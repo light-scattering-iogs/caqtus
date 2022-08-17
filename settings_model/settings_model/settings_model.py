@@ -31,20 +31,3 @@ class SettingsModel(abc.ABC, pydantic.BaseModel):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
-
-
-# def generate_representer(class_: th.Type[SettingsModel]):
-#     def representer(dumper: yaml.Dumper, settings: SettingsModel):
-#         return dumper.represent_mapping(
-#             f"!{class_.__name__}",
-#             {field: getattr(settings, field) for field in class_.__fields__},
-#         )
-#
-#     return representer
-#
-#
-# def generate_constructor(class_: th.Type[SettingsModel]):
-#     def constructor(loader: yaml.Loader, node: yaml.Node):
-#         return class_(**loader.construct_mapping(node, deep=True))
-#
-#     return constructor
