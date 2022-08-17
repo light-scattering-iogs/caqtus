@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="icons">
+    <file alias="control-stop">../../resources/icons/control-stop-square.png</file>
+    <file alias="control">../../resources/icons/control.png</file>
     <file alias="caqtus-logo">../../resources/icons/logo.svg</file>
     <file alias="gear--pencil">../../resources/icons/gear--pencil.png</file>
   </qresource>
