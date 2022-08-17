@@ -6,7 +6,7 @@ authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-PyQt6 = "^6.3.1"
+PyQt5 = "^5.15.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

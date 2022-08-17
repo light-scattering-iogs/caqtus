@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="icons">
+    <file alias="caqtus-logo">../../resources/icons/logo.svg</file>
+    <file alias="gear--pencil">../../resources/icons/gear--pencil.png</file>
+  </qresource>
+</RCC>
