@@ -1,5 +1,8 @@
 <RCC>
   <qresource prefix="icons">
+    <file alias="document-open">../../resources/icons/folder-open-document.png</file>
+    <file alias="document-text-open">../../resources/icons/folder-open-document-text.png</file>
+    <file alias="folder-open">../../resources/icons/folder-open.png</file>
     <file alias="control-stop">../../resources/icons/control-stop-square.png</file>
     <file alias="control">../../resources/icons/control.png</file>
     <file alias="caqtus-logo">../../resources/icons/logo.svg</file>
