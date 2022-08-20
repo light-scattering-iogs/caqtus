@@ -19,7 +19,7 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="QTreeWidget" name="treeWidget">
+    <widget class="QTreeWidget" name="category_tree">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -40,43 +40,10 @@
        <string>1</string>
       </property>
      </column>
-     <item>
-      <property name="text">
-       <string>System</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Remote servers</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Devices</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item>
-    <widget class="QStackedWidget" name="stackedWidget">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="QWidget" name="page">
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <layout class="QFormLayout" name="system_layout"/>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="page_2"/>
-    </widget>
+    <widget class="QStackedWidget" name="stack_widget"/>
    </item>
   </layout>
  </widget>

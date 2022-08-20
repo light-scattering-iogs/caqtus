@@ -2,11 +2,12 @@ import logging
 from pathlib import Path
 
 import yaml
+from PyQt5 import QtGui
 from PyQt5.QtCore import QSettings, QModelIndex, Qt, QAbstractListModel
-from PyQt5.QtWidgets import QDialog, QDataWidgetMapper
+from PyQt5.QtWidgets import QDialog, QDataWidgetMapper, QWidget, QFormLayout, \
+    QTreeWidgetItem
 from appdirs import user_config_dir
 from experiment_config import ExperimentConfig
-from qtpy import QtGui
 
 from condetrol.utils import log_error
 from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
@@ -51,30 +52,28 @@ class ConfigModel(QAbstractListModel):
         return change
 
 
-class ConfigEditor(QDialog, Ui_config_editor):
+class SystemSettingsEditor(QWidget):
     @log_error(logger)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
-        self.setupUi(self)
-        self.restoreGeometry(
-            self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
-        )
+        self.layout = QFormLayout()
+        self.setLayout(self.layout)
 
+        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
         self.config_path = self.get_config_path()
         self.config = self.load_config(self.config_path)
 
         self.config_path_widget = SaveFileWidget(
             self.config_path, "Edit config path...", "config (*.yaml)"
         )
-        self.system_layout.insertRow(0, "Config path", self.config_path_widget)
+        self.layout.insertRow(0, "Config path", self.config_path_widget)
         self.config_path_widget.setEnabled(False)
 
         self.data_path_widget = FolderWidget(
             "Edit data path...",
         )
-        self.system_layout.insertRow(1, "Data path", self.data_path_widget)
+        self.layout.insertRow(1, "Data path", self.data_path_widget)
 
         self.config_model = ConfigModel(self.config, self.config_path)
         self.mapper = QDataWidgetMapper()
@@ -85,12 +84,6 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.mapper.toFirst()
 
         self.data_path_widget.folder_edited.connect(self.mapper.submit)
-
-    @staticmethod
-    def save_config(config: ExperimentConfig, path: Path):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as file:
-            yaml.safe_dump(config, file)
 
     def get_config_path(self) -> Path:
         config_folder = self.ui_settings.value(
@@ -120,6 +113,22 @@ class ConfigEditor(QDialog, Ui_config_editor):
         else:
             config = ExperimentConfig()
         return config
+
+
+class ConfigEditor(QDialog, Ui_config_editor):
+    @log_error(logger)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
+        self.setupUi(self)
+        self.restoreGeometry(
+            self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
+        )
+        self.stack_widget.addWidget(SystemSettingsEditor())
+        self.system_selector = QTreeWidgetItem(self.category_tree)
+        self.system_selector.setText(0, "System")
+        self.system_selector.setSelected(True)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         geometry = self.saveGeometry()
