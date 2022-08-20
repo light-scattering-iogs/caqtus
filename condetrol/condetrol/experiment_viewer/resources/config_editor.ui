@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>297</height>
+    <width>672</width>
+    <height>519</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,7 +68,13 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="page"/>
+     <widget class="QWidget" name="page">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <layout class="QFormLayout" name="system_layout"/>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="page_2"/>
     </widget>
    </item>

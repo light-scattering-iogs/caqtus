@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_config_editor(object):
     def setupUi(self, config_editor):
         config_editor.setObjectName("config_editor")
-        config_editor.resize(400, 297)
+        config_editor.resize(672, 519)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/gear--pencil"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         config_editor.setWindowIcon(icon)
@@ -43,6 +43,11 @@ class Ui_config_editor(object):
         self.stackedWidget.setObjectName("stackedWidget")
         self.page = QtWidgets.QWidget()
         self.page.setObjectName("page")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.page)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.system_layout = QtWidgets.QFormLayout()
+        self.system_layout.setObjectName("system_layout")
+        self.verticalLayout.addLayout(self.system_layout)
         self.stackedWidget.addWidget(self.page)
         self.page_2 = QtWidgets.QWidget()
         self.page_2.setObjectName("page_2")
