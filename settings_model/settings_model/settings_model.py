@@ -2,6 +2,7 @@ import abc
 
 import pydantic
 import yaml
+from pathlib import Path, WindowsPath
 
 
 class SettingsModel(abc.ABC, pydantic.BaseModel):
@@ -31,3 +32,14 @@ class SettingsModel(abc.ABC, pydantic.BaseModel):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
+
+
+def path_representer(dumper: yaml.Dumper, path: Path):
+    return dumper.represent_scalar("!Path", str(path))
+yaml.SafeDumper.add_representer(Path, path_representer)
+yaml.SafeDumper.add_representer(WindowsPath, path_representer)
+
+
+def path_constructor(loader: yaml.Loader, node: yaml.Node):
+    return Path(loader.construct_scalar(node))
+yaml.SafeLoader.add_constructor(f"!Path", path_constructor)
