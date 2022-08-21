@@ -4,8 +4,13 @@ from pathlib import Path
 import yaml
 from PyQt5 import QtGui
 from PyQt5.QtCore import QSettings, QModelIndex, Qt, QAbstractListModel
-from PyQt5.QtWidgets import QDialog, QDataWidgetMapper, QWidget, QFormLayout, \
-    QTreeWidgetItem
+from PyQt5.QtWidgets import (
+    QDialog,
+    QDataWidgetMapper,
+    QWidget,
+    QFormLayout,
+    QTreeWidgetItem,
+)
 from appdirs import user_config_dir
 from experiment_config import ExperimentConfig
 
@@ -60,9 +65,8 @@ class SystemSettingsEditor(QWidget):
         self.layout = QFormLayout()
         self.setLayout(self.layout)
 
-        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
-        self.config_path = self.get_config_path()
-        self.config = self.load_config(self.config_path)
+        self.config_path = get_config_path()
+        self.config = load_config(self.config_path)
 
         self.config_path_widget = SaveFileWidget(
             self.config_path, "Edit config path...", "config (*.yaml)"
@@ -85,34 +89,36 @@ class SystemSettingsEditor(QWidget):
 
         self.data_path_widget.folder_edited.connect(self.mapper.submit)
 
-    def get_config_path(self) -> Path:
-        config_folder = self.ui_settings.value(
-            "experiment/config_path", user_config_dir("ExperimentControl", "Caqtus")
-        )
-        config_path = Path(config_folder) / "config.yaml"
-        return config_path
 
-    @staticmethod
-    def load_config(config_path: Path) -> ExperimentConfig:
-        """Loads or creates the experiment config"""
+def load_config(config_path: Path) -> ExperimentConfig:
+    """Loads or creates the experiment config"""
 
-        if config_path.exists():
-            # noinspection PyBroadException
-            try:
-                with open(config_path, "r") as file:
-                    config = yaml.safe_load(file)
-                if not isinstance(config, ExperimentConfig):
-                    raise TypeError(f"Config is not correct: {config}")
-            except Exception:
-                logger.warning(
-                    f"Unable to load {config_path}. Loading a default configuration"
-                    " instead.",
-                    exc_info=True,
-                )
-                config = ExperimentConfig()
-        else:
+    if config_path.exists():
+        # noinspection PyBroadException
+        try:
+            with open(config_path, "r") as file:
+                config = yaml.safe_load(file)
+            if not isinstance(config, ExperimentConfig):
+                raise TypeError(f"Config is not correct: {config}")
+        except Exception:
+            logger.warning(
+                f"Unable to load {config_path}. Loading a default configuration"
+                " instead.",
+                exc_info=True,
+            )
             config = ExperimentConfig()
-        return config
+    else:
+        config = ExperimentConfig()
+    return config
+
+
+def get_config_path() -> Path:
+    ui_settings = QSettings("Caqtus", "ExperimentControl")
+    config_folder = ui_settings.value(
+        "experiment/config_path", user_config_dir("ExperimentControl", "Caqtus")
+    )
+    config_path = Path(config_folder) / "config.yaml"
+    return config_path
 
 
 class ConfigEditor(QDialog, Ui_config_editor):
