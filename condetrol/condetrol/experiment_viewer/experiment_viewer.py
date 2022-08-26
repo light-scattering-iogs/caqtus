@@ -9,18 +9,20 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QMainWindow,
     QFileSystemModel,
-    QAbstractItemDelegate,
     QStyleOptionViewItem,
     QStyleOptionProgressBar,
     QApplication,
-    QStyle, QStyledItemDelegate,
+    QStyle,
+    QStyledItemDelegate,
 )
 from experiment_config import ExperimentConfig
 from qtpy import QtGui
+from sequence import SequenceStats, SequenceState
 
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
+from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -53,6 +55,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setColumnHidden(1, True)
         self.sequences_view.setColumnHidden(2, True)
         self.sequences_view.setColumnHidden(3, True)
+        self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
+
+        self.setCentralWidget(None)
+
+    def sequence_view_double_clicked(self, index: QModelIndex):
+        # noinspection PyTypeChecker
+        model: SequenceViewerModel = index.model()
+        if model.is_sequence_folder(index):
+            sequence_widget = SequenceWidget(Path(model.filePath(index)))
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
 
     @staticmethod
     def edit_config():
@@ -69,20 +81,20 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
 class SequenceDelegate(QStyledItemDelegate):
     def paint(
-            self, painter: QtGui.QPainter, option: QStyleOptionViewItem,
-            index: QModelIndex
+        self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
         if model.is_sequence_folder(index):
-            progress = model.data(index, Qt.ItemDataRole.DisplayRole)
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect
             opt.minimum = 0
-            opt.maximum = 100
-            opt.progress = progress
-            opt.text = "{}%".format(progress)
-            opt.textVisible = True
+            opt.maximum = 1
+            stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
+            if stats.state == SequenceState.DRAFT:
+                opt.progress = 0
+                opt.text = "draft"
+                opt.textVisible = True
             QApplication.style().drawControl(
                 QStyle.ControlElement.CE_ProgressBar, opt, painter
             )
@@ -109,9 +121,9 @@ class SequenceViewerModel(QFileSystemModel):
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
-                path = Path(self.filePath(index)) / "sequence_config.yaml"
+                path = Path(self.filePath(index)) / "sequence_state.yaml"
                 with open(path) as file:
-                    result = yaml.safe_load(file)
+                    result: SequenceStats = yaml.safe_load(file)
                     return result
             elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
                 return QIcon(":/icons/sequence")
@@ -119,8 +131,8 @@ class SequenceViewerModel(QFileSystemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if (
-                role == Qt.ItemDataRole.DisplayRole
-                and orientation == Qt.Orientation.Horizontal
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
         ):
             if section == 4:
                 return "Status"
@@ -128,7 +140,7 @@ class SequenceViewerModel(QFileSystemModel):
 
     def is_sequence_folder(self, parent: QModelIndex) -> bool:
         path = Path(self.filePath(parent))
-        if (path / "sequence_config.yaml").exists():
+        if (path / "sequence_state.yaml").exists():
             return True
         return False
 
