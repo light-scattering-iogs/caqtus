@@ -9,4 +9,38 @@
     <file alias="caqtus-logo">../../resources/icons/logo.svg</file>
     <file alias="gear--pencil">../../resources/icons/gear--pencil.png</file>
   </qresource>
+  <qresource prefix="fonts">
+    <file>../../resources/jetbrains-mono/JetBrainsMono-Bold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-BoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-ExtraBold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-ExtraBoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-ExtraLight.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-ExtraLightItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-Italic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-Light.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-LightItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-Medium.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-MediumItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Bold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-BoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-ExtraBold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-ExtraBoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-ExtraLight.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-ExtraLightItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Italic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Light.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-LightItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Medium.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-MediumItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Regular.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-SemiBold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-SemiBoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-Thin.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMonoNL-ThinItalic.ttf</file>
+    <file alias="jetbrains-mono">../../resources/jetbrains-mono/JetBrainsMono-Regular.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-SemiBold.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-SemiBoldItalic.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-Thin.ttf</file>
+    <file>../../resources/jetbrains-mono/JetBrainsMono-ThinItalic.ttf</file>
+  </qresource>
 </RCC>
