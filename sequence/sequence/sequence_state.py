@@ -29,6 +29,6 @@ yaml.SafeLoader.add_constructor(f"!SequenceState", state_constructor)
 
 
 class SequenceStats(SettingsModel):
-    state: SequenceState
-    start_time: Optional[datetime]
-    stop_time: Optional[datetime]
+    state: SequenceState = SequenceState.DRAFT
+    start_time: Optional[datetime] = None
+    stop_time: Optional[datetime] = None

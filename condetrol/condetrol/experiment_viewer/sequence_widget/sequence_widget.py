@@ -1,6 +1,12 @@
+"""This module implements an editor for the configuration of a sequence.
+
+It provides a pseudo-code editor for the different steps of the sequence. The only role
+of this module is to generate and edit a yaml file that is then consumed by other parts.
+"""
+
 import logging
 from abc import abstractmethod, ABCMeta
-from functools import singledispatchmethod, singledispatch
+from functools import singledispatch
 from pathlib import Path
 from typing import Optional
 
@@ -22,21 +28,29 @@ from PyQt5.QtWidgets import (
     QStyledItemDelegate,
     QWidget,
     QStyleOptionViewItem,
-    QStyle, QAbstractItemView,
+    QStyle,
+    QAbstractItemView,
+    QTabWidget,
+    QGraphicsScene,
+    QGraphicsView,
+    QGraphicsGridLayout,
+    QGraphicsWidget,
+    QLabel,
+    QMenu,
+    QAction,
 )
 
-from condetrol.widgets import TreeNode
 from sequence import (
     SequenceConfig,
     Step,
-    StepsSequence,
     VariableDeclaration,
     SequenceStats,
     SequenceState,
-    LinspaceIteration,
-    ExecuteShot,
+    LinspaceLoop,
 )
-from .sequence_execute_shot_ui import Ui_ExecuteShot
+from sequence.sequence_config import ArangeLoop
+from settings_model.settings_model import YAMLSerializable
+from .sequence_arange_iteration_ui import Ui_ArangeDeclaration
 from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
 from .sequence_variable_declaration_ui import Ui_VariableDeclaration
 
@@ -56,31 +70,8 @@ class StepWidget(QWidget, metaclass=QABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_step_data(self) -> Step:
+    def get_step_data(self) -> dict[str]:
         raise NotImplementedError()
-
-
-class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setupUi(self)
-        self.setAutoFillBackground(True)
-
-    def set_step_data(self, data: LinspaceIteration):
-        self.name_edit.setText(data.name)
-        self.start_edit.setText(data.start)
-        self.stop_edit.setText(data.stop)
-        self.num_edit.setValue(data.num)
-        self.sub_steps = data.sub_steps
-
-    def get_step_data(self) -> LinspaceIteration:
-        return LinspaceIteration(
-            name=self.name_edit.text(),
-            start=self.start_edit.text(),
-            stop=self.stop_edit.text(),
-            num=self.num_edit.value(),
-            sub_steps=self.sub_steps,
-        )
 
 
 class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
@@ -93,129 +84,86 @@ class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
         self.name_edit.setText(declaration.name)
         self.expression_edit.setText(declaration.expression)
 
-    def get_step_data(self) -> VariableDeclaration:
-        return VariableDeclaration(
-            name=self.name_edit.text(), expression=self.expression_edit.text()
-        )
+    def get_step_data(self) -> dict[str]:
+        return dict(name=self.name_edit.text(), expression=self.expression_edit.text())
 
 
-class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
+class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
         self.setAutoFillBackground(True)
 
-    def set_step_data(self, shot: ExecuteShot):
-        self.name_edit.setText(shot.name)
-        self.shot = shot
+    def set_step_data(self, data: LinspaceLoop):
+        self.name_edit.setText(data.name)
+        self.start_edit.setText(data.start)
+        self.stop_edit.setText(data.stop)
+        self.num_edit.setValue(data.num)
 
-    def get_step_data(self) -> ExecuteShot:
-        self.shot.name = self.name_edit.text()
-        return self.shot
+    def get_step_data(self):
+        return dict(
+            name=self.name_edit.text(),
+            start=self.start_edit.text(),
+            stop=self.stop_edit.text(),
+            num=self.num_edit.value(),
+        )
 
 
-class StepTreeNode(TreeNode[Step]):
-    """Implementation of a tree representation of a sequence
+class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi(self)
+        self.setAutoFillBackground(True)
 
-    This class is a helper for a recursive PyQt model (see PyQt Model/View). It allows
-    to get the parent and children of a sequence step.
-    """
+    def set_step_data(self, data: ArangeLoop):
+        self.name_edit.setText(data.name)
+        self.start_edit.setText(data.start)
+        self.stop_edit.setText(data.stop)
+        self.step_edit.setText(data.step)
 
-    def get_children(self) -> list[TreeNode[Step]]:
-        return self.get_step_children(self.internal_pointer)
+    def get_step_data(self):
+        return dict(
+            name=self.name_edit.text(),
+            start=self.start_edit.text(),
+            stop=self.stop_edit.text(),
+            step=self.step_edit.text(),
+        )
 
-    @singledispatchmethod
-    def get_step_children(self, step) -> list[TreeNode[Step]]:
-        """Generate the child nodes of a parent step"""
-        raise NotImplementedError(f"Can't find the substeps of {type(step)}")
 
-    @get_step_children.register
-    def _(self, step: StepsSequence):
-        return [
-            StepTreeNode(sub_step, self, row) for row, sub_step in enumerate(step.steps)
-        ]
-
-    @get_step_children.register
-    def _(self, step: LinspaceIteration):
-        return [
-            StepTreeNode(sub_step, self, row)
-            for row, sub_step in enumerate(step.sub_steps)
-        ]
-
-    @get_step_children.register
-    def _(self, step: VariableDeclaration):
-        return []
-
-    @get_step_children.register
-    def _(self, step: ExecuteShot):
-        return []
-
-    @singledispatchmethod
-    def update_value(self, new_value: Step):
-        """Edit the parameters of a step
-
-        This method should either update the internal pointer in place or either replace
-        it with a new variable and update its parent as well.
-        """
-        raise NotImplementedError(f"Not implemented for {type(new_value)}")
-
-    @update_value.register
-    def _(self, new_value: VariableDeclaration):
-        self.internal_pointer: VariableDeclaration
-        self.internal_pointer.name = new_value.name
-        self.internal_pointer.expression = new_value.expression
-
-    @update_value.register
-    def _(self, new_value: LinspaceIteration):
-        self.internal_pointer: LinspaceIteration
-        self.internal_pointer.name = new_value.name
-        self.internal_pointer.start = new_value.start
-        self.internal_pointer.stop = new_value.stop
-        self.internal_pointer.num = new_value.num
-
-    @update_value.register
-    def _(self, new_value: ExecuteShot):
-        self.internal_pointer: ExecuteShot
-        self.internal_pointer.name = new_value.name
-
-    @singledispatchmethod
-    @classmethod
-    def update_parent_data(
-        cls, parent_step: Step, new_child_value: Step, child_row: int
-    ):
-        """Replace a child node of a parent node with a new value"""
-        raise NotImplementedError()
-
-    @update_parent_data.register
-    @classmethod
-    def _(cls, parent_step: StepsSequence, new_child_value: Step, child_row: int):
-        parent_step.steps[child_row] = new_child_value
-
-    @update_parent_data.register
-    @classmethod
-    def _(cls, parent_step: LinspaceIteration, new_child_value: Step, child_row: int):
-        parent_step.sub_steps[child_row] = new_child_value
+# class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.setupUi(self)
+#         self.setAutoFillBackground(True)
+#
+#     def set_step_data(self, shot: ExecuteShot):
+#         self.name_edit.setText(shot.name)
+#         self.shot = shot
+#
+#     def get_step_data(self) -> ExecuteShot:
+#         self.shot.name = self.name_edit.text()
+#         return self.shot
 
 
 @singledispatch
-def create_editor(step: Step, parent: QWidget) -> StepWidget:
+def create_editor(step: Step, _: QWidget) -> StepWidget:
     """Create an editor for a step depending on its type"""
-    raise NotImplementedError
+    raise NotImplementedError(f"Not implemented for {type(step)}")
 
 
 @create_editor.register
-def _(step: VariableDeclaration, parent: QWidget):
+def _(_: VariableDeclaration, parent: QWidget):
     return VariableDeclarationWidget(parent)
 
 
 @create_editor.register
-def _(step: LinspaceIteration, parent: QWidget):
+def _(_: LinspaceLoop, parent: QWidget):
     return LinspaceIterationWidget(parent)
 
 
 @create_editor.register
-def _(step: ExecuteShot, parent: QWidget):
-    return ExecuteShotWidget(parent)
+def _(_: ArangeLoop, parent: QWidget):
+    return ArangeIterationWidget(parent)
 
 
 class StepDelegate(QStyledItemDelegate):
@@ -229,6 +177,7 @@ class StepDelegate(QStyledItemDelegate):
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> StepWidget:
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
+        # noinspection PyTypeChecker
         editor = create_editor(data, None)
         editor.setParent(parent)
         return editor
@@ -248,6 +197,7 @@ class StepDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: "QStyleOptionViewItem", index: QModelIndex) -> QSize:
         step = index.data(role=Qt.ItemDataRole.DisplayRole)
+        # noinspection PyTypeChecker
         w = create_editor(step, None)
         self.setEditorData(w, index)
         w.resize(option.rect.size())
@@ -306,7 +256,7 @@ class StepsModel(QAbstractItemModel):
 
         with open(self.config_path) as file:
             self.config: SequenceConfig = yaml.safe_load(file)
-        self.root = StepTreeNode(self.config.program)
+        self.root = self.config.program
         self.layoutChanged.emit()
 
         self.sequence_config_watcher = QFileSystemWatcher()
@@ -329,7 +279,7 @@ class StepsModel(QAbstractItemModel):
     def change_sequence_config(self, sequence_config):
         with open(sequence_config) as file:
             self.config: SequenceConfig = yaml.safe_load(file)
-        self.root = StepTreeNode(self.config.program)
+        self.root = self.config.program
         self.layoutChanged.emit()
 
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
@@ -338,8 +288,8 @@ class StepsModel(QAbstractItemModel):
         if not parent.isValid():
             current_node = self.root.children[row]
         else:
-            parent_node: StepTreeNode = parent.internalPointer()
-            if row < parent_node.child_count:
+            parent_node: Step = parent.internalPointer()
+            if row < len(parent_node.children):
                 current_node = parent_node.children[row]
             else:
                 return QModelIndex()
@@ -350,57 +300,61 @@ class StepsModel(QAbstractItemModel):
         if not child.isValid():
             return QModelIndex()
 
-        child_node: StepTreeNode = child.internalPointer()
-        if not isinstance(child_node, StepTreeNode):
+        child_node: Step = child.internalPointer()
+        if not isinstance(child_node, Step):
             logger.debug("danger")
             return QModelIndex()
-        if child_node.parent:
+        if not child_node.is_root:
             parent_node = child_node.parent
-            return self.createIndex(parent_node.row, 0, parent_node)
+            return self.createIndex(parent_node.row(), 0, child_node.parent)
         else:
             return QModelIndex()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if not parent.isValid():
-            return self.root.child_count
+            return len(self.root.children)
         else:
-            parent_node: TreeNode = parent.internalPointer()
-            return parent_node.child_count
+            parent_node: Step = parent.internalPointer()
+            return len(parent_node.children)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return 1
 
     def data(self, index: QModelIndex, role: int = ...):
         if index.isValid():
-            node: StepTreeNode = index.internalPointer()
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                return node.internal_pointer
+                return index.internalPointer()
 
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
         edit = False
         if (
             index.isValid()
             and role == Qt.ItemDataRole.EditRole
             and self.sequence_state == SequenceState.DRAFT
         ):
-            node: StepTreeNode = index.internalPointer()
-            node.update_value(value)
+            node: Step = index.internalPointer()
+            for attr, value in values.items():
+                setattr(node, attr, value)
             edit = True
 
         if edit:
-            # save config to file in a new thread to avoid blocking the GUI
-            self.sequence_config_watcher.removePath(str(self.config_path))
-            self.config.program = self.root.internal_pointer
-            serialized_config = yaml.safe_dump(self.config)
-            if self.save_thread:
-                self.save_thread.wait()
-            self.save = SaveThread(serialized_config, self.config_path)
-            self.save.finished.connect(
-                lambda: self.sequence_config_watcher.addPath(str(self.config_path))
-            )
-            self.save.start()
-            self.save.wait()
+            self.save_config(self.config)
         return edit
+
+    def save_config(self, config):
+        # save config to file in a new thread to avoid blocking the GUI
+        # TODO: need to fix crashing when letting the thread finish before
+        self.sequence_config_watcher.removePath(str(self.config_path))
+        serialized_config = yaml.dump(
+            config, Dumper=YAMLSerializable.get_dumper(), sort_keys=False
+        )
+        save = SaveThread(serialized_config, self.config_path)
+        # noinspection PyTypeChecker
+        save.finished.connect(
+            lambda: self.sequence_config_watcher.addPath(str(self.config_path))
+        )
+        save.start()
+        save.wait()
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid():
@@ -414,6 +368,47 @@ class StepsModel(QAbstractItemModel):
                     return flags
         return Qt.ItemFlag.NoItemFlags
 
+    def insert_step(self, new_step: Step, index: QModelIndex):
+        # insert at the end of all steps if clicked at invalid index
+        if not index.isValid():
+            position = len(self.root.children)
+            self.beginInsertRows(QModelIndex(), position, position)
+            self.root.children += (new_step,)
+            self.endInsertRows()
+        else:
+            node: Step = index.internalPointer()
+            # if the selected step can't have children, the new step is added below it
+            if isinstance(node, VariableDeclaration):
+                position = index.row() + 1
+                self.beginInsertRows(QModelIndex(), position, position)
+                new_children = list(node.parent.children)
+                new_children.insert(position, new_step)
+                node.parent.children = new_children
+                self.endInsertRows()
+            # otherwise it's added as the last child of the selected step
+            else:
+                position = len(node.children)
+                self.beginInsertRows(index, position, position)
+                new_children = list(node.children)
+                new_children.insert(position, new_step)
+                node.children = new_children
+                self.endInsertRows()
+
+        self.save_config(self.config)
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        self.beginRemoveRows(parent, row, row)
+        if not parent.isValid():
+            parent = self.root
+        else:
+            parent: Step = parent.internalPointer()
+        new_children = list(parent.children)
+        new_children.pop(row)
+        parent.children = new_children
+        self.endRemoveRows()
+        self.save_config(self.config)
+        return True
+
 
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
@@ -423,15 +418,88 @@ class SequenceWidget(QDockWidget):
         self._path = sequence_path
         self.setWindowTitle(f"{self._path}")
 
-        self.program_tree = QTreeView()
-        self.program_tree.setHeaderHidden(True)
-        self.program_tree.setAnimated(True)
-        self.program_tree.setContentsMargins(0, 0, 0, 0)
-        self.program_model = StepsModel(self._path)
-        self.program_tree.setModel(self.program_model)
-        self.setWidget(self.program_tree)
-        self.program_model.layoutChanged.connect(lambda: self.program_tree.expandAll())
-        self.program_tree.expandAll()
-        self.delegate = StepDelegate()
-        self.program_tree.setItemDelegate(self.delegate)
-        self.program_tree.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+        self.tab_widget = QTabWidget()
+        self.setWidget(self.tab_widget)
+
+        self.program_tree = self.create_sequence_tree()
+        self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
+        self.tab_widget.addTab(self.program_tree, "Sequence steps")
+
+        self.shot_widget = self.create_shot_widget()
+        self.tab_widget.addTab(self.shot_widget, "Shot")
+
+    def create_sequence_tree(self):
+        tree = QTreeView()
+        tree.setHeaderHidden(True)
+        tree.setAnimated(True)
+        tree.setContentsMargins(0, 0, 0, 0)
+        program_model = StepsModel(self._path)
+        tree.setModel(program_model)
+        program_model.layoutChanged.connect(lambda: self.program_tree.expandAll())
+        tree.expandAll()
+        delegate = StepDelegate()
+        tree.setItemDelegate(delegate)
+        tree.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+
+        tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        return tree
+
+    def show_context_menu(self, position):
+        index = self.program_tree.indexAt(position)
+        # noinspection PyTypeChecker
+        model: StepsModel = self.program_tree.model()
+
+        menu = QMenu(self.program_tree)
+
+        add_menu = QMenu()
+        add_menu.setTitle("Add..")
+        menu.addMenu(add_menu)
+
+        create_variable_action = QAction("variable declaration")
+        add_menu.addAction(create_variable_action)
+        create_variable_action.triggered.connect(
+            lambda: model.insert_step(
+                VariableDeclaration(name="", expression=""), index
+            )
+        )
+
+        create_linspace_action = QAction("linspace loop")
+        add_menu.addAction(create_linspace_action)
+        create_linspace_action.triggered.connect(
+            lambda: model.insert_step(
+                LinspaceLoop(name="", start="", stop="", num=10), index
+            )
+        )
+
+        create_arange_action = QAction("arange loop")
+        add_menu.addAction(create_arange_action)
+        create_arange_action.triggered.connect(
+            lambda: model.insert_step(
+                ArangeLoop(name="", start="", stop="", step=""), index
+            )
+        )
+
+        if index.isValid():
+            delete_action = QAction("Delete")
+            menu.addAction(delete_action)
+            delete_action.triggered.connect(
+                lambda: model.removeRow(index.row(), index.parent())
+            )
+
+        menu.exec(self.program_tree.mapToGlobal(position))
+
+    def create_shot_widget(self):
+        scene = QGraphicsScene()
+        textEdit = scene.addWidget(QLabel("Step 0"))
+        pushButton = scene.addWidget(QLabel("Step 1"))
+
+        layout = QGraphicsGridLayout()
+        layout.addItem(textEdit, 0, 0)
+        layout.addItem(pushButton, 0, 1)
+
+        form = QGraphicsWidget()
+        form.setLayout(layout)
+        scene.addItem(form)
+
+        view = QGraphicsView(scene)
+        return view

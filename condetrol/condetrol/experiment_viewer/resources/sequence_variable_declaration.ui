@@ -46,7 +46,7 @@
     <number>1</number>
    </property>
    <item>
-    <widget class="QLineEdit" name="name_edit">
+    <widget class="AutoResizeLineEdit" name="name_edit">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -60,7 +60,11 @@
       </size>
      </property>
      <property name="font">
-      <font/>
+      <font>
+       <family>JetBrains Mono</family>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
      </property>
      <property name="autoFillBackground">
       <bool>false</bool>
@@ -117,7 +121,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QLineEdit" name="expression_edit">
+    <widget class="AutoResizeLineEdit" name="expression_edit">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -125,7 +129,11 @@
       </sizepolicy>
      </property>
      <property name="font">
-      <font/>
+      <font>
+       <family>JetBrains Mono</family>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
      </property>
      <property name="autoFillBackground">
       <bool>false</bool>
@@ -154,6 +162,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>AutoResizeLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>widgets.auto_resize_lineedit.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

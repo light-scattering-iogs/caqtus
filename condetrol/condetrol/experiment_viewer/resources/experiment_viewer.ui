@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>848</width>
-    <height>600</height>
+    <width>856</width>
+    <height>617</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,6 +17,9 @@
    <iconset resource="resources.qrc">
     <normaloff>:/icons/caqtus-logo</normaloff>:/icons/caqtus-logo</iconset>
   </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging|QMainWindow::VerticalTabs</set>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout"/>
   </widget>
@@ -25,7 +28,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>848</width>
+     <width>856</width>
      <height>22</height>
     </rect>
    </property>
@@ -37,7 +40,6 @@
    </widget>
    <addaction name="menuPreferences"/>
   </widget>
-  <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="sequences_widget">
    <property name="features">
     <set>QDockWidget::DockWidgetMovable</set>

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\resources\sequence_variable_declaration.ui'
+# Form implementation generated from reading ui file '.\condetrol\experiment_viewer\resources\sequence_variable_declaration.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -27,7 +27,7 @@ class Ui_VariableDeclaration(object):
         self.horizontalLayout.setContentsMargins(1, 1, 1, 1)
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.name_edit = QtWidgets.QLineEdit(VariableDeclaration)
+        self.name_edit = AutoResizeLineEdit(VariableDeclaration)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -35,6 +35,9 @@ class Ui_VariableDeclaration(object):
         self.name_edit.setSizePolicy(sizePolicy)
         self.name_edit.setMinimumSize(QtCore.QSize(300, 0))
         font = QtGui.QFont()
+        font.setFamily("JetBrains Mono")
+        font.setBold(False)
+        font.setWeight(50)
         self.name_edit.setFont(font)
         self.name_edit.setAutoFillBackground(False)
         self.name_edit.setStyleSheet(":focus{color: #AA4926}\n"
@@ -62,13 +65,16 @@ class Ui_VariableDeclaration(object):
         self.label_2.setStyleSheet("")
         self.label_2.setObjectName("label_2")
         self.horizontalLayout.addWidget(self.label_2)
-        self.expression_edit = QtWidgets.QLineEdit(VariableDeclaration)
+        self.expression_edit = AutoResizeLineEdit(VariableDeclaration)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.expression_edit.sizePolicy().hasHeightForWidth())
         self.expression_edit.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
+        font.setFamily("JetBrains Mono")
+        font.setBold(False)
+        font.setWeight(50)
         self.expression_edit.setFont(font)
         self.expression_edit.setAutoFillBackground(False)
         self.expression_edit.setStyleSheet(":focus{ color: #6897BB }\n"
@@ -88,3 +94,4 @@ class Ui_VariableDeclaration(object):
         self.name_edit.setPlaceholderText(_translate("VariableDeclaration", "variable name"))
         self.label_2.setText(_translate("VariableDeclaration", "="))
         self.expression_edit.setPlaceholderText(_translate("VariableDeclaration", "expression"))
+from widgets.auto_resize_lineedit import AutoResizeLineEdit

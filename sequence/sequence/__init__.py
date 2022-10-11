@@ -4,9 +4,8 @@ from .sequence import Sequence
 from .sequence_config import (
     SequenceConfig,
     Step,
-    StepsSequence,
+    SequenceSteps,
     VariableDeclaration,
-    LinspaceIteration,
-    ExecuteShot,
+    LinspaceLoop,
 )
 from .sequence_state import SequenceState, SequenceStats

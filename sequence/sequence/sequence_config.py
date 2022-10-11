@@ -1,38 +1,171 @@
 from abc import ABC
-from typing import Union
+from typing import Optional
+
+import yaml
+from anytree import NodeMixin
 
 from settings_model import SettingsModel
 
+# class Step(SettingsModel, ABC):
+#     pass
+#
+#
+# class StepsSequence(Step):
+#     steps: list[Step]
+#
+#
+# class VariableDeclaration(Step):
+#     name: str
+#     expression: str
+#
+#
+# class GroupDeclaration(Step):
+#     name: str
+#     variables: list[Union["GroupDeclaration", VariableDeclaration]]
+#
+#
+# class LinspaceIteration(Step):
+#     name: str
+#     start: str
+#     stop: str
+#     num: int
+#     sub_steps: list[Step]
+#
+#
+# class ExecuteShot(Step):
+#     name: str
+from settings_model.settings_model import YAMLSerializable
 
-class Step(SettingsModel, ABC):
-    pass
+
+class Step(NodeMixin, ABC):
+    def __init__(
+        self, parent: Optional["Step"] = None, children: Optional[list["Step"]] = None
+    ):
+        self.parent = parent
+        if children is not None:
+            self.children = children
+
+    def row(self):
+        if self.is_root:
+            return 0
+        else:
+            for i, child in enumerate(self.parent.children):
+                if child is self:
+                    return i
 
 
-class StepsSequence(Step):
-    steps: list[Step]
+class SequenceSteps(Step, YAMLSerializable):
+    def __init__(
+        self, parent: Optional["Step"] = None, children: Optional[list["Step"]] = None
+    ):
+        if not children:
+            children = []
+        super().__init__(parent, children)
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, step: "SequenceSteps"):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {"children": [child for child in step.children]},
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
 
 
-class VariableDeclaration(Step):
-    name: str
-    expression: str
+class VariableDeclaration(Step, YAMLSerializable):
+    def __init__(self, name: str, expression: str, parent: Optional["Step"] = None):
+        super().__init__(parent, None)
+        self.name = name
+        self.expression = expression
+
+    def __repr__(self):
+        return f"VariableDeclaration({self.name}, {self.expression})"
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, step: "VariableDeclaration"):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {"name": step.name, "expression": step.expression},
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
 
 
-class GroupDeclaration(Step):
-    name: str
-    variables: list[Union["GroupDeclaration", VariableDeclaration]]
+class LinspaceLoop(Step, YAMLSerializable):
+    def __init__(
+        self,
+        name: str,
+        start: str,
+        stop: str,
+        num: int,
+        parent: Optional["Step"] = None,
+        children: Optional[list["Step"]] = None,
+    ):
+        if not children:
+            children = []
+        super().__init__(parent, children)
+        self.name = name
+        self.start = start
+        self.stop = stop
+        self.num = num
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, step: "LinspaceLoop"):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "name": step.name,
+                "start": step.start,
+                "stop": step.stop,
+                "num": step.num,
+                "children": [child for child in step.children],
+            },
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
 
 
-class LinspaceIteration(Step):
-    name: str
-    start: str
-    stop: str
-    num: int
-    sub_steps: list[Step]
+class ArangeLoop(Step, YAMLSerializable):
+    def __init__(
+        self,
+        name: str,
+        start: str,
+        stop: str,
+        step: str,
+        parent: Optional["Step"] = None,
+        children: Optional[list["Step"]] = None,
+    ):
+        if not children:
+            children = []
+        super().__init__(parent, children)
+        self.name = name
+        self.start = start
+        self.stop = stop
+        self.step = step
 
-class ExecuteShot(Step):
-    name: str
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, step: "ArangeLoop"):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "name": step.name,
+                "start": step.start,
+                "stop": step.stop,
+                "step": step.step,
+                "children": [child for child in step.children],
+            },
+        )
 
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
 
 
 class SequenceConfig(SettingsModel):
-    program: StepsSequence
+    program: SequenceSteps

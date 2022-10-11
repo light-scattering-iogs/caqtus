@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\resources\experiment_viewer.ui'
+# Form implementation generated from reading ui file '.\experiment_viewer\resources\experiment_viewer.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -18,6 +18,7 @@ class Ui_MainWindow(object):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/caqtus-logo"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
+        MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging|QtWidgets.QMainWindow.VerticalTabs)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -29,9 +30,6 @@ class Ui_MainWindow(object):
         self.menuPreferences = QtWidgets.QMenu(self.menubar)
         self.menuPreferences.setObjectName("menuPreferences")
         MainWindow.setMenuBar(self.menubar)
-        self.statusBar = QtWidgets.QStatusBar(MainWindow)
-        self.statusBar.setObjectName("statusBar")
-        MainWindow.setStatusBar(self.statusBar)
         self.sequences_widget = QtWidgets.QDockWidget(MainWindow)
         self.sequences_widget.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable)
         self.sequences_widget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)

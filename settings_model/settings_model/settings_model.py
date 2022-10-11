@@ -1,11 +1,48 @@
 import abc
+from pathlib import Path, WindowsPath
 
 import pydantic
 import yaml
-from pathlib import Path, WindowsPath
 
 
-class SettingsModel(abc.ABC, pydantic.BaseModel):
+class YAMLSerializable(abc.ABC):
+    """
+    Provide a common class with YAML dumper and loader that is used for serialization
+    """
+
+    def __init_subclass__(cls):
+        """Register subclasses for serialization and deserialization to yaml"""
+        cls.get_dumper().add_representer(cls, cls.representer)
+        cls.get_loader().add_constructor(f"!{cls.__name__}", cls.constructor)
+
+    @classmethod
+    def get_dumper(cls):
+        return yaml.SafeDumper
+
+    @classmethod
+    def get_loader(cls):
+        return yaml.SafeLoader
+
+    @classmethod
+    @abc.abstractmethod
+    def representer(cls, dumper: yaml.Dumper, settings: "SettingsModel"):
+        """Represent a python object with a yaml string
+
+        Overload this method in a child class to give a representation.
+        """
+        ...
+
+    @classmethod
+    @abc.abstractmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        """Build a python object from a YAML node
+
+        Overload this method in a child class to provide a constructor.
+        """
+        ...
+
+
+class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
     """Allows to store and load experiment configuration with type validation
 
     All instances of a subclass of this class can be (de)serialized (from) to yaml based
@@ -16,14 +53,14 @@ class SettingsModel(abc.ABC, pydantic.BaseModel):
 
     class Config:
         validate_assignment = True
-
-    def __init_subclass__(cls):
-        """Register subclasses for serialization and deserialization to yaml"""
-        yaml.SafeDumper.add_representer(cls, cls.representer)
-        yaml.SafeLoader.add_constructor(f"!{cls.__name__}", cls.constructor)
+        arbitrary_types_allowed = True
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: "SettingsModel"):
+        """Represent a python object with a yaml string
+
+        Overload this method in a child class to change the default representation.
+        """
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {field: getattr(settings, field) for field in cls.__fields__},
@@ -31,15 +68,23 @@ class SettingsModel(abc.ABC, pydantic.BaseModel):
 
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        """Build a python object from a YAML node
+
+        Overload this method in a child class to change the default construction.
+        """
         return cls(**loader.construct_mapping(node, deep=True))
 
 
 def path_representer(dumper: yaml.Dumper, path: Path):
     return dumper.represent_scalar("!Path", str(path))
-yaml.SafeDumper.add_representer(Path, path_representer)
-yaml.SafeDumper.add_representer(WindowsPath, path_representer)
+
+
+YAMLSerializable.get_dumper().add_representer(Path, path_representer)
+YAMLSerializable.get_dumper().add_representer(WindowsPath, path_representer)
 
 
 def path_constructor(loader: yaml.Loader, node: yaml.Node):
     return Path(loader.construct_scalar(node))
-yaml.SafeLoader.add_constructor(f"!Path", path_constructor)
+
+
+YAMLSerializable.get_loader().add_constructor(f"!Path", path_constructor)

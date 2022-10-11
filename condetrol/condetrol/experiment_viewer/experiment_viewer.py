@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+from functools import partial
 from pathlib import Path
 
 import yaml
@@ -14,11 +15,16 @@ from PyQt5.QtWidgets import (
     QApplication,
     QStyle,
     QStyledItemDelegate,
+    QMenu,
+    QAction,
+    QInputDialog,
+    QLineEdit,
 )
-from experiment_config import ExperimentConfig
 from qtpy import QtGui
-from sequence import SequenceStats, SequenceState
+from send2trash import send2trash
 
+from experiment_config import ExperimentConfig
+from sequence import SequenceStats, SequenceState, SequenceConfig, SequenceSteps
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
@@ -29,6 +35,12 @@ logger.setLevel("DEBUG")
 
 
 class ExperimentViewer(QMainWindow, Ui_MainWindow):
+    """Main window of the application
+
+    It contains a file explorer to navigate the sequences and when clicking on a
+    sequence, opens it in a dockable widget.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         os.environ["QT_FILESYSTEMMODEL_WATCH_FILES"] = "1"
@@ -36,6 +48,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
 
         self.setupUi(self)
+        # restore window geometry from last session
         self.restoreState(self.ui_settings.value(f"{__name__}/state", self.saveState()))
         self.restoreGeometry(
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
@@ -46,7 +59,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         today_folder = self.config.data_path / datetime.datetime.now().strftime(
             "%d-%m-%Y"
         )
-        today_folder.mkdir(parents=True, exist_ok=True)
+        # today_folder.mkdir(parents=True, exist_ok=True)
         self.model = SequenceViewerModel(self.config.data_path)
         self.sequences_view.setModel(self.model)
         self.sequences_view.setRootIndex(self.model.index(str(self.config.data_path)))
@@ -56,6 +69,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setColumnHidden(2, True)
         self.sequences_view.setColumnHidden(3, True)
         self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
+        self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
 
         self.setCentralWidget(None)
 
@@ -65,6 +80,25 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if model.is_sequence_folder(index):
             sequence_widget = SequenceWidget(Path(model.filePath(index)))
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
+
+    def show_context_menu(self, position):
+        index = self.sequences_view.indexAt(position)
+
+        menu = QMenu(self.sequences_view)
+
+        if not self.model.is_sequence_folder(index):
+            create_sequence_action = QAction("New sequence")
+            menu.addAction(create_sequence_action)
+            create_sequence_action.triggered.connect(
+                partial(self.model.create_new_sequence, index)
+            )
+
+        if index.isValid():
+            delete_action = QAction("Delete")
+            menu.addAction(delete_action)
+            delete_action.triggered.connect(partial(self.model.move_to_trash, index))
+
+        menu.exec(self.sequences_view.mapToGlobal(position))
 
     @staticmethod
     def edit_config():
@@ -95,12 +129,18 @@ class SequenceDelegate(QStyledItemDelegate):
                 opt.progress = 0
                 opt.text = "draft"
                 opt.textVisible = True
+            elif stats.state == SequenceState.CRASHED:
+                opt.progress = 0
+                opt.text = "crashed"
+                opt.textVisible = True
             QApplication.style().drawControl(
                 QStyle.ControlElement.CE_ProgressBar, opt, painter
             )
 
 
 class SequenceViewerModel(QFileSystemModel):
+    """Model for sequence explorer"""
+
     def __init__(self, data_root: Path, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setRootPath(str(data_root))
@@ -144,8 +184,37 @@ class SequenceViewerModel(QFileSystemModel):
             return True
         return False
 
-    def fileIcon(self, aindex: QModelIndex) -> QtGui.QIcon:
-        if self.is_sequence_folder(aindex):
+    def fileIcon(self, index: QModelIndex) -> QtGui.QIcon:
+        if self.is_sequence_folder(index):
             return QIcon(":/icons/sequence")
         else:
-            return super().fileIcon(aindex)
+            return super().fileIcon(index)
+
+    def move_to_trash(self, index: QModelIndex):
+        path = Path(self.filePath(index))
+        send2trash(path)
+
+    def create_new_sequence(self, index: QModelIndex):
+        path = Path(self.rootPath()) / self.fileName(index)
+        text, ok = QInputDialog().getText(
+            None,
+            f"New sequence in {path}...",
+            "Sequence name:",
+            QLineEdit.Normal,
+            "new_sequence",
+        )
+        if ok and text:
+            new_sequence_path = path / text
+            try:
+                new_sequence_path.mkdir()
+                config = SequenceConfig(program=SequenceSteps())
+                with open(new_sequence_path / "sequence_config.yaml", "w") as file:
+                    file.write(yaml.safe_dump(config))
+                stats = SequenceStats()
+                with open(new_sequence_path / "sequence_state.yaml", "w") as file:
+                    file.write(yaml.safe_dump(stats))
+            except:
+                logger.error(
+                    f"Could not create new sequence '{new_sequence_path}'",
+                    exc_info=True,
+                )

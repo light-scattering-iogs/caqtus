@@ -12,6 +12,7 @@ appdirs = "^1.4.4"
 settings_model = { path = "../settings_model/", develop = true }
 experiment_config = { path = "../experiment_config/", develop = true }
 sequence = { path = "../sequence/", develop = true }
+Send2Trash = "^1.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
