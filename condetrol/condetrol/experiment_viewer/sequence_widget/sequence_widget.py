@@ -8,7 +8,7 @@ import logging
 from abc import abstractmethod, ABCMeta
 from functools import singledispatch
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Iterable
 
 import yaml
 from PyQt5.QtCore import (
@@ -20,6 +20,8 @@ from PyQt5.QtCore import (
     QObject,
     pyqtSignal,
     QThread,
+    QMimeData,
+    QByteArray,
 )
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -345,16 +347,65 @@ class StepsModel(QAbstractItemModel):
         save.wait()
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if index.isValid():
-            if index.column() == 0:
-                flags = Qt.ItemFlag.ItemIsSelectable
-                if self.sequence_state == SequenceState.DRAFT:
-                    return (
-                        flags | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled
-                    )
-                else:
-                    return flags
-        return Qt.ItemFlag.NoItemFlags
+        if index.isValid() and index.column() == 0:
+            flags = Qt.ItemFlag.ItemIsSelectable
+            if self.sequence_state == SequenceState.DRAFT:
+                flags |= (
+                    Qt.ItemFlag.ItemIsEditable
+                    | Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsDragEnabled
+                )
+                if not isinstance(
+                    self.data(index, Qt.ItemDataRole.DisplayRole),
+                    VariableDeclaration,
+                ):
+                    flags |= Qt.ItemFlag.ItemIsDropEnabled
+        else:
+            flags = Qt.ItemFlag.NoItemFlags
+        return flags
+
+    # noinspection PyTypeChecker
+    def supportedDropActions(self) -> Qt.DropActions:
+        return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
+
+    def supportedDragActions(self) -> Qt.DropAction:
+        return Qt.DropAction.MoveAction
+
+    def mimeTypes(self) -> list[str]:
+        return ["application/x-sequence_steps"]
+
+    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+        data = [self.data(index, Qt.ItemDataRole.DisplayRole) for index in indexes]
+        serialized = yaml.dump(data, Dumper=YAMLSerializable.get_dumper()).encode(
+            "utf-8"
+        )
+        mime_data = QMimeData()
+        mime_data.setData("application/x-sequence_steps", QByteArray(serialized))
+        return mime_data
+
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        yaml_string = data.data("application/x-sequence_steps").data().decode("utf-8")
+        steps = yaml.load(yaml_string, Loader=YAMLSerializable.get_loader())
+        node: Step = parent.internalPointer()
+        if row == -1:
+            position = len(node.children)
+        else:
+            position = row
+        self.beginInsertRows(parent, position, position + len(steps) - 1)
+        new_children = list(node.children)
+        for step in steps[::-1]:
+            new_children.insert(position, step)
+        node.children = new_children
+        self.endInsertRows()
+        self.save_config(self.config)
+        return True
 
     def insert_step(self, new_step: Step, index: QModelIndex):
         # insert at the end of all steps if clicked at invalid index
@@ -397,6 +448,20 @@ class StepsModel(QAbstractItemModel):
         self.save_config(self.config)
         return True
 
+    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        self.beginRemoveRows(parent, row, row + count - 1)
+        if not parent.isValid():
+            parent = self.root
+        else:
+            parent: Step = parent.internalPointer()
+        new_children = list(parent.children)
+        for _ in range(count):
+            new_children.pop(row)
+        parent.children = new_children
+        self.endRemoveRows()
+        self.save_config(self.config)
+        return True
+
 
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
@@ -430,6 +495,16 @@ class SequenceWidget(QDockWidget):
         tree.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
 
         tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        tree.setDragEnabled(True)
+        tree.setAcceptDrops(True)
+        tree.setDropIndicatorShown(True)
+        tree.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        tree.setDefaultDropAction(Qt.DropAction.MoveAction)
+        tree.setDragDropOverwriteMode(False)
+        tree.model().rowsInserted.connect(lambda _: tree.expandAll())
+
+        tree.setItemsExpandable(False)
         return tree
 
     def show_context_menu(self, position):
