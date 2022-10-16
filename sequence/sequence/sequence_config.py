@@ -3,37 +3,9 @@ from typing import Optional
 
 import yaml
 from anytree import NodeMixin
+from expression import Expression
 
 from settings_model import SettingsModel
-
-# class Step(SettingsModel, ABC):
-#     pass
-#
-#
-# class StepsSequence(Step):
-#     steps: list[Step]
-#
-#
-# class VariableDeclaration(Step):
-#     name: str
-#     expression: str
-#
-#
-# class GroupDeclaration(Step):
-#     name: str
-#     variables: list[Union["GroupDeclaration", VariableDeclaration]]
-#
-#
-# class LinspaceIteration(Step):
-#     name: str
-#     start: str
-#     stop: str
-#     num: int
-#     sub_steps: list[Step]
-#
-#
-# class ExecuteShot(Step):
-#     name: str
 from settings_model.settings_model import YAMLSerializable
 
 
@@ -75,7 +47,9 @@ class SequenceSteps(Step, YAMLSerializable):
 
 
 class VariableDeclaration(Step, YAMLSerializable):
-    def __init__(self, name: str, expression: str, parent: Optional["Step"] = None):
+    def __init__(
+        self, name: str, expression: Expression, parent: Optional["Step"] = None
+    ):
         super().__init__(parent, None)
         self.name = name
         self.expression = expression
@@ -99,8 +73,8 @@ class LinspaceLoop(Step, YAMLSerializable):
     def __init__(
         self,
         name: str,
-        start: str,
-        stop: str,
+        start: Expression,
+        stop: Expression,
         num: int,
         parent: Optional["Step"] = None,
         children: Optional[list["Step"]] = None,
@@ -135,9 +109,9 @@ class ArangeLoop(Step, YAMLSerializable):
     def __init__(
         self,
         name: str,
-        start: str,
-        stop: str,
-        step: str,
+        start: Expression,
+        stop: Expression,
+        step: Expression,
         parent: Optional["Step"] = None,
         children: Optional[list["Step"]] = None,
     ):

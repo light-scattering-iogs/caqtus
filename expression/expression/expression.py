@@ -12,7 +12,7 @@ class Expression(YAMLSerializable):
     It may depend on other upstream variables that must be specified for evaluation.
     """
 
-    def __init__(self, body: str):
+    def __init__(self, body: str = ""):
         self._body = body
         self._last_value = None
         self._last_evaluation_variables = None

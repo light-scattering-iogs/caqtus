@@ -39,6 +39,7 @@ from PyQt5.QtWidgets import (
     QMenu,
     QAction,
 )
+from expression import Expression
 
 from sequence import (
     SequenceConfig,
@@ -82,10 +83,13 @@ class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
 
     def set_step_data(self, declaration: VariableDeclaration):
         self.name_edit.setText(declaration.name)
-        self.expression_edit.setText(declaration.expression)
+        self.expression_edit.setText(declaration.expression.body)
 
     def get_step_data(self) -> dict[str]:
-        return dict(name=self.name_edit.text(), expression=self.expression_edit.text())
+        return dict(
+            name=self.name_edit.text(),
+            expression=Expression(self.expression_edit.text()),
+        )
 
 
 class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
@@ -96,15 +100,15 @@ class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
 
     def set_step_data(self, data: LinspaceLoop):
         self.name_edit.setText(data.name)
-        self.start_edit.setText(data.start)
-        self.stop_edit.setText(data.stop)
+        self.start_edit.setText(data.start.body)
+        self.stop_edit.setText(data.stop.body)
         self.num_edit.setValue(data.num)
 
     def get_step_data(self):
         return dict(
             name=self.name_edit.text(),
-            start=self.start_edit.text(),
-            stop=self.stop_edit.text(),
+            start=Expression(self.start_edit.text()),
+            stop=Expression(self.stop_edit.text()),
             num=self.num_edit.value(),
         )
 
@@ -117,32 +121,17 @@ class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
 
     def set_step_data(self, data: ArangeLoop):
         self.name_edit.setText(data.name)
-        self.start_edit.setText(data.start)
-        self.stop_edit.setText(data.stop)
-        self.step_edit.setText(data.step)
+        self.start_edit.setText(data.start.body)
+        self.stop_edit.setText(data.stop.body)
+        self.step_edit.setText(data.step.body)
 
     def get_step_data(self):
         return dict(
             name=self.name_edit.text(),
-            start=self.start_edit.text(),
-            stop=self.stop_edit.text(),
-            step=self.step_edit.text(),
+            start=Expression(self.start_edit.text()),
+            stop=Expression(self.stop_edit.text()),
+            step=Expression(self.step_edit.text()),
         )
-
-
-# class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.setupUi(self)
-#         self.setAutoFillBackground(True)
-#
-#     def set_step_data(self, shot: ExecuteShot):
-#         self.name_edit.setText(shot.name)
-#         self.shot = shot
-#
-#     def get_step_data(self) -> ExecuteShot:
-#         self.shot.name = self.name_edit.text()
-#         return self.shot
 
 
 @singledispatch
@@ -302,7 +291,6 @@ class StepsModel(QAbstractItemModel):
 
         child_node: Step = child.internalPointer()
         if not isinstance(child_node, Step):
-            logger.debug("danger")
             return QModelIndex()
         if not child_node.is_root:
             parent_node = child_node.parent
@@ -459,7 +447,7 @@ class SequenceWidget(QDockWidget):
         add_menu.addAction(create_variable_action)
         create_variable_action.triggered.connect(
             lambda: model.insert_step(
-                VariableDeclaration(name="", expression=""), index
+                VariableDeclaration(name="", expression=Expression()), index
             )
         )
 
@@ -467,7 +455,8 @@ class SequenceWidget(QDockWidget):
         add_menu.addAction(create_linspace_action)
         create_linspace_action.triggered.connect(
             lambda: model.insert_step(
-                LinspaceLoop(name="", start="", stop="", num=10), index
+                LinspaceLoop(name="", start=Expression(), stop=Expression(), num=10),
+                index,
             )
         )
 
@@ -475,7 +464,10 @@ class SequenceWidget(QDockWidget):
         add_menu.addAction(create_arange_action)
         create_arange_action.triggered.connect(
             lambda: model.insert_step(
-                ArangeLoop(name="", start="", stop="", step=""), index
+                ArangeLoop(
+                    name="", start=Expression(), stop=Expression(), step=Expression()
+                ),
+                index,
             )
         )
 
