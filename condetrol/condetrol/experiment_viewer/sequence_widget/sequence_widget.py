@@ -51,9 +51,11 @@ from sequence import (
     SequenceState,
     LinspaceLoop,
 )
-from sequence.sequence_config import ArangeLoop
+from sequence.sequence_config import ArangeLoop, ExecuteShot
 from settings_model.settings_model import YAMLSerializable
+from shot import ShotConfiguration
 from .sequence_arange_iteration_ui import Ui_ArangeDeclaration
+from .sequence_execute_shot_ui import Ui_ExecuteShot
 from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
 from .sequence_variable_declaration_ui import Ui_VariableDeclaration
 
@@ -91,6 +93,21 @@ class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
         return dict(
             name=self.name_edit.text(),
             expression=Expression(self.expression_edit.text()),
+        )
+
+
+class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi(self)
+        self.setAutoFillBackground(True)
+
+    def set_step_data(self, shot: ExecuteShot):
+        self.name_edit.setText(shot.name)
+
+    def get_step_data(self) -> dict[str]:
+        return dict(
+            name=self.name_edit.text(),
         )
 
 
@@ -145,6 +162,11 @@ def create_editor(step: Step, _: QWidget) -> StepWidget:
 @create_editor.register
 def _(_: VariableDeclaration, parent: QWidget):
     return VariableDeclarationWidget(parent)
+
+
+@create_editor.register
+def _(_: ExecuteShot, parent: QWidget):
+    return ExecuteShotWidget(parent)
 
 
 @create_editor.register
@@ -417,7 +439,7 @@ class StepsModel(QAbstractItemModel):
         else:
             node: Step = index.internalPointer()
             # if the selected step can't have children, the new step is added below it
-            if isinstance(node, VariableDeclaration):
+            if isinstance(node, (VariableDeclaration, ExecuteShot)):
                 position = index.row() + 1
                 self.beginInsertRows(QModelIndex(), position, position)
                 new_children = list(node.parent.children)
@@ -523,6 +545,14 @@ class SequenceWidget(QDockWidget):
         create_variable_action.triggered.connect(
             lambda: model.insert_step(
                 VariableDeclaration(name="", expression=Expression()), index
+            )
+        )
+
+        create_shot_action = QAction("shot")
+        add_menu.addAction(create_shot_action)
+        create_shot_action.triggered.connect(
+            lambda: model.insert_step(
+                ExecuteShot(name="shot", configuration=ShotConfiguration()), index
             )
         )
 

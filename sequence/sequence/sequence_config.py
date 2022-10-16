@@ -7,6 +7,7 @@ from expression import Expression
 
 from settings_model import SettingsModel
 from settings_model.settings_model import YAMLSerializable
+from shot import ShotConfiguration
 
 
 class Step(NodeMixin, ABC):
@@ -134,6 +135,24 @@ class ArangeLoop(Step, YAMLSerializable):
                 "step": step.step,
                 "children": [child for child in step.children],
             },
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
+
+
+class ExecuteShot(Step, YAMLSerializable):
+    def __init__(self, name: str, configuration: ShotConfiguration, parent: Optional[Step] = None):
+        super().__init__(parent, None)
+        self.name = name
+        self.configuration = configuration
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, step: "ExecuteShot"):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {"name": step.name, "configuration": step.configuration},
         )
 
     @classmethod
