@@ -6,6 +6,7 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+token-utils = "^0.1.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
