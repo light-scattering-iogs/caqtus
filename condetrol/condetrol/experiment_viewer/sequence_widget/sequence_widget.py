@@ -12,7 +12,6 @@ from typing import Optional, Iterable
 
 import yaml
 from PyQt5.QtCore import (
-    QFileSystemWatcher,
     QAbstractItemModel,
     QModelIndex,
     Qt,
@@ -22,6 +21,7 @@ from PyQt5.QtCore import (
     QThread,
     QMimeData,
     QByteArray,
+    QSignalBlocker,
 )
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -44,7 +44,6 @@ from PyQt5.QtWidgets import (
 
 from expression import Expression
 from sequence import (
-    SequenceConfig,
     Step,
     VariableDeclaration,
     SequenceStats,
@@ -58,6 +57,7 @@ from .sequence_arange_iteration_ui import Ui_ArangeDeclaration
 from .sequence_execute_shot_ui import Ui_ExecuteShot
 from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
 from .sequence_variable_declaration_ui import Ui_VariableDeclaration
+from .sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -271,37 +271,24 @@ class StepsModel(QAbstractItemModel):
 
     def __init__(self, sequence_path: Path, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config_path = sequence_path / "sequence_config.yaml"
-        self.state_path = sequence_path / "sequence_state.yaml"
 
-        with open(self.config_path) as file:
-            self.config: SequenceConfig = yaml.safe_load(file)
+        self.sequence_watcher = SequenceWatcher(sequence_path)
+        self.config = self.sequence_watcher.read_config()
         self.root = self.config.program
+        self.sequence_state = self.sequence_watcher.read_stats().state
         self.layoutChanged.emit()
 
-        self.sequence_config_watcher = QFileSystemWatcher()
-        self.sequence_config_watcher.addPath(str(self.config_path))
-        self.sequence_config_watcher.fileChanged.connect(self.change_sequence_config)
-
-        self.sequence_state_watcher = QFileSystemWatcher()
-        self.sequence_state_watcher.addPath(str(self.state_path))
-        self.sequence_state_watcher.fileChanged.connect(self.change_sequence_state)
-        self.sequence_state = SequenceState.DRAFT
-        self.sequence_state_watcher.fileChanged.emit(
-            self.sequence_state_watcher.files()[0]
-        )
+        self.sequence_watcher.config_changed.connect(self.change_sequence_config)
+        self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
 
         self.save_thread: Optional[SaveThread] = None
 
-    def change_sequence_state(self, path):
-        with open(path, "r") as file:
-            stats: SequenceStats = yaml.safe_load(file.read())
+    def change_sequence_state(self, stats: SequenceStats):
         self.sequence_state = stats.state
         self.layoutChanged.emit()
 
     def change_sequence_config(self, sequence_config):
-        with open(sequence_config) as file:
-            self.config: SequenceConfig = yaml.safe_load(file)
+        self.config = sequence_config
         self.root = self.config.program
         self.layoutChanged.emit()
 
@@ -360,23 +347,19 @@ class StepsModel(QAbstractItemModel):
             edit = True
 
         if edit:
-            self.save_config(self.config)
+            self.save_config()
         return edit
 
-    def save_config(self, config):
-        # save config to file in a new thread to avoid blocking the GUI
-        # TODO: need to fix crashing when letting the thread finish before
-        self.sequence_config_watcher.removePath(str(self.config_path))
-        serialized_config = yaml.dump(
-            config, Dumper=YAMLSerializable.get_dumper(), sort_keys=False
-        )
-        save = SaveThread(serialized_config, self.config_path)
-        # noinspection PyTypeChecker
-        save.finished.connect(
-            lambda: self.sequence_config_watcher.addPath(str(self.config_path))
-        )
-        save.start()
-        save.wait()
+    def save_config(self) -> bool:
+        with QSignalBlocker(self.sequence_watcher):
+            serialized_config = yaml.dump(
+                self.config, Dumper=YAMLSerializable.get_dumper(), sort_keys=False
+            )
+            save = SaveThread(serialized_config, self.sequence_watcher.config_path)
+            # noinspection PyTypeChecker
+            save.start()
+            save.wait()
+            return True
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
@@ -439,7 +422,7 @@ class StepsModel(QAbstractItemModel):
             new_children.insert(position, step)
         node.children = new_children
         self.endInsertRows()
-        self.save_config(self.config)
+        self.save_config()
         return True
 
     def insert_step(self, new_step: Step, index: QModelIndex):
@@ -468,7 +451,7 @@ class StepsModel(QAbstractItemModel):
                 node.children = new_children
                 self.endInsertRows()
 
-        self.save_config(self.config)
+        self.save_config()
 
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
         self.beginRemoveRows(parent, row, row)
@@ -480,7 +463,7 @@ class StepsModel(QAbstractItemModel):
         new_children.pop(row)
         parent.children = new_children
         self.endRemoveRows()
-        self.save_config(self.config)
+        self.save_config()
         return True
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
@@ -494,7 +477,7 @@ class StepsModel(QAbstractItemModel):
             new_children.pop(row)
         parent.children = new_children
         self.endRemoveRows()
-        self.save_config(self.config)
+        self.save_config()
         return True
 
 
@@ -566,7 +549,13 @@ class SequenceWidget(QDockWidget):
             add_menu.addAction(create_shot_action)
             create_shot_action.triggered.connect(
                 lambda: model.insert_step(
-                    ExecuteShot(name="shot", configuration=ShotConfiguration()), index
+                    ExecuteShot(
+                        name="shot",
+                        configuration=ShotConfiguration(
+                            step_names=["Step 0"], step_durations=[Expression("10 ms")]
+                        ),
+                    ),
+                    index,
                 )
             )
 

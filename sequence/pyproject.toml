@@ -5,8 +5,9 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 settings_model = { path = "../settings_model/", develop = true }
+expression = { path = "../expression/", develop = true }
 anytree = "^2.8.0"
 
 [tool.poetry.dev-dependencies]
