@@ -52,6 +52,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     """
 
     def __init__(self, *args, **kwargs):
+        logger.info(f"Started experiment viewer in process {os.getpid()}")
         super().__init__(*args, **kwargs)
         os.environ["QT_FILESYSTEMMODEL_WATCH_FILES"] = "1"
 

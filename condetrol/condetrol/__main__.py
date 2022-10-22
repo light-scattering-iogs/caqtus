@@ -1,13 +1,17 @@
+"""Starts an experiment manager in a different process and then creates and runs the
+experiment viewer/sequences editor in the current process"""
+
+
 import logging
 import sys
+from multiprocessing.managers import BaseManager
 
 import qdarkstyle
-import yaml
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication
 
+from experiment_manager import ExperimentManager
 from experiment_viewer import ExperimentViewer
-from sequence import SequenceConfig, SequenceSteps, VariableDeclaration
 
 
 def except_hook(cls, exception, traceback):
@@ -18,12 +22,16 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
-s = SequenceConfig(program=SequenceSteps(children=[VariableDeclaration("a", "1")]))
-# s = SequenceStats(state=SequenceState.DRAFT)
 
-print(yaml.safe_dump(s, sort_keys=False))
+class ExperimentProcessManager(BaseManager):
+    pass
+
+
+ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 
 if __name__ == "__main__":
+    m = ExperimentProcessManager(address=("localhost", 50000), authkey=b"Deardear")
+    m.start()
     sys.excepthook = except_hook
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -39,3 +47,4 @@ if __name__ == "__main__":
         app.exec()
     except Exception:
         logger.error("An exception occurred.", exc_info=True)
+    m.shutdown()

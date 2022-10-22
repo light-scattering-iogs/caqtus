@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 from enum import Enum, auto
 from functools import singledispatchmethod
 from pathlib import Path
@@ -33,7 +34,8 @@ class ExperimentState(Enum):
 
 class SequenceRunnerThread(Thread):
     def __init__(
-        self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
+            self, experiment_config: str, sequence_path: Path,
+            parent: "ExperimentManager"
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self.experiment_config: ExperimentConfig = yaml.load(
@@ -75,7 +77,6 @@ class SequenceRunnerThread(Thread):
         with open(self.sequence_path / "sequence_state.yaml", "w") as file:
             file.write(yaml.dump(self.stats, Dumper=YAMLSerializable.get_dumper()))
 
-
     def shutdown(self):
         self.parent.set_state(ExperimentState.IDLE)
 
@@ -108,7 +109,8 @@ class SequenceRunnerThread(Thread):
         unit = start.units
 
         for value in numpy.arange(
-            start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
+                start.to(unit).magnitude, stop.to(unit).magnitude,
+                step.to(unit).magnitude
         ):
             self.context[arange_loop.name] = value * unit
             for step in arange_loop.children:
@@ -117,6 +119,7 @@ class SequenceRunnerThread(Thread):
 
 class ExperimentManager:
     def __init__(self):
+        logger.info(f"Started experiment manager in process {os.getpid()}")
         self._state: ExperimentState = ExperimentState.IDLE
         self._sequence_runner_thread = None
 
