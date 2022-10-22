@@ -3,8 +3,8 @@ from typing import Optional
 
 import yaml
 from anytree import NodeMixin
-from expression import Expression
 
+from expression import Expression
 from settings_model import SettingsModel
 from settings_model.settings_model import YAMLSerializable
 from shot import ShotConfiguration
@@ -143,7 +143,9 @@ class ArangeLoop(Step, YAMLSerializable):
 
 
 class ExecuteShot(Step, YAMLSerializable):
-    def __init__(self, name: str, configuration: ShotConfiguration, parent: Optional[Step] = None):
+    def __init__(
+        self, name: str, configuration: ShotConfiguration, parent: Optional[Step] = None
+    ):
         super().__init__(parent, None)
         self.name = name
         self.configuration = configuration

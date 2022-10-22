@@ -1,0 +1,138 @@
+#### MATHEMATICAL CONSTANTS ####
+
+pi     = 3.1415926535897932384626433832795028841971693993751 = π  # pi
+
+#### DEFINED EXACT CONSTANTS ####
+
+speed_of_light = 299792458 m/s = c = c_0                      # since 1983
+planck_constant = 6.62607015e-34 J s = ℎ                      # since May 2019
+elementary_charge = 1.602176634e-19 C = e                     # since May 2019
+boltzmann_constant = 1.380649e-23 J K^-1 = k = k_B            # since May 2019
+standard_gravity = 9.80665 m/s^2 = g_0 = g0 = g_n = gravity   # since 1901
+
+#### PREFIXES ####
+
+# decimal prefixes
+nano- =  1e-9  = n-
+micro- = 1e-6  = µ- = μ- = u-
+milli- = 1e-3  = m-
+centi- = 1e-2  = c-
+deci- =  1e-1  = d-
+deca- =  1e+1  = da-
+hecto- = 1e2   = h-
+kilo- =  1e3   = k-
+mega- =  1e6   = M-
+giga- =  1e9   = G-
+tera- =  1e12  = T-
+
+#### BASE UNITS ####
+
+meter = [length] = m
+second = [time] = s
+ampere = [current] = A
+gram = [mass] = g
+kelvin = [temperature]; offset: 0 = K = °K = degreeK
+radian = [] = rad
+
+#### UNITS ####
+
+# Angle
+degree = π / 180 * radian = deg
+arcminute = degree / 60 = arcmin
+arcsecond = arcminute / 60 = arcsec
+
+# Temperature
+degree_Celsius = kelvin; offset: 273.15 = °C = degreeC
+
+# Area
+[area] = [length] ** 2
+
+# Volume
+[volume] = [length] ** 3
+
+# Frequency
+[frequency] = 1 / [time]
+hertz = 1 / second = Hz
+
+# Wavenumber
+[wavenumber] = 1 / [length]
+reciprocal_centimeter = 1 / cm = cm_1 = kayser
+
+# Velocity
+[velocity] = [length] / [time] = [speed]
+meter_per_second = meter / second = mps
+
+# Acceleration
+[acceleration] = [velocity] / [time]
+
+# Force
+[force] = [mass] * [acceleration]
+newton = kilogram * meter / second ** 2 = N
+
+# Energy
+[energy] = [force] * [length]
+joule = newton * meter = J
+
+# Power
+[power] = [energy] / [time]
+watt = joule / second = W
+
+# Momentum
+[momentum] = [length] * [mass] / [time]
+
+# Entropy
+[entropy] = [energy] / [temperature]
+
+# Intensity
+[intensity] = [power] / [area]
+
+# Electric potential
+[electric_potential] = [energy] / [charge]
+volt = joule / coulomb = V
+
+# Electric field
+[electric_field] = [electric_potential] / [length]
+
+# Resistance
+[resistance] = [electric_potential] / [current]
+ohm = volt / ampere = Ω
+
+# Resistivity
+[resistivity] = [resistance] * [length]
+
+# Conductance
+[conductance] = [current] / [electric_potential]
+siemens = ampere / volt = S = mho
+
+# Capacitance
+[capacitance] = [charge] / [electric_potential]
+farad = coulomb / volt = F
+
+# Inductance
+[inductance] = [magnetic_flux] / [current]
+henry = weber / ampere = H
+
+# Magnetic flux
+[magnetic_flux] = [electric_potential] * [time]
+weber = volt * second = Wb
+
+# Magnetic field
+[magnetic_field] = [magnetic_flux] / [area]
+tesla = weber / meter ** 2 = T
+gauss = 1e-4 * tesla = G
+
+# Electric dipole moment
+[electric_dipole] = [charge] * [length]
+
+# Electric quadrupole moment
+[electric_quadrupole] = [charge] * [area]
+
+# Magnetic dipole moment
+[magnetic_dipole] = [current] * [area]
+
+### Logaritmic Unit Definition ###
+
+decibelmilliwatt = 1e-3 watt; logbase: 10; logfactor: 10 = dBm
+decibelmicrowatt = 1e-6 watt; logbase: 10; logfactor: 10 = dBu
+
+decibel = 1 ; logbase: 10; logfactor: 10 = dB

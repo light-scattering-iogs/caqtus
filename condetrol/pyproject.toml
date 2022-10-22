@@ -11,12 +11,14 @@ QDarkStyle = "^3.1"
 appdirs = "^1.4.4"
 settings_model = { path = "../settings_model/", develop = true }
 experiment_config = { path = "../experiment_config/", develop = true }
+experiment_manager = { path = "../experiment_manager/", develop = true }
 sequence = { path = "../sequence/", develop = true }
 Send2Trash = "^1.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 black = "^22.6.0"
+jupyter = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

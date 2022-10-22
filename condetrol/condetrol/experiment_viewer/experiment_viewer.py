@@ -1,12 +1,13 @@
-import datetime
 import logging
 import os
+import shutil
 from functools import partial
+from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import yaml
 from PyQt5.QtCore import QSettings, QModelIndex, Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
     QFileSystemModel,
@@ -20,11 +21,13 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QLineEdit,
 )
+from experiment_manager import ExperimentManager
 from qtpy import QtGui
 from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
 from sequence import SequenceStats, SequenceState, SequenceConfig, SequenceSteps
+from settings_model import YAMLSerializable
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
@@ -32,6 +35,13 @@ from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+
+class ExperimentProcessManager(BaseManager):
+    pass
+
+
+ExperimentProcessManager.register("ExperimentManager")
 
 
 class ExperimentViewer(QMainWindow, Ui_MainWindow):
@@ -56,10 +66,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         self.action_edit_config.triggered.connect(self.edit_config)
         self.config: ExperimentConfig = load_config(get_config_path())
-        today_folder = self.config.data_path / datetime.datetime.now().strftime(
-            "%d-%m-%Y"
-        )
-        # today_folder.mkdir(parents=True, exist_ok=True)
         self.model = SequenceViewerModel(self.config.data_path)
         self.sequences_view.setModel(self.model)
         self.sequences_view.setRootIndex(self.model.index(str(self.config.data_path)))
@@ -74,6 +80,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         self.setCentralWidget(None)
 
+        self.experiment_process_manager = ExperimentProcessManager(
+            address=("localhost", 50000), authkey=b"Deardear"
+        )
+        self.experiment_process_manager.connect()
+        # noinspection PyUnresolvedReferences
+        self.experiment_manager: ExperimentManager = (
+            self.experiment_process_manager.ExperimentManager()
+        )
+        logger.debug(self.experiment_manager.get_state())
+
     def sequence_view_double_clicked(self, index: QModelIndex):
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
@@ -86,7 +102,28 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         menu = QMenu(self.sequences_view)
 
-        if not self.model.is_sequence_folder(index):
+        if self.model.is_sequence_folder(index):
+            stats = self.model.get_stats(index)
+            if stats.state == SequenceState.DRAFT:
+                start_sequence_action = QAction("Start")
+                menu.addAction(start_sequence_action)
+                config = yaml.dump(self.config, Dumper=YAMLSerializable.get_dumper())
+                start_sequence_action.triggered.connect(
+                    lambda _: self.experiment_manager.start_sequence(
+                        config,
+                        Path(self.model.filePath(index)).relative_to(
+                            self.config.data_path
+                        ),
+                    )
+                )
+            duplicate_sequence_action = QAction("Duplicate")
+            menu.addAction(duplicate_sequence_action)
+            config = yaml.dump(self.config, Dumper=YAMLSerializable.get_dumper())
+            duplicate_sequence_action.triggered.connect(
+                partial(self.model.duplicate_sequence, index)
+            )
+
+        else:
             create_sequence_action = QAction("New sequence")
             menu.addAction(create_sequence_action)
             create_sequence_action.triggered.connect(
@@ -123,16 +160,24 @@ class SequenceDelegate(QStyledItemDelegate):
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect
             opt.minimum = 0
-            opt.maximum = 1
+            opt.maximum = 100
+            opt.textVisible = True
             stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
             if stats.state == SequenceState.DRAFT:
                 opt.progress = 0
                 opt.text = "draft"
-                opt.textVisible = True
+            elif stats.state == SequenceState.RUNNING:
+                opt.progress = 50
+                opt.text = "running"
+            elif stats.state == SequenceState.FINISHED:
+                opt.progress = 100
+                opt.text = "finished"
+                opt.palette.setColor(QPalette.ColorRole.Highlight, QColor(98, 151, 85))
             elif stats.state == SequenceState.CRASHED:
                 opt.progress = 0
                 opt.text = "crashed"
-                opt.textVisible = True
+                opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
+                opt.palette.setColor(QPalette.ColorRole.Highlight, QColor(240, 82, 79))
             QApplication.style().drawControl(
                 QStyle.ControlElement.CE_ProgressBar, opt, painter
             )
@@ -161,13 +206,18 @@ class SequenceViewerModel(QFileSystemModel):
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
-                path = Path(self.filePath(index)) / "sequence_state.yaml"
-                with open(path) as file:
-                    result: SequenceStats = yaml.safe_load(file)
-                    return result
+                return self.get_stats(index)
             elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
                 return QIcon(":/icons/sequence")
         return super().data(index, role)
+
+    def get_stats(self, sequence_index: QModelIndex) -> SequenceStats:
+        path = Path(self.filePath(sequence_index)) / "sequence_state.yaml"
+        with open(path) as file:
+            result: SequenceStats = yaml.load(
+                file, Loader=YAMLSerializable.get_loader()
+            )
+            return result
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if (
@@ -213,6 +263,33 @@ class SequenceViewerModel(QFileSystemModel):
                 stats = SequenceStats()
                 with open(new_sequence_path / "sequence_state.yaml", "w") as file:
                     file.write(yaml.safe_dump(stats))
+            except:
+                logger.error(
+                    f"Could not create new sequence '{new_sequence_path}'",
+                    exc_info=True,
+                )
+
+    def duplicate_sequence(self, index: QModelIndex):
+        path = Path(self.filePath(index)).relative_to(self.rootPath())
+        text, ok = QInputDialog().getText(
+            None,
+            f"Duplicate sequence {path}",
+            "New sequence name:",
+            QLineEdit.Normal,
+            str(path),
+        )
+        if ok and text:
+            new_sequence_path = Path(self.rootPath()) / text
+            try:
+                new_sequence_path.mkdir(parents=True)
+                stats = SequenceStats()
+                with open(new_sequence_path / "sequence_state.yaml", "w") as file:
+                    file.write(yaml.safe_dump(stats))
+                shutil.copy(
+                    Path(self.filePath(index)) / "sequence_config.yaml",
+                    new_sequence_path / "sequence_config.yaml",
+                )
+
             except:
                 logger.error(
                     f"Could not create new sequence '{new_sequence_path}'",

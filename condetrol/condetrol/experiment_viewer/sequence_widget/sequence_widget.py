@@ -41,8 +41,8 @@ from PyQt5.QtWidgets import (
     QMenu,
     QAction,
 )
-from expression import Expression
 
+from expression import Expression
 from sequence import (
     SequenceConfig,
     Step,
@@ -221,15 +221,22 @@ class StepDelegate(QStyledItemDelegate):
     ) -> None:
         data = index.data(Qt.ItemDataRole.DisplayRole)
         if isinstance(data, Step):
-            if option.state & QStyle.StateFlag.State_Selected:
-                painter.fillRect(option.rect, option.palette.highlight())
-            w = create_editor(data, option.widget)
-            w.set_step_data(data)
-            self.updateEditorGeometry(w, option, index)
-            if not (option.state & QStyle.StateFlag.State_Enabled):
-                w.setEnabled(False)
             pixmap = QPixmap(option.rect.size())
-            w.render(pixmap)
+            if option.state & QStyle.StateFlag.State_Selected:
+                pixmap.fill(option.palette.highlight().color())
+            else:
+                pixmap.fill(option.palette.base().color())
+
+            if not (option.state & QStyle.StateFlag.State_Editing):
+                w = create_editor(data, option.widget)
+                w.set_step_data(data)
+                self.updateEditorGeometry(w, option, index)
+                if not (option.state & QStyle.StateFlag.State_Enabled):
+                    w.setEnabled(False)
+
+                w.render(pixmap, flags=QWidget.RenderFlag.DrawChildren)
+            else:
+                logger.debug("editing")
             painter.drawPixmap(option.rect, pixmap)
         else:
             super().paint(painter, option, index)
@@ -280,12 +287,15 @@ class StepsModel(QAbstractItemModel):
         self.sequence_state_watcher.addPath(str(self.state_path))
         self.sequence_state_watcher.fileChanged.connect(self.change_sequence_state)
         self.sequence_state = SequenceState.DRAFT
+        self.sequence_state_watcher.fileChanged.emit(
+            self.sequence_state_watcher.files()[0]
+        )
 
         self.save_thread: Optional[SaveThread] = None
 
     def change_sequence_state(self, path):
         with open(path, "r") as file:
-            stats: SequenceStats = yaml.safe_load(file)
+            stats: SequenceStats = yaml.safe_load(file.read())
         self.sequence_state = stats.state
         self.layoutChanged.emit()
 
@@ -370,13 +380,13 @@ class StepsModel(QAbstractItemModel):
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
-            flags = Qt.ItemFlag.ItemIsSelectable
+            flags = (
+                Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsDragEnabled
+                | Qt.ItemFlag.ItemIsEnabled
+            )
             if self.sequence_state == SequenceState.DRAFT:
-                flags |= (
-                    Qt.ItemFlag.ItemIsEditable
-                    | Qt.ItemFlag.ItemIsEnabled
-                    | Qt.ItemFlag.ItemIsDragEnabled
-                )
+                flags |= Qt.ItemFlag.ItemIsEditable
                 if not isinstance(
                     self.data(index, Qt.ItemDataRole.DisplayRole),
                     VariableDeclaration,
@@ -391,7 +401,10 @@ class StepsModel(QAbstractItemModel):
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def supportedDragActions(self) -> Qt.DropAction:
-        return Qt.DropAction.MoveAction
+        if self.sequence_state == SequenceState.DRAFT:
+            return Qt.DropAction.MoveAction
+        else:
+            return Qt.DropAction.CopyAction
 
     def mimeTypes(self) -> list[str]:
         return ["application/x-sequence_steps"]
@@ -533,57 +546,63 @@ class SequenceWidget(QDockWidget):
         index = self.program_tree.indexAt(position)
         # noinspection PyTypeChecker
         model: StepsModel = self.program_tree.model()
+        if model.sequence_state == SequenceState.DRAFT:
 
-        menu = QMenu(self.program_tree)
+            menu = QMenu(self.program_tree)
 
-        add_menu = QMenu()
-        add_menu.setTitle("Add..")
-        menu.addMenu(add_menu)
+            add_menu = QMenu()
+            add_menu.setTitle("Add...")
+            menu.addMenu(add_menu)
 
-        create_variable_action = QAction("variable declaration")
-        add_menu.addAction(create_variable_action)
-        create_variable_action.triggered.connect(
-            lambda: model.insert_step(
-                VariableDeclaration(name="", expression=Expression()), index
-            )
-        )
-
-        create_shot_action = QAction("shot")
-        add_menu.addAction(create_shot_action)
-        create_shot_action.triggered.connect(
-            lambda: model.insert_step(
-                ExecuteShot(name="shot", configuration=ShotConfiguration()), index
-            )
-        )
-
-        create_linspace_action = QAction("linspace loop")
-        add_menu.addAction(create_linspace_action)
-        create_linspace_action.triggered.connect(
-            lambda: model.insert_step(
-                LinspaceLoop(name="", start=Expression(), stop=Expression(), num=10),
-                index,
-            )
-        )
-
-        create_arange_action = QAction("arange loop")
-        add_menu.addAction(create_arange_action)
-        create_arange_action.triggered.connect(
-            lambda: model.insert_step(
-                ArangeLoop(
-                    name="", start=Expression(), stop=Expression(), step=Expression()
-                ),
-                index,
-            )
-        )
-
-        if index.isValid():
-            delete_action = QAction("Delete")
-            menu.addAction(delete_action)
-            delete_action.triggered.connect(
-                lambda: model.removeRow(index.row(), index.parent())
+            create_variable_action = QAction("variable")
+            add_menu.addAction(create_variable_action)
+            create_variable_action.triggered.connect(
+                lambda: model.insert_step(
+                    VariableDeclaration(name="", expression=Expression()), index
+                )
             )
 
-        menu.exec(self.program_tree.mapToGlobal(position))
+            create_shot_action = QAction("shot")
+            add_menu.addAction(create_shot_action)
+            create_shot_action.triggered.connect(
+                lambda: model.insert_step(
+                    ExecuteShot(name="shot", configuration=ShotConfiguration()), index
+                )
+            )
+
+            create_linspace_action = QAction("linspace loop")
+            add_menu.addAction(create_linspace_action)
+            create_linspace_action.triggered.connect(
+                lambda: model.insert_step(
+                    LinspaceLoop(
+                        name="", start=Expression(), stop=Expression(), num=10
+                    ),
+                    index,
+                )
+            )
+
+            create_arange_action = QAction("arange loop")
+            add_menu.addAction(create_arange_action)
+            create_arange_action.triggered.connect(
+                lambda: model.insert_step(
+                    ArangeLoop(
+                        name="",
+                        start=Expression(),
+                        stop=Expression(),
+                        step=Expression(),
+                    ),
+                    index,
+                )
+            )
+
+            if index.isValid():
+                delete_action = QAction("Delete")
+                menu.addAction(delete_action)
+                delete_action.triggered.connect(
+                    lambda: model.removeRow(index.row(), index.parent())
+                )
+
+            menu.exec(self.program_tree.mapToGlobal(position))
 
     def create_shot_widget(self):
         scene = QGraphicsScene()
