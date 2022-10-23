@@ -1,21 +1,30 @@
 import logging
 from pathlib import Path
+from typing import Optional, TypeVar, Generic
 
 import yaml
 from PyQt5 import QtGui
-from PyQt5.QtCore import QSettings, QModelIndex, Qt, QAbstractListModel
+from PyQt5.QtCore import (
+    QSettings,
+    QModelIndex,
+    Qt,
+    QAbstractListModel,
+    QAbstractItemModel,
+)
 from PyQt5.QtWidgets import (
     QDialog,
     QDataWidgetMapper,
     QWidget,
     QFormLayout,
     QTreeWidgetItem,
+    QLabel,
 )
+from anytree import NodeMixin
 from appdirs import user_config_dir
-from experiment_config import ExperimentConfig
 
 from condetrol.utils import log_error
 from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
+from experiment_config import ExperimentConfig
 from .config_editor_ui import Ui_config_editor
 
 logger = logging.getLogger(__name__)
@@ -131,12 +140,40 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.restoreGeometry(
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
-        self.stack_widget.addWidget(SystemSettingsEditor())
-        self.system_selector = QTreeWidgetItem(self.category_tree)
-        self.system_selector.setText(0, "System")
-        self.system_selector.setSelected(True)
+
+        self.d = {}
+        self.d["system"] = (
+            QTreeWidgetItem(self.category_tree, ["System"]),
+            SystemSettingsEditor(),
+        )
+        self.d["system"][0].setSelected(True)
+        self.d["constants"] = (
+            QTreeWidgetItem(self.category_tree, ["Constants"]),
+            QLabel("Constants"),
+        )
+        self.d["devices"] = (QTreeWidgetItem(self.category_tree, ["Devices"]), None)
+        self.d[r"devices\spincore"] = (
+            QTreeWidgetItem(self.d["devices"][0], ["Spincore pulseblaster"]),
+            QLabel("Spincore"),
+        )
+        self.d[r"devices\ni6738"] = (
+            QTreeWidgetItem(self.d["devices"][0], ["NI6738"]),
+            QLabel("NI6738"),
+        )
+
+        for w in self.d.values():
+            if w[1] is not None:
+                self.stack_widget.addWidget(w[1])
+
+        self.category_tree.currentItemChanged.connect(self.show_widget)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
         super().closeEvent(a0)
+
+    def show_widget(self, item: QTreeWidgetItem, _):
+        for it, widget in self.d.values():
+            if it == item and widget is not None:
+                self.stack_widget.setCurrentWidget(widget)
+                break
