@@ -41,6 +41,14 @@ class YAMLSerializable(abc.ABC):
         """
         ...
 
+    @classmethod
+    def load(cls, stream):
+        return yaml.load(stream, Loader=cls.get_loader())
+
+    @classmethod
+    def dump(cls, data, stream=None):
+        return yaml.dump(data, stream=stream, Dumper=cls.get_dumper())
+
 
 class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
     """Allows to store and load experiment configuration with type validation

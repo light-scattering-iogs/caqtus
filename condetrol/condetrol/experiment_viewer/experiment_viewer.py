@@ -95,7 +95,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
         if model.is_sequence_folder(index):
-            sequence_widget = SequenceWidget(Path(model.filePath(index)))
+            sequence_widget = SequenceWidget(
+                Path(model.filePath(index)), get_config_path()
+            )
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
 
     def show_context_menu(self, position):

@@ -1,9 +1,12 @@
 import logging
 from pathlib import Path
 
+import yaml
 from PyQt5.QtCore import Qt, QModelIndex
 from PyQt5.QtWidgets import QWidget, QTableView, QVBoxLayout, QSizePolicy, QSplitter
 
+from experiment_config import ExperimentConfig
+from settings_model import YAMLSerializable
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -11,10 +14,13 @@ logger.setLevel("DEBUG")
 
 
 class ShotWidget(QWidget):
-    def __init__(self, sequence_path: Path, *args):
+    def __init__(self, sequence_path: Path, experiment_config_path: Path, *args):
         super().__init__(*args)
         self._sequence_path = sequence_path
-        self.model = SwimLaneModel(self._sequence_path, "shot")
+        with open(experiment_config_path, "r") as file:
+            self.experiment_config: ExperimentConfig = YAMLSerializable.load(file)
+
+        self.model = SwimLaneModel(self._sequence_path, "shot", self.experiment_config)
 
         self.layout = QVBoxLayout()
         self.layout.addWidget(SwimLaneWidget(self.model))

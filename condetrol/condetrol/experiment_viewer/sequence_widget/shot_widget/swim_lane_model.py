@@ -5,6 +5,7 @@ from typing import Optional
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
 
+from experiment_config import ExperimentConfig
 from sequence import Step, ExecuteShot, SequenceStats, SequenceConfig
 from shot import ShotConfiguration
 from ..sequence_watcher import SequenceWatcher
@@ -21,7 +22,7 @@ class SwimLaneModel(QAbstractTableModel):
     duration of the steps. Other rows are device lanes.
     """
 
-    def __init__(self, sequence_path: Path, shot_name: str):
+    def __init__(self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig):
         super().__init__()
         self.config_path = sequence_path / "sequence_config.yaml"
         self.state_path = sequence_path / "sequence_state.yaml"

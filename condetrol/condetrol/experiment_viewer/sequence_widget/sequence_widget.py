@@ -479,7 +479,9 @@ class StepsModel(QAbstractItemModel):
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
 
-    def __init__(self, sequence_path: Path, *args, **kwargs):
+    def __init__(
+        self, sequence_path: Path, experiment_config_path: Path, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self._path = sequence_path
         self.setWindowTitle(f"{self._path}")
@@ -491,7 +493,7 @@ class SequenceWidget(QDockWidget):
         self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.tab_widget.addTab(self.program_tree, "Sequence steps")
 
-        self.shot_widget = self.create_shot_widget()
+        self.shot_widget = self.create_shot_widget(experiment_config_path)
         self.tab_widget.addTab(self.shot_widget, "Shot")
 
     def create_sequence_tree(self):
@@ -589,6 +591,6 @@ class SequenceWidget(QDockWidget):
 
             menu.exec(self.program_tree.mapToGlobal(position))
 
-    def create_shot_widget(self):
-        w = ShotWidget(self._path)
+    def create_shot_widget(self, experiment_config_path):
+        w = ShotWidget(self._path, experiment_config_path)
         return w
