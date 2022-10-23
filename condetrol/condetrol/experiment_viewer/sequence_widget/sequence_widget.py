@@ -21,7 +21,6 @@ from PyQt5.QtCore import (
     QThread,
     QMimeData,
     QByteArray,
-    QSignalBlocker,
 )
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -33,11 +32,6 @@ from PyQt5.QtWidgets import (
     QStyle,
     QAbstractItemView,
     QTabWidget,
-    QGraphicsScene,
-    QGraphicsView,
-    QGraphicsGridLayout,
-    QGraphicsWidget,
-    QLabel,
     QMenu,
     QAction,
 )
@@ -58,6 +52,7 @@ from .sequence_execute_shot_ui import Ui_ExecuteShot
 from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
 from .sequence_variable_declaration_ui import Ui_VariableDeclaration
 from .sequence_watcher import SequenceWatcher
+from .shot_widget import ShotWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -351,7 +346,7 @@ class StepsModel(QAbstractItemModel):
         return edit
 
     def save_config(self) -> bool:
-        with QSignalBlocker(self.sequence_watcher):
+        with self.sequence_watcher.block_signals():
             serialized_config = yaml.dump(
                 self.config, Dumper=YAMLSerializable.get_dumper(), sort_keys=False
             )
@@ -552,7 +547,8 @@ class SequenceWidget(QDockWidget):
                     ExecuteShot(
                         name="shot",
                         configuration=ShotConfiguration(
-                            step_names=["Step 0"], step_durations=[Expression("10 ms")]
+                            step_names=["Step 0"],
+                            step_durations=[Expression("10 ms")],
                         ),
                     ),
                     index,
@@ -594,17 +590,5 @@ class SequenceWidget(QDockWidget):
             menu.exec(self.program_tree.mapToGlobal(position))
 
     def create_shot_widget(self):
-        scene = QGraphicsScene()
-        textEdit = scene.addWidget(QLabel("Step 0"))
-        pushButton = scene.addWidget(QLabel("Step 1"))
-
-        layout = QGraphicsGridLayout()
-        layout.addItem(textEdit, 0, 0)
-        layout.addItem(pushButton, 0, 1)
-
-        form = QGraphicsWidget()
-        form.setLayout(layout)
-        scene.addItem(form)
-
-        view = QGraphicsView(scene)
-        return view
+        w = ShotWidget(self._path)
+        return w

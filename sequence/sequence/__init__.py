@@ -7,5 +7,6 @@ from .sequence_config import (
     SequenceSteps,
     VariableDeclaration,
     LinspaceLoop,
+    ExecuteShot,
 )
 from .sequence_state import SequenceState, SequenceStats

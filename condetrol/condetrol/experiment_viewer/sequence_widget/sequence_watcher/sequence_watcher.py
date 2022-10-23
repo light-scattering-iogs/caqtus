@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
@@ -44,3 +45,11 @@ class SequenceWatcher(QObject):
 
     def _update_stats(self, *args):
         self.stats_changed.emit(self.read_stats())
+
+    @contextmanager
+    def block_signals(self):
+        self.sequence_config_watcher.removePath(str(self.config_path))
+        try:
+            yield
+        finally:
+            self.sequence_config_watcher.addPath(str(self.config_path))
