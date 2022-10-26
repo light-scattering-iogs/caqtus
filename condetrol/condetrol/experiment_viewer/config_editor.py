@@ -1,15 +1,12 @@
 import logging
 from pathlib import Path
-from typing import Optional, TypeVar, Generic
 
-import yaml
 from PyQt5 import QtGui
 from PyQt5.QtCore import (
     QSettings,
     QModelIndex,
     Qt,
     QAbstractListModel,
-    QAbstractItemModel,
 )
 from PyQt5.QtWidgets import (
     QDialog,
@@ -19,12 +16,12 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QLabel,
 )
-from anytree import NodeMixin
 from appdirs import user_config_dir
 
 from condetrol.utils import log_error
 from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
 from experiment_config import ExperimentConfig
+from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
 
 logger = logging.getLogger(__name__)
@@ -61,7 +58,7 @@ class ConfigModel(QAbstractListModel):
             if not self._save_path.parent.exists():
                 self._save_path.parent.mkdir(exist_ok=True, parents=True)
             with open(self._save_path, "w") as file:
-                yaml.safe_dump(self._config, file)
+                YAMLSerializable.dump(self._config, file)
 
         return change
 
@@ -106,7 +103,7 @@ def load_config(config_path: Path) -> ExperimentConfig:
         # noinspection PyBroadException
         try:
             with open(config_path, "r") as file:
-                config = yaml.safe_load(file)
+                config = YAMLSerializable.load(file)
             if not isinstance(config, ExperimentConfig):
                 raise TypeError(f"Config is not correct: {config}")
         except Exception:

@@ -1,13 +1,15 @@
 import logging
 from functools import singledispatch
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
 
 from experiment_config import ExperimentConfig
-from sequence import Step, ExecuteShot, SequenceStats, SequenceConfig
-from shot import ShotConfiguration
+from expression import Expression
+from sequence import Step, ExecuteShot, SequenceStats, SequenceConfig, SequenceState
+from settings_model import YAMLSerializable
+from shot import ShotConfiguration, DigitalLane, AnalogLane, Lane
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -22,10 +24,13 @@ class SwimLaneModel(QAbstractTableModel):
     duration of the steps. Other rows are device lanes.
     """
 
-    def __init__(self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig):
+    def __init__(
+        self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
+    ):
         super().__init__()
         self.config_path = sequence_path / "sequence_config.yaml"
         self.state_path = sequence_path / "sequence_state.yaml"
+        self.experiment_config = experiment_config
 
         self.shot_name = shot_name
         self.sequence_watcher = SequenceWatcher(sequence_path)
@@ -65,7 +70,46 @@ class SwimLaneModel(QAbstractTableModel):
             elif index.row() == 1:
                 return self.shot_config.step_durations[index.column()].body
             else:
-                return self.shot_config.lanes[index.row() - 2].values[index.column()]
+                lane = self.get_lane(index)
+                if isinstance(lane, DigitalLane):
+                    return lane.values[index.column()]
+                elif isinstance(lane, AnalogLane):
+                    return lane.values[index.column()].body
+
+    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+        edit = False
+        if role == Qt.ItemDataRole.EditRole:
+            if index.row() == 0:
+                self.shot_config.step_names[index.column()] = value
+                edit = True
+            elif index.row() == 1:
+                self.shot_config.step_durations[index.column()].body = value
+                edit = True
+            else:
+                lane = self.get_lane(index)
+                if isinstance(lane, AnalogLane):
+                    lane.values[index.column()].body = value
+                    edit = True
+                elif isinstance(lane, DigitalLane):
+                    lane.values[index.column()] = value
+                    edit = True
+
+        if edit:
+            self.save_config()
+        return edit
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if index.isValid():
+            flags = (
+                Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsDragEnabled
+                | Qt.ItemFlag.ItemIsEnabled
+            )
+            if self.sequence_state == SequenceState.DRAFT:
+                flags |= Qt.ItemFlag.ItemIsEditable
+        else:
+            flags = Qt.ItemFlag.NoItemFlags
+        return flags
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -86,6 +130,61 @@ class SwimLaneModel(QAbstractTableModel):
             return QSize(
                 self.shot_config.lanes[index.row() - 2].spans[index.column()], 1
             )
+
+    def get_lane(self, index: QModelIndex):
+        if index.row() >= 1:
+            return self.shot_config.lanes[index.row() - 2]
+
+    def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
+        self.beginInsertColumns(parent, column, column)
+        self.shot_config.step_names.insert(column, f"Step {column}")
+        self.shot_config.step_durations.insert(column, Expression("..."))
+        for lane in self.shot_config.lanes:
+            if isinstance(lane, DigitalLane):
+                lane.insert(column, False)
+            elif isinstance(lane, AnalogLane):
+                lane.insert(column, Expression("..."))
+
+        self.endInsertColumns()
+        self.save_config()
+        self.layoutChanged.emit()
+        return True
+
+    def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
+        self.beginRemoveColumns(parent, column, column)
+        self.shot_config.step_names.pop(column)
+        self.shot_config.step_durations.pop(column)
+        for lane in self.shot_config.lanes:
+            lane.remove(column)
+        self.endRemoveColumns()
+        self.save_config()
+        self.layoutChanged.emit()
+        return True
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        self.beginRemoveRows(parent, row, row)
+        self.shot_config.lanes.pop(row - 2)
+        self.endRemoveRows()
+        self.save_config()
+        return True
+
+    def insert_lane(self, row: int, lane_type: Type[Lane], name: str):
+        if lane_type == DigitalLane:
+            new_lane = DigitalLane(
+                name=name,
+                values=[False for _ in range(self.columnCount())],
+                spans=[1 for _ in range(self.columnCount())],
+            )
+            self.beginInsertRows(QModelIndex(), row, row)
+            self.shot_config.lanes.insert(row-2, new_lane)
+            self.endInsertRows()
+            self.save_config()
+
+    def save_config(self) -> bool:
+        with self.sequence_watcher.block_signals():
+            with open(self.sequence_watcher.config_path, "w") as file:
+                file.write(YAMLSerializable.dump(self.sequence_config))
+            return True
 
 
 @singledispatch

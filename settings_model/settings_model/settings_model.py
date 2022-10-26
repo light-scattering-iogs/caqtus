@@ -1,8 +1,12 @@
 import abc
+from enum import Enum
 from pathlib import Path, WindowsPath
+from typing import Type
 
 import pydantic
 import yaml
+
+yaml.SafeDumper.ignore_aliases = lambda *args: True
 
 
 class YAMLSerializable(abc.ABC):
@@ -47,7 +51,18 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     def dump(cls, data, stream=None):
-        return yaml.dump(data, stream=stream, Dumper=cls.get_dumper())
+        return yaml.dump(data, stream=stream, Dumper=cls.get_dumper(), sort_keys=False)
+
+    @classmethod
+    def register_enum(cls, enum_class: Type[Enum]):
+        def representer(dumper: yaml.Dumper, value):
+            return dumper.represent_scalar(f"!{enum_class.__name__}", value.name)
+
+        def constructor(loader: yaml.Loader, node: yaml.Node):
+            return enum_class[loader.construct_scalar(node)]
+
+        cls.get_dumper().add_representer(enum_class, representer)
+        cls.get_loader().add_constructor(f"!{enum_class.__name__}", constructor)
 
 
 class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):

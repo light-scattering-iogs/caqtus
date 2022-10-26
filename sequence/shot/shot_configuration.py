@@ -8,17 +8,59 @@ from settings_model import SettingsModel
 T = TypeVar("T")
 
 
-class Lane(SettingsModel, Generic[T]):
+class Lane(Generic[T], SettingsModel):
     """Represents a temporal list of actions spread over steps that a device can do
 
     Some actions may span over several steps.
+    ex: values = [1, 2, 3, 4, 5]
+        spans  = [1, 2, 0, 1, 1]
+    is equivalent to the time series [1, 2, 2, 4, 5].
     """
+
     name: str
     values: list[T]
     spans: list[int]
 
     def __len__(self):
         return len(self.values)
+
+    def insert(self, index: int, value: T):
+        if index >= len(self) or self.spans[index] != 0:
+            self.values.insert(index, value)
+            self.spans.insert(index, 1)
+        elif self.spans[index] == 0:
+            spanner = self.find_spanner(index)
+            self.spans[spanner] += 1
+            self.values.insert(index, self.values[spanner])
+            self.spans.insert(index, 0)
+
+    def remove(self, index):
+        if self.spans[index] == 0:
+            spanner = self.find_spanner(index)
+            self.spans[spanner] -= 1
+        if self.spans[index] > 1:
+            self.spans[index + 1] = self.spans[index] - 1
+        self.values.pop(index)
+        self.spans.pop(index)
+
+    def find_spanner(self, index):
+        i = index - 1
+        while self.spans[i] == 0:
+            i -= 1
+        return i
+
+
+
+class DigitalLane(Lane[bool]):
+    pass
+
+
+class AnalogLane(Lane[Expression]):
+    pass
+
+
+class CameraLane(Lane[bool]):
+    pass
 
 
 class ShotConfiguration(SettingsModel):
@@ -40,3 +82,6 @@ class ShotConfiguration(SettingsModel):
                     f"Length of lane '{lane.name}' does not match length of steps"
                 )
         return lanes
+
+    def get_lane_names(self) -> list[str]:
+        return [lane.name for lane in self.lanes]
