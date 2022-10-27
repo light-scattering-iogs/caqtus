@@ -7,7 +7,7 @@ import pint
 ureg = pint.UnitRegistry(
     Path(__file__).parent / "units_definition.txt", autoconvert_offset_to_baseunit=True
 )
-Q = ureg.Quantity
+Quantity = ureg.Quantity
 
 TIME_UNITS = {"s", "ms", "µs", "ns"}
 

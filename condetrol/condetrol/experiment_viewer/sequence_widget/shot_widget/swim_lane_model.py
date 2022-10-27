@@ -1,7 +1,8 @@
 import logging
 from functools import singledispatch
+from itertools import groupby
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Type, Iterable
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
 
@@ -137,7 +138,7 @@ class SwimLaneModel(QAbstractTableModel):
 
     def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
         self.beginInsertColumns(parent, column, column)
-        self.shot_config.step_names.insert(column, f"Step {column}")
+        self.shot_config.step_names.insert(column, f"...")
         self.shot_config.step_durations.insert(column, Expression("..."))
         for lane in self.shot_config.lanes:
             if isinstance(lane, DigitalLane):
@@ -169,12 +170,20 @@ class SwimLaneModel(QAbstractTableModel):
         return True
 
     def insert_lane(self, row: int, lane_type: Type[Lane], name: str):
+        new_lane = None
         if lane_type == DigitalLane:
             new_lane = DigitalLane(
                 name=name,
                 values=[False for _ in range(self.columnCount())],
                 spans=[1 for _ in range(self.columnCount())],
             )
+        elif lane_type == AnalogLane:
+            new_lane = AnalogLane(
+                name=name,
+                values=[Expression("...") for _ in range(self.columnCount())],
+                spans=[1 for _ in range(self.columnCount())],
+            )
+        if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)
             self.shot_config.lanes.insert(row-2, new_lane)
             self.endInsertRows()
@@ -185,6 +194,31 @@ class SwimLaneModel(QAbstractTableModel):
             with open(self.sequence_watcher.config_path, "w") as file:
                 file.write(YAMLSerializable.dump(self.sequence_config))
             return True
+
+    def merge(self, indexes: Iterable[QModelIndex]):
+        coordinates = [(index.row() - 2, index.column()) for index in indexes]
+        coordinates.sort()
+        lanes = groupby(coordinates, key=lambda x: x[0])
+        for lane, group in lanes:
+            l = list(group)
+            start = l[0][1]
+            stop = l[-1][1] + 1
+            self.shot_config.lanes[lane].merge(start, stop)
+        self.layoutChanged.emit()
+
+    def break_(self, indexes: Iterable[QModelIndex]):
+        coordinates = [(index.row() - 2, index.column()) for index in indexes]
+        coordinates.sort()
+        lanes = groupby(coordinates, key=lambda x: x[0])
+        for lane, group in lanes:
+            l = list(group)
+            start = l[0][1]
+            stop = l[-1][1] + 1
+            self.shot_config.lanes[lane].break_(start, stop)
+        self.layoutChanged.emit()
+
+
+
 
 
 @singledispatch

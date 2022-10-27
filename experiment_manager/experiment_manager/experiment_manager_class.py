@@ -20,7 +20,7 @@ from sequence import (
 )
 from sequence.sequence_config import ArangeLoop
 from settings_model import YAMLSerializable
-from units import units, Q
+from units import units, Quantity
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -95,16 +95,16 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, declaration: VariableDeclaration):
-        self.context[declaration.name] = Q(
+        self.context[declaration.name] = Quantity(
             declaration.expression.evaluate(self.context | units)
         )
         logger.debug(self.context)
 
     @run_step.register
     def _(self, arange_loop: ArangeLoop):
-        start = Q(arange_loop.start.evaluate(self.context | units))
-        stop = Q(arange_loop.stop.evaluate(self.context | units))
-        step = Q(arange_loop.step.evaluate(self.context | units))
+        start = Quantity(arange_loop.start.evaluate(self.context | units))
+        stop = Quantity(arange_loop.stop.evaluate(self.context | units))
+        step = Quantity(arange_loop.step.evaluate(self.context | units))
 
         unit = start.units
 

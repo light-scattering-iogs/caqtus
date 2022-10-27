@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from experiment_config import ExperimentConfig
 from sequence import SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane
+from shot import DigitalLane, AnalogLane
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,7 @@ class SpanTableView(QTableView):
         self.model().layoutChanged.emit()
 
     def update_span(self):
+        self.clearSpans()
         for row in range(self.model().rowCount()):
             for column in range(self.model().columnCount()):
                 index = self.model().index(row, column, QModelIndex())
@@ -143,7 +144,6 @@ class SwimLaneWidget(QWidget):
         self.lanes_view.horizontalScrollBar().valueChanged.connect(
             self.steps_view.horizontalScrollBar().setValue
         )
-        self.lanes_view.update_span()
 
         self.steps_view.horizontalHeader().setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
@@ -157,6 +157,13 @@ class SwimLaneWidget(QWidget):
         )
         self.lanes_view.verticalHeader().customContextMenuRequested.connect(
             self.show_lanes_context_menu
+        )
+
+        self.lanes_view.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.lanes_view.customContextMenuRequested.connect(
+            self.show_lane_cells_context_menu
         )
 
     def update_vertical_header_width(self):
@@ -190,9 +197,15 @@ class SwimLaneWidget(QWidget):
                 menu.addMenu(add_lane_menu)
                 add_digital_lane_menu = QMenu("digital")
                 actions = self.create_digital_add_lane_actions()
-                for action in actions:
-                    add_digital_lane_menu.addAction(action)
+                for digital_action in actions:
+                    add_digital_lane_menu.addAction(digital_action)
                 add_lane_menu.addMenu(add_digital_lane_menu)
+
+                add_analog_lane_menu = QMenu("analog")
+                actions = self.create_analog_add_lane_actions()
+                for analog_action in actions:
+                    add_analog_lane_menu.addAction(analog_action)
+                add_lane_menu.addMenu(add_analog_lane_menu)
 
             else:
                 remove_lane_action = QAction("Remove")
@@ -209,12 +222,29 @@ class SwimLaneWidget(QWidget):
         possible_channels = unused_channels.difference(in_use_channels)
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
-            logger.debug(action.text())
             action.triggered.connect(
                 partial(
                     self._model.insert_lane,
                     self._model.rowCount(),
                     DigitalLane,
+                    action.text(),
+                )
+            )
+        return actions
+
+    def create_analog_add_lane_actions(self):
+        unused_channels = (
+            self._model.experiment_config.ni6738_analog_sequencer.get_named_channels()
+        )
+        in_use_channels = self._model.shot_config.get_lane_names()
+        possible_channels = unused_channels.difference(in_use_channels)
+        actions = [QAction(channel) for channel in possible_channels]
+        for action in actions:
+            action.triggered.connect(
+                partial(
+                    self._model.insert_lane,
+                    self._model.rowCount(),
+                    AnalogLane,
                     action.text(),
                 )
             )
@@ -255,3 +285,28 @@ class SwimLaneWidget(QWidget):
                 )
 
             menu.exec(self.steps_view.horizontalHeader().mapToGlobal(position))
+
+    def show_lane_cells_context_menu(self, position):
+        if self._model.sequence_state == SequenceState.DRAFT:
+            menu = QMenu(self.lanes_view.viewport())
+
+            index = self.lanes_view.indexAt(position)
+            if index.isValid():
+                merge_action = QAction("merge")
+                menu.addAction(merge_action)
+                merge_action.triggered.connect(
+                    lambda: self._model.merge(
+                        self.lanes_view.selectionModel().selectedIndexes()
+                    )
+                )
+                break_action = QAction("break")
+                menu.addAction(break_action)
+                break_action.triggered.connect(
+                    lambda: self._model.break_(
+                        self.lanes_view.selectionModel().selectedIndexes()
+                    )
+                )
+
+            menu.exec(self.lanes_view.viewport().mapToGlobal(position))
+
+

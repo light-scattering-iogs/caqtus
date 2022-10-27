@@ -4,6 +4,10 @@ from pydantic import validator
 
 from expression import Expression
 from settings_model import SettingsModel
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 T = TypeVar("T")
 
@@ -29,33 +33,50 @@ class Lane(Generic[T], SettingsModel):
             self.values.insert(index, value)
             self.spans.insert(index, 1)
         elif self.spans[index] == 0:
-            spanner = self.find_spanner(index)
+            spanner = self._find_spanner(index)
             self.spans[spanner] += 1
             self.values.insert(index, self.values[spanner])
             self.spans.insert(index, 0)
 
     def remove(self, index):
         if self.spans[index] == 0:
-            spanner = self.find_spanner(index)
+            spanner = self._find_spanner(index)
             self.spans[spanner] -= 1
         if self.spans[index] > 1:
             self.spans[index + 1] = self.spans[index] - 1
         self.values.pop(index)
         self.spans.pop(index)
 
-    def find_spanner(self, index):
+    def _find_spanner(self, index):
         i = index - 1
         while self.spans[i] == 0:
             i -= 1
         return i
 
+    def merge(self, start, stop):
+        total_span = sum(self.spans[start:stop])
+        for i in range(start, stop):
+            self.spans[i] = 0
+        self.spans[start] = total_span
+
+    def break_(self, start, stop):
+        for i in range(start, stop):
+            self.spans[i] = 1
 
 
 class DigitalLane(Lane[bool]):
     pass
 
 
-class AnalogLane(Lane[Expression]):
+class Ramp(SettingsModel):
+    pass
+
+
+class LinearRamp(SettingsModel):
+    pass
+
+
+class AnalogLane(Lane[Expression | Ramp]):
     pass
 
 
@@ -64,9 +85,9 @@ class CameraLane(Lane[bool]):
 
 
 class ShotConfiguration(SettingsModel):
-    step_names: list[str]
-    step_durations: list[Expression]
-    lanes: list[Lane]
+    step_names: list[str] = ["..."]
+    step_durations: list[Expression] = [Expression("...")]
+    lanes: list[Lane] = []
 
     @validator("step_durations")
     def validate_step_durations(cls, durations, values):

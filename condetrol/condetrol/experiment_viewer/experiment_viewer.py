@@ -26,8 +26,15 @@ from qtpy import QtGui
 from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
-from sequence import SequenceStats, SequenceState, SequenceConfig, SequenceSteps
+from sequence import (
+    SequenceStats,
+    SequenceState,
+    SequenceConfig,
+    SequenceSteps,
+    ExecuteShot,
+)
 from settings_model import YAMLSerializable
+from shot import ShotConfiguration
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
@@ -260,7 +267,13 @@ class SequenceViewerModel(QFileSystemModel):
             new_sequence_path = path / text
             try:
                 new_sequence_path.mkdir()
-                config = SequenceConfig(program=SequenceSteps())
+                config = SequenceConfig(
+                    program=SequenceSteps(
+                        children=[
+                            ExecuteShot(name="shot", configuration=ShotConfiguration())
+                        ]
+                    )
+                )
                 with open(new_sequence_path / "sequence_config.yaml", "w") as file:
                     file.write(yaml.safe_dump(config))
                 stats = SequenceStats()
