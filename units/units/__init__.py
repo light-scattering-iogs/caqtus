@@ -5,11 +5,13 @@ from pathlib import Path
 import pint
 
 ureg = pint.UnitRegistry(
-    Path(__file__).parent / "units_definition.txt", autoconvert_offset_to_baseunit=True
+    Path(__file__).parent / "units_definition.txt",
+    autoconvert_offset_to_baseunit=True,
+    cache_folder=":auto:",
 )
 Quantity = ureg.Quantity
 
-TIME_UNITS = {"s", "ms", "µs", "ns"}
+TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
 FREQUENCY_UNITS = {
     "Hz",
