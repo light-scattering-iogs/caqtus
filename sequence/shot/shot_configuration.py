@@ -63,6 +63,12 @@ class Lane(Generic[T], SettingsModel):
         for i in range(start, stop):
             self.spans[i] = 1
 
+    def get_effective_value(self, index):
+        if self.spans[index] != 0:
+            return self.values[index]
+        else:
+            return self.values[self._find_spanner(index)]
+
 
 class DigitalLane(Lane[bool]):
     pass
