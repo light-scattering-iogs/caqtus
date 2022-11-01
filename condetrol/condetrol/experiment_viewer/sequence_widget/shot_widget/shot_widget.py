@@ -196,14 +196,14 @@ class SwimLaneWidget(QWidget):
                 add_lane_menu.setTitle("Add lane...")
                 menu.addMenu(add_lane_menu)
                 add_digital_lane_menu = QMenu("digital")
-                actions = self.create_digital_add_lane_actions()
-                for digital_action in actions:
+                digital_actions = self.create_digital_add_lane_actions()
+                for digital_action in digital_actions:
                     add_digital_lane_menu.addAction(digital_action)
                 add_lane_menu.addMenu(add_digital_lane_menu)
 
                 add_analog_lane_menu = QMenu("analog")
-                actions = self.create_analog_add_lane_actions()
-                for analog_action in actions:
+                analog_actions = self.create_analog_add_lane_actions()
+                for analog_action in analog_actions:
                     add_analog_lane_menu.addAction(analog_action)
                 add_lane_menu.addMenu(add_analog_lane_menu)
 
@@ -258,7 +258,7 @@ class SwimLaneWidget(QWidget):
 
             index = self.steps_view.horizontalHeader().logicalIndexAt(position)
             if index == -1:  # inserts a step after all steps
-                add_step_action = QAction("Insert step after")
+                add_step_action = QAction("Insert after")
                 menu.addAction(add_step_action)
                 add_step_action.triggered.connect(
                     lambda: self._model.insertColumn(
