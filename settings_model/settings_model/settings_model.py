@@ -47,7 +47,11 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     def load(cls, stream):
-        return yaml.load(stream, Loader=cls.get_loader())
+        if isinstance(stream, Path):
+            with open(stream, "r") as file:
+                return yaml.load(file, Loader=cls.get_loader())
+        else:
+            return yaml.load(stream, Loader=cls.get_loader())
 
     @classmethod
     def dump(cls, data, stream=None):

@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import (
     QAction,
 )
 
+from experiment_config import ExperimentConfig
 from expression import Expression
 from sequence import (
     Step,
@@ -484,14 +485,15 @@ class SequenceWidget(QDockWidget):
     ):
         super().__init__(*args, **kwargs)
         self._path = sequence_path
-        self.setWindowTitle(f"{self._path}")
+        experiment_config: ExperimentConfig = YAMLSerializable.load(experiment_config_path)
+        self.setWindowTitle(f"{self._path.relative_to(experiment_config.data_path)}")
 
         self.tab_widget = QTabWidget()
         self.setWidget(self.tab_widget)
 
         self.program_tree = self.create_sequence_tree()
         self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
-        self.tab_widget.addTab(self.program_tree, "Sequence steps")
+        self.tab_widget.addTab(self.program_tree, "Sequence")
 
         self.shot_widget = self.create_shot_widget(experiment_config_path)
         self.tab_widget.addTab(self.shot_widget, "Shot")
