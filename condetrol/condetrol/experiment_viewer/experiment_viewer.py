@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import shutil
@@ -6,7 +7,7 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import yaml
-from PyQt5.QtCore import QSettings, QModelIndex, Qt
+from PyQt5.QtCore import QSettings, QModelIndex, Qt, QFileSystemWatcher
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -20,6 +21,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QInputDialog,
     QLineEdit,
+    QAbstractItemView,
 )
 from experiment_manager import ExperimentManager
 from qtpy import QtGui
@@ -32,6 +34,7 @@ from sequence import (
     SequenceConfig,
     SequenceSteps,
     ExecuteShot,
+    Sequence,
 )
 from settings_model import YAMLSerializable
 from shot import ShotConfiguration
@@ -82,9 +85,18 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setColumnHidden(1, True)
         self.sequences_view.setColumnHidden(2, True)
         self.sequences_view.setColumnHidden(3, True)
+        # self.sequences_view.setColumnHidden(5, True)
         self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
         self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
+        self.sequences_view.setDragEnabled(True)
+        self.sequences_view.setAcceptDrops(True)
+        self.sequences_view.setDropIndicatorShown(True)
+        self.sequences_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.sequences_view.setDragDropOverwriteMode(False)
+        self.sequence_files_watcher = QFileSystemWatcher()
+        self.sequence_files_watcher.directoryChanged.connect(self.show_sequence_updated)
 
         self.setCentralWidget(None)
 
@@ -107,40 +119,70 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             )
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
 
+    def start_sequence(self, path: Path):
+        config = YAMLSerializable.dump(self.config)
+        self.experiment_manager.start_sequence(
+            config, path.relative_to(self.config.data_path)
+        )
+        self.sequence_files_watcher.addPath(str(path))
+
+    def show_sequence_updated(self, path):
+        self.sequences_view.update()
+        sequence = Sequence(Path(path))
+        remove_path = True
+        try:
+            if sequence.state == SequenceState.RUNNING:
+                remove_path = False
+        finally:
+            pass
+        if remove_path:
+            self.sequence_files_watcher.removePath(path)
+
     def show_context_menu(self, position):
         index = self.sequences_view.indexAt(position)
 
         menu = QMenu(self.sequences_view)
 
+        is_deletable = True
+
         if self.model.is_sequence_folder(index):
             stats = self.model.get_stats(index)
+            if stats.state == SequenceState.RUNNING:
+                is_deletable = False
+                interrupt_sequence_action = QAction("Interrupt")
+                menu.addAction(interrupt_sequence_action)
+                interrupt_sequence_action.triggered.connect(
+                    lambda _: self.experiment_manager.interrupt_sequence()
+                ),
             if stats.state == SequenceState.DRAFT:
                 start_sequence_action = QAction("Start")
                 menu.addAction(start_sequence_action)
-                config = yaml.dump(self.config, Dumper=YAMLSerializable.get_dumper())
                 start_sequence_action.triggered.connect(
-                    lambda _: self.experiment_manager.start_sequence(
-                        config,
-                        Path(self.model.filePath(index)).relative_to(
-                            self.config.data_path
-                        ),
-                    )
+                    lambda _: self.start_sequence(Path(self.model.filePath(index))),
                 )
             duplicate_sequence_action = QAction("Duplicate")
             menu.addAction(duplicate_sequence_action)
-            config = yaml.dump(self.config, Dumper=YAMLSerializable.get_dumper())
             duplicate_sequence_action.triggered.connect(
                 partial(self.model.duplicate_sequence, index)
             )
 
         else:
-            create_sequence_action = QAction("New sequence")
-            menu.addAction(create_sequence_action)
+            new_menu = QMenu("New...")
+            menu.addMenu(new_menu)
+
+            create_folder_action = QAction("folder")
+            new_menu.addAction(create_folder_action)
+            create_folder_action.triggered.connect(
+                partial(self.model.create_new_folder, index)
+            )
+
+            create_sequence_action = QAction("sequence")
+            new_menu.addAction(create_sequence_action)
             create_sequence_action.triggered.connect(
                 partial(self.model.create_new_sequence, index)
             )
 
-        if index.isValid():
+        if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
             delete_action.triggered.connect(partial(self.model.move_to_trash, index))
@@ -158,39 +200,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
         super().closeEvent(a0)
-
-
-class SequenceDelegate(QStyledItemDelegate):
-    def paint(
-        self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        # noinspection PyTypeChecker
-        model: SequenceViewerModel = index.model()
-        if model.is_sequence_folder(index):
-            opt = QStyleOptionProgressBar()
-            opt.rect = option.rect
-            opt.minimum = 0
-            opt.maximum = 100
-            opt.textVisible = True
-            stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
-            if stats.state == SequenceState.DRAFT:
-                opt.progress = 0
-                opt.text = "draft"
-            elif stats.state == SequenceState.RUNNING:
-                opt.progress = 50
-                opt.text = "running"
-            elif stats.state == SequenceState.FINISHED:
-                opt.progress = 100
-                opt.text = "finished"
-                opt.palette.setColor(QPalette.ColorRole.Highlight, QColor(98, 151, 85))
-            elif stats.state == SequenceState.CRASHED:
-                opt.progress = 0
-                opt.text = "crashed"
-                opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
-                opt.palette.setColor(QPalette.ColorRole.Highlight, QColor(240, 82, 79))
-            QApplication.style().drawControl(
-                QStyle.ControlElement.CE_ProgressBar, opt, painter
-            )
 
 
 class SequenceViewerModel(QFileSystemModel):
@@ -211,12 +220,41 @@ class SequenceViewerModel(QFileSystemModel):
         return super().rowCount(parent)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return super().columnCount(parent) + 1
+        return super().columnCount(parent) + 2
 
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
                 return self.get_stats(index)
+            elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
+                sequence = Sequence(Path(self.filePath(index)))
+                if sequence.state == SequenceState.DRAFT:
+                    return ""
+                elif sequence.state == SequenceState.FINISHED:
+                    start_time = sequence.stats.start_time
+                    end_time = sequence.stats.stop_time
+                    duration = datetime.timedelta(
+                        seconds=int((end_time - start_time).total_seconds())
+                    )
+                    return str(duration)
+                elif (
+                    sequence.state == SequenceState.INTERRUPTED
+                    or sequence.state == SequenceState.CRASHED
+                ):
+                    start_time = sequence.stats.start_time
+                    end_time = sequence.stats.stop_time
+                    duration = datetime.timedelta(
+                        seconds=int((end_time - start_time).total_seconds())
+                    )
+                    return f"{duration}/--"
+                elif sequence.state == SequenceState.RUNNING:
+                    start_time = sequence.stats.start_time
+                    end_time = datetime.datetime.now()
+                    duration = datetime.timedelta(
+                        seconds=int((end_time - start_time).total_seconds())
+                    )
+                    return f"{duration}/--"
+
             elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
                 return QIcon(":/icons/sequence")
         return super().data(index, role)
@@ -236,7 +274,18 @@ class SequenceViewerModel(QFileSystemModel):
         ):
             if section == 4:
                 return "Status"
+            elif section == 5:
+                return "Duration"
         return super().headerData(section, orientation, role)
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        flags = super().flags(index)
+        if index.isValid():
+            flags |= Qt.ItemFlag.ItemIsDragEnabled
+            file_info = self.fileInfo(index)
+            if file_info.isDir() and not self.is_sequence_folder(index):
+                flags |= Qt.ItemFlag.ItemIsDropEnabled
+        return flags
 
     def is_sequence_folder(self, parent: QModelIndex) -> bool:
         path = Path(self.filePath(parent))
@@ -260,7 +309,7 @@ class SequenceViewerModel(QFileSystemModel):
             None,
             f"New sequence in {path}...",
             "Sequence name:",
-            QLineEdit.Normal,
+            QLineEdit.EchoMode.Normal,
             "new_sequence",
         )
         if ok and text:
@@ -282,6 +331,25 @@ class SequenceViewerModel(QFileSystemModel):
             except:
                 logger.error(
                     f"Could not create new sequence '{new_sequence_path}'",
+                    exc_info=True,
+                )
+
+    def create_new_folder(self, index: QModelIndex):
+        path = Path(self.rootPath()) / self.fileName(index)
+        text, ok = QInputDialog().getText(
+            None,
+            f"New folder in {path}...",
+            "Folder name:",
+            QLineEdit.EchoMode.Normal,
+            "new_folder",
+        )
+        if ok and text:
+            new_folder_path = path / text
+            try:
+                new_folder_path.mkdir(parents=True)
+            except:
+                logger.error(
+                    f"Could not create new folder '{new_folder_path}'",
                     exc_info=True,
                 )
 
@@ -311,3 +379,50 @@ class SequenceViewerModel(QFileSystemModel):
                     f"Could not create new sequence '{new_sequence_path}'",
                     exc_info=True,
                 )
+
+
+class SequenceDelegate(QStyledItemDelegate):
+    def paint(
+        self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
+        # noinspection PyTypeChecker
+        model: SequenceViewerModel = index.model()
+        if model.is_sequence_folder(index):
+            sequence = Sequence(Path(model.filePath(index)))
+            opt = QStyleOptionProgressBar()
+            opt.rect = option.rect
+            opt.minimum = 0
+            opt.maximum = 100
+            opt.textVisible = True
+            stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
+            if stats.state == SequenceState.DRAFT:
+                opt.progress = 0
+                opt.text = "draft"
+            else:
+                opt.maximum = sequence.total_number_shots
+                opt.progress = sequence.number_completed_shots
+
+                if stats.state == SequenceState.RUNNING:
+                    opt.text = "running"
+                elif stats.state == SequenceState.INTERRUPTED:
+                    opt.text = "interrupted"
+                    opt.palette.setColor(
+                        QPalette.ColorRole.Highlight, QColor(166, 138, 13)
+                    )
+                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(92, 79, 23))
+                elif stats.state == SequenceState.FINISHED:
+                    opt.text = f"finished"
+                    opt.palette.setColor(
+                        QPalette.ColorRole.Highlight, QColor(98, 151, 85)
+                    )
+                elif stats.state == SequenceState.CRASHED:
+                    opt.text = "crashed"
+                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
+                    opt.palette.setColor(
+                        QPalette.ColorRole.Highlight, QColor(240, 82, 79)
+                    )
+            QApplication.style().drawControl(
+                QStyle.ControlElement.CE_ProgressBar, opt, painter
+            )
+        else:
+            super().paint(painter, option, index)
