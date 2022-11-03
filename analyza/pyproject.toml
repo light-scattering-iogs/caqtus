@@ -1,14 +1,14 @@
 [tool.poetry]
-name = "experiment_config"
+name = "analyza"
 version = "0.1.0"
 description = ""
-authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-settings_model = { path = "../settings_model/", develop = true }
-appdirs = "^1.4.4"
-PyQt5 = "^5.15.7"
+python = "^3.10"
+sequence = { path = "../sequence/", develop = true }
+matplotlib = "^3.6.2"
+jupyter = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

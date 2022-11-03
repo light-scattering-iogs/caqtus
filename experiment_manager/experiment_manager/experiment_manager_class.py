@@ -2,7 +2,6 @@ import datetime
 import io
 import logging
 import os
-import time
 from copy import copy
 from enum import Enum, auto
 from functools import singledispatchmethod
@@ -12,12 +11,9 @@ from threading import Thread
 import h5py
 import numpy
 import yaml
-from pint import DimensionalityError
-from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 
 from experiment_config import ExperimentConfig
 from experiment_config.experiment_config import ReservedChannel
-from expression import Expression
 from sequence import (
     SequenceStats,
     SequenceState,
@@ -28,7 +24,13 @@ from sequence import (
 )
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
 from settings_model import YAMLSerializable
-from shot import Lane, DigitalLane, AnalogLane, ShotConfiguration
+from shot import (
+    ShotConfiguration,
+    evaluate_step_durations,
+    evaluate_analog_local_times,
+evaluate_analog_values
+)
+from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
 from units import units, Quantity, ureg
 
@@ -41,9 +43,10 @@ class ExperimentState(Enum):
     RUNNING = auto()
     WAITING_TO_INTERRUPT = auto()
 
+
 class SequenceRunnerThread(Thread):
     def __init__(
-        self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
+            self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self.experiment_config: ExperimentConfig = yaml.load(
@@ -57,6 +60,8 @@ class SequenceRunnerThread(Thread):
             self.sequence_config: SequenceConfig = yaml.load(
                 file, Loader=YAMLSerializable.get_loader()
             )
+
+        self.spincore = SpincorePulseBlaster(time_step=self.experiment_config.spincore.time_step)
 
     def run(self):
         try:
@@ -76,7 +81,6 @@ class SequenceRunnerThread(Thread):
             self.experiment_config, self.sequence_path / "experiment_config.yaml"
         )
 
-        self.spincore = SpincorePulseBlaster()
         self.spincore.start()
 
     def finish(self):
@@ -132,7 +136,7 @@ class SequenceRunnerThread(Thread):
         context = copy(context)
 
         for value in numpy.arange(
-            start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
+                start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
         ):
             context[arange_loop.name] = value * unit
             for step in arange_loop.children:
@@ -153,7 +157,7 @@ class SequenceRunnerThread(Thread):
         context = copy(context)
 
         for value in numpy.linspace(
-            start.to(unit).magnitude, stop.to(unit).magnitude, num
+                start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
             context[linspace_loop.name] = value * unit
             for step in linspace_loop.children:
@@ -169,7 +173,7 @@ class SequenceRunnerThread(Thread):
         config = shot.configuration
         spincore_instructions = self.compile_shot(config, context)
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        self.spincore.run()
+        # self.spincore.run()
         data = {}
         # time.sleep(0.2)
 
@@ -183,53 +187,54 @@ class SequenceRunnerThread(Thread):
         return self.parent.get_state() == ExperimentState.WAITING_TO_INTERRUPT
 
     def compile_shot(
-        self, shot: ShotConfiguration, context: dict[str]
+            self, shot: ShotConfiguration, context: dict[str]
     ) -> list[Instruction]:
-        durations = evaluate_step_durations(
-            shot.step_names, shot.step_durations, context
-        )
-        analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
-        digital_time_step = 50e-9
+        step_durations = evaluate_step_durations(shot, context)
 
-        # check durations
+        self.check_durations(shot, step_durations)
+
+        analog_times = evaluate_analog_local_times(
+            shot,
+            step_durations,
+            self.experiment_config.ni6738_analog_sequencer.time_step,
+            self.spincore.time_step,
+        )
+
+        instructions = self.generate_digital_instructions(shot, step_durations, analog_times)
+
+        evaluate_analog_values(shot, )
+        return instructions
+
+    def check_durations(self, shot: ShotConfiguration, durations: list[float]):
         for step_name, duration in zip(shot.step_names, durations):
-            if duration < digital_time_step:
+            if duration < self.spincore.time_step:
                 raise ValueError(
                     f"Duration of step '{step_name}' ({(duration * ureg.s).to('ns')})"
                     " is too short"
                 )
 
-        # computes analog local times for each step
-        analog_times = []
-        last_analog_time = -numpy.inf
-        for duration in durations:
-            step_analog_times = numpy.arange(
-                max(last_analog_time + analog_time_step, digital_time_step),
-                duration - analog_time_step,
-                analog_time_step,
-            )
-            if len(step_analog_times) > 0:
-                last_analog_time = step_analog_times[-1]
-            last_analog_time -= duration
-            analog_times.append(step_analog_times)
-
-        # generate digital instructions
+    def generate_digital_instructions(
+            self,
+            shot: ShotConfiguration,
+            step_durations: list[float],
+            analog_times: list[numpy.ndarray],
+    ) -> list[Instruction]:
+        analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
         instructions = []
-        digital_lanes = [lane for lane in shot.lanes if isinstance(lane, DigitalLane)]
         # noinspection PyTypeChecker
         analog_clock_channel = self.experiment_config.spincore.get_channel_number(
             ReservedChannel.ni6738_analog_sequencer_variable_clock
         )
         values = [False] * self.experiment_config.spincore.number_channels
-        for step in range(len(durations)):
+        for step in range(len(step_durations)):
             values = [False] * self.experiment_config.spincore.number_channels
-            for lane in digital_lanes:
+            for lane in shot.digital_lanes:
                 channel = self.experiment_config.spincore.get_channel_number(lane.name)
                 values[channel] = lane.get_effective_value(step)
             if len(analog_times[step]) > 0:
                 duration = analog_times[step][0]
             else:
-                duration = durations[step]
+                duration = step_durations[step]
             instructions.append(Continue(values=values, duration=duration))
             if len(analog_times[step]) > 0:
                 (low_values := copy(values))[analog_clock_channel] = False
@@ -247,12 +252,12 @@ class SequenceRunnerThread(Thread):
         return instructions
 
     def save_shot(
-        self,
-        shot: ExecuteShot,
-        start_time: datetime.datetime,
-        end_time: datetime.datetime,
-        context: dict[str, Quantity],
-        data: dict[str],
+            self,
+            shot: ExecuteShot,
+            start_time: datetime.datetime,
+            end_time: datetime.datetime,
+            context: dict[str, Quantity],
+            data: dict[str],
     ):
 
         data_buffer = io.BytesIO()
@@ -277,47 +282,6 @@ class SequenceRunnerThread(Thread):
             )
         with open(shot_file_path, "wb") as file:
             file.write(data_buffer.getbuffer())
-
-
-def generate_analog_durations(
-    durations: list[float],
-    analog_time_step: float,
-    lanes: list[Lane],
-    context: dict[str],
-) -> list[Quantity]:
-    last_update_time = -numpy.inf
-    times = []
-    for step, duration in enumerate(durations):
-        is_step_of_constants = all(
-            is_constant(lane.get_effective_value(step))
-            for lane in lanes
-            if isinstance(lane, AnalogLane)
-        )
-        if is_step_of_constants:
-            current_step_times = numpy.zeros(1, dtype=float) * ureg.s
-        else:
-            current_step_times = numpy.arange(0, duration, analog_time_step) * ureg.s
-
-    return times
-
-
-def is_constant(expression: Expression):
-    return "t" not in expression.upstream_variables
-
-
-def evaluate_step_durations(
-    step_names: list[str], duration_expressions: list[Expression], context: dict[str]
-) -> list[float]:
-    """Return the list of step durations in seconds"""
-    durations = []
-    for name, expression in zip(step_names, duration_expressions):
-        duration = Quantity(expression.evaluate(context | units))
-        try:
-            durations.append(duration.to("s").magnitude)
-        except DimensionalityError as err:
-            err.extra_msg = f" for the duration ({expression.body}) of step '{name}'"
-            raise err
-    return durations
 
 
 class ExperimentManager:

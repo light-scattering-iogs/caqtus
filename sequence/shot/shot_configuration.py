@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Optional
 
 from pydantic import validator
 
@@ -83,7 +83,7 @@ class LinearRamp(SettingsModel):
 
 
 class AnalogLane(Lane[Expression | Ramp]):
-    pass
+    units: str
 
 
 class CameraLane(Lane[bool]):
@@ -112,3 +112,17 @@ class ShotConfiguration(SettingsModel):
 
     def get_lane_names(self) -> list[str]:
         return [lane.name for lane in self.lanes]
+
+    def find_lane(self, lane_name: str) -> Optional[Lane]:
+        for lane in self.lanes:
+            if lane.name == lane_name:
+                return lane
+
+    @property
+    def analog_lanes(self) -> list[AnalogLane]:
+        return [lane for lane in self.lanes if isinstance(lane, AnalogLane)]
+
+    @property
+    def digital_lanes(self) -> list[DigitalLane]:
+        return [lane for lane in self.lanes if isinstance(lane, DigitalLane)]
+

@@ -23,8 +23,9 @@ class SpincoreStatus(IntFlag):
 class SpincorePulseBlaster(CDevice):
     board_number: int = 0
     spincore_lib_debug: bool = False
-    core_clock: float = Field(default=100e6, units="Hz", const=True)
+    core_clock: float = Field(default=100e6, units="Hz")
     instructions: list[Instruction] = []
+    time_step: float = Field(50e-9, units="s")
 
     _channel_number: int = 24
 

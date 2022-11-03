@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from appdirs import user_data_dir
+from PyQt5.QtCore import QSettings
+from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
 
 from settings_model import SettingsModel
@@ -56,6 +57,7 @@ class SpincoreConfig(SettingsModel):
     number_channels: int = Field(24, const=True, exclude=True)
     channel_descriptions: list[str | ChannelSpecialPurpose] = Field(default=[])
     channel_colors: list[Optional[ChannelColor]] = Field(default=[])
+    time_step: float = Field(50e-9, units="s")
 
     @validator("channel_descriptions")
     def validate_channel_descriptions(cls, descriptions, values):
@@ -91,12 +93,12 @@ class AnalogUnitsMapping(SettingsModel, ABC):
 
     @property
     @abstractmethod
-    def input_dimensionality(self):
+    def input_units(self):
         ...
 
     @property
     @abstractmethod
-    def output_dimensionality(self):
+    def output_units(self):
         ...
 
 
@@ -145,3 +147,12 @@ class ExperimentConfig(SettingsModel):
     ni6738_analog_sequencer: NI6738AnalogSequencerConfig = Field(
         default_factory=NI6738AnalogSequencerConfig
     )
+
+
+def get_config_path() -> Path:
+    ui_settings = QSettings("Caqtus", "ExperimentControl")
+    config_folder = ui_settings.value(
+        "experiment/config_path", user_config_dir("ExperimentControl", "Caqtus")
+    )
+    config_path = Path(config_folder) / "config.yaml"
+    return config_path

@@ -1,16 +1,15 @@
 import logging
-from functools import singledispatch
 from itertools import groupby
 from pathlib import Path
-from typing import Optional, Type, Iterable
+from typing import Type, Iterable
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
 
 from experiment_config import ExperimentConfig
 from expression import Expression
-from sequence import Step, ExecuteShot, SequenceStats, SequenceConfig, SequenceState
+from sequence import SequenceStats, SequenceConfig, SequenceState, find_shot_config
 from settings_model import YAMLSerializable
-from shot import ShotConfiguration, DigitalLane, AnalogLane, Lane
+from shot import DigitalLane, AnalogLane, Lane
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -185,7 +184,7 @@ class SwimLaneModel(QAbstractTableModel):
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)
-            self.shot_config.lanes.insert(row-2, new_lane)
+            self.shot_config.lanes.insert(row - 2, new_lane)
             self.endInsertRows()
             self.save_config()
 
@@ -204,6 +203,7 @@ class SwimLaneModel(QAbstractTableModel):
             start = l[0][1]
             stop = l[-1][1] + 1
             self.shot_config.lanes[lane].merge(start, stop)
+        self.save_config()
         self.layoutChanged.emit()
 
     def break_(self, indexes: Iterable[QModelIndex]):
@@ -215,20 +215,5 @@ class SwimLaneModel(QAbstractTableModel):
             start = l[0][1]
             stop = l[-1][1] + 1
             self.shot_config.lanes[lane].break_(start, stop)
+        self.save_config()
         self.layoutChanged.emit()
-
-
-
-
-
-@singledispatch
-def find_shot_config(step: Step, shot_name: str) -> Optional[ShotConfiguration]:
-    for sub_step in step.children:
-        if result := find_shot_config(sub_step, shot_name):
-            return result
-
-
-@find_shot_config.register
-def _(shot: ExecuteShot, shot_name):
-    if shot.name == shot_name:
-        return shot.configuration

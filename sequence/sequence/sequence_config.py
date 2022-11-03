@@ -209,3 +209,16 @@ def _(loop: ArangeLoop):
 @compute_number_shots.register
 def _(shot: ExecuteShot):
     return 1
+
+
+@singledispatch
+def find_shot_config(step: Step, shot_name: str) -> Optional[ShotConfiguration]:
+    for sub_step in step.children:
+        if result := find_shot_config(sub_step, shot_name):
+            return result
+
+
+@find_shot_config.register
+def _(shot: ExecuteShot, shot_name):
+    if shot.name == shot_name:
+        return shot.configuration

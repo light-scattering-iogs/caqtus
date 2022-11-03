@@ -11,6 +11,9 @@ ureg = pint.UnitRegistry(
 )
 Quantity = ureg.Quantity
 
+DimensionalityError = pint.DimensionalityError
+dimensionless = Quantity(1, "").units
+
 TIME_UNITS = {"s", "ms", "µs", "us", "ns"}
 
 FREQUENCY_UNITS = {

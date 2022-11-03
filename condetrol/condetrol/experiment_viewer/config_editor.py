@@ -16,11 +16,10 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QLabel,
 )
-from appdirs import user_config_dir
 
 from condetrol.utils import log_error
 from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
-from experiment_config import ExperimentConfig
+from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
 
@@ -116,15 +115,6 @@ def load_config(config_path: Path) -> ExperimentConfig:
     else:
         config = ExperimentConfig()
     return config
-
-
-def get_config_path() -> Path:
-    ui_settings = QSettings("Caqtus", "ExperimentControl")
-    config_folder = ui_settings.value(
-        "experiment/config_path", user_config_dir("ExperimentControl", "Caqtus")
-    )
-    config_path = Path(config_folder) / "config.yaml"
-    return config_path
 
 
 class ConfigEditor(QDialog, Ui_config_editor):
