@@ -1,4 +1,5 @@
 import datetime
+import io
 import logging
 import os
 import time
@@ -8,6 +9,7 @@ from functools import singledispatchmethod
 from pathlib import Path
 from threading import Thread
 
+import h5py
 import numpy
 import yaml
 from pint import DimensionalityError
@@ -38,7 +40,6 @@ class ExperimentState(Enum):
     RUNNING = auto()
     WAITING_TO_INTERRUPT = auto()
 
-
 class SequenceRunnerThread(Thread):
     def __init__(
         self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
@@ -50,6 +51,7 @@ class SequenceRunnerThread(Thread):
         self.sequence_path = self.experiment_config.data_path / sequence_path
         self.parent = parent
         self.stats = SequenceStats(state=SequenceState.RUNNING)
+        self.shot_numbers = {"shot": 0}
         with open(self.sequence_path / "sequence_config.yaml", "r") as file:
             self.sequence_config: SequenceConfig = yaml.load(
                 file, Loader=YAMLSerializable.get_loader()
@@ -68,20 +70,23 @@ class SequenceRunnerThread(Thread):
 
     def prepare(self):
         self.stats.start_time = datetime.datetime.now()
-        with open(self.sequence_path / "sequence_state.yaml", "w") as file:
-            file.write(yaml.dump(self.stats, Dumper=YAMLSerializable.get_dumper()))
+        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
+        YAMLSerializable.dump(
+            self.experiment_config, self.sequence_path / "experiment_config.yaml"
+        )
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
-        self.stats.state = SequenceState.FINISHED
-        with open(self.sequence_path / "sequence_state.yaml", "w") as file:
-            file.write(yaml.dump(self.stats, Dumper=YAMLSerializable.get_dumper()))
+        if self.is_waiting_to_interrupt():
+            self.stats.state = SequenceState.INTERRUPTED
+        else:
+            self.stats.state = SequenceState.FINISHED
+        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def record_exception(self):
         self.stats.stop_time = datetime.datetime.now()
         self.stats.state = SequenceState.CRASHED
-        with open(self.sequence_path / "sequence_state.yaml", "w") as file:
-            file.write(yaml.dump(self.stats, Dumper=YAMLSerializable.get_dumper()))
+        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def shutdown(self):
         self.parent.set_state(ExperimentState.IDLE)
@@ -97,7 +102,10 @@ class SequenceRunnerThread(Thread):
     @run_step.register
     def _(self, steps: SequenceSteps, context):
         for step in steps.children:
-            context = self.run_step(step, context)
+            if self.is_waiting_to_interrupt():
+                return context
+            else:
+                context = self.run_step(step, context)
         return context
 
     @run_step.register
@@ -106,7 +114,6 @@ class SequenceRunnerThread(Thread):
         updated_context[declaration.name] = Quantity(
             declaration.expression.evaluate(context | units)
         )
-        logger.debug(updated_context)
         return updated_context
 
     @run_step.register
@@ -124,7 +131,10 @@ class SequenceRunnerThread(Thread):
         ):
             context[arange_loop.name] = value * unit
             for step in arange_loop.children:
-                context = self.run_step(step, context)
+                if self.is_waiting_to_interrupt():
+                    return context
+                else:
+                    context = self.run_step(step, context)
         return context
 
     @run_step.register
@@ -142,18 +152,28 @@ class SequenceRunnerThread(Thread):
         ):
             context[linspace_loop.name] = value * unit
             for step in linspace_loop.children:
-                context = self.run_step(step, context)
+                if self.is_waiting_to_interrupt():
+                    return context
+                else:
+                    context = self.run_step(step, context)
         return context
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: dict[str]):
-        t0 = time.time()
+        t0 = datetime.datetime.now()
         config = shot.configuration
-        self.compile_shot(config, context)
+        spincore_instructions = self.compile_shot(config, context)
+        data = {}
+        time.sleep(0.2)
 
-        t1 = time.time()
-        logger.info(f"shot executed in {(t1 - t0) * 1e3} ms")
+        t1 = datetime.datetime.now()
+        logger.info(f"shot executed in {(t1 - t0)}")
+        self.save_shot(shot, t0, t1, context, data)
+        self.shot_numbers[shot.name] += 1
         return context
+
+    def is_waiting_to_interrupt(self) -> bool:
+        return self.parent.get_state() == ExperimentState.WAITING_TO_INTERRUPT
 
     def compile_shot(
         self, shot: ShotConfiguration, context: dict[str]
@@ -216,6 +236,38 @@ class SequenceRunnerThread(Thread):
                 )
         return instructions
 
+    def save_shot(
+        self,
+        shot: ExecuteShot,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        context: dict[str, Quantity],
+        data: dict[str],
+    ):
+
+        data_buffer = io.BytesIO()
+        with h5py.File(data_buffer, "w") as file:
+            file.attrs["start_time"] = start_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
+            file.attrs["end_time"] = end_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
+            file.create_dataset("variables/names", data=list(context.keys()))
+            file.create_dataset(
+                "variables/units",
+                data=[str(quantity.units) for quantity in context.values()],
+            )
+            file.create_dataset(
+                "variables/magnitudes",
+                data=[float(quantity.magnitude) for quantity in context.values()],
+            )
+
+        shot_file_name = f"{shot.name}_{self.shot_numbers[shot.name]}.h5py"
+        shot_file_path = self.sequence_path / shot_file_name
+        if shot_file_path.is_file():
+            raise RuntimeError(
+                f"{shot_file_path} already exists and won't be overwritten."
+            )
+        with open(shot_file_path, "wb") as file:
+            file.write(data_buffer.getbuffer())
+
 
 def generate_analog_durations(
     durations: list[float],
@@ -249,15 +301,13 @@ def evaluate_step_durations(
     """Return the list of step durations in seconds"""
     durations = []
     for name, expression in zip(step_names, duration_expressions):
-        duration: Quantity = expression.evaluate(context | units)
+        duration = Quantity(expression.evaluate(context | units))
         try:
             durations.append(duration.to("s").magnitude)
         except DimensionalityError as err:
             err.extra_msg = f" for the duration ({expression.body}) of step '{name}'"
             raise err
     return durations
-
-
 
 
 class ExperimentManager:
@@ -289,3 +339,9 @@ class ExperimentManager:
             return True
         else:
             return False
+
+    def interrupt_sequence(self) -> bool:
+        if self._state == ExperimentState.RUNNING:
+            self._state = ExperimentState.WAITING_TO_INTERRUPT
+            return True
+        return False

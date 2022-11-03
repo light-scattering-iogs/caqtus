@@ -1,6 +1,9 @@
+import math
 from abc import ABC
+from functools import singledispatch
 from typing import Optional
 
+import numpy
 import yaml
 from anytree import NodeMixin
 
@@ -8,6 +11,7 @@ from expression import Expression
 from settings_model import SettingsModel
 from settings_model.settings_model import YAMLSerializable
 from shot import ShotConfiguration
+from units import Quantity, units
 
 
 class Step(NodeMixin, ABC):
@@ -164,3 +168,44 @@ class ExecuteShot(Step, YAMLSerializable):
 
 class SequenceConfig(SettingsModel):
     program: SequenceSteps
+
+
+@singledispatch
+def compute_number_shots(steps: Step):
+    return 0
+
+
+@compute_number_shots.register
+def _(steps: SequenceSteps):
+    return sum(compute_number_shots(step) for step in steps.children)
+
+
+@compute_number_shots.register
+def _(loop: LinspaceLoop):
+    return loop.num * sum(compute_number_shots(step) for step in loop.children)
+
+
+@compute_number_shots.register
+def _(loop: ArangeLoop):
+    try:
+        start = Quantity(loop.start.evaluate(units))
+        stop = Quantity(loop.stop.evaluate(units))
+        step = Quantity(loop.step.evaluate(units))
+
+        unit = start.units
+
+        multiplier = len(
+            numpy.arange(
+                start.to(unit).magnitude,
+                stop.to(unit).magnitude,
+                step.to(unit).magnitude,
+            )
+        )
+        return multiplier * sum(compute_number_shots(step) for step in loop.children)
+    except Exception:
+        return math.nan
+
+
+@compute_number_shots.register
+def _(shot: ExecuteShot):
+    return 1

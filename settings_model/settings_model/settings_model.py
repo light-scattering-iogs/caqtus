@@ -55,7 +55,15 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     def dump(cls, data, stream=None):
-        return yaml.dump(data, stream=stream, Dumper=cls.get_dumper(), sort_keys=False)
+        if isinstance(stream, Path):
+            with open(stream, "w") as file:
+                return yaml.dump(
+                    data, stream=file, Dumper=cls.get_dumper(), sort_keys=False
+                )
+        else:
+            return yaml.dump(
+                data, stream=stream, Dumper=cls.get_dumper(), sort_keys=False
+            )
 
     @classmethod
     def register_enum(cls, enum_class: Type[Enum]):

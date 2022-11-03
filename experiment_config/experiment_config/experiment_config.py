@@ -28,6 +28,11 @@ class UnusedChannel(ChannelSpecialPurpose):
 class ReservedChannel(ChannelSpecialPurpose):
     purpose: str
 
+    @classmethod
+    @property
+    def ni6738_analog_sequencer_variable_clock(cls) -> "ReservedChannel":
+        return ReservedChannel(purpose="NI6738_analog_sequencer_variable_clock")
+
 
 class ChannelColor(SettingsModel):
     red: float
@@ -75,6 +80,9 @@ class SpincoreConfig(SettingsModel):
         """Return the names of channels that don't have a special purpose"""
         return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
 
+    def get_channel_number(self, description: str | ChannelSpecialPurpose):
+        return self.channel_descriptions.index(description)
+
 
 class AnalogUnitsMapping(SettingsModel, ABC):
     @abstractmethod
@@ -97,6 +105,7 @@ class NI6738AnalogSequencerConfig(SettingsModel):
     channel_descriptions: list[str | ChannelSpecialPurpose] = []
     channel_colors: list[Optional[ChannelColor]] = []
     channel_mappings: list[Optional[AnalogUnitsMapping]] = []
+    time_step: float = Field(2.5e-6)
 
     @validator("channel_descriptions", always=True)
     def validate_channel_descriptions(cls, descriptions, values):
