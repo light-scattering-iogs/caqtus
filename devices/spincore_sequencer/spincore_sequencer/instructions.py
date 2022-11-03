@@ -1,17 +1,21 @@
 from abc import ABC
 
-import pydantic
+from pydantic import BaseModel, Field
 
 
-class Instruction(pydantic.BaseModel, ABC):
+class Instruction(BaseModel, ABC):
     pass
 
 class Continue(Instruction):
     values: list[bool]
-    duration: float
+    duration: float = Field(units="s")
+
+class Stop(Instruction):
+    values: list[bool]
 
 class Loop(Instruction):
+    repetitions: int
     start_values: list[bool]
-    start_duration: float
+    start_duration: float = Field(units="s")
     end_values: list[bool]
-    end_duration: float
+    end_duration: float = Field(units="s")

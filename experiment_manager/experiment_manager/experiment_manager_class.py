@@ -13,7 +13,7 @@ import h5py
 import numpy
 import yaml
 from pint import DimensionalityError
-from spincore_sequencer import Instruction, Continue, Loop
+from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 
 from experiment_config import ExperimentConfig
 from experiment_config.experiment_config import ReservedChannel
@@ -29,6 +29,7 @@ from sequence import (
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
 from settings_model import YAMLSerializable
 from shot import Lane, DigitalLane, AnalogLane, ShotConfiguration
+from spincore_sequencer.instructions import Stop
 from units import units, Quantity, ureg
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,9 @@ class SequenceRunnerThread(Thread):
             self.experiment_config, self.sequence_path / "experiment_config.yaml"
         )
 
+        self.spincore = SpincorePulseBlaster()
+        self.spincore.start()
+
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
         if self.is_waiting_to_interrupt():
@@ -89,6 +93,7 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def shutdown(self):
+        self.spincore.shutdown()
         self.parent.set_state(ExperimentState.IDLE)
 
     def run_sequence(self):
@@ -163,8 +168,10 @@ class SequenceRunnerThread(Thread):
         t0 = datetime.datetime.now()
         config = shot.configuration
         spincore_instructions = self.compile_shot(config, context)
+        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        self.spincore.run()
         data = {}
-        time.sleep(0.2)
+        # time.sleep(0.2)
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
@@ -182,7 +189,7 @@ class SequenceRunnerThread(Thread):
             shot.step_names, shot.step_durations, context
         )
         analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
-        digital_time_step = 10e-9
+        digital_time_step = 50e-9
 
         # check durations
         for step_name, duration in zip(shot.step_names, durations):
@@ -213,6 +220,7 @@ class SequenceRunnerThread(Thread):
         analog_clock_channel = self.experiment_config.spincore.get_channel_number(
             ReservedChannel.ni6738_analog_sequencer_variable_clock
         )
+        values = [False] * self.experiment_config.spincore.number_channels
         for step in range(len(durations)):
             values = [False] * self.experiment_config.spincore.number_channels
             for lane in digital_lanes:
@@ -228,12 +236,14 @@ class SequenceRunnerThread(Thread):
                 (high_values := copy(low_values))[analog_clock_channel] = True
                 instructions.append(
                     Loop(
+                        repetitions=len(analog_times[step]),
                         start_values=high_values,
                         start_duration=analog_time_step / 2,
                         end_values=low_values,
                         end_duration=analog_time_step / 2,
                     )
                 )
+        instructions.append(Stop(values=values))
         return instructions
 
     def save_shot(
@@ -259,7 +269,7 @@ class SequenceRunnerThread(Thread):
                 data=[float(quantity.magnitude) for quantity in context.values()],
             )
 
-        shot_file_name = f"{shot.name}_{self.shot_numbers[shot.name]}.h5py"
+        shot_file_name = f"{shot.name}_{self.shot_numbers[shot.name]}.hdf5"
         shot_file_path = self.sequence_path / shot_file_name
         if shot_file_path.is_file():
             raise RuntimeError(

@@ -50,7 +50,7 @@ class Sequence:
     def number_completed_shots(self) -> int:
         count = 0
         for child in self._path.iterdir():
-            if child.is_file() and child.suffix == ".h5py":
+            if child.is_file() and child.suffix == ".hdf5":
                 count += 1
 
         return count
