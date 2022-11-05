@@ -101,14 +101,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.setCentralWidget(None)
 
         self.experiment_process_manager = ExperimentProcessManager(
-            address=("localhost", 50000), authkey=b"Deardear"
+            address=("localhost", 60000), authkey=b"Deardear"
         )
         self.experiment_process_manager.connect()
         # noinspection PyUnresolvedReferences
         self.experiment_manager: ExperimentManager = (
             self.experiment_process_manager.ExperimentManager()
         )
-        logger.debug(self.experiment_manager.get_state())
 
     def sequence_view_double_clicked(self, index: QModelIndex):
         # noinspection PyTypeChecker

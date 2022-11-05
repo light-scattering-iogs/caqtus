@@ -1,7 +1,6 @@
 """Starts an experiment manager in a different process and then creates and runs the
 experiment viewer/sequences editor in the current process"""
 
-
 import logging
 import sys
 from multiprocessing.managers import BaseManager
@@ -30,7 +29,7 @@ class ExperimentProcessManager(BaseManager):
 ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 
 if __name__ == "__main__":
-    m = ExperimentProcessManager(address=("localhost", 50000), authkey=b"Deardear")
+    m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
     m.start()
     sys.excepthook = except_hook
     app = QApplication(sys.argv)
