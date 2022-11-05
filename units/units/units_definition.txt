@@ -86,6 +86,10 @@ watt = joule / second = W
 # Intensity
 [intensity] = [power] / [area]
 
+# Charge
+[charge] = [current] * [time]
+coulomb = ampere * second = C
+
 # Electric potential
 [electric_potential] = [energy] / [charge]
 volt = joule / coulomb = V
