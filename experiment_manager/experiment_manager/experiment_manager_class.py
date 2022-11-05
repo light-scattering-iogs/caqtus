@@ -14,6 +14,7 @@ import yaml
 
 from experiment_config import ExperimentConfig
 from experiment_config.experiment_config import ReservedChannel
+from ni6738_analog_card import NI6738AnalogCard
 from sequence import (
     SequenceStats,
     SequenceState,
@@ -28,7 +29,7 @@ from shot import (
     ShotConfiguration,
     evaluate_step_durations,
     evaluate_analog_local_times,
-evaluate_analog_values
+    evaluate_analog_values,
 )
 from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
@@ -46,7 +47,7 @@ class ExperimentState(Enum):
 
 class SequenceRunnerThread(Thread):
     def __init__(
-            self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
+        self, experiment_config: str, sequence_path: Path, parent: "ExperimentManager"
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self.experiment_config: ExperimentConfig = yaml.load(
@@ -61,7 +62,9 @@ class SequenceRunnerThread(Thread):
                 file, Loader=YAMLSerializable.get_loader()
             )
 
-        self.spincore = SpincorePulseBlaster(time_step=self.experiment_config.spincore.time_step)
+        self.spincore = SpincorePulseBlaster(
+            time_step=self.experiment_config.spincore.time_step
+        )
 
     def run(self):
         try:
@@ -136,7 +139,7 @@ class SequenceRunnerThread(Thread):
         context = copy(context)
 
         for value in numpy.arange(
-                start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
+            start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
         ):
             context[arange_loop.name] = value * unit
             for step in arange_loop.children:
@@ -157,7 +160,7 @@ class SequenceRunnerThread(Thread):
         context = copy(context)
 
         for value in numpy.linspace(
-                start.to(unit).magnitude, stop.to(unit).magnitude, num
+            start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
             context[linspace_loop.name] = value * unit
             for step in linspace_loop.children:
@@ -173,9 +176,8 @@ class SequenceRunnerThread(Thread):
         config = shot.configuration
         spincore_instructions = self.compile_shot(config, context)
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        # self.spincore.run()
+        self.spincore.run()
         data = {}
-        # time.sleep(0.2)
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
@@ -187,7 +189,7 @@ class SequenceRunnerThread(Thread):
         return self.parent.get_state() == ExperimentState.WAITING_TO_INTERRUPT
 
     def compile_shot(
-            self, shot: ShotConfiguration, context: dict[str]
+        self, shot: ShotConfiguration, context: dict[str]
     ) -> list[Instruction]:
         step_durations = evaluate_step_durations(shot, context)
 
@@ -200,9 +202,11 @@ class SequenceRunnerThread(Thread):
             self.spincore.time_step,
         )
 
-        instructions = self.generate_digital_instructions(shot, step_durations, analog_times)
+        instructions = self.generate_digital_instructions(
+            shot, step_durations, analog_times
+        )
 
-        evaluate_analog_values(shot, )
+        analog_values = evaluate_analog_values(shot, analog_times, context)
         return instructions
 
     def check_durations(self, shot: ShotConfiguration, durations: list[float]):
@@ -214,10 +218,10 @@ class SequenceRunnerThread(Thread):
                 )
 
     def generate_digital_instructions(
-            self,
-            shot: ShotConfiguration,
-            step_durations: list[float],
-            analog_times: list[numpy.ndarray],
+        self,
+        shot: ShotConfiguration,
+        step_durations: list[float],
+        analog_times: list[numpy.ndarray],
     ) -> list[Instruction]:
         analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
         instructions = []
@@ -248,16 +252,30 @@ class SequenceRunnerThread(Thread):
                         end_duration=analog_time_step / 2,
                     )
                 )
+                instructions.append(
+                    Continue(
+                        values=low_values,
+                        duration=step_durations[step]
+                        - (analog_times[step][-1] + analog_time_step),
+                    )
+                )
         instructions.append(Stop(values=values))
         return instructions
 
+    def generate_analog_voltages(self, analog_values: dict[str, numpy.ndarray]):
+        data_length = 0
+        for array in analog_values.values():
+            data_length = len(array)
+            break
+        values = numpy.zeros((NI6738AnalogCard.channel_number, data_length), dtype=numpy.float64)
+
     def save_shot(
-            self,
-            shot: ExecuteShot,
-            start_time: datetime.datetime,
-            end_time: datetime.datetime,
-            context: dict[str, Quantity],
-            data: dict[str],
+        self,
+        shot: ExecuteShot,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        context: dict[str, Quantity],
+        data: dict[str],
     ):
 
         data_buffer = io.BytesIO()
