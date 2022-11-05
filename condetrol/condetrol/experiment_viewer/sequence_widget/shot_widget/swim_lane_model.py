@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Type, Iterable
 
 from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
+from PyQt5.QtGui import QColor
 
 from experiment_config import ExperimentConfig
 from expression import Expression
@@ -75,6 +76,14 @@ class SwimLaneModel(QAbstractTableModel):
                     return lane.values[index.column()]
                 elif isinstance(lane, AnalogLane):
                     return lane.values[index.column()].body
+        elif role == Qt.ItemDataRole.TextColorRole:
+            if index.row() > 1:
+                lane = self.get_lane(index)
+                if isinstance(lane, AnalogLane):
+                    color = self.experiment_config.ni6738_analog_sequencer.find_color(lane)
+                    if color:
+                        return QColor.fromRgbF(color.red, color.green, color.blue)
+
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
@@ -181,6 +190,7 @@ class SwimLaneModel(QAbstractTableModel):
                 name=name,
                 values=[Expression("...") for _ in range(self.columnCount())],
                 spans=[1 for _ in range(self.columnCount())],
+                units="V"
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)
