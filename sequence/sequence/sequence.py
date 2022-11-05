@@ -1,8 +1,10 @@
 import math
 from copy import copy
+from functools import cached_property
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Iterable, Any
 
+import h5py
 import numpy
 import numpy as np
 
@@ -10,7 +12,7 @@ from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
 from shot import DigitalLane, AnalogLane, evaluate_analog_local_times
 from shot import evaluate_step_durations, evaluate_analog_values
-from units import ureg
+from units import ureg, Quantity
 from .sequence_config import SequenceConfig, compute_number_shots, find_shot_config
 from .sequence_state import SequenceState, SequenceStats
 
@@ -54,7 +56,7 @@ class Sequence:
     def number_completed_shots(self) -> int:
         count = 0
         for child in self._path.iterdir():
-            if child.is_file() and child.suffix == ".hdf5":
+            if self._is_shot(child):
                 count += 1
 
         return count
@@ -66,6 +68,18 @@ class Sequence:
             return YAMLSerializable.load(stored_copy)
         else:
             return YAMLSerializable.load(get_config_path())
+
+    @property
+    def shots(self) -> list["Shot"]:
+        result = []
+        for child in self._path.iterdir():
+            if self._is_shot(child):
+                result.append(Shot(child.relative_to(self._path), self))
+        return result
+
+    @staticmethod
+    def _is_shot(path: Path):
+        return path.is_file() and path.suffix == ".hdf5"
 
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
@@ -98,3 +112,26 @@ class Sequence:
             return np.append(concatenated_times, times[-1] * ureg.s), np.append(
                 values[lane.name], values[lane.name][-1]
             )
+
+
+class Shot:
+    def __init__(self, relative_path: Path, parent: Sequence):
+        self._parent = parent
+        self._relative_path = relative_path
+
+    @cached_property
+    def runtime_variable(self) -> dict[str, Any]:
+        with h5py.File(self.path, "r") as file:
+            names = file["variables/names"][:]
+            units = file["variables/units"][:]
+            magnitudes = file["variables/magnitudes"][:]
+            result = {
+                name.decode("utf-8"): Quantity(magnitude, units=unit.decode("utf-8"))
+                for name, unit, magnitude in zip(names, units, magnitudes)
+            }
+
+        return result
+
+    @property
+    def path(self) -> Path:
+        return self._parent.path / self._relative_path
