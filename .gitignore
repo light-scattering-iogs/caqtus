@@ -1,3 +1,4 @@
 .idea/
 /condetrol/condetrol/resources/icons/
 *.lock
+.ipynb_checkpoints
