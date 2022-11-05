@@ -2,11 +2,10 @@ import math
 from copy import copy
 from functools import cached_property
 from pathlib import Path
-from typing import Literal, Iterable, Any
+from typing import Literal, Any
 
 import h5py
 import numpy
-import numpy as np
 
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
@@ -88,7 +87,7 @@ class Sequence:
         lane = shot.find_lane(lane_name)
 
         step_durations = evaluate_step_durations(shot, context)
-        times = np.zeros(len(step_durations) + 1, dtype=float)
+        times = numpy.zeros(len(step_durations) + 1, dtype=float)
         times[1:] = numpy.cumsum(step_durations)
 
         if isinstance(lane, DigitalLane):
@@ -107,9 +106,9 @@ class Sequence:
             for i, offset in enumerate(times[:-1]):
                 global_analog_times[i] += offset
 
-            concatenated_times = np.concatenate(global_analog_times) * ureg.s
+            concatenated_times = numpy.concatenate(global_analog_times) * ureg.s
 
-            return np.append(concatenated_times, times[-1] * ureg.s), np.append(
+            return numpy.append(concatenated_times, times[-1] * ureg.s), numpy.append(
                 values[lane.name], values[lane.name][-1]
             )
 

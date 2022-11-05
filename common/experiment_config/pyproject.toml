@@ -7,6 +7,7 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.9"
 settings_model = { path = "../settings_model/", develop = true }
+sequence = { path = "../sequence/", develop = true }
 appdirs = "^1.4.4"
 PyQt5 = "^5.15.7"
 

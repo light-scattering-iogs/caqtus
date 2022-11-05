@@ -1,10 +1,8 @@
 import numpy
-import numpy as np
 
 from expression import Expression
-from .shot_configuration import ShotConfiguration
-
 from units import units, Quantity, DimensionalityError, ureg, dimensionless
+from .shot_configuration import ShotConfiguration
 
 
 def evaluate_step_durations(shot: ShotConfiguration, context: dict[str]) -> list[float]:
@@ -61,7 +59,7 @@ def evaluate_analog_local_times(
 
 def evaluate_analog_values(
     shot: ShotConfiguration, analog_times: list[numpy.ndarray], context: dict[str]
-) -> dict[str, np.ndarray]:
+) -> dict[str, numpy.ndarray]:
     result = {}
     for lane in shot.analog_lanes:
         lane_has_dimension = not Quantity(1, units=lane.units).is_compatible_with(
@@ -73,7 +71,9 @@ def evaluate_analog_values(
             if _is_constant(expression):
                 value = Quantity(expression.evaluate(context | units))
                 if value.is_compatible_with(dimensionless) and lane_has_dimension:
-                    value = Quantity(value.to(dimensionless).magnitude, units=lane.units)
+                    value = Quantity(
+                        value.to(dimensionless).magnitude, units=lane.units
+                    )
                 else:
                     value = value.to(lane.units)
                 values.append(numpy.full_like(analog_times[step], value.magnitude))
@@ -84,12 +84,14 @@ def evaluate_analog_values(
                     )
                 )
                 if value.is_compatible_with(dimensionless) and lane_has_dimension:
-                    value = Quantity(value.to(dimensionless).magnitude, units=lane.units)
+                    value = Quantity(
+                        value.to(dimensionless).magnitude, units=lane.units
+                    )
                 else:
                     value = value.to(lane.units)
                 values.append(value.magnitude)
 
-        result[lane.name] = np.concatenate(values) * Quantity(1, units=lane.units)
+        result[lane.name] = numpy.concatenate(values) * Quantity(1, units=lane.units)
 
     return result
 

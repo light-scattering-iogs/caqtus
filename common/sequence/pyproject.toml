@@ -8,6 +8,10 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 python = "^3.10"
 settings_model = { path = "../settings_model/", develop = true }
 expression = { path = "../expression/", develop = true }
+experiment_config = { path = "../experiment_config/", develop = true }
+units = { path = "../units/", develop = true }
+h5py = "^3.7.0"
+numpy = "^1.23.4"
 anytree = "^2.8.0"
 
 [tool.poetry.dev-dependencies]
