@@ -104,15 +104,31 @@ class SequenceRunnerThread(Thread):
         self.parent.set_state(ExperimentState.IDLE)
 
     def run_sequence(self):
+        """Walk through the sequence program and execute each step sequentially"""
         context: dict[str] = {}
         self.run_step(self.sequence_config.program, context)
 
     @singledispatchmethod
     def run_step(self, step: Step, context: dict[str]) -> dict[str]:
+        """Execute a given step of the sequence
+
+        This function should be implemented for each Step type that can be run on the experiment. It should also return
+        as soon as possible if the sequence needs to be interrupted.
+
+        Args:
+            step: the step of the sequence currently executed
+            context: a dictionary of the current variables names and values at this step
+
+        Returns:
+            updated context after the step was executed
+        """
+
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
 
     @run_step.register
     def _(self, steps: SequenceSteps, context):
+        """Execute each child step sequentially"""
+
         for step in steps.children:
             if self.is_waiting_to_interrupt():
                 return context
@@ -122,6 +138,8 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, declaration: VariableDeclaration, context):
+        """Add or update a variable declaration in the context"""
+
         updated_context = copy(context)
         updated_context[declaration.name] = Quantity(
             declaration.expression.evaluate(context | units)
@@ -130,6 +148,7 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, arange_loop: ArangeLoop, context):
+        """Loop over a variable in a numpy arange like loop and execute children steps at each repetition"""
         start = Quantity(arange_loop.start.evaluate(context | units))
         stop = Quantity(arange_loop.stop.evaluate(context | units))
         step = Quantity(arange_loop.step.evaluate(context | units))
@@ -151,6 +170,7 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, linspace_loop: LinspaceLoop, context):
+        """Loop over a variable in a numpy linspace like loop and execute children steps at each repetition"""
         start = Quantity(linspace_loop.start.evaluate(context | units))
         stop = Quantity(linspace_loop.stop.evaluate(context | units))
         num = int(linspace_loop.num)
@@ -172,11 +192,13 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: dict[str]):
+        """Execute a shot on the experiment"""
+
         t0 = datetime.datetime.now()
         config = shot.configuration
         spincore_instructions = self.compile_shot(config, context)
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        self.spincore.run()
+        # self.spincore.run()
         data = {}
 
         t1 = datetime.datetime.now()
@@ -267,7 +289,9 @@ class SequenceRunnerThread(Thread):
         for array in analog_values.values():
             data_length = len(array)
             break
-        values = numpy.zeros((NI6738AnalogCard.channel_number, data_length), dtype=numpy.float64)
+        values = numpy.zeros(
+            (NI6738AnalogCard.channel_number, data_length), dtype=numpy.float64
+        )
 
     def save_shot(
         self,
