@@ -64,7 +64,7 @@ def evaluate_analog_values(
 ) -> dict[str, np.ndarray]:
     result = {}
     for lane in shot.analog_lanes:
-        lane_has_dimension = not Quantity(1, lane.units).is_compatible_with(
+        lane_has_dimension = not Quantity(1, units=lane.units).is_compatible_with(
             dimensionless
         )
         values = []

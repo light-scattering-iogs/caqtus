@@ -1,7 +1,3 @@
 .idea/
 /condetrol/condetrol/resources/icons/
-/experiment_config/poetry.lock
-/expression/poetry.lock
-/sequence/poetry.lock
-/condetrol/poetry.lock
-/cdevice/poetry.lock
+*.lock
