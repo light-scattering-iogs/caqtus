@@ -2,12 +2,12 @@ import datetime
 import logging
 import os
 import shutil
-from functools import partial
+from functools import partial, lru_cache
 from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import yaml
-from PyQt5.QtCore import QSettings, QModelIndex, Qt, QFileSystemWatcher
+from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -23,11 +23,11 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QAbstractItemView,
 )
-from experiment_manager import ExperimentManager
 from qtpy import QtGui
 from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
+from experiment_manager import ExperimentManager
 from sequence import (
     SequenceStats,
     SequenceState,
@@ -95,8 +95,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.sequences_view.setDragDropOverwriteMode(False)
-        self.sequence_files_watcher = QFileSystemWatcher()
-        self.sequence_files_watcher.directoryChanged.connect(self.show_sequence_updated)
+
+        self.view_update_timer = QTimer(self)
+        self.view_update_timer.timeout.connect(self.sequences_view.update)
+        self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.view_update_timer.start(500)
 
         self.setCentralWidget(None)
 
@@ -123,19 +126,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.experiment_manager.start_sequence(
             config, path.relative_to(self.config.data_path)
         )
-        self.sequence_files_watcher.addPath(str(path))
-
-    def show_sequence_updated(self, path):
-        self.sequences_view.update()
-        sequence = Sequence(Path(path))
-        remove_path = True
-        try:
-            if sequence.state == SequenceState.RUNNING:
-                remove_path = False
-        finally:
-            pass
-        if remove_path:
-            self.sequence_files_watcher.removePath(path)
 
     def show_context_menu(self, position):
         index = self.sequences_view.indexAt(position)
@@ -145,7 +135,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         is_deletable = True
 
         if self.model.is_sequence_folder(index):
-            stats = self.model.get_stats(index)
+            stats = self.model.data(index, Qt.ItemDataRole.DisplayRole).stats
             if stats.state == SequenceState.RUNNING:
                 is_deletable = False
                 interrupt_sequence_action = QAction("Interrupt")
@@ -201,6 +191,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         super().closeEvent(a0)
 
 
+@lru_cache(maxsize=128)
+def get_sequence(path: Path):
+    return Sequence(path, monitoring=True)
+
+
 class SequenceViewerModel(QFileSystemModel):
     """Model for sequence explorer"""
 
@@ -223,10 +218,10 @@ class SequenceViewerModel(QFileSystemModel):
 
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
+            sequence = get_sequence(Path(self.filePath(index)))
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
-                return self.get_stats(index)
+                return sequence
             elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
-                sequence = Sequence(Path(self.filePath(index)))
                 if sequence.state == SequenceState.DRAFT:
                     return ""
                 elif sequence.state == SequenceState.FINISHED:
@@ -257,14 +252,6 @@ class SequenceViewerModel(QFileSystemModel):
             elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
                 return QIcon(":/icons/sequence")
         return super().data(index, role)
-
-    def get_stats(self, sequence_index: QModelIndex) -> SequenceStats:
-        path = Path(self.filePath(sequence_index)) / "sequence_state.yaml"
-        with open(path) as file:
-            result: SequenceStats = yaml.load(
-                file, Loader=YAMLSerializable.get_loader()
-            )
-            return result
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if (
@@ -387,13 +374,13 @@ class SequenceDelegate(QStyledItemDelegate):
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
         if model.is_sequence_folder(index):
-            sequence = Sequence(Path(model.filePath(index)))
+            sequence: Sequence = model.data(index, Qt.ItemDataRole.DisplayRole)
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect
             opt.minimum = 0
             opt.maximum = 100
             opt.textVisible = True
-            stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
+            stats = sequence.stats
             if stats.state == SequenceState.DRAFT:
                 opt.progress = 0
                 opt.text = "draft"
