@@ -1,3 +1,4 @@
+import logging
 import math
 from copy import copy
 from functools import cached_property
@@ -6,6 +7,8 @@ from typing import Literal, Any
 
 import h5py
 import numpy
+from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent
+from watchdog.observers.polling import PollingObserver
 
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
@@ -15,10 +18,28 @@ from units import ureg, Quantity
 from .sequence_config import SequenceConfig, compute_number_shots, find_shot_config
 from .sequence_state import SequenceState, SequenceStats
 
+logger = logging.getLogger(__name__)
+logger.setLevel("INFO")
+
 
 class Sequence:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, monitoring=False):
+        """Dynamical sequence watcher
+
+        This class gives access to a sequence folder and all the underlying information. If monitoring is set to True,
+        it updates its attributes to reflect the changes happening on the sequence. If monitoring is False, the sequence
+        freezes its attributes to their first read values.
+        """
+        self._monitoring = monitoring
         self._path = Path(path)
+        if not self._path.is_dir():
+            raise NotADirectoryError(f"{path} is not a sequence directory")
+
+        self._observer = PollingObserver(timeout=1)
+        self._event_handler = SequenceModifiedEventHandler(self)
+        self._observer.schedule(self._event_handler, str(self._path))
+        if self._monitoring:
+            self._observer.start()
 
     @property
     def path(self):
@@ -28,13 +49,17 @@ class Sequence:
     def relative_path(self):
         return self._path.relative_to(self.experiment_config.data_path)
 
-    @property
+    @cached_property
     def config(self) -> SequenceConfig:
         return YAMLSerializable.load(self._path / "sequence_config.yaml")
 
-    @property
+    @cached_property
     def stats(self) -> SequenceStats:
         return YAMLSerializable.load(self._path / "sequence_state.yaml")
+
+    def remove_cached_property(self, property_: str):
+        if hasattr(self, property_):
+            delattr(self, property_)
 
     @property
     def state(self) -> SequenceState:
@@ -51,7 +76,7 @@ class Sequence:
     def __len__(self):
         return self.number_completed_shots
 
-    @property
+    @cached_property
     def number_completed_shots(self) -> int:
         count = 0
         for child in self._path.iterdir():
@@ -111,6 +136,27 @@ class Sequence:
             return numpy.append(concatenated_times, times[-1] * ureg.s), numpy.append(
                 values[lane.name], values[lane.name][-1]
             )
+
+
+class SequenceModifiedEventHandler(FileSystemEventHandler):
+    def __init__(self, sequence: Sequence):
+        super().__init__()
+        self._sequence = sequence
+
+    def on_any_event(self, event):
+        logger.debug(event)
+
+    def on_modified(self, event):
+        if isinstance(event, FileModifiedEvent):
+            if event.src_path == str(self._sequence.path / "sequence_state.yaml"):
+                self._sequence.remove_cached_property("stats")
+            elif event.src_path == str(self._sequence.path / "sequence_config.yaml"):
+                self._sequence.remove_cached_property("config")
+
+    def on_created(self, event):
+        if isinstance(event, FileCreatedEvent):
+            if Path(event.src_path).suffix == ".hdf5":
+                self._sequence.remove_cached_property("number_completed_shots")
 
 
 class Shot:
