@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy
 import yaml
-from anytree import NodeMixin
+from anytree import NodeMixin, RenderTree
 
 from expression import Expression
 from settings_model import SettingsModel
@@ -46,6 +46,15 @@ class SequenceSteps(Step, YAMLSerializable):
             {"children": [child for child in step.children]},
         )
 
+    def __repr__(self):
+        return f"SequenceSteps(parent={self.parent}, children={self.children})"
+
+    def __str__(self):
+        return "\n".join(
+            f"{pre}{node if not node is self else 'steps'}"
+            for pre, _, node in RenderTree(self)
+        )
+
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
@@ -61,6 +70,9 @@ class VariableDeclaration(Step, YAMLSerializable):
 
     def __repr__(self):
         return f"VariableDeclaration({self.name}, {self.expression})"
+
+    def __str__(self):
+        return f"{self.name} = {self.expression.body}"
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, step: "VariableDeclaration"):
@@ -109,6 +121,9 @@ class LinspaceLoop(Step, YAMLSerializable):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
 
+    def __str__(self):
+        return f"For {self.name} = {self.start.body} to {self.stop.body} with {self.num} steps"
+
 
 class ArangeLoop(Step, YAMLSerializable):
     def __init__(
@@ -145,6 +160,9 @@ class ArangeLoop(Step, YAMLSerializable):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
 
+    def __str__(self):
+        return f"For {self.name} = {self.start.body} to {self.stop.body} with {self.step.body} spacing"
+
 
 class ExecuteShot(Step, YAMLSerializable):
     def __init__(
@@ -164,6 +182,9 @@ class ExecuteShot(Step, YAMLSerializable):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
+
+    def __str__(self):
+        return f"Do {self.name}"
 
 
 class SequenceConfig(SettingsModel):
