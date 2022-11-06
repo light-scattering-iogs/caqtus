@@ -1,13 +1,20 @@
+import datetime
 import logging
 import math
 from copy import copy
 from functools import cached_property
 from pathlib import Path
 from typing import Literal, Any
+from weakref import WeakValueDictionary
 
 import h5py
 import numpy
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent, FileCreatedEvent
+from watchdog.events import (
+    FileSystemEventHandler,
+    FileSystemEvent,
+    FileModifiedEvent,
+    FileCreatedEvent,
+)
 from watchdog.observers.polling import PollingObserver
 
 from experiment_config import ExperimentConfig, get_config_path
@@ -20,6 +27,39 @@ from .sequence_state import SequenceState, SequenceStats
 
 logger = logging.getLogger(__name__)
 logger.setLevel("INFO")
+
+
+class DataFolderModifiedEventHandler(FileSystemEventHandler):
+    def __init__(self):
+        super().__init__()
+        self._sequence_references: WeakValueDictionary[
+            str, Sequence
+        ] = WeakValueDictionary()
+
+    def on_any_event(self, event: FileSystemEvent):
+        event_path = Path(event.src_path)
+        if event_path.is_dir():
+            sequence_path = event_path
+        else:
+            sequence_path = event_path.parent
+        try:
+            self._sequence_references[sequence_path].local_files_changed(event)
+        except KeyError:
+            pass
+
+    def register_sequence(self, sequence: "Sequence"):
+        self._sequence_references[sequence.path] = sequence
+
+
+data_folder_observer = PollingObserver(timeout=1)
+event_dispatcher = DataFolderModifiedEventHandler()
+
+experiment_config: ExperimentConfig = YAMLSerializable.load(get_config_path())
+
+data_folder_observer.schedule(
+    event_dispatcher, str(experiment_config.data_path), recursive=True
+)
+data_folder_observer.start()
 
 
 class Sequence:
@@ -35,11 +75,10 @@ class Sequence:
         if not self._path.is_dir():
             raise NotADirectoryError(f"{path} is not a sequence directory")
 
-        self._observer = PollingObserver(timeout=1)
-        self._event_handler = SequenceModifiedEventHandler(self)
-        self._observer.schedule(self._event_handler, str(self._path))
-        if self._monitoring:
-            self._observer.start()
+        self.events = []
+        self._number_completed_shots = self.get_number_completed_shots()
+
+        event_dispatcher.register_sequence(self)
 
     @property
     def path(self):
@@ -76,14 +115,28 @@ class Sequence:
     def __len__(self):
         return self.number_completed_shots
 
-    @cached_property
-    def number_completed_shots(self) -> int:
+    def get_number_completed_shots(self) -> int:
         count = 0
         for child in self._path.iterdir():
             if self._is_shot(child):
                 count += 1
 
         return count
+
+    @property
+    def number_completed_shots(self):
+        return self._number_completed_shots
+
+    def local_files_changed(self, event: FileSystemEvent):
+        if isinstance(event, FileModifiedEvent):
+            if event.src_path == str(self.path / "sequence_state.yaml"):
+                self.remove_cached_property("stats")
+            elif event.src_path == str(self.path / "sequence_config.yaml"):
+                self.remove_cached_property("config")
+
+        elif isinstance(event, FileCreatedEvent):
+            if Path(event.src_path).suffix == ".hdf5":
+                self._number_completed_shots += 1
 
     @property
     def experiment_config(self) -> ExperimentConfig:
@@ -104,6 +157,29 @@ class Sequence:
     @staticmethod
     def _is_shot(path: Path):
         return path.is_file() and path.suffix == ".hdf5"
+
+    @property
+    def duration(self) -> datetime.timedelta:
+        if self.state == SequenceState.DRAFT:
+            return datetime.timedelta(seconds=0.0)
+        else:
+            start_time = self.stats.start_time
+            if self.state == SequenceState.RUNNING:
+                end_time = datetime.datetime.now()
+            else:
+                end_time = self.stats.stop_time
+            return end_time - start_time
+
+    @property
+    def remaining_duration(self) -> datetime.timedelta | Literal["unknown"]:
+        if self.number_completed_shots == 0:
+            return "unknown"
+        else:
+            return (
+                self.duration
+                * (self.total_number_shots - self.number_completed_shots)
+                / self.number_completed_shots
+            )
 
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
@@ -137,26 +213,18 @@ class Sequence:
                 values[lane.name], values[lane.name][-1]
             )
 
-
-class SequenceModifiedEventHandler(FileSystemEventHandler):
-    def __init__(self, sequence: Sequence):
-        super().__init__()
-        self._sequence = sequence
-
-    def on_any_event(self, event):
-        logger.debug(event)
-
-    def on_modified(self, event):
-        if isinstance(event, FileModifiedEvent):
-            if event.src_path == str(self._sequence.path / "sequence_state.yaml"):
-                self._sequence.remove_cached_property("stats")
-            elif event.src_path == str(self._sequence.path / "sequence_config.yaml"):
-                self._sequence.remove_cached_property("config")
-
-    def on_created(self, event):
-        if isinstance(event, FileCreatedEvent):
-            if Path(event.src_path).suffix == ".hdf5":
-                self._sequence.remove_cached_property("number_completed_shots")
+    # def on_modified(self, event):
+    #     if isinstance(event, FileModifiedEvent):
+    #         if event.src_path == str(self._sequence.path / "sequence_state.yaml"):
+    #             self._sequence.remove_cached_property("stats")
+    #         elif event.src_path == str(self._sequence.path / "sequence_config.yaml"):
+    #             self._sequence.remove_cached_property("config")
+    #
+    # def on_created(self, event):
+    #     if isinstance(event, FileCreatedEvent):
+    #         if Path(event.src_path).suffix == ".hdf5":
+    #             self._sequence._number_completed_shots += 1
+    #             # self._sequence.remove_cached_property("number_completed_shots")
 
 
 class Shot:

@@ -7,7 +7,7 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import yaml
-from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
+from PyQt5.QtCore import QSettings, QModelIndex, Qt
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -224,31 +224,17 @@ class SequenceViewerModel(QFileSystemModel):
             elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
                 if sequence.state == SequenceState.DRAFT:
                     return ""
-                elif sequence.state == SequenceState.FINISHED:
-                    start_time = sequence.stats.start_time
-                    end_time = sequence.stats.stop_time
+                else:
                     duration = datetime.timedelta(
-                        seconds=int((end_time - start_time).total_seconds())
+                        seconds=round(sequence.duration.total_seconds())
                     )
-                    return str(duration)
-                elif (
-                    sequence.state == SequenceState.INTERRUPTED
-                    or sequence.state == SequenceState.CRASHED
-                ):
-                    start_time = sequence.stats.start_time
-                    end_time = sequence.stats.stop_time
-                    duration = datetime.timedelta(
-                        seconds=int((end_time - start_time).total_seconds())
-                    )
-                    return f"{duration}/--"
-                elif sequence.state == SequenceState.RUNNING:
-                    start_time = sequence.stats.start_time
-                    end_time = datetime.datetime.now()
-                    duration = datetime.timedelta(
-                        seconds=int((end_time - start_time).total_seconds())
-                    )
-                    return f"{duration}/--"
-
+                    if sequence.state == SequenceState.FINISHED:
+                        return f"{duration}"
+                    else:
+                        remaining_duration = datetime.timedelta(
+                            seconds=round(sequence.remaining_duration.total_seconds())
+                        )
+                        return f"{duration}/{remaining_duration}"
             elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
                 return QIcon(":/icons/sequence")
         return super().data(index, role)
