@@ -3,17 +3,20 @@ import logging
 import math
 from copy import copy
 from functools import cached_property
+from os.path import normpath
 from pathlib import Path
 from typing import Literal, Any
-from weakref import WeakValueDictionary
 
 import h5py
 import numpy
 from watchdog.events import (
     FileSystemEventHandler,
-    FileSystemEvent,
     FileModifiedEvent,
     FileCreatedEvent,
+    DirModifiedEvent,
+    DirCreatedEvent,
+    FileDeletedEvent,
+    DirDeletedEvent,
 )
 from watchdog.observers.polling import PollingObserver
 
@@ -29,56 +32,27 @@ logger = logging.getLogger(__name__)
 logger.setLevel("INFO")
 
 
-class DataFolderModifiedEventHandler(FileSystemEventHandler):
-    def __init__(self):
-        super().__init__()
-        self._sequence_references: WeakValueDictionary[
-            str, Sequence
-        ] = WeakValueDictionary()
-
-    def on_any_event(self, event: FileSystemEvent):
-        event_path = Path(event.src_path)
-        if event_path.is_dir():
-            sequence_path = event_path
-        else:
-            sequence_path = event_path.parent
-        try:
-            self._sequence_references[sequence_path].local_files_changed(event)
-        except KeyError:
-            pass
-
-    def register_sequence(self, sequence: "Sequence"):
-        self._sequence_references[sequence.path] = sequence
-
-
-data_folder_observer = PollingObserver(timeout=1)
-event_dispatcher = DataFolderModifiedEventHandler()
-
-experiment_config: ExperimentConfig = YAMLSerializable.load(get_config_path())
-
-data_folder_observer.schedule(
-    event_dispatcher, str(experiment_config.data_path), recursive=True
-)
-data_folder_observer.start()
-
-
 class Sequence:
-    def __init__(self, path: Path, monitoring=False):
-        """Dynamical sequence watcher
+    def __init__(
+        self,
+        path: Path,
+    ):
+        """Give access to a sequence folder and the underlying information
 
-        This class gives access to a sequence folder and all the underlying information. If monitoring is set to True,
-        it updates its attributes to reflect the changes happening on the sequence. If monitoring is False, the sequence
-        freezes its attributes to their first read values.
+        If the sequence is instantiated directly, its attributes are frozen to their
+        first read value, e.g. the number of shot won't increase even though shots are
+        produced. If the sequence is created by using
+        sequence_folder_watcher.get_sequence(path), the sequencer watcher instance will
+        clear the sequence cache when the sequence folder is updated.
+
+        Args:
+            path: the folder containing the sequence configuration and data
         """
-        self._monitoring = monitoring
         self._path = Path(path)
         if not self._path.is_dir():
-            raise NotADirectoryError(f"{path} is not a sequence directory")
-
-        self.events = []
-        self._number_completed_shots = self.get_number_completed_shots()
-
-        event_dispatcher.register_sequence(self)
+            raise NotADirectoryError(f"{path} is not a directory")
+        if not self.is_sequence_folder(self._path):
+            raise RuntimeError(f"{path} is not a sequence directory")
 
     @property
     def path(self):
@@ -92,52 +66,6 @@ class Sequence:
     def config(self) -> SequenceConfig:
         return YAMLSerializable.load(self._path / "sequence_config.yaml")
 
-    @cached_property
-    def stats(self) -> SequenceStats:
-        return YAMLSerializable.load(self._path / "sequence_state.yaml")
-
-    def remove_cached_property(self, property_: str):
-        if hasattr(self, property_):
-            delattr(self, property_)
-
-    @property
-    def state(self) -> SequenceState:
-        return self.stats.state
-
-    @property
-    def total_number_shots(self) -> int | Literal["unknown"]:
-        program = self.config.program
-        if math.isnan(num := compute_number_shots(program)):
-            return "unknown"
-        else:
-            return num
-
-    def __len__(self):
-        return self.number_completed_shots
-
-    def get_number_completed_shots(self) -> int:
-        count = 0
-        for child in self._path.iterdir():
-            if self._is_shot(child):
-                count += 1
-
-        return count
-
-    @property
-    def number_completed_shots(self):
-        return self._number_completed_shots
-
-    def local_files_changed(self, event: FileSystemEvent):
-        if isinstance(event, FileModifiedEvent):
-            if event.src_path == str(self.path / "sequence_state.yaml"):
-                self.remove_cached_property("stats")
-            elif event.src_path == str(self.path / "sequence_config.yaml"):
-                self.remove_cached_property("config")
-
-        elif isinstance(event, FileCreatedEvent):
-            if Path(event.src_path).suffix == ".hdf5":
-                self._number_completed_shots += 1
-
     @property
     def experiment_config(self) -> ExperimentConfig:
         stored_copy = self._path / "experiment_config.yaml"
@@ -146,17 +74,33 @@ class Sequence:
         else:
             return YAMLSerializable.load(get_config_path())
 
+    @cached_property
+    def stats(self) -> SequenceStats:
+        return YAMLSerializable.load(self._path / "sequence_state.yaml")
+
     @property
-    def shots(self) -> list["Shot"]:
-        result = []
+    def state(self) -> SequenceState:
+        return self.stats.state
+
+    @cached_property
+    def total_number_shots(self) -> int | Literal["unknown"]:
+        program = self.config.program
+        if math.isnan(num := compute_number_shots(program)):
+            return "unknown"
+        else:
+            return num
+
+    @cached_property
+    def number_completed_shots(self) -> int:
+        count = 0
         for child in self._path.iterdir():
             if self._is_shot(child):
-                result.append(Shot(child.relative_to(self._path), self))
-        return result
+                count += 1
 
-    @staticmethod
-    def _is_shot(path: Path):
-        return path.is_file() and path.suffix == ".hdf5"
+        return count
+
+    def __len__(self):
+        return self.number_completed_shots
 
     @property
     def duration(self) -> datetime.timedelta:
@@ -180,6 +124,14 @@ class Sequence:
                 * (self.total_number_shots - self.number_completed_shots)
                 / self.number_completed_shots
             )
+
+    @property
+    def shots(self) -> list["Shot"]:
+        result = []
+        for child in self._path.iterdir():
+            if self._is_shot(child):
+                result.append(Shot(child.relative_to(self._path), self))
+        return result
 
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
@@ -213,18 +165,19 @@ class Sequence:
                 values[lane.name], values[lane.name][-1]
             )
 
-    # def on_modified(self, event):
-    #     if isinstance(event, FileModifiedEvent):
-    #         if event.src_path == str(self._sequence.path / "sequence_state.yaml"):
-    #             self._sequence.remove_cached_property("stats")
-    #         elif event.src_path == str(self._sequence.path / "sequence_config.yaml"):
-    #             self._sequence.remove_cached_property("config")
-    #
-    # def on_created(self, event):
-    #     if isinstance(event, FileCreatedEvent):
-    #         if Path(event.src_path).suffix == ".hdf5":
-    #             self._sequence._number_completed_shots += 1
-    #             # self._sequence.remove_cached_property("number_completed_shots")
+    @staticmethod
+    def _is_shot(path: Path):
+        return path.is_file() and path.suffix == ".hdf5"
+
+    def remove_cached_property(self, property_: str):
+        if property_ in self.__dict__:
+            delattr(self, property_)
+
+    @staticmethod
+    def is_sequence_folder(path: Path) -> bool:
+        return (path / "sequence_state.yaml").exists() and (
+            path / "sequence_config.yaml"
+        ).exists()
 
 
 class Shot:
@@ -248,3 +201,57 @@ class Shot:
     @property
     def path(self) -> Path:
         return self._parent.path / self._relative_path
+
+
+class SequenceFolderWatcher(FileSystemEventHandler):
+    def __init__(self, data_folder: Path):
+        self._data_folder = data_folder
+
+        self._sequence_cache: dict[str, Sequence] = {}
+
+        self._observer = PollingObserver(timeout=1)
+        self._observer.schedule(self, str(self._data_folder), recursive=True)
+        self._observer.start()
+
+    @property
+    def data_folder(self):
+        return self._data_folder
+
+    def on_modified(self, event: DirModifiedEvent | FileModifiedEvent):
+        if isinstance(event, FileModifiedEvent):
+            file_path = Path(event.src_path)
+            parent = file_path.parent
+            if normpath(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normpath(parent)]
+                if file_path.name == "sequence_state.yaml":
+                    sequence.remove_cached_property("stats")
+                elif file_path.name == "sequence_config.yaml":
+                    sequence.remove_cached_property("config")
+                    sequence.remove_cached_property("total_number_shots")
+
+    def on_created(self, event: DirCreatedEvent | FileCreatedEvent):
+        if isinstance(event, FileCreatedEvent):
+            file_path = Path(event.src_path)
+            parent = file_path.parent
+            if normpath(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normpath(parent)]
+                if file_path.suffix == ".hdf5":
+                    sequence.number_completed_shots += 1
+
+    def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
+        if isinstance(event, DirDeletedEvent):
+            self._sequence_cache.pop(normpath(event.src_path), None)
+
+    def get_sequence(self, path: Path) -> Sequence:
+        if normpath(path) in self._sequence_cache:
+            return self._sequence_cache[normpath(path)]
+        else:
+            sequence = Sequence(path)
+            self._sequence_cache[normpath(path)] = sequence
+            return sequence
+
+    def is_sequence_folder(self, path: Path) -> bool:
+        if normpath(path) in self._sequence_cache:
+            return True
+        else:
+            return Sequence.is_sequence_folder(path)

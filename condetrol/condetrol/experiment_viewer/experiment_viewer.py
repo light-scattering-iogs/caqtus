@@ -2,12 +2,12 @@ import datetime
 import logging
 import os
 import shutil
-from functools import partial, lru_cache
+from functools import partial
 from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import yaml
-from PyQt5.QtCore import QSettings, QModelIndex, Qt
+from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -28,6 +28,7 @@ from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
+from sequence import SequenceFolderWatcher
 from sequence import (
     SequenceStats,
     SequenceState,
@@ -191,15 +192,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         super().closeEvent(a0)
 
 
-@lru_cache(maxsize=128)
-def get_sequence(path: Path):
-    return Sequence(path, monitoring=True)
-
-
 class SequenceViewerModel(QFileSystemModel):
     """Model for sequence explorer"""
 
     def __init__(self, data_root: Path, *args, **kwargs):
+        self.sequence_watcher = SequenceFolderWatcher(data_root)
         super().__init__(*args, **kwargs)
         self.setRootPath(str(data_root))
 
@@ -218,7 +215,7 @@ class SequenceViewerModel(QFileSystemModel):
 
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
-            sequence = get_sequence(Path(self.filePath(index)))
+            sequence = self.sequence_watcher.get_sequence(Path(self.filePath(index)))
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
                 return sequence
             elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
@@ -261,9 +258,7 @@ class SequenceViewerModel(QFileSystemModel):
 
     def is_sequence_folder(self, parent: QModelIndex) -> bool:
         path = Path(self.filePath(parent))
-        if (path / "sequence_state.yaml").exists():
-            return True
-        return False
+        return self.sequence_watcher.is_sequence_folder(path)
 
     def fileIcon(self, index: QModelIndex) -> QtGui.QIcon:
         if self.is_sequence_folder(index):
@@ -331,7 +326,7 @@ class SequenceViewerModel(QFileSystemModel):
             None,
             f"Duplicate sequence {path}",
             "New sequence name:",
-            QLineEdit.Normal,
+            QLineEdit.EchoMode.Normal,
             str(path),
         )
         if ok and text:
