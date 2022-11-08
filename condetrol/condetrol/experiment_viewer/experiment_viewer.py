@@ -286,14 +286,12 @@ class SequenceViewerModel(QFileSystemModel):
             try:
                 new_sequence_path.mkdir()
                 config = SequenceConfig(
-                    program=SequenceSteps(
-                        children=[
-                            ExecuteShot(name="shot")
-                        ]
-                    ),
-                    shot_configurations={"shot": ShotConfiguration()}
+                    program=SequenceSteps(children=[ExecuteShot(name="shot")]),
+                    shot_configurations={"shot": ShotConfiguration()},
                 )
-                YAMLSerializable.dump(config, new_sequence_path / "sequence_config.yaml")
+                YAMLSerializable.dump(
+                    config, new_sequence_path / "sequence_config.yaml"
+                )
                 stats = SequenceStats()
                 YAMLSerializable.dump(stats, new_sequence_path / "sequence_state.yaml")
             except:
@@ -383,6 +381,7 @@ class SequenceDelegate(QStyledItemDelegate):
                     opt.palette.setColor(
                         QPalette.ColorRole.Highlight, QColor(98, 151, 85)
                     )
+                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
                 elif stats.state == SequenceState.CRASHED:
                     opt.text = "crashed"
                     opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
