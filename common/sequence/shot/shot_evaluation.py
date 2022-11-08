@@ -69,7 +69,13 @@ def evaluate_analog_values(
         for step in range(len(shot.step_names)):
             expression = lane.get_effective_value(step)
             if _is_constant(expression):
-                value = Quantity(expression.evaluate(context | units))
+                try:
+                    value = Quantity(expression.evaluate(context | units))
+                except NameError as err:
+                    raise NameError(
+                        f"'{err.name}' is no defined in expression '{expression.body}' "
+                        f"(step: {shot.step_names[step]}, lane: {lane.name})"
+                    )
                 if value.is_compatible_with(dimensionless) and lane_has_dimension:
                     value = Quantity(
                         value.to(dimensionless).magnitude, units=lane.units
@@ -78,11 +84,17 @@ def evaluate_analog_values(
                     value = value.to(lane.units)
                 values.append(numpy.full_like(analog_times[step], value.magnitude))
             else:
-                value = Quantity(
-                    expression.evaluate(
-                        context | units | {"t": analog_times[step] * ureg.s}
+                try:
+                    value = Quantity(
+                        expression.evaluate(
+                            context | units | {"t": analog_times[step] * ureg.s}
+                        )
                     )
-                )
+                except NameError as err:
+                    raise NameError(
+                        f"'{err.name}' is no defined in expression '{expression.body}' "
+                        f"(step: {shot.step_names[step]}, lane: {lane.name})"
+                    )
                 if value.is_compatible_with(dimensionless) and lane_has_dimension:
                     value = Quantity(
                         value.to(dimensionless).magnitude, units=lane.units
