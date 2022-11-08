@@ -231,7 +231,6 @@ class SwimLaneModel(QAbstractTableModel):
         return True
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        return False
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
             self.shot_config.lanes.pop(row - 2)
@@ -252,7 +251,7 @@ class SwimLaneModel(QAbstractTableModel):
                 name=name,
                 values=[Expression("...") for _ in range(self.columnCount())],
                 spans=[1 for _ in range(self.columnCount())],
-                units="V",
+                units=self.experiment_config.ni6738_analog_sequencer.find_unit(name),
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)
