@@ -231,7 +231,8 @@ class SwimLaneWidget(QWidget):
     def create_digital_add_lane_actions(self):
         unused_channels = self._model.experiment_config.spincore.get_named_channels()
         in_use_channels = self._model.shot_config.get_lane_names()
-        possible_channels = unused_channels.difference(in_use_channels)
+        possible_channels = list(unused_channels.difference(in_use_channels))
+        possible_channels.sort()
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
             action.triggered.connect(
@@ -249,7 +250,8 @@ class SwimLaneWidget(QWidget):
             self._model.experiment_config.ni6738_analog_sequencer.get_named_channels()
         )
         in_use_channels = self._model.shot_config.get_lane_names()
-        possible_channels = unused_channels.difference(in_use_channels)
+        possible_channels = list(unused_channels.difference(in_use_channels))
+        possible_channels.sort()
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
             action.triggered.connect(
