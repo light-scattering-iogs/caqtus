@@ -47,10 +47,12 @@ from sequence import (
 )
 from sequence.sequence_config import ArangeLoop, ExecuteShot
 from settings_model.settings_model import YAMLSerializable
-from .sequence_arange_iteration_ui import Ui_ArangeDeclaration
-from .sequence_execute_shot_ui import Ui_ExecuteShot
-from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
-from .sequence_variable_declaration_ui import Ui_VariableDeclaration
+from .step_uis import (
+    Ui_ArangeDeclaration,
+    Ui_VariableDeclaration,
+    Ui_LinspaceDeclaration,
+    Ui_ExecuteShot,
+)
 from .sequence_watcher import SequenceWatcher
 from .shot_widget import ShotWidget
 

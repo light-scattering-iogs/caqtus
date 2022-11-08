@@ -2,6 +2,7 @@ import datetime
 import io
 import logging
 import os
+import time
 from copy import copy
 from enum import Enum, auto
 from functools import singledispatchmethod
@@ -84,7 +85,7 @@ class SequenceRunnerThread(Thread):
             self.experiment_config, self.sequence_path / "experiment_config.yaml"
         )
 
-        self.spincore.start()
+        # self.spincore.start()
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
@@ -201,9 +202,10 @@ class SequenceRunnerThread(Thread):
         t0 = datetime.datetime.now()
         config = self.sequence_config.shot_configurations[shot.name]
         spincore_instructions = self.compile_shot(config, context)
-        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        # self.spincore.apply_rt_variables(instructions=spincore_instructions)
         # self.spincore.run()
         data = {}
+        time.sleep(0.2)
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
