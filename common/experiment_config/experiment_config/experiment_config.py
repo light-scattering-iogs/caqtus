@@ -8,6 +8,7 @@ from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
 
+from sequence import SequenceSteps
 from settings_model import SettingsModel
 from shot import DigitalLane, AnalogLane
 from units import Quantity
@@ -158,6 +159,11 @@ class NI6738AnalogSequencerConfig(SettingsModel):
     def find_color(self, lane: AnalogLane) -> Optional[ChannelColor]:
         return self.channel_colors[self.find_channel_index(lane)]
 
+    def find_unit(self, lane_name: str) -> str:
+        return self.channel_mappings[
+            self.channel_descriptions.index(lane_name)
+        ].get_input_units()
+
     def find_channel_index(self, lane: AnalogLane):
         return self.channel_descriptions.index(lane.name)
 
@@ -175,6 +181,11 @@ class ExperimentConfig(SettingsModel):
     ni6738_analog_sequencer: NI6738AnalogSequencerConfig = Field(
         default_factory=NI6738AnalogSequencerConfig
     )
+    header: SequenceSteps = Field(
+        default_factory=SequenceSteps,
+        description="Steps that are always executed before a sequence",
+    )
+
 
 
 def get_config_path() -> Path:

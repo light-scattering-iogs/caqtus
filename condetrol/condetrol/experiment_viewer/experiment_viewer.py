@@ -28,15 +28,14 @@ from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
-from sequence import SequenceFolderWatcher
 from sequence import (
     SequenceStats,
     SequenceState,
     SequenceConfig,
     SequenceSteps,
     ExecuteShot,
-    Sequence,
 )
+from sequence.sequence import Sequence, SequenceFolderWatcher
 from settings_model import YAMLSerializable
 from shot import ShotConfiguration
 from .config_editor import ConfigEditor

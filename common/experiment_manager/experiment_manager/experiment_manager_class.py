@@ -111,6 +111,7 @@ class SequenceRunnerThread(Thread):
     def run_sequence(self):
         """Walk through the sequence program and execute each step sequentially"""
         context: dict[str] = {}
+        context = self.run_step(self.experiment_config.header, context)
         self.run_step(self.sequence_config.program, context)
 
     @singledispatchmethod

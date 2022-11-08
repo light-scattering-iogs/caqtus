@@ -1,6 +1,5 @@
 __version__ = "0.1.0"
 
-from .sequence import Sequence, SequenceFolderWatcher
 from .sequence_config import (
     SequenceConfig,
     Step,
@@ -10,3 +9,4 @@ from .sequence_config import (
     ExecuteShot,
 )
 from .sequence_state import SequenceState, SequenceStats
+
