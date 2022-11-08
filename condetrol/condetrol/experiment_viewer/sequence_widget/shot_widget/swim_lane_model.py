@@ -3,7 +3,14 @@ from itertools import groupby
 from pathlib import Path
 from typing import Type, Iterable
 
-from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize
+from PyQt5.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+    QSize,
+    QMimeData,
+    QByteArray,
+)
 from PyQt5.QtGui import QColor
 
 from experiment_config import ExperimentConfig
@@ -53,7 +60,7 @@ class SwimLaneModel(QAbstractTableModel):
         self.sequence_config = sequence_config
         self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
         self.endResetModel()
-        self.layoutChanged.emit
+        self.layoutChanged.emit()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return 2 + len(self.shot_config.lanes)
@@ -107,16 +114,64 @@ class SwimLaneModel(QAbstractTableModel):
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid():
-            flags = (
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsDragEnabled
-                | Qt.ItemFlag.ItemIsEnabled
-            )
+            flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
+            if index.row() > 1:
+                flags |= Qt.ItemFlag.ItemIsDragEnabled
             if self.sequence_state == SequenceState.DRAFT:
                 flags |= Qt.ItemFlag.ItemIsEditable
+                if index.row() > 1:
+                    flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
+
+    # noinspection PyTypeChecker
+    def supportedDropActions(self) -> Qt.DropActions:
+        return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
+
+    def supportedDragActions(self) -> Qt.DropAction:
+        if self.sequence_state == SequenceState.DRAFT:
+            return Qt.DropAction.MoveAction
+        else:
+            return Qt.DropAction.CopyAction
+
+    def mimeTypes(self) -> list[str]:
+        return ["application/x-shot_lanes"]
+
+    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+        rows = set(index.row() for index in indexes)
+        data = [self.shot_config.lanes[row - 2] for row in rows]
+        serialized = YAMLSerializable.dump(data).encode("utf-8")
+        mime_data = QMimeData()
+        mime_data.setData("application/x-shot_lanes", QByteArray(serialized))
+        logger.debug(data)
+        return mime_data
+
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        yaml_string = data.data("application/x-shot_lanes").data().decode("utf-8")
+        lanes: list[Lane] = YAMLSerializable.load(yaml_string)
+        return False
+
+        correct_length = all(
+            len(lane) == len(self.shot_config.step_names) for lane in lanes
+        )
+        if correct_length:
+            self.beginInsertRows(parent, row, row + len(lanes) - 1)
+            for lane in lanes:
+                logger.debug(row)
+                self.shot_config.lanes.insert(row - 2, lane)
+            self.endInsertRows()
+            self.save_config()
+            return True
+        else:
+            return False
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -171,6 +226,15 @@ class SwimLaneModel(QAbstractTableModel):
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
         self.beginRemoveRows(parent, row, row)
         self.shot_config.lanes.pop(row - 2)
+        self.endRemoveRows()
+        self.save_config()
+        return True
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        return False
+        self.beginRemoveRows(parent, row, row + count - 1)
+        for _ in range(count):
+            self.shot_config.lanes.pop(row - 2)
         self.endRemoveRows()
         self.save_config()
         return True

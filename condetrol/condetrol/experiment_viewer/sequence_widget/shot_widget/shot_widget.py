@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QStyle,
     QMenu,
     QAction,
+    QAbstractItemView,
 )
 
 from experiment_config import ExperimentConfig
@@ -80,6 +81,13 @@ class SpanTableView(QTableView):
         self.model().layoutChanged.connect(self.update_span)
         self.model().layoutChanged.emit()
 
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setDragDropOverwriteMode(False)
+
     def update_span(self):
         self.clearSpans()
         for row in range(self.model().rowCount()):
@@ -101,8 +109,8 @@ class SwimLaneWidget(QWidget):
 
         self.steps_view = QTableView()
         self.steps_view.setModel(self._model)
-        for i in range(2, self._model.rowCount()):
-            self.steps_view.setRowHidden(i, True)
+        self.hide_time_table_lanes()
+        self._model.rowsInserted.connect(self.hide_time_table_lanes)
 
         self.steps_view.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -165,6 +173,10 @@ class SwimLaneWidget(QWidget):
         self.lanes_view.customContextMenuRequested.connect(
             self.show_lane_cells_context_menu
         )
+
+    def hide_time_table_lanes(self, *_):
+        for i in range(2, self._model.rowCount()):
+            self.steps_view.setRowHidden(i, True)
 
     def update_vertical_header_width(self):
         new_width = max(
