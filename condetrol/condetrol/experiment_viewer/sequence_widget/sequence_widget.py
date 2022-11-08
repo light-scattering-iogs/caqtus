@@ -47,7 +47,6 @@ from sequence import (
 )
 from sequence.sequence_config import ArangeLoop, ExecuteShot
 from settings_model.settings_model import YAMLSerializable
-from shot import ShotConfiguration
 from .sequence_arange_iteration_ui import Ui_ArangeDeclaration
 from .sequence_execute_shot_ui import Ui_ExecuteShot
 from .sequence_linspace_iteration_ui import Ui_LinspaceDeclaration
@@ -485,7 +484,9 @@ class SequenceWidget(QDockWidget):
     ):
         super().__init__(*args, **kwargs)
         self._path = sequence_path
-        experiment_config: ExperimentConfig = YAMLSerializable.load(experiment_config_path)
+        experiment_config: ExperimentConfig = YAMLSerializable.load(
+            experiment_config_path
+        )
         self.setWindowTitle(f"{self._path.relative_to(experiment_config.data_path)}")
 
         self.tab_widget = QTabWidget()
@@ -550,10 +551,6 @@ class SequenceWidget(QDockWidget):
                 lambda: model.insert_step(
                     ExecuteShot(
                         name="shot",
-                        configuration=ShotConfiguration(
-                            step_names=["Step 0"],
-                            step_durations=[Expression("10 ms")],
-                        ),
                     ),
                     index,
                 )

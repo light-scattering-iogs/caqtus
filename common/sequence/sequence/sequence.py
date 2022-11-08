@@ -25,7 +25,7 @@ from settings_model import YAMLSerializable
 from shot import DigitalLane, AnalogLane, evaluate_analog_local_times
 from shot import evaluate_step_durations, evaluate_analog_values
 from units import ureg, Quantity
-from .sequence_config import SequenceConfig, compute_number_shots, find_shot_config
+from .sequence_config import SequenceConfig, compute_number_shots
 from .sequence_state import SequenceState, SequenceStats
 
 logger = logging.getLogger(__name__)
@@ -136,7 +136,7 @@ class Sequence:
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
     ):
-        shot = find_shot_config(self.config.program, shot_name)
+        shot = self.config.shot_configurations[shot_name]
         lane = shot.find_lane(lane_name)
 
         step_durations = evaluate_step_durations(shot, context)

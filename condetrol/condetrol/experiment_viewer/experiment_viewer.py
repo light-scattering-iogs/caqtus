@@ -228,6 +228,8 @@ class SequenceViewerModel(QFileSystemModel):
                     if sequence.state == SequenceState.FINISHED:
                         return f"{duration}"
                     else:
+                        if sequence.remaining_duration == "unknown":
+                            return ""
                         remaining_duration = datetime.timedelta(
                             seconds=round(sequence.remaining_duration.total_seconds())
                         )
@@ -286,15 +288,14 @@ class SequenceViewerModel(QFileSystemModel):
                 config = SequenceConfig(
                     program=SequenceSteps(
                         children=[
-                            ExecuteShot(name="shot", configuration=ShotConfiguration())
+                            ExecuteShot(name="shot")
                         ]
-                    )
+                    ),
+                    shot_configurations={"shot": ShotConfiguration()}
                 )
-                with open(new_sequence_path / "sequence_config.yaml", "w") as file:
-                    file.write(yaml.safe_dump(config))
+                YAMLSerializable.dump(config, new_sequence_path / "sequence_config.yaml")
                 stats = SequenceStats()
-                with open(new_sequence_path / "sequence_state.yaml", "w") as file:
-                    file.write(yaml.safe_dump(stats))
+                YAMLSerializable.dump(stats, new_sequence_path / "sequence_state.yaml")
             except:
                 logger.error(
                     f"Could not create new sequence '{new_sequence_path}'",

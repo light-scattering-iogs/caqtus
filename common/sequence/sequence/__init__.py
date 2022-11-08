@@ -8,6 +8,5 @@ from .sequence_config import (
     VariableDeclaration,
     LinspaceLoop,
     ExecuteShot,
-    find_shot_config,
 )
 from .sequence_state import SequenceState, SequenceStats

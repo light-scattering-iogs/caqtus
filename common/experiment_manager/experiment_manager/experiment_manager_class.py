@@ -100,8 +100,12 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def shutdown(self):
-        self.spincore.shutdown()
-        self.parent.set_state(ExperimentState.IDLE)
+        try:
+            self.spincore.shutdown()
+        except:
+            logger.error("An error occurred when shutting down", exc_info=True)
+        finally:
+            self.parent.set_state(ExperimentState.IDLE)
 
     def run_sequence(self):
         """Walk through the sequence program and execute each step sequentially"""
@@ -195,7 +199,7 @@ class SequenceRunnerThread(Thread):
         """Execute a shot on the experiment"""
 
         t0 = datetime.datetime.now()
-        config = shot.configuration
+        config = self.sequence_config.shot_configurations[shot.name]
         spincore_instructions = self.compile_shot(config, context)
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
         # self.spincore.run()

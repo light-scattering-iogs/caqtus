@@ -8,7 +8,7 @@ from PyQt5.QtGui import QColor
 
 from experiment_config import ExperimentConfig
 from expression import Expression
-from sequence import SequenceStats, SequenceConfig, SequenceState, find_shot_config
+from sequence import SequenceStats, SequenceConfig, SequenceState
 from settings_model import YAMLSerializable
 from shot import DigitalLane, AnalogLane, Lane
 from ..sequence_watcher import SequenceWatcher
@@ -37,15 +37,10 @@ class SwimLaneModel(QAbstractTableModel):
         self.sequence_watcher = SequenceWatcher(sequence_path)
         self.sequence_config = self.sequence_watcher.read_config()
         self.sequence_state = self.sequence_watcher.read_stats().state
-        self.shot_config = find_shot_config(
-            self.sequence_config.program, self.shot_name
-        )
-        self.layoutChanged.emit()
+        self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
 
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
-
-        logger.debug(self.shot_config)
 
     def change_sequence_state(self, stats: SequenceStats):
         self.sequence_state = stats.state
@@ -53,9 +48,7 @@ class SwimLaneModel(QAbstractTableModel):
 
     def change_sequence_config(self, sequence_config: SequenceConfig):
         self.sequence_config = sequence_config
-        self.shot_config = find_shot_config(
-            self.sequence_config.program, self.shot_name
-        )
+        self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
         self.layoutChanged.emit()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
@@ -80,10 +73,11 @@ class SwimLaneModel(QAbstractTableModel):
             if index.row() > 1:
                 lane = self.get_lane(index)
                 if isinstance(lane, AnalogLane):
-                    color = self.experiment_config.ni6738_analog_sequencer.find_color(lane)
+                    color = self.experiment_config.ni6738_analog_sequencer.find_color(
+                        lane
+                    )
                     if color:
                         return QColor.fromRgbF(color.red, color.green, color.blue)
-
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
@@ -190,7 +184,7 @@ class SwimLaneModel(QAbstractTableModel):
                 name=name,
                 values=[Expression("...") for _ in range(self.columnCount())],
                 spans=[1 for _ in range(self.columnCount())],
-                units="V"
+                units="V",
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)
@@ -200,8 +194,9 @@ class SwimLaneModel(QAbstractTableModel):
 
     def save_config(self) -> bool:
         with self.sequence_watcher.block_signals():
-            with open(self.sequence_watcher.config_path, "w") as file:
-                file.write(YAMLSerializable.dump(self.sequence_config))
+            YAMLSerializable.dump(
+                self.sequence_config, self.sequence_watcher.config_path
+            )
             return True
 
     def merge(self, indexes: Iterable[QModelIndex]):

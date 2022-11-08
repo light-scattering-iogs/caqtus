@@ -122,7 +122,10 @@ class LinspaceLoop(Step, YAMLSerializable):
         return cls(**loader.construct_mapping(node, deep=True))
 
     def __str__(self):
-        return f"For {self.name} = {self.start.body} to {self.stop.body} with {self.num} steps"
+        return (
+            f"For {self.name} = {self.start.body} to {self.stop.body} with"
+            f" {self.num} steps"
+        )
 
 
 class ArangeLoop(Step, YAMLSerializable):
@@ -161,22 +164,22 @@ class ArangeLoop(Step, YAMLSerializable):
         return cls(**loader.construct_mapping(node, deep=True))
 
     def __str__(self):
-        return f"For {self.name} = {self.start.body} to {self.stop.body} with {self.step.body} spacing"
+        return (
+            f"For {self.name} = {self.start.body} to {self.stop.body} with"
+            f" {self.step.body} spacing"
+        )
 
 
 class ExecuteShot(Step, YAMLSerializable):
-    def __init__(
-        self, name: str, configuration: ShotConfiguration, parent: Optional[Step] = None
-    ):
+    def __init__(self, name: str, parent: Optional[Step] = None):
         super().__init__(parent, None)
         self.name = name
-        self.configuration = configuration
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, step: "ExecuteShot"):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
-            {"name": step.name, "configuration": step.configuration},
+            {"name": step.name},
         )
 
     @classmethod
@@ -189,6 +192,7 @@ class ExecuteShot(Step, YAMLSerializable):
 
 class SequenceConfig(SettingsModel):
     program: SequenceSteps
+    shot_configurations: dict[str, ShotConfiguration]
 
 
 @singledispatch
@@ -230,16 +234,3 @@ def _(loop: ArangeLoop):
 @compute_number_shots.register
 def _(shot: ExecuteShot):
     return 1
-
-
-@singledispatch
-def find_shot_config(step: Step, shot_name: str) -> Optional[ShotConfiguration]:
-    for sub_step in step.children:
-        if result := find_shot_config(sub_step, shot_name):
-            return result
-
-
-@find_shot_config.register
-def _(shot: ExecuteShot, shot_name):
-    if shot.name == shot_name:
-        return shot.configuration
