@@ -43,13 +43,17 @@ class SwimLaneModel(QAbstractTableModel):
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
 
     def change_sequence_state(self, stats: SequenceStats):
+        self.beginResetModel()
         self.sequence_state = stats.state
+        self.endResetModel()
         self.layoutChanged.emit()
 
     def change_sequence_config(self, sequence_config: SequenceConfig):
+        self.beginResetModel()
         self.sequence_config = sequence_config
         self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
-        self.layoutChanged.emit()
+        self.endResetModel()
+        self.layoutChanged.emit
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return 2 + len(self.shot_config.lanes)

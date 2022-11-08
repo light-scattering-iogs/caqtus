@@ -8,7 +8,7 @@ import logging
 from abc import abstractmethod, ABCMeta
 from functools import singledispatch
 from pathlib import Path
-from typing import Optional, Iterable
+from typing import Iterable
 
 import yaml
 from PyQt5.QtCore import (
@@ -47,14 +47,14 @@ from sequence import (
 )
 from sequence.sequence_config import ArangeLoop, ExecuteShot
 from settings_model.settings_model import YAMLSerializable
+from .sequence_watcher import SequenceWatcher
+from .shot_widget import ShotWidget
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
 )
-from .sequence_watcher import SequenceWatcher
-from .shot_widget import ShotWidget
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -273,21 +273,20 @@ class StepsModel(QAbstractItemModel):
         self.config = self.sequence_watcher.read_config()
         self.root = self.config.program
         self.sequence_state = self.sequence_watcher.read_stats().state
-        self.layoutChanged.emit()
 
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
 
-        self.save_thread: Optional[SaveThread] = None
-
     def change_sequence_state(self, stats: SequenceStats):
+        self.beginResetModel()
         self.sequence_state = stats.state
-        self.layoutChanged.emit()
+        self.endResetModel()
 
     def change_sequence_config(self, sequence_config):
+        self.beginResetModel()
         self.config = sequence_config
         self.root = self.config.program
-        self.layoutChanged.emit()
+        self.endResetModel()
 
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
@@ -391,9 +390,7 @@ class StepsModel(QAbstractItemModel):
 
     def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
         data = [self.data(index, Qt.ItemDataRole.DisplayRole) for index in indexes]
-        serialized = yaml.dump(data, Dumper=YAMLSerializable.get_dumper()).encode(
-            "utf-8"
-        )
+        serialized = YAMLSerializable.dump(data).encode("utf-8")
         mime_data = QMimeData()
         mime_data.setData("application/x-sequence_steps", QByteArray(serialized))
         return mime_data
@@ -407,8 +404,11 @@ class StepsModel(QAbstractItemModel):
         parent: QModelIndex,
     ) -> bool:
         yaml_string = data.data("application/x-sequence_steps").data().decode("utf-8")
-        steps = yaml.load(yaml_string, Loader=YAMLSerializable.get_loader())
-        node: Step = parent.internalPointer()
+        steps: list[Step] = YAMLSerializable.load(yaml_string)
+        if not parent.isValid():
+            node = self.root
+        else:
+            node: Step = parent.internalPointer()
         if row == -1:
             position = len(node.children)
         else:
@@ -508,7 +508,7 @@ class SequenceWidget(QDockWidget):
         tree.setContentsMargins(0, 0, 0, 0)
         program_model = StepsModel(self._path)
         tree.setModel(program_model)
-        program_model.layoutChanged.connect(lambda: self.program_tree.expandAll())
+        program_model.modelReset.connect(lambda: self.program_tree.expandAll())
         tree.expandAll()
         delegate = StepDelegate()
         tree.setItemDelegate(delegate)

@@ -59,8 +59,10 @@ class ShotWidget(QWidget):
     def __init__(self, sequence_path: Path, experiment_config_path: Path, *args):
         super().__init__(*args)
         self._sequence_path = sequence_path
-        with open(experiment_config_path, "r") as file:
-            self.experiment_config: ExperimentConfig = YAMLSerializable.load(file)
+
+        self.experiment_config: ExperimentConfig = YAMLSerializable.load(
+            experiment_config_path
+        )
 
         self.model = SwimLaneModel(self._sequence_path, "shot", self.experiment_config)
 
@@ -159,9 +161,7 @@ class SwimLaneWidget(QWidget):
             self.show_lanes_context_menu
         )
 
-        self.lanes_view.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
+        self.lanes_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lanes_view.customContextMenuRequested.connect(
             self.show_lane_cells_context_menu
         )
@@ -308,5 +308,3 @@ class SwimLaneWidget(QWidget):
                 )
 
             menu.exec(self.lanes_view.viewport().mapToGlobal(position))
-
-
