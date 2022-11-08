@@ -5,10 +5,9 @@ of this module is to generate and edit a yaml file that is then consumed by othe
 """
 
 import logging
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod
 from functools import singledispatch
 from pathlib import Path
-from typing import Iterable
 
 import yaml
 from PyQt5.QtCore import (
@@ -20,7 +19,6 @@ from PyQt5.QtCore import (
     pyqtSignal,
     QThread,
     QMimeData,
-    QByteArray,
 )
 from PyQt5.QtGui import QPainter, QPixmap
 from PyQt5.QtWidgets import (
@@ -55,13 +53,10 @@ from .step_uis import (
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
 )
+from .steps_model import StepsModel, QABCMeta
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-
-class QABCMeta(type(QObject), ABCMeta):
-    pass
 
 
 class StepWidget(QWidget, metaclass=QABCMeta):
@@ -184,7 +179,7 @@ class StepDelegate(QStyledItemDelegate):
     """
 
     def createEditor(
-        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+            self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> StepWidget:
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         # noinspection PyTypeChecker
@@ -196,12 +191,12 @@ class StepDelegate(QStyledItemDelegate):
         editor.set_step_data(index.data(role=Qt.ItemDataRole.EditRole))
 
     def setModelData(
-        self, editor: StepWidget, model: QAbstractItemModel, index: QModelIndex
+            self, editor: StepWidget, model: QAbstractItemModel, index: QModelIndex
     ) -> None:
         model.setData(index, editor.get_step_data(), Qt.ItemDataRole.EditRole)
 
     def updateEditorGeometry(
-        self, editor: StepWidget, option: QStyleOptionViewItem, index: QModelIndex
+            self, editor: StepWidget, option: QStyleOptionViewItem, index: QModelIndex
     ):
         editor.setGeometry(option.rect)
 
@@ -214,7 +209,7 @@ class StepDelegate(QStyledItemDelegate):
         return w.sizeHint()
 
     def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
+            self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         data = index.data(Qt.ItemDataRole.DisplayRole)
         if isinstance(data, Step):
@@ -239,43 +234,24 @@ class StepDelegate(QStyledItemDelegate):
             super().paint(painter, option, index)
 
 
-class FinishedSignal(QObject):
-    finished = pyqtSignal()
+class SequenceStepsModel(StepsModel):
+    """Model for a view to display and manipulate the steps of a sequence
 
-
-class SaveThread(QThread):
-    finished = pyqtSignal()
-
-    def __init__(self, data: str, file: Path):
-        super().__init__()
-        self._data = data
-        self._file = file
-
-    def run(self):
-        with open(self._file, "w") as file:
-            file.write(self._data)
-        self.finished.emit()
-
-
-class StepsModel(QAbstractItemModel):
-    """Qt Model for sequence steps (see PyQt Model/View)
-
-    This model provides data for a view to display the different steps of a sequence. It
-    watches and saves the sequence steps on the sequence_path/sequence_config.yaml file.
-    It also watches the sequence_path/sequence_state.yaml file, and if the sequence
-    state is not 'DRAFT', it sets the data to not editable.
+    This model becomes read only if the sequence is not a draft and it also saves any change to disk.
     """
-
     def __init__(self, sequence_path: Path, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.sequence_watcher = SequenceWatcher(sequence_path)
         self.config = self.sequence_watcher.read_config()
-        self.root = self.config.program
         self.sequence_state = self.sequence_watcher.read_stats().state
 
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
+
+    @property
+    def root(self):
+        return self.config.program
 
     def change_sequence_state(self, stats: SequenceStats):
         self.beginResetModel()
@@ -285,99 +261,33 @@ class StepsModel(QAbstractItemModel):
     def change_sequence_config(self, sequence_config):
         self.beginResetModel()
         self.config = sequence_config
-        self.root = self.config.program
         self.endResetModel()
-
-    def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
-        if not parent.isValid():
-            current_node = self.root.children[row]
-        else:
-            parent_node: Step = parent.internalPointer()
-            if row < len(parent_node.children):
-                current_node = parent_node.children[row]
-            else:
-                return QModelIndex()
-
-        return self.createIndex(row, column, current_node)
-
-    def parent(self, child: QModelIndex) -> QModelIndex:
-        if not child.isValid():
-            return QModelIndex()
-
-        child_node: Step = child.internalPointer()
-        if not isinstance(child_node, Step):
-            return QModelIndex()
-        if not child_node.is_root:
-            parent_node = child_node.parent
-            return self.createIndex(parent_node.row(), 0, child_node.parent)
-        else:
-            return QModelIndex()
-
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        if not parent.isValid():
-            return len(self.root.children)
-        else:
-            parent_node: Step = parent.internalPointer()
-            return len(parent_node.children)
-
-    def columnCount(self, parent: QModelIndex = ...) -> int:
-        return 1
-
-    def data(self, index: QModelIndex, role: int = ...):
-        if index.isValid():
-            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                return index.internalPointer()
-
-    def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-        edit = False
-        if (
-            index.isValid()
-            and role == Qt.ItemDataRole.EditRole
-            and self.sequence_state == SequenceState.DRAFT
-        ):
-            node: Step = index.internalPointer()
-            for attr, value in values.items():
-                setattr(node, attr, value)
-            edit = True
-
-        if edit:
-            self.save_config()
-        return edit
 
     def save_config(self) -> bool:
         with self.sequence_watcher.block_signals():
-            serialized_config = yaml.dump(
-                self.config, Dumper=YAMLSerializable.get_dumper(), sort_keys=False
-            )
-            save = SaveThread(serialized_config, self.sequence_watcher.config_path)
-            # noinspection PyTypeChecker
-            save.start()
-            save.wait()
+            YAMLSerializable.dump(self.config, self.sequence_watcher.config_path)
             return True
+
+    def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
+        if self.sequence_state == SequenceState.DRAFT:
+            if super().setData(index, values, role):
+                self.save_config()
+        else:
+            return False
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
-            flags = (
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsDragEnabled
-                | Qt.ItemFlag.ItemIsEnabled
-            )
+            flags = super().flags(index)
             if self.sequence_state == SequenceState.DRAFT:
                 flags |= Qt.ItemFlag.ItemIsEditable
                 if not isinstance(
-                    self.data(index, Qt.ItemDataRole.DisplayRole),
-                    VariableDeclaration,
+                        self.data(index, Qt.ItemDataRole.DisplayRole),
+                        VariableDeclaration,
                 ):
                     flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
-
-    # noinspection PyTypeChecker
-    def supportedDropActions(self) -> Qt.DropActions:
-        return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def supportedDragActions(self) -> Qt.DropAction:
         if self.sequence_state == SequenceState.DRAFT:
@@ -385,104 +295,48 @@ class StepsModel(QAbstractItemModel):
         else:
             return Qt.DropAction.CopyAction
 
-    def mimeTypes(self) -> list[str]:
-        return ["application/x-sequence_steps"]
-
-    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
-        data = [self.data(index, Qt.ItemDataRole.DisplayRole) for index in indexes]
-        serialized = YAMLSerializable.dump(data).encode("utf-8")
-        mime_data = QMimeData()
-        mime_data.setData("application/x-sequence_steps", QByteArray(serialized))
-        return mime_data
-
     def dropMimeData(
-        self,
-        data: QMimeData,
-        action: Qt.DropAction,
-        row: int,
-        column: int,
-        parent: QModelIndex,
+            self,
+            data: QMimeData,
+            action: Qt.DropAction,
+            row: int,
+            column: int,
+            parent: QModelIndex,
     ) -> bool:
-        yaml_string = data.data("application/x-sequence_steps").data().decode("utf-8")
-        steps: list[Step] = YAMLSerializable.load(yaml_string)
-        if not parent.isValid():
-            node = self.root
+        if self.sequence_state == SequenceState.DRAFT:
+            if result := super().dropMimeData(data, action, row, column, parent):
+                self.save_config()
+            return result
         else:
-            node: Step = parent.internalPointer()
-        if row == -1:
-            position = len(node.children)
-        else:
-            position = row
-        self.beginInsertRows(parent, position, position + len(steps) - 1)
-        new_children = list(node.children)
-        for step in steps[::-1]:
-            new_children.insert(position, step)
-        node.children = new_children
-        self.endInsertRows()
-        self.save_config()
-        return True
+            return False
 
     def insert_step(self, new_step: Step, index: QModelIndex):
-        # insert at the end of all steps if clicked at invalid index
-        if not index.isValid():
-            position = len(self.root.children)
-            self.beginInsertRows(QModelIndex(), position, position)
-            self.root.children += (new_step,)
-            self.endInsertRows()
-        else:
-            node: Step = index.internalPointer()
-            # if the selected step can't have children, the new step is added below it
-            if isinstance(node, (VariableDeclaration, ExecuteShot)):
-                position = index.row() + 1
-                self.beginInsertRows(QModelIndex(), position, position)
-                new_children = list(node.parent.children)
-                new_children.insert(position, new_step)
-                node.parent.children = new_children
-                self.endInsertRows()
-            # otherwise it's added as the last child of the selected step
-            else:
-                position = len(node.children)
-                self.beginInsertRows(index, position, position)
-                new_children = list(node.children)
-                new_children.insert(position, new_step)
-                node.children = new_children
-                self.endInsertRows()
-
-        self.save_config()
-
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        self.beginRemoveRows(parent, row, row)
-        if not parent.isValid():
-            parent = self.root
-        else:
-            parent: Step = parent.internalPointer()
-        new_children = list(parent.children)
-        new_children.pop(row)
-        parent.children = new_children
-        self.endRemoveRows()
-        self.save_config()
-        return True
+        if self.sequence_state == SequenceState.DRAFT:
+            super().insert_step(new_step, index)
+            self.save_config()
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        self.beginRemoveRows(parent, row, row + count - 1)
-        if not parent.isValid():
-            parent = self.root
+        if self.sequence_state == SequenceState.DRAFT:
+            if result := super().removeRows(row, count, parent):
+                self.save_config()
+            return result
         else:
-            parent: Step = parent.internalPointer()
-        new_children = list(parent.children)
-        for _ in range(count):
-            new_children.pop(row)
-        parent.children = new_children
-        self.endRemoveRows()
-        self.save_config()
-        return True
+            return False
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        if self.sequence_state == SequenceState.DRAFT:
+            if result := super().removeRow(row, parent):
+                self.save_config()
+            return result
+        else:
+            return False
 
 
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
 
     def __init__(
-        self, sequence_path: Path, experiment_config_path: Path, *args, **kwargs
+            self, sequence_path: Path, experiment_config_path: Path, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self._path = sequence_path
@@ -506,7 +360,7 @@ class SequenceWidget(QDockWidget):
         tree.setHeaderHidden(True)
         tree.setAnimated(True)
         tree.setContentsMargins(0, 0, 0, 0)
-        program_model = StepsModel(self._path)
+        program_model = SequenceStepsModel(self._path)
         tree.setModel(program_model)
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
         tree.expandAll()
@@ -530,7 +384,7 @@ class SequenceWidget(QDockWidget):
     def show_context_menu(self, position):
         index = self.program_tree.indexAt(position)
         # noinspection PyTypeChecker
-        model: StepsModel = self.program_tree.model()
+        model: SequenceStepsModel = self.program_tree.model()
         if model.sequence_state == SequenceState.DRAFT:
 
             menu = QMenu(self.program_tree)
