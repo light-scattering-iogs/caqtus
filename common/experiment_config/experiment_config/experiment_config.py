@@ -164,12 +164,27 @@ class NI6738AnalogSequencerConfig(SettingsModel):
             self.channel_descriptions.index(lane_name)
         ].get_input_units()
 
-    def find_channel_index(self, lane: AnalogLane):
-        return self.channel_descriptions.index(lane.name)
+    def find_channel_index(self, lane: AnalogLane | str):
+        if isinstance(lane, AnalogLane):
+            name = lane.name
+        else:
+            name = lane
+        return self.channel_descriptions.index(name)
 
     def get_named_channels(self) -> set[str]:
         """Return the names of channels that don't have a special purpose"""
         return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
+
+    def convert_values_to_voltages(self, lane_name: str, value: Quantity) -> Quantity:
+        lane_index = self.channel_descriptions.index(lane_name)
+        if (mapping := self.channel_mappings[lane_index]) is not None:
+            if Quantity(1, units=mapping.get_output_units()).is_compatible_with("V"):
+                return mapping.convert(value).to("V")
+            else:
+                raise ValueError(f"Units mapping for lane {lane_name} can't convert {mapping.get_input_units()} to Volt.")
+        else:
+            raise ValueError(f"No unit mappings defined for lane {lane_name} to convert {value.units} to Volt")
+
 
 
 class ExperimentConfig(SettingsModel):

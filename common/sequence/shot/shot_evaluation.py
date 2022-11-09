@@ -59,7 +59,8 @@ def evaluate_analog_local_times(
 
 def evaluate_analog_values(
     shot: ShotConfiguration, analog_times: list[numpy.ndarray], context: dict[str]
-) -> dict[str, numpy.ndarray]:
+) -> dict[str, Quantity]:
+    """Computes the analog values of each lanes in lane units"""
     result = {}
     for lane in shot.analog_lanes:
         lane_has_dimension = not Quantity(1, units=lane.units).is_compatible_with(

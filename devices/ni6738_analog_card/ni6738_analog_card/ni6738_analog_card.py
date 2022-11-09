@@ -6,4 +6,4 @@ from pydantic import Field
 
 
 class NI6738AnalogCard(CDevice):
-    channel_number: ClassVar[int] = Field(32, const=True)
+    channel_number: ClassVar[int] = 32

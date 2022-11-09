@@ -2,7 +2,6 @@ import datetime
 import io
 import logging
 import os
-import time
 from copy import copy
 from enum import Enum, auto
 from functools import singledispatchmethod
@@ -202,11 +201,12 @@ class SequenceRunnerThread(Thread):
 
         t0 = datetime.datetime.now()
         config = self.sequence_config.shot_configurations[shot.name]
-        spincore_instructions = self.compile_shot(config, context)
+        spincore_instructions, analog_values = self.compile_shot(config, context)
+        analog_voltages = self.generate_analog_voltages(analog_values)
         # self.spincore.apply_rt_variables(instructions=spincore_instructions)
         # self.spincore.run()
         data = {}
-        time.sleep(0.2)
+        # time.sleep(0.2)
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
@@ -219,7 +219,8 @@ class SequenceRunnerThread(Thread):
 
     def compile_shot(
         self, shot: ShotConfiguration, context: dict[str]
-    ) -> list[Instruction]:
+    ) -> tuple[list[Instruction], dict[str, Quantity]]:
+        """Return the spincore instructions and the analog values for the ni6738"""
         step_durations = evaluate_step_durations(shot, context)
 
         self.check_durations(shot, step_durations)
@@ -236,7 +237,7 @@ class SequenceRunnerThread(Thread):
         )
 
         analog_values = evaluate_analog_values(shot, analog_times, context)
-        return instructions
+        return instructions, analog_values
 
     def check_durations(self, shot: ShotConfiguration, durations: list[float]):
         for step_name, duration in zip(shot.step_names, durations):
@@ -291,14 +292,21 @@ class SequenceRunnerThread(Thread):
         instructions.append(Stop(values=values))
         return instructions
 
-    def generate_analog_voltages(self, analog_values: dict[str, numpy.ndarray]):
+    def generate_analog_voltages(self, analog_values: dict[str, Quantity]):
         data_length = 0
         for array in analog_values.values():
             data_length = len(array)
             break
-        values = numpy.zeros(
+        data = numpy.zeros(
             (NI6738AnalogCard.channel_number, data_length), dtype=numpy.float64
         )
+
+        for name, values in analog_values.items():
+            voltages = self.experiment_config.ni6738_analog_sequencer.convert_values_to_voltages(name, values).magnitude
+            channel_number = self.experiment_config.ni6738_analog_sequencer.find_channel_index(name)
+            data[channel_number] = voltages
+        return data
+
 
     def save_shot(
         self,
