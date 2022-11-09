@@ -34,8 +34,8 @@ from sequence.sequence_config import ArangeLoop, ExecuteShot
 from settings_model.settings_model import YAMLSerializable
 from .sequence_watcher import SequenceWatcher
 from .shot_widget import ShotWidget
-from .steps_delegate import StepDelegate
-from .steps_model import StepsModel
+from ..steps_editor import StepDelegate
+from ..steps_editor import StepsModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -78,8 +78,9 @@ class SequenceStepsModel(StepsModel):
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
         if self.sequence_state == SequenceState.DRAFT:
-            if super().setData(index, values, role):
+            if result := super().setData(index, values, role):
                 self.save_config()
+            return result
         else:
             return False
 
