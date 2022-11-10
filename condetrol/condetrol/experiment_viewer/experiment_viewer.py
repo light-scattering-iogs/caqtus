@@ -5,6 +5,7 @@ import shutil
 from functools import partial
 from multiprocessing.managers import BaseManager
 from pathlib import Path
+from threading import Thread
 
 import yaml
 from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
@@ -269,7 +270,7 @@ class SequenceViewerModel(QFileSystemModel):
 
     def move_to_trash(self, index: QModelIndex):
         path = Path(self.filePath(index))
-        send2trash(path)
+        Thread(target=lambda: shutil.rmtree(path)).start()
 
     def create_new_sequence(self, index: QModelIndex):
         path = Path(self.rootPath()) / self.fileName(index)
