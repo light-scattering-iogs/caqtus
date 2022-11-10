@@ -65,6 +65,7 @@ class SequenceRunnerThread(Thread):
         self.spincore = SpincorePulseBlaster(
             time_step=self.experiment_config.spincore.time_step
         )
+        self.ni6738 = NI6738AnalogCard(device_id="Dev1", time_step=self.experiment_config.ni6738_analog_sequencer.time_step)
 
     def run(self):
         try:
@@ -84,7 +85,9 @@ class SequenceRunnerThread(Thread):
             self.experiment_config, self.sequence_path / "experiment_config.yaml"
         )
 
-        # self.spincore.start()
+        self.ni6738.start()
+
+        self.spincore.start()
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
@@ -100,12 +103,13 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def shutdown(self):
-        try:
-            self.spincore.shutdown()
-        except:
-            logger.error("An error occurred when shutting down", exc_info=True)
-        finally:
-            self.parent.set_state(ExperimentState.IDLE)
+        actions = [self.spincore.shutdown, self.ni6738.shutdown]
+        for action in actions:
+            try:
+                action()
+            except Exception:
+                logger.error("An error occurred when shutting down", exc_info=True)
+        self.parent.set_state(ExperimentState.IDLE)
 
     def run_sequence(self):
         """Walk through the sequence program and execute each step sequentially"""
@@ -203,8 +207,10 @@ class SequenceRunnerThread(Thread):
         config = self.sequence_config.shot_configurations[shot.name]
         spincore_instructions, analog_values = self.compile_shot(config, context)
         analog_voltages = self.generate_analog_voltages(analog_values)
-        # self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        # self.spincore.run()
+        self.ni6738.apply_rt_variables(values=analog_voltages)
+        self.ni6738.run()
+        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        self.spincore.run()
         data = {}
         # time.sleep(0.2)
 
