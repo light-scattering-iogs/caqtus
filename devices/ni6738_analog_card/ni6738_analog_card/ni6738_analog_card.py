@@ -53,9 +53,12 @@ class NI6738AnalogCard(CDevice, extra=Extra.allow):
             sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
             samps_per_chan=self.values.shape[1],
         )
+        values = self.values.astype(numpy.float64)
+        if numpy.any(numpy.isnan(values)):
+            raise ValueError(f"Analog voltages can't be nan")
 
         self.task.write(
-            self.values.astype(numpy.float64),
+            values,
             auto_start=False,
             timeout=nidaqmx.constants.WAIT_INFINITELY,
         )
