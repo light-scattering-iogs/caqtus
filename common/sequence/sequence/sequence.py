@@ -241,6 +241,14 @@ class SequenceFolderWatcher(FileSystemEventHandler):
     def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
         if isinstance(event, DirDeletedEvent):
             self._sequence_cache.pop(normpath(event.src_path), None)
+        elif isinstance(event, FileDeletedEvent):
+            file_path = Path(event.src_path)
+            parent = file_path.parent
+            if normpath(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normpath(parent)]
+                if file_path.suffix == ".hdf5":
+                    sequence.remove_cached_property("number_completed_shots")
+
 
     def get_sequence(self, path: Path) -> Sequence:
         if normpath(path) in self._sequence_cache:

@@ -156,6 +156,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 partial(self.model.duplicate_sequence, index)
             )
 
+            if (
+                stats.state != SequenceState.RUNNING
+                and stats.state != SequenceState.DRAFT
+            ):
+                clear_sequence_action = QAction("Remove data")
+                menu.addAction(clear_sequence_action)
+                clear_sequence_action.triggered.connect(
+                    partial(self.model.revert_to_draft, index)
+                )
+
         else:
             new_menu = QMenu("New...")
             menu.addMenu(new_menu)
@@ -345,6 +355,26 @@ class SequenceViewerModel(QFileSystemModel):
                     f"Could not create new sequence '{new_sequence_path}'",
                     exc_info=True,
                 )
+
+    def revert_to_draft(self, index: QModelIndex) -> bool:
+        sequence_reverted = False
+        if self.is_sequence_folder(index):
+            path = Path(self.filePath(index))
+            state = self.sequence_watcher.get_sequence(path).state
+            if state != SequenceState.DRAFT and state != SequenceState.RUNNING:
+                stats = SequenceStats()
+                YAMLSerializable.dump(stats, path / "sequence_state.yaml")
+                os.remove(path / "experiment_config.yaml")
+
+                def target():
+                    files = (file for file in path.iterdir() if file.is_file())
+                    for file in files:
+                        if file.suffix == ".hdf5":
+                            os.remove(file)
+
+                Thread(target=target).start()
+
+        return sequence_reverted
 
 
 class SequenceDelegate(QStyledItemDelegate):
