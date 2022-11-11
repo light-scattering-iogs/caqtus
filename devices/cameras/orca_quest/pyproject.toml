@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "orca-quest"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "orca_quest"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9, <4.0"
+pydantic = "^1.10.2"
+cdevice = { path = "../../../common/cdevice/", develop = true }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
