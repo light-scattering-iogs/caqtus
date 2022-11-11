@@ -68,7 +68,7 @@ class Expression(YAMLSerializable):
     def ast(self) -> ast.Expression:
         """Computes the abstract syntax tree for this expression"""
 
-        explicit_expr = add_implicit_multiplication(self.body)
+        explicit_expr = add_implicit_multiplication(self.body.replace("%", "*(1e-2)"))
         return ast.parse(explicit_expr, mode="eval")
 
     @cached_property
