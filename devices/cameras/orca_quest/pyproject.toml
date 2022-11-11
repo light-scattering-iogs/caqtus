@@ -15,6 +15,7 @@ camera = { path = "../camera/", develop = true }
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"
+matplotlib = "^3.6.2"
 
 [build-system]
 requires = ["poetry-core"]
