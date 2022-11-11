@@ -1,11 +1,23 @@
 from abc import ABC, abstractmethod
 from collections import Counter
 from math import inf
+from typing import Optional
 
 import numpy
+import pydantic
 from pydantic import Field, validator
+from typing_extensions import ClassVar
 
 from cdevice import CDevice
+
+
+class ROI(pydantic.BaseModel):
+    x: int = Field(
+        description="horizontal coordinate of the corner of the roi",
+    )
+    width: int = Field(description="width of the roi")
+    y: int = Field(description="x coordinate of the corner of the roi")
+    height: int = Field(description="height of the roi")
 
 
 class CCamera(CDevice, ABC):
@@ -19,6 +31,11 @@ class CCamera(CDevice, ABC):
         default_factory=list,
         description="Names to give to the pictures in order of acquisition. Each name must be unique.",
         allow_mutation=False,
+    )
+    roi: ROI = Field(
+        default_factory=ROI,
+        allow_mutation=False,
+        description="The region of interest to crop from a full image.",
     )
     timeout: float = Field(
         default=inf,
@@ -37,6 +54,9 @@ class CCamera(CDevice, ABC):
         "If set to False, it will acquire images as fast as possible.",
         allow_mutation=False,
     )
+
+    sensor_width: ClassVar[int]
+    sensor_height: ClassVar[int]
 
     _acquired_pictures: list[bool] = []
 
@@ -90,7 +110,9 @@ class CCamera(CDevice, ABC):
         except ValueError:
             next_picture_index = 0
             self._acquired_pictures = [False] * self.number_pictures_to_acquire
-        self._acquire_picture(next_picture_index, self.exposures[next_picture_index], self.timeout)
+        self._acquire_picture(
+            next_picture_index, self.exposures[next_picture_index], self.timeout
+        )
 
     def acquire_all_pictures(self) -> dict[str, numpy.ndarray]:
         """Take all the pictures specified by their names and exposures
@@ -112,7 +134,9 @@ class CCamera(CDevice, ABC):
         return self._read_picture(picture_number)
 
     @abstractmethod
-    def _acquire_picture(self, picture_number: int, exposure: float, timeout: float) -> None:
+    def _acquire_picture(
+        self, picture_number: int, exposure: float, timeout: float
+    ) -> None:
         """Take a single picture
 
         When subclassing this function, it should start a single acquisition and be blocking until the picture is

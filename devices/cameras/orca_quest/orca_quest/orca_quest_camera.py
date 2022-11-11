@@ -1,7 +1,7 @@
 import atexit
 import logging
 import time
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, Final
 
 import numpy
 from pydantic import Field
@@ -20,6 +20,9 @@ class OrcaQuestCamera(CCamera):
         allow_mutation=False,
     )
 
+    sensor_width: Final = 4096
+    sensor_height: Final = 2304
+
     _pictures: list[Optional[numpy.ndarray]]
     _camera: Dcam
 
@@ -35,12 +38,19 @@ class OrcaQuestCamera(CCamera):
                 self._camera = Dcam(self.camera_number)
             else:
                 raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
+
         if not self._camera.dev_open():
             raise RuntimeError(
                 f"Failed to open camera {self.name}: {str(self._camera.lasterr())}"
             )
 
+        # TODO: fix subarray properties being ignored
         properties = {
+            #DCAM_IDPROP.SUBARRAYMODE: True,
+            #DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
+            #DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
+            #DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
+            #DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
             DCAM_IDPROP.SENSORMODE: DCAMPROP.SENSORMODE.AREA,
             DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.GLOBALRESET,
         }
@@ -55,7 +65,7 @@ class OrcaQuestCamera(CCamera):
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
                 raise RuntimeError(
-                    f"Failed to set property {property_id.name} to {property_value.name} for {self.name}: "
+                    f"Failed to set property {str(property_id)} to {str(property_value)} for {self.name}: "
                     f"{str(self._camera.lasterr())}"
                 )
 
@@ -131,7 +141,11 @@ class OrcaQuestCamera(CCamera):
             while True:
                 if self._camera.wait_capevent_frameready(1):
                     data = self._camera.buf_getlastframedata()
-                    self._pictures[picture_number] = data
+                    logger.debug(data.shape)
+                    roi = self.roi
+                    self._pictures[picture_number] = data.T[
+                        roi.x : roi.x + roi.width, roi.y : roi.y + roi.height
+                    ]
                     self._picture_acquired(picture_number)
                     break
 
