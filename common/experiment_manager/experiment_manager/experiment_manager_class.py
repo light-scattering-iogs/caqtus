@@ -63,9 +63,14 @@ class SequenceRunnerThread(Thread):
             )
 
         self.spincore = SpincorePulseBlaster(
-            time_step=self.experiment_config.spincore.time_step
+            name="Spincore PulseBlaster",
+            time_step=self.experiment_config.spincore.time_step,
         )
-        self.ni6738 = NI6738AnalogCard(device_id="Dev1", time_step=self.experiment_config.ni6738_analog_sequencer.time_step)
+        self.ni6738 = NI6738AnalogCard(
+            name="NI6738 card",
+            device_id="Dev1",
+            time_step=self.experiment_config.ni6738_analog_sequencer.time_step,
+        )
 
     def run(self):
         try:
@@ -308,11 +313,14 @@ class SequenceRunnerThread(Thread):
         )
 
         for name, values in analog_values.items():
-            voltages = self.experiment_config.ni6738_analog_sequencer.convert_values_to_voltages(name, values).magnitude
-            channel_number = self.experiment_config.ni6738_analog_sequencer.find_channel_index(name)
+            voltages = self.experiment_config.ni6738_analog_sequencer.convert_values_to_voltages(
+                name, values
+            ).magnitude
+            channel_number = (
+                self.experiment_config.ni6738_analog_sequencer.find_channel_index(name)
+            )
             data[channel_number] = voltages
         return data
-
 
     def save_shot(
         self,
