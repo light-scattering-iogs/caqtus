@@ -7,6 +7,7 @@ from pydantic import Field, validator
 from pydantic.color import Color
 
 from settings_model import SettingsModel
+from units import Quantity
 from ..units_mapping import AnalogUnitsMapping
 
 
@@ -89,3 +90,16 @@ class AnalogChannelConfiguration(ChannelConfiguration, ABC):
             )
         else:
             return mappings
+
+    def convert_to_output_units(self, channel_name: str, value: Quantity) -> Quantity:
+        channel = self.get_channel_index(channel_name)
+
+        if (mapping := self.channel_mappings[channel]) is not None:
+            if value.is_compatible_with(mapping.get_input_units()):
+                return mapping.convert(value).to(mapping.get_output_units())
+            else:
+                raise ValueError(
+                    f"Incompatible units ({value.units}) for conversion to {mapping.get_input_units()})"
+                )
+        else:
+            raise ValueError(f"No unit mappings defined for channel {channel_name}")
