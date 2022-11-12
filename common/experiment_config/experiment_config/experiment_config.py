@@ -242,10 +242,14 @@ class ExperimentConfig(SettingsModel):
                 try:
                     index = device_config.get_channel_index(channel)
                     channel_exists = True
-                    units = device_config.channel_mappings[index].get_input_units()
-                    break
                 except ValueError:
                     pass
+                else:
+                    if (mapping := device_config.channel_mappings[index]) is not None:
+                        units = mapping.get_input_units()
+                        break
+                    else:
+                        raise ValueError(f"Channel {channel} has no defined units mapping")
         if channel_exists:
             return units
         else:
@@ -261,7 +265,7 @@ class ExperimentConfig(SettingsModel):
     def get_analog_channels(self) -> set[str]:
         analog_channels = set()
         for device_config in self.device_configurations:
-            if isinstance(device_config, DigitalChannelConfiguration):
+            if isinstance(device_config, AnalogChannelConfiguration):
                 analog_channels |= device_config.get_named_channels()
         return analog_channels
 
