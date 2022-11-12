@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import Counter
 from pathlib import Path
-from typing import Optional, ClassVar
+from typing import Optional
 
 import numpy
 import yaml
@@ -54,8 +54,12 @@ class ChannelColor(SettingsModel):
         return cls(red=r, green=g, blue=b)
 
 
-class SequencerConfiguration(DeviceConfiguration, ABC):
-    number_channels: ClassVar[int]
+class ChannelConfiguration(SettingsModel, ABC):
+    @classmethod
+    @property
+    @abstractmethod
+    def number_channels(cls) -> int:
+        ...
 
     channel_descriptions: list[str | ChannelSpecialPurpose] = Field(
         default_factory=list
@@ -85,9 +89,21 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
         else:
             return colors
 
+    def get_named_channels(self) -> set[str]:
+        """Return the names of channels that don't have a special purpose"""
+        return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
 
-class SpincoreSequencerConfiguration(SequencerConfiguration):
-    number_channels = 24
+    def get_channel_index(self, description: str | ChannelSpecialPurpose):
+        return self.channel_descriptions.index(description)
+
+
+class SpincoreSequencerConfiguration(DeviceConfiguration, ChannelConfiguration):
+    @classmethod
+    @property
+    def number_channels(cls) -> int:
+        return 24
+
+    board_number: int
     time_step: float = Field(
         default=50e-9,
         ge=50e-9,
@@ -97,6 +113,13 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
 
     def get_device_type(self) -> str:
         return "SpincorePulseBlaster"
+
+    def get_device_init_args(self) -> dict[str]:
+        extra = {
+            "board_number": self.board_number,
+            "time_step": self.time_step,
+        }
+        return super().get_device_init_args() | extra
 
 
 class SpincoreConfig(SettingsModel):

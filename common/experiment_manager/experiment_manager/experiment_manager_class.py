@@ -4,7 +4,7 @@ import logging
 import os
 from copy import copy
 from enum import Enum, auto
-from functools import singledispatchmethod
+from functools import singledispatchmethod, cached_property
 from pathlib import Path
 from threading import Thread
 
@@ -12,8 +12,11 @@ import h5py
 import numpy
 import yaml
 
-from experiment_config import ExperimentConfig
-from experiment_config.experiment_config import ChannelSpecialPurpose
+from experiment_config import (
+    ExperimentConfig,
+    ChannelSpecialPurpose,
+    SpincoreSequencerConfiguration,
+)
 from ni6738_analog_card import NI6738AnalogCard
 from sequence import (
     SequenceStats,
@@ -63,9 +66,9 @@ class SequenceRunnerThread(Thread):
             )
 
         self.spincore = SpincorePulseBlaster(
-            name="Spincore PulseBlaster",
-            time_step=self.experiment_config.spincore.time_step,
+            **self.spincore_config.get_device_init_args()
         )
+
         self.ni6738 = NI6738AnalogCard(
             name="NI6738 card",
             device_id="Dev1",
@@ -267,14 +270,14 @@ class SequenceRunnerThread(Thread):
         analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
         instructions = []
         # noinspection PyTypeChecker
-        analog_clock_channel = self.experiment_config.spincore.get_channel_number(
+        analog_clock_channel = self.spincore_config.get_channel_index(
             ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
         )
-        values = [False] * self.experiment_config.spincore.number_channels
+        values = [False] * self.spincore_config.number_channels
         for step in range(len(step_durations)):
-            values = [False] * self.experiment_config.spincore.number_channels
+            values = [False] * self.spincore_config.number_channels
             for lane in shot.digital_lanes:
-                channel = self.experiment_config.spincore.get_channel_number(lane.name)
+                channel = self.spincore_config.get_channel_index(lane.name)
                 values[channel] = lane.get_effective_value(step)
             if len(analog_times[step]) > 0:
                 duration = analog_times[step][0]
@@ -352,7 +355,15 @@ class SequenceRunnerThread(Thread):
                 f"{shot_file_path} already exists and won't be overwritten."
             )
         with open(shot_file_path, "wb") as file:
+            # noinspection PyTypeChecker
             file.write(data_buffer.getbuffer())
+
+    @cached_property
+    def spincore_config(self) -> SpincoreSequencerConfiguration:
+        for device_config in self.experiment_config.device_configurations:
+            if isinstance(device_config, SpincoreSequencerConfiguration):
+                return device_config
+        raise ValueError("Could not find a configuration for spincore sequencer")
 
 
 class ExperimentManager:
