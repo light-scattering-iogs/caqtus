@@ -13,7 +13,7 @@ import numpy
 import yaml
 
 from experiment_config import ExperimentConfig
-from experiment_config.experiment_config import ReservedChannel
+from experiment_config.experiment_config import ChannelSpecialPurpose
 from ni6738_analog_card import NI6738AnalogCard
 from sequence import (
     SequenceStats,
@@ -268,7 +268,7 @@ class SequenceRunnerThread(Thread):
         instructions = []
         # noinspection PyTypeChecker
         analog_clock_channel = self.experiment_config.spincore.get_channel_number(
-            ReservedChannel.ni6738_analog_sequencer_variable_clock
+            ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
         )
         values = [False] * self.experiment_config.spincore.number_channels
         for step in range(len(step_durations)):

@@ -1,40 +1,39 @@
 from abc import ABC, abstractmethod
+from collections import Counter
 from pathlib import Path
-from typing import Optional
+from typing import Optional, ClassVar
 
 import numpy
 import yaml
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
+from pydantic.color import Color
 
 from sequence import SequenceSteps
 from settings_model import SettingsModel
 from shot import DigitalLane, AnalogLane
 from units import Quantity
+from .device_config import DeviceConfiguration
 
 
 class ChannelSpecialPurpose(SettingsModel):
-    pass
+    purpose: str
 
+    def __hash__(self):
+        return hash(self.purpose)
 
-class UnusedChannel(ChannelSpecialPurpose):
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, unused: "UnusedChannel"):
-        return dumper.represent_scalar(f"!{cls.__name__}", "channel not in use")
+    def representer(cls, dumper: yaml.Dumper, channel_purpose: "ChannelSpecialPurpose"):
+        return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
 
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        return cls()
-
-
-class ReservedChannel(ChannelSpecialPurpose):
-    purpose: str
+        return cls(purpose=loader.construct_scalar(node))
 
     @classmethod
-    @property
-    def ni6738_analog_sequencer_variable_clock(cls) -> "ReservedChannel":
-        return ReservedChannel(purpose="NI6738_analog_sequencer_variable_clock")
+    def unused(cls):
+        return cls(purpose="Unused")
 
 
 class ChannelColor(SettingsModel):
@@ -55,6 +54,51 @@ class ChannelColor(SettingsModel):
         return cls(red=r, green=g, blue=b)
 
 
+class SequencerConfiguration(DeviceConfiguration, ABC):
+    number_channels: ClassVar[int]
+
+    channel_descriptions: list[str | ChannelSpecialPurpose] = Field(
+        default_factory=list
+    )
+    channel_colors: list[Optional[Color]] = Field(default_factory=list)
+
+    @validator("channel_descriptions")
+    def validate_channel_descriptions(cls, descriptions):
+        if not len(descriptions) == cls.number_channels:
+            raise ValueError(
+                f"The length of channel descriptions ({len(descriptions)}) doesn't match the number of channels "
+                f"{cls.number_channels}"
+            )
+        counter = Counter(descriptions)
+        for description, count in counter.items():
+            if not isinstance(description, ChannelSpecialPurpose) and count > 1:
+                raise ValueError(f"Channel {description} is specified more than once")
+        return descriptions
+
+    @validator("channel_colors")
+    def validate_channel_colors(cls, colors):
+        if not len(colors) == cls.number_channels:
+            raise ValueError(
+                f"The length of channel descriptions ({len(colors)}) doesn't match the number of channels "
+                f"{cls.number_channels}"
+            )
+        else:
+            return colors
+
+
+class SpincoreSequencerConfiguration(SequencerConfiguration):
+    number_channels = 24
+    time_step: float = Field(
+        default=50e-9,
+        ge=50e-9,
+        units="s",
+        description="The quantization time step used when converting step times to instructions.",
+    )
+
+    def get_device_type(self) -> str:
+        return "SpincorePulseBlaster"
+
+
 class SpincoreConfig(SettingsModel):
     number_channels: int = Field(24, const=True, exclude=True)
     channel_descriptions: list[str | ChannelSpecialPurpose] = Field(default=[])
@@ -64,7 +108,7 @@ class SpincoreConfig(SettingsModel):
     @validator("channel_descriptions")
     def validate_channel_descriptions(cls, descriptions, values):
         descriptions += [
-            UnusedChannel()
+            ChannelSpecialPurpose.unused()
             for _ in range(0, values["number_channels"] - len(descriptions))
         ]
         return descriptions
@@ -141,7 +185,7 @@ class NI6738AnalogSequencerConfig(SettingsModel):
     @validator("channel_descriptions", always=True)
     def validate_channel_descriptions(cls, descriptions, values):
         descriptions += [
-            UnusedChannel()
+            ChannelSpecialPurpose.unused()
             for _ in range(0, values["number_channels"] - len(descriptions))
         ]
         return descriptions
@@ -181,10 +225,13 @@ class NI6738AnalogSequencerConfig(SettingsModel):
             if Quantity(1, units=mapping.get_output_units()).is_compatible_with("V"):
                 return mapping.convert(value).to("V")
             else:
-                raise ValueError(f"Units mapping for lane {lane_name} can't convert {mapping.get_input_units()} to Volt.")
+                raise ValueError(
+                    f"Units mapping for lane {lane_name} can't convert {mapping.get_input_units()} to Volt."
+                )
         else:
-            raise ValueError(f"No unit mappings defined for lane {lane_name} to convert {value.units} to Volt")
-
+            raise ValueError(
+                f"No unit mappings defined for lane {lane_name} to convert {value.units} to Volt"
+            )
 
 
 class ExperimentConfig(SettingsModel):
@@ -200,7 +247,10 @@ class ExperimentConfig(SettingsModel):
         default_factory=SequenceSteps,
         description="Steps that are always executed before a sequence",
     )
-
+    device_configurations: list[DeviceConfiguration] = Field(
+        default_factory=list,
+        description="All the static configurations of the devices present on the experiment.",
+    )
 
 
 def get_config_path() -> Path:

@@ -2,6 +2,7 @@ import logging
 import time
 from enum import IntFlag
 from functools import singledispatchmethod
+from typing import ClassVar
 
 from pydantic import Field
 
@@ -27,7 +28,7 @@ class SpincorePulseBlaster(CDevice):
     instructions: list[Instruction] = []
     time_step: float = Field(50e-9, units="s")
 
-    _channel_number: int = 24
+    channel_number: ClassVar[int] = 24
 
     def start(self) -> None:
         super().start()
@@ -131,7 +132,7 @@ class SpincorePulseBlaster(CDevice):
 
     def _state_to_flags(self, states: list[bool]) -> int:
         flags = 0
-        for channel, state in zip(range(self._channel_number), states):
+        for channel, state in zip(range(self.channel_number), states):
             flags |= int(state) << channel
         return flags
 
