@@ -7,11 +7,15 @@ import numpy
 from pydantic import Field
 
 from camera import CCamera
-from dcam import Dcamapi, Dcam, DCAM_IDSTR
-from dcamapi4 import DCAM_IDPROP, DCAMPROP
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+try:
+    from .dcam import Dcamapi, Dcam, DCAM_IDSTR
+    from .dcamapi4 import DCAM_IDPROP, DCAMPROP
+except FileNotFoundError:
+    logger.warning("Could not load DCAM-API")
 
 
 class OrcaQuestCamera(CCamera):
@@ -34,6 +38,7 @@ class OrcaQuestCamera(CCamera):
                 f"Failed to initialize DCAM-API: {str(Dcamapi.lasterr())}"
             )
         else:
+            logger.info(f"{self.name}: DCAM-API initialized")
             if self.camera_number < Dcamapi.get_devicecount():
                 self._camera = Dcam(self.camera_number)
             else:
@@ -43,14 +48,16 @@ class OrcaQuestCamera(CCamera):
             raise RuntimeError(
                 f"Failed to open camera {self.name}: {str(self._camera.lasterr())}"
             )
+        else:
+            logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
 
         # TODO: fix subarray properties being ignored
         properties = {
-            #DCAM_IDPROP.SUBARRAYMODE: True,
-            #DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
-            #DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
-            #DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
-            #DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
+            # DCAM_IDPROP.SUBARRAYMODE: True,
+            # DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
+            # DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
+            # DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
+            # DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
             DCAM_IDPROP.SENSORMODE: DCAMPROP.SENSORMODE.AREA,
             DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.GLOBALRESET,
         }
@@ -75,11 +82,23 @@ class OrcaQuestCamera(CCamera):
             )
 
     def shutdown(self):
-        self._camera.buf_release()
+        if self._camera.buf_release():
+            logger.info(f"{self.name}: DCAM buffer successfully released")
+        else:
+            logger.warning(
+                f"{self.name}: an error occurred while releasing DCAM buffer: {str(self._camera.lasterr())}"
+            )
 
         if self._camera.is_opened():
-            self._camera.dev_close()
-        Dcamapi.uninit()
+            if self._camera.dev_close():
+                logger.info(f"{self.name}: camera successfully released")
+            else:
+                logger.warning(
+                    f"{self.name}: an error occurred while closing the camera: {str(self._camera.lasterr())}"
+                )
+        if Dcamapi.uninit():
+            logger.info(f"{self.name}: DCAM-API successfully released")
+
         super().shutdown()
 
     def list_properties(self) -> list:
@@ -141,12 +160,15 @@ class OrcaQuestCamera(CCamera):
             while True:
                 if self._camera.wait_capevent_frameready(1):
                     data = self._camera.buf_getlastframedata()
-                    logger.debug(data.shape)
                     roi = self.roi
                     self._pictures[picture_number] = data.T[
                         roi.x : roi.x + roi.width, roi.y : roi.y + roi.height
                     ]
                     self._picture_acquired(picture_number)
+                    logger.info(
+                        f"{self.name}: picture '{self.picture_names[picture_number]}' acquired after "
+                        f"{(time.time() - start_acquire) * 1e3:.0f} ms"
+                    )
                     break
 
                 error = self._camera.lasterr()
