@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
 from collections import Counter
 from math import inf
-from typing import Optional
 
 import numpy
 import pydantic
+from cdevice import CDevice
 from pydantic import Field, validator
 from typing_extensions import ClassVar
-
-from cdevice import CDevice
 
 
 class ROI(pydantic.BaseModel):
@@ -59,6 +57,14 @@ class CCamera(CDevice, ABC):
     sensor_height: ClassVar[int]
 
     _acquired_pictures: list[bool] = []
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "acquire_picture",
+            "acquire_all_pictures",
+            "read_picture",
+        )
 
     @validator("picture_names")
     def validate_picture_names(cls, picture_names):

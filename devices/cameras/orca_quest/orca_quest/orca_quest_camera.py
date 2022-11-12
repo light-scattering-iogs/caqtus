@@ -28,7 +28,11 @@ class OrcaQuestCamera(CCamera):
     sensor_height: Final = 2304
 
     _pictures: list[Optional[numpy.ndarray]]
-    _camera: Dcam
+    _camera: "Dcam"
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + ("list_properties",)
 
     def start(self) -> None:
         super().start()
@@ -122,7 +126,6 @@ class OrcaQuestCamera(CCamera):
             infos["camera version"] = camera.dev_getstring(DCAM_IDSTR.CAMERAVERSION)
             infos["driver version"] = camera.dev_getstring(DCAM_IDSTR.DRIVERVERSION)
             result.append(infos)
-            logger.debug(camera.lasterr())
         return result
 
     @classmethod
