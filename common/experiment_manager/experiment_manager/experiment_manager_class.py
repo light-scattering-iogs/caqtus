@@ -217,8 +217,8 @@ class SequenceRunnerThread(Thread):
         config = self.sequence_config.shot_configurations[shot.name]
         spincore_instructions, analog_values = self.compile_shot(config, context)
         analog_voltages = self.generate_analog_voltages(analog_values)
-        self.ni6738.apply_rt_variables(values=analog_voltages)
-        self.ni6738.run()
+        # self.ni6738.apply_rt_variables(values=analog_voltages)
+        # self.ni6738.run()
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
         self.spincore.run()
         data = {}

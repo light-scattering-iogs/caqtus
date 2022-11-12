@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import Counter
 from pathlib import Path
@@ -12,11 +13,9 @@ from pydantic.color import Color
 
 from sequence import SequenceSteps
 from settings_model import SettingsModel
-from shot import DigitalLane, AnalogLane
+from shot import AnalogLane
 from units import Quantity
 from .device_config import DeviceConfiguration
-
-import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -131,39 +130,6 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
         return super().get_device_init_args() | extra
 
 
-class SpincoreConfig(SettingsModel):
-    number_channels: int = Field(24, const=True, exclude=True)
-    channel_descriptions: list[str | ChannelSpecialPurpose] = Field(default=[])
-    channel_colors: list[Optional[ChannelColor]] = Field(default=[])
-    time_step: float = Field(50e-9, units="s")
-
-    @validator("channel_descriptions")
-    def validate_channel_descriptions(cls, descriptions, values):
-        descriptions += [
-            ChannelSpecialPurpose.unused()
-            for _ in range(0, values["number_channels"] - len(descriptions))
-        ]
-        return descriptions
-
-    @validator("channel_colors")
-    def validate_channel_colors(cls, colors, values):
-        colors += [None for _ in range(0, values["number_channels"] - len(colors))]
-        return colors
-
-    def find_color(self, lane: DigitalLane) -> Optional[ChannelColor]:
-        return self.channel_colors[self.find_channel_index(lane)]
-
-    def find_channel_index(self, lane: DigitalLane):
-        return self.channel_descriptions.index(lane.name)
-
-    def get_named_channels(self) -> set[str]:
-        """Return the names of channels that don't have a special purpose"""
-        return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
-
-    def get_channel_number(self, description: str | ChannelSpecialPurpose):
-        return self.channel_descriptions.index(description)
-
-
 class AnalogUnitsMapping(SettingsModel, ABC):
     @abstractmethod
     def convert(self, input_: Quantity) -> Quantity:
@@ -271,7 +237,6 @@ class ExperimentConfig(SettingsModel):
         default_factory=lambda: Path(user_data_dir("ExperimentControl", "Caqtus"))
         / "data/"
     )
-    spincore: SpincoreConfig = Field(default_factory=SpincoreConfig)
     ni6738_analog_sequencer: NI6738AnalogSequencerConfig = Field(
         default_factory=NI6738AnalogSequencerConfig
     )
