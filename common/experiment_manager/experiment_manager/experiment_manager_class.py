@@ -16,6 +16,7 @@ from experiment_config import (
     ExperimentConfig,
     ChannelSpecialPurpose,
     SpincoreSequencerConfiguration,
+    NI6738SequencerConfiguration,
 )
 from ni6738_analog_card import NI6738AnalogCard
 from sequence import (
@@ -69,11 +70,7 @@ class SequenceRunnerThread(Thread):
             **self.spincore_config.get_device_init_args()
         )
 
-        self.ni6738 = NI6738AnalogCard(
-            name="NI6738 card",
-            device_id="Dev1",
-            time_step=self.experiment_config.ni6738_analog_sequencer.time_step,
-        )
+        self.ni6738 = NI6738AnalogCard(**self.ni6738_config.get_device_init_args())
 
     def run(self):
         # noinspection PyBroadException
@@ -244,7 +241,7 @@ class SequenceRunnerThread(Thread):
         analog_times = evaluate_analog_local_times(
             shot,
             step_durations,
-            self.experiment_config.ni6738_analog_sequencer.time_step,
+            self.ni6738_config.time_step,
             self.spincore.time_step,
         )
 
@@ -269,7 +266,7 @@ class SequenceRunnerThread(Thread):
         step_durations: list[float],
         analog_times: list[numpy.ndarray],
     ) -> list[Instruction]:
-        analog_time_step = self.experiment_config.ni6738_analog_sequencer.time_step
+        analog_time_step = self.ni6738_config.time_step
         instructions = []
         # noinspection PyTypeChecker
         analog_clock_channel = self.spincore_config.get_channel_index(
@@ -318,11 +315,9 @@ class SequenceRunnerThread(Thread):
         )
 
         for name, values in analog_values.items():
-            voltages = self.experiment_config.ni6738_analog_sequencer.convert_values_to_voltages(
-                name, values
-            ).magnitude
+            voltages = self.ni6738_config.convert_to_output_units(name, values).to("V").magnitude
             channel_number = (
-                self.experiment_config.ni6738_analog_sequencer.find_channel_index(name)
+                self.ni6738_config.get_channel_index(name)
             )
             data[channel_number] = voltages
         return data
@@ -363,6 +358,10 @@ class SequenceRunnerThread(Thread):
     @cached_property
     def spincore_config(self) -> SpincoreSequencerConfiguration:
         return self.experiment_config.spincore_config
+
+    @cached_property
+    def ni6738_config(self) -> NI6738SequencerConfiguration:
+        return self.experiment_config.ni6738_config
 
 
 class ExperimentManager:
