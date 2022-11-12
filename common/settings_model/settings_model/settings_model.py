@@ -5,6 +5,7 @@ from typing import Type
 
 import pydantic
 import yaml
+from pydantic.color import Color
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
 
@@ -55,11 +56,12 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     def dump(cls, data, stream=None):
+        """Dump the serialized data on the stream"""
+
         if isinstance(stream, Path):
+            serialized = yaml.dump(data, Dumper=cls.get_dumper(), sort_keys=False)
             with open(stream, "w") as file:
-                return yaml.dump(
-                    data, stream=file, Dumper=cls.get_dumper(), sort_keys=False
-                )
+                file.write(serialized)
         else:
             return yaml.dump(
                 data, stream=stream, Dumper=cls.get_dumper(), sort_keys=False
@@ -89,6 +91,7 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
     class Config:
         validate_assignment = True
         arbitrary_types_allowed = True
+        validate_all = True
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: "SettingsModel"):
@@ -123,3 +126,10 @@ def path_constructor(loader: yaml.Loader, node: yaml.Node):
 
 
 YAMLSerializable.get_loader().add_constructor(f"!Path", path_constructor)
+
+
+def color_representer(dumper: yaml.Dumper, color: Color):
+    return dumper.represent_data(color.original())
+
+
+YAMLSerializable.get_dumper().add_representer(Color, color_representer)

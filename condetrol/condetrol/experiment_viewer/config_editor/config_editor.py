@@ -73,8 +73,7 @@ class ConfigModel(QAbstractListModel):
         if change:
             if not self._save_path.parent.exists():
                 self._save_path.parent.mkdir(exist_ok=True, parents=True)
-            with open(self._save_path, "w") as file:
-                YAMLSerializable.dump(self._config, file)
+            YAMLSerializable.dump(self._config, self._save_path)
 
         return change
 
