@@ -173,9 +173,6 @@ class ExperimentConfig(SettingsModel):
         default_factory=lambda: Path(user_data_dir("ExperimentControl", "Caqtus"))
         / "data/"
     )
-    ni6738_analog_sequencer: NI6738AnalogSequencerConfig = Field(
-        default_factory=NI6738AnalogSequencerConfig
-    )
     header: SequenceSteps = Field(
         default_factory=SequenceSteps,
         description="Steps that are always executed before a sequence",
