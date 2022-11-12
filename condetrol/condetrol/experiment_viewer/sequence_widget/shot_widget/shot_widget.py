@@ -41,7 +41,7 @@ class LaneCellDelegate(QStyledItemDelegate):
         if isinstance(lane, DigitalLane):
             if index.data(Qt.ItemDataRole.DisplayRole):
                 try:
-                    color = self.experiment_config.find_color(lane.name)
+                    color = self.experiment_config.get_color(lane.name)
                 except ValueError:
                     brush = QBrush(QColor.fromRgb(0, 0, 0))
                 else:

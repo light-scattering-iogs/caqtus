@@ -84,11 +84,13 @@ class SwimLaneModel(QAbstractTableModel):
             if index.row() > 1:
                 lane = self.get_lane(index)
                 if isinstance(lane, AnalogLane):
-                    color = self.experiment_config.ni6738_analog_sequencer.find_color(
-                        lane
-                    )
-                    if color:
-                        return QColor.fromRgbF(color.red, color.green, color.blue)
+                    try:
+                        color = self.experiment_config.get_color(lane.name)
+                    except ValueError:
+                        return QColor.fromRgb(0, 0, 0)
+                    else:
+                        if color is not None:
+                            return QColor.fromRgb(*color.as_rgb_tuple())
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
@@ -251,7 +253,7 @@ class SwimLaneModel(QAbstractTableModel):
                 name=name,
                 values=[Expression("...") for _ in range(self.columnCount())],
                 spans=[1 for _ in range(self.columnCount())],
-                units=self.experiment_config.ni6738_analog_sequencer.find_unit(name),
+                units=self.experiment_config.get_input_units(name),
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)

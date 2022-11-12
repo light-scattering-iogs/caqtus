@@ -217,7 +217,7 @@ class ExperimentConfig(SettingsModel):
                 return device_config
         raise ValueError("Could not find a configuration for NI6738 card")
 
-    def find_color(self, channel: str) -> Optional[Color]:
+    def get_color(self, channel: str) -> Optional[Color]:
         color = None
         channel_exists = False
         for device_config in self.device_configurations:
@@ -231,6 +231,23 @@ class ExperimentConfig(SettingsModel):
                     pass
         if channel_exists:
             return color
+        else:
+            raise ValueError(f"Channel {channel} doesn't exists in the configuration")
+
+    def get_input_units(self, channel: str) -> Optional[str]:
+        units = None
+        channel_exists = False
+        for device_config in self.device_configurations:
+            if isinstance(device_config, AnalogChannelConfiguration):
+                try:
+                    index = device_config.get_channel_index(channel)
+                    channel_exists = True
+                    units = device_config.channel_mappings[index].get_input_units()
+                    break
+                except ValueError:
+                    pass
+        if channel_exists:
+            return units
         else:
             raise ValueError(f"Channel {channel} doesn't exists in the configuration")
 
