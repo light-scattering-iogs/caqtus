@@ -76,6 +76,7 @@ class SequenceRunnerThread(Thread):
         )
 
     def run(self):
+        # noinspection PyBroadException
         try:
             self.prepare()
             self.run_sequence()
@@ -113,6 +114,7 @@ class SequenceRunnerThread(Thread):
     def shutdown(self):
         actions = [self.spincore.shutdown, self.ni6738.shutdown]
         for action in actions:
+            # noinspection PyBroadException
             try:
                 action()
             except Exception:
@@ -360,10 +362,7 @@ class SequenceRunnerThread(Thread):
 
     @cached_property
     def spincore_config(self) -> SpincoreSequencerConfiguration:
-        for device_config in self.experiment_config.device_configurations:
-            if isinstance(device_config, SpincoreSequencerConfiguration):
-                return device_config
-        raise ValueError("Could not find a configuration for spincore sequencer")
+        return self.experiment_config.spincore_config
 
 
 class ExperimentManager:

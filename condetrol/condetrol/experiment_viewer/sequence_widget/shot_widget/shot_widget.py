@@ -15,7 +15,6 @@ from PyQt5.QtWidgets import (
     QStyle,
     QMenu,
     QAction,
-    QAbstractItemView,
 )
 
 from experiment_config import ExperimentConfig
@@ -41,11 +40,15 @@ class LaneCellDelegate(QStyledItemDelegate):
         lane = model.get_lane(index)
         if isinstance(lane, DigitalLane):
             if index.data(Qt.ItemDataRole.DisplayRole):
-                color = self.experiment_config.spincore.find_color(lane)
-                if color is not None:
-                    brush = QBrush(QColor.fromRgbF(color.red, color.green, color.blue))
+                try:
+                    color = self.experiment_config.find_color(lane.name)
+                except ValueError:
+                    brush = QBrush(QColor.fromRgb(0, 0, 0))
                 else:
-                    brush = QBrush(option.palette.highlightedText().color())
+                    if color is not None:
+                        brush = QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
+                    else:
+                        brush = QBrush(option.palette.highlightedText().color())
                 painter.fillRect(option.rect, brush)
             if option.state & QStyle.StateFlag.State_Selected:
                 c = option.palette.highlight().color()
@@ -81,12 +84,12 @@ class SpanTableView(QTableView):
         self.model().layoutChanged.connect(self.update_span)
         self.model().layoutChanged.emit()
 
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
-        self.setDropIndicatorShown(True)
-        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.setDragDropOverwriteMode(False)
+        # self.setDragEnabled(True)
+        # self.setAcceptDrops(True)
+        # self.setDropIndicatorShown(True)
+        # self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        # self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        # self.setDragDropOverwriteMode(False)
 
     def update_span(self):
         self.clearSpans()
@@ -229,7 +232,7 @@ class SwimLaneWidget(QWidget):
             menu.exec(self.lanes_view.verticalHeader().mapToGlobal(position))
 
     def create_digital_add_lane_actions(self):
-        unused_channels = self._model.experiment_config.spincore.get_named_channels()
+        unused_channels = self._model.experiment_config.get_digital_channels()
         in_use_channels = self._model.shot_config.get_lane_names()
         possible_channels = list(unused_channels.difference(in_use_channels))
         possible_channels.sort()

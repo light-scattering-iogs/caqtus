@@ -16,6 +16,11 @@ from shot import DigitalLane, AnalogLane
 from units import Quantity
 from .device_config import DeviceConfiguration
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
+
 
 class ChannelSpecialPurpose(SettingsModel):
     purpose: str
@@ -97,7 +102,11 @@ class ChannelConfiguration(SettingsModel, ABC):
         return self.channel_descriptions.index(description)
 
 
-class SpincoreSequencerConfiguration(DeviceConfiguration, ChannelConfiguration):
+class DigitalChannelConfiguration(ChannelConfiguration, ABC):
+    pass
+
+
+class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
     @classmethod
     @property
     def number_channels(cls) -> int:
@@ -274,6 +283,55 @@ class ExperimentConfig(SettingsModel):
         default_factory=list,
         description="All the static configurations of the devices present on the experiment.",
     )
+
+    @validator("device_configurations")
+    def validate_device_configurations(
+        cls, device_configurations: list[DeviceConfiguration]
+    ):
+        channel_names = set()
+        for device_configuration in device_configurations:
+            name = device_configuration.device_name
+            if isinstance(device_configuration, ChannelConfiguration):
+                device_channel_names = device_configuration.get_named_channels()
+                if channel_names.isdisjoint(device_channel_names):
+                    channel_names |= device_channel_names
+                else:
+                    raise ValueError(
+                        f"Device {name} has channel names that are already used by an other device: "
+                        f"{channel_names & device_channel_names}"
+                    )
+        return device_configurations
+
+    @property
+    def spincore_config(self) -> SpincoreSequencerConfiguration:
+        for device_config in self.device_configurations:
+            if isinstance(device_config, SpincoreSequencerConfiguration):
+                return device_config
+        raise ValueError("Could not find a configuration for spincore sequencer")
+
+    def find_color(self, channel: str) -> Optional[Color]:
+        color = None
+        channel_exists = False
+        for device_config in self.device_configurations:
+            if isinstance(device_config, ChannelConfiguration):
+                try:
+                    index = device_config.get_channel_index(channel)
+                    channel_exists = True
+                    color = device_config.channel_colors[index]
+                    break
+                except ValueError:
+                    pass
+        if channel_exists:
+            return color
+        else:
+            raise ValueError(f"Channel {channel} doesn't exists in the configuration")
+
+    def get_digital_channels(self) -> set[str]:
+        digital_channels = set()
+        for device_config in self.device_configurations:
+            if isinstance(device_config, DigitalChannelConfiguration):
+                digital_channels |= device_config.get_named_channels()
+        return digital_channels
 
 
 def get_config_path() -> Path:
