@@ -13,6 +13,7 @@ from settings_model import SettingsModel
 from shot import AnalogLane
 from units import Quantity
 from .channel_config import (
+    AnalogChannelConfiguration,
     ChannelSpecialPurpose,
     ChannelConfiguration,
     DigitalChannelConfiguration,
@@ -43,6 +44,7 @@ class ChannelColor(SettingsModel):
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
+    # noinspection PyPropertyDefinition
     @classmethod
     @property
     def number_channels(cls) -> int:
@@ -65,6 +67,25 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
             "time_step": self.time_step,
         }
         return super().get_device_init_args() | extra
+
+
+class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfiguration):
+    device_id: str
+    time_step: float = Field(
+        default=2.5e-6,
+        ge=2.5e-6,
+        units="s",
+        description="The quantization time step used when converting step times to instructions.",
+    )
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def number_channels(cls) -> int:
+        return 32
+
+    def get_device_type(self) -> str:
+        return "NI6738AnalogCard"
 
 
 class NI6738AnalogSequencerConfig(SettingsModel):
