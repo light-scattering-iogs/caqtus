@@ -48,8 +48,8 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
         order = numpy.argsort(input_values)
         sorted_input_values = input_values[order]
         sorted_output_values = output_values[order]
-        values["input_values"] = tuple(sorted_input_values)
-        values["output_values"] = tuple(sorted_output_values)
+        values["input_values"] = tuple(sorted_input_values.tolist())
+        values["output_values"] = tuple(sorted_output_values.tolist())
         return values
 
     def get_input_units(self) -> str:
