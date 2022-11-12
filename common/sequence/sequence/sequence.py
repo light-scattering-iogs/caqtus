@@ -150,7 +150,7 @@ class Sequence:
             local_analog_times = evaluate_analog_local_times(
                 shot,
                 step_durations,
-                self.experiment_config.ni6738_analog_sequencer.time_step,
+                self.experiment_config.ni6738_config.time_step,
                 self.experiment_config.spincore_config.time_step,
             )
             values = evaluate_analog_values(shot, local_analog_times, context)
