@@ -1,10 +1,7 @@
 import logging
-from abc import ABC, abstractmethod
-from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-import numpy
 import yaml
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
@@ -15,29 +12,16 @@ from sequence import SequenceSteps
 from settings_model import SettingsModel
 from shot import AnalogLane
 from units import Quantity
+from .channel_config import (
+    ChannelSpecialPurpose,
+    ChannelConfiguration,
+    DigitalChannelConfiguration,
+)
 from .device_config import DeviceConfiguration
+from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-
-class ChannelSpecialPurpose(SettingsModel):
-    purpose: str
-
-    def __hash__(self):
-        return hash(self.purpose)
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, channel_purpose: "ChannelSpecialPurpose"):
-        return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        return cls(purpose=loader.construct_scalar(node))
-
-    @classmethod
-    def unused(cls):
-        return cls(purpose="Unused")
 
 
 class ChannelColor(SettingsModel):
@@ -56,53 +40,6 @@ class ChannelColor(SettingsModel):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         r, g, b = loader.construct_sequence(node)
         return cls(red=r, green=g, blue=b)
-
-
-class ChannelConfiguration(SettingsModel, ABC):
-    @classmethod
-    @property
-    @abstractmethod
-    def number_channels(cls) -> int:
-        ...
-
-    channel_descriptions: list[str | ChannelSpecialPurpose] = Field(
-        default_factory=list
-    )
-    channel_colors: list[Optional[Color]] = Field(default_factory=list)
-
-    @validator("channel_descriptions")
-    def validate_channel_descriptions(cls, descriptions):
-        if not len(descriptions) == cls.number_channels:
-            raise ValueError(
-                f"The length of channel descriptions ({len(descriptions)}) doesn't match the number of channels "
-                f"{cls.number_channels}"
-            )
-        counter = Counter(descriptions)
-        for description, count in counter.items():
-            if not isinstance(description, ChannelSpecialPurpose) and count > 1:
-                raise ValueError(f"Channel {description} is specified more than once")
-        return descriptions
-
-    @validator("channel_colors")
-    def validate_channel_colors(cls, colors):
-        if not len(colors) == cls.number_channels:
-            raise ValueError(
-                f"The length of channel descriptions ({len(colors)}) doesn't match the number of channels "
-                f"{cls.number_channels}"
-            )
-        else:
-            return colors
-
-    def get_named_channels(self) -> set[str]:
-        """Return the names of channels that don't have a special purpose"""
-        return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
-
-    def get_channel_index(self, description: str | ChannelSpecialPurpose):
-        return self.channel_descriptions.index(description)
-
-
-class DigitalChannelConfiguration(ChannelConfiguration, ABC):
-    pass
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
@@ -128,49 +65,6 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
             "time_step": self.time_step,
         }
         return super().get_device_init_args() | extra
-
-
-class AnalogUnitsMapping(SettingsModel, ABC):
-    @abstractmethod
-    def convert(self, input_: Quantity) -> Quantity:
-        ...
-
-    @abstractmethod
-    def get_input_units(self) -> str:
-        ...
-
-    @abstractmethod
-    def get_output_units(self) -> str:
-        ...
-
-
-class CalibratedUnitsMapping(AnalogUnitsMapping):
-    input_units: str = ""
-    output_units: str = "V"
-    input_values: list[float] = []
-    output_values: list[float] = []
-
-    def get_input_units(self) -> str:
-        return self.input_units
-
-    def get_output_units(self) -> str:
-        return self.output_units
-
-    def convert(self, input_: Quantity) -> Quantity:
-        input_values = numpy.array(self.input_values)
-        output_values = numpy.array(self.output_values)
-        order = numpy.argsort(input_values)
-        sorted_input_values = input_values[order]
-        sorted_output_values = output_values[order]
-        interp = numpy.interp(
-            x=input_.to(self.get_input_units()).magnitude,
-            xp=sorted_input_values,
-            fp=sorted_output_values,
-        )
-        min_ = numpy.min(output_values)
-        max_ = numpy.max(output_values)
-        clipped = numpy.clip(interp, min_, max_)
-        return Quantity(clipped, units=self.get_output_units())
 
 
 class NI6738AnalogSequencerConfig(SettingsModel):
