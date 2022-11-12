@@ -249,9 +249,7 @@ class SwimLaneWidget(QWidget):
         return actions
 
     def create_analog_add_lane_actions(self):
-        unused_channels = (
-            self._model.experiment_config.ni6738_analog_sequencer.get_named_channels()
-        )
+        unused_channels = self._model.experiment_config.get_analog_channels()
         in_use_channels = self._model.shot_config.get_lane_names()
         possible_channels = list(unused_channels.difference(in_use_channels))
         possible_channels.sort()

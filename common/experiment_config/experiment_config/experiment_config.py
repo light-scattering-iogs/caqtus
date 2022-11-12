@@ -241,6 +241,13 @@ class ExperimentConfig(SettingsModel):
                 digital_channels |= device_config.get_named_channels()
         return digital_channels
 
+    def get_analog_channels(self) -> set[str]:
+        analog_channels = set()
+        for device_config in self.device_configurations:
+            if isinstance(device_config, DigitalChannelConfiguration):
+                analog_channels |= device_config.get_named_channels()
+        return analog_channels
+
 
 def get_config_path() -> Path:
     ui_settings = QSettings("Caqtus", "ExperimentControl")
