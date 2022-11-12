@@ -189,10 +189,10 @@ class SwimLaneWidget(QWidget):
         self.lanes_view.verticalHeader().setFixedWidth(new_width)
         self.steps_view.verticalHeader().setFixedWidth(new_width)
 
-    def update_section_width(self, logicalIndex: int, oldSize: int, newSize: int):
-        self.lanes_view.setColumnWidth(logicalIndex, newSize)
+    def update_section_width(self, logical_index: int, old_size: int, new_size: int):
+        self.lanes_view.setColumnWidth(logical_index, new_size)
 
-    def update_section_height(self, *args):
+    def update_section_height(self, *_):
         height = (
             self.steps_view.horizontalHeader().height()
             + self.steps_view.rowHeight(0)

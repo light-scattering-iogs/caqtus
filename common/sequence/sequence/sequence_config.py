@@ -195,6 +195,7 @@ class SequenceConfig(SettingsModel):
     shot_configurations: dict[str, ShotConfiguration]
 
 
+# noinspection PyUnusedLocal
 @singledispatch
 def compute_number_shots(steps: Step):
     return 0
@@ -231,6 +232,7 @@ def _(loop: ArangeLoop):
         return math.nan
 
 
+# noinspection PyUnusedLocal
 @compute_number_shots.register
 def _(shot: ExecuteShot):
     return 1

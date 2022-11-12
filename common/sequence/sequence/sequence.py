@@ -151,7 +151,7 @@ class Sequence:
                 shot,
                 step_durations,
                 self.experiment_config.ni6738_analog_sequencer.time_step,
-                self.experiment_config.spincore.time_step,
+                self.experiment_config.spincore_config.time_step,
             )
             values = evaluate_analog_values(shot, local_analog_times, context)
 
@@ -236,6 +236,7 @@ class SequenceFolderWatcher(FileSystemEventHandler):
             if normpath(parent) in self._sequence_cache:
                 sequence = self._sequence_cache[normpath(parent)]
                 if file_path.suffix == ".hdf5":
+                    # noinspection PyPropertyAccess
                     sequence.number_completed_shots += 1
 
     def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
@@ -248,7 +249,6 @@ class SequenceFolderWatcher(FileSystemEventHandler):
                 sequence = self._sequence_cache[normpath(parent)]
                 if file_path.suffix == ".hdf5":
                     sequence.remove_cached_property("number_completed_shots")
-
 
     def get_sequence(self, path: Path) -> Sequence:
         if normpath(path) in self._sequence_cache:
