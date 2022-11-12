@@ -78,6 +78,20 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
         description="The quantization time step used when converting step times to instructions.",
     )
 
+    @validator("channel_mappings")
+    def validate_channel_mappings(cls, channel_mappings):
+        channel_mappings: list[
+            Optional[AnalogUnitsMapping]
+        ] = super().validate_channel_mappings(channel_mappings)
+        for channel, mapping in enumerate(channel_mappings):
+            if mapping is not None:
+                output_units = mapping.get_output_units()
+                if not Quantity(1, units=output_units).is_compatible_with("V"):
+                    raise ValueError(
+                        f"Channel {channel} output units ({output_units}) are not compatible with Volt"
+                    )
+        return channel_mappings
+
     # noinspection PyPropertyDefinition
     @classmethod
     @property
@@ -86,6 +100,13 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
 
     def get_device_type(self) -> str:
         return "NI6738AnalogCard"
+
+    def get_device_init_args(self) -> dict[str]:
+        extra = {
+            "device_id": self.device_id,
+            "time_step": self.time_step,
+        }
+        return super().get_device_init_args() | extra
 
 
 class NI6738AnalogSequencerConfig(SettingsModel):
@@ -188,6 +209,13 @@ class ExperimentConfig(SettingsModel):
             if isinstance(device_config, SpincoreSequencerConfiguration):
                 return device_config
         raise ValueError("Could not find a configuration for spincore sequencer")
+
+    @property
+    def ni6738_config(self) -> NI6738SequencerConfiguration:
+        for device_config in self.device_configurations:
+            if isinstance(device_config, NI6738SequencerConfiguration):
+                return device_config
+        raise ValueError("Could not find a configuration for NI6738 card")
 
     def find_color(self, channel: str) -> Optional[Color]:
         color = None
