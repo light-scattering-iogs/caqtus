@@ -1,9 +1,14 @@
+import logging
 from abc import abstractmethod, ABC
 
 import numpy
+from pydantic import root_validator, Field
 
 from settings_model import SettingsModel
 from units import Quantity
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 
 class AnalogUnitsMapping(SettingsModel, ABC):
@@ -33,8 +38,19 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
 
     input_units: str = ""
     output_units: str = ""
-    input_values: list[float] = []
-    output_values: list[float] = []
+    input_values: tuple[float, ...] = Field(default_factory=tuple)
+    output_values: tuple[float, ...] = Field(default_factory=tuple)
+
+    @root_validator(pre=False)
+    def order_input_values(cls, values):
+        input_values = numpy.array(values.get("input_values"))
+        output_values = numpy.array(values.get("output_values"))
+        order = numpy.argsort(input_values)
+        sorted_input_values = input_values[order]
+        sorted_output_values = output_values[order]
+        values["input_values"] = tuple(sorted_input_values)
+        values["output_values"] = tuple(sorted_output_values)
+        return values
 
     def get_input_units(self) -> str:
         return self.input_units
@@ -45,13 +61,10 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
     def convert(self, input_: Quantity) -> Quantity:
         input_values = numpy.array(self.input_values)
         output_values = numpy.array(self.output_values)
-        order = numpy.argsort(input_values)
-        sorted_input_values = input_values[order]
-        sorted_output_values = output_values[order]
         interp = numpy.interp(
             x=input_.to(self.get_input_units()).magnitude,
-            xp=sorted_input_values,
-            fp=sorted_output_values,
+            xp=input_values,
+            fp=output_values,
         )
         min_ = numpy.min(output_values)
         max_ = numpy.max(output_values)
