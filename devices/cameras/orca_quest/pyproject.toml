@@ -9,7 +9,7 @@ packages = [{include = "orca_quest"}]
 [tool.poetry.dependencies]
 python = ">=3.9, <4.0"
 pydantic = "^1.10.2"
-cdevice = { path = "../../../common/cdevice/", develop = true }
+cdevice = { path = "../../cdevice/", develop = true }
 camera = { path = "../camera/", develop = true }
 
 
