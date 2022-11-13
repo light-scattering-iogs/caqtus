@@ -1,4 +1,5 @@
 import logging
+from abc import ABC
 from pathlib import Path
 from typing import Optional
 
@@ -20,6 +21,18 @@ from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+
+class CameraConfiguration(DeviceConfiguration, ABC):
+    pass
+
+
+class OrcaQuestCameraConfiguration(CameraConfiguration):
+    camera_number: int
+
+    @classmethod
+    def get_device_type(cls) -> str:
+        return "OrcaQuestCamera"
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
@@ -187,6 +200,13 @@ class ExperimentConfig(SettingsModel):
             if isinstance(device_config, AnalogChannelConfiguration):
                 analog_channels |= device_config.get_named_channels()
         return analog_channels
+
+    def get_cameras(self) -> set[str]:
+        cameras = set()
+        for device_config in self.device_configurations:
+            if isinstance(device_config, CameraConfiguration):
+                cameras |= device_config.device_name
+        return cameras
 
 
 def get_config_path() -> Path:
