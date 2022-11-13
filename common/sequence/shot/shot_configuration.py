@@ -1,4 +1,5 @@
 import logging
+from abc import ABC
 from typing import Generic, TypeVar, Optional
 
 from pydantic import validator
@@ -122,12 +123,18 @@ class AnalogLane(Lane[Expression | Ramp]):
     units: str
 
 
-class CameraLane(Lane[Optional[str]]):
+class CameraAction(SettingsModel, ABC):
+    pass
+
+
+class TakePicture(CameraAction):
+    picture_name: str
+
+
+class CameraLane(Lane[Optional[CameraAction]]):
     """Lane to describe a camera
 
-    The name of this lane must match one of the camera present in the experiment configuration. Values in the lane
-    that have a string value indicates that the camera should take a picture during these steps and the picture name
-    corresponds to the string value. If the cell value is None, the camera is not exposing.
+    The name of this lane must match one of the camera present in the experiment configuration.
     """
 
 
