@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-import yaml
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
@@ -10,11 +9,9 @@ from pydantic.color import Color
 
 from sequence import SequenceSteps
 from settings_model import SettingsModel
-from shot import AnalogLane
 from units import Quantity
 from .channel_config import (
     AnalogChannelConfiguration,
-    ChannelSpecialPurpose,
     ChannelConfiguration,
     DigitalChannelConfiguration,
 )
@@ -23,24 +20,6 @@ from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-
-class ChannelColor(SettingsModel):
-    red: float
-    green: float
-    blue: float
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, color: "ChannelColor"):
-        return dumper.represent_sequence(
-            f"!{cls.__name__}",
-            [color.red, color.green, color.blue],
-        )
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        r, g, b = loader.construct_sequence(node)
-        return cls(red=r, green=g, blue=b)
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
@@ -107,65 +86,6 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
             "time_step": self.time_step,
         }
         return super().get_device_init_args() | extra
-
-
-class NI6738AnalogSequencerConfig(SettingsModel):
-    number_channels: int = Field(32, const=True, exclude=True)
-    channel_descriptions: list[str | ChannelSpecialPurpose] = []
-    channel_colors: list[Optional[ChannelColor]] = []
-    channel_mappings: list[Optional[AnalogUnitsMapping]] = []
-    time_step: float = Field(2.5e-6)
-
-    @validator("channel_descriptions", always=True)
-    def validate_channel_descriptions(cls, descriptions, values):
-        descriptions += [
-            ChannelSpecialPurpose.unused()
-            for _ in range(0, values["number_channels"] - len(descriptions))
-        ]
-        return descriptions
-
-    @validator("channel_colors", always=True)
-    def validate_channel_colors(cls, colors, values):
-        colors += [None for _ in range(0, values["number_channels"] - len(colors))]
-        return colors
-
-    @validator("channel_mappings", always=True)
-    def validate_channel_mappings(cls, mappings, values):
-        mappings += [None for _ in range(0, values["number_channels"] - len(mappings))]
-        return mappings
-
-    def find_color(self, lane: AnalogLane) -> Optional[ChannelColor]:
-        return self.channel_colors[self.find_channel_index(lane)]
-
-    def find_unit(self, lane_name: str) -> str:
-        return self.channel_mappings[
-            self.channel_descriptions.index(lane_name)
-        ].get_input_units()
-
-    def find_channel_index(self, lane: AnalogLane | str):
-        if isinstance(lane, AnalogLane):
-            name = lane.name
-        else:
-            name = lane
-        return self.channel_descriptions.index(name)
-
-    def get_named_channels(self) -> set[str]:
-        """Return the names of channels that don't have a special purpose"""
-        return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
-
-    def convert_values_to_voltages(self, lane_name: str, value: Quantity) -> Quantity:
-        lane_index = self.channel_descriptions.index(lane_name)
-        if (mapping := self.channel_mappings[lane_index]) is not None:
-            if Quantity(1, units=mapping.get_output_units()).is_compatible_with("V"):
-                return mapping.convert(value).to("V")
-            else:
-                raise ValueError(
-                    f"Units mapping for lane {lane_name} can't convert {mapping.get_input_units()} to Volt."
-                )
-        else:
-            raise ValueError(
-                f"No unit mappings defined for lane {lane_name} to convert {value.units} to Volt"
-            )
 
 
 class ExperimentConfig(SettingsModel):
@@ -246,7 +166,9 @@ class ExperimentConfig(SettingsModel):
                         units = mapping.get_input_units()
                         break
                     else:
-                        raise ValueError(f"Channel {channel} has no defined units mapping")
+                        raise ValueError(
+                            f"Channel {channel} has no defined units mapping"
+                        )
         if channel_exists:
             return units
         else:

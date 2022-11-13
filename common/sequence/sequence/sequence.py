@@ -144,7 +144,7 @@ class Sequence:
         times[1:] = numpy.cumsum(step_durations)
 
         if isinstance(lane, DigitalLane):
-            values = numpy.array(lane.values + [lane.values[-1]])
+            values = numpy.array(list(lane.values) + [lane.values[-1]])
             return times * ureg.s, values
         elif isinstance(lane, AnalogLane):
             local_analog_times = evaluate_analog_local_times(

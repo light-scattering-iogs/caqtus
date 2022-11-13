@@ -5,5 +5,6 @@ from .experiment_config import (
     get_config_path,
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
-    ChannelSpecialPurpose,
 )
+
+from .channel_config import ChannelSpecialPurpose
