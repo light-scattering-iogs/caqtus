@@ -74,9 +74,9 @@ class NI6738AnalogCard(CDevice, extra=Extra.allow):
         try:
             self._task.stop()
             self._task.close()
-        except Exception as error:
-            pass
+        except Exception as err:
+            error = err
         finally:
             super().shutdown()
-        if error:
+        if error is not None:
             raise error

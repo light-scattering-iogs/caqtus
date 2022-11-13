@@ -147,13 +147,12 @@ class SpincorePulseBlaster(CDevice):
             time.sleep(0.01)
 
     def shutdown(self):
-        error = False
+        error_msg = None
         if spinapi.pb_close() != 0:
-            error = True
             error_msg = spinapi.pb_get_error()
 
         super().shutdown()
-        if error:
+        if error_msg is not None:
             raise ConnectionError(
                 f"An error occurred when closing board {self.board_number}: {error_msg}"
             )
