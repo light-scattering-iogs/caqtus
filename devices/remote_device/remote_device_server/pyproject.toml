@@ -9,8 +9,8 @@ packages = [{include = "remote_device_server"}]
 [tool.poetry.dependencies]
 python = ">=3.9, <4.0"
 pydantic = "^1.10.2"
-cdevice = { path = "../cdevice/", develop = true }
-orca_quest = {path = "../cameras/orca_quest/", develop = true}
+cdevice = { path = "../../cdevice/", develop = true }
+orca_quest = {path = "../../cameras/orca_quest/", develop = true}
 
 
 [build-system]
