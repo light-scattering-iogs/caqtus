@@ -1,1 +1,1 @@
-from .device_config import DeviceConfiguration
+from .device_config import DeviceConfiguration, DeviceConfigType
