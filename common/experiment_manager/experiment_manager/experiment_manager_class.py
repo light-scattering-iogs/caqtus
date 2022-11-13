@@ -285,8 +285,8 @@ class SequenceRunnerThread(Thread):
             self.sequence_config.shot_configurations[shot.name], context
         )
         t1 = datetime.datetime.now()
-        logger.info(f"shot executed in {(t1 - t0)}")
         self.save_shot(shot, t0, t1, context, data)
+        logger.info(f"shot executed in {(t1 - t0)}")
         self.shot_numbers[shot.name] += 1
         return context
 
@@ -311,7 +311,7 @@ class SequenceRunnerThread(Thread):
         self.ni6738.run()
 
         camera_threads = [
-            Thread(target=camera.acquire_picture) for camera in self.cameras.values()
+            Thread(target=camera.acquire_all_pictures) for camera in self.cameras.values()
         ]
         logger.debug(f"camera threads: {camera_threads}")
         for thread in camera_threads:
@@ -321,6 +321,8 @@ class SequenceRunnerThread(Thread):
         for thread in camera_threads:
             thread.join()
         data = {}
+        for name, camera in self.cameras.items():
+            data[name] = camera.read_all_pictures()
         return data
 
     def is_waiting_to_interrupt(self) -> bool:
@@ -455,6 +457,10 @@ class SequenceRunnerThread(Thread):
                 "variables/magnitudes",
                 data=[float(quantity.magnitude) for quantity in context.values()],
             )
+            for device, device_data in data.items():
+                if isinstance(device_data, dict):
+                    for key, value in device_data.items():
+                        file.create_dataset(f"data/{device}/{key}", data=value)
 
         shot_file_name = f"{shot.name}_{self.shot_numbers[shot.name]}.hdf5"
         shot_file_path = self.sequence_path / shot_file_name
