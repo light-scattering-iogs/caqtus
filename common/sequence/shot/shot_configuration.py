@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from typing import Generic, TypeVar, Optional
 
-from pydantic import validator
+from pydantic import validator, root_validator
 
 from expression import Expression
 from settings_model import SettingsModel
@@ -136,6 +136,20 @@ class CameraLane(Lane[Optional[CameraAction]]):
 
     The name of this lane must match one of the camera present in the experiment configuration.
     """
+
+    @root_validator
+    def validate_picture_names(cls, values):
+        actions = values["values"]
+        spans = values["spans"]
+        name = values["name"]
+        picture_names = set()
+        for action, span in zip(actions, spans):
+            if span > 0 and isinstance(action, TakePicture):
+                if action.picture_name in picture_names:
+                    raise ValueError(f"Picture name {action.picture_name} is used twice in lane {name}")
+                else:
+                    picture_names.add(action.picture_name)
+        return values
 
 
 class ShotConfiguration(SettingsModel):
