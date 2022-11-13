@@ -104,10 +104,10 @@ class SwimLaneModel(QAbstractTableModel):
             else:
                 lane = self.get_lane(index)
                 if isinstance(lane, AnalogLane):
-                    lane.values[index.column()].body = value
+                    lane[index.column()].body = value
                     edit = True
                 elif isinstance(lane, DigitalLane):
-                    lane.values[index.column()] = value
+                    lane[index.column()] = value
                     edit = True
 
         if edit:
@@ -245,14 +245,14 @@ class SwimLaneModel(QAbstractTableModel):
         if lane_type == DigitalLane:
             new_lane = DigitalLane(
                 name=name,
-                values=[False for _ in range(self.columnCount())],
-                spans=[1 for _ in range(self.columnCount())],
+                values=tuple(False for _ in range(self.columnCount())),
+                spans=tuple(1 for _ in range(self.columnCount())),
             )
         elif lane_type == AnalogLane:
             new_lane = AnalogLane(
                 name=name,
-                values=[Expression("...") for _ in range(self.columnCount())],
-                spans=[1 for _ in range(self.columnCount())],
+                values=tuple(Expression("...") for _ in range(self.columnCount())),
+                spans=tuple(1 for _ in range(self.columnCount())),
                 units=self.experiment_config.get_input_units(name),
             )
         if new_lane:
