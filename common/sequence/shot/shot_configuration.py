@@ -86,8 +86,13 @@ class AnalogLane(Lane[Expression | Ramp]):
     units: str
 
 
-class CameraLane(Lane[bool]):
-    pass
+class CameraLane(Lane[Optional[str]]):
+    """Lane to describe a camera
+
+    The name of this lane must match one of the camera present in the experiment configuration. Values in the lane
+    that have a string value indicates that the camera should take a picture during these steps and the picture name
+    corresponds to the string value. If the cell value is None, the camera is not exposing.
+    """
 
 
 class ShotConfiguration(SettingsModel):
