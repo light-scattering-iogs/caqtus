@@ -11,13 +11,13 @@ from PyQt5.QtCore import (
     QMimeData,
     QByteArray,
 )
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QIcon
 
-from experiment_config import ExperimentConfig
+from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, Lane, CameraLane
+from shot import DigitalLane, AnalogLane, Lane, CameraLane, TakePicture, CameraAction
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class SwimLaneModel(QAbstractTableModel):
     """
 
     def __init__(
-        self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
+            self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
     ):
         super().__init__()
         self.config_path = sequence_path / "sequence_config.yaml"
@@ -69,21 +69,27 @@ class SwimLaneModel(QAbstractTableModel):
         return len(self.shot_config.step_names)
 
     def data(self, index: QModelIndex, role: int = ...):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
+        if index.row() == 0:
+            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 return self.shot_config.step_names[index.column()]
-            elif index.row() == 1:
+        elif index.row() == 1:
+            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 return self.shot_config.step_durations[index.column()].body
-            else:
-                lane = self.get_lane(index)
-                if isinstance(lane, DigitalLane):
-                    return lane.values[index.column()]
-                elif isinstance(lane, AnalogLane):
-                    return lane.values[index.column()].body
-        elif role == Qt.ItemDataRole.TextColorRole:
-            if index.row() > 1:
-                lane = self.get_lane(index)
-                if isinstance(lane, AnalogLane):
+        else:
+            lane = self.get_lane(index)
+            if isinstance(lane, DigitalLane):
+                if (
+                        role == Qt.ItemDataRole.DisplayRole
+                        or role == Qt.ItemDataRole.EditRole
+                ):
+                    return lane[index.column()]
+            elif isinstance(lane, AnalogLane):
+                if (
+                        role == Qt.ItemDataRole.DisplayRole
+                        or role == Qt.ItemDataRole.EditRole
+                ):
+                    return lane[index.column()].body
+                elif role == Qt.ItemDataRole.TextColorRole:
                     try:
                         color = self.experiment_config.get_color(lane.name)
                     except ValueError:
@@ -91,6 +97,24 @@ class SwimLaneModel(QAbstractTableModel):
                     else:
                         if color is not None:
                             return QColor.fromRgb(*color.as_rgb_tuple())
+            elif isinstance(lane, CameraLane):
+                camera_action = lane[index.column()]
+                if isinstance(camera_action, TakePicture):
+                    if (
+                            role == Qt.ItemDataRole.DisplayRole
+                            or role == Qt.ItemDataRole.EditRole
+                    ):
+                        return camera_action.picture_name
+                    elif role == Qt.ItemDataRole.DecorationRole:
+                        return QIcon(":/icons/camera-icon")
+                    elif role == Qt.ItemDataRole.TextColorRole:
+                        try:
+                            color = self.experiment_config.get_color(ChannelSpecialPurpose(purpose=lane.name))
+                        except ValueError:
+                            return QColor.fromRgb(0, 0, 0)
+                        else:
+                            if color is not None:
+                                return QColor.fromRgb(*color.as_rgb_tuple())
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
@@ -109,7 +133,13 @@ class SwimLaneModel(QAbstractTableModel):
                 elif isinstance(lane, DigitalLane):
                     lane[index.column()] = value
                     edit = True
-
+                elif isinstance(lane, CameraLane):
+                    if value is None or isinstance(value, CameraAction):
+                        lane[index.column()] = value
+                        edit = True
+                    elif isinstance(value, str) and isinstance(cell := lane[index.column()], TakePicture):
+                        cell.picture_name = value
+                        edit = True
         if edit:
             self.save_config()
         return edit
@@ -150,12 +180,12 @@ class SwimLaneModel(QAbstractTableModel):
         return mime_data
 
     def dropMimeData(
-        self,
-        data: QMimeData,
-        action: Qt.DropAction,
-        row: int,
-        column: int,
-        parent: QModelIndex,
+            self,
+            data: QMimeData,
+            action: Qt.DropAction,
+            row: int,
+            column: int,
+            parent: QModelIndex,
     ) -> bool:
         yaml_string = data.data("application/x-shot_lanes").data().decode("utf-8")
         lanes: list[Lane] = YAMLSerializable.load(yaml_string)

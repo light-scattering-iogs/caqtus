@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from experiment_config import ExperimentConfig
 from sequence import SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, CameraLane
+from shot import DigitalLane, AnalogLane, CameraLane, TakePicture
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -331,19 +331,42 @@ class SwimLaneWidget(QWidget):
 
             index = self.lanes_view.indexAt(position)
             if index.isValid():
-                merge_action = QAction("merge")
-                menu.addAction(merge_action)
-                merge_action.triggered.connect(
-                    lambda: self._model.merge(
-                        self.lanes_view.selectionModel().selectedIndexes()
+                if len(self.lanes_view.selectionModel().selectedIndexes()) > 1:
+                    merge_action = QAction("Merge")
+                    menu.addAction(merge_action)
+                    merge_action.triggered.connect(
+                        lambda: self._model.merge(
+                            self.lanes_view.selectionModel().selectedIndexes()
+                        )
                     )
-                )
-                break_action = QAction("break")
-                menu.addAction(break_action)
-                break_action.triggered.connect(
-                    lambda: self._model.break_(
-                        self.lanes_view.selectionModel().selectedIndexes()
+                    break_action = QAction("Break")
+                    menu.addAction(break_action)
+                    break_action.triggered.connect(
+                        lambda: self._model.break_(
+                            self.lanes_view.selectionModel().selectedIndexes()
+                        )
                     )
-                )
+                if isinstance(self._model.get_lane(index), CameraLane):
+                    camera_action = self._model.data(index, Qt.ItemDataRole.DisplayRole)
+                    if camera_action is None:
+                        take_picture_action = QAction("Take picture")
+                        menu.addAction(take_picture_action)
+                        take_picture_action.triggered.connect(
+                            lambda: self._model.setData(
+                                index,
+                                TakePicture(picture_name="..."),
+                                Qt.ItemDataRole.EditRole,
+                            )
+                        )
+                    elif isinstance(camera_action, str):
+                        remove_picture_action = QAction("Remove picture")
+                        menu.addAction(remove_picture_action)
+                        remove_picture_action.triggered.connect(
+                            lambda: self._model.setData(
+                                index,
+                                None,
+                                Qt.ItemDataRole.EditRole,
+                            )
+                        )
 
             menu.exec(self.lanes_view.viewport().mapToGlobal(position))

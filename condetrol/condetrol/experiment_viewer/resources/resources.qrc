@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file alias="camera-icon">../../resources/icons/camera.png</file>
     <file alias="sequence">../../resources/icons/script-attribute-s.png</file>
     <file alias="document-open">../../resources/icons/folder-open-document.png</file>
     <file alias="document-text-open">../../resources/icons/folder-open-document-text.png</file>

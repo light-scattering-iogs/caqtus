@@ -15,6 +15,7 @@ from .channel_config import (
     AnalogChannelConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
+    ChannelSpecialPurpose,
 )
 from .device_config import DeviceConfiguration
 from .units_mapping import AnalogUnitsMapping
@@ -147,7 +148,7 @@ class ExperimentConfig(SettingsModel):
                 return device_config
         raise ValueError("Could not find a configuration for NI6738 card")
 
-    def get_color(self, channel: str) -> Optional[Color]:
+    def get_color(self, channel: str | ChannelSpecialPurpose) -> Optional[Color]:
         color = None
         channel_exists = False
         for device_config in self.device_configurations:
