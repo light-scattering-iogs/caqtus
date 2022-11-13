@@ -52,5 +52,5 @@ class ShotConfiguration(SettingsModel):
     def digital_lanes(self) -> list[DigitalLane]:
         return [lane for lane in self.lanes if isinstance(lane, DigitalLane)]
 
-    def get_lanes(self, lane_type: Type[TLane]) -> list[TLane]:
-        return [lane for lane in self.lanes if isinstance(lane, lane_type)]
+    def get_lanes(self, lane_type: Type[TLane]) -> dict[str, TLane]:
+        return {lane.name: lane for lane in self.lanes if isinstance(lane, lane_type)}

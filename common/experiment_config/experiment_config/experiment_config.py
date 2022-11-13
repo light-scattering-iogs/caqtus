@@ -229,12 +229,12 @@ class ExperimentConfig(SettingsModel):
 
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
-    ) -> list[DeviceConfigType]:
-        result = []
-        for config in self.device_configurations:
-            if isinstance(config, config_type):
-                result.append(config)
-        return result
+    ) -> dict[str, DeviceConfigType]:
+        return {
+            config.device_name: config
+            for config in self.device_configurations
+            if isinstance(config, config_type)
+        }
 
 
 def get_config_path() -> Path:
