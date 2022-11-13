@@ -86,6 +86,8 @@ class SequenceRunnerThread(Thread):
                 address=address, authkey=authkey
             )
 
+        self.shutdown_actions = []
+
     def run(self):
         # noinspection PyBroadException
         try:
@@ -109,14 +111,19 @@ class SequenceRunnerThread(Thread):
             server.connect()
             logger.info(f"Connection established to {server_name}")
 
-
-
         self.ni6738.start()
+        self.shutdown_actions.append(self.ni6738.shutdown)
         self.spincore.start()
+        self.shutdown_actions.append(self.spincore.shutdown)
 
         camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
         for camera_config in camera_configs:
-            logger.debug(camera_config.device_name)
+            name = camera_config.device_name
+            server = self.remote_device_managers[camera_config.remote_server]
+            init_args = camera_config.get_device_init_args()
+            self.cameras[name] = getattr(server, camera_config.get_device_type())(**init_args)
+            self.cameras[name].start()
+            self.shutdown_actions.append(self.cameras[name].shutdown)
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
@@ -132,8 +139,7 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
 
     def shutdown(self):
-        actions = [self.spincore.shutdown, self.ni6738.shutdown]
-        for action in actions:
+        for action in self.shutdown_actions:
             # noinspection PyBroadException
             try:
                 action()
