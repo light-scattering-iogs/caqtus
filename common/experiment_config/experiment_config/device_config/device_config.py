@@ -1,4 +1,5 @@
 from abc import abstractmethod, ABC
+from typing import TypeVar
 
 from pydantic import Field
 
@@ -21,3 +22,6 @@ class DeviceConfiguration(SettingsModel, ABC):
 
     def get_device_init_args(self) -> dict[str]:
         return {"name": self.device_name}
+
+
+DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)

@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type
 
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
@@ -17,7 +17,7 @@ from .channel_config import (
     DigitalChannelConfiguration,
     ChannelSpecialPurpose,
 )
-from .device_config import DeviceConfiguration
+from .device_config import DeviceConfiguration, DeviceConfigType
 from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
@@ -208,6 +208,15 @@ class ExperimentConfig(SettingsModel):
             if isinstance(device_config, CameraConfiguration):
                 cameras.add(device_config.device_name)
         return cameras
+
+    def get_device_configs(
+        self, config_type: Type[DeviceConfigType]
+    ) -> list[DeviceConfigType]:
+        result = []
+        for config in self.device_configurations:
+            if isinstance(config, config_type):
+                result.append(config)
+        return result
 
 
 def get_config_path() -> Path:
