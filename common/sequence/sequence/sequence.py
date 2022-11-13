@@ -1,9 +1,10 @@
 import datetime
 import logging
 import math
+import os.path
+import os.path
 from copy import copy
 from functools import cached_property
-from os.path import normpath
 from pathlib import Path
 from typing import Literal, Any
 
@@ -241,20 +242,22 @@ class SequenceFolderWatcher(FileSystemEventHandler):
         self._observer = PollingObserver(timeout=1)
         self._observer.schedule(self, str(self._data_folder), recursive=True)
         self._observer.start()
+        self.events = []
 
     @property
     def data_folder(self):
         return self._data_folder
 
     def on_any_event(self, event):
-        logger.debug(event)
+        logger.debug(self._sequence_cache)
+        self.events.append(event)
 
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent):
         if isinstance(event, FileModifiedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
-            if normpath(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normpath(parent)]
+            if normalize_path(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normalize_path(parent)]
                 if file_path.name == "sequence_state.yaml":
                     sequence.remove_cached_property("stats")
                 elif file_path.name == "sequence_config.yaml":
@@ -265,33 +268,37 @@ class SequenceFolderWatcher(FileSystemEventHandler):
         if isinstance(event, FileCreatedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
-            if normpath(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normpath(parent)]
+            if normalize_path(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normalize_path(parent)]
                 if file_path.suffix == ".hdf5":
                     # noinspection PyPropertyAccess
                     sequence.number_completed_shots += 1
 
     def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
         if isinstance(event, DirDeletedEvent):
-            self._sequence_cache.pop(normpath(event.src_path), None)
+            self._sequence_cache.pop(normalize_path(event.src_path), None)
         elif isinstance(event, FileDeletedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
-            if normpath(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normpath(parent)]
+            if normalize_path(parent) in self._sequence_cache:
+                sequence = self._sequence_cache[normalize_path(parent)]
                 if file_path.suffix == ".hdf5":
                     sequence.remove_cached_property("number_completed_shots")
 
     def get_sequence(self, path: Path) -> Sequence:
-        if normpath(path) in self._sequence_cache:
-            return self._sequence_cache[normpath(path)]
+        if normalize_path(path) in self._sequence_cache:
+            return self._sequence_cache[normalize_path(path)]
         else:
             sequence = Sequence(path)
-            self._sequence_cache[normpath(path)] = sequence
+            self._sequence_cache[normalize_path(path)] = sequence
             return sequence
 
     def is_sequence_folder(self, path: Path) -> bool:
-        if normpath(path) in self._sequence_cache:
+        if normalize_path(path) in self._sequence_cache:
             return True
         else:
             return Sequence.is_sequence_folder(path)
+
+
+def normalize_path(path: Path):
+    return os.path.normpath(path)

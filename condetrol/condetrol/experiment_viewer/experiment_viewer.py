@@ -23,10 +23,10 @@ from PyQt5.QtWidgets import (
     QAction,
     QInputDialog,
     QLineEdit,
-    QAbstractItemView, QMessageBox,
+    QAbstractItemView,
+    QMessageBox,
 )
 from qtpy import QtGui
-from send2trash import send2trash
 
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
@@ -201,7 +201,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             message_box.setWindowTitle("Caqtus")
             message_box.setText("A sequence is still running.")
             message_box.setInformativeText("Do you want to interrupt it?")
-            message_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            message_box.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+            )
             message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
             message_box.setIcon(QMessageBox.Question)
             result = message_box.exec()
@@ -224,6 +226,7 @@ class SequenceViewerModel(QFileSystemModel):
 
     def __init__(self, data_root: Path, *args, **kwargs):
         self.sequence_watcher = SequenceFolderWatcher(data_root)
+        logger.debug(self.sequence_watcher.data_folder)
         super().__init__(*args, **kwargs)
         self.setRootPath(str(data_root))
 
@@ -239,6 +242,10 @@ class SequenceViewerModel(QFileSystemModel):
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return super().columnCount(parent) + 2
+
+    def filePath(self, index: QModelIndex) -> str:
+        path = super().filePath(index)
+        return normalize_path(path)
 
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
@@ -440,3 +447,11 @@ class SequenceDelegate(QStyledItemDelegate):
             )
         else:
             super().paint(painter, option, index)
+
+
+def normalize_path(path: str):
+    path = os.path.normpath(path)
+    drive, relative_path = os.path.splitdrive(path)
+    relative_path = relative_path.removeprefix("\\")
+
+    return os.path.join(drive, relative_path)
