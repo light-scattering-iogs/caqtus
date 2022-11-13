@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import shutil
+import time
 from functools import partial
 from multiprocessing.managers import BaseManager
 from pathlib import Path
@@ -22,7 +23,7 @@ from PyQt5.QtWidgets import (
     QAction,
     QInputDialog,
     QLineEdit,
-    QAbstractItemView,
+    QAbstractItemView, QMessageBox,
 )
 from qtpy import QtGui
 from send2trash import send2trash
@@ -194,12 +195,28 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         editor = ConfigEditor()
         editor.exec()
 
-    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        if self.experiment_manager.is_running():
+            message_box = QMessageBox(self)
+            message_box.setWindowTitle("Caqtus")
+            message_box.setText("A sequence is still running.")
+            message_box.setInformativeText("Do you want to interrupt it?")
+            message_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel)
+            message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            message_box.setIcon(QMessageBox.Question)
+            result = message_box.exec()
+            if result == QMessageBox.StandardButton.Cancel:
+                event.ignore()
+                return
+            elif result == QMessageBox.StandardButton.Yes:
+                self.experiment_manager.interrupt_sequence()
+                while self.experiment_manager.is_running():
+                    time.sleep(0.1)
         state = self.saveState()
         self.ui_settings.setValue(f"{__name__}/state", state)
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
-        super().closeEvent(a0)
+        super().closeEvent(event)
 
 
 class SequenceViewerModel(QFileSystemModel):

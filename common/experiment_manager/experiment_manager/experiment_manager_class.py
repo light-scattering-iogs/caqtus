@@ -116,6 +116,7 @@ class SequenceRunnerThread(Thread):
                 action()
             except Exception:
                 logger.error("An error occurred when shutting down", exc_info=True)
+        logger.info("Sequence finished")
         self.parent.set_state(ExperimentState.IDLE)
 
     def run_sequence(self):
@@ -376,6 +377,9 @@ class ExperimentManager:
     def set_state(self, value):
         self._state = value
 
+    def is_running(self) -> bool:
+        return self._state != ExperimentState.IDLE
+
     def _sequence_finished(self):
         self._state = ExperimentState.IDLE
 
@@ -397,5 +401,6 @@ class ExperimentManager:
     def interrupt_sequence(self) -> bool:
         if self._state == ExperimentState.RUNNING:
             self._state = ExperimentState.WAITING_TO_INTERRUPT
+            logger.info("Sequence waiting to interrupt")
             return True
         return False
