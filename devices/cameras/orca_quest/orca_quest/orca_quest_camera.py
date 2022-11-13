@@ -86,24 +86,26 @@ class OrcaQuestCamera(CCamera):
             )
 
     def shutdown(self):
-        if self._camera.buf_release():
-            logger.info(f"{self.name}: DCAM buffer successfully released")
-        else:
-            logger.warning(
-                f"{self.name}: an error occurred while releasing DCAM buffer: {str(self._camera.lasterr())}"
-            )
-
-        if self._camera.is_opened():
-            if self._camera.dev_close():
-                logger.info(f"{self.name}: camera successfully released")
+        try:
+            if self._camera.buf_release():
+                logger.info(f"{self.name}: DCAM buffer successfully released")
             else:
                 logger.warning(
-                    f"{self.name}: an error occurred while closing the camera: {str(self._camera.lasterr())}"
+                    f"{self.name}: an error occurred while releasing DCAM buffer: {str(self._camera.lasterr())}"
                 )
-        if Dcamapi.uninit():
-            logger.info(f"{self.name}: DCAM-API successfully released")
 
-        super().shutdown()
+            if self._camera.is_opened():
+                if self._camera.dev_close():
+                    logger.info(f"{self.name}: camera successfully released")
+                else:
+                    logger.warning(
+                        f"{self.name}: an error occurred while closing the camera: {str(self._camera.lasterr())}"
+                    )
+            if Dcamapi.uninit():
+                logger.info(f"{self.name}: DCAM-API successfully released")
+        finally:
+            super().shutdown()
+
 
     def list_properties(self) -> list:
         result = []
