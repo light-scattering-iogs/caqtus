@@ -106,6 +106,24 @@ class Lane(Generic[T], SettingsModel):
         else:
             return self.values[self._find_spanner(index)]
 
+    def get_value_spans(self) -> list[tuple[T, int, int]]:
+        """Return a list of values with their respective spans
+
+        It has the form [(value0, start0, stop0), (value1, start1, stop1), ...], where stop is excluded for each value.
+        """
+
+        result = []
+        index = 0
+        while index < len(self.values):
+            value = self.values[index]
+            start = index
+            index += 1
+            while index < len(self.values) and self.spans[index] == 0:
+                index += 1
+            stop = index
+            result.append((value, start, stop))
+        return result
+
 
 class DigitalLane(Lane[bool]):
     pass
@@ -152,3 +170,11 @@ class CameraLane(Lane[Optional[CameraAction]]):
                 else:
                     picture_names.add(action.picture_name)
         return values
+
+    def get_picture_spans(self) -> list[tuple[str, int, int]]:
+        """Return a list of the pictures and the step index at which they start (included) and stop (excluded)"""
+        result = []
+        for action, start, stop in self.get_value_spans():
+            if isinstance(action, TakePicture):
+                result.append((action.picture_name, start, stop))
+        return result

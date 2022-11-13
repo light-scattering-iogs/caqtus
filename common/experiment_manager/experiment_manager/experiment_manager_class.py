@@ -7,6 +7,7 @@ from enum import Enum, auto
 from functools import singledispatchmethod, cached_property
 from pathlib import Path
 from threading import Thread
+from typing import Any, TypedDict
 
 import h5py
 import numpy
@@ -51,6 +52,33 @@ class ExperimentState(Enum):
     IDLE = auto()
     RUNNING = auto()
     WAITING_TO_INTERRUPT = auto()
+
+
+class CameraInstructions(TypedDict):
+    timeout: float
+    exposures: list[float]
+    triggers: list[bool]
+
+
+def compile_camera_instructions(
+    step_durations: list[float], shot: ShotConfiguration
+) -> dict[str, CameraInstructions]:
+    result = {}
+    camera_lanes = shot.get_lanes(CameraLane)
+    timeout = sum(step_durations)
+    for camera_name, camera_lane in camera_lanes.items():
+        triggers = [False] * len(step_durations)
+        exposures = []
+        for _, start, stop in camera_lane.get_picture_spans():
+            triggers[start:stop] = [True] * (stop - start)
+            exposures.append(sum(step_durations[start:stop]))
+        instructions: CameraInstructions = {
+            "timeout": timeout,
+            "triggers": triggers,
+            "exposures": exposures,
+        }
+        result[camera_name] = instructions
+    return result
 
 
 class SequenceRunnerThread(Thread):
@@ -251,32 +279,38 @@ class SequenceRunnerThread(Thread):
         """Execute a shot on the experiment"""
 
         t0 = datetime.datetime.now()
-        config = self.sequence_config.shot_configurations[shot.name]
-        spincore_instructions, analog_values = self.compile_shot(config, context)
-        analog_voltages = self.generate_analog_voltages(analog_values)
-        # self.ni6738.apply_rt_variables(values=analog_voltages)
-        # self.ni6738.run()
-        self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        self.spincore.run()
-        data = {}
-        # time.sleep(0.2)
-
+        data = self.do_shot(
+            self.sequence_config.shot_configurations[shot.name], context
+        )
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
         self.save_shot(shot, t0, t1, context, data)
         self.shot_numbers[shot.name] += 1
         return context
 
+    def do_shot(self, shot: ShotConfiguration, context: dict[str]) -> dict[str, Any]:
+        step_durations = evaluate_step_durations(shot, context)
+        self.check_durations(shot, step_durations)
+        camera_instructions = compile_camera_instructions(step_durations, shot)
+        logger.debug(camera_instructions)
+        spincore_instructions, analog_values = self.compile_sequencer_instructions(
+            step_durations, shot, context
+        )
+        analog_voltages = self.generate_analog_voltages(analog_values)
+        self.ni6738.apply_rt_variables(values=analog_voltages)
+        self.ni6738.run()
+        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        self.spincore.run()
+        data = {}
+        return data
+
     def is_waiting_to_interrupt(self) -> bool:
         return self.parent.get_state() == ExperimentState.WAITING_TO_INTERRUPT
 
-    def compile_shot(
-        self, shot: ShotConfiguration, context: dict[str]
+    def compile_sequencer_instructions(
+        self, step_durations: list[float], shot: ShotConfiguration, context: dict[str]
     ) -> tuple[list[Instruction], dict[str, Quantity]]:
         """Return the spincore instructions and the analog values for the ni6738"""
-        step_durations = evaluate_step_durations(shot, context)
-
-        self.check_durations(shot, step_durations)
 
         analog_times = evaluate_analog_local_times(
             shot,
