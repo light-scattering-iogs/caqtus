@@ -17,7 +17,7 @@ from experiment_config import ExperimentConfig
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, Lane
+from shot import DigitalLane, AnalogLane, Lane, CameraLane
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -254,6 +254,12 @@ class SwimLaneModel(QAbstractTableModel):
                 values=tuple(Expression("...") for _ in range(self.columnCount())),
                 spans=tuple(1 for _ in range(self.columnCount())),
                 units=self.experiment_config.get_input_units(name),
+            )
+        elif lane_type == CameraLane:
+            new_lane = CameraLane(
+                name=name,
+                values=(None,) * self.columnCount(),
+                spans=(1,) * self.columnCount(),
             )
         if new_lane:
             self.beginInsertRows(QModelIndex(), row, row)

@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from experiment_config import ExperimentConfig
 from sequence import SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane
+from shot import DigitalLane, AnalogLane, CameraLane
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -222,6 +222,13 @@ class SwimLaneWidget(QWidget):
                     add_analog_lane_menu.addAction(analog_action)
                 add_lane_menu.addMenu(add_analog_lane_menu)
 
+                camera_actions = self.create_camera_add_lane_actions()
+                if len(camera_actions) > 0:
+                    add_camera_lane_menu = QMenu("camera")
+                    for camera_action in camera_actions:
+                        add_camera_lane_menu.addAction(camera_action)
+                    add_lane_menu.addMenu(add_camera_lane_menu)
+
             else:
                 remove_lane_action = QAction("Remove")
                 menu.addAction(remove_lane_action)
@@ -260,6 +267,23 @@ class SwimLaneWidget(QWidget):
                     self._model.insert_lane,
                     self._model.rowCount(),
                     AnalogLane,
+                    action.text(),
+                )
+            )
+        return actions
+
+    def create_camera_add_lane_actions(self):
+        unused_cameras = self._model.experiment_config.get_cameras()
+        in_use_channels = self._model.shot_config.get_lane_names()
+        possible_channels = list(unused_cameras.difference(in_use_channels))
+        possible_channels.sort()
+        actions = [QAction(channel) for channel in possible_channels]
+        for action in actions:
+            action.triggered.connect(
+                partial(
+                    self._model.insert_lane,
+                    self._model.rowCount(),
+                    CameraLane,
                     action.text(),
                 )
             )

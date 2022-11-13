@@ -205,7 +205,7 @@ class ExperimentConfig(SettingsModel):
         cameras = set()
         for device_config in self.device_configurations:
             if isinstance(device_config, CameraConfiguration):
-                cameras |= device_config.device_name
+                cameras.add(device_config.device_name)
         return cameras
 
 
