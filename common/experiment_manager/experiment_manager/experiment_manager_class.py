@@ -37,6 +37,7 @@ from shot import (
     evaluate_step_durations,
     evaluate_analog_local_times,
     evaluate_analog_values,
+    CameraLane,
 )
 from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
@@ -117,13 +118,22 @@ class SequenceRunnerThread(Thread):
         self.shutdown_actions.append(self.spincore.shutdown)
 
         camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
-        for camera_config in camera_configs:
-            name = camera_config.device_name
+        camera_lanes = self.sequence_config.shot_configurations["shot"].get_lanes(
+            CameraLane
+        )
+        for camera_name in camera_lanes:
+            if camera_name not in camera_configs:
+                raise RuntimeError(
+                    f"There is no camera configuration associated to {camera_name}"
+                )
+            camera_config = camera_configs[camera_name]
             server = self.remote_device_managers[camera_config.remote_server]
             init_args = camera_config.get_device_init_args()
-            self.cameras[name] = getattr(server, camera_config.get_device_type())(**init_args)
-            self.cameras[name].start()
-            self.shutdown_actions.append(self.cameras[name].shutdown)
+            self.cameras[camera_name] = getattr(
+                server, camera_config.get_device_type()
+            )(**init_args)
+            self.cameras[camera_name].start()
+            self.shutdown_actions.append(self.cameras[camera_name].shutdown)
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
