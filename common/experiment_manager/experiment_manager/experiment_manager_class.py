@@ -12,14 +12,16 @@ import h5py
 import numpy
 import yaml
 
+from camera import CCamera
 from experiment_config import (
     ExperimentConfig,
     ChannelSpecialPurpose,
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
-    CameraConfiguration
+    CameraConfiguration,
 )
 from ni6738_analog_card import NI6738AnalogCard
+from remote_device_client import RemoteDeviceClientManager
 from sequence import (
     SequenceStats,
     SequenceState,
@@ -72,10 +74,17 @@ class SequenceRunnerThread(Thread):
         )
 
         self.ni6738 = NI6738AnalogCard(**self.ni6738_config.get_device_init_args())
+        self.cameras: dict[str, CCamera] = {}
 
-        camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
-        for camera_config in camera_configs:
-            logger.debug(camera_config.device_name)
+        self.remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
+        for server_name, server_config in self.experiment_config.device_servers.items():
+            ipaddress = server_config.address
+            port = server_config.port
+            address = (ipaddress, port)
+            authkey = bytes(server_config.authkey.get_secret_value(), encoding="utf-8")
+            self.remote_device_managers[server_name] = RemoteDeviceClientManager(
+                address=address, authkey=authkey
+            )
 
     def run(self):
         # noinspection PyBroadException
@@ -95,10 +104,19 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(
             self.experiment_config, self.sequence_path / "experiment_config.yaml"
         )
+        for server_name, server in self.remote_device_managers.items():
+            logger.info(f"Connecting to device server {server_name}...")
+            server.connect()
+            logger.info(f"Connection established to {server_name}")
+
+
 
         self.ni6738.start()
-
         self.spincore.start()
+
+        camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
+        for camera_config in camera_configs:
+            logger.debug(camera_config.device_name)
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
@@ -321,10 +339,12 @@ class SequenceRunnerThread(Thread):
         )
 
         for name, values in analog_values.items():
-            voltages = self.ni6738_config.convert_to_output_units(name, values).to("V").magnitude
-            channel_number = (
-                self.ni6738_config.get_channel_index(name)
+            voltages = (
+                self.ni6738_config.convert_to_output_units(name, values)
+                .to("V")
+                .magnitude
             )
+            channel_number = self.ni6738_config.get_channel_index(name)
             data[channel_number] = voltages
         return data
 
@@ -394,11 +414,11 @@ class ExperimentManager:
         Return True if the sequence was started, False if not.
         """
         if self._state == ExperimentState.IDLE:
-            self._state = ExperimentState.RUNNING
             self._sequence_runner_thread = SequenceRunnerThread(
                 experiment_config, sequence_path, self
             )
             self._sequence_runner_thread.start()
+            self._state = ExperimentState.RUNNING
             return True
         else:
             return False
