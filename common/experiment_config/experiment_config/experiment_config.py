@@ -8,6 +8,7 @@ from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
 from pydantic.color import Color
 
+from camera import ROI
 from sequence import SequenceSteps
 from settings_model import SettingsModel
 from units import Quantity
@@ -26,7 +27,13 @@ logger.setLevel("DEBUG")
 
 
 class CameraConfiguration(DeviceConfiguration, ABC):
-    pass
+    roi: ROI
+
+    def get_device_init_args(self) -> dict[str]:
+        return super().get_device_init_args() | {
+            "roi": self.roi,
+            "external_trigger": True,
+        }
 
 
 class OrcaQuestCameraConfiguration(CameraConfiguration):
@@ -35,6 +42,12 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
     @classmethod
     def get_device_type(cls) -> str:
         return "OrcaQuestCamera"
+
+    def get_device_init_args(self) -> dict[str]:
+        extra = {
+            "camera_number": self.camera_number,
+        }
+        return super().get_device_init_args() | extra
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):

@@ -3,7 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
-from orca_quest_camera import OrcaQuestCamera
+from orca_quest import OrcaQuestCamera
 from camera import ROI
 
 logging.basicConfig()

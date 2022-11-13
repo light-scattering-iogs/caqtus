@@ -3,13 +3,14 @@ from collections import Counter
 from math import inf
 
 import numpy
-import pydantic
-from cdevice import CDevice
 from pydantic import Field, validator
 from typing_extensions import ClassVar
 
+from cdevice import CDevice
+from settings_model import SettingsModel
 
-class ROI(pydantic.BaseModel):
+
+class ROI(SettingsModel):
     x: int = Field(
         description="horizontal coordinate of the corner of the roi",
     )
