@@ -133,6 +133,11 @@ class Sequence:
                 result.append(Shot(child.relative_to(self._path), self))
         return result
 
+    def __iter__(self):
+        for child in self._path.iterdir():
+            if self._is_shot(child):
+                yield Shot(child.relative_to(self._path), self)
+
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
     ):
@@ -202,6 +207,30 @@ class Shot:
     def path(self) -> Path:
         return self._parent.path / self._relative_path
 
+    @property
+    def name(self) -> str:
+        return str(self._relative_path).removesuffix(".hdf5")
+
+    @property
+    def sequence(self) -> Sequence:
+        return self._parent
+
+    @cached_property
+    def start_time(self) -> datetime.datetime:
+        with h5py.File(self.path, "r") as file:
+            start_time = datetime.datetime.strptime(
+                file.attrs["start_time"], "%Y-%m-%d-%Hh%Mm%Ss%fus"
+            )
+            return start_time
+
+    @cached_property
+    def end_time(self) -> datetime.datetime:
+        with h5py.File(self.path, "r") as file:
+            start_time = datetime.datetime.strptime(
+                file.attrs["start_time"], "%Y-%m-%d-%Hh%Mm%Ss%fus"
+            )
+            return start_time
+
 
 class SequenceFolderWatcher(FileSystemEventHandler):
     def __init__(self, data_folder: Path):
@@ -216,6 +245,9 @@ class SequenceFolderWatcher(FileSystemEventHandler):
     @property
     def data_folder(self):
         return self._data_folder
+
+    def on_any_event(self, event):
+        logger.debug(event)
 
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent):
         if isinstance(event, FileModifiedEvent):
