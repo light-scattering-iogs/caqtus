@@ -248,6 +248,8 @@ class SwimLaneModel(QAbstractTableModel):
                 lane.insert(column, False)
             elif isinstance(lane, AnalogLane):
                 lane.insert(column, Expression("..."))
+            elif isinstance(lane, CameraLane):
+                lane.insert(column, None)
 
         self.endInsertColumns()
         self.save_config()
