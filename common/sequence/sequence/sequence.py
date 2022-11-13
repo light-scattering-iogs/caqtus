@@ -204,6 +204,22 @@ class Shot:
 
         return result
 
+    @cached_property
+    def data_labels(self) -> tuple[str]:
+        result: list[str] = list()
+
+        def update_data(name: str, obj):
+            if isinstance(obj, h5py.Dataset):
+                result.append(name)
+
+        with h5py.File(self.path, "r") as file:
+            file["data"].visititems(update_data)
+        return tuple(result)
+
+    def get_data(self, data_label: str):
+        with h5py.File(self.path, "r") as file:
+            return file[f"data/{data_label}"][:]
+
     @property
     def path(self) -> Path:
         return self._parent.path / self._relative_path
