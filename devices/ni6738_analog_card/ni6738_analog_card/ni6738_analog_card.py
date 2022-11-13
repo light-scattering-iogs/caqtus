@@ -28,7 +28,6 @@ class NI6738AnalogCard(CDevice, extra=Extra.allow):
     def start(self) -> None:
         super().start()
         system = nidaqmx.system.System.local()
-        logger.debug(list(system.devices))
         if self.device_id not in system.devices:
             raise ConnectionError(f"Could not find device {self.device_id}")
 
@@ -70,6 +69,14 @@ class NI6738AnalogCard(CDevice, extra=Extra.allow):
         self._task.start()
 
     def shutdown(self):
-        self._task.stop()
-        self._task.close()
-        super().shutdown()
+        error = None
+        # noinspection PyBroadException
+        try:
+            self._task.stop()
+            self._task.close()
+        except Exception as error:
+            pass
+        finally:
+            super().shutdown()
+        if error:
+            raise error
