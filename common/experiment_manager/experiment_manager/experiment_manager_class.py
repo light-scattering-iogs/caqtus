@@ -7,7 +7,7 @@ from enum import Enum, auto
 from functools import singledispatchmethod, cached_property
 from pathlib import Path
 from threading import Thread
-from typing import Any, TypedDict
+from typing import Any, TypedDict, Iterable
 
 import h5py
 import numpy
@@ -149,7 +149,7 @@ class SequenceRunnerThread(Thread):
         camera_lanes = self.sequence_config.shot_configurations["shot"].get_lanes(
             CameraLane
         )
-        for camera_name in camera_lanes:
+        for camera_name, camera_lane in camera_lanes.items():
             if camera_name not in camera_configs:
                 raise RuntimeError(
                     f"There is no camera configuration associated to {camera_name}"
@@ -157,6 +157,8 @@ class SequenceRunnerThread(Thread):
             camera_config = camera_configs[camera_name]
             server = self.remote_device_managers[camera_config.remote_server]
             init_args = camera_config.get_device_init_args()
+            init_args["picture_names"] = camera_lane.get_picture_names()
+            init_args["exposures"] = [0] * len(init_args["picture_names"])
             self.cameras[camera_name] = getattr(
                 server, camera_config.get_device_type()
             )(**init_args)
@@ -292,15 +294,32 @@ class SequenceRunnerThread(Thread):
         step_durations = evaluate_step_durations(shot, context)
         self.check_durations(shot, step_durations)
         camera_instructions = compile_camera_instructions(step_durations, shot)
-        logger.debug(camera_instructions)
+        for camera, instructions in camera_instructions.items():
+            self.cameras[camera].apply_rt_variables(
+                timeout=instructions["timeout"], exposures=instructions["exposures"]
+            )
+        camera_triggers = {
+            camera_name: instructions["triggers"]
+            for camera_name, instructions in camera_instructions.items()
+        }
         spincore_instructions, analog_values = self.compile_sequencer_instructions(
-            step_durations, shot, context
+            step_durations, shot, context, camera_triggers
         )
+
         analog_voltages = self.generate_analog_voltages(analog_values)
         self.ni6738.apply_rt_variables(values=analog_voltages)
         self.ni6738.run()
+
+        camera_threads = [
+            Thread(target=camera.acquire_picture) for camera in self.cameras.values()
+        ]
+        logger.debug(f"camera threads: {camera_threads}")
+        for thread in camera_threads:
+            thread.start()
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
         self.spincore.run()
+        for thread in camera_threads:
+            thread.join()
         data = {}
         return data
 
@@ -308,7 +327,11 @@ class SequenceRunnerThread(Thread):
         return self.parent.get_state() == ExperimentState.WAITING_TO_INTERRUPT
 
     def compile_sequencer_instructions(
-        self, step_durations: list[float], shot: ShotConfiguration, context: dict[str]
+        self,
+        step_durations: list[float],
+        shot: ShotConfiguration,
+        context: dict[str],
+        camera_triggers: dict[str, list[bool]],
     ) -> tuple[list[Instruction], dict[str, Quantity]]:
         """Return the spincore instructions and the analog values for the ni6738"""
 
@@ -320,7 +343,7 @@ class SequenceRunnerThread(Thread):
         )
 
         instructions = self.generate_digital_instructions(
-            shot, step_durations, analog_times
+            shot, step_durations, analog_times, camera_triggers
         )
 
         analog_values = evaluate_analog_values(shot, analog_times, context)
@@ -339,6 +362,7 @@ class SequenceRunnerThread(Thread):
         shot: ShotConfiguration,
         step_durations: list[float],
         analog_times: list[numpy.ndarray],
+        camera_triggers: dict[str, list[bool]],
     ) -> list[Instruction]:
         analog_time_step = self.ni6738_config.time_step
         instructions = []
@@ -346,9 +370,12 @@ class SequenceRunnerThread(Thread):
         analog_clock_channel = self.spincore_config.get_channel_index(
             ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
         )
+        camera_channels = self.get_camera_channels(camera_triggers.keys())
         values = [False] * self.spincore_config.number_channels
         for step in range(len(step_durations)):
             values = [False] * self.spincore_config.number_channels
+            for camera, triggers in camera_triggers.items():
+                values[camera_channels[camera]] = triggers[step]
             for lane in shot.digital_lanes:
                 channel = self.spincore_config.get_channel_index(lane.name)
                 values[channel] = lane.get_effective_value(step)
@@ -378,6 +405,14 @@ class SequenceRunnerThread(Thread):
                 )
         instructions.append(Stop(values=values))
         return instructions
+
+    def get_camera_channels(self, camera_names: Iterable[str]) -> dict[str, int]:
+        return {
+            name: self.spincore_config.get_channel_index(
+                ChannelSpecialPurpose(purpose=name)
+            )
+            for name in camera_names
+        }
 
     def generate_analog_voltages(self, analog_values: dict[str, Quantity]):
         data_length = 0

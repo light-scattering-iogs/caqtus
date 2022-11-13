@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import Counter
 from math import inf
@@ -8,6 +9,9 @@ from typing_extensions import ClassVar
 
 from cdevice import CDevice
 from settings_model import SettingsModel
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 
 class ROI(SettingsModel):
@@ -98,16 +102,19 @@ class CCamera(CDevice, ABC):
         self._acquired_pictures = [False] * self.number_pictures_to_acquire
 
     def shutdown(self):
+        error = None
         if not all(self._acquired_pictures):
-            raise UserWarning(
+            error = UserWarning(
                 f"Only {sum(self._acquired_pictures)} out of {self.number_pictures_to_acquire} pictures where "
                 f"successfully acquired for {self.name}"
             )
         super().shutdown()
+        if error is not None:
+            raise error
 
     def apply_rt_variables(self, /, **kwargs) -> None:
         if "exposures" in kwargs:
-            if not all(self._acquired_pictures):
+            if self._acquired_pictures[0] and not self._acquired_pictures[-1]:
                 raise RuntimeError(f"Not all pictures have been acquired")
         super().apply_rt_variables(**kwargs)
 
@@ -117,6 +124,7 @@ class CCamera(CDevice, ABC):
         except ValueError:
             next_picture_index = 0
             self._acquired_pictures = [False] * self.number_pictures_to_acquire
+        logger.debug("Starting picture acquisition")
         self._acquire_picture(
             next_picture_index, self.exposures[next_picture_index], self.timeout
         )

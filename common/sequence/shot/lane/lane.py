@@ -178,3 +178,6 @@ class CameraLane(Lane[Optional[CameraAction]]):
             if isinstance(action, TakePicture):
                 result.append((action.picture_name, start, stop))
         return result
+
+    def get_picture_names(self) -> list[str]:
+        return [name for name, _, _ in self.get_picture_spans()]
