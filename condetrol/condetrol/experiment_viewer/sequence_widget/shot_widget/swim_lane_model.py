@@ -150,12 +150,22 @@ class SwimLaneModel(QAbstractTableModel):
             if index.row() > 1:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
             if self.sequence_state == SequenceState.DRAFT:
-                flags |= Qt.ItemFlag.ItemIsEditable
+                if self.is_editable(index):
+                    flags |= Qt.ItemFlag.ItemIsEditable
                 if index.row() > 1:
                     flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
+
+    def is_editable(self, index: QModelIndex) -> bool:
+        editable = True
+        if index.row() > 1:
+            lane = self.get_lane(index)
+            if isinstance(lane, CameraLane):
+                if self.data(index, Qt.ItemDataRole.EditRole) is None:
+                    editable = False
+        return editable
 
     # noinspection PyTypeChecker
     def supportedDropActions(self) -> Qt.DropActions:
