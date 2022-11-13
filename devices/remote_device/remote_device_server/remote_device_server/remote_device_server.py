@@ -17,7 +17,7 @@ RemoteDeviceServerManager.register(
     "OrcaQuestCamera", OrcaQuestCamera, exposed=OrcaQuestCamera.exposed_remote_methods()
 )
 
-password = os.environ.get('CAQTUS_DEVICE_SERVER_PASSWORD', None)
+password = os.environ.get("CAQTUS_DEVICE_SERVER_PASSWORD", None)
 if password is None:
     raise ValueError(
         "The environment variable 'CAQTUS_DEVICE_SERVER_PASSWORD' is not set to any value"
