@@ -18,6 +18,7 @@ from .channel_config import (
     ChannelSpecialPurpose,
 )
 from .device_config import DeviceConfiguration, DeviceConfigType
+from .device_server_config import DeviceServerConfiguration
 from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,10 @@ class ExperimentConfig(SettingsModel):
     data_path: Path = Field(
         default_factory=lambda: Path(user_data_dir("ExperimentControl", "Caqtus"))
         / "data/"
+    )
+    device_servers: dict[str, DeviceServerConfiguration] = Field(
+        default_factory=dict,
+        description="The configurations of the servers that will actually instantiate devices.",
     )
     header: SequenceSteps = Field(
         default_factory=SequenceSteps,
