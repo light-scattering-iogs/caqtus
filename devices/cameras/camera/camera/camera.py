@@ -69,6 +69,7 @@ class CCamera(CDevice, ABC):
             "acquire_picture",
             "acquire_all_pictures",
             "read_picture",
+            "read_all_pictures",
         )
 
     @validator("picture_names")
@@ -129,20 +130,23 @@ class CCamera(CDevice, ABC):
             next_picture_index, self.exposures[next_picture_index], self.timeout
         )
 
-    def acquire_all_pictures(self) -> dict[str, numpy.ndarray]:
+    def acquire_all_pictures(self) -> None:
         """Take all the pictures specified by their names and exposures
 
         This function is blocking until all required pictures have been taken.
-        Returns:
-            pictures: a dictionary mapping picture name to a 2D numpy array
         """
 
-        pictures = {}
-        for name, exposure in zip(self.picture_names, self.exposures):
+        for _ in range(self.number_pictures_to_acquire):
             self.acquire_picture()
-            pictures[name] = self.read_picture(name)
 
-        return pictures
+    def read_all_pictures(self) -> dict[str, numpy.ndarray]:
+        if not all(self._acquired_pictures):
+            raise RuntimeError(
+                f"Could not read all pictures on {self.name} "
+                f"({sum(self._acquired_pictures)}/{self.number_pictures_to_acquire} acquired)"
+            )
+        else:
+            return {name: self.read_picture(name) for name in self.picture_names}
 
     def read_picture(self, name: str) -> numpy.ndarray:
         picture_number = self.picture_names.index(name)
