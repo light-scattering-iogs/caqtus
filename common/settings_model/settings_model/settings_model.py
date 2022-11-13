@@ -5,6 +5,7 @@ from typing import Type
 
 import pydantic
 import yaml
+from pydantic import SecretStr
 from pydantic.color import Color
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
@@ -133,3 +134,10 @@ def color_representer(dumper: yaml.Dumper, color: Color):
 
 
 YAMLSerializable.get_dumper().add_representer(Color, color_representer)
+
+
+def secret_str_representer(dumper: yaml.Dumper, secret: SecretStr):
+    return dumper.represent_data(secret.get_secret_value())
+
+
+YAMLSerializable.get_dumper().add_representer(SecretStr, secret_str_representer)

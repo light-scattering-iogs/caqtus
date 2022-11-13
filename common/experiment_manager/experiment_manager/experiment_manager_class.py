@@ -17,6 +17,7 @@ from experiment_config import (
     ChannelSpecialPurpose,
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
+    CameraConfiguration
 )
 from ni6738_analog_card import NI6738AnalogCard
 from sequence import (
@@ -71,6 +72,10 @@ class SequenceRunnerThread(Thread):
         )
 
         self.ni6738 = NI6738AnalogCard(**self.ni6738_config.get_device_init_args())
+
+        camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
+        for camera_config in camera_configs:
+            logger.debug(camera_config.device_name)
 
     def run(self):
         # noinspection PyBroadException
