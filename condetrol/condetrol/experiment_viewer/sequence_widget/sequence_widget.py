@@ -258,3 +258,6 @@ class SequenceWidget(QDockWidget):
     def create_shot_widget(self, experiment_config_path):
         w = ShotWidget(self._path, experiment_config_path)
         return w
+
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.shot_widget.update_experiment_config(new_config)

@@ -78,10 +78,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
 
         self.action_edit_config.triggered.connect(self.edit_config)
-        self.config: ExperimentConfig = load_config(get_config_path())
-        self.model = SequenceViewerModel(self.config.data_path)
+        self.experiment_config: ExperimentConfig = load_config(get_config_path())
+        self.model = SequenceViewerModel(self.experiment_config.data_path)
         self.sequences_view.setModel(self.model)
-        self.sequences_view.setRootIndex(self.model.index(str(self.config.data_path)))
+        self.sequences_view.setRootIndex(
+            self.model.index(str(self.experiment_config.data_path))
+        )
         delegate = SequenceDelegate(self.sequences_view)
         self.sequences_view.setItemDelegateForColumn(4, delegate)
         self.sequences_view.setColumnHidden(1, True)
@@ -124,9 +126,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
 
     def start_sequence(self, path: Path):
-        config = YAMLSerializable.dump(self.config)
+        config = YAMLSerializable.dump(self.experiment_config)
         self.experiment_manager.start_sequence(
-            config, path.relative_to(self.config.data_path)
+            config, path.relative_to(self.experiment_config.data_path)
         )
 
     def show_context_menu(self, position):
@@ -190,10 +192,21 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
-    @staticmethod
-    def edit_config():
+    def edit_config(self):
+        """Open the experiment config editor"""
         editor = ConfigEditor()
         editor.exec()
+        self.update_experiment_config(load_config(get_config_path()))
+
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.experiment_config = new_config
+        self.model.setRootPath(str(self.experiment_config.data_path))
+        self.sequences_view.setRootIndex(
+            self.model.index(str(self.experiment_config.data_path))
+        )
+        for sequence_widget in self.findChildren(SequenceWidget):
+            sequence_widget: SequenceWidget
+            logger.debug(sequence_widget.update_experiment_config(new_config))
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if self.experiment_manager.is_running():

@@ -49,6 +49,11 @@ class SwimLaneModel(QAbstractTableModel):
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
 
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.beginResetModel()
+        self.experiment_config = new_config
+        self.endResetModel()
+
     def change_sequence_state(self, stats: SequenceStats):
         self.beginResetModel()
         self.sequence_state = stats.state

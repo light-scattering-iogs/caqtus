@@ -74,6 +74,9 @@ class ShotWidget(QWidget):
         self.layout.addWidget(SwimLaneWidget(self.model))
         self.setLayout(self.layout)
 
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.model.update_experiment_config(new_config)
+
 
 class SpanTableView(QTableView):
     def __init__(self):
