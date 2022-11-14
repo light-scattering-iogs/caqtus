@@ -2,6 +2,7 @@ import datetime
 import io
 import logging
 import os
+from concurrent.futures import Executor, ThreadPoolExecutor
 from copy import copy
 from enum import Enum, auto
 from functools import singledispatchmethod, cached_property
@@ -60,6 +61,19 @@ class CameraInstructions(TypedDict):
     triggers: list[bool]
 
 
+class SequenceContext:
+    def __init__(self, variables: dict[str]):
+        self.variables = variables
+        self.delayed_executor: Executor = ThreadPoolExecutor()
+        self.shot_numbers: dict[str, int] = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.delayed_executor.shutdown(wait=True)
+
+
 def compile_camera_instructions(
     step_durations: list[float], shot: ShotConfiguration
 ) -> dict[str, CameraInstructions]:
@@ -79,6 +93,38 @@ def compile_camera_instructions(
         }
         result[camera_name] = instructions
     return result
+
+
+def save_shot(
+    file_path: Path,
+    start_time: datetime.datetime,
+    end_time: datetime.datetime,
+    variables: dict[str, Quantity],
+    data: dict[str],
+):
+    data_buffer = io.BytesIO()
+    with h5py.File(data_buffer, "w") as file:
+        file.attrs["start_time"] = start_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
+        file.attrs["end_time"] = end_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
+        file.create_dataset("variables/names", data=list(variables.keys()))
+        file.create_dataset(
+            "variables/units",
+            data=[str(quantity.units) for quantity in variables.values()],
+        )
+        file.create_dataset(
+            "variables/magnitudes",
+            data=[float(quantity.magnitude) for quantity in variables.values()],
+        )
+        for device, device_data in data.items():
+            if isinstance(device_data, dict):
+                for key, value in device_data.items():
+                    file.create_dataset(f"data/{device}/{key}", data=value)
+
+    if file_path.is_file():
+        raise RuntimeError(f"{file_path} already exists and won't be overwritten.")
+    with open(file_path, "wb") as file:
+        # noinspection PyTypeChecker
+        file.write(data_buffer.getbuffer())
 
 
 class SequenceRunnerThread(Thread):
@@ -190,12 +236,12 @@ class SequenceRunnerThread(Thread):
 
     def run_sequence(self):
         """Walk through the sequence program and execute each step sequentially"""
-        context: dict[str] = {}
-        context = self.run_step(self.experiment_config.header, context)
-        self.run_step(self.sequence_config.program, context)
+        with SequenceContext(variables={}) as context:
+            self.run_step(self.experiment_config.header, context)
+            self.run_step(self.sequence_config.program, context)
 
     @singledispatchmethod
-    def run_step(self, step: Step, context: dict[str]) -> dict[str]:
+    def run_step(self, step: Step, context: SequenceContext):
         """Execute a given step of the sequence
 
         This function should be implemented for each Step type that can be run on the experiment. It should also return
@@ -203,7 +249,8 @@ class SequenceRunnerThread(Thread):
 
         Args:
             step: the step of the sequence currently executed
-            context: a dictionary of the current variables names and values at this step
+            context: a mutable object that holds information about the sequence being run, such as the values of the
+            variables. Step that update variables should reflect this by modifying the context.
 
         Returns:
             updated context after the step was executed
@@ -212,83 +259,80 @@ class SequenceRunnerThread(Thread):
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
 
     @run_step.register
-    def _(self, steps: SequenceSteps, context):
+    def _(self, steps: SequenceSteps, context: SequenceContext):
         """Execute each child step sequentially"""
 
         for step in steps.children:
             if self.is_waiting_to_interrupt():
-                return context
+                return
             else:
-                context = self.run_step(step, context)
-        return context
+                self.run_step(step, context)
 
     @run_step.register
-    def _(self, declaration: VariableDeclaration, context):
+    def _(self, declaration: VariableDeclaration, context: SequenceContext):
         """Add or update a variable declaration in the context"""
 
-        updated_context = copy(context)
-        updated_context[declaration.name] = Quantity(
-            declaration.expression.evaluate(context | units)
+        context.variables[declaration.name] = Quantity(
+            declaration.expression.evaluate(context.variables | units)
         )
-        return updated_context
 
     @run_step.register
-    def _(self, arange_loop: ArangeLoop, context):
+    def _(self, arange_loop: ArangeLoop, context: SequenceContext):
         """Loop over a variable in a numpy arange like loop and execute children steps at each repetition"""
-        start = Quantity(arange_loop.start.evaluate(context | units))
-        stop = Quantity(arange_loop.stop.evaluate(context | units))
-        step = Quantity(arange_loop.step.evaluate(context | units))
+        start = Quantity(arange_loop.start.evaluate(context.variables | units))
+        stop = Quantity(arange_loop.stop.evaluate(context.variables | units))
+        step = Quantity(arange_loop.step.evaluate(context.variables | units))
 
         unit = start.units
-
-        context = copy(context)
 
         for value in numpy.arange(
             start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
         ):
-            context[arange_loop.name] = value * unit
+            context.variables[arange_loop.name] = value * unit
             for step in arange_loop.children:
                 if self.is_waiting_to_interrupt():
-                    return context
+                    return
                 else:
-                    context = self.run_step(step, context)
-        return context
+                    self.run_step(step, context)
 
     @run_step.register
-    def _(self, linspace_loop: LinspaceLoop, context):
+    def _(self, linspace_loop: LinspaceLoop, context: SequenceContext):
         """Loop over a variable in a numpy linspace like loop and execute children steps at each repetition"""
-        start = Quantity(linspace_loop.start.evaluate(context | units))
-        stop = Quantity(linspace_loop.stop.evaluate(context | units))
+        start = Quantity(linspace_loop.start.evaluate(context.variables | units))
+        stop = Quantity(linspace_loop.stop.evaluate(context.variables | units))
         num = int(linspace_loop.num)
 
         unit = start.units
 
-        context = copy(context)
-
         for value in numpy.linspace(
             start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
-            context[linspace_loop.name] = value * unit
+            context.variables[linspace_loop.name] = value * unit
             for step in linspace_loop.children:
                 if self.is_waiting_to_interrupt():
-                    return context
+                    return
                 else:
-                    context = self.run_step(step, context)
-        return context
+                    self.run_step(step, context)
 
     @run_step.register
-    def _(self, shot: ExecuteShot, context: dict[str]):
+    def _(self, shot: ExecuteShot, context: SequenceContext):
         """Execute a shot on the experiment"""
 
         t0 = datetime.datetime.now()
         data = self.do_shot(
-            self.sequence_config.shot_configurations[shot.name], context
+            self.sequence_config.shot_configurations[shot.name], context.variables
         )
+
+        old_shot_number = context.shot_numbers.get(shot.name, 0)
+        context.shot_numbers[shot.name] = old_shot_number + 1
+
+        shot_file_path = (
+            self.sequence_path / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
+        )
+
         t1 = datetime.datetime.now()
-        self.save_shot(shot, t0, t1, context, data)
         logger.info(f"shot executed in {(t1 - t0)}")
-        self.shot_numbers[shot.name] += 1
-        return context
+        context.delayed_executor.submit(save_shot, shot_file_path, t0, t1, copy(context.variables), data)
 
     def do_shot(self, shot: ShotConfiguration, context: dict[str]) -> dict[str, Any]:
         step_durations = evaluate_step_durations(shot, context)
@@ -311,7 +355,8 @@ class SequenceRunnerThread(Thread):
         self.ni6738.run()
 
         camera_threads = [
-            Thread(target=camera.acquire_all_pictures) for camera in self.cameras.values()
+            Thread(target=camera.acquire_all_pictures)
+            for camera in self.cameras.values()
         ]
         logger.debug(f"camera threads: {camera_threads}")
         for thread in camera_threads:
@@ -434,43 +479,6 @@ class SequenceRunnerThread(Thread):
             channel_number = self.ni6738_config.get_channel_index(name)
             data[channel_number] = voltages
         return data
-
-    def save_shot(
-        self,
-        shot: ExecuteShot,
-        start_time: datetime.datetime,
-        end_time: datetime.datetime,
-        context: dict[str, Quantity],
-        data: dict[str],
-    ):
-
-        data_buffer = io.BytesIO()
-        with h5py.File(data_buffer, "w") as file:
-            file.attrs["start_time"] = start_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
-            file.attrs["end_time"] = end_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
-            file.create_dataset("variables/names", data=list(context.keys()))
-            file.create_dataset(
-                "variables/units",
-                data=[str(quantity.units) for quantity in context.values()],
-            )
-            file.create_dataset(
-                "variables/magnitudes",
-                data=[float(quantity.magnitude) for quantity in context.values()],
-            )
-            for device, device_data in data.items():
-                if isinstance(device_data, dict):
-                    for key, value in device_data.items():
-                        file.create_dataset(f"data/{device}/{key}", data=value)
-
-        shot_file_name = f"{shot.name}_{self.shot_numbers[shot.name]}.hdf5"
-        shot_file_path = self.sequence_path / shot_file_name
-        if shot_file_path.is_file():
-            raise RuntimeError(
-                f"{shot_file_path} already exists and won't be overwritten."
-            )
-        with open(shot_file_path, "wb") as file:
-            # noinspection PyTypeChecker
-            file.write(data_buffer.getbuffer())
 
     @cached_property
     def spincore_config(self) -> SpincoreSequencerConfiguration:
