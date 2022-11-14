@@ -152,6 +152,11 @@ class CCamera(CDevice, ABC):
         picture_number = self.picture_names.index(name)
         return self._read_picture(picture_number)
 
+    def _has_exposure_changed(self, picture_number: int) -> bool:
+        return picture_number == 0 or (
+            self.exposures[picture_number - 1] != self.exposures[picture_number]
+        )
+
     @abstractmethod
     def _acquire_picture(
         self, picture_number: int, exposure: float, timeout: float

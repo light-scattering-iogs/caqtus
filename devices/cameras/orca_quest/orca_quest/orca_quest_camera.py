@@ -106,7 +106,6 @@ class OrcaQuestCamera(CCamera):
         finally:
             super().shutdown()
 
-
     def list_properties(self) -> list:
         result = []
         property_id = self._camera.prop_getnextid(0)
@@ -148,18 +147,11 @@ class OrcaQuestCamera(CCamera):
     def _acquire_picture(
         self, picture_number: int, new_exposure: float, timeout: float
     ):
-        if (exposure := self._camera.prop_getvalue(DCAM_IDPROP.EXPOSURETIME)) is False:
-            raise RuntimeError(
-                f"Can't access exposure property of {self.name}: {str(self._camera.lasterr())}"
-            )
-        else:
-            if exposure != new_exposure:
-                if not self._camera.prop_setvalue(
-                    DCAM_IDPROP.EXPOSURETIME, new_exposure
-                ):
-                    raise RuntimeError(
-                        f"Can't set exposure of {self.name} to {new_exposure}: {str(self._camera.lasterr())}"
-                    )
+        if self._has_exposure_changed(picture_number):
+            if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
+                raise RuntimeError(
+                    f"Can't set exposure of {self.name} to {new_exposure}: {str(self._camera.lasterr())}"
+                )
         if self._camera.cap_snapshot() is not False:
             start_acquire = time.time()
             while True:
