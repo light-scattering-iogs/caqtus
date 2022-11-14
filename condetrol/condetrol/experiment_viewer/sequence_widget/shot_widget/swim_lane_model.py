@@ -102,6 +102,11 @@ class SwimLaneModel(QAbstractTableModel):
                     else:
                         if color is not None:
                             return QColor.fromRgb(*color.as_rgb_tuple())
+                elif role == Qt.ItemDataRole.TextAlignmentRole:
+                    if lane.spans[index.column()] > 1:
+                        return Qt.AlignCenter
+                    else:
+                        return Qt.AlignLeft
             elif isinstance(lane, CameraLane):
                 camera_action = lane[index.column()]
                 if isinstance(camera_action, TakePicture):
