@@ -192,7 +192,7 @@ class Shot:
         self._relative_path = relative_path
 
     @cached_property
-    def runtime_variable(self) -> dict[str, Any]:
+    def runtime_variables(self) -> dict[str, Any]:
         with h5py.File(self.path, "r") as file:
             names = file["variables/names"][:]
             units = file["variables/units"][:]

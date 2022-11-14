@@ -1,0 +1,1 @@
+poetry run jupyter-notebook --notebook-dir="C:\Users\Elizabeth\Dropbox\Dy\Scripts"

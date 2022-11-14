@@ -1,9 +1,11 @@
+import copy
 from abc import ABC, abstractmethod
 from itertools import chain, tee
 from pathlib import Path
 from typing import Any
 from typing import Optional, Literal
 
+import warnings
 import pandas
 import pint_pandas
 from tqdm.notebook import tqdm
@@ -20,25 +22,28 @@ tqdm.pandas()
 class SequenceDataframe(pandas.DataFrame, ABC):
     def __init__(
         self,
-        sequence_names: str | list[str],
+        /,
+        *sequence_names,
+        root: Path = Path("D:data"),
         units: Optional[Literal["strip"] | Literal["column"]] = None,
     ):
-        if isinstance(sequence_names, str):
-            sequence_names = [sequence_names]
         sequences = [Sequence(Path(sequence_name)) for sequence_name in sequence_names]
 
         s1, s2 = tee(chain(*sequences))
-        indices = [(shot.sequence.relative_path, shot.name) for shot in s1]
+        indices = [(shot.sequence.path.relative_to(root), shot.name) for shot in s1]
         index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
         total = sum(len(sequence) for sequence in sequences)
         rows = tqdm(map(self.convert_shot_to_row, s2), total=total)
         super().__init__(rows, index=index)
+        with warnings.catch_warnings():
+            self._units = {}
 
-        if units is not None:
-            for name, value in self.iloc[0].items():
-                if isinstance(value, Quantity):
-                    units_ = value.units
-                    dtype = None
+        for name, value in self.iloc[0].items():
+            if isinstance(value, Quantity):
+                units_ = value.units
+                self._units[name] = units_
+                dtype = None
+                if units is not None:
                     if units == "column":
                         if str(units_) != "":
                             dtype = f"pint[{units_}]"
@@ -50,3 +55,7 @@ class SequenceDataframe(pandas.DataFrame, ABC):
     @abstractmethod
     def convert_shot_to_row(self, shot: Shot) -> dict[str, Any]:
         ...
+
+    @property
+    def units(self):
+        return copy.copy(self._units)
