@@ -19,6 +19,7 @@ except FileNotFoundError:
 
 
 class OrcaQuestCamera(CCamera):
+    # only some specific roi values are allowed for this camera !
     camera_number: int = Field(
         description="The camera number used to identify the specific camera.",
         allow_mutation=False,
@@ -55,13 +56,16 @@ class OrcaQuestCamera(CCamera):
         else:
             logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
 
-        # TODO: fix subarray properties being ignored
+        if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.OFF):
+            raise RuntimeError(
+                f"can't set subarray mode off: {str(self._camera.lasterr())}"
+            )
+
         properties = {
-            # DCAM_IDPROP.SUBARRAYMODE: True,
-            # DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
-            # DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
-            # DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
-            # DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
+            DCAM_IDPROP.SUBARRAYHPOS: self.roi.x,
+            DCAM_IDPROP.SUBARRAYHSIZE: self.roi.width,
+            DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
+            DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
             DCAM_IDPROP.SENSORMODE: DCAMPROP.SENSORMODE.AREA,
             DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.GLOBALRESET,
         }
@@ -79,6 +83,11 @@ class OrcaQuestCamera(CCamera):
                     f"Failed to set property {str(property_id)} to {str(property_value)} for {self.name}: "
                     f"{str(self._camera.lasterr())}"
                 )
+
+        if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
+            raise RuntimeError(
+                f"can't set subarray mode on: {str(self._camera.lasterr())}"
+            )
 
         if not self._camera.buf_alloc(1):
             raise RuntimeError(
@@ -157,10 +166,7 @@ class OrcaQuestCamera(CCamera):
             while True:
                 if self._camera.wait_capevent_frameready(1):
                     data = self._camera.buf_getlastframedata()
-                    roi = self.roi
-                    self._pictures[picture_number] = data.T[
-                        roi.x : roi.x + roi.width, roi.y : roi.y + roi.height
-                    ]
+                    self._pictures[picture_number] = data.T
                     self._picture_acquired(picture_number)
                     logger.info(
                         f"{self.name}: picture '{self.picture_names[picture_number]}' acquired after "
