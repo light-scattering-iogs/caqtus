@@ -177,6 +177,7 @@ class OrcaQuestCamera(CCamera):
                 error = self._camera.lasterr()
                 if error.is_timeout():
                     if time.time() - start_acquire > self.timeout:
+                        self._camera.cap_stop()
                         raise TimeoutError(
                             f"{self.name} timed out before receiving a trigger"
                         )
