@@ -19,6 +19,7 @@ from watchdog.events import (
     FileDeletedEvent,
     DirDeletedEvent,
 )
+from watchdog.observers.api import ObservedWatch
 from watchdog.observers.polling import PollingObserver
 
 from experiment_config import ExperimentConfig, get_config_path
@@ -253,10 +254,9 @@ class SequenceFolderWatcher(FileSystemEventHandler):
     def __init__(self, data_folder: Path):
         self._data_folder = data_folder
 
-        self._sequence_cache: dict[str, Sequence] = {}
+        self._sequence_cache: dict[str, tuple[Sequence, ObservedWatch]] = {}
 
         self._observer = PollingObserver(timeout=1)
-        self._observer.schedule(self, str(self._data_folder), recursive=True)
         self._observer.start()
         self.events = []
 
@@ -264,16 +264,12 @@ class SequenceFolderWatcher(FileSystemEventHandler):
     def data_folder(self):
         return self._data_folder
 
-    def on_any_event(self, event):
-        logger.debug(self._sequence_cache)
-        self.events.append(event)
-
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent):
         if isinstance(event, FileModifiedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normalize_path(parent)]
+                sequence = self._sequence_cache[normalize_path(parent)][0]
                 if file_path.name == "sequence_state.yaml":
                     sequence.remove_cached_property("stats")
                 elif file_path.name == "sequence_config.yaml":
@@ -285,28 +281,33 @@ class SequenceFolderWatcher(FileSystemEventHandler):
             file_path = Path(event.src_path)
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normalize_path(parent)]
+                sequence = self._sequence_cache[normalize_path(parent)][0]
                 if file_path.suffix == ".hdf5":
                     # noinspection PyPropertyAccess
                     sequence.number_completed_shots += 1
 
     def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
         if isinstance(event, DirDeletedEvent):
-            self._sequence_cache.pop(normalize_path(event.src_path), None)
+            _, watch = self._sequence_cache.pop(
+                normalize_path(event.src_path), (None, None)
+            )
+            if watch is not None:
+                self._observer.unschedule(watch)
         elif isinstance(event, FileDeletedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normalize_path(parent)]
+                sequence = self._sequence_cache[normalize_path(parent)][0]
                 if file_path.suffix == ".hdf5":
                     sequence.remove_cached_property("number_completed_shots")
 
     def get_sequence(self, path: Path) -> Sequence:
         if normalize_path(path) in self._sequence_cache:
-            return self._sequence_cache[normalize_path(path)]
+            return self._sequence_cache[normalize_path(path)][0]
         else:
+            watch = self._observer.schedule(self, str(path), recursive=True)
             sequence = Sequence(path)
-            self._sequence_cache[normalize_path(path)] = sequence
+            self._sequence_cache[normalize_path(path)] = (sequence, watch)
             return sequence
 
     def is_sequence_folder(self, path: Path) -> bool:
