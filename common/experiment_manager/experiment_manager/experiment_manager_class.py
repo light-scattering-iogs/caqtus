@@ -332,7 +332,9 @@ class SequenceRunnerThread(Thread):
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0)}")
-        context.delayed_executor.submit(save_shot, shot_file_path, t0, t1, copy(context.variables), data)
+        context.delayed_executor.submit(
+            save_shot, shot_file_path, t0, t1, copy(context.variables), data
+        )
 
     def do_shot(self, shot: ShotConfiguration, context: dict[str]) -> dict[str, Any]:
         step_durations = evaluate_step_durations(shot, context)
