@@ -17,7 +17,15 @@ from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, Lane, CameraLane, TakePicture, CameraAction
+from shot import (
+    DigitalLane,
+    AnalogLane,
+    Lane,
+    CameraLane,
+    TakePicture,
+    CameraAction,
+    Ramp,
+)
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -33,7 +41,7 @@ class SwimLaneModel(QAbstractTableModel):
     """
 
     def __init__(
-            self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
+        self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
     ):
         super().__init__()
         self.config_path = sequence_path / "sequence_config.yaml"
@@ -84,16 +92,20 @@ class SwimLaneModel(QAbstractTableModel):
             lane = self.get_lane(index)
             if isinstance(lane, DigitalLane):
                 if (
-                        role == Qt.ItemDataRole.DisplayRole
-                        or role == Qt.ItemDataRole.EditRole
+                    role == Qt.ItemDataRole.DisplayRole
+                    or role == Qt.ItemDataRole.EditRole
                 ):
                     return lane[index.column()]
             elif isinstance(lane, AnalogLane):
                 if (
-                        role == Qt.ItemDataRole.DisplayRole
-                        or role == Qt.ItemDataRole.EditRole
+                    role == Qt.ItemDataRole.DisplayRole
+                    or role == Qt.ItemDataRole.EditRole
                 ):
-                    return lane[index.column()].body
+                    value = lane[index.column()]
+                    if isinstance(value, Expression):
+                        return lane[index.column()].body
+                    elif isinstance(value, Ramp):
+                        return "\u279F"
                 elif role == Qt.ItemDataRole.TextColorRole:
                     try:
                         color = self.experiment_config.get_color(lane.name)
@@ -103,7 +115,9 @@ class SwimLaneModel(QAbstractTableModel):
                         if color is not None:
                             return QColor.fromRgb(*color.as_rgb_tuple())
                 elif role == Qt.ItemDataRole.TextAlignmentRole:
-                    if lane.spans[index.column()] > 1:
+                    if lane.spans[index.column()] > 1 or isinstance(
+                        lane[index.column()], Ramp
+                    ):
                         return Qt.AlignCenter
                     else:
                         return Qt.AlignLeft
@@ -111,15 +125,17 @@ class SwimLaneModel(QAbstractTableModel):
                 camera_action = lane[index.column()]
                 if isinstance(camera_action, TakePicture):
                     if (
-                            role == Qt.ItemDataRole.DisplayRole
-                            or role == Qt.ItemDataRole.EditRole
+                        role == Qt.ItemDataRole.DisplayRole
+                        or role == Qt.ItemDataRole.EditRole
                     ):
                         return camera_action.picture_name
                     elif role == Qt.ItemDataRole.DecorationRole:
                         return QIcon(":/icons/camera-icon")
                     elif role == Qt.ItemDataRole.TextColorRole:
                         try:
-                            color = self.experiment_config.get_color(ChannelSpecialPurpose(purpose=lane.name))
+                            color = self.experiment_config.get_color(
+                                ChannelSpecialPurpose(purpose=lane.name)
+                            )
                         except ValueError:
                             return QColor.fromRgb(0, 0, 0)
                         else:
@@ -147,7 +163,9 @@ class SwimLaneModel(QAbstractTableModel):
                     if value is None or isinstance(value, CameraAction):
                         lane[index.column()] = value
                         edit = True
-                    elif isinstance(value, str) and isinstance(cell := lane[index.column()], TakePicture):
+                    elif isinstance(value, str) and isinstance(
+                        cell := lane[index.column()], TakePicture
+                    ):
                         cell.picture_name = value
                         edit = True
         if edit:
@@ -200,12 +218,12 @@ class SwimLaneModel(QAbstractTableModel):
         return mime_data
 
     def dropMimeData(
-            self,
-            data: QMimeData,
-            action: Qt.DropAction,
-            row: int,
-            column: int,
-            parent: QModelIndex,
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
     ) -> bool:
         yaml_string = data.data("application/x-shot_lanes").data().decode("utf-8")
         lanes: list[Lane] = YAMLSerializable.load(yaml_string)

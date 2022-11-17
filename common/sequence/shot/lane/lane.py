@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import TypeVar, Generic, Optional
 
+import yaml
 from pydantic import validator, root_validator
 
 from expression import Expression
@@ -130,11 +131,13 @@ class DigitalLane(Lane[bool]):
 
 
 class Ramp(SettingsModel):
-    pass
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        """Build a python object from a YAML node
 
-
-class LinearRamp(SettingsModel):
-    pass
+        Overload this method in a child class to change the default construction.
+        """
+        return cls()
 
 
 class AnalogLane(Lane[Expression | Ramp]):
