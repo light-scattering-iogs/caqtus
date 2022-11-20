@@ -1,3 +1,4 @@
+import logging
 from abc import abstractmethod
 from functools import singledispatch
 
@@ -8,14 +9,16 @@ from PyQt5.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, 
 from expression import Expression
 from sequence import Step, VariableDeclaration, ExecuteShot, LinspaceLoop
 from sequence.sequence_config import ArangeLoop
-from .steps_model import QABCMeta
-
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
 )
+from .steps_model import QABCMeta
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 
 class StepWidget(QWidget, metaclass=QABCMeta):
@@ -30,11 +33,67 @@ class StepWidget(QWidget, metaclass=QABCMeta):
         raise NotImplementedError()
 
 
+class StepDelegate(QStyledItemDelegate):
+    """Delegate for a sequence step (see PyQt Model/View/Delegate)
+
+    This delegate creates a widget editor to edit the data of a step. It also paints the
+    widget on the view when editing if done.
+    """
+
+    def createEditor(
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> StepWidget:
+        data: Step = index.data(role=Qt.ItemDataRole.EditRole)
+        # noinspection PyTypeChecker
+        editor = create_editor(data, None)
+        editor.setParent(parent)
+        editor.setAutoFillBackground(True)
+        return editor
+
+    def setEditorData(self, editor: StepWidget, index: QModelIndex):
+        editor.set_step_data(index.data(role=Qt.ItemDataRole.EditRole))
+
+    def setModelData(
+        self, editor: StepWidget, model: QAbstractItemModel, index: QModelIndex
+    ) -> None:
+        model.setData(index, editor.get_step_data(), Qt.ItemDataRole.EditRole)
+
+    def updateEditorGeometry(
+        self, editor: StepWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ):
+        geometry = option.rect
+        editor.setGeometry(geometry)
+
+    def sizeHint(self, option: "QStyleOptionViewItem", index: QModelIndex) -> QSize:
+        step = index.data(role=Qt.ItemDataRole.DisplayRole)
+        # noinspection PyTypeChecker
+        w = create_editor(step, None)
+        self.setEditorData(w, index)
+        w.resize(option.rect.size())
+        return w.sizeHint()
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
+        data = index.data(Qt.ItemDataRole.DisplayRole)
+        if isinstance(data, Step):
+            pixmap = QPixmap(option.rect.size())
+            pixmap.fill(option.palette.base().color())
+            w = create_editor(data, option.widget)
+            w.set_step_data(data)
+            self.updateEditorGeometry(w, option, index)
+            if not (option.state & QStyle.StateFlag.State_Enabled):
+                w.setEnabled(False)
+            w.render(pixmap, flags=QWidget.RenderFlag.DrawChildren)
+            painter.drawPixmap(option.rect, pixmap)
+        else:
+            super().paint(painter, option, index)
+
+
 class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setAutoFillBackground(True)
 
     def set_step_data(self, declaration: VariableDeclaration):
         self.name_edit.setText(declaration.name)
@@ -51,7 +110,6 @@ class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setAutoFillBackground(True)
 
     def set_step_data(self, shot: ExecuteShot):
         self.name_edit.setText(shot.name)
@@ -66,7 +124,6 @@ class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setAutoFillBackground(True)
 
     def set_step_data(self, data: LinspaceLoop):
         self.name_edit.setText(data.name)
@@ -87,7 +144,6 @@ class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self.setAutoFillBackground(True)
 
     def set_step_data(self, data: ArangeLoop):
         self.name_edit.setText(data.name)
@@ -128,64 +184,3 @@ def _(_: LinspaceLoop, parent: QWidget):
 @create_editor.register
 def _(_: ArangeLoop, parent: QWidget):
     return ArangeIterationWidget(parent)
-
-
-class StepDelegate(QStyledItemDelegate):
-    """Delegate for a sequence step (see PyQt Model/View/Delegate)
-
-    This delegate creates a widget editor to edit the data of a step. It also paints the
-    widget on the view when editing if done.
-    """
-
-    def createEditor(
-            self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> StepWidget:
-        data: Step = index.data(role=Qt.ItemDataRole.EditRole)
-        # noinspection PyTypeChecker
-        editor = create_editor(data, None)
-        editor.setParent(parent)
-        return editor
-
-    def setEditorData(self, editor: StepWidget, index: QModelIndex):
-        editor.set_step_data(index.data(role=Qt.ItemDataRole.EditRole))
-
-    def setModelData(
-            self, editor: StepWidget, model: QAbstractItemModel, index: QModelIndex
-    ) -> None:
-        model.setData(index, editor.get_step_data(), Qt.ItemDataRole.EditRole)
-
-    def updateEditorGeometry(
-            self, editor: StepWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ):
-        editor.setGeometry(option.rect)
-
-    def sizeHint(self, option: "QStyleOptionViewItem", index: QModelIndex) -> QSize:
-        step = index.data(role=Qt.ItemDataRole.DisplayRole)
-        # noinspection PyTypeChecker
-        w = create_editor(step, None)
-        self.setEditorData(w, index)
-        w.resize(option.rect.size())
-        return w.sizeHint()
-
-    def paint(
-            self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        data = index.data(Qt.ItemDataRole.DisplayRole)
-        if isinstance(data, Step):
-            pixmap = QPixmap(option.rect.size())
-            if option.state & QStyle.StateFlag.State_Selected:
-                pixmap.fill(option.palette.highlight().color())
-            else:
-                pixmap.fill(option.palette.base().color())
-
-            if not (option.state & QStyle.StateFlag.State_Editing):
-                w = create_editor(data, option.widget)
-                w.set_step_data(data)
-                self.updateEditorGeometry(w, option, index)
-                if not (option.state & QStyle.StateFlag.State_Enabled):
-                    w.setEnabled(False)
-
-                w.render(pixmap, flags=QWidget.RenderFlag.DrawChildren)
-            painter.drawPixmap(option.rect, pixmap)
-        else:
-            super().paint(painter, option, index)
