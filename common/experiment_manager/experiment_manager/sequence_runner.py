@@ -5,11 +5,10 @@ from copy import copy
 from functools import singledispatchmethod, cached_property
 from pathlib import Path
 from threading import Thread, Event
-from typing import Any, Iterable, TypedDict
+from typing import Any, Iterable, TypedDict, Final
 
 import h5py
 import numpy
-import yaml
 
 from camera import CCamera
 from experiment_config import (
@@ -52,16 +51,16 @@ class SequenceRunnerThread(Thread):
         self, experiment_config: str, sequence_path: Path, waiting_to_interrupt: Event
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
-        self.experiment_config: ExperimentConfig = yaml.load(
-            experiment_config, Loader=YAMLSerializable.get_loader()
+        self.experiment_config: Final[ExperimentConfig] = YAMLSerializable.load(
+            experiment_config
         )
         self.sequence_path = self.experiment_config.data_path / sequence_path
-        self._waiting_to_interrupt = waiting_to_interrupt
+        self.sequence_config: Final[SequenceConfig] = YAMLSerializable.load(
+            self.sequence_path / "sequence_config.yaml"
+        )
         self.stats = SequenceStats(state=SequenceState.RUNNING)
-        with open(self.sequence_path / "sequence_config.yaml", "r") as file:
-            self.sequence_config: SequenceConfig = yaml.load(
-                file, Loader=YAMLSerializable.get_loader()
-            )
+
+        self._waiting_to_interrupt = waiting_to_interrupt
 
         self.spincore = SpincorePulseBlaster(
             **self.spincore_config.get_device_init_args()
