@@ -17,6 +17,7 @@ from experiment_config import (
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
     CameraConfiguration,
+    DeviceServerConfiguration,
 )
 from ni6738_analog_card import NI6738AnalogCard
 from remote_device_client import RemoteDeviceClientManager
@@ -65,19 +66,12 @@ class SequenceRunnerThread(Thread):
         self.spincore = SpincorePulseBlaster(
             **self.spincore_config.get_device_init_args()
         )
-
         self.ni6738 = NI6738AnalogCard(**self.ni6738_config.get_device_init_args())
         self.cameras: dict[str, CCamera] = {}
 
-        self.remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
-        for server_name, server_config in self.experiment_config.device_servers.items():
-            ipaddress = server_config.address
-            port = server_config.port
-            address = (ipaddress, port)
-            authkey = bytes(server_config.authkey.get_secret_value(), encoding="utf-8")
-            self.remote_device_managers[server_name] = RemoteDeviceClientManager(
-                address=address, authkey=authkey
-            )
+        self.remote_device_managers: dict[
+            str, RemoteDeviceClientManager
+        ] = create_remote_device_managers(self.experiment_config.device_servers)
 
         self.shutdown_actions = []
 
@@ -467,6 +461,19 @@ def save_shot(
     with open(file_path, "wb") as file:
         # noinspection PyTypeChecker
         file.write(data_buffer.getbuffer())
+
+
+def create_remote_device_managers(
+    device_server_configs: dict[str, DeviceServerConfiguration]
+) -> dict[str, RemoteDeviceClientManager]:
+    remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
+    for server_name, server_config in device_server_configs.items():
+        address = (server_config.address, server_config.port)
+        authkey = bytes(server_config.authkey.get_secret_value(), encoding="utf-8")
+        remote_device_managers[server_name] = RemoteDeviceClientManager(
+            address=address, authkey=authkey
+        )
+    return remote_device_managers
 
 
 class CameraInstructions(TypedDict):
