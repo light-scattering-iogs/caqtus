@@ -29,6 +29,7 @@ from sequence import (
     SequenceSteps,
     VariableDeclaration,
 )
+from sequence.sequence import Sequence
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
 from settings_model import YAMLSerializable
 from shot import (
@@ -55,10 +56,8 @@ class SequenceRunnerThread(Thread):
         self.experiment_config: Final[ExperimentConfig] = YAMLSerializable.load(
             experiment_config
         )
-        self.sequence_path = self.experiment_config.data_path / sequence_path
-        self.sequence_config: Final[SequenceConfig] = YAMLSerializable.load(
-            self.sequence_path / "sequence_config.yaml"
-        )
+        self.sequence = Sequence(self.experiment_config.data_path / sequence_path)
+        self.sequence_config: Final[SequenceConfig] = self.sequence.config
         self.stats = SequenceStats(state=SequenceState.RUNNING)
 
         self._waiting_to_interrupt = waiting_to_interrupt
@@ -89,9 +88,9 @@ class SequenceRunnerThread(Thread):
 
     def prepare(self):
         self.stats.start_time = datetime.datetime.now()
-        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
+        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
         YAMLSerializable.dump(
-            self.experiment_config, self.sequence_path / "experiment_config.yaml"
+            self.experiment_config, self.sequence.experiment_config_path
         )
         for server_name, server in self.remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
@@ -129,12 +128,12 @@ class SequenceRunnerThread(Thread):
             self.stats.state = SequenceState.INTERRUPTED
         else:
             self.stats.state = SequenceState.FINISHED
-        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
+        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
 
     def record_exception(self):
         self.stats.stop_time = datetime.datetime.now()
         self.stats.state = SequenceState.CRASHED
-        YAMLSerializable.dump(self.stats, self.sequence_path / "sequence_state.yaml")
+        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
 
     def shutdown(self):
         for action in self.shutdown_actions:
@@ -246,7 +245,7 @@ class SequenceRunnerThread(Thread):
         context.shot_numbers[shot.name] = old_shot_number + 1
 
         shot_file_path = (
-            self.sequence_path / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
+            self.sequence.path / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
         )
 
         t1 = datetime.datetime.now()

@@ -64,21 +64,33 @@ class Sequence:
     def relative_path(self):
         return self._path.relative_to(self.experiment_config.data_path)
 
+    @property
+    def config_path(self) -> Path:
+        return self._path / "sequence_config.yaml"
+
     @cached_property
     def config(self) -> SequenceConfig:
-        return YAMLSerializable.load(self._path / "sequence_config.yaml")
+        return YAMLSerializable.load(self.config_path)
+
+    @property
+    def experiment_config_path(self) -> Path:
+        return self._path / "experiment_config.yaml"
 
     @property
     def experiment_config(self) -> ExperimentConfig:
-        stored_copy = self._path / "experiment_config.yaml"
-        if stored_copy.exists():
-            return YAMLSerializable.load(stored_copy)
+        if self.experiment_config_path.exists():
+            path = self.experiment_config_path
         else:
-            return YAMLSerializable.load(get_config_path())
+            path = get_config_path()
+        return YAMLSerializable.load(path)
+
+    @property
+    def stats_path(self) -> Path:
+        return self._path / "sequence_state.yaml"
 
     @cached_property
     def stats(self) -> SequenceStats:
-        return YAMLSerializable.load(self._path / "sequence_state.yaml")
+        return YAMLSerializable.load(self.stats_path)
 
     @property
     def state(self) -> SequenceState:
