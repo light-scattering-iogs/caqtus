@@ -7,4 +7,5 @@ from .experiment_config import (
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
     CameraConfiguration,
+    DeviceServerConfiguration,
 )

@@ -23,6 +23,10 @@ class ROI(SettingsModel):
     height: int = Field(description="height of the roi")
 
 
+class CameraTimeoutError(TimeoutError):
+    pass
+
+
 class CCamera(CDevice, ABC):
     """Base class for a camera device
 
@@ -35,6 +39,7 @@ class CCamera(CDevice, ABC):
         description="Names to give to the pictures in order of acquisition. Each name must be unique.",
         allow_mutation=False,
     )
+
     roi: ROI = Field(
         default_factory=ROI,
         allow_mutation=False,
@@ -43,7 +48,8 @@ class CCamera(CDevice, ABC):
     timeout: float = Field(
         default=inf,
         units="s",
-        description="The camera must raise a TimeoutError if it is not able to acquire a picture within this time.",
+        description="The camera must raise a CameraTimeoutError if it is didn't receive a trigger within this time "
+        "after starting acquisition.",
         allow_mutation=True,
     )
     exposures: list[float] = Field(
@@ -62,16 +68,6 @@ class CCamera(CDevice, ABC):
     sensor_height: ClassVar[int]
 
     _acquired_pictures: list[bool] = []
-
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + (
-            "acquire_picture",
-            "acquire_all_pictures",
-            "read_picture",
-            "read_all_pictures",
-            "reset_acquisition",
-        )
 
     @validator("picture_names")
     def validate_picture_names(cls, picture_names):
@@ -95,29 +91,9 @@ class CCamera(CDevice, ABC):
             raise ValueError(f"Exposure is longer than timeout")
         return exposures
 
-    @property
-    def number_pictures_to_acquire(self):
-        return len(self.picture_names)
-
     def start(self):
         super().start()
         self._acquired_pictures = [False] * self.number_pictures_to_acquire
-
-    def shutdown(self):
-        error = None
-        if not all(self._acquired_pictures):
-            error = UserWarning(
-                f"Only {sum(self._acquired_pictures)} out of {self.number_pictures_to_acquire} pictures where "
-                f"successfully acquired for {self.name}"
-            )
-        super().shutdown()
-        if error is not None:
-            raise error
-
-    def reset_acquisition(self):
-        for i in range(len(self._acquired_pictures)):
-            self._acquired_pictures[i] = False
-
 
     def apply_rt_variables(self, /, **kwargs) -> None:
         if "exposures" in kwargs:
@@ -145,6 +121,14 @@ class CCamera(CDevice, ABC):
         for _ in range(self.number_pictures_to_acquire):
             self.acquire_picture()
 
+    def reset_acquisition(self):
+        for i in range(len(self._acquired_pictures)):
+            self._acquired_pictures[i] = False
+
+    def read_picture(self, name: str) -> numpy.ndarray:
+        picture_number = self.picture_names.index(name)
+        return self._read_picture(picture_number)
+
     def read_all_pictures(self) -> dict[str, numpy.ndarray]:
         if not all(self._acquired_pictures):
             raise TimeoutError(
@@ -154,9 +138,27 @@ class CCamera(CDevice, ABC):
         else:
             return {name: self.read_picture(name) for name in self.picture_names}
 
-    def read_picture(self, name: str) -> numpy.ndarray:
-        picture_number = self.picture_names.index(name)
-        return self._read_picture(picture_number)
+    def shutdown(self):
+        if not all(self._acquired_pictures):
+            logger.warning(
+                f"Only {sum(self._acquired_pictures)} out of {self.number_pictures_to_acquire} pictures where "
+                f"successfully acquired for {self.name}."
+            )
+        super().shutdown()
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "acquire_picture",
+            "acquire_all_pictures",
+            "read_picture",
+            "read_all_pictures",
+            "reset_acquisition",
+        )
+
+    @property
+    def number_pictures_to_acquire(self):
+        return len(self.picture_names)
 
     def _has_exposure_changed(self, picture_number: int) -> bool:
         return picture_number == 0 or (

@@ -6,7 +6,7 @@ from typing import ClassVar, Optional, Final
 import numpy
 from pydantic import Field
 
-from camera import CCamera
+from camera import CCamera, CameraTimeoutError
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -178,8 +178,8 @@ class OrcaQuestCamera(CCamera):
                 if error.is_timeout():
                     if time.time() - start_acquire > self.timeout:
                         self._camera.cap_stop()
-                        raise TimeoutError(
-                            f"{self.name} timed out before receiving a trigger"
+                        raise CameraTimeoutError(
+                            f"{self.name} timed out after {timeout*1e3:.0f} ms before receiving a trigger"
                         )
                     pass
                 else:

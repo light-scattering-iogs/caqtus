@@ -1,6 +1,7 @@
 import datetime
 import io
 import logging
+from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
 from functools import singledispatchmethod, cached_property
 from pathlib import Path
@@ -10,7 +11,7 @@ from typing import Any, Iterable, TypedDict, Final
 import h5py
 import numpy
 
-from camera import CCamera
+from camera import CCamera, CameraTimeoutError
 from experiment_config import (
     ExperimentConfig,
     ChannelSpecialPurpose,
@@ -246,8 +247,12 @@ class SequenceRunnerThread(Thread):
             data = self.do_shot(
                 self.sequence_config.shot_configurations[shot.name], context.variables
             )
-        except TimeoutError:
-            logger.warning(f"Camera timeout error, retrying once")
+        except CameraTimeoutError as error:
+            logger.warning(
+                f"A camera timeout error occurred:\n"
+                f"{error}\n"
+                f"Attempting to redo the failed shot"
+            )
             for camera in self.cameras.values():
                 camera.reset_acquisition()
             data = self.do_shot(
@@ -287,17 +292,19 @@ class SequenceRunnerThread(Thread):
         self.ni6738.apply_rt_variables(values=analog_voltages)
         self.ni6738.run()
 
-        camera_threads = [
-            Thread(target=camera.acquire_all_pictures)
-            for camera in self.cameras.values()
-        ]
-        logger.debug(f"camera threads: {camera_threads}")
-        for thread in camera_threads:
-            thread.start()
         self.spincore.apply_rt_variables(instructions=spincore_instructions)
-        self.spincore.run()
-        for thread in camera_threads:
-            thread.join()
+
+        future_acquisitions: dict[str, Future] = {}
+        with ThreadPoolExecutor() as acquisition_executor:
+            for camera_name, camera in self.cameras.items():
+                future_acquisitions[camera_name] = acquisition_executor.submit(
+                    camera.acquire_all_pictures
+                )
+            self.spincore.run()
+        for acquisition in future_acquisitions.values():
+            if exception := acquisition.exception():
+                raise exception
+
         data = {}
         for name, camera in self.cameras.items():
             data[name] = camera.read_all_pictures()

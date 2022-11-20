@@ -6,5 +6,3 @@ class RemoteDeviceClientManager(BaseManager):
 
 
 RemoteDeviceClientManager.register("OrcaQuestCamera")
-# manager = RemoteDeviceManager(address=("192.168.137.4", 65000), authkey=b"Deardear")
-# manager.connect()
