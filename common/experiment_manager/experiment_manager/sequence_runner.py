@@ -106,21 +106,34 @@ class SequenceRunnerThread(Thread):
         camera_lanes = self.sequence_config.shot_configurations["shot"].get_lanes(
             CameraLane
         )
+        self.cameras = self.create_cameras(camera_lanes, camera_configs)
+
+        for camera_name in self.cameras:
+            self.cameras[camera_name].start()
+            self.shutdown_actions.append(self.cameras[camera_name].shutdown)
+
+    def create_cameras(
+        self,
+        camera_lanes: dict[str, CameraLane],
+        camera_configs: dict[str, CameraConfiguration],
+    ) -> dict[str, CCamera]:
+        """Create a CCamera for each camera lane using the information from the camera configurations"""
+        cameras: dict[str, CCamera] = {}
+
         for camera_name, camera_lane in camera_lanes.items():
             if camera_name not in camera_configs:
                 raise RuntimeError(
-                    f"There is no camera configuration associated to {camera_name}"
+                    f"Could not find a camera configuration for the lane {camera_name}"
                 )
             camera_config = camera_configs[camera_name]
             server = self.remote_device_managers[camera_config.remote_server]
             init_args = camera_config.get_device_init_args()
             init_args["picture_names"] = camera_lane.get_picture_names()
             init_args["exposures"] = [0] * len(init_args["picture_names"])
-            self.cameras[camera_name] = getattr(
-                server, camera_config.get_device_type()
-            )(**init_args)
-            self.cameras[camera_name].start()
-            self.shutdown_actions.append(self.cameras[camera_name].shutdown)
+            cameras[camera_name] = getattr(server, camera_config.get_device_type())(
+                **init_args
+            )
+        return cameras
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
