@@ -70,6 +70,7 @@ class CCamera(CDevice, ABC):
             "acquire_all_pictures",
             "read_picture",
             "read_all_pictures",
+            "reset_acquisition",
         )
 
     @validator("picture_names")
@@ -113,6 +114,11 @@ class CCamera(CDevice, ABC):
         if error is not None:
             raise error
 
+    def reset_acquisition(self):
+        for i in range(len(self._acquired_pictures)):
+            self._acquired_pictures[i] = False
+
+
     def apply_rt_variables(self, /, **kwargs) -> None:
         if "exposures" in kwargs:
             if self._acquired_pictures[0] and not self._acquired_pictures[-1]:
@@ -141,7 +147,7 @@ class CCamera(CDevice, ABC):
 
     def read_all_pictures(self) -> dict[str, numpy.ndarray]:
         if not all(self._acquired_pictures):
-            raise RuntimeError(
+            raise TimeoutError(
                 f"Could not read all pictures on {self.name} "
                 f"({sum(self._acquired_pictures)}/{self.number_pictures_to_acquire} acquired)"
             )

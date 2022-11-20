@@ -319,9 +319,17 @@ class SequenceRunnerThread(Thread):
         """Execute a shot on the experiment"""
 
         t0 = datetime.datetime.now()
-        data = self.do_shot(
-            self.sequence_config.shot_configurations[shot.name], context.variables
-        )
+        try:
+            data = self.do_shot(
+                self.sequence_config.shot_configurations[shot.name], context.variables
+            )
+        except TimeoutError:
+            logger.warning(f"Camera timeout error, retrying once")
+            for camera in self.cameras.values():
+                camera.reset_acquisition()
+            data = self.do_shot(
+                self.sequence_config.shot_configurations[shot.name], context.variables
+            )
 
         old_shot_number = context.shot_numbers.get(shot.name, 0)
         context.shot_numbers[shot.name] = old_shot_number + 1
