@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\condetrol\experiment_viewer\resources\sequence_variable_declaration.ui'
+# Form implementation generated from reading ui file '.\sequence_variable_declaration.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_VariableDeclaration(object):
     def setupUi(self, VariableDeclaration):
         VariableDeclaration.setObjectName("VariableDeclaration")
-        VariableDeclaration.resize(904, 56)
+        VariableDeclaration.resize(904, 412)
         font = QtGui.QFont()
         font.setFamily("JetBrains Mono")
         font.setBold(True)
@@ -24,10 +24,18 @@ class Ui_VariableDeclaration(object):
         VariableDeclaration.setAutoFillBackground(False)
         self.horizontalLayout = QtWidgets.QHBoxLayout(VariableDeclaration)
         self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
-        self.horizontalLayout.setContentsMargins(1, 1, 1, 1)
-        self.horizontalLayout.setSpacing(6)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.name_edit = AutoResizeLineEdit(VariableDeclaration)
+        self.frame = QtWidgets.QFrame(VariableDeclaration)
+        self.frame.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame.setLineWidth(0)
+        self.frame.setObjectName("frame")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.frame)
+        self.horizontalLayout_2.setContentsMargins(1, 1, 1, 1)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.name_edit = AutoResizeLineEdit(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -50,8 +58,8 @@ class Ui_VariableDeclaration(object):
         self.name_edit.setCursorMoveStyle(QtCore.Qt.VisualMoveStyle)
         self.name_edit.setClearButtonEnabled(False)
         self.name_edit.setObjectName("name_edit")
-        self.horizontalLayout.addWidget(self.name_edit)
-        self.label_2 = QtWidgets.QLabel(VariableDeclaration)
+        self.horizontalLayout_2.addWidget(self.name_edit)
+        self.label_2 = QtWidgets.QLabel(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -61,11 +69,11 @@ class Ui_VariableDeclaration(object):
         font.setBold(False)
         font.setWeight(50)
         self.label_2.setFont(font)
-        self.label_2.setAutoFillBackground(True)
-        self.label_2.setStyleSheet("")
+        self.label_2.setAutoFillBackground(False)
+        self.label_2.setStyleSheet("background-color: rgba(255, 255, 255, 0);")
         self.label_2.setObjectName("label_2")
-        self.horizontalLayout.addWidget(self.label_2)
-        self.expression_edit = AutoResizeLineEdit(VariableDeclaration)
+        self.horizontalLayout_2.addWidget(self.label_2)
+        self.expression_edit = AutoResizeLineEdit(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -80,10 +88,10 @@ class Ui_VariableDeclaration(object):
         self.expression_edit.setStyleSheet(":focus{ color: #6897BB }\n"
 ":!focus{ border: none; color: #6897BB }")
         self.expression_edit.setObjectName("expression_edit")
-        self.horizontalLayout.addWidget(self.expression_edit)
+        self.horizontalLayout_2.addWidget(self.expression_edit)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
-        self.horizontalLayout.setStretch(3, 1)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.horizontalLayout.addWidget(self.frame)
 
         self.retranslateUi(VariableDeclaration)
         QtCore.QMetaObject.connectSlotsByName(VariableDeclaration)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\resources\sequence_execute_shot.ui'
+# Form implementation generated from reading ui file '.\sequence_execute_shot.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -21,14 +21,23 @@ class Ui_ExecuteShot(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout(ExecuteShot)
         self.horizontalLayout.setContentsMargins(1, 1, 1, 1)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.label = QtWidgets.QLabel(ExecuteShot)
+        self.frame = QtWidgets.QFrame(ExecuteShot)
+        self.frame.setAutoFillBackground(True)
+        self.frame.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame.setLineWidth(0)
+        self.frame.setObjectName("frame")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.frame)
+        self.horizontalLayout_2.setContentsMargins(1, 1, 1, 1)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.label = QtWidgets.QLabel(self.frame)
         font = QtGui.QFont()
         font.setFamily("JetBrains Mono")
         self.label.setFont(font)
         self.label.setStyleSheet("color: #CC7832")
         self.label.setObjectName("label")
-        self.horizontalLayout.addWidget(self.label)
-        self.name_edit = QtWidgets.QLineEdit(ExecuteShot)
+        self.horizontalLayout_2.addWidget(self.label)
+        self.name_edit = QtWidgets.QLineEdit(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -49,10 +58,10 @@ class Ui_ExecuteShot(object):
         self.name_edit.setCursorMoveStyle(QtCore.Qt.VisualMoveStyle)
         self.name_edit.setClearButtonEnabled(False)
         self.name_edit.setObjectName("name_edit")
-        self.horizontalLayout.addWidget(self.name_edit)
+        self.horizontalLayout_2.addWidget(self.name_edit)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
-        self.horizontalLayout.setStretch(2, 1)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.horizontalLayout.addWidget(self.frame)
 
         self.retranslateUi(ExecuteShot)
         QtCore.QMetaObject.connectSlotsByName(ExecuteShot)
