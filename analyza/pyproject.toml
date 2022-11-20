@@ -13,6 +13,8 @@ pandas = "^1.5.1"
 tqdm = "^4.64.1"
 pint-pandas = "^0.2"
 seaborn = "^0.12.1"
+scipy = "^1.9.3"
+numdifftools = "^0.9.41"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
