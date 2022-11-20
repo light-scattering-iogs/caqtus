@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\experiment_viewer\resources\experiment_viewer.ui'
+# Form implementation generated from reading ui file '.\resources\experiment_viewer.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(848, 600)
+        MainWindow.resize(886, 638)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/caqtus-logo"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
@@ -25,7 +25,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 848, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 886, 21))
         self.menubar.setObjectName("menubar")
         self.menuPreferences = QtWidgets.QMenu(self.menubar)
         self.menuPreferences.setObjectName("menuPreferences")
@@ -51,6 +51,13 @@ class Ui_MainWindow(object):
         self.toolBar.setFloatable(False)
         self.toolBar.setObjectName("toolBar")
         MainWindow.addToolBar(QtCore.Qt.TopToolBarArea, self.toolBar)
+        self.logs = QtWidgets.QDockWidget(MainWindow)
+        self.logs.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable)
+        self.logs.setObjectName("logs")
+        self.dockWidgetContents_2 = QtWidgets.QWidget()
+        self.dockWidgetContents_2.setObjectName("dockWidgetContents_2")
+        self.logs.setWidget(self.dockWidgetContents_2)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.logs)
         self.action_edit_config = QtWidgets.QAction(MainWindow)
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(":/icons/gear--pencil"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -78,6 +85,7 @@ class Ui_MainWindow(object):
         self.menuPreferences.setTitle(_translate("MainWindow", "Edit"))
         self.sequences_widget.setWindowTitle(_translate("MainWindow", "Sequences"))
         self.toolBar.setWindowTitle(_translate("MainWindow", "toolBar"))
+        self.logs.setWindowTitle(_translate("MainWindow", "Logs"))
         self.action_edit_config.setText(_translate("MainWindow", "Config..."))
         self.action_start.setText(_translate("MainWindow", "Start"))
         self.action_stop.setText(_translate("MainWindow", "Stop"))

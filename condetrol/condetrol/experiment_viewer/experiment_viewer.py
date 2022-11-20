@@ -105,7 +105,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.view_update_timer.start(500)
 
-        self.setCentralWidget(None)
+        self.dock_widget = QMainWindow()
+        self.setCentralWidget(self.dock_widget)
 
         self.experiment_process_manager = ExperimentProcessManager(
             address=("localhost", 60000), authkey=b"Deardear"
@@ -123,7 +124,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             sequence_widget = SequenceWidget(
                 Path(model.filePath(index)), get_config_path()
             )
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget)
+            self.dock_widget.addDockWidget(
+                Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
+            )
 
     def start_sequence(self, path: Path):
         config = YAMLSerializable.dump(self.experiment_config)
