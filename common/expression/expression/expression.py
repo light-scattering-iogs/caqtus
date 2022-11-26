@@ -5,6 +5,7 @@ import token_utils
 import yaml
 
 from settings_model import YAMLSerializable
+import numpy
 
 
 class Expression(YAMLSerializable):
@@ -47,6 +48,7 @@ class Expression(YAMLSerializable):
         if variables == self._last_evaluation_variables:
             return self._last_value
         else:
+            variables |= dict(cos = numpy.cos, sin = numpy.sin, pi = numpy.pi)
             self._last_value = eval(self.code, variables)
             return self._last_value
 
