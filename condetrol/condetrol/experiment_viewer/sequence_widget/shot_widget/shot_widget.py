@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from experiment_config import ExperimentConfig
 from sequence import SequenceState
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, CameraLane, TakePicture
+from sequence.shot import DigitalLane, AnalogLane, CameraLane, TakePicture
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)

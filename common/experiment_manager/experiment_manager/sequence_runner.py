@@ -33,7 +33,7 @@ from sequence import (
 from sequence.sequence import Sequence
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
 from settings_model import YAMLSerializable
-from shot import (
+from sequence.shot import (
     CameraLane,
     ShotConfiguration,
     evaluate_step_durations,

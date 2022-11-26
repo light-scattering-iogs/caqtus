@@ -42,7 +42,7 @@ from sequence import (
 )
 from sequence.sequence import Sequence, SequenceFolderWatcher
 from settings_model import YAMLSerializable
-from shot import ShotConfiguration
+from sequence.shot import ShotConfiguration
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow

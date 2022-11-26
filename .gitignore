@@ -2,3 +2,5 @@
 /condetrol/condetrol/resources/icons/
 *.lock
 .ipynb_checkpoints
+.pytest_cache
+.hypothesis

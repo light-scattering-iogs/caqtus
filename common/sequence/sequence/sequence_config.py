@@ -10,7 +10,7 @@ from anytree import NodeMixin, RenderTree
 from expression import Expression
 from settings_model import SettingsModel
 from settings_model.settings_model import YAMLSerializable
-from shot import ShotConfiguration
+from sequence.shot import ShotConfiguration
 from units import Quantity, units
 
 

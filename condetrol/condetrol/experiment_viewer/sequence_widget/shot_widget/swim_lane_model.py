@@ -17,7 +17,7 @@ from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
 from settings_model import YAMLSerializable
-from shot import (
+from sequence.shot import (
     DigitalLane,
     AnalogLane,
     Lane,

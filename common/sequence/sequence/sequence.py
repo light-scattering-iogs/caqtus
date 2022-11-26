@@ -24,8 +24,8 @@ from watchdog.observers.polling import PollingObserver
 
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
-from shot import DigitalLane, AnalogLane, evaluate_analog_local_times
-from shot import evaluate_step_durations, evaluate_analog_values
+from sequence.shot import DigitalLane, AnalogLane, evaluate_analog_local_times
+from sequence.shot import evaluate_step_durations, evaluate_analog_values
 from units import ureg, Quantity
 from .sequence_config import SequenceConfig, compute_number_shots
 from .sequence_state import SequenceState, SequenceStats

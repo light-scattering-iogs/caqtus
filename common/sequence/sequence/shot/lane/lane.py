@@ -80,15 +80,23 @@ class Lane(Generic[T], SettingsModel):
         return i
 
     def merge(self, start, stop):
+        """Merge the cells between start included and stop excluded"""
         new_spans = list(self.spans)
+        new_values = list(self.values)
+        start, _ = self.span(start)
+        _, stop = self.span(stop-1)
         total_span = sum(self.spans[start:stop])
         for i in range(start, stop):
             new_spans[i] = 0
+            new_values[i] = self.values[start]
         new_spans[start] = total_span
         self.spans = tuple(new_spans)
+        self.values = tuple(new_values)
 
     def break_(self, start, stop):
         new_spans = list(self.spans)
+        start, _ = self.span(start)
+        _, stop = self.span(stop-1)
         for i in range(start, stop):
             new_spans[i] = 1
         self.spans = tuple(new_spans)
@@ -124,6 +132,11 @@ class Lane(Generic[T], SettingsModel):
             stop = index
             result.append((value, start, stop))
         return result
+
+    def span(self, index) -> tuple[int, int]:
+        start = self._find_spanner(index)
+        stop = start + self.spans[start]
+        return start, stop
 
 
 class DigitalLane(Lane[bool]):
@@ -168,7 +181,8 @@ class CameraLane(Lane[Optional[CameraAction]]):
             if span > 0 and isinstance(action, TakePicture):
                 if action.picture_name in picture_names:
                     raise ValueError(
-                        f"Picture name {action.picture_name} is used twice in lane {name}"
+                        f"Picture name {action.picture_name} is used twice in lane"
+                        f" {name}"
                     )
                 else:
                     picture_names.add(action.picture_name)
