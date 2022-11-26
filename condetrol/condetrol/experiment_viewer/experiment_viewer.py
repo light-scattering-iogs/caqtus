@@ -4,11 +4,13 @@ import os
 import shutil
 import time
 from functools import partial
+from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
 from pathlib import Path
 from threading import Thread
 
 import yaml
+from PyQt5 import QtCore
 from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt5.QtGui import QIcon, QColor, QPalette
 from PyQt5.QtWidgets import (
@@ -25,6 +27,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QAbstractItemView,
     QMessageBox,
+    QTextBrowser,
 )
 from qtpy import QtGui
 
@@ -54,6 +57,46 @@ class ExperimentProcessManager(BaseManager):
 
 
 ExperimentProcessManager.register("ExperimentManager")
+ExperimentProcessManager.register("get_logs_queue")
+
+
+class TextBrowser(QTextBrowser):
+    def sizeHint(self) -> QtCore.QSize:
+        size = super().sizeHint()
+        return QtCore.QSize(size.width(), 0)
+
+
+class CustomFormatter(logging.Formatter):
+    header = "<b>%(levelname)s</b> %(asctime)s - <a href=%(pathname)s:%(lineno)d>%(pathname)s:%(lineno)d</a>"
+
+    FORMATS = {
+        logging.DEBUG: f"<span style='color:grey;white-space: pre-wrap'>{header} %(message)s</span>",
+        logging.INFO: f"<span style='color:white;white-space:pre-wrap'>{header} %(message)s</span>",
+        logging.WARNING: f"<span style='color:yellow;white-space:pre-wrap'>{header} %(message)s</span>",
+        logging.ERROR: f"<span style='color:red;white-space: pre-wrap'>{header} %(message)s</span>",
+        logging.CRITICAL: f"<span style='color:red';>{header} %(message)s</span>",
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
+
+class TextBrowserEditLogger(logging.Handler, QtCore.QObject):
+    append_text = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        QtCore.QObject.__init__(self)
+        self.widget = TextBrowser(parent)
+        self.widget.setOpenExternalLinks(True)
+        self.widget.setReadOnly(True)
+        self.append_text.connect(self.widget.append)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.append_text.emit(msg)
 
 
 class ExperimentViewer(QMainWindow, Ui_MainWindow):
@@ -108,6 +151,20 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.dock_widget = QMainWindow()
         self.setCentralWidget(self.dock_widget)
 
+        self.logs_handler = TextBrowserEditLogger()
+        # self.logs_widget.setPlainText("test\n" * 50)
+        self.logs_dock.setWidget(self.logs_handler.widget)
+        self.logs_handler.setFormatter(CustomFormatter())
+        # self.logs_handler.setFormatter(
+        #     logging.Formatter(
+        #         "<b>%(levelname)s</b> %(asctime)s (%(module)s, %(funcName)s): %(message)s"
+        #     )
+        # )
+        logging.getLogger().addHandler(self.logs_handler)
+        logging.getLogger().setLevel(logging.DEBUG)
+        # logger.debug("ty")
+        # self.logs_widget.setMinimumHeight(0)
+
         self.experiment_process_manager = ExperimentProcessManager(
             address=("localhost", 60000), authkey=b"Deardear"
         )
@@ -116,6 +173,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.experiment_manager: ExperimentManager = (
             self.experiment_process_manager.ExperimentManager()
         )
+        self.logs_listener = QueueListener(
+            self.experiment_process_manager.get_logs_queue(), self.logs_handler
+        )
+        self.logs_listener.start()
 
     def sequence_view_double_clicked(self, index: QModelIndex):
         # noinspection PyTypeChecker
@@ -234,6 +295,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.ui_settings.setValue(f"{__name__}/state", state)
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
+        self.logs_listener.stop()
         super().closeEvent(event)
 
 

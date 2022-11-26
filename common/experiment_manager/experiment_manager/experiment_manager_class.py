@@ -1,4 +1,6 @@
 import logging
+from logging.handlers import QueueHandler
+from multiprocessing import Queue
 from pathlib import Path
 from threading import Lock, Event
 from typing import Optional
@@ -7,6 +9,12 @@ from .sequence_runner import SequenceRunnerThread
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+logs_queue = Queue()
+logging.getLogger().addHandler(QueueHandler(logs_queue))
+
+def get_logs_queue():
+    return logs_queue
 
 
 class ExperimentManager:

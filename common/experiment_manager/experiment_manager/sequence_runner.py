@@ -267,7 +267,7 @@ class SequenceRunnerThread(Thread):
         )
 
         t1 = datetime.datetime.now()
-        logger.info(f"shot executed in {(t1 - t0)}")
+        logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
         context.delayed_executor.submit(
             save_shot, shot_file_path, t0, t1, copy(context.variables), data
         )

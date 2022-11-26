@@ -9,7 +9,7 @@ import qdarkstyle
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication
 
-from experiment_manager import ExperimentManager
+from experiment_manager import ExperimentManager, get_logs_queue
 from experiment_viewer import ExperimentViewer
 
 
@@ -27,6 +27,7 @@ class ExperimentProcessManager(BaseManager):
 
 
 ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
+ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
 if __name__ == "__main__":
     m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")

@@ -79,7 +79,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="logs">
+  <widget class="QDockWidget" name="logs_dock">
    <property name="features">
     <set>QDockWidget::DockWidgetMovable</set>
    </property>
