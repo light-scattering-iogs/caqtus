@@ -6,10 +6,11 @@ import os.path
 from copy import copy
 from functools import cached_property
 from pathlib import Path
-from typing import Literal, Any
+from typing import Literal, Any, Optional
 
 import h5py
 import numpy
+from PyQt5.QtCore import QSaveFile
 from watchdog.events import (
     FileSystemEventHandler,
     FileModifiedEvent,
@@ -23,9 +24,9 @@ from watchdog.observers.api import ObservedWatch
 from watchdog.observers.polling import PollingObserver
 
 from experiment_config import ExperimentConfig, get_config_path
-from settings_model import YAMLSerializable
 from sequence.shot import DigitalLane, AnalogLane, evaluate_analog_local_times
 from sequence.shot import evaluate_step_durations, evaluate_analog_values
+from settings_model import YAMLSerializable
 from units import ureg, Quantity
 from .sequence_config import SequenceConfig, compute_number_shots
 from .sequence_state import SequenceState, SequenceStats
@@ -38,6 +39,7 @@ class Sequence:
     def __init__(
         self,
         path: Path,
+        read_only=True,
     ):
         """Give access to a sequence folder and the underlying information
 
@@ -55,6 +57,7 @@ class Sequence:
             raise NotADirectoryError(f"{path} is not a directory")
         if not self.is_sequence_folder(self._path):
             raise RuntimeError(f"{path} is not a sequence directory")
+        self._read_only = read_only
 
     @property
     def path(self):
@@ -91,6 +94,25 @@ class Sequence:
     @cached_property
     def _stats(self) -> SequenceStats:
         return YAMLSerializable.load(self.stats_path)
+
+    @stats.setter
+    def stats(self, value: SequenceStats):
+        if self._read_only:
+            raise ValueError("Sequence is read only")
+        if not isinstance(value, SequenceStats):
+            raise TypeError(f"Can't set sequence stats to value of type {type(value)}")
+        self._commit_stats_to_file(value)
+        self.remove_cached_property("_stats")
+
+    def _commit_stats_to_file(self, value: SequenceStats):
+        file = QSaveFile(str(self.stats_path))
+        try:
+            file.open(QSaveFile.OpenModeFlag.WriteOnly)
+            file.write(YAMLSerializable.dump(value))
+            file.commit()
+        except Exception as error:
+            file.cancelWriting()
+            raise error
 
     @property
     def stats_path(self) -> Path:
@@ -201,6 +223,21 @@ class Sequence:
         return (path / "sequence_state.yaml").exists() and (
             path / "sequence_config.yaml"
         ).exists()
+
+    @staticmethod
+    def create_new_sequence(path: Path, config: SequenceConfig):
+        """Create a new sequence folder with a given configuration
+
+        The sequence created is in the draft state.
+        """
+        if (parent_sequence := _get_parent_sequence_folder(path)) is not None:
+            raise RuntimeError(
+                f"Attempting to create a sequence inside an other sequence folder ({parent_sequence})"
+            )
+        path.mkdir(parents=True, exist_ok=False)
+        YAMLSerializable.dump(config, path / "sequence_config.yaml")
+        stats = SequenceStats()
+        YAMLSerializable.dump(stats, path / "sequence_state.yaml")
 
 
 class Shot:
@@ -335,3 +372,13 @@ class SequenceFolderWatcher(FileSystemEventHandler):
 
 def normalize_path(path: Path):
     return os.path.normpath(path)
+
+
+def _get_parent_sequence_folder(path: Path) -> Optional[Path]:
+    """Return a parent folder of the path that is a sequence folder, if there is one"""
+    parent_sequence = None
+    for parent in path.parents:
+        if Sequence.is_sequence_folder(parent):
+            parent_sequence = parent
+            break
+    return parent_sequence

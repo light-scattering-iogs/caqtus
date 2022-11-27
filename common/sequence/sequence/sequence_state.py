@@ -12,6 +12,7 @@ class SequenceState(Enum):
     FINISHED = auto()
     INTERRUPTED = auto()
     CRASHED = auto()
+    UNTRUSTED = auto()
 
 
 def state_representer(dumper: yaml.Dumper, state: SequenceState):

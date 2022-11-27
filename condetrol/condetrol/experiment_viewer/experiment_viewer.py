@@ -9,7 +9,6 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 from threading import Thread
 
-import yaml
 from PyQt5 import QtCore
 from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt5.QtGui import QIcon, QColor, QPalette
@@ -41,8 +40,8 @@ from sequence import (
     ExecuteShot,
 )
 from sequence.sequence import Sequence, SequenceFolderWatcher
-from settings_model import YAMLSerializable
 from sequence.shot import ShotConfiguration
+from settings_model import YAMLSerializable
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
@@ -395,18 +394,14 @@ class SequenceViewerModel(QFileSystemModel):
         )
         if ok and text:
             new_sequence_path = path / text
+            # noinspection PyBroadException
             try:
-                new_sequence_path.mkdir()
                 config = SequenceConfig(
                     program=SequenceSteps(children=[ExecuteShot(name="shot")]),
                     shot_configurations={"shot": ShotConfiguration()},
                 )
-                YAMLSerializable.dump(
-                    config, new_sequence_path / "sequence_config.yaml"
-                )
-                stats = SequenceStats()
-                YAMLSerializable.dump(stats, new_sequence_path / "sequence_state.yaml")
-            except:
+                Sequence.create_new_sequence(new_sequence_path, config)
+            except Exception:
                 logger.error(
                     f"Could not create new sequence '{new_sequence_path}'",
                     exc_info=True,
@@ -442,17 +437,12 @@ class SequenceViewerModel(QFileSystemModel):
         )
         if ok and text:
             new_sequence_path = Path(self.rootPath()) / text
+            # noinspection PyBroadException
             try:
-                new_sequence_path.mkdir(parents=True)
-                stats = SequenceStats()
-                with open(new_sequence_path / "sequence_state.yaml", "w") as file:
-                    file.write(yaml.safe_dump(stats))
-                shutil.copy(
-                    Path(self.filePath(index)) / "sequence_config.yaml",
-                    new_sequence_path / "sequence_config.yaml",
-                )
-
-            except:
+                src_sequence = Sequence(Path(self.filePath(index)))
+                src_config = src_sequence.config
+                Sequence.create_new_sequence(new_sequence_path, src_config)
+            except Exception:
                 logger.error(
                     f"Could not create new sequence '{new_sequence_path}'",
                     exc_info=True,
