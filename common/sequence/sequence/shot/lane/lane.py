@@ -24,13 +24,11 @@ class Lane(Generic[T], SettingsModel):
     """
 
     name: str
-    values: tuple[T, ...]
     spans: tuple[int, ...]
+    values: tuple[T, ...]
 
     @validator("spans")
     def validate_spans(cls, spans: tuple[int, ...], values):
-        if len(spans) != len(values["values"]):
-            raise ValueError("Length of spans and values must match")
         index = 0
         while index < len(spans):
             if spans[index] >= 1:
@@ -42,6 +40,27 @@ class Lane(Generic[T], SettingsModel):
             else:
                 raise ValueError(f"Span at position {index} should be larger than 1")
         return spans
+
+    @validator("values")
+    def set_merged_values(cls, lane_values, values):
+        lane_values = list(lane_values)
+        spans = values["spans"]
+        if len(spans) != len(lane_values):
+            raise ValueError("Length of spans and values must match")
+        index = 0
+        while index < len(spans):
+            if spans[index] >= 1:
+                span = spans[index]
+                value = lane_values[index]
+                for index in range(index + 1, index + span):
+                    if spans[index] == 0:
+                        lane_values[index] = value
+                    else:
+                        raise ValueError(f"Span at position {index} should be zero")
+                index += 1
+            else:
+                raise ValueError(f"Span at position {index} should be larger than 1")
+        return tuple(lane_values)
 
     def __len__(self) -> int:
         return len(self.values)
@@ -57,8 +76,8 @@ class Lane(Generic[T], SettingsModel):
             new_spans[spanner] += 1
             new_values.insert(index, self.values[spanner])
             new_spans.insert(index, 0)
-        self.values = tuple(new_values)
         self.spans = tuple(new_spans)
+        self.values = tuple(new_values)
 
     def remove(self, index):
         new_values = list(self.values)
@@ -70,8 +89,8 @@ class Lane(Generic[T], SettingsModel):
             new_spans[index + 1] = self.spans[index] - 1
         new_values.pop(index)
         new_spans.pop(index)
-        self.values = tuple(new_values)
         self.spans = tuple(new_spans)
+        self.values = tuple(new_values)
 
     def _find_spanner(self, index):
         i = index
