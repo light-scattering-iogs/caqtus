@@ -3,6 +3,7 @@ import logging
 import math
 import os.path
 import os.path
+import shutil
 from copy import copy
 from functools import cached_property
 from pathlib import Path
@@ -89,7 +90,13 @@ class Sequence:
 
     def get_stats(self) -> SequenceStats:
         """Read the sequence stats from file"""
-        return YAMLSerializable.load(self.stats_path)
+        result = None
+        while not isinstance(result, SequenceStats):
+            try:
+                result = YAMLSerializable.load(self.stats_path)
+            except PermissionError:
+                pass
+        return result
 
     def set_stats(self, value: SequenceStats):
         """Store stats to file"""
@@ -109,10 +116,11 @@ class Sequence:
         try:
             file.open(QSaveFile.OpenModeFlag.WriteOnly)
             file.write(YAMLSerializable.dump(value).encode("utf-8"))
-            file.commit()
         except Exception as error:
             file.cancelWriting()
             raise error
+        while not file.commit():
+            pass
 
     @property
     def stats_path(self) -> Path:
@@ -132,8 +140,17 @@ class Sequence:
 
     @cached_property
     def number_completed_shots(self) -> int:
+        stats = self.stats
+        number_completed_shots = stats.number_completed_shots
+        if number_completed_shots == "unknown":
+            number_completed_shots = self.get_number_completed_shots()
+            stats.number_completed_shots = number_completed_shots
+            self.set_stats(stats)
+        return number_completed_shots
+
+    def get_number_completed_shots(self) -> int:
         count = 0
-        for child in self._path.iterdir():
+        for child in self.shot_folder.iterdir():
             if self._is_shot(child):
                 count += 1
 
@@ -237,7 +254,7 @@ class Sequence:
             )
         path.mkdir(parents=True, exist_ok=False)
         YAMLSerializable.dump(config, Sequence.get_config_path(path))
-        stats = SequenceStats()
+        stats = SequenceStats(number_completed_shots=0)
         YAMLSerializable.dump(stats, Sequence.get_stats_path(path))
 
     def revert_to_draft(self) -> bool:
@@ -251,13 +268,10 @@ class Sequence:
         if self.state != SequenceState.DRAFT and self.state != SequenceState.RUNNING:
             self.set_stats(SequenceStats(state=SequenceState.UNTRUSTED))
             self._remove_experiment_config_file()
-
-            shot_files = (
-                file for file in self._path.iterdir() if Sequence._is_shot(file)
+            shutil.rmtree(self.shot_folder)
+            self.set_stats(
+                SequenceStats(state=SequenceState.DRAFT, number_completed_shots=0)
             )
-            for file in shot_files:
-                os.remove(file)
-            self.set_stats(SequenceStats(state=SequenceState.DRAFT))
             return True
         else:
             return False
@@ -277,6 +291,17 @@ class Sequence:
     @staticmethod
     def get_experiment_config_path(sequence_path: Path):
         return sequence_path / "experiment_config.yaml"
+
+    @staticmethod
+    def get_shot_folder(sequence_path: Path):
+        return sequence_path / "sequence_data"
+
+    @property
+    def shot_folder(self):
+        return Sequence.get_shot_folder(self._path)
+
+    def create_shot_folder(self):
+        self.shot_folder.mkdir(parents=False, exist_ok=False)
 
 
 class Shot:
@@ -377,11 +402,9 @@ class SequenceFolderWatcher(FileSystemEventHandler):
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
                 sequence = self._sequence_cache[normalize_path(parent)][0]
-                if file_path.suffix == ".hdf5":
-                    # noinspection PyPropertyAccess
-                    sequence.number_completed_shots += 1
-                elif file_path == sequence.stats_path:
+                if file_path == sequence.stats_path:
                     sequence.remove_cached_property("stats")
+                    sequence.remove_cached_property("number_completed_shots")
                 elif file_path == sequence.config_path:
                     sequence.remove_cached_property("config")
                     sequence.remove_cached_property("total_number_shots")
@@ -393,19 +416,12 @@ class SequenceFolderWatcher(FileSystemEventHandler):
             )
             if watch is not None:
                 self._observer.unschedule(watch)
-        elif isinstance(event, FileDeletedEvent):
-            file_path = Path(event.src_path)
-            parent = file_path.parent
-            if normalize_path(parent) in self._sequence_cache:
-                sequence = self._sequence_cache[normalize_path(parent)][0]
-                if file_path.suffix == ".hdf5":
-                    sequence.remove_cached_property("number_completed_shots")
 
     def get_sequence(self, path: Path, read_only=True) -> Sequence:
         if normalize_path(path) in self._sequence_cache:
             return self._sequence_cache[normalize_path(path)][0]
         else:
-            watch = self._observer.schedule(self, str(path), recursive=True)
+            watch = self._observer.schedule(self, str(path), recursive=False)
             sequence = Sequence(path, read_only)
             self._sequence_cache[normalize_path(path)] = (sequence, watch)
             return sequence

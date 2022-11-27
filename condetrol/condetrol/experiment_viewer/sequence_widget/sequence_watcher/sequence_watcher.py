@@ -40,7 +40,7 @@ class SequenceWatcher(QObject):
         while not isinstance(result, SequenceStats):
             try:
                 result = YAMLSerializable.load(self.state_path)
-            except FileNotFoundError:
+            except PermissionError:
                 pass
         return result
 

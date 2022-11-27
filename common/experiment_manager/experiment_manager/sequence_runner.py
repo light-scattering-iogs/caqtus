@@ -59,6 +59,7 @@ class SequenceRunnerThread(Thread):
         self.sequence = Sequence(self.experiment_config.data_path / sequence_path, read_only=False)
         self.sequence_config: Final[SequenceConfig] = self.sequence.config
         self.stats = self.sequence.get_stats()
+        self.stats.number_completed_shots = 0
         self.stats.state = SequenceState.PREPARING
         self.sequence.set_stats(self.stats)
 
@@ -89,6 +90,7 @@ class SequenceRunnerThread(Thread):
             self.shutdown()
 
     def prepare(self):
+        self.sequence.create_shot_folder()
         YAMLSerializable.dump(
             self.experiment_config, self.sequence.experiment_config_path
         )
@@ -266,10 +268,12 @@ class SequenceRunnerThread(Thread):
         context.shot_numbers[shot.name] = old_shot_number + 1
 
         shot_file_path = (
-            self.sequence.path / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
+            self.sequence.shot_folder / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
         )
 
         t1 = datetime.datetime.now()
+        self.stats.number_completed_shots += 1
+        self.sequence.set_stats(self.stats)
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
         context.delayed_executor.submit(
             save_shot, shot_file_path, t0, t1, copy(context.variables), data

@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum, auto
-from typing import Optional
+from typing import Optional, Literal
 
 import yaml
 from settings_model import SettingsModel
@@ -34,3 +34,4 @@ class SequenceStats(SettingsModel):
     state: SequenceState = SequenceState.DRAFT
     start_time: Optional[datetime] = None
     stop_time: Optional[datetime] = None
+    number_completed_shots: int | Literal["unknown"] = "unknown"
