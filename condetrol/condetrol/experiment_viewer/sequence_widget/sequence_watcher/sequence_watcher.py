@@ -1,10 +1,10 @@
 from contextlib import contextmanager
 from pathlib import Path
 
-import yaml
 from PyQt5.QtCore import QObject, pyqtSignal, QFileSystemWatcher
 
 from sequence import SequenceConfig, SequenceStats
+from sequence.sequence import Sequence
 from settings_model import YAMLSerializable
 
 
@@ -18,8 +18,8 @@ class SequenceWatcher(QObject):
 
     def __init__(self, sequence_path: Path):
         super().__init__()
-        self.config_path = sequence_path / "sequence_config.yaml"
-        self.state_path = sequence_path / "sequence_state.yaml"
+        self.config_path = Sequence.get_config_path(sequence_path)
+        self.state_path = Sequence.get_stats_path(sequence_path)
 
         self.sequence_config_watcher = QFileSystemWatcher()
         self.sequence_config_watcher.addPath(str(self.config_path))
@@ -33,12 +33,10 @@ class SequenceWatcher(QObject):
         )
 
     def read_config(self) -> SequenceConfig:
-        with open(self.config_path, "r") as file:
-            return yaml.load(file, Loader=YAMLSerializable.get_loader())
+        return YAMLSerializable.load(self.config_path)
 
     def read_stats(self) -> SequenceStats:
-        with open(self.state_path, "r") as file:
-            return yaml.load(file.read(), Loader=YAMLSerializable.get_loader())
+        return YAMLSerializable.load(self.state_path)
 
     def _update_config(self, *args):
         self.config_changed.emit(self.read_config())

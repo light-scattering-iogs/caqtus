@@ -44,8 +44,6 @@ class SwimLaneModel(QAbstractTableModel):
         self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
     ):
         super().__init__()
-        self.config_path = sequence_path / "sequence_config.yaml"
-        self.state_path = sequence_path / "sequence_state.yaml"
         self.experiment_config = experiment_config
 
         self.shot_name = shot_name

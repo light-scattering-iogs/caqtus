@@ -69,7 +69,7 @@ class Sequence:
 
     @property
     def config_path(self) -> Path:
-        return self._path / "sequence_config.yaml"
+        return Sequence.get_config_path(self._path)
 
     @cached_property
     def config(self) -> SequenceConfig:
@@ -77,7 +77,7 @@ class Sequence:
 
     @property
     def experiment_config_path(self) -> Path:
-        return self._path / "experiment_config.yaml"
+        return Sequence.get_experiment_config_path(self._path)
 
     @property
     def experiment_config(self) -> ExperimentConfig:
@@ -116,7 +116,7 @@ class Sequence:
 
     @property
     def stats_path(self) -> Path:
-        return self._path / "sequence_state.yaml"
+        return Sequence.get_stats_path(self._path)
 
     @property
     def state(self) -> SequenceState:
@@ -220,9 +220,10 @@ class Sequence:
 
     @staticmethod
     def is_sequence_folder(path: Path) -> bool:
-        return (path / "sequence_state.yaml").exists() and (
-            path / "sequence_config.yaml"
-        ).exists()
+        return (
+            Sequence.get_stats_path(path).exists()
+            and (Sequence.get_config_path(path)).exists()
+        )
 
     @staticmethod
     def create_new_sequence(path: Path, config: SequenceConfig):
@@ -235,9 +236,9 @@ class Sequence:
                 f"Attempting to create a sequence inside an other sequence folder ({parent_sequence})"
             )
         path.mkdir(parents=True, exist_ok=False)
-        YAMLSerializable.dump(config, path / "sequence_config.yaml")
+        YAMLSerializable.dump(config, Sequence.get_config_path(path))
         stats = SequenceStats()
-        YAMLSerializable.dump(stats, path / "sequence_state.yaml")
+        YAMLSerializable.dump(stats, Sequence.get_stats_path(path))
 
     def revert_to_draft(self) -> bool:
         """Remove all data from a sequence
@@ -264,6 +265,18 @@ class Sequence:
     def _remove_experiment_config_file(self):
         if self.experiment_config_path.exists():
             os.remove(self.experiment_config_path)
+
+    @staticmethod
+    def get_config_path(sequence_path: Path):
+        return sequence_path / "sequence_config.yaml"
+
+    @staticmethod
+    def get_stats_path(sequence_path: Path):
+        return sequence_path / "sequence_state.yaml"
+
+    @staticmethod
+    def get_experiment_config_path(sequence_path: Path):
+        return sequence_path / "experiment_config.yaml"
 
 
 class Shot:

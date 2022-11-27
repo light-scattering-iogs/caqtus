@@ -1,3 +1,10 @@
+"""This module provides a model to interact with a tree of sequence steps.
+
+It is meant to provide data for a view within the Qt model/view architecture. This model is used to show and interact
+with the steps that a sequence execute.
+"""
+
+
 from abc import abstractmethod, ABCMeta
 from typing import Iterable
 
