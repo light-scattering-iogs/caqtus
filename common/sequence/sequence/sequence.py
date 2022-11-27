@@ -85,12 +85,16 @@ class Sequence:
         return YAMLSerializable.load(path)
 
     @property
-    def stats_path(self) -> Path:
-        return self._path / "sequence_state.yaml"
+    def stats(self) -> SequenceStats:
+        return self._stats
 
     @cached_property
-    def stats(self) -> SequenceStats:
+    def _stats(self) -> SequenceStats:
         return YAMLSerializable.load(self.stats_path)
+
+    @property
+    def stats_path(self) -> Path:
+        return self._path / "sequence_state.yaml"
 
     @property
     def state(self) -> SequenceState:
@@ -282,9 +286,9 @@ class SequenceFolderWatcher(FileSystemEventHandler):
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
                 sequence = self._sequence_cache[normalize_path(parent)][0]
-                if file_path.name == "sequence_state.yaml":
-                    sequence.remove_cached_property("stats")
-                elif file_path.name == "sequence_config.yaml":
+                if file_path == sequence.stats_path:
+                    sequence.remove_cached_property("_stats")
+                elif file_path == sequence.config_path:
                     sequence.remove_cached_property("config")
                     sequence.remove_cached_property("total_number_shots")
 
