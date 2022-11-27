@@ -356,6 +356,7 @@ class SequenceViewerModel(QFileSystemModel):
                 if (
                     sequence.state == SequenceState.DRAFT
                     or sequence.state == SequenceState.UNTRUSTED
+                    or sequence.state == SequenceState.PREPARING
                 ):
                     return ""
                 else:
@@ -509,6 +510,9 @@ class SequenceDelegate(QStyledItemDelegate):
             elif stats.state == SequenceState.UNTRUSTED:
                 opt.progress = 0
                 opt.text = "untrusted"
+            elif stats.state == SequenceState.PREPARING:
+                opt.progress = 0
+                opt.text = "preparing"
             else:
                 opt.maximum = sequence.total_number_shots
                 opt.progress = sequence.number_completed_shots

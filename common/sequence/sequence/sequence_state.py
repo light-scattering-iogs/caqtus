@@ -8,6 +8,7 @@ from settings_model import SettingsModel
 
 class SequenceState(Enum):
     DRAFT = auto()
+    PREPARING = auto()
     RUNNING = auto()
     FINISHED = auto()
     INTERRUPTED = auto()

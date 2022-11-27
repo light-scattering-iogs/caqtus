@@ -23,7 +23,6 @@ from experiment_config import (
 from ni6738_analog_card import NI6738AnalogCard
 from remote_device_client import RemoteDeviceClientManager
 from sequence import (
-    SequenceStats,
     SequenceState,
     Step,
     SequenceConfig,
@@ -32,7 +31,6 @@ from sequence import (
 )
 from sequence.sequence import Sequence
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
-from settings_model import YAMLSerializable
 from sequence.shot import (
     CameraLane,
     ShotConfiguration,
@@ -40,6 +38,7 @@ from sequence.shot import (
     evaluate_analog_local_times,
     evaluate_analog_values,
 )
+from settings_model import YAMLSerializable
 from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
 from units import Quantity, units, ureg
@@ -57,9 +56,11 @@ class SequenceRunnerThread(Thread):
         self.experiment_config: Final[ExperimentConfig] = YAMLSerializable.load(
             experiment_config
         )
-        self.sequence = Sequence(self.experiment_config.data_path / sequence_path)
+        self.sequence = Sequence(self.experiment_config.data_path / sequence_path, read_only=False)
         self.sequence_config: Final[SequenceConfig] = self.sequence.config
-        self.stats = SequenceStats(state=SequenceState.RUNNING)
+        self.stats = self.sequence.get_stats()
+        self.stats.state = SequenceState.PREPARING
+        self.sequence.set_stats(self.stats)
 
         self._waiting_to_interrupt = waiting_to_interrupt
 
@@ -88,8 +89,6 @@ class SequenceRunnerThread(Thread):
             self.shutdown()
 
     def prepare(self):
-        self.stats.start_time = datetime.datetime.now()
-        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
         YAMLSerializable.dump(
             self.experiment_config, self.sequence.experiment_config_path
         )
@@ -112,6 +111,10 @@ class SequenceRunnerThread(Thread):
         for camera_name in self.cameras:
             self.cameras[camera_name].start()
             self.shutdown_actions.append(self.cameras[camera_name].shutdown)
+
+        self.stats.state = SequenceState.RUNNING
+        self.stats.start_time = datetime.datetime.now()
+        self.sequence.set_stats(self.stats)
 
     def create_cameras(
         self,
@@ -142,12 +145,12 @@ class SequenceRunnerThread(Thread):
             self.stats.state = SequenceState.INTERRUPTED
         else:
             self.stats.state = SequenceState.FINISHED
-        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
+        self.sequence.set_stats(self.stats)
 
     def record_exception(self):
         self.stats.stop_time = datetime.datetime.now()
         self.stats.state = SequenceState.CRASHED
-        YAMLSerializable.dump(self.stats, self.sequence.stats_path)
+        self.sequence.set_stats(self.stats)
 
     def shutdown(self):
         for action in self.shutdown_actions:

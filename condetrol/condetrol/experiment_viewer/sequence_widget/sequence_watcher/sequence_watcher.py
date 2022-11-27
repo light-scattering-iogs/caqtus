@@ -36,7 +36,13 @@ class SequenceWatcher(QObject):
         return YAMLSerializable.load(self.config_path)
 
     def read_stats(self) -> SequenceStats:
-        return YAMLSerializable.load(self.state_path)
+        result = None
+        while not isinstance(result, SequenceStats):
+            try:
+                result = YAMLSerializable.load(self.state_path)
+            except FileNotFoundError:
+                pass
+        return result
 
     def _update_config(self, *args):
         self.config_changed.emit(self.read_config())

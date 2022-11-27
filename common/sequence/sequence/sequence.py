@@ -87,22 +87,22 @@ class Sequence:
             path = get_config_path()
         return YAMLSerializable.load(path)
 
-    @property
-    def stats(self) -> SequenceStats:
-        return self._stats
-
-    @cached_property
-    def _stats(self) -> SequenceStats:
+    def get_stats(self) -> SequenceStats:
+        """Read the sequence stats from file"""
         return YAMLSerializable.load(self.stats_path)
 
-    @stats.setter
-    def stats(self, value: SequenceStats):
+    def set_stats(self, value: SequenceStats):
+        """Store stats to file"""
         if self._read_only:
             raise ValueError("Sequence is read only")
         if not isinstance(value, SequenceStats):
             raise TypeError(f"Can't set sequence stats to value of type {type(value)}")
         self._commit_stats_to_file(value)
-        self.remove_cached_property("_stats")
+        self.remove_cached_property("stats")
+
+    @cached_property
+    def stats(self) -> SequenceStats:
+        return self.get_stats()
 
     def _commit_stats_to_file(self, value: SequenceStats):
         file = QSaveFile(str(self.stats_path))
@@ -247,9 +247,9 @@ class Sequence:
         """
         if self._read_only:
             raise ValueError("Sequence is read only")
-        self.remove_cached_property("_stats")
+        self.remove_cached_property("stats")
         if self.state != SequenceState.DRAFT and self.state != SequenceState.RUNNING:
-            self.stats = SequenceStats(state=SequenceState.UNTRUSTED)
+            self.set_stats(SequenceStats(state=SequenceState.UNTRUSTED))
             self._remove_experiment_config_file()
 
             shot_files = (
@@ -257,7 +257,7 @@ class Sequence:
             )
             for file in shot_files:
                 os.remove(file)
-            self.stats = SequenceStats(state=SequenceState.DRAFT)
+            self.set_stats(SequenceStats(state=SequenceState.DRAFT))
             return True
         else:
             return False
@@ -356,14 +356,17 @@ class SequenceFolderWatcher(FileSystemEventHandler):
     def data_folder(self):
         return self._data_folder
 
+    def on_any_event(self, event):
+        self.events.append(event)
+
     def on_modified(self, event: DirModifiedEvent | FileModifiedEvent):
         if isinstance(event, FileModifiedEvent):
             file_path = Path(event.src_path)
             parent = file_path.parent
             if normalize_path(parent) in self._sequence_cache:
                 sequence = self._sequence_cache[normalize_path(parent)][0]
-                if file_path == sequence.stats_path:
-                    sequence.remove_cached_property("_stats")
+                if file_path.name == "sequence_state.yaml":
+                    sequence.remove_cached_property("stats")
                 elif file_path == sequence.config_path:
                     sequence.remove_cached_property("config")
                     sequence.remove_cached_property("total_number_shots")
@@ -377,6 +380,11 @@ class SequenceFolderWatcher(FileSystemEventHandler):
                 if file_path.suffix == ".hdf5":
                     # noinspection PyPropertyAccess
                     sequence.number_completed_shots += 1
+                elif file_path == sequence.stats_path:
+                    sequence.remove_cached_property("stats")
+                elif file_path == sequence.config_path:
+                    sequence.remove_cached_property("config")
+                    sequence.remove_cached_property("total_number_shots")
 
     def on_deleted(self, event: DirDeletedEvent | FileDeletedEvent):
         if isinstance(event, DirDeletedEvent):
