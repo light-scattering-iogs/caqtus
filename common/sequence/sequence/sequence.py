@@ -108,7 +108,7 @@ class Sequence:
         file = QSaveFile(str(self.stats_path))
         try:
             file.open(QSaveFile.OpenModeFlag.WriteOnly)
-            file.write(YAMLSerializable.dump(value))
+            file.write(YAMLSerializable.dump(value).encode("utf-8"))
             file.commit()
         except Exception as error:
             file.cancelWriting()
@@ -239,6 +239,32 @@ class Sequence:
         stats = SequenceStats()
         YAMLSerializable.dump(stats, path / "sequence_state.yaml")
 
+    def revert_to_draft(self) -> bool:
+        """Remove all data from a sequence
+
+        The sequence state is set to untrusted while the shots are being removed.
+        """
+        if self._read_only:
+            raise ValueError("Sequence is read only")
+        self.remove_cached_property("_stats")
+        if self.state != SequenceState.DRAFT and self.state != SequenceState.RUNNING:
+            self.stats = SequenceStats(state=SequenceState.UNTRUSTED)
+            self._remove_experiment_config_file()
+
+            shot_files = (
+                file for file in self._path.iterdir() if Sequence._is_shot(file)
+            )
+            for file in shot_files:
+                os.remove(file)
+            self.stats = SequenceStats(state=SequenceState.DRAFT)
+            return True
+        else:
+            return False
+
+    def _remove_experiment_config_file(self):
+        if self.experiment_config_path.exists():
+            os.remove(self.experiment_config_path)
+
 
 class Shot:
     def __init__(self, relative_path: Path, parent: Sequence):
@@ -354,12 +380,12 @@ class SequenceFolderWatcher(FileSystemEventHandler):
                 if file_path.suffix == ".hdf5":
                     sequence.remove_cached_property("number_completed_shots")
 
-    def get_sequence(self, path: Path) -> Sequence:
+    def get_sequence(self, path: Path, read_only=True) -> Sequence:
         if normalize_path(path) in self._sequence_cache:
             return self._sequence_cache[normalize_path(path)][0]
         else:
             watch = self._observer.schedule(self, str(path), recursive=True)
-            sequence = Sequence(path)
+            sequence = Sequence(path, read_only)
             self._sequence_cache[normalize_path(path)] = (sequence, watch)
             return sequence
 

@@ -33,7 +33,6 @@ from qtpy import QtGui
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
 from sequence import (
-    SequenceStats,
     SequenceState,
     SequenceConfig,
     SequenceSteps,
@@ -229,7 +228,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 clear_sequence_action = QAction("Remove data")
                 menu.addAction(clear_sequence_action)
                 clear_sequence_action.triggered.connect(
-                    partial(self.model.revert_to_draft, index)
+                    partial(self.revert_to_draft, index)
                 )
 
         else:
@@ -297,6 +296,30 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.logs_listener.stop()
         super().closeEvent(event)
 
+    def revert_to_draft(self, index: QModelIndex):
+        """Remove all data files from a sequence"""
+        if self.model.is_sequence_folder(index):
+            sequence = self.model.get_sequence(index)
+            if self.exec_revert_to_draft_message_box(sequence.relative_path):
+                self.model.revert_to_draft(index)
+
+    def exec_revert_to_draft_message_box(self, path: Path) -> bool:
+        """Show a popup box to ask if the sequence data should be erased"""
+        message_box = QMessageBox(self)
+        message_box.setWindowTitle("Caqtus")
+        message_box.setText(f"This will remove all shot data from sequence {path}.")
+        message_box.setInformativeText("Are you sure you want to continue?")
+        message_box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+        )
+        message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        message_box.setIcon(QMessageBox.Warning)
+        result = message_box.exec()
+        if result == QMessageBox.StandardButton.Cancel:
+            return False
+        elif result == QMessageBox.StandardButton.Yes:
+            return True
+
 
 class SequenceViewerModel(QFileSystemModel):
     """Model for sequence explorer"""
@@ -326,11 +349,14 @@ class SequenceViewerModel(QFileSystemModel):
 
     def data(self, index: QModelIndex, role: int = ...):
         if self.is_sequence_folder(index):
-            sequence = self.sequence_watcher.get_sequence(Path(self.filePath(index)))
+            sequence = self.get_sequence(index)
             if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
                 return sequence
             elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
-                if sequence.state == SequenceState.DRAFT:
+                if (
+                    sequence.state == SequenceState.DRAFT
+                    or sequence.state == SequenceState.UNTRUSTED
+                ):
                     return ""
                 else:
                     duration = datetime.timedelta(
@@ -448,25 +474,19 @@ class SequenceViewerModel(QFileSystemModel):
                     exc_info=True,
                 )
 
-    def revert_to_draft(self, index: QModelIndex) -> bool:
-        sequence_reverted = False
+    def revert_to_draft(self, index: QModelIndex):
+        """Remove all data files from a sequence"""
         if self.is_sequence_folder(index):
-            path = Path(self.filePath(index))
-            state = self.sequence_watcher.get_sequence(path).state
-            if state != SequenceState.DRAFT and state != SequenceState.RUNNING:
-                stats = SequenceStats()
-                YAMLSerializable.dump(stats, path / "sequence_state.yaml")
-                os.remove(path / "experiment_config.yaml")
+            sequence = self.get_sequence(index)
+            Thread(target=sequence.revert_to_draft).start()
 
-                def target():
-                    files = (file for file in path.iterdir() if file.is_file())
-                    for file in files:
-                        if file.suffix == ".hdf5":
-                            os.remove(file)
-
-                Thread(target=target).start()
-
-        return sequence_reverted
+    def get_sequence(self, index: QModelIndex) -> Sequence:
+        path = Path(self.filePath(index))
+        if self.is_sequence_folder(index):
+            sequence = self.sequence_watcher.get_sequence(path, read_only=False)
+            return sequence
+        else:
+            raise RuntimeError(f"Folder {path} is not a sequence")
 
 
 class SequenceDelegate(QStyledItemDelegate):
@@ -486,6 +506,9 @@ class SequenceDelegate(QStyledItemDelegate):
             if stats.state == SequenceState.DRAFT:
                 opt.progress = 0
                 opt.text = "draft"
+            elif stats.state == SequenceState.UNTRUSTED:
+                opt.progress = 0
+                opt.text = "untrusted"
             else:
                 opt.maximum = sequence.total_number_shots
                 opt.progress = sequence.number_completed_shots
