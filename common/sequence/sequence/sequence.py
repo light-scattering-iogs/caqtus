@@ -112,15 +112,12 @@ class Sequence:
         return self.get_stats()
 
     def _commit_stats_to_file(self, value: SequenceStats):
-        file = QSaveFile(str(self.stats_path))
-        try:
+        committed = False
+        while not committed:
+            file = QSaveFile(str(self.stats_path))
             file.open(QSaveFile.OpenModeFlag.WriteOnly)
             file.write(YAMLSerializable.dump(value).encode("utf-8"))
-        except Exception as error:
-            file.cancelWriting()
-            raise error
-        while not file.commit():
-            pass
+            committed = file.commit()
 
     @property
     def stats_path(self) -> Path:
@@ -185,15 +182,15 @@ class Sequence:
     @property
     def shots(self) -> list["Shot"]:
         result = []
-        for child in self._path.iterdir():
+        for child in self.shot_folder.iterdir():
             if self._is_shot(child):
-                result.append(Shot(child.relative_to(self._path), self))
+                result.append(Shot(child.relative_to(self.shot_folder), self))
         return result
 
     def __iter__(self):
-        for child in self._path.iterdir():
+        for child in self.shot_folder.iterdir():
             if self._is_shot(child):
-                yield Shot(child.relative_to(self._path), self)
+                yield Shot(child.relative_to(self.shot_folder), self)
 
     def compute_lane_values(
         self, lane_name: str, context: dict[str], shot_name: str = "shot"
@@ -340,7 +337,7 @@ class Shot:
 
     @property
     def path(self) -> Path:
-        return self._parent.path / self._relative_path
+        return self._parent.shot_folder / self._relative_path
 
     @property
     def name(self) -> str:

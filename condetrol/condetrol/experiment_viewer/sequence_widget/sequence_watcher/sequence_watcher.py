@@ -36,12 +36,7 @@ class SequenceWatcher(QObject):
         return YAMLSerializable.load(self.config_path)
 
     def read_stats(self) -> SequenceStats:
-        result = None
-        while not isinstance(result, SequenceStats):
-            try:
-                result = YAMLSerializable.load(self.state_path)
-            except PermissionError:
-                pass
+        result = YAMLSerializable.load(self.state_path)
         return result
 
     def _update_config(self, *args):
