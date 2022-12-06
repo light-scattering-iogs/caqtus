@@ -1,4 +1,5 @@
 from abc import ABC
+from copy import copy
 from typing import TypeVar, Generic, Optional
 
 import yaml
@@ -28,7 +29,7 @@ class Lane(Generic[T], SettingsModel):
     values: tuple[T, ...]
 
     @validator("spans")
-    def validate_spans(cls, spans: tuple[int, ...], values):
+    def validate_spans(cls, spans: tuple[int, ...]):
         index = 0
         while index < len(spans):
             if spans[index] >= 1:
@@ -54,7 +55,7 @@ class Lane(Generic[T], SettingsModel):
                 value = lane_values[index]
                 for index in range(index + 1, index + span):
                     if spans[index] == 0:
-                        lane_values[index] = value
+                        lane_values[index] = copy(value)
                     else:
                         raise ValueError(f"Span at position {index} should be zero")
                 index += 1
@@ -69,12 +70,12 @@ class Lane(Generic[T], SettingsModel):
         new_values = list(self.values)
         new_spans = list(self.spans)
         if index >= len(self) or self.spans[index] != 0:
-            new_values.insert(index, value)
+            new_values.insert(index, copy(value))
             new_spans.insert(index, 1)
         elif self.spans[index] == 0:
             spanner = self._find_spanner(index)
             new_spans[spanner] += 1
-            new_values.insert(index, self.values[spanner])
+            new_values.insert(index, copy(self.values[spanner]))
             new_spans.insert(index, 0)
         self.spans = tuple(new_spans)
         self.values = tuple(new_values)
@@ -107,18 +108,21 @@ class Lane(Generic[T], SettingsModel):
         total_span = sum(self.spans[start:stop])
         for i in range(start, stop):
             new_spans[i] = 0
-            new_values[i] = self.values[start]
+            new_values[i] = copy(self.values[start])
         new_spans[start] = total_span
         self.spans = tuple(new_spans)
         self.values = tuple(new_values)
 
     def break_(self, start, stop):
         new_spans = list(self.spans)
+        new_values = list(self.values)
         start, _ = self.span(start)
         _, stop = self.span(stop-1)
         for i in range(start, stop):
             new_spans[i] = 1
+            new_values[i] = copy(self.values[start])
         self.spans = tuple(new_spans)
+        self.values = tuple(new_values)
 
     def __setitem__(self, key, value):
         new_values = list(self.values)
