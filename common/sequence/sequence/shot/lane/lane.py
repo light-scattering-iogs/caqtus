@@ -201,7 +201,6 @@ class CameraLane(Lane[Optional[CameraAction]]):
     @validator("values")
     def validate_values(cls, actions, values):
         """Check that there are not two separate pictures with the same name"""
-
         actions = super().validate_values(actions, values)
         spans = values["spans"]
         name = values["name"]
@@ -211,7 +210,8 @@ class CameraLane(Lane[Optional[CameraAction]]):
             if span > 0 and isinstance(action, TakePicture):
                 if action.picture_name in picture_names:
                     raise ValueError(
-                        f"Picture name '{action.picture_name}' is used twice in lane '{name}'"
+                        f"Picture name {action.picture_name} is used twice in lane"
+                        f" {name}"
                     )
                 else:
                     picture_names.add(action.picture_name)
@@ -219,7 +219,6 @@ class CameraLane(Lane[Optional[CameraAction]]):
 
     def get_picture_spans(self) -> list[tuple[str, int, int]]:
         """Return a list of the pictures and the step index at which they start (included) and stop (excluded)"""
-
         result = []
         for action, start, stop in self.get_value_spans():
             if isinstance(action, TakePicture):
