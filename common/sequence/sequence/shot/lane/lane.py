@@ -1,12 +1,16 @@
+import logging
 from abc import ABC
 from copy import copy
 from typing import TypeVar, Generic, Optional
 
 import yaml
-from pydantic import validator, root_validator
+from pydantic import validator
 
 from expression import Expression
 from settings_model import SettingsModel
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 T = TypeVar("T")
 
@@ -43,7 +47,7 @@ class Lane(Generic[T], SettingsModel):
         return spans
 
     @validator("values")
-    def set_merged_values(cls, lane_values, values):
+    def validate_values(cls, lane_values, values):
         lane_values = list(lane_values)
         spans = values["spans"]
         if len(spans) != len(lane_values):
@@ -104,7 +108,7 @@ class Lane(Generic[T], SettingsModel):
         new_spans = list(self.spans)
         new_values = list(self.values)
         start, _ = self.span(start)
-        _, stop = self.span(stop-1)
+        _, stop = self.span(stop - 1)
         total_span = sum(self.spans[start:stop])
         for i in range(start, stop):
             new_spans[i] = 0
@@ -117,7 +121,7 @@ class Lane(Generic[T], SettingsModel):
         new_spans = list(self.spans)
         new_values = list(self.values)
         start, _ = self.span(start)
-        _, stop = self.span(stop-1)
+        _, stop = self.span(stop - 1)
         for i in range(start, stop):
             new_spans[i] = 1
             new_values[i] = copy(self.values[start])
@@ -194,25 +198,28 @@ class CameraLane(Lane[Optional[CameraAction]]):
     The name of this lane must match one of the camera present in the experiment configuration.
     """
 
-    @root_validator
-    def validate_picture_names(cls, values):
-        actions = values["values"]
+    @validator("values")
+    def validate_values(cls, actions, values):
+        """Check that there are not two separate pictures with the same name"""
+
+        actions = super().validate_values(actions, values)
         spans = values["spans"]
         name = values["name"]
         picture_names = set()
+        logger.debug(values)
         for action, span in zip(actions, spans):
             if span > 0 and isinstance(action, TakePicture):
                 if action.picture_name in picture_names:
                     raise ValueError(
-                        f"Picture name {action.picture_name} is used twice in lane"
-                        f" {name}"
+                        f"Picture name '{action.picture_name}' is used twice in lane '{name}'"
                     )
                 else:
                     picture_names.add(action.picture_name)
-        return values
+        return actions
 
     def get_picture_spans(self) -> list[tuple[str, int, int]]:
         """Return a list of the pictures and the step index at which they start (included) and stop (excluded)"""
+
         result = []
         for action, start, stop in self.get_value_spans():
             if isinstance(action, TakePicture):
