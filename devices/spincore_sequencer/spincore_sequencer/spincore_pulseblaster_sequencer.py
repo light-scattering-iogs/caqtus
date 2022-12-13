@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from cdevice import CDevice
+from device import Device
 from . import spinapi
 from .instructions import Instruction, Continue, Loop, Stop
 
@@ -21,7 +21,7 @@ class SpincoreStatus(IntFlag):
     Waiting = 2**3
 
 
-class SpincorePulseBlaster(CDevice):
+class SpincorePulseBlaster(Device):
     board_number: int = 0
     spincore_lib_debug: bool = False
     core_clock: float = Field(default=100e6, units="Hz")

@@ -7,13 +7,13 @@ import nidaqmx.system
 import numpy
 from pydantic import Extra, Field
 
-from cdevice import CDevice
+from device import Device
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class NI6738AnalogCard(CDevice, extra=Extra.allow):
+class NI6738AnalogCard(Device, extra=Extra.allow):
     device_id: str
     time_step: float = Field(ge=2.5e-6, units="s")
     values: numpy.ndarray = Field(

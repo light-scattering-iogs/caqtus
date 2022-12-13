@@ -7,7 +7,7 @@ import numpy
 from pydantic import Field, validator
 from typing_extensions import ClassVar
 
-from cdevice import CDevice
+from device import Device
 from settings_model import SettingsModel
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-class CCamera(CDevice, ABC):
+class CCamera(Device, ABC):
     """Base class for a camera device
 
     Warnings:

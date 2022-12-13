@@ -7,7 +7,7 @@ authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 [tool.poetry.dependencies]
 python = ">=3.9, <4.0"
 pydantic = "^1.10.2"
-cdevice = { path = "../cdevice/", develop = true }
+device = { path = "../device/", develop = true }
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

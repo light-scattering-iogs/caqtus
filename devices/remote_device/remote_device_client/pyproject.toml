@@ -8,7 +8,7 @@ packages = [{include = "remote_device_client"}]
 
 [tool.poetry.dependencies]
 python = ">=3.9, <4.0"
-cdevice = { path = "../../cdevice/", develop = true }
+device = { path = "../../device/", develop = true }
 orca_quest = {path = "../../cameras/orca_quest/", develop = true}
 
 [build-system]
