@@ -1,6 +1,1 @@
-[submodule "cdevice"]
-	path = cdevice
-	url = ./devices/cdevice
-[submodule "moglabs_rf_synthesizer"]
-	path = moglabs_rf_synthesizer
-	url = ./devices/moglabs_rf_synthesizer/
+
