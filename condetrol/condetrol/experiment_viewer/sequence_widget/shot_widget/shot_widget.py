@@ -3,7 +3,7 @@ from functools import partial
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
-from PyQt5.QtGui import QPainter, QBrush, QColor
+from PyQt5.QtGui import QPainter, QBrush, QColor, QKeySequence
 from PyQt5.QtWidgets import (
     QWidget,
     QTableView,
@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QStyleOptionViewItem,
     QStyle,
     QMenu,
-    QAction,
+    QAction, QShortcut,
 )
 
 from experiment_config import ExperimentConfig
@@ -73,6 +73,11 @@ class ShotWidget(QWidget):
         self.layout = QVBoxLayout()
         self.layout.addWidget(SwimLaneWidget(self.model))
         self.setLayout(self.layout)
+
+        self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
+
+    def undo(self):
+        logger.debug("undo")
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.model.update_experiment_config(new_config)

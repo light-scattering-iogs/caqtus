@@ -2,6 +2,7 @@ import logging
 from itertools import groupby
 from pathlib import Path
 from typing import Type, Iterable
+from condetrol.utils import UndoStack
 
 from PyQt5.QtCore import (
     QAbstractTableModel,
@@ -12,11 +13,9 @@ from PyQt5.QtCore import (
     QByteArray,
 )
 from PyQt5.QtGui import QColor, QIcon
-
 from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
-from settings_model import YAMLSerializable
 from sequence.shot import (
     DigitalLane,
     AnalogLane,
@@ -26,6 +25,8 @@ from sequence.shot import (
     CameraAction,
     Ramp,
 )
+from settings_model import YAMLSerializable
+
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,9 @@ class SwimLaneModel(QAbstractTableModel):
 
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
+
+        self.undo_stack = UndoStack()
+        self.undo_stack.push(self.shot_config.to_yaml())
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.beginResetModel()
@@ -340,6 +344,7 @@ class SwimLaneModel(QAbstractTableModel):
             YAMLSerializable.dump(
                 self.sequence_config, self.sequence_watcher.config_path
             )
+            self.undo_stack.push(YAMLSerializable.dump(self.sequence_config))
             return True
 
     def merge(self, indexes: Iterable[QModelIndex]):
