@@ -79,6 +79,16 @@ class YAMLSerializable(abc.ABC):
         cls.get_dumper().add_representer(enum_class, representer)
         cls.get_loader().add_constructor(f"!{enum_class.__name__}", constructor)
 
+    def to_yaml(self) -> str:
+        return YAMLSerializable.dump(self)
+
+    @classmethod
+    def from_yaml(cls, serialized: str):
+        result = YAMLSerializable.load(serialized)
+        if not isinstance(result, cls):
+            raise ValueError(f"Cannot deserialized object of type {type(result)} to {cls.__name__}")
+        return result
+
 
 class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
     """Allows to store and load experiment configuration with type validation

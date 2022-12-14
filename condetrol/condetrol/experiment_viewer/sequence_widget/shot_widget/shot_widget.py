@@ -19,8 +19,8 @@ from PyQt5.QtWidgets import (
 
 from experiment_config import ExperimentConfig
 from sequence import SequenceState
-from settings_model import YAMLSerializable
 from sequence.shot import DigitalLane, AnalogLane, CameraLane, TakePicture
+from settings_model import YAMLSerializable
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class LaneCellDelegate(QStyledItemDelegate):
         self.experiment_config = experiment_config
 
     def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
+            self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ):
         # noinspection PyTypeChecker
         model: SwimLaneModel = index.model()
@@ -75,9 +75,13 @@ class ShotWidget(QWidget):
         self.setLayout(self.layout)
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
+        self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
 
     def undo(self):
-        logger.debug("undo")
+        self.model.undo()
+
+    def redo(self):
+        self.model.redo()
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.model.update_experiment_config(new_config)
@@ -202,10 +206,10 @@ class SwimLaneWidget(QWidget):
 
     def update_section_height(self, *_):
         height = (
-            self.steps_view.horizontalHeader().height()
-            + self.steps_view.rowHeight(0)
-            + self.steps_view.rowHeight(1)
-            + 5
+                self.steps_view.horizontalHeader().height()
+                + self.steps_view.rowHeight(0)
+                + self.steps_view.rowHeight(1)
+                + 5
         )
         self.steps_view.setFixedHeight(height)
 

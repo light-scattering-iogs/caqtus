@@ -6,10 +6,10 @@ duration. Each lane correspond to a time series of actions to do on the experime
 import logging
 from typing import Optional, Type
 
-from expression import Expression
 from pydantic import validator
-from settings_model import SettingsModel, YAMLSerializable
 
+from expression import Expression
+from settings_model import SettingsModel
 from .lane import TLane, Lane, AnalogLane, DigitalLane
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,3 @@ class ShotConfiguration(SettingsModel):
 
     def get_lanes(self, lane_type: Type[TLane]) -> dict[str, TLane]:
         return {lane.name: lane for lane in self.lanes if isinstance(lane, lane_type)}
-
-    def to_yaml(self) -> str:
-        return YAMLSerializable.dump(self)

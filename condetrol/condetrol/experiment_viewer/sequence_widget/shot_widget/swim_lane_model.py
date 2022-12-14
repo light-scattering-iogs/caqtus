@@ -23,7 +23,7 @@ from sequence.shot import (
     CameraLane,
     TakePicture,
     CameraAction,
-    Ramp,
+    Ramp, ShotConfiguration,
 )
 from settings_model import YAMLSerializable
 
@@ -74,6 +74,7 @@ class SwimLaneModel(QAbstractTableModel):
         self.beginResetModel()
         self.sequence_config = sequence_config
         self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
+        self.undo_stack.push(self.shot_config.to_yaml())
         self.endResetModel()
         self.layoutChanged.emit()
 
@@ -151,13 +152,24 @@ class SwimLaneModel(QAbstractTableModel):
                 self.shot_config.step_names[index.column()] = value
                 edit = True
             elif index.row() == 1:
-                self.shot_config.step_durations[index.column()].body = value
-                edit = True
+                previous = self.shot_config.step_durations[index.column()].body
+                try:
+                    self.shot_config.step_durations[index.column()].body = value
+                    edit = True
+                except SyntaxError as error:
+                    logger.error(error.msg)
+                    self.shot_config.step_durations[index.column()].body = previous
             else:
                 lane = self.get_lane(index)
                 if isinstance(lane, AnalogLane):
-                    lane[index.column()].body = value
-                    edit = True
+                    previous = lane[index.column()].body
+                    try:
+                        lane[index.column()].body = value
+                        edit = True
+                    except SyntaxError as error:
+                        logger.error(error.msg)
+                        lane[index.column()].body = previous
+
                 elif isinstance(lane, DigitalLane):
                     lane[index.column()] = value
                     edit = True
@@ -339,12 +351,13 @@ class SwimLaneModel(QAbstractTableModel):
             self.endInsertRows()
             self.save_config()
 
-    def save_config(self) -> bool:
+    def save_config(self, save_undo: bool = True) -> bool:
         with self.sequence_watcher.block_signals():
             YAMLSerializable.dump(
                 self.sequence_config, self.sequence_watcher.config_path
             )
-            self.undo_stack.push(YAMLSerializable.dump(self.sequence_config))
+            if save_undo:
+                self.undo_stack.push(YAMLSerializable.dump(self.sequence_config.shot_configurations[self.shot_name]))
             return True
 
     def merge(self, indexes: Iterable[QModelIndex]):
@@ -369,4 +382,24 @@ class SwimLaneModel(QAbstractTableModel):
             stop = l[-1][1] + 1
             self.shot_config.lanes[lane].break_(start, stop)
         self.save_config()
+        self.layoutChanged.emit()
+
+    def undo(self):
+        new_yaml = self.undo_stack.undo()
+        new_config = ShotConfiguration.from_yaml(new_yaml)
+        self.beginResetModel()
+        self.sequence_config.shot_configurations[self.shot_name] = new_config
+        self.shot_config = new_config
+        self.save_config(save_undo=False)
+        self.endResetModel()
+        self.layoutChanged.emit()
+
+    def redo(self):
+        new_yaml = self.undo_stack.redo()
+        new_config = ShotConfiguration.from_yaml(new_yaml)
+        self.beginResetModel()
+        self.sequence_config.shot_configurations[self.shot_name] = new_config
+        self.shot_config = new_config
+        self.save_config(save_undo=False)
+        self.endResetModel()
         self.layoutChanged.emit()

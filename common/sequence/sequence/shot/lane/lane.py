@@ -206,7 +206,6 @@ class CameraLane(Lane[Optional[CameraAction]]):
         spans = values["spans"]
         name = values["name"]
         picture_names = set()
-        logger.debug(values)
         for action, span in zip(actions, spans):
             if span > 0 and isinstance(action, TakePicture):
                 if action.picture_name in picture_names:

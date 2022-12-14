@@ -12,15 +12,17 @@ from PyQt5.QtCore import (
     Qt,
     QMimeData,
 )
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QDockWidget,
     QTreeView,
     QAbstractItemView,
     QTabWidget,
     QMenu,
-    QAction,
+    QAction, QShortcut,
 )
 
+from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig
 from expression import Expression
 from sequence import (
@@ -30,7 +32,7 @@ from sequence import (
     SequenceState,
     LinspaceLoop,
 )
-from sequence.sequence_config import ArangeLoop, ExecuteShot
+from sequence.sequence_config import ArangeLoop, ExecuteShot, SequenceSteps
 from settings_model.settings_model import YAMLSerializable
 from .sequence_watcher import SequenceWatcher
 from .shot_widget import ShotWidget
@@ -57,6 +59,9 @@ class SequenceStepsModel(StepsModel):
         self.sequence_watcher.config_changed.connect(self.change_sequence_config)
         self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
 
+        self.undo_stack = UndoStack()
+        self.undo_stack.push(self.config.program.to_yaml())
+
     @property
     def root(self):
         return self.config.program
@@ -69,11 +74,14 @@ class SequenceStepsModel(StepsModel):
     def change_sequence_config(self, sequence_config):
         self.beginResetModel()
         self.config = sequence_config
+        self.undo_stack.push(self.config.program.to_yaml())
         self.endResetModel()
 
-    def save_config(self) -> bool:
+    def save_config(self, save_undo: bool = True) -> bool:
         with self.sequence_watcher.block_signals():
             YAMLSerializable.dump(self.config, self.sequence_watcher.config_path)
+            if save_undo:
+                self.undo_stack.push(self.config.program.to_yaml())
             return True
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
@@ -140,6 +148,24 @@ class SequenceStepsModel(StepsModel):
         else:
             return False
 
+    def undo(self):
+        new_yaml = self.undo_stack.undo()
+        new_steps = SequenceSteps.from_yaml(new_yaml)
+        self.beginResetModel()
+        self.config.program = new_steps
+        self.save_config(save_undo=False)
+        self.endResetModel()
+        self.layoutChanged.emit()
+
+    def redo(self):
+        new_yaml = self.undo_stack.redo()
+        new_steps = SequenceSteps.from_yaml(new_yaml)
+        self.beginResetModel()
+        self.config.program = new_steps
+        self.save_config(save_undo=False)
+        self.endResetModel()
+        self.layoutChanged.emit()
+
 
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
@@ -163,6 +189,15 @@ class SequenceWidget(QDockWidget):
 
         self.shot_widget = self.create_shot_widget(experiment_config_path)
         self.tab_widget.addTab(self.shot_widget, "Shot")
+
+        self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
+        self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
+
+    def undo(self):
+        self.program_tree.model().undo()
+
+    def redo(self):
+        self.program_tree.model().redo()
 
     def create_sequence_tree(self):
         tree = QTreeView()
@@ -261,3 +296,4 @@ class SequenceWidget(QDockWidget):
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.shot_widget.update_experiment_config(new_config)
+
