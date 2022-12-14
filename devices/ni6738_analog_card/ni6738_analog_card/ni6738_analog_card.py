@@ -77,14 +77,11 @@ class NI6738AnalogCard(Device, extra=Extra.allow):
         self._task.start()
 
     def shutdown(self):
-        error = None
         # noinspection PyBroadException
         try:
             self._task.stop()
             self._task.close()
         except Exception as err:
-            error = err
+            raise err
         finally:
             super().shutdown()
-        if error is not None:
-            raise error

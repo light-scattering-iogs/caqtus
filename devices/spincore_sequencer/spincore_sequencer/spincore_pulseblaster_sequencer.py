@@ -4,9 +4,9 @@ from enum import IntFlag
 from functools import singledispatchmethod
 from typing import ClassVar
 
+from device import Device
 from pydantic import Field
 
-from device import Device
 from . import spinapi
 from .instructions import Instruction, Continue, Loop, Stop
 
@@ -15,10 +15,10 @@ logger.setLevel("DEBUG")
 
 
 class SpincoreStatus(IntFlag):
-    Stopped = 2**0
-    Reset = 2**1
-    Running = 2**2
-    Waiting = 2**3
+    Stopped = 2 ** 0
+    Reset = 2 ** 1
+    Running = 2 ** 2
+    Waiting = 2 ** 3
 
 
 class SpincorePulseBlaster(Device):
@@ -77,10 +77,10 @@ class SpincorePulseBlaster(Device):
     def _(self, continue_: Continue):
         flags = self._state_to_flags(continue_.values)
         if (
-            spinapi.pb_inst_pbonly(
-                flags, spinapi.Inst.CONTINUE, 0, continue_.duration * 1e9
-            )
-            < 0
+                spinapi.pb_inst_pbonly(
+                    flags, spinapi.Inst.CONTINUE, 0, continue_.duration * 1e9
+                )
+                < 0
         ):
             raise RuntimeError(
                 f"An error occurred when programming the sequence. "
@@ -90,12 +90,12 @@ class SpincorePulseBlaster(Device):
     @_program_instruction.register
     def _(self, loop: Loop):
         if (
-            loop_beginning := spinapi.pb_inst_pbonly(
-                self._state_to_flags(loop.start_values),
-                spinapi.Inst.LOOP,
-                loop.repetitions,
-                loop.start_duration * 1e9,
-            )
+                loop_beginning := spinapi.pb_inst_pbonly(
+                    self._state_to_flags(loop.start_values),
+                    spinapi.Inst.LOOP,
+                    loop.repetitions,
+                    loop.start_duration * 1e9,
+                )
         ) < 0:
             raise RuntimeError(
                 f"An error occurred when programming the sequence."
@@ -103,13 +103,13 @@ class SpincorePulseBlaster(Device):
             )
 
         if (
-            spinapi.pb_inst_pbonly(
-                self._state_to_flags(loop.end_values),
-                spinapi.Inst.END_LOOP,
-                loop_beginning,
-                loop.end_duration * 1e9,
-            )
-            < 0
+                spinapi.pb_inst_pbonly(
+                    self._state_to_flags(loop.end_values),
+                    spinapi.Inst.END_LOOP,
+                    loop_beginning,
+                    loop.end_duration * 1e9,
+                )
+                < 0
         ):
             raise RuntimeError(
                 f"An error occurred when programming the sequence."
@@ -120,10 +120,10 @@ class SpincorePulseBlaster(Device):
     def _(self, stop: Stop):
         flags = self._state_to_flags(stop.values)
         if (
-            spinapi.pb_inst_pbonly(
-                flags, spinapi.Inst.STOP, 0, 10 / self.core_clock * 1e9
-            )
-            < 0
+                spinapi.pb_inst_pbonly(
+                    flags, spinapi.Inst.STOP, 0, 10 / self.core_clock * 1e9
+                )
+                < 0
         ):
             raise RuntimeError(
                 f"An error occurred when programming the sequence. "
@@ -148,10 +148,12 @@ class SpincorePulseBlaster(Device):
 
     def shutdown(self):
         error_msg = None
-        if spinapi.pb_close() != 0:
-            error_msg = spinapi.pb_get_error()
+        try:
+            if spinapi.pb_close() != 0:
+                error_msg = spinapi.pb_get_error()
+        finally:
+            super().shutdown()
 
-        super().shutdown()
         if error_msg is not None:
             raise ConnectionError(
                 f"An error occurred when closing board {self.board_number}: {error_msg}"
