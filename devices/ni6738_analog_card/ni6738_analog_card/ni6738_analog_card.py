@@ -5,9 +5,8 @@ import nidaqmx
 import nidaqmx.constants
 import nidaqmx.system
 import numpy
-from pydantic import Extra, Field
-
 from device import Device
+from pydantic import Extra, Field, validator
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -19,11 +18,19 @@ class NI6738AnalogCard(Device, extra=Extra.allow):
     values: numpy.ndarray = Field(
         default_factory=lambda: numpy.array([0]),
         units="V",
-        description="Voltages for each channel with shape (channel_number, samples_per_channel)",
+        description=(
+            "Voltages for each channel with shape (channel_number, samples_per_channel)"
+        ),
     )
 
     channel_number: ClassVar[int] = 32
     _task: nidaqmx.Task
+
+    @validator("values")
+    def validate_values(cls, analog_voltages):
+        if numpy.any(numpy.isnan(analog_voltages)):
+            raise ValueError(f"Analog voltages can't be nan")
+        return analog_voltages
 
     def start(self) -> None:
         super().start()
@@ -61,7 +68,8 @@ class NI6738AnalogCard(Device, extra=Extra.allow):
             timeout=nidaqmx.constants.WAIT_INFINITELY,
         )
 
-        # only take into account a trigger pulse if it is long enough to avoid triggering on glitches
+        # only take into account a trigger pulse if it is long enough to avoid
+        # triggering on glitches
         self._task.timing.samp_clk_dig_fltr_min_pulse_width = self.time_step / 8
         self._task.timing.samp_clk_dig_fltr_enable = True
 
