@@ -1,19 +1,20 @@
 import abc
 from enum import Enum
 from pathlib import Path, WindowsPath
-
-from pydantic import SecretStr
-from pydantic.color import Color
-from typing import Type
+from typing import Type, TypeVar
 
 import yaml
+from pydantic import SecretStr
+from pydantic.color import Color
+
+TYAMLSerializable = TypeVar("TYAMLSerializable", bound="YAMLSerializable")
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
 
 
 class YAMLSerializable(abc.ABC):
     """
-    Provide a common class with YAML dumper and loader that is used for serialization
+    Provide an interface for object that can be (de)serialized to yaml strings
     """
 
     def __init_subclass__(cls):
@@ -31,19 +32,21 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def representer(cls, dumper: yaml.Dumper, obj: "YAMLSerializable"):
+    def representer(cls, dumper: yaml.Dumper, obj: "YAMLSerializable") -> yaml.Node:
         """Represent a python object with a yaml string
 
-        Overload this method in a child class to give a representation.
+        Overload this method in a child class to provide a yaml representation for a given type.
         """
         ...
 
     @classmethod
     @abc.abstractmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+    def constructor(
+        cls: Type[TYAMLSerializable], loader: yaml.Loader, node: yaml.Node
+    ) -> TYAMLSerializable:
         """Build a python object from a YAML node
 
-        Overload this method in a child class to provide a constructor.
+        Overload this method in a child class to provide a constructor for a given type from a yaml node.
         """
         ...
 
@@ -80,10 +83,17 @@ class YAMLSerializable(abc.ABC):
         cls.get_loader().add_constructor(f"!{enum_class.__name__}", constructor)
 
     def to_yaml(self) -> str:
+        """Return a yaml string representing the object"""
         return YAMLSerializable.dump(self)
 
+    def save_yaml(self, path: Path):
+        """Save the serialized object to a yaml file"""
+        serialized = self.to_yaml()
+        with open(path, "w") as file:
+            file.write(serialized)
+
     @classmethod
-    def from_yaml(cls, serialized: str):
+    def from_yaml(cls: Type[TYAMLSerializable], serialized: str) -> TYAMLSerializable:
         result = YAMLSerializable.load(serialized)
         if not isinstance(result, cls):
             raise ValueError(
