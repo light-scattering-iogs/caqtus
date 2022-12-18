@@ -1,8 +1,12 @@
 import abc
-from .yaml_serializable import YAMLSerializable
+from typing import TypeVar
 
 import pydantic
 import yaml
+
+from .yaml_serializable import YAMLSerializable
+
+Self = TypeVar("Self", bound="SettingsModel")
 
 
 class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
@@ -20,7 +24,7 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
         validate_all = True
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, settings: "SettingsModel"):
+    def representer(cls, dumper: yaml.Dumper, settings: Self):
         """Represent a python object with a yaml string
 
         Overload this method in a child class to change the default representation.
@@ -32,8 +36,10 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
 
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        """Build a python object from a YAML node
+        """Build a python object from of dictionary of parameters
 
         Overload this method in a child class to change the default construction.
         """
-        return cls(**loader.construct_mapping(node, deep=True))
+        kwargs = loader.construct_mapping(node, deep=True)
+        # noinspection PyArgumentList
+        return cls(**kwargs)

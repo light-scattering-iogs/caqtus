@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 
-from pydantic import BaseModel, Field, validator
+from pydantic import Field, validator
+
+from common.settings_model.settings_model import SettingsModel
 
 
-class SiglentSDG6000XModulation(BaseModel, ABC):
+class SiglentSDG6000XModulation(SettingsModel, ABC):
     source: Literal["INT", "EXT", "CH1", "CH2"] = Field(
         default="EXT", allow_mutation=False
     )
@@ -30,11 +32,12 @@ class SiglentSDG6000XModulation(BaseModel, ABC):
 
 class AmplitudeModulation(SiglentSDG6000XModulation):
     depth: float = Field(default=100, units="%", allow_mutation=False)
+
     def get_modulation_type(self) -> str:
         return "AM"
 
     def get_modulation_parameters(self) -> dict[str]:
-        return {"AM,SRC": self.source, "AM,DEPTHI": self.depth}
+        return {"AM,SRC": self.source, "AM,DEPTH": self.depth}
 
 
 class FrequencyModulation(SiglentSDG6000XModulation):

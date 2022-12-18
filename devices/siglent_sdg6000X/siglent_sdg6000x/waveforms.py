@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
 
-import pydantic
 from pydantic import Field
 
+from common.settings_model.settings_model import SettingsModel
 
-class SiglentSDG6000XWaveform(pydantic.BaseModel, ABC):
-    class Config:
-        validate_assignment = True
-        validate_all = True
 
+class SiglentSDG6000XWaveform(SettingsModel, ABC):
     @abstractmethod
     def get_scpi_basic_wave_parameters(self) -> dict[str]:
         ...
@@ -24,7 +21,7 @@ class DCVoltage(SiglentSDG6000XWaveform):
 class SineWave(SiglentSDG6000XWaveform):
     frequency: float = Field(units="Hz", allow_mutation=False)
     amplitude: float = Field(
-        units="V", description="peak-to-peak", allow_mutation=False
+        units="V", description="peak-to-peak amplitude of the waveform", allow_mutation=False
     )
     offset: float = Field(default=0, units="V", allow_mutation=False)
     phase: float = Field(default=0, units="deg", ge=0, le=360)

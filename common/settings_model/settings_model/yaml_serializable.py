@@ -7,7 +7,7 @@ import yaml
 from pydantic import SecretStr
 from pydantic.color import Color
 
-TYAMLSerializable = TypeVar("TYAMLSerializable", bound="YAMLSerializable")
+Self = TypeVar("Self", bound="YAMLSerializable")
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
 
@@ -42,8 +42,8 @@ class YAMLSerializable(abc.ABC):
     @classmethod
     @abc.abstractmethod
     def constructor(
-        cls: Type[TYAMLSerializable], loader: yaml.Loader, node: yaml.Node
-    ) -> TYAMLSerializable:
+        cls: Type[Self], loader: yaml.Loader, node: yaml.Node
+    ) -> Self:
         """Build a python object from a YAML node
 
         Overload this method in a child class to provide a constructor for a given type from a yaml node.
@@ -93,7 +93,7 @@ class YAMLSerializable(abc.ABC):
             file.write(serialized)
 
     @classmethod
-    def from_yaml(cls: Type[TYAMLSerializable], serialized: str) -> TYAMLSerializable:
+    def from_yaml(cls: Type[Self], serialized: str) -> Self:
         result = YAMLSerializable.load(serialized)
         if not isinstance(result, cls):
             raise ValueError(

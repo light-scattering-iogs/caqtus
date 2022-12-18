@@ -1,12 +1,12 @@
 import logging
 from typing import ClassVar, Literal, Optional
 
-import pydantic
 import pyvisa
 import pyvisa.resources
 from pydantic import Field, validator
 from pyvisa.constants import AccessModes
 
+from common.settings_model.settings_model import SettingsModel
 from device import Device
 from modulation import SiglentSDG6000XModulation
 from waveforms import SiglentSDG6000XWaveform, DCVoltage
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class SiglentSDG6000XChannel(pydantic.BaseModel):
+class SiglentSDG6000XChannel(SettingsModel):
     output_enabled: bool = Field(allow_mutation=False)
     output_load: float | Literal["HZ"] = Field(
         default=50, ge=50, units="Ohm", allow_mutation=False
@@ -25,10 +25,6 @@ class SiglentSDG6000XChannel(pydantic.BaseModel):
     modulation: Optional[SiglentSDG6000XModulation] = Field(
         default=None, allow_mutation=False
     )
-
-    class Config:
-        validate_assignment = True
-        validate_all = True
 
 
 class SiglentSDG6000XWaveformGenerator(Device):
