@@ -40,9 +40,7 @@ class SiglentSDG6000XWaveformGenerator(Device):
         description="Maximum amount of time to wait for an answer from the device before raising an error",
         allow_mutation=False,
     )
-    channel_configurations: tuple[SiglentSDG6000XChannel, ...] = Field(
-        allow_mutation=False
-    )
+    channel_configurations: tuple[SiglentSDG6000XChannel, ...] = Field()
 
     @validator("channel_configurations")
     def validate_channel_configurations(cls, channel_configurations):
@@ -72,6 +70,14 @@ class SiglentSDG6000XWaveformGenerator(Device):
             timeout=int(self.timeout * 1e3),
         )
 
+        self._setup()
+
+    def update_parameters(self, /, **kwargs) -> None:
+        super().update_parameters(**kwargs)
+        self._setup()
+
+    def _setup(self):
+        self._shutdown_outputs()
         self._setup_waveforms()
         self._setup_modulations()
         self._setup_outputs()
@@ -86,6 +92,15 @@ class SiglentSDG6000XWaveformGenerator(Device):
 
     def get_identity(self) -> str:
         return self._device.query("*IDN?")
+
+    def _shutdown_outputs(self):
+        for channel in range(self.channel_number):
+            self._shutdown_channel_output(channel)
+
+    def _shutdown_channel_output(self, channel: int):
+        channel_name = self.channel_names[channel]
+        message = f"{channel_name}:OUTPUT OFF"
+        self._device.write(message)
 
     def _setup_waveforms(self):
         for channel, channel_configuration in enumerate(self.channel_configurations):
@@ -115,9 +130,9 @@ class SiglentSDG6000XWaveformGenerator(Device):
             message = f"{channel_name}:MODULATEWAVE {modulation.get_modulation_type()}"
             self._device.write(message)
 
-            for parameter, value in modulation.get_modulation_parameters().items():
+            for parameter, value in modulation.get_modulation_parameters():
                 message = f"{channel_name}:MODULATEWAVE {parameter},{value}"
-                print(self._device.write(message))
+                self._device.write(message)
 
     def _setup_outputs(self):
         for channel, channel_configuration in enumerate(self.channel_configurations):

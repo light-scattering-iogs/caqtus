@@ -12,18 +12,18 @@ class SiglentSDG6000XWaveform(SettingsModel, ABC):
 
 
 class DCVoltage(SiglentSDG6000XWaveform):
-    value: float = Field(default=0, units="V", allow_mutation=False)
+    value: float = Field(default=0, units="V")
 
     def get_scpi_basic_wave_parameters(self) -> dict[str]:
         return {"WVTP": "DC", "OFST": self.value}
 
 
 class SineWave(SiglentSDG6000XWaveform):
-    frequency: float = Field(units="Hz", allow_mutation=False)
+    frequency: float = Field(units="Hz")
     amplitude: float = Field(
-        units="V", description="peak-to-peak amplitude of the waveform", allow_mutation=False
+        units="V", description="peak-to-peak amplitude of the waveform"
     )
-    offset: float = Field(default=0, units="V", allow_mutation=False)
+    offset: float = Field(default=0, units="V")
     phase: float = Field(default=0, units="deg", ge=0, le=360)
 
     def get_scpi_basic_wave_parameters(self) -> dict[str]:

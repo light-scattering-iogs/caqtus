@@ -1,9 +1,13 @@
+import logging
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import Field, validator
 
 from common.settings_model.settings_model import SettingsModel
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 
 class SiglentSDG6000XModulation(SettingsModel, ABC):
@@ -15,6 +19,8 @@ class SiglentSDG6000XModulation(SettingsModel, ABC):
     def validate_source(cls, source):
         if source == "INT":
             raise NotImplementedError("Internal modulation source is not implemented")
+        if source == "CH1" or source == "CH2":
+            raise NotImplementedError("Inter channels modulation is not implemented")
         return source
 
     @abstractmethod
@@ -22,7 +28,7 @@ class SiglentSDG6000XModulation(SettingsModel, ABC):
         ...
 
     @abstractmethod
-    def get_modulation_parameters(self) -> dict[str]:
+    def get_modulation_parameters(self) -> list[tuple[str, Any]]:
         ...
 
     class Config:
@@ -36,8 +42,8 @@ class AmplitudeModulation(SiglentSDG6000XModulation):
     def get_modulation_type(self) -> str:
         return "AM"
 
-    def get_modulation_parameters(self) -> dict[str]:
-        return {"AM,SRC": self.source, "AM,DEPTH": self.depth}
+    def get_modulation_parameters(self):
+        return [("AM,SRC", self.source), ("AM,DEPTH", self.depth)]
 
 
 class FrequencyModulation(SiglentSDG6000XModulation):
@@ -46,5 +52,5 @@ class FrequencyModulation(SiglentSDG6000XModulation):
     def get_modulation_type(self) -> str:
         return "FM"
 
-    def get_modulation_parameters(self) -> dict[str]:
-        return {"FM,SRC": self.source, "FM,DEVI": self.deviation}
+    def get_modulation_parameters(self):
+        return [("FM,SRC", self.source), ("FM,DEVI", self.deviation)]

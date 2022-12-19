@@ -48,8 +48,8 @@ class NI6738AnalogCard(Device, extra=Extra.allow):
                 units=nidaqmx.constants.VoltageUnits.VOLTS,
             )
 
-    def apply_rt_variables(self, /, **kwargs) -> None:
-        super().apply_rt_variables(**kwargs)
+    def update_parameters(self, /, **kwargs) -> None:
+        super().update_parameters(**kwargs)
         self._task.stop()
         self._task.timing.cfg_samp_clk_timing(
             rate=1 / self.time_step,

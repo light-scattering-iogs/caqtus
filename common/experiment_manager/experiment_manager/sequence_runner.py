@@ -281,7 +281,7 @@ class SequenceRunnerThread(Thread):
         self.check_durations(shot, step_durations)
         camera_instructions = compile_camera_instructions(step_durations, shot)
         for camera, instructions in camera_instructions.items():
-            self.cameras[camera].apply_rt_variables(
+            self.cameras[camera].update_parameters(
                 timeout=instructions["timeout"], exposures=instructions["exposures"]
             )
         camera_triggers = {
@@ -293,10 +293,10 @@ class SequenceRunnerThread(Thread):
         )
 
         analog_voltages = self.generate_analog_voltages(analog_values)
-        self.ni6738.apply_rt_variables(values=analog_voltages)
+        self.ni6738.update_parameters(values=analog_voltages)
         self.ni6738.run()
 
-        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        self.spincore.update_parameters(instructions=spincore_instructions)
 
         future_acquisitions: dict[str, Future] = {}
         with ThreadPoolExecutor() as acquisition_executor:

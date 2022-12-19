@@ -1,11 +1,11 @@
 import logging
 
-from modulation import AmplitudeModulation, FrequencyModulation
+from modulation import AmplitudeModulation
 from siglent_sdg6000X import (
     SiglentSDG6000XWaveformGenerator,
     SiglentSDG6000XChannel,
 )
-from waveforms import SineWave
+from waveforms import SineWave, DCVoltage
 
 logging.basicConfig()
 
@@ -16,13 +16,16 @@ if __name__ == "__main__":
         channel_configurations=(
             SiglentSDG6000XChannel(
                 output_enabled=True,
-                waveform=SineWave(frequency=1e3, amplitude=1),
-                modulation=AmplitudeModulation(source="CH2", depth=10),
+                output_load="HZ",
+                waveform=SineWave(frequency=30, amplitude=4),
+                modulation=AmplitudeModulation(source="EXT"),
             ),
             SiglentSDG6000XChannel(
                 output_enabled=True,
-                waveform=SineWave(frequency=100, amplitude=4, offset=2),
+                output_load="HZ",
+                waveform=DCVoltage(value=+6),
             ),
         ),
     ) as device:
-        print(device.get_identity())
+        device.channel_configurations[0].waveform = SineWave(frequency=2, amplitude=4)
+        device.update_parameters()
