@@ -1,28 +1,81 @@
 import ast
 from functools import cached_property
+from typing import Optional
 
+import numpy
 import token_utils
 import yaml
 
 from settings_model import YAMLSerializable
-import numpy
+
+BUILTINS = {
+    "abs": numpy.abs,
+    "arccos": numpy.arccos,
+    "arcsin": numpy.arcsin,
+    "arctan": numpy.arctan,
+    "arctan2": numpy.arctan2,
+    "ceil": numpy.ceil,
+    "cos": numpy.cos,
+    "cosh": numpy.cosh,
+    "degrees": numpy.degrees,
+    "e": numpy.e,
+    "exp": numpy.exp,
+    "floor": numpy.floor,
+    "log": numpy.log,
+    "log10": numpy.log10,
+    "log2": numpy.log2,
+    "pi": numpy.pi,
+    "radians": numpy.radians,
+    "sin": numpy.sin,
+    "sinh": numpy.sinh,
+    "sqrt": numpy.sqrt,
+    "tan": numpy.tan,
+    "tanh": numpy.tanh,
+}
 
 
 class Expression(YAMLSerializable):
     """Python expression that can be evaluated to return a python object
 
-    It may depend on other upstream variables that must be specified for evaluation.
+    It may depend on other upstream variables that must be specified during evaluation.
     """
 
-    def __init__(self, body: str = ""):
+    def __init__(
+        self,
+        body: str,
+        builtins: Optional[dict[str]] = None,
+        implicit_multiplication: bool = True,
+        allow_percentage: bool = True,
+    ):
+        """
+        Args:
+            body: the expression body. This is a string expression that must follow the
+            specifications of the python syntax.
+            builtins: a dictionary of builtin functions and constants that can be used
+            in the expression. they will be available in the expression namespace, but
+            are not included in the upstream variables.
+            implicit_multiplication: if True, the expression will be parsed to allow
+            implicit multiplication, even though it is not regular python. for example,
+            'a b' will be parsed as 'a * b'. if set to False, a syntax error will be
+            raised in such cases.
+            allow_percentage: if True, the expression will be parsed to understand the
+            use of the % symbol as a multiplication by 0.01. if set to False, the %
+            symbol will be understood as a modulo operator.
+        """
+        if builtins is None:
+            builtins = BUILTINS
         self._body = body
         self._last_value = None
         self._last_evaluation_variables = None
+        self._builtins = builtins
+        self._implicit_multiplication = implicit_multiplication
+        self._allow_percentage = allow_percentage
 
     @property
     def body(self) -> str:
         return self._body
 
+    # noinspection PyPropertyAccess
     @body.setter
     def body(self, value: str):
         self._body = value
@@ -38,6 +91,13 @@ class Expression(YAMLSerializable):
 
     def evaluate(self, variables: dict[str]):
         """Evaluate an expression on specific values for its variables"""
+        # prevent overwriting the builtins
+        variable_names = set(variables)
+        builtin_overwritten = variable_names.intersection(self._builtins)
+        if builtin_overwritten:
+            raise NameError(
+                f"Cannot overwrite builtins: {', '.join(builtin_overwritten)}"
+            )
 
         # Only keep the variables the expression actually depends of. This allow to
         # cache the last evaluation if these variables don't change but some other do.
@@ -48,7 +108,7 @@ class Expression(YAMLSerializable):
         if variables == self._last_evaluation_variables:
             return self._last_value
         else:
-            variables |= dict(cos = numpy.cos, sin = numpy.sin, pi = numpy.pi)
+            variables = {**self._builtins, **variables}
             self._last_value = eval(self.code, variables)
             return self._last_value
 
@@ -58,10 +118,13 @@ class Expression(YAMLSerializable):
 
         variables = set()
 
+        builtins = self._builtins
+
         class FindNameVisitor(ast.NodeVisitor):
             def visit_Name(self, node: ast.Name):
                 if isinstance(node.ctx, ast.Load):
-                    variables.add(node.id)
+                    if node.id not in builtins:
+                        variables.add(node.id)
 
         FindNameVisitor().visit(self.ast)
         return frozenset(variables)
@@ -70,8 +133,15 @@ class Expression(YAMLSerializable):
     def ast(self) -> ast.Expression:
         """Computes the abstract syntax tree for this expression"""
 
-        explicit_expr = add_implicit_multiplication(self.body.replace("%", "*(1e-2)"))
-        return ast.parse(explicit_expr, mode="eval")
+        expr = self.body
+        if self._allow_percentage:
+            expr = expr.replace("%", "*(1e-2)")
+
+        if self._implicit_multiplication:
+            expr = add_implicit_multiplication(expr)
+
+        # noinspection PyTypeChecker
+        return ast.parse(expr, mode="eval")
 
     @cached_property
     def code(self):
