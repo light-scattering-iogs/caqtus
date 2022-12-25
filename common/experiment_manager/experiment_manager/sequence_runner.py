@@ -119,7 +119,7 @@ class SequenceRunnerThread(Thread):
         )
         cameras = self.create_cameras(camera_lanes, camera_configs)
 
-        for camera_name in self.cameras:
+        for camera_name in cameras:
             cameras[camera_name].start()
             self.shutdown_actions.append(cameras[camera_name].shutdown)
 
