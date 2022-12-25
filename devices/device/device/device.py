@@ -37,10 +37,14 @@ class Device(pydantic.BaseModel, ABC):
             self._devices_already_in_use[self.name] = self
         pass
 
-    def apply_rt_variables(self, /, **kwargs) -> None:
-        """Apply per shot variables to the device
+    def update_parameters(self, /, **kwargs) -> None:
+        """Apply argument parameters or previous value changes to the device
 
-        The base methode writes named arguments passed to the device attributes.
+        How it should be used:
+            some_device.some_parameter = some_value
+            some_device.update_parameters()
+        or
+            some_device.update_parameters(some_parameter=some_value)
         """
         for name, value in kwargs.items():
             setattr(self, name, value)

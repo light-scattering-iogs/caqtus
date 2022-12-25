@@ -52,8 +52,8 @@ class SpincorePulseBlaster(Device):
 
         spinapi.pb_core_clock(self.core_clock / 1e6)
 
-    def apply_rt_variables(self, /, **kwargs) -> None:
-        super().apply_rt_variables(**kwargs)
+    def update_parameters(self, /, **kwargs) -> None:
+        super().update_parameters(**kwargs)
 
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(

@@ -95,11 +95,11 @@ class CCamera(Device, ABC):
         super().start()
         self._acquired_pictures = [False] * self.number_pictures_to_acquire
 
-    def apply_rt_variables(self, /, **kwargs) -> None:
+    def update_parameters(self, /, **kwargs) -> None:
         if "exposures" in kwargs:
             if self._acquired_pictures[0] and not self._acquired_pictures[-1]:
                 raise RuntimeError(f"Not all pictures have been acquired")
-        super().apply_rt_variables(**kwargs)
+        super().update_parameters(**kwargs)
 
     def acquire_picture(self):
         try:

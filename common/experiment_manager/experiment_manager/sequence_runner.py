@@ -6,7 +6,7 @@ from copy import copy
 from functools import singledispatchmethod, cached_property
 from pathlib import Path
 from threading import Thread, Event
-from typing import Any, Iterable, TypedDict, Final
+from typing import Any, Iterable, TypedDict
 
 import h5py
 import numpy
@@ -24,7 +24,6 @@ from remote_device_client import RemoteDeviceClientManager
 from sequence import (
     SequenceState,
     Step,
-    SequenceConfig,
     SequenceSteps,
     VariableDeclaration,
 )
@@ -37,7 +36,6 @@ from sequence.shot import (
     evaluate_analog_local_times,
     evaluate_analog_values,
 )
-from settings_model import YAMLSerializable
 from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
 from units import Quantity, units, ureg
@@ -53,11 +51,11 @@ class SequenceRunnerThread(Thread):
         self, experiment_config: str, sequence_path: Path, waiting_to_interrupt: Event
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
-        self.experiment_config: Final = ExperimentConfig.from_yaml(experiment_config)
+        self.experiment_config = ExperimentConfig.from_yaml(experiment_config)
         self.sequence = Sequence(
             self.experiment_config.data_path / sequence_path, read_only=False
         )
-        self.sequence_config: Final[SequenceConfig] = self.sequence.config
+        self.sequence_config = self.sequence.config
         self.stats = self.sequence.get_stats()
         self.stats.number_completed_shots = 0
         self.stats.state = SequenceState.PREPARING
@@ -91,9 +89,7 @@ class SequenceRunnerThread(Thread):
 
     def prepare(self):
         self.sequence.create_shot_folder()
-        YAMLSerializable.dump(
-            self.experiment_config, self.sequence.experiment_config_path
-        )
+        self.experiment_config.save_yaml(self.sequence.experiment_config_path)
         self.connect_to_device_servers()
 
         self.ni6738.start()
@@ -295,7 +291,7 @@ class SequenceRunnerThread(Thread):
         self.check_durations(shot, step_durations)
         camera_instructions = compile_camera_instructions(step_durations, shot)
         for camera, instructions in camera_instructions.items():
-            self.cameras[camera].apply_rt_variables(
+            self.cameras[camera].update_parameters(
                 timeout=instructions["timeout"], exposures=instructions["exposures"]
             )
         camera_triggers = {
@@ -307,10 +303,10 @@ class SequenceRunnerThread(Thread):
         )
 
         analog_voltages = self.generate_analog_voltages(analog_values)
-        self.ni6738.apply_rt_variables(values=analog_voltages)
+        self.ni6738.update_parameters(values=analog_voltages)
         self.ni6738.run()
 
-        self.spincore.apply_rt_variables(instructions=spincore_instructions)
+        self.spincore.update_parameters(instructions=spincore_instructions)
 
         future_acquisitions: dict[str, Future] = {}
         with ThreadPoolExecutor() as acquisition_executor:
