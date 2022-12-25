@@ -28,10 +28,9 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QTextBrowser,
 )
-from qtpy import QtGui
-
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
+from qtpy import QtGui
 from sequence import (
     SequenceState,
     SequenceConfig,
@@ -40,7 +39,7 @@ from sequence import (
 )
 from sequence.sequence import Sequence, SequenceFolderWatcher
 from sequence.shot import ShotConfiguration
-from settings_model import YAMLSerializable
+
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow
@@ -65,13 +64,27 @@ class TextBrowser(QTextBrowser):
 
 
 class CustomFormatter(logging.Formatter):
-    header = "<b>%(levelname)s</b> %(asctime)s - <a href=%(pathname)s:%(lineno)d>%(pathname)s:%(lineno)d</a>"
+    header = (
+        "<b>%(levelname)s</b> %(asctime)s - <a"
+        " href=%(pathname)s:%(lineno)d>%(pathname)s:%(lineno)d</a>"
+    )
 
     FORMATS = {
-        logging.DEBUG: f"<span style='color:grey;white-space: pre-wrap'>{header} %(message)s</span>",
-        logging.INFO: f"<span style='color:white;white-space:pre-wrap'>{header} %(message)s</span>",
-        logging.WARNING: f"<span style='color:yellow;white-space:pre-wrap'>{header} %(message)s</span>",
-        logging.ERROR: f"<span style='color:red;white-space: pre-wrap'>{header} %(message)s</span>",
+        logging.DEBUG: (
+            "<span style='color:grey;white-space:"
+            f" pre-wrap'>{header} %(message)s</span>"
+        ),
+        logging.INFO: (
+            "<span"
+            f" style='color:white;white-space:pre-wrap'>{header} %(message)s</span>"
+        ),
+        logging.WARNING: (
+            "<span"
+            f" style='color:yellow;white-space:pre-wrap'>{header} %(message)s</span>"
+        ),
+        logging.ERROR: (
+            f"<span style='color:red;white-space: pre-wrap'>{header} %(message)s</span>"
+        ),
         logging.CRITICAL: f"<span style='color:red';>{header} %(message)s</span>",
     }
 
@@ -188,7 +201,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             )
 
     def start_sequence(self, path: Path):
-        config = YAMLSerializable.dump(self.experiment_config)
+        config = self.experiment_config.to_yaml()
         self.experiment_manager.start_sequence(
             config, path.relative_to(self.experiment_config.data_path)
         )

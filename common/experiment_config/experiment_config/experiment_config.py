@@ -5,13 +5,13 @@ from typing import Optional, Type
 
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
+from camera import ROI
 from pydantic import Field, validator
 from pydantic.color import Color
-
-from camera import ROI
 from sequence import SequenceSteps
 from settings_model import SettingsModel
 from units import Quantity
+
 from .channel_config import (
     AnalogChannelConfiguration,
     ChannelConfiguration,
@@ -62,7 +62,10 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
         default=50e-9,
         ge=50e-9,
         units="s",
-        description="The quantization time step used when converting step times to instructions.",
+        description=(
+            "The quantization time step used when converting step times to"
+            " instructions."
+        ),
     )
 
     def get_device_type(self) -> str:
@@ -82,7 +85,10 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
         default=2.5e-6,
         ge=2.5e-6,
         units="s",
-        description="The quantization time step used when converting step times to instructions.",
+        description=(
+            "The quantization time step used when converting step times to"
+            " instructions."
+        ),
     )
 
     @validator("channel_mappings")
@@ -95,7 +101,8 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
                 output_units = mapping.get_output_units()
                 if not Quantity(1, units=output_units).is_compatible_with("V"):
                     raise ValueError(
-                        f"Channel {channel} output units ({output_units}) are not compatible with Volt"
+                        f"Channel {channel} output units ({output_units}) are not"
+                        " compatible with Volt"
                     )
         return channel_mappings
 
@@ -123,7 +130,9 @@ class ExperimentConfig(SettingsModel):
     )
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
-        description="The configurations of the servers that will actually instantiate devices.",
+        description=(
+            "The configurations of the servers that will actually instantiate devices."
+        ),
     )
     header: SequenceSteps = Field(
         default_factory=SequenceSteps,
@@ -131,7 +140,9 @@ class ExperimentConfig(SettingsModel):
     )
     device_configurations: list[DeviceConfiguration] = Field(
         default_factory=list,
-        description="All the static configurations of the devices present on the experiment.",
+        description=(
+            "All the static configurations of the devices present on the experiment."
+        ),
     )
 
     @validator("device_configurations")
@@ -147,8 +158,8 @@ class ExperimentConfig(SettingsModel):
                     channel_names |= device_channel_names
                 else:
                     raise ValueError(
-                        f"Device {name} has channel names that are already used by an other device: "
-                        f"{channel_names & device_channel_names}"
+                        f"Device {name} has channel names that are already used by an"
+                        f" other device: {channel_names & device_channel_names}"
                     )
         return device_configurations
 
@@ -230,6 +241,7 @@ class ExperimentConfig(SettingsModel):
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
     ) -> dict[str, DeviceConfigType]:
+        """Return a dictionary of all device configurations matching a given type"""
         return {
             config.device_name: config
             for config in self.device_configurations

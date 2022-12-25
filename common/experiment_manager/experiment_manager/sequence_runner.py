@@ -10,7 +10,6 @@ from typing import Any, Iterable, TypedDict, Final
 
 import h5py
 import numpy
-
 from camera import CCamera, CameraTimeoutError
 from experiment_config import (
     ExperimentConfig,
@@ -42,6 +41,7 @@ from settings_model import YAMLSerializable
 from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
 from spincore_sequencer.instructions import Stop
 from units import Quantity, units, ureg
+
 from .sequence_context import SequenceContext
 
 logger = logging.getLogger(__name__)
@@ -53,10 +53,10 @@ class SequenceRunnerThread(Thread):
         self, experiment_config: str, sequence_path: Path, waiting_to_interrupt: Event
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
-        self.experiment_config: Final[ExperimentConfig] = YAMLSerializable.load(
-            experiment_config
+        self.experiment_config: Final = ExperimentConfig.from_yaml(experiment_config)
+        self.sequence = Sequence(
+            self.experiment_config.data_path / sequence_path, read_only=False
         )
-        self.sequence = Sequence(self.experiment_config.data_path / sequence_path, read_only=False)
         self.sequence_config: Final[SequenceConfig] = self.sequence.config
         self.stats = self.sequence.get_stats()
         self.stats.number_completed_shots = 0
@@ -94,29 +94,40 @@ class SequenceRunnerThread(Thread):
         YAMLSerializable.dump(
             self.experiment_config, self.sequence.experiment_config_path
         )
+        self.connect_to_device_servers()
+
+        self.ni6738.start()
+        self.shutdown_actions.append(self.ni6738.shutdown)
+
+        self.spincore.start()
+        self.shutdown_actions.append(self.spincore.shutdown)
+
+        self.cameras = self.setup_cameras()
+
+        self.stats.state = SequenceState.RUNNING
+        self.stats.start_time = datetime.datetime.now()
+        self.sequence.set_stats(self.stats)
+
+    def connect_to_device_servers(self):
         for server_name, server in self.remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
             server.connect()
             logger.info(f"Connection established to {server_name}")
 
-        self.ni6738.start()
-        self.shutdown_actions.append(self.ni6738.shutdown)
-        self.spincore.start()
-        self.shutdown_actions.append(self.spincore.shutdown)
+    def setup_cameras(self) -> dict[str, CCamera]:
+        """Return a dictionary of started camera devices"""
 
         camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
         camera_lanes = self.sequence_config.shot_configurations["shot"].get_lanes(
             CameraLane
         )
-        self.cameras = self.create_cameras(camera_lanes, camera_configs)
+        cameras = self.create_cameras(camera_lanes, camera_configs)
 
         for camera_name in self.cameras:
-            self.cameras[camera_name].start()
-            self.shutdown_actions.append(self.cameras[camera_name].shutdown)
+            cameras[camera_name].start()
+            self.shutdown_actions.append(cameras[camera_name].shutdown)
 
-        self.stats.state = SequenceState.RUNNING
-        self.stats.start_time = datetime.datetime.now()
-        self.sequence.set_stats(self.stats)
+        return cameras
 
     def create_cameras(
         self,
@@ -164,7 +175,8 @@ class SequenceRunnerThread(Thread):
         logger.info("Sequence finished")
 
     def run_sequence(self):
-        """Walk through the sequence program and execute each step sequentially"""
+        """Execute the sequence header and program"""
+
         with SequenceContext(variables={}) as context:
             self.run_step(self.experiment_config.header, context)
             self.run_step(self.sequence_config.program, context)
@@ -173,16 +185,14 @@ class SequenceRunnerThread(Thread):
     def run_step(self, step: Step, context: SequenceContext):
         """Execute a given step of the sequence
 
-        This function should be implemented for each Step type that can be run on the experiment. It should also return
-        as soon as possible if the sequence needs to be interrupted.
+        This function should be implemented for each Step type that can be run on the
+        experiment. It should also return as soon as possible if the sequence needs to be interrupted.
 
         Args:
             step: the step of the sequence currently executed
-            context: a mutable object that holds information about the sequence being run, such as the values of the
-            variables. Step that update variables should reflect this by modifying the context.
-
-        Returns:
-            updated context after the step was executed
+            context: a mutable object that holds information about the sequence being
+            run, such as the values of the variables. Step that update variables should
+            reflect this by modifying the context.
         """
 
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
@@ -254,9 +264,9 @@ class SequenceRunnerThread(Thread):
             )
         except CameraTimeoutError as error:
             logger.warning(
-                f"A camera timeout error occurred:\n"
+                "A camera timeout error occurred:\n"
                 f"{error}\n"
-                f"Attempting to redo the failed shot"
+                "Attempting to redo the failed shot"
             )
             for camera in self.cameras.values():
                 camera.reset_acquisition()
@@ -268,7 +278,8 @@ class SequenceRunnerThread(Thread):
         context.shot_numbers[shot.name] = old_shot_number + 1
 
         shot_file_path = (
-            self.sequence.shot_folder / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
+            self.sequence.shot_folder
+            / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
         )
 
         t1 = datetime.datetime.now()
