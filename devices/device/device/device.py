@@ -24,7 +24,7 @@ class Device(pydantic.BaseModel, ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "start", "apply_rt_variables", "shutdown"
+        return "start", "update_parameters", "shutdown"
 
     def start(self) -> None:
         """Initiate the communication to the device
