@@ -91,14 +91,6 @@ class Expression(YAMLSerializable):
 
     def evaluate(self, variables: dict[str]):
         """Evaluate an expression on specific values for its variables"""
-        # prevent overwriting the builtins
-        variable_names = set(variables)
-        builtin_overwritten = variable_names.intersection(self._builtins)
-        if builtin_overwritten:
-            raise NameError(
-                f"Cannot overwrite builtins: {', '.join(builtin_overwritten)}"
-            )
-
         # Only keep the variables the expression actually depends of. This allow to
         # cache the last evaluation if these variables don't change but some other do.
         useful_variables = set(variables) & self.upstream_variables
@@ -108,8 +100,9 @@ class Expression(YAMLSerializable):
         if variables == self._last_evaluation_variables:
             return self._last_value
         else:
-            variables = {**self._builtins, **variables}
-            self._last_value = eval(self.code, variables)
+            self._last_value = eval(
+                self.code, {"__builtins__": self._builtins}, variables
+            )
             return self._last_value
 
     @cached_property

@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from expression import Expression
 from expression import __version__
@@ -15,10 +14,6 @@ def test_simple_evaluation():
 
 def test_builtins():
     assert Expression("sin(pi / 4)").evaluate({}) == np.sin(np.pi / 4)
-    with pytest.raises(NameError):
-        Expression("sin(0)").evaluate({"sin": np.cos})
-    with pytest.raises(NameError):
-        Expression("0").evaluate({"sin": None})
 
 
 def test_numpy():
