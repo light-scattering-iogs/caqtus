@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\resources\config_editor.ui'
+# Form implementation generated from reading ui file '.\config_editor.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -31,9 +31,16 @@ class Ui_config_editor(object):
         self.category_tree.setObjectName("category_tree")
         self.category_tree.header().setVisible(False)
         self.horizontalLayout.addWidget(self.category_tree)
-        self.stack_widget = QtWidgets.QStackedWidget(config_editor)
-        self.stack_widget.setObjectName("stack_widget")
-        self.horizontalLayout.addWidget(self.stack_widget)
+        self.frame = QtWidgets.QFrame(config_editor)
+        self.frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame.setObjectName("frame")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.frame)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.widget_layout = QtWidgets.QVBoxLayout()
+        self.widget_layout.setObjectName("widget_layout")
+        self.verticalLayout.addLayout(self.widget_layout)
+        self.horizontalLayout.addWidget(self.frame)
 
         self.retranslateUi(config_editor)
         QtCore.QMetaObject.connectSlotsByName(config_editor)

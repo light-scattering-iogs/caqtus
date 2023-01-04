@@ -1,243 +1,98 @@
 import logging
+from copy import deepcopy
 from pathlib import Path
+from typing import Type, Optional
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import (
     QSettings,
-    QModelIndex,
-    Qt,
-    QAbstractListModel,
-    QFileSystemWatcher,
-    QMimeData,
 )
 from PyQt5.QtWidgets import (
     QDialog,
-    QDataWidgetMapper,
-    QWidget,
-    QFormLayout,
     QTreeWidgetItem,
-    QLabel,
-    QTreeView,
-    QAbstractItemView,
-    QMenu,
-    QAction,
+    QLayout,
 )
 
-from condetrol.utils import log_error
-from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
 from experiment_config import ExperimentConfig, get_config_path
-from expression import Expression
-from sequence import Step, VariableDeclaration, ExecuteShot
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
-from ..steps_editor import StepsModel, StepDelegate
+from .config_settings_editor import ConfigSettingsEditor
+from .sequence_header_editor import SequenceHeaderEditor
+from .system_settings_editor import SystemSettingsEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class ConfigModel(QAbstractListModel):
-    def __init__(self, config: ExperimentConfig, save_path: Path, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._config: ExperimentConfig = config
-        self._save_path = save_path
-        self._config_watcher = QFileSystemWatcher()
-        self._config_watcher.addPath(str(self._save_path))
-        self._config_watcher.fileChanged.connect(self.config_changed)
+class ConfigEditor(QDialog, Ui_config_editor):
+    """A widget to edit the experiment config file
 
-    def config_changed(self, path):
-        self.beginResetModel()
-        self._config: ExperimentConfig = load_config(Path(path))
-        self.endResetModel()
+    This widget is made of a settings tree to select a category of settings and a specific widget for each category
+    """
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        return 1
-
-    def data(self, index: QModelIndex, role: int = ...):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
-                return str(self._config.data_path)
-
-    # noinspection PyTypeChecker
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
-        if index.isValid():
-            return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled
-
-    @log_error(logger)
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
-        change = False
-        if role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
-                self._config.data_path = value
-                change = True
-        if change:
-            if not self._save_path.parent.exists():
-                self._save_path.parent.mkdir(exist_ok=True, parents=True)
-            YAMLSerializable.dump(self._config, self._save_path)
-
-        return change
-
-
-class SystemSettingsEditor(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.layout = QFormLayout()
-        self.setLayout(self.layout)
-
-        self.config_path = get_config_path()
-        self.config = load_config(self.config_path)
-
-        self.config_path_widget = SaveFileWidget(
-            self.config_path, "Edit config path...", "config (*.yaml)"
+        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
+        self.setupUi(self)
+        self.restoreGeometry(
+            self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
-        self.layout.insertRow(0, "Config path", self.config_path_widget)
-        self.config_path_widget.setEnabled(False)
 
-        self.data_path_widget = FolderWidget(
-            "Edit data path...",
-        )
-        self.layout.insertRow(1, "Data path", self.data_path_widget)
+        with open(get_config_path(), "r") as file:
+            self.config = ExperimentConfig.from_yaml(file.read())
 
-        self.config_model = ConfigModel(self.config, self.config_path)
-        self.mapper = QDataWidgetMapper()
-        self.mapper.setOrientation(Qt.Orientation.Vertical)
-        self.mapper.setModel(self.config_model)
-        self.mapper.addMapping(self.data_path_widget, 0)
-        self.mapper.setItemDelegate(SettingsDelegate())
-        self.mapper.toFirst()
+        self.settings_tree: dict[str, Type[ConfigSettingsEditor]] = dict()
 
-        self.data_path_widget.folder_edited.connect(self.mapper.submit)
+        # To add a new category of settings, add a new entry in the dictionary below
+        # The key is the name of the category and the value is the class that is
+        # instantiated to create the editor widget.
+        self.settings_tree["System"] = SystemSettingsEditor
+        self.settings_tree["Constants"] = SequenceHeaderEditor
 
+        for tree_label, widget_class in self.settings_tree.items():
+            item = QTreeWidgetItem(self.category_tree)
+            item.setText(0, tree_label)
 
-class SequenceHeaderModel(StepsModel):
-    def __init__(self, config_path: Path):
-        super().__init__()
-        self._config: ExperimentConfig = YAMLSerializable.load(config_path)
-        self._config_path = config_path
+        self.category_tree.currentItemChanged.connect(self.change_displayed_widget)
 
-        self._config_watcher = QFileSystemWatcher()
-        self._config_watcher.addPath(str(config_path))
-        self._config_watcher.fileChanged.connect(self.config_changed)
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        self.save_experiment_config()
+        self.save_window_geometry()
+        super().closeEvent(a0)
 
-    def config_changed(self, path):
-        self.beginResetModel()
-        self._config: ExperimentConfig = load_config(Path(path))
-        self.endResetModel()
+    def save_experiment_config(self):
+        if widget := self.get_current_widget():
+            self.config = widget.get_experiment_config()
+        with open(get_config_path(), "w") as file:
+            file.write(self.config.to_yaml())
 
-    @property
-    def root(self) -> Step:
-        return self._config.header
+    def save_window_geometry(self):
+        geometry = self.saveGeometry()
+        self.ui_settings.setValue(f"{__name__}/geometry", geometry)
 
-    def save_config(self) -> bool:
-        self._config_watcher.blockSignals(True)
-        try:
-            YAMLSerializable.dump(self._config, self._config_path)
-        finally:
-            self._config_watcher.blockSignals(False)
-        return True
+    def change_displayed_widget(self, item: QTreeWidgetItem, _):
+        """Save the config from the previously displayed widget then display the new widget instead"""
 
-    def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-        if result := super().setData(index, values, role):
-            self.save_config()
-        return result
+        label = item.text(0)
+        if widget := self.get_current_widget():
+            self.config = widget.get_experiment_config()
+        clear_layout(self.widget_layout)
+        widget = self.settings_tree[label](deepcopy(self.config), label)
+        self.widget_layout.addWidget(widget)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if index.isValid() and index.column() == 0:
-            flags = super().flags(index)
-            flags |= Qt.ItemFlag.ItemIsEditable
-            if not isinstance(
-                self.data(index, Qt.ItemDataRole.DisplayRole),
-                (VariableDeclaration, ExecuteShot),
-            ):
-                flags |= Qt.ItemFlag.ItemIsDropEnabled
+    def get_current_widget(self) -> Optional[ConfigSettingsEditor]:
+        if self.widget_layout.count():
+            return self.widget_layout.itemAt(0).widget()
         else:
-            flags = Qt.ItemFlag.NoItemFlags
-        return flags
-
-    def supportedDragActions(self) -> Qt.DropAction:
-        return Qt.DropAction.MoveAction
-
-    def dropMimeData(
-        self,
-        data: QMimeData,
-        action: Qt.DropAction,
-        row: int,
-        column: int,
-        parent: QModelIndex,
-    ) -> bool:
-        if result := super().dropMimeData(data, action, row, column, parent):
-            self.save_config()
-        return result
-
-    def insert_step(self, new_step: Step, index: QModelIndex):
-        super().insert_step(new_step, index)
-        self.save_config()
-
-    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        if result := super().removeRows(row, count, parent):
-            self.save_config()
-        return result
-
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        if result := super().removeRow(row, parent):
-            self.save_config()
-        return result
+            return None
 
 
-class SequenceHeaderEditor(QTreeView):
-    """Editor for the steps that are executed before each sequence
-
-    Only allows to declare constants at the moment.
-    """
-
-    def __init__(self, config_path: Path):
-        super().__init__()
-
-        self.model = SequenceHeaderModel(config_path)
-        self.setModel(self.model)
-        delegate = StepDelegate()
-        self.setItemDelegate(delegate)
-        self.setHeaderHidden(True)
-        self.setAnimated(True)
-        self.setContentsMargins(0, 0, 0, 0)
-
-        self.model.modelReset.connect(lambda: self.expandAll())
-        self.expandAll()
-        self.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
-
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
-        self.setDropIndicatorShown(True)
-        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.setDragDropOverwriteMode(False)
-        self.model.rowsInserted.connect(lambda _: self.expandAll())
-
-        self.setItemsExpandable(False)
-
-        self.customContextMenuRequested.connect(self.show_context_menu)
-
-    def show_context_menu(self, position):
-        index = self.indexAt(position)
-        # noinspection PyTypeChecker
-
-        menu = QMenu(self)
-
-        add_menu = QMenu()
-        add_menu.setTitle("Add...")
-        menu.addMenu(add_menu)
-
-        create_variable_action = QAction("constant")
-        add_menu.addAction(create_variable_action)
-        create_variable_action.triggered.connect(
-            lambda: self.model.insert_step(
-                VariableDeclaration(name="", expression=Expression()), index
-            )
-        )
-        menu.exec(self.mapToGlobal(position))
+def clear_layout(layout: QLayout):
+    while layout.count():
+        child = layout.takeAt(0)
+        if child.widget():
+            child.widget().deleteLater()
 
 
 def load_config(config_path: Path) -> ExperimentConfig:
@@ -252,60 +107,13 @@ def load_config(config_path: Path) -> ExperimentConfig:
                 raise TypeError(f"Config is not correct: {config}")
         except Exception:
             logger.warning(
-                f"Unable to load {config_path}. Loading a default configuration"
-                " instead.",
+                (
+                    f"Unable to load {config_path}. Loading a default configuration"
+                    " instead."
+                ),
                 exc_info=True,
             )
             config = ExperimentConfig()
     else:
         config = ExperimentConfig()
     return config
-
-
-class ConfigEditor(QDialog, Ui_config_editor):
-    @log_error(logger)
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.ui_settings = QSettings("Caqtus", "ExperimentControl")
-        self.setupUi(self)
-        self.restoreGeometry(
-            self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
-        )
-
-        self.d = {}
-        self.d["system"] = (
-            QTreeWidgetItem(self.category_tree, ["System"]),
-            SystemSettingsEditor(),
-        )
-        self.d["system"][0].setSelected(True)
-        self.d["constants"] = (
-            QTreeWidgetItem(self.category_tree, ["Constants"]),
-            SequenceHeaderEditor(get_config_path()),
-        )
-        self.d["devices"] = (QTreeWidgetItem(self.category_tree, ["Devices"]), None)
-        self.d[r"devices\spincore"] = (
-            QTreeWidgetItem(self.d["devices"][0], ["Spincore pulseblaster"]),
-            QLabel("Spincore"),
-        )
-        self.d[r"devices\ni6738"] = (
-            QTreeWidgetItem(self.d["devices"][0], ["NI6738"]),
-            QLabel("NI6738"),
-        )
-
-        for w in self.d.values():
-            if w[1] is not None:
-                self.stack_widget.addWidget(w[1])
-
-        self.category_tree.currentItemChanged.connect(self.show_widget)
-
-    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        geometry = self.saveGeometry()
-        self.ui_settings.setValue(f"{__name__}/geometry", geometry)
-        super().closeEvent(a0)
-
-    def show_widget(self, item: QTreeWidgetItem, _):
-        for it, widget in self.d.values():
-            if it == item and widget is not None:
-                self.stack_widget.setCurrentWidget(widget)
-                break

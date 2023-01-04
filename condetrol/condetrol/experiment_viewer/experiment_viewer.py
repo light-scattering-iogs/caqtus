@@ -268,7 +268,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         menu.exec(self.sequences_view.mapToGlobal(position))
 
     def edit_config(self):
-        """Open the experiment config editor"""
+        """Open the experiment config editor then propagate the changes done on the experiment config"""
         editor = ConfigEditor()
         editor.exec()
         self.update_experiment_config(load_config(get_config_path()))
