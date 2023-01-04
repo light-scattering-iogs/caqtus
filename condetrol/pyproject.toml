@@ -11,7 +11,7 @@ QDarkStyle = "^3.1"
 appdirs = "^1.4.4"
 settings_model = { path = "../common/settings_model/", develop = true }
 experiment_config = { path = "../common/experiment_config/", develop = true }
-experiment_manager = { path = "../common/experiment_manager/", develop = true }
+experiment_manager = { path = "../experiment_manager/", develop = true }
 sequence = { path = "../common/sequence/", develop = true }
 Send2Trash = "^1.8.0"
 
