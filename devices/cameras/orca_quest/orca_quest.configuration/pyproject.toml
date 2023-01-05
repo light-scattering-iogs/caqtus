@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "orca-quest-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "orca_quest"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+camera-configuration = {path = "../../camera/camera.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

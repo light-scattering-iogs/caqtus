@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "camera-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "camera"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+device-config = {path = "../../../../common/device_config", develop = true}
+settings-model = {path = "../../../../common/settings_model", develop = true}
+pydantic = "^1.10.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

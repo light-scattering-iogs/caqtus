@@ -9,11 +9,13 @@ python = "^3.10"
 settings_model = { path = "../settings_model/", develop = true }
 sequence = { path = "../sequence/", develop = true }
 device_config = { path = "../device_config/", develop = true }
-camera = { path = "../../devices/cameras/camera", develop = true }
-orca_quest = { path = "../../devices/cameras/orca_quest", develop = true }
 appdirs = "^1.4.4"
 PyQt5 = "^5.15.7"
-picomotor = {path = "../../devices/picomotor", develop = true}
+picomotor-configuration = {path = "../../devices/picomotor/picomotor.configuration", develop = true}
+camera-configuration = {path = "../../devices/cameras/camera/camera.configuration", develop = true}
+orca-quest-configuration = {path = "../../devices/cameras/orca_quest/orca_quest.configuration", develop = true}
+ni6738-analog-card-configuration = {path = "../../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
+spincore-sequencer-configuration = {path = "../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

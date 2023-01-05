@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ni6738-analog-card-runtime"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "ni6738_analog_card"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+nidaqmx = "^0.6.5"
+pydantic = "^1.10.4"
+numpy = "^1.24.1"
+device = {path = "../../device", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

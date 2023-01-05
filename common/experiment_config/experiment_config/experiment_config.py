@@ -7,7 +7,7 @@ from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
 from pydantic.color import Color
 
-from camera import CameraConfiguration
+from camera.configuration import CameraConfiguration
 from device_config import DeviceConfiguration, DeviceConfigType
 from device_config.channel_config import (
     AnalogChannelConfiguration,

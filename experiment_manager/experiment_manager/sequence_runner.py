@@ -11,15 +11,15 @@ from typing import Any, Iterable, TypedDict
 import h5py
 import numpy
 
-from camera import CCamera, CameraTimeoutError
+from camera.configuration import CameraConfiguration
+from camera.runtime import CCamera, CameraTimeoutError
 from experiment_config import (
     ExperimentConfig,
     ChannelSpecialPurpose,
     SpincoreSequencerConfiguration,
-    NI6738SequencerConfiguration,
-    CameraConfiguration,
     DeviceServerConfiguration,
 )
+from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from ni6738_analog_card.runtime import NI6738AnalogCard
 from remote_device_client import RemoteDeviceClientManager
 from sequence import (

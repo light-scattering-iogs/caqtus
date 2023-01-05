@@ -1,0 +1,1 @@
+from .configuration import NI6738SequencerConfiguration
