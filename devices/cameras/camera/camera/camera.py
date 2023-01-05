@@ -8,6 +8,7 @@ from pydantic import Field, validator
 from typing_extensions import ClassVar
 
 from device import Device
+from device_config import DeviceConfiguration
 from settings_model import SettingsModel
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,10 @@ class CCamera(Device, ABC):
 
     picture_names: list[str] = Field(
         default_factory=list,
-        description="Names to give to the pictures in order of acquisition. Each name must be unique.",
+        description=(
+            "Names to give to the pictures in order of acquisition. Each name must be"
+            " unique."
+        ),
         allow_mutation=False,
     )
 
@@ -48,8 +52,10 @@ class CCamera(Device, ABC):
     timeout: float = Field(
         default=inf,
         units="s",
-        description="The camera must raise a CameraTimeoutError if it is didn't receive a trigger within this time "
-        "after starting acquisition.",
+        description=(
+            "The camera must raise a CameraTimeoutError if it is didn't receive a"
+            " trigger within this time after starting acquisition."
+        ),
         allow_mutation=True,
     )
     exposures: list[float] = Field(
@@ -59,8 +65,10 @@ class CCamera(Device, ABC):
         allow_mutation=True,
     )
     external_trigger: bool = Field(
-        description="Specify if the camera should wait for an external trigger to take a picture. "
-        "If set to False, it will acquire images as fast as possible.",
+        description=(
+            "Specify if the camera should wait for an external trigger to take a"
+            " picture. If set to False, it will acquire images as fast as possible."
+        ),
         allow_mutation=False,
     )
 
@@ -84,7 +92,8 @@ class CCamera(Device, ABC):
         num_names = len(values["picture_names"])
         if num_names != num_exposures:
             raise ValueError(
-                f"Number of picture names ({num_names}) and of exposures ({num_exposures}) must match"
+                f"Number of picture names ({num_names}) and of exposures"
+                f" ({num_exposures}) must match"
             )
 
         if any(exposure > values["timeout"] for exposure in exposures):
@@ -141,8 +150,9 @@ class CCamera(Device, ABC):
     def shutdown(self):
         if not all(self._acquired_pictures):
             logger.warning(
-                f"Only {sum(self._acquired_pictures)} out of {self.number_pictures_to_acquire} pictures where "
-                f"successfully acquired for {self.name}."
+                f"Only {sum(self._acquired_pictures)} out of"
+                f" {self.number_pictures_to_acquire} pictures where successfully"
+                f" acquired for {self.name}."
             )
         super().shutdown()
 
@@ -192,3 +202,13 @@ class CCamera(Device, ABC):
             raise RuntimeError(f"Picture {picture_number} was not yet acquired")
         else:
             return numpy.array([[]])
+
+
+class CameraConfiguration(DeviceConfiguration, ABC):
+    roi: ROI
+
+    def get_device_init_args(self) -> dict[str]:
+        return super().get_device_init_args() | {
+            "roi": self.roi,
+            "external_trigger": True,
+        }

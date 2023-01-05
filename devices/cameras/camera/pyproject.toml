@@ -10,6 +10,7 @@ python = ">=3.9, <4.0"
 pydantic = "^1.10.2"
 device = { path = "../../device/", develop = true }
 settings_model = { path = "../../../common/settings_model/", develop = true }
+device_config = { path = "../../../common/device_config/", develop = true }
 numpy = "^1.23.4"
 
 

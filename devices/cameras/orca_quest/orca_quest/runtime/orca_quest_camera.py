@@ -1,7 +1,7 @@
 import atexit
 import logging
 import time
-from typing import ClassVar, Optional, Final
+from typing import ClassVar, Optional
 
 import numpy
 from pydantic import Field
@@ -25,8 +25,8 @@ class OrcaQuestCamera(CCamera):
         allow_mutation=False,
     )
 
-    sensor_width: Final = 4096
-    sensor_height: Final = 2304
+    sensor_width = 4096
+    sensor_height = 2304
 
     _pictures: list[Optional[numpy.ndarray]]
     _camera: "Dcam"
@@ -80,8 +80,9 @@ class OrcaQuestCamera(CCamera):
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
                 raise RuntimeError(
-                    f"Failed to set property {str(property_id)} to {str(property_value)} for {self.name}: "
-                    f"{str(self._camera.lasterr())}"
+                    f"Failed to set property {str(property_id)} to"
+                    f" {str(property_value)} for {self.name}:"
+                    f" {str(self._camera.lasterr())}"
                 )
 
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
@@ -100,7 +101,8 @@ class OrcaQuestCamera(CCamera):
                 logger.info(f"{self.name}: DCAM buffer successfully released")
             else:
                 logger.warning(
-                    f"{self.name}: an error occurred while releasing DCAM buffer: {str(self._camera.lasterr())}"
+                    f"{self.name}: an error occurred while releasing DCAM buffer:"
+                    f" {str(self._camera.lasterr())}"
                 )
 
             if self._camera.is_opened():
@@ -108,7 +110,8 @@ class OrcaQuestCamera(CCamera):
                     logger.info(f"{self.name}: camera successfully released")
                 else:
                     logger.warning(
-                        f"{self.name}: an error occurred while closing the camera: {str(self._camera.lasterr())}"
+                        f"{self.name}: an error occurred while closing the camera:"
+                        f" {str(self._camera.lasterr())}"
                     )
             if Dcamapi.uninit():
                 logger.info(f"{self.name}: DCAM-API successfully released")
@@ -159,7 +162,8 @@ class OrcaQuestCamera(CCamera):
         if self._has_exposure_changed(picture_number):
             if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
                 raise RuntimeError(
-                    f"Can't set exposure of {self.name} to {new_exposure}: {str(self._camera.lasterr())}"
+                    f"Can't set exposure of {self.name} to {new_exposure}:"
+                    f" {str(self._camera.lasterr())}"
                 )
         if self._camera.cap_snapshot() is not False:
             start_acquire = time.time()
@@ -169,8 +173,8 @@ class OrcaQuestCamera(CCamera):
                     self._pictures[picture_number] = data.T
                     self._picture_acquired(picture_number)
                     logger.info(
-                        f"{self.name}: picture '{self.picture_names[picture_number]}' acquired after "
-                        f"{(time.time() - start_acquire) * 1e3:.0f} ms"
+                        f"{self.name}: picture '{self.picture_names[picture_number]}'"
+                        f" acquired after {(time.time() - start_acquire) * 1e3:.0f} ms"
                     )
                     break
 
@@ -179,16 +183,19 @@ class OrcaQuestCamera(CCamera):
                     if time.time() - start_acquire > self.timeout:
                         self._camera.cap_stop()
                         raise CameraTimeoutError(
-                            f"{self.name} timed out after {timeout*1e3:.0f} ms before receiving a trigger"
+                            f"{self.name} timed out after {timeout*1e3:.0f} ms before"
+                            " receiving a trigger"
                         )
                     pass
                 else:
                     raise RuntimeError(
-                        f"An error occurred while acquiring an image on {self.name}: {str(error)}"
+                        f"An error occurred while acquiring an image on {self.name}:"
+                        f" {str(error)}"
                     )
         else:
             raise RuntimeError(
-                f"Failed to start capture for {self.name}: {str(self._camera.lasterr())}"
+                f"Failed to start capture for {self.name}:"
+                f" {str(self._camera.lasterr())}"
             )
 
     def _read_picture(self, picture_number: int) -> numpy.ndarray:

@@ -1,6 +1,6 @@
 __version__ = "0.1.0"
 
-from .channel_config import ChannelSpecialPurpose
+from device_config.channel_config import ChannelSpecialPurpose
 from .experiment_config import (
     ExperimentConfig,
     get_config_path,
@@ -9,3 +9,4 @@ from .experiment_config import (
     CameraConfiguration,
     DeviceServerConfiguration,
 )
+from orca_quest.configuration import OrcaQuestCameraConfiguration

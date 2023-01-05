@@ -10,6 +10,7 @@ from typing import Any, Iterable, TypedDict
 
 import h5py
 import numpy
+
 from camera import CCamera, CameraTimeoutError
 from experiment_config import (
     ExperimentConfig,
@@ -19,7 +20,7 @@ from experiment_config import (
     CameraConfiguration,
     DeviceServerConfiguration,
 )
-from ni6738_analog_card import NI6738AnalogCard
+from ni6738_analog_card.runtime import NI6738AnalogCard
 from remote_device_client import RemoteDeviceClientManager
 from sequence import (
     SequenceState,
@@ -36,10 +37,14 @@ from sequence.shot import (
     evaluate_analog_local_times,
     evaluate_analog_values,
 )
-from spincore_sequencer import Instruction, Continue, Loop, SpincorePulseBlaster
-from spincore_sequencer.instructions import Stop
+from spincore_sequencer.runtime import (
+    Instruction,
+    Continue,
+    Loop,
+    Stop,
+    SpincorePulseBlaster,
+)
 from units import Quantity, units, ureg
-
 from .sequence_context import SequenceContext
 
 logger = logging.getLogger(__name__)

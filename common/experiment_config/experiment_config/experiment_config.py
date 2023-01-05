@@ -1,126 +1,28 @@
 import logging
-from abc import ABC
 from pathlib import Path
 from typing import Optional, Type
 
 from PyQt5.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
-from camera import ROI
 from pydantic import Field, validator
 from pydantic.color import Color
-from sequence import SequenceSteps
-from settings_model import SettingsModel
-from units import Quantity
 
-from .channel_config import (
+from camera import CameraConfiguration
+from device_config import DeviceConfiguration, DeviceConfigType
+from device_config.channel_config import (
     AnalogChannelConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
     ChannelSpecialPurpose,
 )
-from .device_config import DeviceConfiguration, DeviceConfigType
+from ni6738_analog_card.configuration import NI6738SequencerConfiguration
+from sequence import SequenceSteps
+from settings_model import SettingsModel
+from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration
-from .units_mapping import AnalogUnitsMapping
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-
-class CameraConfiguration(DeviceConfiguration, ABC):
-    roi: ROI
-
-    def get_device_init_args(self) -> dict[str]:
-        return super().get_device_init_args() | {
-            "roi": self.roi,
-            "external_trigger": True,
-        }
-
-
-class OrcaQuestCameraConfiguration(CameraConfiguration):
-    camera_number: int
-
-    @classmethod
-    def get_device_type(cls) -> str:
-        return "OrcaQuestCamera"
-
-    def get_device_init_args(self) -> dict[str]:
-        extra = {
-            "camera_number": self.camera_number,
-        }
-        return super().get_device_init_args() | extra
-
-
-class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def number_channels(cls) -> int:
-        return 24
-
-    board_number: int
-    time_step: float = Field(
-        default=50e-9,
-        ge=50e-9,
-        units="s",
-        description=(
-            "The quantization time step used when converting step times to"
-            " instructions."
-        ),
-    )
-
-    def get_device_type(self) -> str:
-        return "SpincorePulseBlaster"
-
-    def get_device_init_args(self) -> dict[str]:
-        extra = {
-            "board_number": self.board_number,
-            "time_step": self.time_step,
-        }
-        return super().get_device_init_args() | extra
-
-
-class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfiguration):
-    device_id: str
-    time_step: float = Field(
-        default=2.5e-6,
-        ge=2.5e-6,
-        units="s",
-        description=(
-            "The quantization time step used when converting step times to"
-            " instructions."
-        ),
-    )
-
-    @validator("channel_mappings")
-    def validate_channel_mappings(cls, channel_mappings):
-        channel_mappings: list[
-            Optional[AnalogUnitsMapping]
-        ] = super().validate_channel_mappings(channel_mappings)
-        for channel, mapping in enumerate(channel_mappings):
-            if mapping is not None:
-                output_units = mapping.get_output_units()
-                if not Quantity(1, units=output_units).is_compatible_with("V"):
-                    raise ValueError(
-                        f"Channel {channel} output units ({output_units}) are not"
-                        " compatible with Volt"
-                    )
-        return channel_mappings
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def number_channels(cls) -> int:
-        return 32
-
-    def get_device_type(self) -> str:
-        return "NI6738AnalogCard"
-
-    def get_device_init_args(self) -> dict[str]:
-        extra = {
-            "device_id": self.device_id,
-            "time_step": self.time_step,
-        }
-        return super().get_device_init_args() | extra
 
 
 class ExperimentConfig(SettingsModel):
@@ -136,7 +38,10 @@ class ExperimentConfig(SettingsModel):
     )
     header: SequenceSteps = Field(
         default_factory=SequenceSteps,
-        description="Steps that are always executed before a sequence",
+        description=(
+            "Steps that are always executed before a sequence. At the moment, it is"
+            " only used to pre-define 'constant variables'."
+        ),
     )
     device_configurations: list[DeviceConfiguration] = Field(
         default_factory=list,

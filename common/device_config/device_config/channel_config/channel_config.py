@@ -22,7 +22,7 @@ class ChannelSpecialPurpose(SettingsModel):
         return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
 
     @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+    def constructor(cls, loader: yaml.Loader, node: yaml.ScalarNode):
         return cls(purpose=loader.construct_scalar(node))
 
     @classmethod
@@ -47,8 +47,8 @@ class ChannelConfiguration(SettingsModel, ABC):
     def validate_channel_descriptions(cls, descriptions):
         if not len(descriptions) == cls.number_channels:
             raise ValueError(
-                f"The length of channel descriptions ({len(descriptions)}) doesn't match the number of channels "
-                f"{cls.number_channels}"
+                f"The length of channel descriptions ({len(descriptions)}) doesn't"
+                f" match the number of channels {cls.number_channels}"
             )
         counter = Counter(descriptions)
         for description, count in counter.items():
@@ -60,8 +60,8 @@ class ChannelConfiguration(SettingsModel, ABC):
     def validate_channel_colors(cls, colors):
         if not len(colors) == cls.number_channels:
             raise ValueError(
-                f"The length of channel descriptions ({len(colors)}) doesn't match the number of channels "
-                f"{cls.number_channels}"
+                f"The length of channel descriptions ({len(colors)}) doesn't match the"
+                f" number of channels {cls.number_channels}"
             )
         else:
             return colors
@@ -85,8 +85,8 @@ class AnalogChannelConfiguration(ChannelConfiguration, ABC):
     def validate_channel_mappings(cls, mappings):
         if not len(mappings) == cls.number_channels:
             raise ValueError(
-                f"The length of channel mappings ({len(mappings)}) doesn't match the number of channels "
-                f"{cls.number_channels}"
+                f"The length of channel mappings ({len(mappings)}) doesn't match the"
+                f" number of channels {cls.number_channels}"
             )
         else:
             return mappings
@@ -99,7 +99,8 @@ class AnalogChannelConfiguration(ChannelConfiguration, ABC):
                 return mapping.convert(value).to(mapping.get_output_units())
             else:
                 raise ValueError(
-                    f"Incompatible units ({value.units}) for conversion to {mapping.get_input_units()})"
+                    f"Incompatible units ({value.units}) for conversion to"
+                    f" {mapping.get_input_units()})"
                 )
         else:
             raise ValueError(f"No unit mappings defined for channel {channel_name}")

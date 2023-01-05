@@ -1,1 +1,1 @@
-from .camera import CCamera, CameraTimeoutError, ROI
+from .camera import CCamera, CameraTimeoutError, ROI, CameraConfiguration

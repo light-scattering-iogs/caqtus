@@ -8,7 +8,9 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 python = "^3.9"
 settings_model = { path = "../settings_model/", develop = true }
 sequence = { path = "../sequence/", develop = true }
+device_config = { path = "../device_config/", develop = true }
 camera = { path = "../../devices/cameras/camera", develop = true }
+orca_quest = { path = "../../devices/cameras/orca_quest", develop = true }
 appdirs = "^1.4.4"
 PyQt5 = "^5.15.7"
 
