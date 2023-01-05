@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections import Counter
-from typing import Optional
+from typing import Optional, ClassVar
 
 import yaml
 from pydantic import Field, validator
@@ -32,11 +32,7 @@ class ChannelSpecialPurpose(SettingsModel):
 
 class ChannelConfiguration(SettingsModel, ABC):
     # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    @abstractmethod
-    def number_channels(cls) -> int:
-        ...
+    number_channels: ClassVar[int]
 
     channel_descriptions: list[str | ChannelSpecialPurpose] = Field(
         default_factory=list
@@ -60,7 +56,7 @@ class ChannelConfiguration(SettingsModel, ABC):
     def validate_channel_colors(cls, colors):
         if not len(colors) == cls.number_channels:
             raise ValueError(
-                f"The length of channel descriptions ({len(colors)}) doesn't match the"
+                f"The length of channel colors ({len(colors)}) doesn't match the"
                 f" number of channels {cls.number_channels}"
             )
         else:

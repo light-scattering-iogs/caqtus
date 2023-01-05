@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "picomotor"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+device-config = {path = "../../common/device_config", develop = true}
+sequence = {path = "../../common/sequence", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

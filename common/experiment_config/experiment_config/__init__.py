@@ -10,3 +10,4 @@ from .experiment_config import (
     DeviceServerConfiguration,
 )
 from orca_quest.configuration import OrcaQuestCameraConfiguration
+from picomotor.configuration import PicomotorConfiguration
