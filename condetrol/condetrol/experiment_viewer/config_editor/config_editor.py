@@ -10,7 +10,7 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
-    QLayout,
+    QLayout, QToolBar, QAction,
 )
 
 from experiment_config import ExperimentConfig, get_config_path
@@ -19,6 +19,7 @@ from .config_editor_ui import Ui_config_editor
 from .config_settings_editor import ConfigSettingsEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .system_settings_editor import SystemSettingsEditor
+from .devices_editor import DevicesEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -49,6 +50,7 @@ class ConfigEditor(QDialog, Ui_config_editor):
         # instantiated to create the editor widget.
         self.settings_tree["System"] = SystemSettingsEditor
         self.settings_tree["Constants"] = SequenceHeaderEditor
+        self.settings_tree["Devices"] = DevicesEditor
 
         for tree_label, widget_class in self.settings_tree.items():
             item = QTreeWidgetItem(self.category_tree)
