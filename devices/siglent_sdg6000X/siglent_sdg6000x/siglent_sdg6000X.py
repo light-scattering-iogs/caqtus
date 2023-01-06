@@ -7,7 +7,7 @@ from pydantic import Field, validator
 from pyvisa.constants import AccessModes
 
 from common.settings_model.settings_model import SettingsModel
-from device import Device
+from device import RuntimeDevice
 from modulation import SiglentSDG6000XModulation
 from waveforms import SiglentSDG6000XWaveform, DCVoltage
 
@@ -27,8 +27,8 @@ class SiglentSDG6000XChannel(SettingsModel):
     )
 
 
-class SiglentSDG6000XWaveformGenerator(Device):
-    """Device class to control the Siglent waveform generator SDG6000X series"""
+class SiglentSDG6000XWaveformGenerator(RuntimeDevice):
+    """RuntimeDevice class to control the Siglent waveform generator SDG6000X series"""
 
     channel_number: ClassVar[int] = 2
     channel_names: ClassVar[list[str]] = [f"C{i + 1}" for i in range(channel_number)]

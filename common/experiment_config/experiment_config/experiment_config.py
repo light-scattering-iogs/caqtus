@@ -63,7 +63,7 @@ class ExperimentConfig(SettingsModel):
                     channel_names |= device_channel_names
                 else:
                     raise ValueError(
-                        f"Device {name} has channel names that are already used by an"
+                        f"RuntimeDevice {name} has channel names that are already used by an"
                         f" other device: {channel_names & device_channel_names}"
                     )
         return device_configurations

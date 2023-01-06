@@ -8,7 +8,7 @@ import numpy
 from camera.configuration import ROI
 from pydantic import Field, validator
 
-from device import Device
+from device import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -18,7 +18,7 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-class CCamera(Device, ABC):
+class CCamera(RuntimeDevice, ABC):
     """Base class for a camera device
 
     Warnings:

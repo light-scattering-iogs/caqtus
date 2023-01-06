@@ -1,1 +1,1 @@
-from .device import Device
+from .runtime_device import RuntimeDevice

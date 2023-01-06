@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 n = 16 # number of bits for the encoding
 LSB = -2**(n-1) # Least Significant Bit
 MSB = 2**(n-1)-1 # Most Significant Bit
-arb_mode = 'TARB' # arbitrary mode: 'DDS' for Direct Device Synthetizer or 'TARB' for True Arbitrary
+arb_mode = 'TARB' # arbitrary mode: 'DDS' for Direct RuntimeDevice Synthetizer or 'TARB' for True Arbitrary
 sampling_rate = 2400 # sampling rate of the AWG (in MSa/s)
 #Note: - in DDS mode, the sampling rate is only indicative, the real sampling rate being chosen by the AWG
 #        (typically 1.2 GSa/s but it can be less if the number of samples is higher than 30000)
@@ -165,7 +165,7 @@ def send_wave_data(dev, index_channel, arb_mode, file_waveform, amplitude_AWG, o
     using the wanted amplitude, offset and frequency
     
     arb_mode is the mode of the AWG:
-        'DDS' for Direct Device Synthetizer (automatic choice of the sampling rate, high bandwidth but risk of jitter)
+        'DDS' for Direct RuntimeDevice Synthetizer (automatic choice of the sampling rate, high bandwidth but risk of jitter)
         'TARB' for True Arbitrary waveform (the sampling rate is a parameter, but it cannot go higher than 3MSa/s)
         
     index_channel is the index of the output channel: '1' or '2'

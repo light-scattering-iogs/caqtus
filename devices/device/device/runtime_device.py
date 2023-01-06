@@ -6,8 +6,8 @@ import pydantic
 from pydantic import Field, Extra
 
 
-class Device(pydantic.BaseModel, ABC):
-    """Controlled device base class
+class RuntimeDevice(pydantic.BaseModel, ABC):
+    """A class that is instantiated to directly control a physical device
 
     All devices used in the experiment must inherit from this class. A device is defined
     by a list of parameters and predetermined methods to call during the sequence.
@@ -67,4 +67,4 @@ class Device(pydantic.BaseModel, ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.shutdown()
 
-    _devices_already_in_use: ClassVar[dict[str, "Device"]] = {}
+    _devices_already_in_use: ClassVar[dict[str, "RuntimeDevice"]] = {}
