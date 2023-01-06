@@ -1,0 +1,1 @@
+from .static_trap_generator import StaticTrapGenerator
