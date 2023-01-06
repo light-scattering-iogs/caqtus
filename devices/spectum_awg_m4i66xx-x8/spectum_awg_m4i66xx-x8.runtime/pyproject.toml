@@ -12,6 +12,9 @@ device = {path = "../../device", develop = true}
 pydantic = "^1.10.4"
 
 
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
