@@ -1,1 +1,2 @@
 from .static_trap_generator import StaticTrapGenerator
+from .moving_trap_generator import MovingTrapGenerator

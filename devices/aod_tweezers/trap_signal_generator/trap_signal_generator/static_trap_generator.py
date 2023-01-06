@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 
 import numpy as np
-from numba import njit, float32, prange
+from numba import njit, float64, prange
 from pydantic import BaseModel, validator, Field
 
 
@@ -40,10 +40,10 @@ class StaticTrapGenerator(BaseModel):
 
     def compute_signal(self) -> np.ndarray["number_samples", np.float32]:
         return compute_signal_numba(
-            times=np.array(self.times, dtype=np.float32),
-            amplitudes=np.array(self.amplitudes, dtype=np.float32),
-            frequencies=np.array(self.frequencies, dtype=np.float32),
-            phases=np.array(self.frequencies, dtype=np.float32),
+            times=np.array(self.times, dtype=np.float64),
+            amplitudes=np.array(self.amplitudes, dtype=np.float64),
+            frequencies=np.array(self.frequencies, dtype=np.float64),
+            phases=np.array(self.phases, dtype=np.float64),
         )
 
     @property
@@ -53,11 +53,11 @@ class StaticTrapGenerator(BaseModel):
 
 @njit(parallel=True)
 def compute_signal_numba(
-    times: float32[:],
-    amplitudes: float32[:],
-    frequencies: float32[:],
-    phases: float32[:],
-) -> float32[:]:
+    times: float64[:],
+    amplitudes: float64[:],
+    frequencies: float64[:],
+    phases: float64[:],
+) -> float64[:]:
     result = np.zeros_like(times)
     t = times
     number_tones = len(amplitudes)
