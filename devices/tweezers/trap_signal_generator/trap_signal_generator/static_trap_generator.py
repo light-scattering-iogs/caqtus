@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 from collections.abc import Sequence
 from itertools import product, chain
 from typing import Iterable
@@ -9,14 +9,18 @@ from pydantic import validator, Field
 from scipy.optimize import basinhopping
 
 from settings_model import SettingsModel
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class StaticTrapGenerator(SettingsModel):
-    frequencies: Sequence[float] = Field(allow_mutation=False)
+    frequencies: Sequence[float] = Field()
     amplitudes: Sequence[float] = Field()
     phases: Sequence[float] = Field()
-    sampling_rate: float = Field(gt=0, allow_mutation=False)
-    number_samples: int = Field(gt=0, allow_mutation=False)
+    sampling_rate: float = Field(gt=0)
+    number_samples: int = Field(gt=0)
 
     @validator("frequencies", pre=True)
     def validate_frequencies(cls, frequencies):
@@ -55,11 +59,49 @@ class StaticTrapGenerator(SettingsModel):
     def optimize_phases(self):
         """Changes its phases to reduce the peak values of the signal envelope."""
 
-        segment_frequency = self.sampling_rate / self.number_samples
+        if not self.is_periodic():
+            raise ValueError(
+                "Cannot optimize phases for a signal whose frequencies are not integer multiples of the signal "
+                "frequency."
+            )
+
         optimal_phases = compute_optimized_phases(
-            self.frequencies, self.amplitudes, segment_frequency
+            self.frequencies, self.amplitudes, self.segment_frequency
         )
         self.phases = optimal_phases
+
+    @property
+    def segment_frequency(self):
+        return self.sampling_rate / self.number_samples
+
+    def is_periodic(self):
+        fractional_parts, _ = np.modf(np.array(self.frequencies) / self.segment_frequency % 1)
+        return np.allclose(fractional_parts, 0)
+
+    @property
+    def _integer_frequencies(self):
+        return np.round(np.array(self.frequencies) / self.segment_frequency).astype(int)
+
+    def compute_all_frequencies_beating(self, order: int):
+        """Computes all possible sum of order frequencies beating."""
+
+        if not self.is_periodic():
+            raise ValueError(
+                "Cannot compute beating frequencies for a signal whose frequencies are not integer multiples of the "
+                "signal frequency."
+            )
+
+        f = np.concatenate([self._integer_frequencies, -self._integer_frequencies])
+        beats = np.array(sorted(Counter(map(lambda x: abs(sum(x)), product(f, repeat=order))).keys()))
+        return beats * self.segment_frequency
+
+    def compute_smallest_frequency_beating(self, order: int):
+        """Computes the smallest frequency beating."""
+
+        beats = self.compute_all_frequencies_beating(order)
+        beats = beats[beats > self.segment_frequency / 2]
+        return np.min(beats)
+
 
 
 @njit(parallel=True)
