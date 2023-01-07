@@ -96,17 +96,33 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         spcm.spcm_dwSetParam_i64(self._board_handle, spcm.SPC_CHENABLE, enable)
 
-        AMPLITUDE_REGISTERS = (spcm.SPC_AMP0, spcm.SPC_AMP1, spcm.SPC_AMP2, spcm.SPC_AMP3)
+        AMPLITUDE_REGISTERS = (
+            spcm.SPC_AMP0,
+            spcm.SPC_AMP1,
+            spcm.SPC_AMP2,
+            spcm.SPC_AMP3,
+        )
         for channel in range(self.NUMBER_CHANNELS):
-            amp = ctypes.c_int64(-1)
-
-
+            channel_name = self.channel_settings[channel].name
             if self.channel_settings[channel].enabled:
                 amplitude = int(self.channel_settings[channel].amplitude * 1e3)
-                spcm.spcm_dwSetParam_i64(self._board_handle, AMPLITUDE_REGISTERS[channel], amplitude)
+                spcm.spcm_dwSetParam_i64(
+                    self._board_handle, AMPLITUDE_REGISTERS[channel], amplitude
+                )
 
-            spcm.spcm_dwGetParam_i64(self._board_handle, AMPLITUDE_REGISTERS[channel], ctypes.byref(amp))
-            logger.debug(f"Channel {channel} amplitude: {amp.value}")
+                set_amplitude = ctypes.c_int64(-1)
+                spcm.spcm_dwGetParam_i64(
+                    self._board_handle,
+                    AMPLITUDE_REGISTERS[channel],
+                    ctypes.byref(set_amplitude),
+                )
+                if set_amplitude.value != amplitude:
+                    raise RuntimeError(
+                        f"Could not set amplitude of channel {channel_name} to {amplitude} mV"
+                    )
+                logger.debug(
+                    f"Channel {channel_name} amplitude: {set_amplitude.value} mV"
+                )
         self.check_error()
 
     def _set_sampling_rate(self, sampling_rate):
@@ -189,10 +205,30 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             )
 
         for channel in range(self.number_channels_enabled):
-            self._check_power(data[channel], self.channel_settings[channel])
+            channel_settings = self.channel_settings[channel]
+            power = self._measure_mean_power(data[channel], channel_settings.amplitude)
+            power_dbm = 10 * math.log10(power / 1e-3)
+            logger.info(
+                f"Channel {channel_settings.name} power for segment {segment_name}: {power_dbm:.2f} dBm"
+            )
+            if power_dbm > channel_settings.maximum_power:
+                raise ValueError(
+                    f"Power of {power_dbm:.2f} dBm exceeds maximum of "
+                    f"{channel_settings.maximum_power:.2f} dBm for channel "
+                    f"{channel_settings.name}"
+                )
 
         segment_index = self._segment_indices[segment_name]
         self._write_segment_data(segment_index, data)
+
+    @staticmethod
+    def _measure_mean_power(data: np.ndarray[np.int16], amplitude: float):
+        voltages = data * amplitude / (2**15 - 1)
+
+        output_load = 50  # Ohms
+
+        mean_power = np.mean(voltages**2 / output_load)
+        return mean_power
 
     @staticmethod
     def _check_power(data, channel_settings: "ChannelSettings"):
@@ -201,8 +237,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         output_load = 50  # Ohms
         mean_power = np.mean(voltages**2 / output_load)
         mean_power_dbm = 10 * np.log10(mean_power / 1e-3)
-
-        logger.debug(f"{mean_power_dbm=}")
 
         if mean_power_dbm > channel_settings.maximum_power:
             raise ValueError(
