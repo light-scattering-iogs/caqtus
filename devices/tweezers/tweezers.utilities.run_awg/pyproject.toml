@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "tweezers-utilities-run-awg"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "tweezers"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10, <3.12"
+spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
+trap-signal-generator = {path = "../trap_signal_generator", develop = true}
+
+
+[tool.poetry.group.black.dependencies]
+jupyter = "^1.0.0"
+matplotlib = "^3.6.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

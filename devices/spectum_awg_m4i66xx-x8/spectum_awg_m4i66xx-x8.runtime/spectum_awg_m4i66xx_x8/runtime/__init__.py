@@ -1,1 +1,1 @@
-from .runtime import SpectrumAWGM4i66xxX8
+from .runtime import SpectrumAWGM4i66xxX8, ChannelSettings, Segment
