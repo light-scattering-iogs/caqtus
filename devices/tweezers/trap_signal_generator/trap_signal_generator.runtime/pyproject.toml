@@ -1,23 +1,18 @@
 [tool.poetry]
-name = "trap-signal-generator"
+name = "trap-signal-generator-runtime"
 version = "0.1.0"
 description = ""
-authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
 packages = [{include = "trap_signal_generator"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-pydantic = "^1.10.4"
 numba = "^0.56.4"
+pydantic = "^1.10.4"
 scipy = "^1.10.0"
-settings-model = {path = "../../../common/settings_model", develop = true}
+trap-signal-generator-configuration = {path = "../trap_signal_generator.configuration", develop = true}
 
-
-[tool.poetry.group.dev.dependencies]
-black = "^22.12.0"
-jupyter = "^1.0.0"
-matplotlib = "^3.6.2"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict, Counter
 from collections.abc import Sequence
 from itertools import product, chain
@@ -5,22 +6,25 @@ from typing import Iterable
 
 import numpy as np
 from numba import njit, float64, prange
-from pydantic import validator, Field
+from pydantic import validator, Field, BaseModel
 from scipy.optimize import basinhopping
-
-from settings_model import SettingsModel
-import logging
+from trap_signal_generator.configuration import StaticTrapConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class StaticTrapGenerator(SettingsModel):
+class StaticTrapGenerator(BaseModel):
     frequencies: Sequence[float] = Field()
     amplitudes: Sequence[float] = Field()
     phases: Sequence[float] = Field()
     sampling_rate: float = Field(gt=0)
     number_samples: int = Field(gt=0)
+
+    class Config:
+        validate_assignment = True
+        arbitrary_types_allowed = True
+        validate_all = True
 
     @validator("frequencies", pre=True)
     def validate_frequencies(cls, frequencies):
@@ -75,7 +79,10 @@ class StaticTrapGenerator(SettingsModel):
         return self.sampling_rate / self.number_samples
 
     def is_periodic(self):
-        fractional_parts, _ = np.modf(np.array(self.frequencies) / self.segment_frequency % 1)
+        fractional_parts = (
+            np.array(self.frequencies) / self.segment_frequency
+            - self._integer_frequencies
+        )
         return np.allclose(fractional_parts, 0)
 
     @property
@@ -92,7 +99,9 @@ class StaticTrapGenerator(SettingsModel):
             )
 
         f = np.concatenate([self._integer_frequencies, -self._integer_frequencies])
-        beats = np.array(sorted(Counter(map(lambda x: abs(sum(x)), product(f, repeat=order))).keys()))
+        beats = np.array(
+            sorted(Counter(map(lambda x: abs(sum(x)), product(f, repeat=order))).keys())
+        )
         return beats * self.segment_frequency
 
     def compute_smallest_frequency_beating(self, order: int):
@@ -102,6 +111,25 @@ class StaticTrapGenerator(SettingsModel):
         beats = beats[beats > self.segment_frequency / 2]
         return np.min(beats)
 
+    # noinspection PyTypeChecker
+    def get_configuration(self) -> StaticTrapConfiguration:
+        return StaticTrapConfiguration(
+            frequencies=np.array(self.frequencies).tolist(),
+            amplitudes=np.array(self.amplitudes).tolist(),
+            phases=np.array(self.phases).tolist(),
+            sampling_rate=self.sampling_rate,
+            number_samples=self.number_samples,
+        )
+
+    @classmethod
+    def from_configuration(cls, config: StaticTrapConfiguration):
+        return cls(
+            frequencies=config.frequencies,
+            amplitudes=config.amplitudes,
+            phases=config.phases,
+            sampling_rate=config.sampling_rate,
+            number_samples=config.number_samples,
+        )
 
 
 @njit(parallel=True)
