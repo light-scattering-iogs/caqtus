@@ -38,7 +38,10 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     channel_settings: tuple["ChannelSettings", ...] = Field(
         description="The configuration of the output channels", allow_mutation=False
     )
-    segments: tuple["Segment", ...] = Field(allow_mutation=False)
+    segment_names: frozenset[str] = Field(
+        description="The names of the segments to split the AWG memory into",
+        allow_mutation=False,
+    )
     first_step: int = Field(allow_mutation=False)
     sampling_rate: int = Field(allow_mutation=False, units="Hz")
 
@@ -49,7 +52,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._segment_indices = {
-            segment.name: index for index, segment in enumerate(self.segments)
+            name: index for index, name in enumerate(self.segment_names)
         }
 
     @validator("channel_settings")
@@ -59,15 +62,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                 f"Expected {cls.NUMBER_CHANNELS} channel settings, but got {len(channel_settings)}"
             )
         return channel_settings
-
-    @validator("segments")
-    def validate_segments(cls, segments):
-        names = set()
-        for segment in segments:
-            if segment.name in names:
-                raise ValueError(f"Duplicate segment name {segment.name}")
-            names.add(segment.name)
-        return segments
 
     def start(self) -> None:
         super().start()
@@ -144,7 +138,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
 
         # The card memory can only be divided by a power of two, so we round up to the next power of two
-        number_actual_segments = 2 ** math.ceil(math.log2(len(self.segments)))
+        number_actual_segments = 2 ** math.ceil(math.log2(len(self.segment_names)))
         if number_actual_segments < 2:
             number_actual_segments = 2
         spcm.spcm_dwSetParam_i64(
@@ -219,7 +213,10 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                     f"{channel_settings.name}"
                 )
 
-        segment_index = self._segment_indices[segment_name]
+        try:
+            segment_index = self._segment_indices[segment_name]
+        except KeyError:
+            raise ValueError(f"There is no segment named {segment_name}")
         self._write_segment_data(segment_index, data)
 
     @staticmethod
@@ -230,20 +227,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         mean_power = np.mean(voltages**2 / output_load)
         return mean_power
-
-    @staticmethod
-    def _check_power(data, channel_settings: "ChannelSettings"):
-        voltages = data * channel_settings.amplitude / (2**15 - 1)
-
-        output_load = 50  # Ohms
-        mean_power = np.mean(voltages**2 / output_load)
-        mean_power_dbm = 10 * np.log10(mean_power / 1e-3)
-
-        if mean_power_dbm > channel_settings.maximum_power:
-            raise ValueError(
-                f"Output RF power ({mean_power_dbm:.1f} dBm) is higher than the set limit ({channel_settings.maximum_power}"
-                f" dBm) for channel {channel_settings.name}"
-            )
 
     def _write_segment_data(
         self,
@@ -325,11 +308,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     @property
     def number_channels_enabled(self):
         return sum(channel.enabled for channel in self.channel_settings)
-
-
-class Segment(SettingsModel):
-    name: str = Field(description="The name of the segment", allow_mutation=False)
-    default_value: np.int16 = Field(default=np.int16(0), allow_mutation=False)
 
 
 class ChannelSettings(SettingsModel):

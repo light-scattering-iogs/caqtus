@@ -35,7 +35,7 @@ with SpectrumAWGM4i66xxX8(
         ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-7),
         ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-7),
     ),
-    segments=(Segment(name="test1"),),
+    segment_names={"segment_1"},
     first_step=0,
     sampling_rate=static_trap_generator_x.sampling_rate,
 ) as awg:
@@ -45,7 +45,7 @@ with SpectrumAWGM4i66xxX8(
             static_trap_generator_y.compute_signal(),
         )
     )
-    awg.write_segment_data("test1", data)
+    awg.write_segment_data("segment_1", data)
     awg.run()
     input()
     awg.stop()
