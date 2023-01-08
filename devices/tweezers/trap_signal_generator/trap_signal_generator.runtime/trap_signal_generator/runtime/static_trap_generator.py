@@ -72,7 +72,7 @@ class StaticTrapGenerator(BaseModel):
         optimal_phases = compute_optimized_phases(
             self.frequencies, self.amplitudes, self.segment_frequency
         )
-        self.phases = optimal_phases
+        self.phases = optimal_phases % (2 * np.pi)
 
     @property
     def segment_frequency(self):
