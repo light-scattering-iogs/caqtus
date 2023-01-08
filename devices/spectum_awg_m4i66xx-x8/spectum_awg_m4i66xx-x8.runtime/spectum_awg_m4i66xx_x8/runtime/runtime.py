@@ -4,9 +4,9 @@ import math
 from typing import ClassVar
 
 import numpy as np
-from device import RuntimeDevice
 from pydantic import Field, validator
 
+from device import RuntimeDevice
 from settings_model import SettingsModel
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
@@ -14,6 +14,13 @@ from .pyspcm.py_header.regs import ERRORTEXTLEN
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+AMPLITUDE_REGISTERS = (
+    spcm.SPC_AMP0,
+    spcm.SPC_AMP1,
+    spcm.SPC_AMP2,
+    spcm.SPC_AMP3,
+)
 
 
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
@@ -96,12 +103,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         spcm.spcm_dwSetParam_i64(self._board_handle, spcm.SPC_CHENABLE, enable)
 
-        AMPLITUDE_REGISTERS = (
-            spcm.SPC_AMP0,
-            spcm.SPC_AMP1,
-            spcm.SPC_AMP2,
-            spcm.SPC_AMP3,
-        )
         for channel in range(self.NUMBER_CHANNELS):
             channel_name = self.channel_settings[channel].name
             if self.channel_settings[channel].enabled:
