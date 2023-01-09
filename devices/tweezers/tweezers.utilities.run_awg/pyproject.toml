@@ -17,6 +17,10 @@ trap-signal-generator-runtime = {path = "../trap_signal_generator/trap_signal_ge
 jupyter = "^1.0.0"
 matplotlib = "^3.6.2"
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

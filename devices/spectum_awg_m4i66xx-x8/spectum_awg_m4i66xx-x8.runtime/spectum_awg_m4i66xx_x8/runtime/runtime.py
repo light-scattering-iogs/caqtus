@@ -1,6 +1,8 @@
+import copy
 import ctypes
 import logging
 import math
+from enum import Enum
 from typing import ClassVar
 
 import numpy as np
@@ -35,6 +37,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         description="An identifier to find the board. ex: /dev/spcm0",
         allow_mutation=False,
     )
+    sampling_rate: int = Field(allow_mutation=False, units="Hz")
     channel_settings: tuple["ChannelSettings", ...] = Field(
         description="The configuration of the output channels", allow_mutation=False
     )
@@ -42,18 +45,39 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         description="The names of the segments to split the AWG memory into",
         allow_mutation=False,
     )
-    first_step: int = Field(allow_mutation=False)
-    sampling_rate: int = Field(allow_mutation=False, units="Hz")
+
+    first_step: str = Field(allow_mutation=False)
 
     _board_handle: spcm.drv_handle
     _segment_indices: dict[str, int]
+    _steps: dict[str, "StepConfiguration"]
+    _step_indices: dict[str, int]
     _bytes_per_sample: int
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self,
+        name: str,
+        board_id: str,
+        sampling_rate: int,
+        channel_settings: tuple["ChannelSettings", ...],
+        segment_names: frozenset[str],
+        steps: dict[str, "StepConfiguration"],
+        first_step: str,
+    ):
+        super().__init__(
+            name=name,
+            board_id=board_id,
+            sampling_rate=sampling_rate,
+            channel_settings=channel_settings,
+            segment_names=segment_names,
+            steps=steps,
+            first_step=first_step,
+        )
+        self._steps = copy.deepcopy(steps)
         self._segment_indices = {
             name: index for index, name in enumerate(self.segment_names)
         }
+        self._step_indices = {name: index for index, name in enumerate(self._steps)}
 
     @validator("channel_settings")
     def validate_channel_settings(cls, channel_settings):
@@ -147,25 +171,46 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
 
     def _setup_sequence(self):
+        for step_name, step_config in self._steps.items():
+            self._setup_step(step_name, step_config)
+
+        self._set_first_step(self.first_step)
+
+    def setup_step(self, step_name: str, config: "StepConfiguration") -> None:
+        self._setup_step(step_name, config)
+        self._steps[step_name] = config
+
+    def _setup_step(self, step_name: str, config: "StepConfiguration"):
+        step_index = self._step_indices[step_name]
+        segment_index = self._segment_indices[config.segment]
+        next_step_index = self._step_indices[config.next_step]
+
+        assert segment_index <= spcm.SPCSEQ_SEGMENTMASK
+        assert (next_step_index << 16) <= spcm.SPCSEQ_NEXTSTEPMASK
+        mask_lower = segment_index | (next_step_index << 16)
+
+        assert config.repetition <= spcm.SPCSEQ_LOOPMASK
+        mask_upper = config.repetition | config.change_condition.value
+        logger.debug(config.change_condition.value)
+
+        mask = mask_lower | (mask_upper << 32)
+
+        logger.debug(f"{step_name=}")
+        logger.debug(f"{step_index=}")
+        logger.debug(f"{mask & spcm.SPCSEQ_NEXTSTEPMASK=}")
+
         spcm.spcm_dwSetParam_i64(
-            self._board_handle, spcm.SPC_SEQMODE_STARTSTEP, self.first_step
+            self._board_handle,
+            spcm.SPC_SEQMODE_STEPMEM0 + step_index,
+            mask,
         )
+        self.check_error()
 
-        step = 0
-        segment = 0
-        loop_number = 1
-        next_segment = segment
-        leave_condition = spcm.SPCSEQ_ENDLOOPALWAYS
-
-        mask = (
-            segment
-            | (next_segment << 16)
-            | (loop_number << 32)
-            | (leave_condition << 32)
-        )
+    def _set_first_step(self, first_step: str):
+        first_step_index = self._step_indices[first_step]
 
         spcm.spcm_dwSetParam_i64(
-            self._board_handle, spcm.SPC_SEQMODE_STEPMEM0 + step, mask
+            self._board_handle, spcm.SPC_SEQMODE_STARTSTEP, first_step_index
         )
 
     def _setup_trigger(self):
@@ -272,6 +317,12 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
+    def get_current_step(self):
+        step_index = ctypes.c_int64(-1)
+        spcm.spcm_dwGetParam_i64(self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index))
+        self.check_error()
+        return step_index.value
+
     def stop(self):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_STOP
@@ -326,6 +377,19 @@ class ChannelSettings(SettingsModel):
         units="dBm",
         allow_mutation=False,
     )
+
+
+class StepChangeCondition(Enum):
+    ALWAYS = 0x0
+    ON_TRIGGER = 0x40000000
+    END = 0x80000000
+
+
+class StepConfiguration(SettingsModel):
+    segment: str
+    next_step: str
+    repetition: int
+    change_condition: StepChangeCondition = StepChangeCondition.ALWAYS
 
 
 SpectrumAWGM4i66xxX8.update_forward_refs()

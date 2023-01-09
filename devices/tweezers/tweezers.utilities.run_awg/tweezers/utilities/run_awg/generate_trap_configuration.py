@@ -11,7 +11,7 @@ number_samples = 19533 * 32
 sampling_rate = 625_000_000
 segment_frequency = sampling_rate / number_samples
 
-frequencies_x = np.linspace(70e6, 86e6, 9)
+frequencies_x = np.linspace(70e6, 86e6, 8)
 frequencies_y = np.linspace(70e6, 81e6, 1)
 frequencies_x = np.round(frequencies_x / segment_frequency) * segment_frequency
 frequencies_y = np.round(frequencies_y / segment_frequency) * segment_frequency

@@ -1,14 +1,15 @@
 import logging
-from trap_signal_generator.configuration import StaticTrapConfiguration
-from trap_signal_generator.runtime import StaticTrapGenerator
 
 import numpy as np
 
 from spectum_awg_m4i66xx_x8.runtime import (
     SpectrumAWGM4i66xxX8,
     ChannelSettings,
-    Segment,
+    StepConfiguration,
+    StepChangeCondition,
 )
+from trap_signal_generator.configuration import StaticTrapConfiguration
+from trap_signal_generator.runtime import StaticTrapGenerator
 
 logging.basicConfig()
 
@@ -35,17 +36,42 @@ with SpectrumAWGM4i66xxX8(
         ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-7),
         ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-7),
     ),
-    segment_names={"segment_1"},
-    first_step=0,
+    segment_names=frozenset(["segment_0", "segment_1"]),
+    steps={
+        "step_0": StepConfiguration(
+            segment="segment_0",
+            next_step="step_1",
+            repetition=100,
+            change_condition=StepChangeCondition.ALWAYS,
+        ),
+        "step_1": StepConfiguration(
+            segment="segment_1",
+            next_step="step_0",
+            repetition=100,
+            change_condition=StepChangeCondition.ALWAYS,
+        )
+    },
+    first_step="step_0",
     sampling_rate=static_trap_generator_x.sampling_rate,
 ) as awg:
-    data = np.int16(
+    data_0 = np.int16(
         (
             static_trap_generator_x.compute_signal(),
             static_trap_generator_y.compute_signal(),
         )
     )
-    awg.write_segment_data("segment_1", data)
+    static_trap_generator_y.frequencies = np.array(static_trap_generator_y.frequencies) + 4e6
+    data_1 = np.int16(
+        (
+            static_trap_generator_x.compute_signal(),
+            static_trap_generator_y.compute_signal(),
+        )
+    )
+
+    awg.write_segment_data("segment_0", data_0)
+    awg.write_segment_data("segment_1", data_1)
     awg.run()
+    # for _ in range(100):
+    #     print(awg.get_current_step())
     input()
     awg.stop()
