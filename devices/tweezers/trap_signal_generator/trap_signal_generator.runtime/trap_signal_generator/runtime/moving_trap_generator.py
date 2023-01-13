@@ -1,9 +1,24 @@
 from collections.abc import Sequence
 from functools import cached_property
+from typing import Literal, Callable
 
 import numpy as np
 from pydantic import BaseModel, validator
 from scipy.integrate import cumtrapz, quad
+
+
+def linear_trajectory(x):
+    return x
+
+
+def sin_trajectory(x):
+    return np.sin(np.pi / 2 * x) ** 2
+
+
+TRAJECTORIES: dict[str, Callable[[float], float]] = {
+    "linear": linear_trajectory,
+    "sin": sin_trajectory,
+}
 
 
 class MovingTrapGenerator(BaseModel):
@@ -14,6 +29,7 @@ class MovingTrapGenerator(BaseModel):
     amplitudes: Sequence[float]
     sampling_rate: float
     number_samples: int
+    trajectory_function: Literal["linear", "sin"]
 
     class Config:
         validate_assignment = True
@@ -60,11 +76,8 @@ class MovingTrapGenerator(BaseModel):
             )
         return tuple(amplitudes)
 
-    @staticmethod
-    def interpolating_function(x):
-        def fun(s):
-            return np.sin(np.pi / 2 * s) ** 2
-
+    def interpolating_function(self, x):
+        fun = TRAJECTORIES[self.trajectory_function]
         return np.piecewise(x, (x < 0, x <= 1), (0, fun, 1))
 
     @cached_property

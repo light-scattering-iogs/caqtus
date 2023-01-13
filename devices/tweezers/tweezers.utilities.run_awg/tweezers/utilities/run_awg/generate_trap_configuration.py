@@ -7,11 +7,16 @@ from trap_signal_generator.runtime import StaticTrapGenerator
 file_x = "./config_x.yaml"
 file_y = "./config_y.yaml"
 
-number_samples = 19533 * 32
+number_samples = 19539 * 32
 sampling_rate = 625_000_000
 segment_frequency = sampling_rate / number_samples
 
-frequencies_x = np.linspace(70e6, 86e6, 8)
+
+frequencies_x = np.linspace(70e6, 84e6, 15)
+spacing = frequencies_x[1] - frequencies_x[0]
+spacing = np.round(spacing / segment_frequency) * segment_frequency
+frequencies_x = np.arange(frequencies_x[0], frequencies_x[-1] + spacing, spacing)
+
 frequencies_y = np.linspace(70e6, 81e6, 1)
 frequencies_x = np.round(frequencies_x / segment_frequency) * segment_frequency
 frequencies_y = np.round(frequencies_y / segment_frequency) * segment_frequency

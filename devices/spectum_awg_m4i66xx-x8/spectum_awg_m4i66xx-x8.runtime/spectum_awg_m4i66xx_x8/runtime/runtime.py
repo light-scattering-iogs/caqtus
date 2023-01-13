@@ -15,7 +15,7 @@ from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP0,
@@ -52,6 +52,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     _segment_indices: dict[str, int]
     _steps: dict[str, "StepConfiguration"]
     _step_indices: dict[str, int]
+    _step_names: dict[int, str]
     _bytes_per_sample: int
 
     def __init__(
@@ -78,6 +79,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             name: index for index, name in enumerate(self.segment_names)
         }
         self._step_indices = {name: index for index, name in enumerate(self._steps)}
+        self._step_names = {index: name for name, index in self._step_indices.items()}
 
     @validator("channel_settings")
     def validate_channel_settings(cls, channel_settings):
@@ -317,11 +319,11 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def get_current_step(self):
+    def get_current_step(self) -> str:
         step_index = ctypes.c_int64(-1)
         spcm.spcm_dwGetParam_i64(self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index))
         self.check_error()
-        return step_index.value
+        return self._step_names[step_index.value]
 
     def stop(self):
         spcm.spcm_dwSetParam_i64(

@@ -49,7 +49,7 @@ with SpectrumAWGM4i66xxX8(
             next_step="step_0",
             repetition=100,
             change_condition=StepChangeCondition.ALWAYS,
-        )
+        ),
     },
     first_step="step_0",
     sampling_rate=static_trap_generator_x.sampling_rate,
@@ -60,7 +60,9 @@ with SpectrumAWGM4i66xxX8(
             static_trap_generator_y.compute_signal(),
         )
     )
-    static_trap_generator_y.frequencies = np.array(static_trap_generator_y.frequencies) + 4e6
+    static_trap_generator_y.frequencies = (
+        np.array(static_trap_generator_y.frequencies) + 4e6
+    )
     data_1 = np.int16(
         (
             static_trap_generator_x.compute_signal(),
@@ -71,7 +73,5 @@ with SpectrumAWGM4i66xxX8(
     awg.write_segment_data("segment_0", data_0)
     awg.write_segment_data("segment_1", data_1)
     awg.run()
-    # for _ in range(100):
-    #     print(awg.get_current_step())
     input()
     awg.stop()
