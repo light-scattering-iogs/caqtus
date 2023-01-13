@@ -1,18 +1,16 @@
 [tool.poetry]
-name = "spectum-awg-m4i66xx-x8-runtime"
+name = "spectum-awg-m4i66xx-x8-configuration"
 version = "0.1.0"
 description = ""
-authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
 packages = [{include = "spectum_awg_m4i66xx_x8"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-device = {path = "../../device", develop = true}
+device-config = {path = "../../../common/device_config", develop = true}
 pydantic = "^1.10.4"
-settings-model = {path = "../../../common/settings_model"}
-numpy = ">=1.18,<1.24"
-spectum-awg-m4i66xx-x8-configuration = {path = "../spectum_awg_m4i66xx-x8.configuration", develop = true}
+settings-model = {path = "../../../common/settings_model", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

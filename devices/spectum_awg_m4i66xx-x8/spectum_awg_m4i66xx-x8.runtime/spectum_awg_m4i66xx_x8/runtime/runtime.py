@@ -10,6 +10,7 @@ from pydantic import Field, validator
 
 from device import RuntimeDevice
 from settings_model import SettingsModel
+from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
@@ -321,7 +322,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
     def get_current_step(self) -> str:
         step_index = ctypes.c_int64(-1)
-        spcm.spcm_dwGetParam_i64(self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index))
+        spcm.spcm_dwGetParam_i64(
+            self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index)
+        )
         self.check_error()
         return self._step_names[step_index.value]
 
@@ -361,24 +364,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     @property
     def number_channels_enabled(self):
         return sum(channel.enabled for channel in self.channel_settings)
-
-
-class ChannelSettings(SettingsModel):
-    name: str = Field(description="The name of the channel", allow_mutation=False)
-    enabled: bool = Field(allow_mutation=False)
-    amplitude: float = Field(
-        description="The voltage amplitude of the output when setting the extrema values. ex: at an amplitude of 1 V, "
-        "the output can swing between +1 V and -1 V in a 50 Ohm termination.",
-        units="V",
-        allow_mutation=False,
-        ge=80e-3,
-        le=2.5,
-    )
-    maximum_power: float = Field(
-        description="Maximum average power per segment.",
-        units="dBm",
-        allow_mutation=False,
-    )
 
 
 class StepChangeCondition(Enum):

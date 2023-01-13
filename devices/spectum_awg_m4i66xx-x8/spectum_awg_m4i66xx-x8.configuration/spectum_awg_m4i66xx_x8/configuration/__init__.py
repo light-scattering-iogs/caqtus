@@ -1,0 +1,1 @@
+from .configuration import SpectrumAWGM4i66xxX8Configuration, ChannelSettings
