@@ -10,6 +10,7 @@ packages = [{include = "remote_device_server"}]
 python = "^3.10"
 pydantic = "^1.10.2"
 device = { path = "../../device/", develop = true }
+orca-quest-runtime = {path = "../../cameras/orca_quest/orca_quest.runtime", develop = true}
 
 
 [build-system]
