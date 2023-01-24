@@ -12,6 +12,7 @@ from device import RuntimeDevice
 from settings_model import SettingsModel
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
+from .pyspcm.spcm_tools import pvAllocMemPageAligned
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
 
@@ -250,7 +251,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         for channel in range(self.number_channels_enabled):
             channel_settings = self.channel_settings[channel]
             power = self._measure_mean_power(data[channel], channel_settings.amplitude)
-            power_dbm = 10 * math.log10(power / 1e-3)
+            power_dbm = 10 * math.log10(power / 1e-3) if power > 0 else -np.inf
             logger.info(
                 f"Channel {channel_settings.name} power for segment {segment_name}: {power_dbm:.2f} dBm"
             )
@@ -261,11 +262,14 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                     f"{channel_settings.name}"
                 )
 
+        segment_index = self._get_segment_index(segment_name)
+        self._write_segment_data(segment_index, data)
+
+    def _get_segment_index(self, segment_name: str) -> int:
         try:
-            segment_index = self._segment_indices[segment_name]
+            return self._segment_indices[segment_name]
         except KeyError:
             raise ValueError(f"There is no segment named {segment_name}")
-        self._write_segment_data(segment_index, data)
 
     @staticmethod
     def _measure_mean_power(data: np.ndarray[np.int16], amplitude: float):
@@ -295,12 +299,15 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     def _transfer_data(self, data: np.ndarray[np.int16]):
         data_length_bytes = len(data) * self._bytes_per_sample
 
+        buffer = pvAllocMemPageAligned(data_length_bytes)
+        ctypes.memmove(buffer, data.ctypes.data, data_length_bytes)
+
         spcm.spcm_dwDefTransfer_i64(
             self._board_handle,
             spcm.SPCM_BUF_DATA,
             spcm.SPCM_DIR_PCTOCARD,
-            data_length_bytes,
-            data.ctypes.data_as(ctypes.POINTER(ctypes.c_int16)),
+            0,
+            buffer,
             0,
             data_length_bytes,
         )
@@ -310,6 +317,26 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             spcm.M2CMD_DATA_STARTDMA | spcm.M2CMD_DATA_WAITDMA,
         )
         self.check_error()
+
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_DATA_STOPDMA
+        )
+        spcm.spcm_dwInvalidateBuf(self._board_handle, spcm.SPCM_BUF_DATA)
+        self.check_error()
+
+    def _get_segment_size(self, segment_index: int) -> int:
+        """Return the number of samples in the segment."""
+
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_SEQMODE_WRITESEGMENT, segment_index
+        )
+
+        segment_size = ctypes.c_int64(-1)
+        spcm.spcm_dwGetParam_i64(
+            self._board_handle, spcm.SPC_SEQMODE_SEGMENTSIZE, ctypes.byref(segment_size)
+        )
+        self.check_error()
+        return segment_size.value
 
     def run(self):
         spcm.spcm_dwSetParam_i64(self._board_handle, spcm.SPC_TIMEOUT, 0)

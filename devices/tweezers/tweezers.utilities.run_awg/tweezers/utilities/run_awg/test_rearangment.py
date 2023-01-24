@@ -17,6 +17,8 @@ logging.basicConfig()
 with open("./config_x.yaml", "r") as f:
     config_x = StaticTrapConfiguration.from_yaml(f.read())
 
+rng = np.random.RandomState(0)
+
 
 amplitude_one_tone = 0.135
 scale_x = np.sqrt(config_x.number_tones) * amplitude_one_tone
@@ -24,7 +26,7 @@ scale_y = amplitude_one_tone
 
 
 def generate_filled_traps(N):
-    return np.arange(N)[np.random.binomial(1, 0.5, N) == 1]
+    return np.arange(N)[rng.binomial(1, 0.5, N) == 1]
 
 
 filled_traps = generate_filled_traps(config_x.number_tones)
@@ -38,6 +40,8 @@ amplitudes = np.array(config_x.amplitudes)[filled_traps]
 
 target_frequencies = config_x.frequencies[: len(filled_traps)]
 target_phases = config_x.phases[: len(filled_traps)]
+
+static_trap_generator_x = StaticTrapGenerator.from_configuration(config_x)
 
 moving_generator = MovingTrapGenerator(
     starting_frequencies=starting_frequencies,
@@ -71,7 +75,6 @@ y_scan_generator = MovingTrapGenerator(
 
 data_y = y_scan_generator.compute_signal()
 
-static_trap_generator_x = StaticTrapGenerator.from_configuration(config_x)
 
 with SpectrumAWGM4i66xxX8(
     name="AWG",
@@ -80,6 +83,7 @@ with SpectrumAWGM4i66xxX8(
         ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-7),
         ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-7),
     ),
+    # segment_names=frozenset(["all_static_traps"]),
     segment_names=frozenset(["all_static_traps", "moving_traps", "target_traps"]),
     steps={
         "all_static_traps": StepConfiguration(
@@ -107,7 +111,7 @@ with SpectrumAWGM4i66xxX8(
     data = np.int16(
         (
             static_trap_generator_x.compute_signal(),
-            data_y[: config_x.number_samples],
+            data_y[: static_trap_generator_x.number_samples],
         )
     )
 
@@ -129,7 +133,7 @@ with SpectrumAWGM4i66xxX8(
     y_scan_generator.target_frequencies = [65e6]
     data = np.int16(
         (
-            target_generator.compute_signal(),
+            static_trap_generator_x.compute_signal(),
             data_y[2 * config_x.number_samples :],
         )
     )
