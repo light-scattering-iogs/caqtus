@@ -2,7 +2,7 @@ import logging
 import os
 from multiprocessing.managers import BaseManager
 
-from orca_quest import OrcaQuestCamera
+from orca_quest.runtime import OrcaQuestCamera
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)

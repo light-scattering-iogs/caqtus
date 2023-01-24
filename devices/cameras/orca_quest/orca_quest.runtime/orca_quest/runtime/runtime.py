@@ -4,9 +4,9 @@ import time
 from typing import ClassVar, Optional
 
 import numpy
-from camera.runtime import CCamera, CameraTimeoutError
 from pydantic import Field
 
+from camera.runtime import CCamera, CameraTimeoutError
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP
 
