@@ -24,7 +24,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="comboBox"/>
+      <widget class="QComboBox" name="remote_server_combobox"/>
      </item>
      <item>
       <spacer name="horizontalSpacer">

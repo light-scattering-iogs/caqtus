@@ -23,6 +23,7 @@ from .config_settings_editor import (
 from .devices_editor import DevicesEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .system_settings_editor import SystemSettingsEditor
+from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -89,7 +90,9 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.update_device_tree()
 
     def create_widget_for_device(self, device_name: str):
-        type_to_widget = {}
+        type_to_widget = {
+            "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor
+        }
 
         device_type = self.config.get_device_config(device_name).get_device_type()
 

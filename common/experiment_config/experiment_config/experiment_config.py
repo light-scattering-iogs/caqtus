@@ -177,9 +177,6 @@ class ExperimentConfig(SettingsModel):
             )
         if config.device_name in self.get_device_names():
             raise ValueError(f"Device name {config.device_name} is already being used")
-        allowed_name_regex = "^[a-zA-Z0-9_ ]+$"
-        if not re.match(config.device_name, allowed_name_regex):
-            raise ValueError(f"Invalid device name '{config.device_name}'")
         self.device_configurations.append(config)
 
 
