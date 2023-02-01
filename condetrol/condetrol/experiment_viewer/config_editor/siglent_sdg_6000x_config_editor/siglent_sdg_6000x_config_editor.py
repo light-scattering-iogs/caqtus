@@ -19,7 +19,7 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
 
         self.config = experiment_config
         self.device_name = self.strip_device_prefix(tree_label)
-        self.siglent_config = self.config.get_device_config(self.device_name)
+        # self.siglent_config = self.config.get_device_config(self.device_name)
 
     def get_experiment_config(self) -> ExperimentConfig:
         self.config.set_device_config(self.device_name, self.siglent_config)

@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Optional
 
 from PyQt5.QtCore import QObject
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from experiment_config import ExperimentConfig
 
@@ -43,3 +43,28 @@ class ConfigSettingsEditor(QWidget, metaclass=QABCMeta):
                 " 'Devices\\'"
             )
         return tree_label[8:]
+
+
+class NotImplementedDeviceConfigEditor(ConfigSettingsEditor):
+    def __init__(
+        self,
+        experiment_config: ExperimentConfig,
+        tree_label: str,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(experiment_config, tree_label, parent)
+
+        self.config = experiment_config
+        self.device_name = self.strip_device_prefix(tree_label)
+        device_config = self.config.get_device_config(self.device_name)
+        device_type = device_config.get_device_type()
+        layout = QHBoxLayout()
+        layout.addWidget(
+            QLabel(
+                f"There is no widget implemented for a device of type <{device_type}>"
+            )
+        )
+        self.setLayout(layout)
+
+    def get_experiment_config(self) -> ExperimentConfig:
+        return self.config

@@ -15,8 +15,20 @@ class Ui_EditorWidget(object):
     def setupUi(self, EditorWidget):
         EditorWidget.setObjectName("EditorWidget")
         EditorWidget.resize(558, 486)
-        self.horizontalLayout = QtWidgets.QHBoxLayout(EditorWidget)
+        self.verticalLayout = QtWidgets.QVBoxLayout(EditorWidget)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.label = QtWidgets.QLabel(EditorWidget)
+        self.label.setObjectName("label")
+        self.horizontalLayout.addWidget(self.label)
+        self.comboBox = QtWidgets.QComboBox(EditorWidget)
+        self.comboBox.setObjectName("comboBox")
+        self.horizontalLayout.addWidget(self.comboBox)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
+        self.horizontalLayout.setStretch(2, 1)
+        self.verticalLayout.addLayout(self.horizontalLayout)
         self.tabWidget = QtWidgets.QTabWidget(EditorWidget)
         self.tabWidget.setObjectName("tabWidget")
         self.tab_1 = QtWidgets.QWidget()
@@ -25,7 +37,7 @@ class Ui_EditorWidget(object):
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.tabWidget.addTab(self.tab_2, "")
-        self.horizontalLayout.addWidget(self.tabWidget)
+        self.verticalLayout.addWidget(self.tabWidget)
 
         self.retranslateUi(EditorWidget)
         self.tabWidget.setCurrentIndex(0)
@@ -34,5 +46,6 @@ class Ui_EditorWidget(object):
     def retranslateUi(self, EditorWidget):
         _translate = QtCore.QCoreApplication.translate
         EditorWidget.setWindowTitle(_translate("EditorWidget", "Form"))
+        self.label.setText(_translate("EditorWidget", "Remote server:"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_1), _translate("EditorWidget", "CH1"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("EditorWidget", "CH2"))

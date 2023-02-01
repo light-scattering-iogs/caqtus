@@ -8,6 +8,7 @@ packages = [{include = "siglent_sdg6000x"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+device-config = {path = "../../../common/device_config", develop = true}
 
 
 [build-system]

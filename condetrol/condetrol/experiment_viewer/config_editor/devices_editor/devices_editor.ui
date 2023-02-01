@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>596</width>
-    <height>389</height>
+    <width>909</width>
+    <height>530</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,0,1">
+      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,0,0,0,1">
        <item>
         <widget class="QPushButton" name="add_button">
          <property name="text">
@@ -48,6 +48,16 @@
           <string>device name</string>
          </property>
         </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>instanciated on</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="remote_server_combobox"/>
        </item>
        <item>
         <spacer name="horizontalSpacer">
