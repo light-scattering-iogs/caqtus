@@ -28,3 +28,18 @@ class ConfigSettingsEditor(QWidget, metaclass=QABCMeta):
     @abstractmethod
     def get_experiment_config(self) -> ExperimentConfig:
         ...
+
+    @staticmethod
+    def strip_device_prefix(tree_label: str) -> str:
+        """
+
+        example: strip_device_prefix("Devices\dev A") == "dev A"
+        """
+
+        prefix = tree_label[0:8]
+        if prefix != "Devices\\":
+            raise ValueError(
+                f"Invalid prefix for device tree label: {tree_label} should start with"
+                " 'Devices\\'"
+            )
+        return tree_label[8:]

@@ -10,16 +10,17 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
-    QLayout, QToolBar, QAction,
+    QLayout,
 )
 
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
 from .config_settings_editor import ConfigSettingsEditor
+from .devices_editor import DevicesEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .system_settings_editor import SystemSettingsEditor
-from .devices_editor import DevicesEditor
+from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -51,6 +52,7 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.settings_tree["System"] = SystemSettingsEditor
         self.settings_tree["Constants"] = SequenceHeaderEditor
         self.settings_tree["Devices"] = DevicesEditor
+        self.settings_tree["Devices\\Siglent SDG6000X A"] = SiglentSDG6000XConfigEditor
 
         for tree_label, widget_class in self.settings_tree.items():
             item = QTreeWidgetItem(self.category_tree)
