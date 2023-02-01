@@ -1,3 +1,4 @@
+import copy
 import logging
 from pathlib import Path
 from typing import Optional, Type
@@ -153,6 +154,17 @@ class ExperimentConfig(SettingsModel):
             if isinstance(config, config_type)
         }
 
+    def get_device_config(self, device_name: str) -> DeviceConfiguration:
+        for config in self.device_configurations:
+            if config.device_name == device_name:
+                return copy.deepcopy(config)
+        raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
+
+    def set_device_config(self, device_name: str, config: DeviceConfiguration):
+        names = [config.device_name for config in self.device_configurations]
+        index = names.index(device_name)
+        self.device_configurations[index] = copy.deepcopy(config)
+
 
 def get_config_path() -> Path:
     ui_settings = QSettings("Caqtus", "ExperimentControl")
@@ -161,3 +173,7 @@ def get_config_path() -> Path:
     )
     config_path = Path(config_folder) / "config.yaml"
     return config_path
+
+
+class DeviceConfigNotFoundError(RuntimeError):
+    pass
