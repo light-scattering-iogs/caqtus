@@ -158,7 +158,7 @@ class ExperimentConfig(SettingsModel):
             if isinstance(config, config_type)
         }
 
-    def get_device_config(self, device_name: str) -> DeviceConfiguration:
+    def get_device_config(self, device_name: str) -> DeviceConfigType:
         for config in self.device_configurations:
             if config.device_name == device_name:
                 return copy.deepcopy(config)

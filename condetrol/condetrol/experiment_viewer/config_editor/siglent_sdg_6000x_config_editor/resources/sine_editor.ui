@@ -27,7 +27,7 @@
       </widget>
      </item>
      <item row="2" column="2">
-      <widget class="QLineEdit" name="lineEdit_3">
+      <widget class="QLineEdit" name="offset_name_lineedit">
        <property name="placeholderText">
         <string>binding name</string>
        </property>
@@ -41,7 +41,7 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QLineEdit" name="lineEdit_2">
+      <widget class="QLineEdit" name="amplitude_name_lineedit">
        <property name="placeholderText">
         <string>binding name</string>
        </property>
@@ -62,7 +62,7 @@
       </widget>
      </item>
      <item row="0" column="2">
-      <widget class="QLineEdit" name="lineEdit">
+      <widget class="QLineEdit" name="frequency_name_lineedit">
        <property name="placeholderText">
         <string>binding name</string>
        </property>
@@ -111,21 +111,21 @@
       </widget>
      </item>
      <item row="0" column="4">
-      <widget class="QLineEdit" name="lineEdit_5">
+      <widget class="QLineEdit" name="frequency_expression_lineedit">
        <property name="placeholderText">
         <string>expression</string>
        </property>
       </widget>
      </item>
      <item row="1" column="4">
-      <widget class="QLineEdit" name="lineEdit_6">
+      <widget class="QLineEdit" name="amplitude_expression_lineedit">
        <property name="placeholderText">
         <string>expression</string>
        </property>
       </widget>
      </item>
      <item row="2" column="4">
-      <widget class="QLineEdit" name="lineEdit_7">
+      <widget class="QLineEdit" name="offset_expression_lineedit">
        <property name="placeholderText">
         <string>expression</string>
        </property>
@@ -139,7 +139,7 @@
       </widget>
      </item>
      <item row="3" column="2">
-      <widget class="QLineEdit" name="lineEdit_4">
+      <widget class="QLineEdit" name="phase_name_lineedit">
        <property name="placeholderText">
         <string>binding name</string>
        </property>
@@ -153,7 +153,7 @@
       </widget>
      </item>
      <item row="3" column="4">
-      <widget class="QLineEdit" name="lineEdit_8">
+      <widget class="QLineEdit" name="phase_expression_lineedit">
        <property name="placeholderText">
         <string>expression</string>
        </property>

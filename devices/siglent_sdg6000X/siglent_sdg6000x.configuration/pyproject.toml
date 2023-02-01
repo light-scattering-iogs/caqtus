@@ -9,6 +9,10 @@ packages = [{include = "siglent_sdg6000x"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 device-config = {path = "../../../common/device_config", develop = true}
+settings-model = {path = "../../../common/settings_model", develop = true}
+sequence = {path = "../../../common/sequence", develop = true}
+units = {path = "../../../common/units", develop = true}
+expression = {path = "../../../common/expression", develop = true}
 
 
 [build-system]
