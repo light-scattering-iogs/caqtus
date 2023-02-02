@@ -4,7 +4,7 @@ from typing import Literal, Any
 
 from pydantic import Field, validator
 
-from common.settings_model.settings_model import SettingsModel
+from settings_model import SettingsModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

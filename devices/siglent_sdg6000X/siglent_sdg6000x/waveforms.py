@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import Field
 
-from common.settings_model.settings_model import SettingsModel
+from settings_model import SettingsModel
 
 
 class SiglentSDG6000XWaveform(SettingsModel, ABC):

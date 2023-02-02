@@ -6,7 +6,7 @@ import pyvisa.resources
 from pydantic import Field, validator
 from pyvisa.constants import AccessModes
 
-from common.settings_model.settings_model import SettingsModel
+from settings_model import SettingsModel
 from device import RuntimeDevice
 from modulation import SiglentSDG6000XModulation
 from waveforms import SiglentSDG6000XWaveform, DCVoltage
