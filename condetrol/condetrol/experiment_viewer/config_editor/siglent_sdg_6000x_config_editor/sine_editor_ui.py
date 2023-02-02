@@ -14,6 +14,7 @@ class Ui_SineEditor(object):
         SineEditor.setObjectName("SineEditor")
         SineEditor.resize(640, 478)
         self.verticalLayout = QtWidgets.QVBoxLayout(SineEditor)
+        self.verticalLayout.setContentsMargins(-1, 0, -1, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.gridLayout = QtWidgets.QGridLayout()
         self.gridLayout.setSpacing(6)
@@ -81,9 +82,6 @@ class Ui_SineEditor(object):
         self.gridLayout.setColumnStretch(2, 1)
         self.gridLayout.setColumnStretch(4, 2)
         self.verticalLayout.addLayout(self.gridLayout)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
-        self.verticalLayout.addItem(spacerItem)
-        self.verticalLayout.setStretch(1, 1)
 
         self.retranslateUi(SineEditor)
         QtCore.QMetaObject.connectSlotsByName(SineEditor)

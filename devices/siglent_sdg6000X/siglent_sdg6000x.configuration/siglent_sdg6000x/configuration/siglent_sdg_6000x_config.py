@@ -13,6 +13,14 @@ class SiglentSDG6000XModulationConfiguration(SettingsModel, ABC):
     source: Literal["INT", "EXT", "CH1", "CH2"] = "EXT"
 
 
+class AmplitudeModulationConfiguration(SiglentSDG6000XModulationConfiguration):
+    depth: float = Field(default=100, units="%")
+
+
+class FrequencyModulationConfiguration(SiglentSDG6000XModulationConfiguration):
+    deviation: float = Field(ge=0, units="Hz")
+
+
 class SineWaveConfiguration(SettingsModel):
     frequency: VariableDeclaration = VariableDeclaration("", Expression("..."))
     amplitude: VariableDeclaration = VariableDeclaration("", Expression("..."))

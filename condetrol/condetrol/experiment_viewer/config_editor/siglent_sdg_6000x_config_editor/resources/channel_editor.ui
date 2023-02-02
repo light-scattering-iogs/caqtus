@@ -36,18 +36,15 @@
          </item>
         </layout>
        </item>
-       <item row="3" column="1">
-        <widget class="QComboBox" name="comboBox_2"/>
-       </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_3">
+        <widget class="QLabel" name="modulation_label">
          <property name="text">
           <string>Modulation</string>
          </property>
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="label_2">
+        <widget class="QLabel" name="waveform_label">
          <property name="text">
           <string>Waveform</string>
          </property>
@@ -72,6 +69,9 @@
        </item>
        <item row="1" column="1">
         <widget class="QComboBox" name="output_load_combobox"/>
+       </item>
+       <item row="3" column="1">
+        <widget class="QComboBox" name="modulation_combobox"/>
        </item>
       </layout>
      </item>
