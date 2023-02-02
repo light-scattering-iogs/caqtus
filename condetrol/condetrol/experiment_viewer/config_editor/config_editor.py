@@ -1,7 +1,7 @@
 import logging
 from copy import deepcopy
 from pathlib import Path
-from typing import Type, Optional
+from typing import Optional
 
 from PyQt5 import QtGui
 from PyQt5.QtCore import (
@@ -10,16 +10,20 @@ from PyQt5.QtCore import (
 from PyQt5.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
-    QLayout, QToolBar, QAction,
+    QLayout,
 )
 
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
-from .config_settings_editor import ConfigSettingsEditor
+from .config_settings_editor import (
+    ConfigSettingsEditor,
+    NotImplementedDeviceConfigEditor,
+)
+from .devices_editor import DevicesEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .system_settings_editor import SystemSettingsEditor
-from .devices_editor import DevicesEditor
+from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -43,20 +47,57 @@ class ConfigEditor(QDialog, Ui_config_editor):
         with open(get_config_path(), "r") as file:
             self.config = ExperimentConfig.from_yaml(file.read())
 
-        self.settings_tree: dict[str, Type[ConfigSettingsEditor]] = dict()
+        self.system_item = QTreeWidgetItem(self.category_tree)
+        self.system_item.setText(0, "System")
 
-        # To add a new category of settings, add a new entry in the dictionary below
-        # The key is the name of the category and the value is the class that is
-        # instantiated to create the editor widget.
-        self.settings_tree["System"] = SystemSettingsEditor
-        self.settings_tree["Constants"] = SequenceHeaderEditor
-        self.settings_tree["Devices"] = DevicesEditor
+        self.constants_item = QTreeWidgetItem(self.category_tree)
+        self.constants_item.setText(0, "Constants")
 
-        for tree_label, widget_class in self.settings_tree.items():
-            item = QTreeWidgetItem(self.category_tree)
-            item.setText(0, tree_label)
+        self.devices_item = QTreeWidgetItem(self.category_tree)
+        self.devices_item.setText(0, "Devices")
 
         self.category_tree.currentItemChanged.connect(self.change_displayed_widget)
+
+        self.update_device_tree()
+
+    def update_device_tree(self):
+        while self.devices_item.childCount():
+            child = self.devices_item.child(0)
+            self.devices_item.removeChild(child)
+
+        for device_name in self.config.get_device_names():
+            item = QTreeWidgetItem(self.devices_item)
+            item.setText(0, device_name)
+
+    def create_editor_widget(
+        self,
+        tree_label: str,
+    ) -> ConfigSettingsEditor:
+        if tree_label == "System":
+            return SystemSettingsEditor(deepcopy(self.config), tree_label)
+        elif tree_label == "Constants":
+            return SequenceHeaderEditor(deepcopy(self.config), tree_label)
+        elif tree_label == "Devices":
+            editor = DevicesEditor(deepcopy(self.config), tree_label)
+            editor.device_added.connect(self.on_device_added)
+            return editor
+        elif tree_label.startswith("Devices\\"):
+            return self.create_widget_for_device(tree_label[8:])
+        raise RuntimeError(f"Tree label {tree_label} has no associated widget")
+
+    def on_device_added(self):
+        self.change_displayed_widget(self.devices_item, None)
+        self.update_device_tree()
+
+    def create_widget_for_device(self, device_name: str):
+        type_to_widget = {
+            "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor
+        }
+
+        device_type = self.config.get_device_config(device_name).get_device_type()
+
+        widget_type = type_to_widget.get(device_type, NotImplementedDeviceConfigEditor)
+        return widget_type(deepcopy(self.config), f"Devices\\{device_name}")
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         self.save_experiment_config()
@@ -77,11 +118,21 @@ class ConfigEditor(QDialog, Ui_config_editor):
         """Save the config from the previously displayed widget then display the new widget instead"""
 
         label = item.text(0)
-        if widget := self.get_current_widget():
-            self.config = widget.get_experiment_config()
-        clear_layout(self.widget_layout)
-        widget = self.settings_tree[label](deepcopy(self.config), label)
-        self.widget_layout.addWidget(widget)
+
+        if old_widget := self.get_current_widget():
+            config = old_widget.get_experiment_config()
+            if not isinstance(config, ExperimentConfig):
+                raise TypeError(
+                    f"Widget {label} did not return an <ExperimentConfig> object"
+                )
+            self.config = config
+            old_widget.deleteLater()
+
+        if item.parent() is self.devices_item:
+            label = f"Devices\\{label}"
+        new_widget = self.create_editor_widget(label)
+
+        self.widget_layout.addWidget(new_widget)
 
     def get_current_widget(self) -> Optional[ConfigSettingsEditor]:
         if self.widget_layout.count():

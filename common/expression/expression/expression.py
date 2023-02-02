@@ -132,9 +132,13 @@ class Expression(YAMLSerializable):
 
         if self._implicit_multiplication:
             expr = add_implicit_multiplication(expr)
+        try:
+            # noinspection PyTypeChecker
+            return ast.parse(expr, mode="eval")
+        except SyntaxError as error:
+            print(f"There is a syntax error in the expression '{expr}'")
+            raise error
 
-        # noinspection PyTypeChecker
-        return ast.parse(expr, mode="eval")
 
     @cached_property
     def code(self):

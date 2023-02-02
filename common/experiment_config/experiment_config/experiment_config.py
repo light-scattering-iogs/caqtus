@@ -1,4 +1,6 @@
+import copy
 import logging
+import re
 from pathlib import Path
 from typing import Optional, Type
 
@@ -143,6 +145,9 @@ class ExperimentConfig(SettingsModel):
                 cameras.add(device_config.device_name)
         return cameras
 
+    def get_device_names(self):
+        return (config.device_name for config in self.device_configurations)
+
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
     ) -> dict[str, DeviceConfigType]:
@@ -153,6 +158,27 @@ class ExperimentConfig(SettingsModel):
             if isinstance(config, config_type)
         }
 
+    def get_device_config(self, device_name: str) -> DeviceConfigType:
+        for config in self.device_configurations:
+            if config.device_name == device_name:
+                return copy.deepcopy(config)
+        raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
+
+    def set_device_config(self, device_name: str, config: DeviceConfiguration):
+        names = [config.device_name for config in self.device_configurations]
+        index = names.index(device_name)
+        self.device_configurations[index] = copy.deepcopy(config)
+
+    def add_device_config(self, config: DeviceConfiguration):
+        if not isinstance(config, DeviceConfiguration):
+            raise TypeError(
+                f"Trying to create a configuration that is not an instance of"
+                f" <DeviceConfiguration>"
+            )
+        if config.device_name in self.get_device_names():
+            raise ValueError(f"Device name {config.device_name} is already being used")
+        self.device_configurations.append(config)
+
 
 def get_config_path() -> Path:
     ui_settings = QSettings("Caqtus", "ExperimentControl")
@@ -161,3 +187,7 @@ def get_config_path() -> Path:
     )
     config_path = Path(config_folder) / "config.yaml"
     return config_path
+
+
+class DeviceConfigNotFoundError(RuntimeError):
+    pass
