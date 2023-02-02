@@ -31,7 +31,7 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         )
 
         self.waveform_editors = []
-        self.channel_editors = []
+        self.channel_editors: list[ChannelEditor] = []
 
         self.setup_server_combobox()
         self.setup_visa_resource()
@@ -115,10 +115,9 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
 
     def read_channels(self):
         for index in range(self.siglent_config.channel_number):
-            self.siglent_config.channel_configurations[index] = self.read_channel(
-                self.channel_editors[index].,
-                self.siglent_config.channel_configurations[index],
-            )
+            self.siglent_config.channel_configurations[index] = self.channel_editors[
+                index
+            ].get_updated_config(self.siglent_config.channel_configurations[index])
 
     @staticmethod
     def read_channel(
@@ -183,7 +182,9 @@ class ChannelEditor(QWidget, Ui_ChannelEditor):
             )
         SiglentSDG6000XConfigEditor.setup_waveform(self, config)
 
-    def get_updated_config(self, config: SiglentSDG6000XChannelConfiguration) -> SiglentSDG6000XChannelConfiguration:
+    def get_updated_config(
+        self, config: SiglentSDG6000XChannelConfiguration
+    ) -> SiglentSDG6000XChannelConfiguration:
         config.output_enabled = self.on_button.isChecked()
         if self.output_load_combobox.currentText() == "HiZ":
             config.output_load = "HZ"
