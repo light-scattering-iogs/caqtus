@@ -1,17 +1,21 @@
 from typing import Optional
 
+from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 
 from experiment_config import ExperimentConfig
 from siglent_sdg6000x.configuration import (
     SiglentSDG6000XConfiguration,
     SineWaveConfiguration,
+    SiglentSDG6000XChannelConfiguration,
 )
+from .channel_editor_ui import Ui_ChannelEditor
 from .editor_widget_ui import Ui_EditorWidget
 from .sine_editor_ui import Ui_SineEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
 
+QObjectBindableProperty
 class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
     def __init__(
         self,
@@ -31,12 +35,38 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         self.waveform_editors = []
 
         self.setup_server_combobox()
-        self.setup_waveforms()
+        self.setup_visa_resource()
+        self.setup_channels()
+        # self.setup_waveforms()
+
+    @pyqtProperty
+    def test(self):
+        return 2
+
 
     def setup_server_combobox(self):
         for remote_server in self.config.device_servers:
             self.remote_server_combobox.addItem(remote_server)
         self.remote_server_combobox.setCurrentText(self.siglent_config.remote_server)
+
+    def setup_visa_resource(self):
+        self.visa_resource_lineedit.setText(self.siglent_config.visa_resource)
+
+    def setup_channels(self):
+        channel_editor_1 = ChannelEditor()
+        layout_1 = QVBoxLayout()
+        layout_1.addWidget(channel_editor_1)
+        self.tab_1.setLayout(layout_1)
+
+        channel_editor_2 = ChannelEditor()
+        layout_2 = QVBoxLayout()
+        layout_2.addWidget(channel_editor_2)
+        self.tab_2.setLayout(layout_2)
+
+    def setup_channel(
+        self, editor: "ChannelEditor", config: SiglentSDG6000XChannelConfiguration
+    ):
+        pass
 
     def setup_waveforms(self):
         self.waveform_editors = []
@@ -70,12 +100,16 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
 
     def get_experiment_config(self) -> ExperimentConfig:
         self.read_server_combobox()
+        self.read_visa_resource()
         self.read_waveforms()
         self.config.set_device_config(self.device_name, self.siglent_config)
         return self.config
 
     def read_server_combobox(self):
         self.siglent_config.remote_server = self.remote_server_combobox.currentText()
+
+    def read_visa_resource(self):
+        self.siglent_config.visa_resource = self.visa_resource_lineedit.text()
 
     def read_waveforms(self):
         for index in range(self.siglent_config.channel_number):
@@ -100,6 +134,12 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
 
 
 class SineEditor(QWidget, Ui_SineEditor):
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.setupUi(self)
+
+
+class ChannelEditor(QWidget, Ui_ChannelEditor):
     def __init__(self, *args):
         super().__init__(*args)
         self.setupUi(self)
