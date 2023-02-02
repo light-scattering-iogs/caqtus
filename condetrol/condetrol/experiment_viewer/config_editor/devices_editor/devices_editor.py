@@ -1,8 +1,8 @@
 import copy
 from typing import Optional
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QWidget
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QWidget
 
 from device_config import DeviceConfiguration
 from experiment_config import ExperimentConfig, SiglentSDG6000XConfiguration
@@ -14,6 +14,7 @@ DEVICE_TYPES = ["SiglentSDG6000XWaveformGenerator"]
 
 class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
     device_added = pyqtSignal(DeviceConfiguration)
+
     def __init__(
         self, config: ExperimentConfig, label: str, parent: Optional[QWidget] = None
     ):

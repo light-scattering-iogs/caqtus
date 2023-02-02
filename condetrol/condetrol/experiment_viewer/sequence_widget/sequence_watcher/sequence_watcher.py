@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from pathlib import Path
 
-from PyQt5.QtCore import QObject, pyqtSignal, QFileSystemWatcher
+from PyQt6.QtCore import QObject, pyqtSignal, QFileSystemWatcher
 
 from sequence import SequenceConfig, SequenceStats
 from sequence.sequence import Sequence

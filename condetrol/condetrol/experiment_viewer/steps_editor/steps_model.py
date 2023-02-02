@@ -8,7 +8,7 @@ with the steps that a sequence execute.
 from abc import abstractmethod, ABCMeta
 from typing import Iterable
 
-from PyQt5.QtCore import (
+from PyQt6.QtCore import (
     QAbstractItemModel,
     QModelIndex,
     Qt,
@@ -99,7 +99,7 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
         return flags
 
     # noinspection PyTypeChecker
-    def supportedDropActions(self) -> Qt.DropActions:
+    def supportedDropActions(self) -> Qt.DropAction:
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def mimeTypes(self) -> list[str]:

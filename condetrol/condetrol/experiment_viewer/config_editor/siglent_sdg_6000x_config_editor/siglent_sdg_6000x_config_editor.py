@@ -1,7 +1,6 @@
 from typing import Optional
 
-from PyQt5.QtCore import pyqtProperty
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from experiment_config import ExperimentConfig
 from siglent_sdg6000x.configuration import (
@@ -15,7 +14,6 @@ from .sine_editor_ui import Ui_SineEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
 
-QObjectBindableProperty
 class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
     def __init__(
         self,
@@ -33,16 +31,12 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         )
 
         self.waveform_editors = []
+        self.channel_editors = []
 
         self.setup_server_combobox()
         self.setup_visa_resource()
         self.setup_channels()
         # self.setup_waveforms()
-
-    @pyqtProperty
-    def test(self):
-        return 2
-
 
     def setup_server_combobox(self):
         for remote_server in self.config.device_servers:
@@ -53,20 +47,26 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         self.visa_resource_lineedit.setText(self.siglent_config.visa_resource)
 
     def setup_channels(self):
-        channel_editor_1 = ChannelEditor()
+        for index in range(self.siglent_config.channel_number):
+            editor = ChannelEditor()
+            editor.setup(self.siglent_config.channel_configurations[index])
+            self.channel_editors.append(editor)
+
         layout_1 = QVBoxLayout()
-        layout_1.addWidget(channel_editor_1)
+        layout_1.addWidget(self.channel_editors[0])
         self.tab_1.setLayout(layout_1)
 
-        channel_editor_2 = ChannelEditor()
         layout_2 = QVBoxLayout()
-        layout_2.addWidget(channel_editor_2)
+        layout_2.addWidget(self.channel_editors[1])
         self.tab_2.setLayout(layout_2)
 
-    def setup_channel(
-        self, editor: "ChannelEditor", config: SiglentSDG6000XChannelConfiguration
+    @staticmethod
+    def setup_waveform(
+        editor: "ChannelEditor", config: SiglentSDG6000XChannelConfiguration
     ):
-        pass
+        editor.waveform_combobox.addItem("Sine")
+        editor.waveform_combobox.setCurrentText("Sine")
+        editor.parameters_layout
 
     def setup_waveforms(self):
         self.waveform_editors = []
@@ -84,7 +84,8 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         layout_2.addWidget(self.waveform_editors[1])
         self.tab_2.setLayout(layout_2)
 
-    def setup_sine_editor(self, editor: "SineEditor", config: SineWaveConfiguration):
+    @staticmethod
+    def setup_sine_editor(editor: "SineEditor", config: SineWaveConfiguration):
         editor.frequency_name_lineedit.setText(config.frequency.name)
         editor.frequency_expression_lineedit.setText(config.frequency.expression.body)
 
@@ -101,7 +102,8 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
     def get_experiment_config(self) -> ExperimentConfig:
         self.read_server_combobox()
         self.read_visa_resource()
-        self.read_waveforms()
+        self.read_channels()
+        # self.read_waveforms()
         self.config.set_device_config(self.device_name, self.siglent_config)
         return self.config
 
@@ -111,6 +113,26 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
     def read_visa_resource(self):
         self.siglent_config.visa_resource = self.visa_resource_lineedit.text()
 
+    def read_channels(self):
+        for index in range(self.siglent_config.channel_number):
+            self.siglent_config.channel_configurations[index] = self.read_channel(
+                self.channel_editors[index].,
+                self.siglent_config.channel_configurations[index],
+            )
+
+    @staticmethod
+    def read_channel(
+        editor: "ChannelEditor", config: SiglentSDG6000XChannelConfiguration
+    ):
+        config.output_enabled = editor.on_button.isChecked()
+        if editor.output_load_combobox.currentText() == "HiZ":
+            config.output_load = "HZ"
+        elif editor.output_load_combobox.currentText() == "50 Ω":
+            config.output_load = 50.0
+        else:
+            raise NotImplementedError()
+        return config
+
     def read_waveforms(self):
         for index in range(self.siglent_config.channel_number):
             self.siglent_config.waveform_configs[index] = self.read_sine_waveform(
@@ -118,7 +140,8 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
                 self.siglent_config.waveform_configs[index],
             )
 
-    def read_sine_waveform(self, editor: "SineEditor", config: SineWaveConfiguration):
+    @staticmethod
+    def read_sine_waveform(editor: "SineEditor", config: SineWaveConfiguration):
         config.frequency.name = editor.frequency_name_lineedit.text()
         config.frequency.expression.body = editor.frequency_expression_lineedit.text()
 
@@ -143,3 +166,29 @@ class ChannelEditor(QWidget, Ui_ChannelEditor):
     def __init__(self, *args):
         super().__init__(*args)
         self.setupUi(self)
+
+    def setup(self, config: SiglentSDG6000XChannelConfiguration):
+        self.on_button.setChecked(config.output_enabled)
+        self.off_button.setChecked(not config.output_enabled)
+
+        self.output_load_combobox.addItem("50 Ω")
+        self.output_load_combobox.addItem("HiZ")
+        if config.output_load == 50.0:
+            self.output_load_combobox.setCurrentText("50 Ω")
+        elif config.output_load == "HZ":
+            self.output_load_combobox.setCurrentText("HiZ")
+        else:
+            raise NotImplemented(
+                f"output load of {config.output_load} Ω not implemented"
+            )
+        SiglentSDG6000XConfigEditor.setup_waveform(self, config)
+
+    def get_updated_config(self, config: SiglentSDG6000XChannelConfiguration) -> SiglentSDG6000XChannelConfiguration:
+        config.output_enabled = self.on_button.isChecked()
+        if self.output_load_combobox.currentText() == "HiZ":
+            config.output_load = "HZ"
+        elif self.output_load_combobox.currentText() == "50 Ω":
+            config.output_load = 50.0
+        else:
+            raise NotImplementedError()
+        return config

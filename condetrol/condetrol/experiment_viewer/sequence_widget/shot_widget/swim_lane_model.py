@@ -2,9 +2,8 @@ import logging
 from itertools import groupby
 from pathlib import Path
 from typing import Type, Iterable
-from condetrol.utils import UndoStack
 
-from PyQt5.QtCore import (
+from PyQt6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
     Qt,
@@ -12,7 +11,9 @@ from PyQt5.QtCore import (
     QMimeData,
     QByteArray,
 )
-from PyQt5.QtGui import QColor, QIcon
+from PyQt6.QtGui import QColor, QIcon
+
+from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence import SequenceStats, SequenceConfig, SequenceState
@@ -23,10 +24,10 @@ from sequence.shot import (
     CameraLane,
     TakePicture,
     CameraAction,
-    Ramp, ShotConfiguration,
+    Ramp,
+    ShotConfiguration,
 )
 from settings_model import YAMLSerializable
-
 from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
@@ -210,7 +211,7 @@ class SwimLaneModel(QAbstractTableModel):
         return editable
 
     # noinspection PyTypeChecker
-    def supportedDropActions(self) -> Qt.DropActions:
+    def supportedDropActions(self) -> Qt.DropAction:
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def supportedDragActions(self) -> Qt.DropAction:
@@ -357,7 +358,11 @@ class SwimLaneModel(QAbstractTableModel):
                 self.sequence_config, self.sequence_watcher.config_path
             )
             if save_undo:
-                self.undo_stack.push(YAMLSerializable.dump(self.sequence_config.shot_configurations[self.shot_name]))
+                self.undo_stack.push(
+                    YAMLSerializable.dump(
+                        self.sequence_config.shot_configurations[self.shot_name]
+                    )
+                )
             return True
 
     def merge(self, indexes: Iterable[QModelIndex]):

@@ -2,9 +2,9 @@ import logging
 from abc import abstractmethod
 from functools import singledispatch
 
-from PyQt5.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize
-from PyQt5.QtGui import QPainter, QPixmap
-from PyQt5.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
+from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize
+from PyQt6.QtGui import QPainter, QPixmap
+from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
 
 from expression import Expression
 from sequence import Step, VariableDeclaration, ExecuteShot, LinspaceLoop

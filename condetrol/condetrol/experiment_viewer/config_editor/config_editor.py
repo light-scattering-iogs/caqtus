@@ -3,14 +3,14 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-from PyQt5 import QtGui
-from PyQt5.QtCore import (
-    QSettings,
-)
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
     QLayout,
+)
+from PyQt6 import QtGui
+from PyQt6.QtCore import (
+    QSettings,
 )
 
 from experiment_config import ExperimentConfig, get_config_path
@@ -22,8 +22,8 @@ from .config_settings_editor import (
 )
 from .devices_editor import DevicesEditor
 from .sequence_header_editor import SequenceHeaderEditor
-from .system_settings_editor import SystemSettingsEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
+from .system_settings_editor import SystemSettingsEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

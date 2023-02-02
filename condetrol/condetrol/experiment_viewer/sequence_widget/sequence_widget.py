@@ -7,19 +7,18 @@ of this module is to generate and edit a yaml file that is then consumed by othe
 import logging
 from pathlib import Path
 
-from PyQt5.QtCore import (
+from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
 )
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import (
+from PyQt6.QtGui import QKeySequence, QShortcut, QAction
+from PyQt6.QtWidgets import (
     QDockWidget,
     QTreeView,
     QAbstractItemView,
     QTabWidget,
     QMenu,
-    QAction, QShortcut,
 )
 
 from condetrol.utils import UndoStack

@@ -14,7 +14,7 @@ h5py = "^3.7.0"
 numpy = "^1.23.4"
 anytree = "^2.8.0"
 watchdog = "^2.1.9"
-pyqt5 = "^5.15.7"
+pyqt6 = "^6.4.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2"

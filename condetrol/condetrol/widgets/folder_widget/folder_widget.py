@@ -1,16 +1,14 @@
 import logging
-from functools import singledispatchmethod
 from pathlib import Path
 
-from PyQt5 import QtGui
-from PyQt5.QtCore import pyqtSignal, QModelIndex, Qt, QAbstractItemModel
-from PyQt5.QtWidgets import (
+from PyQt6 import QtGui
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QLineEdit,
     QPushButton,
     QFileDialog,
-    QAbstractItemDelegate,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,6 +54,3 @@ class FolderWidget(QWidget):
     @property
     def path(self):
         return self._path.text()
-
-
-

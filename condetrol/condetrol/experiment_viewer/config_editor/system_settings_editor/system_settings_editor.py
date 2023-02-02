@@ -1,7 +1,7 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex
-from PyQt5.QtWidgets import QFormLayout, QDataWidgetMapper, QWidget
+from PyQt6.QtCore import Qt, QAbstractListModel, QModelIndex
+from PyQt6.QtWidgets import QFormLayout, QDataWidgetMapper, QWidget
 
 from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
 from experiment_config import ExperimentConfig, get_config_path
@@ -69,7 +69,7 @@ class SystemSettingsModel(QAbstractListModel):
                 return str(self._config.data_path)
 
     # noinspection PyTypeChecker
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid():
             return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled
 

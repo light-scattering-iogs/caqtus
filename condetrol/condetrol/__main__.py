@@ -6,8 +6,8 @@ import sys
 from multiprocessing.managers import BaseManager
 
 import qdarkstyle
-from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtGui import QFontDatabase
+from PyQt6.QtWidgets import QApplication
 
 from experiment_manager import ExperimentManager, get_logs_queue
 from experiment_viewer import ExperimentViewer

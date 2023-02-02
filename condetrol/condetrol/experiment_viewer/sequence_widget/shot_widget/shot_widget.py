@@ -2,9 +2,9 @@ import logging
 from functools import partial
 from pathlib import Path
 
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
-from PyQt5.QtGui import QPainter, QBrush, QColor, QKeySequence
-from PyQt5.QtWidgets import (
+from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
+from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
+from PyQt6.QtWidgets import (
     QWidget,
     QTableView,
     QVBoxLayout,
@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import (
     QStyleOptionViewItem,
     QStyle,
     QMenu,
-    QAction, QShortcut,
 )
 
 from experiment_config import ExperimentConfig

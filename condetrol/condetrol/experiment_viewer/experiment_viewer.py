@@ -9,25 +9,25 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 from threading import Thread
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import QSettings, QModelIndex, Qt, QTimer
-from PyQt5.QtGui import QIcon, QColor, QPalette
-from PyQt5.QtWidgets import (
+from PyQt6 import QtCore
+from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
+from PyQt6.QtGui import QIcon, QColor, QPalette, QFileSystemModel, QAction
+from PyQt6.QtWidgets import (
     QMainWindow,
-    QFileSystemModel,
     QStyleOptionViewItem,
     QStyleOptionProgressBar,
     QApplication,
     QStyle,
     QStyledItemDelegate,
     QMenu,
-    QAction,
     QInputDialog,
     QLineEdit,
     QAbstractItemView,
     QMessageBox,
     QTextBrowser,
 )
+
+
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
 from qtpy import QtGui
@@ -400,7 +400,7 @@ class SequenceViewerModel(QFileSystemModel):
                 return "Duration"
         return super().headerData(section, orientation, role)
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)
         if index.isValid():
             flags |= Qt.ItemFlag.ItemIsDragEnabled

@@ -1,7 +1,8 @@
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QModelIndex
-from PyQt5.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu, QAction
+from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu
 
 from experiment_config import ExperimentConfig
 from expression import Expression

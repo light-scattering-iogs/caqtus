@@ -11,7 +11,7 @@ from typing import Literal, Any, Optional
 
 import h5py
 import numpy
-from PyQt5.QtCore import QSaveFile
+from PyQt6.QtCore import QSaveFile
 from watchdog.events import (
     FileSystemEventHandler,
     FileModifiedEvent,

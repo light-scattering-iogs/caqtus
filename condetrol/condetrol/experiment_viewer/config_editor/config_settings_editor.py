@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
-from PyQt5.QtCore import QObject
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PyQt6.QtCore import QObject
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from experiment_config import ExperimentConfig
 

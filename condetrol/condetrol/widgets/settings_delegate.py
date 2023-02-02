@@ -1,7 +1,7 @@
 from functools import singledispatchmethod
 
-from PyQt5.QtCore import QModelIndex, QAbstractItemModel, Qt
-from PyQt5.QtWidgets import QAbstractItemDelegate, QWidget
+from PyQt6.QtCore import QModelIndex, QAbstractItemModel, Qt
+from PyQt6.QtWidgets import QAbstractItemDelegate, QWidget
 
 from .folder_widget import FolderWidget
 

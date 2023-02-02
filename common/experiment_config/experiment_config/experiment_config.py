@@ -1,10 +1,9 @@
 import copy
 import logging
-import re
 from pathlib import Path
 from typing import Optional, Type
 
-from PyQt5.QtCore import QSettings
+from PyQt6.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
 from pydantic import Field, validator
 from pydantic.color import Color
