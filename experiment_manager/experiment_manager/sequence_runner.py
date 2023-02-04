@@ -11,8 +11,8 @@ from typing import Any, Iterable, TypedDict
 import h5py
 import numpy
 
-from camera.configuration import CameraConfiguration
-from camera.runtime import CCamera, CameraTimeoutError
+from camera.runtime import CameraTimeoutError
+from device import RuntimeDevice
 from experiment_config import (
     ExperimentConfig,
     ChannelSpecialPurpose,
@@ -42,9 +42,9 @@ from spincore_sequencer.runtime import (
     Continue,
     Loop,
     Stop,
-    SpincorePulseBlaster,
 )
 from units import Quantity, units, ureg
+from .initialize_devices import get_devices_initialization_parameters
 from .sequence_context import SequenceContext
 
 logger = logging.getLogger(__name__)
@@ -68,17 +68,11 @@ class SequenceRunnerThread(Thread):
 
         self._waiting_to_interrupt = waiting_to_interrupt
 
-        self.spincore = SpincorePulseBlaster(
-            **self.spincore_config.get_device_init_args()
-        )
-        self.ni6738 = NI6738AnalogCard(**self.ni6738_config.get_device_init_args())
-        self.cameras: dict[str, CCamera] = {}
-
         self.remote_device_managers: dict[
             str, RemoteDeviceClientManager
         ] = create_remote_device_managers(self.experiment_config.device_servers)
 
-        self.shutdown_actions = []
+        self.devices: dict[str, RuntimeDevice] = {}
 
     def run(self):
         # noinspection PyBroadException
@@ -97,61 +91,37 @@ class SequenceRunnerThread(Thread):
         self.experiment_config.save_yaml(self.sequence.experiment_config_path)
         self.connect_to_device_servers()
 
-        self.ni6738.start()
-        self.shutdown_actions.append(self.ni6738.shutdown)
-
-        self.spincore.start()
-        self.shutdown_actions.append(self.spincore.shutdown)
-
-        self.cameras = self.setup_cameras()
+        self.devices = self.create_devices()
+        self.start_devices()
 
         self.stats.state = SequenceState.RUNNING
         self.stats.start_time = datetime.datetime.now()
         self.sequence.set_stats(self.stats)
 
     def connect_to_device_servers(self):
+        """Start the connection to the device servers"""
+
         for server_name, server in self.remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
             server.connect()
             logger.info(f"Connection established to {server_name}")
 
-    def setup_cameras(self) -> dict[str, CCamera]:
-        """Return a dictionary of started camera devices"""
+    def create_devices(self) -> dict[str, RuntimeDevice]:
+        """Instantiate the devices on their respective remote server"""
 
-        camera_configs = self.experiment_config.get_device_configs(CameraConfiguration)
-        camera_lanes = self.sequence_config.shot_configurations["shot"].get_lanes(
-            CameraLane
-        )
-        cameras = self.create_cameras(camera_lanes, camera_configs)
-
-        for camera_name in cameras:
-            cameras[camera_name].start()
-            self.shutdown_actions.append(cameras[camera_name].shutdown)
-
-        return cameras
-
-    def create_cameras(
-        self,
-        camera_lanes: dict[str, CameraLane],
-        camera_configs: dict[str, CameraConfiguration],
-    ) -> dict[str, CCamera]:
-        """Create a CCamera for each camera lane using the information from the camera configurations"""
-        cameras: dict[str, CCamera] = {}
-
-        for camera_name, camera_lane in camera_lanes.items():
-            if camera_name not in camera_configs:
-                raise RuntimeError(
-                    f"Could not find a camera configuration for the lane {camera_name}"
-                )
-            camera_config = camera_configs[camera_name]
-            server = self.remote_device_managers[camera_config.remote_server]
-            init_args = camera_config.get_device_init_args()
-            init_args["picture_names"] = camera_lane.get_picture_names()
-            init_args["exposures"] = [0] * len(init_args["picture_names"])
-            cameras[camera_name] = getattr(server, camera_config.get_device_type())(
-                **init_args
+        devices = {}
+        for name, parameters in get_devices_initialization_parameters(
+            self.experiment_config, self.sequence_config
+        ).items():
+            server = self.remote_device_managers[parameters["server"]]
+            devices[name] = getattr(server, parameters["type"])(
+                **parameters["init_kwargs"]
             )
-        return cameras
+        return devices
+
+    def start_devices(self):
+        for device in self.devices.values():
+            device.start()
 
     def finish(self):
         self.stats.stop_time = datetime.datetime.now()
@@ -167,12 +137,14 @@ class SequenceRunnerThread(Thread):
         self.sequence.set_stats(self.stats)
 
     def shutdown(self):
-        for action in self.shutdown_actions:
-            # noinspection PyBroadException
+        exceptions = []
+        for device in self.devices.values():
             try:
-                action()
-            except Exception:
-                logger.error("An error occurred when shutting down", exc_info=True)
+                device.shutdown()
+            except Exception as error:
+                exceptions.append(error)
+        if exceptions:
+            raise ExceptionGroup("Errors occurred while shutting down", exceptions)
         logger.info("Sequence finished")
 
     def run_sequence(self):
@@ -237,7 +209,8 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, linspace_loop: LinspaceLoop, context: SequenceContext):
-        """Loop over a variable in a numpy linspace like loop and execute children steps at each repetition"""
+        """Loop over a variable in a numpy linspace like loop"""
+
         start = Quantity(linspace_loop.start.evaluate(context.variables | units))
         stop = Quantity(linspace_loop.stop.evaluate(context.variables | units))
         num = int(linspace_loop.num)
