@@ -46,6 +46,7 @@ class Expression(YAMLSerializable):
         builtins: Optional[dict[str]] = None,
         implicit_multiplication: bool = True,
         allow_percentage: bool = True,
+        cache_evaluation: bool = True,
     ):
         """
         Args:
@@ -70,6 +71,7 @@ class Expression(YAMLSerializable):
         self._builtins = builtins
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
+        self._cache_evaluation = cache_evaluation
 
     @property
     def body(self) -> str:
@@ -91,13 +93,16 @@ class Expression(YAMLSerializable):
 
     def evaluate(self, variables: dict[str]):
         """Evaluate an expression on specific values for its variables"""
-        # Only keep the variables the expression actually depends of. This allow to
+        # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.
         useful_variables = set(variables) & self.upstream_variables
         return self._evaluate({expr: variables[expr] for expr in useful_variables})
 
     def _evaluate(self, variables: dict[str]):
-        if variables == self._last_evaluation_variables:
+        can_use_cached_value = self._cache_evaluation and (
+            variables == self._last_evaluation_variables
+        )
+        if can_use_cached_value:
             return self._last_value
         else:
             self._last_value = eval(
@@ -107,7 +112,7 @@ class Expression(YAMLSerializable):
 
     @cached_property
     def upstream_variables(self) -> frozenset[str]:
-        """Return the name of the other variables the expression depend of"""
+        """Return the name of the other variables the expression depend on"""
 
         variables = set()
 
@@ -138,7 +143,6 @@ class Expression(YAMLSerializable):
         except SyntaxError as error:
             print(f"There is a syntax error in the expression '{expr}'")
             raise error
-
 
     @cached_property
     def code(self):
