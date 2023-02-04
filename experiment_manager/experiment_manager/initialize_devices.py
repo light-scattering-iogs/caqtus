@@ -1,0 +1,91 @@
+from typing import Any, TypedDict
+
+from camera.configuration import CameraConfiguration
+from experiment_config import ExperimentConfig
+from ni6738_analog_card.configuration import NI6738SequencerConfiguration
+from sequence import SequenceConfig
+from sequence.shot import CameraLane
+from spincore_sequencer.configuration import SpincoreSequencerConfiguration
+
+
+class InitializationParameters(TypedDict):
+    type: str
+    server: str
+    init_kwargs: dict[str, Any]
+
+
+def get_devices_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[str, InitializationParameters]:
+    """Compute the initialization parameters for all devices.
+
+    Returns:
+        A dictionary mapping device names to initialization parameters.
+    """
+
+    return (
+        get_spincore_initialization_parameters(experiment_config, sequence_config)
+        | get_ni6738_initialization_parameters(experiment_config, sequence_config)
+        | get_cameras_initialization_parameters(experiment_config, sequence_config)
+    )
+
+
+def get_spincore_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[str, InitializationParameters]:
+    """Compute the initialization parameters for all spincore sequencer devices."""
+
+    result = {}
+    for name, config in experiment_config.get_device_configs(
+        SpincoreSequencerConfiguration
+    ).items():
+        result[name] = InitializationParameters(
+            type=config.get_device_type(),
+            server=config.remote_server,
+            init_kwargs=config.get_device_init_args(),
+        )
+    return result
+
+
+def get_ni6738_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[str, InitializationParameters]:
+    """Compute the initialization parameters for all ni6738 cards."""
+
+    result = {}
+    for name, config in experiment_config.get_device_configs(
+        NI6738SequencerConfiguration
+    ).items():
+        result[name] = InitializationParameters(
+            type=config.get_device_type(),
+            server=config.remote_server,
+            init_kwargs=config.get_device_init_args(),
+        )
+    return result
+
+
+def get_cameras_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[str, InitializationParameters]:
+    result = {}
+
+    camera_configs = experiment_config.get_device_configs(CameraConfiguration)
+    camera_lanes = sequence_config.shot_configurations["shot"].get_lanes(CameraLane)
+
+    for camera_name, camera_lane in camera_lanes.items():
+        if camera_name not in camera_configs:
+            raise DeviceConfigurationNotFound(
+                f"Could not find a camera configuration for the lane {camera_name}"
+            )
+        camera_config = camera_configs[camera_name]
+        result[camera_name] = InitializationParameters(
+            type=camera_config.get_device_type(),
+            server=camera_config.remote_server,
+            init_kwargs=camera_config.get_device_init_args(),
+        )
+
+    return result
+
+
+class DeviceConfigurationNotFound(Exception):
+    pass
