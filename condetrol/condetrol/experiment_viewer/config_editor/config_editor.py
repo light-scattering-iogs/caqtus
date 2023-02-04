@@ -3,16 +3,17 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
+from PyQt6 import QtGui
+from PyQt6.QtCore import (
+    QSettings,
+)
 from PyQt6.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
     QLayout,
 )
-from PyQt6 import QtGui
-from PyQt6.QtCore import (
-    QSettings,
-)
 
+from .spincore_config_editor import SpincoreConfigEditor
 from experiment_config import ExperimentConfig, get_config_path
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
@@ -91,7 +92,8 @@ class ConfigEditor(QDialog, Ui_config_editor):
 
     def create_widget_for_device(self, device_name: str):
         type_to_widget = {
-            "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor
+            "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor,
+            "SpincorePulseBlaster": SpincoreConfigEditor,
         }
 
         device_type = self.config.get_device_config(device_name).get_device_type()

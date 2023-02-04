@@ -2,6 +2,7 @@
 experiment viewer/sequences editor in the current process"""
 
 import logging
+import os
 import sys
 from multiprocessing.managers import BaseManager
 
@@ -30,12 +31,15 @@ ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
 if __name__ == "__main__":
+    os.environ["QT_QUICK_CONTROLS_CONF"] = "C:\\Users\\Damien Bloch\\Desktop\\caqtus_repo\\condetrol\\qtquickcontrols2.conf"
     m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
     m.start()
     sys.excepthook = except_hook
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     id = QFontDatabase.addApplicationFont(":/fonts/jetbrains-mono")
     if id < 0:
         logger.error("Could not load font jetbrains-mono")
