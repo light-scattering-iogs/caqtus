@@ -171,4 +171,4 @@ class Ui_LinspaceDeclaration(object):
         self.stop_edit.setPlaceholderText(_translate("LinspaceDeclaration", "stop"))
         self.label_4.setText(_translate("LinspaceDeclaration", "with"))
         self.label_5.setText(_translate("LinspaceDeclaration", "steps:"))
-from widgets.auto_resize_lineedit import AutoResizeLineEdit
+from condetrol.widgets.auto_resize_lineedit import AutoResizeLineEdit

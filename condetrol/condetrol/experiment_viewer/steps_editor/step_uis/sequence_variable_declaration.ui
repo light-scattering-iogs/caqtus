@@ -193,7 +193,7 @@
   <customwidget>
    <class>AutoResizeLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>widgets.auto_resize_lineedit.h</header>
+   <header>condetrol.widgets.auto_resize_lineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -180,4 +180,4 @@ class Ui_ArangeDeclaration(object):
         self.label_4.setText(_translate("ArangeDeclaration", "with"))
         self.step_edit.setPlaceholderText(_translate("ArangeDeclaration", "spacing"))
         self.label_5.setText(_translate("ArangeDeclaration", "spacing:"))
-from widgets.auto_resize_lineedit import AutoResizeLineEdit
+from condetrol.widgets.auto_resize_lineedit import AutoResizeLineEdit

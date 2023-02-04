@@ -100,4 +100,4 @@ class Ui_VariableDeclaration(object):
         self.name_edit.setPlaceholderText(_translate("VariableDeclaration", "variable name"))
         self.label_2.setText(_translate("VariableDeclaration", "="))
         self.expression_edit.setPlaceholderText(_translate("VariableDeclaration", "expression"))
-from widgets.auto_resize_lineedit import AutoResizeLineEdit
+from condetrol.widgets.auto_resize_lineedit import AutoResizeLineEdit
