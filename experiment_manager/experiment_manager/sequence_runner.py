@@ -1,26 +1,26 @@
 import datetime
 import io
 import logging
+import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
-from functools import singledispatchmethod, cached_property
+from functools import singledispatchmethod
 from pathlib import Path
 from threading import Thread, Event
-from typing import Any, Iterable, TypedDict
+from typing import Any
 
 import h5py
 import numpy
 
+from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
 from device import RuntimeDevice
 from experiment_config import (
     ExperimentConfig,
-    ChannelSpecialPurpose,
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
 )
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from ni6738_analog_card.runtime import NI6738AnalogCard
 from remote_device_client import RemoteDeviceClientManager
 from sequence import (
     SequenceState,
@@ -31,21 +31,17 @@ from sequence import (
 from sequence.sequence import Sequence
 from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
 from sequence.shot import (
-    CameraLane,
     ShotConfiguration,
-    evaluate_step_durations,
-    evaluate_analog_local_times,
-    evaluate_analog_values,
 )
-from spincore_sequencer.runtime import (
-    Instruction,
-    Continue,
-    Loop,
-    Stop,
-)
-from units import Quantity, units, ureg
+from units import Quantity, units
+from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
 from .sequence_context import SequenceContext
+
+if typing.TYPE_CHECKING:
+    from ni6738_analog_card.runtime import NI6738AnalogCard
+    from camera.runtime import CCamera
+    from spincore_sequencer.runtime import SpincorePulseBlaster
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -159,7 +155,8 @@ class SequenceRunnerThread(Thread):
         """Execute a given step of the sequence
 
         This function should be implemented for each Step type that can be run on the
-        experiment. It should also return as soon as possible if the sequence needs to be interrupted.
+        experiment. It should also return as soon as possible if the sequence needs to
+        be interrupted.
 
         Args:
             step: the step of the sequence currently executed
@@ -190,7 +187,8 @@ class SequenceRunnerThread(Thread):
 
     @run_step.register
     def _(self, arange_loop: ArangeLoop, context: SequenceContext):
-        """Loop over a variable in a numpy arange like loop and execute children steps at each repetition"""
+        """Loop over a variable in a numpy arange like loop"""
+
         start = Quantity(arange_loop.start.evaluate(context.variables | units))
         stop = Quantity(arange_loop.stop.evaluate(context.variables | units))
         step = Quantity(arange_loop.step.evaluate(context.variables | units))
@@ -242,7 +240,7 @@ class SequenceRunnerThread(Thread):
                 f"{error}\n"
                 "Attempting to redo the failed shot"
             )
-            for camera in self.cameras.values():
+            for camera in self.get_cameras().values():
                 camera.reset_acquisition()
             data = self.do_shot(
                 self.sequence_config.shot_configurations[shot.name], context.variables
@@ -265,181 +263,76 @@ class SequenceRunnerThread(Thread):
         )
 
     def do_shot(self, shot: ShotConfiguration, context: dict[str]) -> dict[str, Any]:
-        step_durations = evaluate_step_durations(shot, context)
-        self.check_durations(shot, step_durations)
-        camera_instructions = compile_camera_instructions(step_durations, shot)
-        for camera, instructions in camera_instructions.items():
-            self.cameras[camera].update_parameters(
-                timeout=instructions["timeout"], exposures=instructions["exposures"]
-            )
-        camera_triggers = {
-            camera_name: instructions["triggers"]
-            for camera_name, instructions in camera_instructions.items()
-        }
-        spincore_instructions, analog_values = self.compile_sequencer_instructions(
-            step_durations, shot, context, camera_triggers
+        self.prepare_shot(shot, context)
+        self.run_shot()
+        data = self.extract_data()
+        return data
+
+    def prepare_shot(self, shot: ShotConfiguration, context: dict[str]):
+        device_parameters = compute_shot_parameters(
+            self.experiment_config, shot, context
         )
+        self.update_device_parameters(device_parameters)
 
-        analog_voltages = self.generate_analog_voltages(analog_values)
-        self.ni6738.update_parameters(values=analog_voltages)
-        self.ni6738.run()
+    def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
+        for device_name, parameters in device_parameters.items():
+            self.devices[device_name].update_parameters(**parameters)
 
-        self.spincore.update_parameters(instructions=spincore_instructions)
+    def run_shot(self):
+        for ni6738_card in self.get_ni6738_cards().values():
+            ni6738_card.run()
 
         future_acquisitions: dict[str, Future] = {}
         with ThreadPoolExecutor() as acquisition_executor:
-            for camera_name, camera in self.cameras.items():
+            for camera_name, camera in self.get_cameras().items():
                 future_acquisitions[camera_name] = acquisition_executor.submit(
                     camera.acquire_all_pictures
                 )
-            self.spincore.run()
+            for spincore_sequencer in self.get_spincore_sequencers().values():
+                spincore_sequencer.run()
+
         for acquisition in future_acquisitions.values():
             if exception := acquisition.exception():
                 raise exception
 
+    def extract_data(self):
         data = {}
-        for name, camera in self.cameras.items():
-            data[name] = camera.read_all_pictures()
+        for camera_name, camera in self.get_cameras().items():
+            data[camera_name] = camera.read_all_pictures()
         return data
+
+    def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
+        return {
+            device_name: device
+            for device_name, device in self.devices.items()
+            if isinstance(
+                self.experiment_config.get_device_config(device_name),
+                NI6738SequencerConfiguration,
+            )
+        }
+
+    def get_spincore_sequencers(self) -> dict[str, "SpincorePulseBlaster"]:
+        return {
+            device_name: device
+            for device_name, device in self.devices.items()
+            if isinstance(
+                self.experiment_config.get_device_config(device_name),
+                SpincoreSequencerConfiguration,
+            )
+        }
+
+    def get_cameras(self) -> dict[str, "CCamera"]:
+        return {
+            device_name: device
+            for device_name, device in self.devices.items()
+            if isinstance(
+                self.experiment_config.get_device_config(device_name),
+                CameraConfiguration,
+            )
+        }
 
     def is_waiting_to_interrupt(self) -> bool:
         return self._waiting_to_interrupt.is_set()
-
-    def compile_sequencer_instructions(
-        self,
-        step_durations: list[float],
-        shot: ShotConfiguration,
-        context: dict[str],
-        camera_triggers: dict[str, list[bool]],
-    ) -> tuple[list[Instruction], dict[str, Quantity]]:
-        """Return the spincore instructions and the analog values for the ni6738"""
-
-        analog_times = evaluate_analog_local_times(
-            shot,
-            step_durations,
-            self.ni6738_config.time_step,
-            self.spincore.time_step,
-        )
-
-        instructions = self.generate_digital_instructions(
-            shot, step_durations, analog_times, camera_triggers
-        )
-
-        analog_values = evaluate_analog_values(shot, analog_times, context)
-        return instructions, analog_values
-
-    def check_durations(self, shot: ShotConfiguration, durations: list[float]):
-        for step_name, duration in zip(shot.step_names, durations):
-            if duration < self.spincore.time_step:
-                raise ValueError(
-                    f"Duration of step '{step_name}' ({(duration * ureg.s).to('ns')})"
-                    " is too short"
-                )
-
-    def generate_digital_instructions(
-        self,
-        shot: ShotConfiguration,
-        step_durations: list[float],
-        analog_times: list[numpy.ndarray],
-        camera_triggers: dict[str, list[bool]],
-    ) -> list[Instruction]:
-        analog_time_step = self.ni6738_config.time_step
-        instructions = []
-        # noinspection PyTypeChecker
-        analog_clock_channel = self.spincore_config.get_channel_index(
-            ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
-        )
-        camera_channels = self.get_camera_channels(camera_triggers.keys())
-        values = [False] * self.spincore_config.number_channels
-        for step in range(len(step_durations)):
-            values = [False] * self.spincore_config.number_channels
-            for camera, triggers in camera_triggers.items():
-                values[camera_channels[camera]] = triggers[step]
-            for lane in shot.digital_lanes:
-                channel = self.spincore_config.get_channel_index(lane.name)
-                values[channel] = lane.get_effective_value(step)
-            if len(analog_times[step]) > 0:
-                duration = analog_times[step][0]
-            else:
-                duration = step_durations[step]
-            instructions.append(Continue(values=values, duration=duration))
-            if len(analog_times[step]) > 0:
-                (low_values := copy(values))[analog_clock_channel] = False
-                (high_values := copy(low_values))[analog_clock_channel] = True
-                instructions.append(
-                    Loop(
-                        repetitions=len(analog_times[step]),
-                        start_values=high_values,
-                        start_duration=analog_time_step / 2,
-                        end_values=low_values,
-                        end_duration=analog_time_step / 2,
-                    )
-                )
-                instructions.append(
-                    Continue(
-                        values=low_values,
-                        duration=step_durations[step]
-                        - (analog_times[step][-1] + analog_time_step),
-                    )
-                )
-        instructions.append(Stop(values=values))
-        return instructions
-
-    def get_camera_channels(self, camera_names: Iterable[str]) -> dict[str, int]:
-        return {
-            name: self.spincore_config.get_channel_index(
-                ChannelSpecialPurpose(purpose=name)
-            )
-            for name in camera_names
-        }
-
-    def generate_analog_voltages(self, analog_values: dict[str, Quantity]):
-        data_length = 0
-        for array in analog_values.values():
-            data_length = len(array)
-            break
-        data = numpy.zeros(
-            (NI6738AnalogCard.channel_number, data_length), dtype=numpy.float64
-        )
-
-        for name, values in analog_values.items():
-            voltages = (
-                self.ni6738_config.convert_to_output_units(name, values)
-                .to("V")
-                .magnitude
-            )
-            channel_number = self.ni6738_config.get_channel_index(name)
-            data[channel_number] = voltages
-        return data
-
-    @cached_property
-    def spincore_config(self) -> SpincoreSequencerConfiguration:
-        return self.experiment_config.spincore_config
-
-    @cached_property
-    def ni6738_config(self) -> NI6738SequencerConfiguration:
-        return self.experiment_config.ni6738_config
-
-
-def compile_camera_instructions(
-    step_durations: list[float], shot: ShotConfiguration
-) -> dict[str, "CameraInstructions"]:
-    result = {}
-    camera_lanes = shot.get_lanes(CameraLane)
-    timeout = sum(step_durations)
-    for camera_name, camera_lane in camera_lanes.items():
-        triggers = [False] * len(step_durations)
-        exposures = []
-        for _, start, stop in camera_lane.get_picture_spans():
-            triggers[start:stop] = [True] * (stop - start)
-            exposures.append(sum(step_durations[start:stop]))
-        instructions: CameraInstructions = {
-            "timeout": timeout,
-            "triggers": triggers,
-            "exposures": exposures,
-        }
-        result[camera_name] = instructions
-    return result
 
 
 def save_shot(
@@ -485,9 +378,3 @@ def create_remote_device_managers(
             address=address, authkey=authkey
         )
     return remote_device_managers
-
-
-class CameraInstructions(TypedDict):
-    timeout: float
-    exposures: list[float]
-    triggers: list[bool]
