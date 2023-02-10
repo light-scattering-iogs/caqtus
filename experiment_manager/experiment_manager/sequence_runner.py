@@ -276,12 +276,25 @@ class SequenceRunnerThread(Thread):
         self.update_device_parameters(device_parameters)
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
-        for device_name, parameters in device_parameters.items():
-            try:
-                self.devices[device_name].update_parameters(**parameters)
-            except Exception as error:
-                error.add_note(f"Failed to update device {device_name} with parameters:\n {pprint.pformat(parameters)}")
-                raise error
+        future_updates: dict[str, Future] = {}
+
+        with ThreadPoolExecutor() as update_executor:
+            for device_name, parameters in device_parameters.items():
+                future_updates[device_name] = update_executor.submit(
+                    self.devices[device_name].update_parameters, **parameters
+                )
+
+        exceptions = []
+        for device_name, update in future_updates.items():
+            if isinstance(exception := update.exception(), Exception):
+                exception.add_note(
+                    f"Failed to update device {device_name} with parameters:\n"
+                    f"{pprint.pformat(device_parameters[device_name])}"
+                )
+                exceptions.append(exception)
+
+        if exceptions:
+            raise ExceptionGroup("Errors occurred when updating device parameters", exceptions)
 
     def run_shot(self):
         for ni6738_card in self.get_ni6738_cards().values():
