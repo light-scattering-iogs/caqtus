@@ -26,6 +26,10 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     channel_number: ClassVar[int] = 32
     _task: nidaqmx.Task
 
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + ("run",)
+
     @validator("values")
     def validate_values(cls, analog_voltages):
         if numpy.any(numpy.isnan(analog_voltages)):

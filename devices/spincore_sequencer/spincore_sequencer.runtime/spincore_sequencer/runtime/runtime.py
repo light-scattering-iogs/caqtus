@@ -30,6 +30,10 @@ class SpincorePulseBlaster(RuntimeDevice):
 
     channel_number: ClassVar[int] = 24
 
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + ("run",)
+
     def start(self) -> None:
         super().start()
 
