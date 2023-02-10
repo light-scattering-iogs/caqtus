@@ -162,6 +162,8 @@ class Sequence:
             return datetime.timedelta(seconds=0.0)
         else:
             start_time = self.stats.start_time
+            if start_time is None:
+                return datetime.timedelta(seconds=0.0)
             if self.state == SequenceState.RUNNING:
                 end_time = datetime.datetime.now()
             else:
