@@ -1,6 +1,7 @@
 import datetime
 import io
 import logging
+import pprint
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
@@ -276,7 +277,11 @@ class SequenceRunnerThread(Thread):
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
         for device_name, parameters in device_parameters.items():
-            self.devices[device_name].update_parameters(**parameters)
+            try:
+                self.devices[device_name].update_parameters(**parameters)
+            except Exception as error:
+                error.add_note(f"Failed to update device {device_name} with parameters:\n {pprint.pformat(parameters)}")
+                raise error
 
     def run_shot(self):
         for ni6738_card in self.get_ni6738_cards().values():
