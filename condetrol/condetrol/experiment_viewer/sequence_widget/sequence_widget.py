@@ -1,6 +1,6 @@
 """This module implements an editor for the configuration of a sequence.
 
-It provides a pseudo-code editor for the different steps of the sequence. The only role
+It provides a pseudocode editor for the different steps of the sequence. The only role
 of this module is to generate and edit a yaml file that is then consumed by other parts.
 """
 
@@ -45,7 +45,7 @@ logger.setLevel("DEBUG")
 class SequenceStepsModel(StepsModel):
     """Model for a view to display and manipulate the steps of a sequence
 
-    This model becomes read only if the sequence is not a draft and it also saves any change to disk.
+    This model becomes read only if the sequence is not a draft, and it also saves any change to disk.
     """
 
     def __init__(self, sequence_path: Path, *args, **kwargs):
@@ -240,7 +240,7 @@ class SequenceWidget(QDockWidget):
             add_menu.addAction(create_variable_action)
             create_variable_action.triggered.connect(
                 lambda: model.insert_step(
-                    VariableDeclaration(name="", expression=Expression()), index
+                    VariableDeclaration(name="", expression=Expression("...")), index
                 )
             )
 
@@ -260,7 +260,7 @@ class SequenceWidget(QDockWidget):
             create_linspace_action.triggered.connect(
                 lambda: model.insert_step(
                     LinspaceLoop(
-                        name="", start=Expression(), stop=Expression(), num=10
+                        name="", start=Expression("..."), stop=Expression("..."), num=10
                     ),
                     index,
                 )
@@ -272,9 +272,9 @@ class SequenceWidget(QDockWidget):
                 lambda: model.insert_step(
                     ArangeLoop(
                         name="",
-                        start=Expression(),
-                        stop=Expression(),
-                        step=Expression(),
+                        start=Expression("..."),
+                        stop=Expression("..."),
+                        step=Expression("..."),
                     ),
                     index,
                 )
@@ -295,4 +295,3 @@ class SequenceWidget(QDockWidget):
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.shot_widget.update_experiment_config(new_config)
-
