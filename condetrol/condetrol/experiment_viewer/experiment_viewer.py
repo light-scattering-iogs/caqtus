@@ -293,7 +293,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
             )
             message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            message_box.setIcon(QMessageBox.Question)
+            message_box.setIcon(QMessageBox.Icon.Question)
             result = message_box.exec()
             if result == QMessageBox.StandardButton.Cancel:
                 event.ignore()
@@ -326,7 +326,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
         )
         message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        message_box.setIcon(QMessageBox.Warning)
+        message_box.setIcon(QMessageBox.Icon.Warning)
         result = message_box.exec()
         if result == QMessageBox.StandardButton.Cancel:
             return False
