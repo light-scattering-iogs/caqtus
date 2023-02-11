@@ -8,7 +8,6 @@ from experiment_config import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from .model import SequenceModel
 from .path import SequencePath
-from .state import State
 
 
 class Sequence:
@@ -49,25 +48,10 @@ class Sequence:
                 " ExperimentConfig"
             )
 
-        now = datetime.now()
-        creation_args = {
-            "path": str(
-                SequencePath(path)  # raise ValueError if path has invalid format
-            ),
-            "state": State.DRAFT,
-            "sequence_config_yaml": sequence_config.to_yaml(),
-            "experiment_config_yaml": experiment_config.to_yaml()
-            if experiment_config
-            else None,
-            "creation_date": now,
-            "modification_date": now,
-            "start_date": None,
-            "stop_date": None,
-        }
-
-        sequence_sql = SequenceModel(**creation_args)
         with session_maker.begin() as session:
-            session.add(sequence_sql)
+            SequenceModel.create_sequence(
+                SequencePath(path), sequence_config, experiment_config, session
+            )
         sequence = cls(path, session_maker)
         return sequence
 
@@ -82,7 +66,10 @@ class Sequence:
         if sequence := result.scalar():
             return sequence
         else:
-            raise SequenceNotFoundError(f"Could not find sequence '{self._path}' in database")
+            raise SequenceNotFoundError(
+                f"Could not find sequence '{self._path}' in database"
+            )
+
 
 class SequenceNotFoundError(Exception):
     pass
