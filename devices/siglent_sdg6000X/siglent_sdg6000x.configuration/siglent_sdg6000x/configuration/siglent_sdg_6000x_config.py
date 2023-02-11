@@ -5,7 +5,7 @@ from pydantic import Field
 
 from device_config import DeviceConfiguration
 from expression import Expression
-from sequence import VariableDeclaration
+from sequence.configuration import VariableDeclaration
 from settings_model import SettingsModel
 
 

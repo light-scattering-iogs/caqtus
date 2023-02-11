@@ -8,10 +8,9 @@ import yaml
 from anytree import NodeMixin, RenderTree
 
 from expression import Expression
-from sequence.shot import ShotConfiguration
-from settings_model import SettingsModel
-from settings_model.settings_model import YAMLSerializable
+from settings_model import SettingsModel, YAMLSerializable
 from units import Quantity, units
+from .shot import ShotConfiguration
 
 
 class Step(NodeMixin, ABC):

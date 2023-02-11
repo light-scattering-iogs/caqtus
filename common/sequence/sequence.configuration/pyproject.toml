@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "sequence-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "sequence"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+anytree = "^2.8.0"
+pydantic = "^1.10.4"
+expression = {path = "../../expression", develop = true}
+units = {path = "../../units", develop = true}
+settings-model = {path = "../../settings_model", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

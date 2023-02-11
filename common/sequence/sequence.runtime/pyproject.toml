@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "sequence-runtime"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "sequence"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sqlalchemy = ">=2.0"
+sequence-configuration = {path = "../sequence.configuration", develop = true}
+experiment-config = {path = "../../experiment_config", develop = true}
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.2.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

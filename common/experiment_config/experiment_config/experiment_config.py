@@ -17,7 +17,7 @@ from device_config.channel_config import (
     ChannelSpecialPurpose,
 )
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from sequence import SequenceSteps
+from sequence.configuration import SequenceSteps
 from settings_model import SettingsModel
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration

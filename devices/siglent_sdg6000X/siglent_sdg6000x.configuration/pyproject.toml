@@ -7,12 +7,12 @@ readme = "README.md"
 packages = [{include = "siglent_sdg6000x"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 device-config = {path = "../../../common/device_config", develop = true}
 settings-model = {path = "../../../common/settings_model", develop = true}
-sequence = {path = "../../../common/sequence", develop = true}
 units = {path = "../../../common/units", develop = true}
 expression = {path = "../../../common/expression", develop = true}
+sequence-configuration = {path = "../../../common/sequence/sequence.configuration", develop = true}
 
 
 [build-system]
