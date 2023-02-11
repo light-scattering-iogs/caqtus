@@ -1,5 +1,6 @@
+import copy
 import re
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Mapping
 from types import SimpleNamespace
 from typing import Any
 
@@ -61,8 +62,20 @@ class VariableNamespace(MutableMapping):
         kwargs = ", ".join(f"{key}={value}" for key, value in self.items())
         return f"{self.__class__.__name__}({kwargs})"
 
+    def __or__(self, other):
+        if isinstance(other, Mapping):
+            new = copy.deepcopy(self)
+            new.update(other)
+            return new
+        else:
+            raise TypeError
 
-NAME_REGEX = re.compile("[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+
+
+
+NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 
 
 def split_names(string: str) -> tuple[str, ...]:

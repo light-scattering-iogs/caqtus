@@ -16,12 +16,13 @@ from spincore_sequencer.runtime import (
     Stop,
 )
 from units import ureg, Quantity, units, DimensionalityError, dimensionless
+from variable import VariableNamespace
 
 
 def compute_shot_parameters(
     experiment_config: ExperimentConfig,
     shot_config: ShotConfiguration,
-    variables: dict[str],
+    variables: VariableNamespace,
 ) -> dict[str, dict[str, Any]]:
     """Compute the parameters to be applied to the devices before a shot"""
 
@@ -61,7 +62,7 @@ def compute_shot_parameters(
     return result
 
 
-def evaluate_step_durations(shot: ShotConfiguration, context: dict[str]) -> list[float]:
+def evaluate_step_durations(shot: ShotConfiguration, context: VariableNamespace) -> list[float]:
     """Compute the duration of each step in the shot
 
     This function evaluates all the step duration expressions by replacing the variables with their numerical values
@@ -269,7 +270,7 @@ def generate_digital_instructions(
 
 
 def evaluate_analog_values(
-    shot: ShotConfiguration, analog_times: list[numpy.ndarray], context: dict[str]
+    shot: ShotConfiguration, analog_times: list[numpy.ndarray], context: VariableNamespace
 ) -> dict[str, Quantity]:
     """Computes the analog values of each lane, in lane units"""
 

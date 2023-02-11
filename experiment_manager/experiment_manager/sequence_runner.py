@@ -4,7 +4,7 @@ import logging
 import pprint
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
-from copy import copy
+from copy import deepcopy
 from functools import singledispatchmethod
 from pathlib import Path
 from threading import Thread, Event
@@ -35,6 +35,7 @@ from sequence.shot import (
     ShotConfiguration,
 )
 from units import Quantity, units
+from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
 from .sequence_context import SequenceContext
@@ -147,7 +148,7 @@ class SequenceRunnerThread(Thread):
     def run_sequence(self):
         """Execute the sequence header and program"""
 
-        with SequenceContext(variables={}) as context:
+        with SequenceContext(variables=VariableNamespace()) as context:
             self.run_step(self.experiment_config.header, context)
             self.run_step(self.sequence_config.program, context)
 
@@ -260,16 +261,19 @@ class SequenceRunnerThread(Thread):
         self.sequence.set_stats(self.stats)
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
         context.delayed_executor.submit(
-            save_shot, shot_file_path, t0, t1, copy(context.variables), data
+            save_shot, shot_file_path, t0, t1, deepcopy(context.variables), data
         )
+        logger.debug(context.variables)
 
-    def do_shot(self, shot: ShotConfiguration, context: dict[str]) -> dict[str, Any]:
+    def do_shot(
+        self, shot: ShotConfiguration, context: VariableNamespace
+    ) -> dict[str, Any]:
         self.prepare_shot(shot, context)
         self.run_shot()
         data = self.extract_data()
         return data
 
-    def prepare_shot(self, shot: ShotConfiguration, context: dict[str]):
+    def prepare_shot(self, shot: ShotConfiguration, context: VariableNamespace):
         device_parameters = compute_shot_parameters(
             self.experiment_config, shot, context
         )
@@ -294,7 +298,9 @@ class SequenceRunnerThread(Thread):
                 exceptions.append(exception)
 
         if exceptions:
-            raise ExceptionGroup("Errors occurred when updating device parameters", exceptions)
+            raise ExceptionGroup(
+                "Errors occurred when updating device parameters", exceptions
+            )
 
     def run_shot(self):
         for ni6738_card in self.get_ni6738_cards().values():
@@ -357,7 +363,7 @@ def save_shot(
     file_path: Path,
     start_time: datetime.datetime,
     end_time: datetime.datetime,
-    variables: dict[str, Quantity],
+    variables: VariableNamespace,
     data: dict[str],
 ):
     data_buffer = io.BytesIO()

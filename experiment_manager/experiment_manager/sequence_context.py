@@ -1,8 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor, Executor
+from variable import VariableNamespace
 
 
 class SequenceContext:
-    def __init__(self, variables: dict[str]):
+    def __init__(self, variables: VariableNamespace):
         self.variables = variables
         self.delayed_executor: Executor = ThreadPoolExecutor()
         self.shot_numbers: dict[str, int] = {}

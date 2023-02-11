@@ -5,7 +5,7 @@ description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 sequence = { path = "../common/sequence/", develop = true }
 matplotlib = "^3.6.2"
 jupyter = "^1.0.0"

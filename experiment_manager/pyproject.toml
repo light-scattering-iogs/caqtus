@@ -16,6 +16,7 @@ ni6738-analog-card-configuration = {path = "../devices/ni6738_analog_card/ni6738
 ni6738-analog-card-runtime = {path = "../devices/ni6738_analog_card/ni6738_analog_card.runtime", develop = true}
 spincore-sequencer-configuration = {path = "../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 spincore-sequencer-runtime = {path = "../devices/spincore_sequencer/spincore_sequencer.runtime", develop = true}
+variable = {path = "../common/variable", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

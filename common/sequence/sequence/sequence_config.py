@@ -8,9 +8,9 @@ import yaml
 from anytree import NodeMixin, RenderTree
 
 from expression import Expression
+from sequence.shot import ShotConfiguration
 from settings_model import SettingsModel
 from settings_model.settings_model import YAMLSerializable
-from sequence.shot import ShotConfiguration
 from units import Quantity, units
 
 
@@ -193,6 +193,42 @@ class ExecuteShot(Step, YAMLSerializable):
 class SequenceConfig(SettingsModel):
     program: SequenceSteps
     shot_configurations: dict[str, ShotConfiguration]
+
+    def get_all_variable_names(self) -> set[str]:
+        return get_all_variable_names(self.program)
+
+
+@singledispatch
+def get_all_variable_names(_: Step) -> set[str]:
+    raise NotImplementedError()
+
+
+@get_all_variable_names.register
+def _(steps: SequenceSteps):
+    result = set()
+    for step in steps.children:
+        result |= get_all_variable_names(step)
+    return result
+
+
+@get_all_variable_names.register
+def _(variable_declaration: VariableDeclaration):
+    return {variable_declaration.name}
+
+
+@get_all_variable_names.register
+def _(linspace_loop: LinspaceLoop):
+    return {linspace_loop.name}
+
+
+@get_all_variable_names.register
+def _(arange_loop: ArangeLoop):
+    return {arange_loop.name}
+
+
+@get_all_variable_names.register
+def _(_: ExecuteShot):
+    return set()
 
 
 # noinspection PyUnusedLocal
