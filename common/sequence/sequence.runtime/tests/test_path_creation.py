@@ -33,7 +33,3 @@ class TestPathCreation:
             path.create(session)
             assert path.exists(session)
             assert path.is_folder(session)
-
-            path = SequencePath("2023.02.12")
-
-            print(path.get_children(session))

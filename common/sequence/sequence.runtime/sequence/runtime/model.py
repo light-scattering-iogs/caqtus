@@ -34,7 +34,7 @@ class SequencePathModel(Base):
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     path = Column(LtreeType, unique=True, nullable=False)
     creation_date: Mapped[datetime] = mapped_column()
-    parent: Mapped["SequencePathModel"] = relationship(
+    parent: Mapped[Optional["SequencePathModel"]] = relationship(
         primaryjoin=remote(path) == foreign(func.subpath(path, 0, -1)),
         backref="children",
         viewonly=True,
@@ -53,6 +53,9 @@ class SequencePathModel(Base):
     ):
         session.add(cls(path=Ltree(str(path)), creation_date=datetime.now()))
         session.flush()
+
+    def is_sequence(self) -> bool:
+        return len(self.sequence) == 1
 
 
 class SequenceModel(Base):

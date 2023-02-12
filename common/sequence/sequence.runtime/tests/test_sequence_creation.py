@@ -92,6 +92,9 @@ class TestSequenceCreation:
                     session,
                 )
 
+            Sequence.create_sequence(
+                SequencePath("year.month.day.other_name"), sequence_config, None, session
+            )
             session.commit()
 
     def test_shot_creation(self, clean_database, sequence_config):

@@ -1,10 +1,10 @@
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
-from sqlalchemy import select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import select, func
+from sqlalchemy.orm import sessionmaker, Session
 
 from sequence.runtime import SequencePath
-from sequence.runtime.model import SequenceModel
+from sequence.runtime.model import SequenceModel, SequencePathModel
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
@@ -16,14 +16,13 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def __init__(self, session_maker: sessionmaker):
         self._session_maker = session_maker
 
-        self._root = SequenceHierarchyItem(
-            SequencePath.root(),
-            children=_build_highest_level(
-                SequencePath.root(), self._get_sequence_infos(SequencePath.root())
-            ),
-            row=0,
-            is_sequence=False,
-        )
+        with self._session_maker.begin() as session:
+            self._root = SequenceHierarchyItem(
+                SequencePath.root(),
+                children=_build_children(SequencePath.root(), session),
+                row=0,
+                is_sequence=False,
+            )
 
         super().__init__()
 
@@ -87,12 +86,11 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if parent_item.is_sequence:
             return
 
-        print(parent_item)
-
-        children = _build_highest_level(
-            parent_item.sequence_path,
-            self._get_sequence_infos(path_prefix=parent_item.sequence_path),
-        )
+        with self._session_maker.begin() as session:
+            children = _build_children(
+                parent_item.sequence_path,
+                session,
+            )
 
         self.beginInsertRows(parent, 0, len(children) - 1)
         parent_item.children = children
@@ -136,27 +134,28 @@ class SequenceHierarchyItem(NodeMixin):
         return not self.is_sequence
 
 
-def _build_highest_level(
-    parent: SequencePath, sequence_infos: list[dict]
+def _build_children(
+    parent: SequencePath, session: Session
 ) -> list[SequenceHierarchyItem]:
-    """Build the root of the sequence hierarchy model
 
-    This function builds the higher level hierarchy of the sequence hierarchy model.
-    """
-    top_level_names = set()
-    top_level_nodes = []
-    for sequence_info in sequence_infos:
-        sequence_path = SequencePath(sequence_info["path"])
-        if sequence_path.has_ancestor(parent):
-            sub_path = sequence_path.get_ancestors(strict=False)[parent.depth + 1]
-            is_sub_path_sequence = str(sub_path) == str(sequence_path)
-            if sub_path.name not in top_level_names:
-                top_level_nodes.append(
-                    SequenceHierarchyItem(
-                        sub_path,
-                        row=len(top_level_names),
-                        is_sequence=is_sub_path_sequence,
-                    )
-                )
-            top_level_names.add(sub_path.name)
-    return top_level_nodes
+    children_items = []
+
+    if parent.is_root():
+        query_children = session.query(SequencePathModel).filter(
+            func.nlevel(SequencePathModel.path) == 1
+        )
+        children = session.scalars(query_children)
+    else:
+        path = parent.query_model(session)
+        children = path.children
+
+    for child in children:
+        child: SequencePathModel
+        children_items.append(
+            SequenceHierarchyItem(
+                SequencePath(str(child.path)),
+                row=len(children_items),
+                is_sequence=child.is_sequence(),
+            )
+        )
+    return children_items

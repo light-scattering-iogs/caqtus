@@ -64,6 +64,9 @@ class SequencePath:
         path = self.query_model(session)
         return bool(path.sequence)
 
+    def is_root(self) -> bool:
+        return self._path == ""
+
     def has_children(self, session: Session) -> int:
         return bool(self.child_count(session))
 
