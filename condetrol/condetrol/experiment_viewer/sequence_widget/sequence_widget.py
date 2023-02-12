@@ -24,14 +24,14 @@ from PyQt6.QtWidgets import (
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig
 from expression import Expression
-from sequence import (
+from sequence.configuration import (
     Step,
+    SequenceSteps,
     VariableDeclaration,
-    SequenceStats,
-    SequenceState,
+    ArangeLoop,
     LinspaceLoop,
+    ExecuteShot,
 )
-from sequence.sequence_config import ArangeLoop, ExecuteShot, SequenceSteps
 from settings_model.settings_model import YAMLSerializable
 from .sequence_watcher import SequenceWatcher
 from .shot_widget import ShotWidget
@@ -65,7 +65,7 @@ class SequenceStepsModel(StepsModel):
     def root(self):
         return self.config.program
 
-    def change_sequence_state(self, stats: SequenceStats):
+    def change_sequence_state(self, stats: "SequenceStats"):
         self.beginResetModel()
         self.sequence_state = stats.state
         self.endResetModel()

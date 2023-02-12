@@ -7,8 +7,13 @@ from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
 
 from expression import Expression
-from sequence import Step, VariableDeclaration, ExecuteShot, LinspaceLoop
-from sequence.sequence_config import ArangeLoop
+from sequence.configuration import (
+    Step,
+    ArangeLoop,
+    LinspaceLoop,
+    VariableDeclaration,
+    ExecuteShot,
+)
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,

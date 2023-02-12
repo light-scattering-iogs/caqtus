@@ -5,11 +5,11 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 numpy = "^1.23.4"
+h5py = "^3.7.0"
 units = { path = "../common/units", develop = true }
 remote_device_client = { path = "../devices/remote_device/remote_device_client", develop = true }
-h5py = "^3.7.0"
 camera-configuration = {path = "../devices/cameras/camera/camera.configuration", develop = true}
 camera-runtime = {path = "../devices/cameras/camera/camera.runtime", develop = true}
 ni6738-analog-card-configuration = {path = "../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
@@ -17,6 +17,8 @@ ni6738-analog-card-runtime = {path = "../devices/ni6738_analog_card/ni6738_analo
 spincore-sequencer-configuration = {path = "../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 spincore-sequencer-runtime = {path = "../devices/spincore_sequencer/spincore_sequencer.runtime", develop = true}
 variable = {path = "../common/variable", develop = true}
+sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
+sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -4,7 +4,7 @@ from pathlib import Path, WindowsPath
 from typing import Type, TypeVar
 
 import yaml
-from pydantic import SecretStr
+from pydantic import SecretStr, PostgresDsn
 from pydantic.color import Color
 
 Self = TypeVar("Self", bound="YAMLSerializable")
@@ -41,9 +41,7 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def constructor(
-        cls: Type[Self], loader: yaml.Loader, node: yaml.Node
-    ) -> Self:
+    def constructor(cls: Type[Self], loader: yaml.Loader, node: yaml.Node) -> Self:
         """Build a python object from a YAML node
 
         Overload this method in a child class to provide a constructor for a given type from a yaml node.
@@ -122,6 +120,13 @@ def color_representer(dumper: yaml.Dumper, color: Color):
 
 
 YAMLSerializable.get_dumper().add_representer(Color, color_representer)
+
+
+def database_url_representer(dumper: yaml.Dumper, url: PostgresDsn):
+    return dumper.represent_data(str(url))
+
+
+YAMLSerializable.get_dumper().add_representer(PostgresDsn, database_url_representer)
 
 
 def secret_str_representer(dumper: yaml.Dumper, secret: SecretStr):

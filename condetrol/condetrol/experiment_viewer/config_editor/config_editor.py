@@ -31,12 +31,13 @@ logger.setLevel("DEBUG")
 
 
 class ConfigEditor(QDialog, Ui_config_editor):
-    """A widget to edit the experiment config file
+    """A widget to edit the experiment config
 
-    This widget is made of a settings tree to select a category of settings and a specific widget for each category
+    This widget is made of a settings tree to select a category of settings and a
+    specific widget for each category
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, experiment_config: ExperimentConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
@@ -45,8 +46,8 @@ class ConfigEditor(QDialog, Ui_config_editor):
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
 
-        with open(get_config_path(), "r") as file:
-            self.config = ExperimentConfig.from_yaml(file.read())
+        assert isinstance(experiment_config, ExperimentConfig)
+        self.config = experiment_config
 
         self.system_item = QTreeWidgetItem(self.category_tree)
         self.system_item.setText(0, "System")
@@ -60,6 +61,10 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.category_tree.currentItemChanged.connect(self.change_displayed_widget)
 
         self.update_device_tree()
+
+    def get_config(self) -> ExperimentConfig:
+        assert isinstance(self.config, ExperimentConfig)
+        return self.config
 
     def update_device_tree(self):
         while self.devices_item.childCount():
@@ -102,15 +107,10 @@ class ConfigEditor(QDialog, Ui_config_editor):
         return widget_type(deepcopy(self.config), f"Devices\\{device_name}")
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        self.save_experiment_config()
-        self.save_window_geometry()
-        super().closeEvent(a0)
-
-    def save_experiment_config(self):
         if widget := self.get_current_widget():
             self.config = widget.get_experiment_config()
-        with open(get_config_path(), "w") as file:
-            file.write(self.config.to_yaml())
+        self.save_window_geometry()
+        super().closeEvent(a0)
 
     def save_window_geometry(self):
         geometry = self.saveGeometry()

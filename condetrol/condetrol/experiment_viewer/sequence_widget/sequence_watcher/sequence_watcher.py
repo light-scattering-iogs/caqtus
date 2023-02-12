@@ -3,8 +3,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal, QFileSystemWatcher
 
-from sequence import SequenceConfig, SequenceStats
-from sequence.sequence import Sequence
+from sequence.configuration import SequenceConfig
 from settings_model import YAMLSerializable
 
 
@@ -14,7 +13,7 @@ class SequenceWatcher(QObject):
     """
 
     config_changed = pyqtSignal(SequenceConfig)
-    stats_changed = pyqtSignal(SequenceStats)
+    # stats_changed = pyqtSignal(SequenceStats)
 
     def __init__(self, sequence_path: Path):
         super().__init__()
@@ -35,7 +34,7 @@ class SequenceWatcher(QObject):
     def read_config(self) -> SequenceConfig:
         return YAMLSerializable.load(self.config_path)
 
-    def read_stats(self) -> SequenceStats:
+    def read_stats(self) -> "SequenceStats":
         result = YAMLSerializable.load(self.state_path)
         return result
 

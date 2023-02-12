@@ -5,7 +5,7 @@ from typing import Optional, Type
 
 from PyQt6.QtCore import QSettings
 from appdirs import user_config_dir, user_data_dir
-from pydantic import Field, validator
+from pydantic import Field, validator, PostgresDsn
 from pydantic.color import Color
 
 from camera.configuration import CameraConfiguration
@@ -27,6 +27,10 @@ logger.setLevel("DEBUG")
 
 
 class ExperimentConfig(SettingsModel):
+    database_url: PostgresDsn = Field(
+        default="postgresql+psycopg2://user:password@host:port/database",
+        description="The url to the database where the experiment data will be stored.",
+    )
     data_path: Path = Field(
         default_factory=lambda: Path(user_data_dir("ExperimentControl", "Caqtus"))
         / "data/"
@@ -64,8 +68,8 @@ class ExperimentConfig(SettingsModel):
                     channel_names |= device_channel_names
                 else:
                     raise ValueError(
-                        f"RuntimeDevice {name} has channel names that are already used by an"
-                        f" other device: {channel_names & device_channel_names}"
+                        f"RuntimeDevice {name} has channel names that are already used"
+                        f" by an other device: {channel_names & device_channel_names}"
                     )
         return device_configurations
 

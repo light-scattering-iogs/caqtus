@@ -23,16 +23,14 @@ from experiment_config import (
 )
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from remote_device_client import RemoteDeviceClientManager
-from sequence import (
-    SequenceState,
+from sequence.configuration import (
+    ShotConfiguration,
     Step,
     SequenceSteps,
+    ArangeLoop,
+    LinspaceLoop,
     VariableDeclaration,
-)
-from sequence.sequence import Sequence
-from sequence.sequence_config import ArangeLoop, LinspaceLoop, ExecuteShot
-from sequence.shot import (
-    ShotConfiguration,
+    ExecuteShot,
 )
 from units import Quantity, units
 from variable import VariableNamespace

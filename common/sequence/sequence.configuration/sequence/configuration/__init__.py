@@ -5,8 +5,19 @@ from .sequence_config import (
     Step,
     SequenceSteps,
     VariableDeclaration,
+    ArangeLoop,
     LinspaceLoop,
     ExecuteShot,
+)
+
+from .shot import (
+    Lane,
+    DigitalLane,
+    AnalogLane,
+    Ramp,
+    CameraLane,
+    CameraAction,
+    TakePicture,
 )
 
 from .shot import ShotConfiguration
@@ -16,7 +27,15 @@ __all__ = [
     "Step",
     "SequenceSteps",
     "VariableDeclaration",
+    "ArangeLoop",
     "LinspaceLoop",
     "ExecuteShot",
     "ShotConfiguration",
+    "Lane",
+    "DigitalLane",
+    "AnalogLane",
+    "Ramp",
+    "CameraLane",
+    "CameraAction",
+    "TakePicture",
 ]

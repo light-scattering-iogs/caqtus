@@ -7,7 +7,7 @@ from device_config.channel_config import ChannelSpecialPurpose
 from experiment_config import ExperimentConfig
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from sequence.shot import ShotConfiguration, CameraLane
+from sequence.configuration import ShotConfiguration, CameraLane
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from spincore_sequencer.runtime import (
     Instruction,
@@ -62,7 +62,9 @@ def compute_shot_parameters(
     return result
 
 
-def evaluate_step_durations(shot: ShotConfiguration, context: VariableNamespace) -> list[float]:
+def evaluate_step_durations(
+    shot: ShotConfiguration, context: VariableNamespace
+) -> list[float]:
     """Compute the duration of each step in the shot
 
     This function evaluates all the step duration expressions by replacing the variables with their numerical values
@@ -270,7 +272,9 @@ def generate_digital_instructions(
 
 
 def evaluate_analog_values(
-    shot: ShotConfiguration, analog_times: list[numpy.ndarray], context: VariableNamespace
+    shot: ShotConfiguration,
+    analog_times: list[numpy.ndarray],
+    context: VariableNamespace,
 ) -> dict[str, Quantity]:
     """Computes the analog values of each lane, in lane units"""
 

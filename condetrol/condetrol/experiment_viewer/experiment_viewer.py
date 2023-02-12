@@ -10,8 +10,16 @@ from pathlib import Path
 from threading import Thread
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
-from PyQt6.QtGui import QIcon, QColor, QPalette, QFileSystemModel, QAction
+from PyQt6.QtCore import QSettings, QModelIndex, Qt
+from PyQt6.QtGui import (
+    QIcon,
+    QColor,
+    QPalette,
+    QFileSystemModel,
+    QAction,
+    QCloseEvent,
+    QPainter,
+)
 from PyQt6.QtWidgets import (
     QMainWindow,
     QStyleOptionViewItem,
@@ -22,7 +30,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QInputDialog,
     QLineEdit,
-    QAbstractItemView,
     QMessageBox,
     QTextBrowser,
 )
@@ -36,7 +43,7 @@ from sequence.configuration import (
     ExecuteShot,
 )
 from .config_editor import ConfigEditor
-from .config_editor import get_config_path, load_config
+from .config_editor import get_config_path
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_widget import SequenceWidget
 
@@ -105,6 +112,15 @@ class TextBrowserEditLogger(logging.Handler, QtCore.QObject):
         self.append_text.emit(msg)
 
 
+def save_experiment_config(experiment_config: ExperimentConfig, path: Path):
+    if path.exists():
+        shutil.copyfile(path, f"{path}.old")
+
+    yaml = experiment_config.to_yaml()
+    with open(path, "w") as f:
+        f.write(yaml)
+
+
 class ExperimentViewer(QMainWindow, Ui_MainWindow):
     """Main window of the application
 
@@ -113,13 +129,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     """
 
     def __init__(self, *args, **kwargs):
-        logger.info(f"Started experiment viewer in process {os.getpid()}")
         super().__init__(*args, **kwargs)
-        os.environ["QT_FILESYSTEMMODEL_WATCH_FILES"] = "1"
 
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
 
         self.setupUi(self)
+
         # restore window geometry from last session
         self.restoreState(self.ui_settings.value(f"{__name__}/state", self.saveState()))
         self.restoreGeometry(
@@ -127,49 +142,42 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
 
         self.action_edit_config.triggered.connect(self.edit_config)
-        self.experiment_config: ExperimentConfig = load_config(get_config_path())
-        self.model = SequenceViewerModel(self.experiment_config.data_path)
-        self.sequences_view.setModel(self.model)
-        self.sequences_view.setRootIndex(
-            self.model.index(str(self.experiment_config.data_path))
-        )
-        delegate = SequenceDelegate(self.sequences_view)
-        self.sequences_view.setItemDelegateForColumn(4, delegate)
-        self.sequences_view.setColumnHidden(1, True)
-        self.sequences_view.setColumnHidden(2, True)
-        self.sequences_view.setColumnHidden(3, True)
+        with open(get_config_path(), "r") as file:
+            self.experiment_config = ExperimentConfig.from_yaml(file.read())
+        # self.model = SequenceViewerModel(self.experiment_config.data_path)
+        # self.sequences_view.setModel(self.model)
+        # self.sequences_view.setRootIndex(
+        #     self.model.index(str(self.experiment_config.data_path))
+        # )
+        # delegate = SequenceDelegate(self.sequences_view)
+        # self.sequences_view.setItemDelegateForColumn(4, delegate)
+        # self.sequences_view.setColumnHidden(1, True)
+        # self.sequences_view.setColumnHidden(2, True)
+        # self.sequences_view.setColumnHidden(3, True)
         # self.sequences_view.setColumnHidden(5, True)
-        self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
-        self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
-        self.sequences_view.setDragEnabled(True)
-        self.sequences_view.setAcceptDrops(True)
-        self.sequences_view.setDropIndicatorShown(True)
-        self.sequences_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.sequences_view.setDragDropOverwriteMode(False)
-
-        self.view_update_timer = QTimer(self)
-        self.view_update_timer.timeout.connect(self.sequences_view.update)
-        self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self.view_update_timer.start(500)
+        # self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
+        # self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
+        # self.sequences_view.setDragEnabled(True)
+        # self.sequences_view.setAcceptDrops(True)
+        # self.sequences_view.setDropIndicatorShown(True)
+        # self.sequences_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        # self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        # self.sequences_view.setDragDropOverwriteMode(False)
+        #
+        # self.view_update_timer = QTimer(self)
+        # self.view_update_timer.timeout.connect(self.sequences_view.update)
+        # self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        # self.view_update_timer.start(500)
 
         self.dock_widget = QMainWindow()
         self.setCentralWidget(self.dock_widget)
 
         self.logs_handler = TextBrowserEditLogger()
-        # self.logs_widget.setPlainText("test\n" * 50)
         self.logs_dock.setWidget(self.logs_handler.widget)
         self.logs_handler.setFormatter(CustomFormatter())
-        # self.logs_handler.setFormatter(
-        #     logging.Formatter(
-        #         "<b>%(levelname)s</b> %(asctime)s (%(module)s, %(funcName)s): %(message)s"
-        #     )
-        # )
         logging.getLogger().addHandler(self.logs_handler)
         logging.getLogger().setLevel(logging.DEBUG)
-        # logger.debug("ty")
-        # self.logs_widget.setMinimumHeight(0)
 
         self.experiment_process_manager = ExperimentProcessManager(
             address=("localhost", 60000), authkey=b"Deardear"
@@ -263,13 +271,15 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         menu.exec(self.sequences_view.mapToGlobal(position))
 
     def edit_config(self):
-        """Open the experiment config editor then propagate the changes done on the experiment config"""
-        editor = ConfigEditor()
+        """Open the experiment config editor then propagate the changes done"""
+
+        editor = ConfigEditor(self.experiment_config)
         editor.exec()
-        self.update_experiment_config(load_config(get_config_path()))
+        self.experiment_config = editor.get_config()
+        save_experiment_config(self.experiment_config, get_config_path())
+        self.update_experiment_config(self.experiment_config)
 
     def update_experiment_config(self, new_config: ExperimentConfig):
-        self.experiment_config = new_config
         self.model.setRootPath(str(self.experiment_config.data_path))
         self.sequences_view.setRootIndex(
             self.model.index(str(self.experiment_config.data_path))
@@ -278,7 +288,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             sequence_widget: SequenceWidget
             logger.debug(sequence_widget.update_experiment_config(new_config))
 
-    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
             message_box = QMessageBox(self)
             message_box.setWindowTitle("Caqtus")
@@ -408,7 +418,7 @@ class SequenceViewerModel(QFileSystemModel):
         path = Path(self.filePath(parent))
         return self.sequence_watcher.is_sequence_folder(path)
 
-    def fileIcon(self, index: QModelIndex) -> QtGui.QIcon:
+    def fileIcon(self, index: QModelIndex) -> QIcon:
         if self.is_sequence_folder(index):
             return QIcon(":/icons/sequence")
         else:
@@ -489,7 +499,7 @@ class SequenceViewerModel(QFileSystemModel):
             sequence = self.get_sequence(index)
             Thread(target=sequence.revert_to_draft).start()
 
-    def get_sequence(self, index: QModelIndex) -> Sequence:
+    def get_sequence(self, index: QModelIndex) -> "Sequence":
         path = Path(self.filePath(index))
         if self.is_sequence_folder(index):
             sequence = self.sequence_watcher.get_sequence(path, read_only=False)
@@ -500,7 +510,7 @@ class SequenceViewerModel(QFileSystemModel):
 
 class SequenceDelegate(QStyledItemDelegate):
     def paint(
-        self, painter: QtGui.QPainter, option: QStyleOptionViewItem, index: QModelIndex
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()

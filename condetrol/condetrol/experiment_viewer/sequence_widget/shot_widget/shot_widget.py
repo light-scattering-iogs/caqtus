@@ -17,8 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment_config import ExperimentConfig
-from sequence import SequenceState
-from sequence.shot import DigitalLane, AnalogLane, CameraLane, TakePicture
+from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
 from settings_model import YAMLSerializable
 from .swim_lane_model import SwimLaneModel
 

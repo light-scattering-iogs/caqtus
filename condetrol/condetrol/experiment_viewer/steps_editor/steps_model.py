@@ -17,7 +17,7 @@ from PyQt6.QtCore import (
     QObject,
 )
 
-from sequence import Step, VariableDeclaration, ExecuteShot
+from sequence.configuration import Step, VariableDeclaration, ExecuteShot
 from settings_model import YAMLSerializable
 
 

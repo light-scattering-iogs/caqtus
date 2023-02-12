@@ -16,8 +16,8 @@ from PyQt6.QtGui import QColor, QIcon
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
-from sequence import SequenceStats, SequenceConfig, SequenceState
-from sequence.shot import (
+from sequence.configuration import (
+    SequenceConfig,
     DigitalLane,
     AnalogLane,
     Lane,
@@ -65,7 +65,7 @@ class SwimLaneModel(QAbstractTableModel):
         self.experiment_config = new_config
         self.endResetModel()
 
-    def change_sequence_state(self, stats: SequenceStats):
+    def change_sequence_state(self, stats: "SequenceStats"):
         self.beginResetModel()
         self.sequence_state = stats.state
         self.endResetModel()
