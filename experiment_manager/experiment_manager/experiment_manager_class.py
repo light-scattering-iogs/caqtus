@@ -13,6 +13,7 @@ logger.setLevel("DEBUG")
 logs_queue = Queue()
 logging.getLogger().addHandler(QueueHandler(logs_queue))
 
+
 def get_logs_queue():
     return logs_queue
 

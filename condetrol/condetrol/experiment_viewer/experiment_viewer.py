@@ -27,19 +27,14 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
 )
 
-
 from experiment_config import ExperimentConfig
 from experiment_manager import ExperimentManager
-from qtpy import QtGui
-from sequence import (
-    SequenceState,
+from sequence.configuration import (
+    ShotConfiguration,
     SequenceConfig,
     SequenceSteps,
     ExecuteShot,
 )
-from sequence.sequence import Sequence, SequenceFolderWatcher
-from sequence.shot import ShotConfiguration
-
 from .config_editor import ConfigEditor
 from .config_editor import get_config_path, load_config
 from .experiment_viewer_ui import Ui_MainWindow

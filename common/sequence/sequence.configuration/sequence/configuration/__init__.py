@@ -9,6 +9,8 @@ from .sequence_config import (
     ExecuteShot,
 )
 
+from .shot import ShotConfiguration
+
 __all__ = [
     "SequenceConfig",
     "Step",
@@ -16,4 +18,5 @@ __all__ = [
     "VariableDeclaration",
     "LinspaceLoop",
     "ExecuteShot",
+    "ShotConfiguration",
 ]

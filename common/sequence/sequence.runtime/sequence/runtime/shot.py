@@ -1,0 +1,73 @@
+import typing
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from .model import ShotModel, DataOrigin
+
+if typing.TYPE_CHECKING:
+    from .sequence import Sequence
+
+
+class Shot:
+    def __init__(self, sequence: "Sequence", name: str, index: int):
+        self._sequence = sequence
+        self._name = name
+        self._index = index
+
+    def __str__(self):
+        return (
+            f'Shot(sequence={self._sequence!s}, name="{self._name}",'
+            f" index={self._index})"
+        )
+
+    def __repr__(self):
+        return (
+            f'Shot(sequence={self._sequence!r}, name="{self._name}",'
+            f" index={self._index})"
+        )
+
+    def add_measures(self, data: dict[str, typing.Any], session: Session):
+        shot_sql = self.query_model(session)
+        shot_sql.add_data(data, DataOrigin.MEASURE, session)
+
+    def get_measures(self, session: Session):
+        shot_sql = self.query_model(session)
+        return shot_sql.get_data(DataOrigin.MEASURE, session)
+
+    def add_parameters(self, parameters: dict[str, typing.Any], session: Session):
+        shot_sql = self.query_model(session)
+        shot_sql.add_data(parameters, DataOrigin.PARAMETER, session)
+
+    def get_parameters(self, session: Session):
+        shot_sql = self.query_model(session)
+        return shot_sql.get_data(DataOrigin.PARAMETER, session)
+
+    @property
+    def sequence(self):
+        return self._sequence
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def index(self):
+        return self._index
+
+    def query_model(self, session: typing.Optional[Session]) -> ShotModel:
+        query_shot = select(ShotModel).where(
+            ShotModel.sequence == self.sequence.query_model(session),
+            ShotModel.name == self.name,
+            ShotModel.index == self.index,
+        )
+        result = session.execute(query_shot)
+        # noinspection PyTypeChecker
+        if shot := result.scalar():
+            return shot
+        else:
+            raise ShotNotFoundError(f"Could not find shot {self!s} in database")
+
+
+class ShotNotFoundError(Exception):
+    pass

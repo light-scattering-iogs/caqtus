@@ -1,7 +1,8 @@
 from datetime import datetime
 
 import pytest
-from sqlalchemy import create_engine
+import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from sequence.configuration import SequenceConfig, SequenceSteps
@@ -9,13 +10,17 @@ from sequence.configuration.shot import ShotConfiguration
 from sequence.runtime import Sequence, SequenceNotFoundError
 from sequence.runtime.base import Base
 
+DB_NAME = "test_database"
 
-@pytest.fixture(scope="function")
+DB_URL = f"postgresql+psycopg2://caqtus:Deardear@localhost/{DB_NAME}"
+
+
+@pytest.fixture
 def clean_database():
-    engine = create_engine("sqlite://", echo=False)
+    engine = sa.create_engine(DB_URL, echo=False)
     Base.metadata.create_all(engine)
 
-    session_maker = sessionmaker(bind=engine)
+    session_maker = sessionmaker(engine)
 
     return session_maker
 
@@ -27,47 +32,82 @@ def sequence_config():
     )
 
 
-def test_sequence_creation(clean_database, sequence_config):
-    before = datetime.now()
-    Sequence.create_sequence(
-        "year/month/day/name",
-        sequence_config,
-        None,
-        clean_database,
-    )
-    after = datetime.now()
+class TestSequenceCreation:
+    def setup_class(self):
+        engine = sa.create_engine(DB_URL, echo=False)
 
-    # creation date is between correct
-    creation_date = Sequence("year/month/day/name", clean_database).get_creation_date()
-    assert before <= creation_date <= after
+        Base.metadata.drop_all(engine)
 
-    # Cannot access a sequence that does not exist
-    with pytest.raises(SequenceNotFoundError):
-        _ = Sequence("year/month/day/other_name", clean_database).get_creation_date()
+        session = sa.orm.scoped_session(sa.orm.sessionmaker())
+        session.configure(bind=engine)
+        Base.metadata.create_all(engine)
 
-    # Cannot create a sequence twice
-    with pytest.raises(RuntimeError):
-        Sequence.create_sequence(
-            "year/month/day/name",
-            sequence_config,
-            None,
-            clean_database,
-        )
+    def teardown_class(self):
+        pass
 
-    # Cannot create a sequence with an ancestor
-    with pytest.raises(RuntimeError):
-        Sequence.create_sequence(
-            "year/month/day/name/other",
-            sequence_config,
-            None,
-            clean_database,
-        )
+    def test_sequence_creation(self, clean_database: sessionmaker, sequence_config):
+        with clean_database() as session:
+            before = datetime.now()
+            Sequence.create_sequence(
+                "year/month/day/name", sequence_config, None, session
+            )
+            after = datetime.now()
 
-    # Cannot create a sequence with a descendant
-    with pytest.raises(RuntimeError):
-        Sequence.create_sequence(
-            "year/month/day",
-            sequence_config,
-            None,
-            clean_database,
-        )
+            # creation date is between correct
+            creation_date = Sequence("year/month/day/name").get_creation_date(session)
+            assert before <= creation_date <= after
+
+            # Cannot access a sequence that does not exist
+            with pytest.raises(SequenceNotFoundError):
+                _ = Sequence(
+                    "year/month/day/other_name",
+                ).get_creation_date(session)
+
+            # Cannot create a sequence twice
+            with pytest.raises(RuntimeError):
+                Sequence.create_sequence(
+                    "year/month/day/name",
+                    sequence_config,
+                    None,
+                    session,
+                )
+
+            # Cannot create a sequence with an ancestor
+            with pytest.raises(RuntimeError):
+                Sequence.create_sequence(
+                    "year/month/day/name/other",
+                    sequence_config,
+                    None,
+                    session,
+                )
+
+            # Cannot create a sequence with a descendant
+            with pytest.raises(RuntimeError):
+                Sequence.create_sequence(
+                    "year/month/day",
+                    sequence_config,
+                    None,
+                    session,
+                )
+
+    def test_shot_creation(self, clean_database, sequence_config):
+        with clean_database() as session:
+            now = datetime.now()
+            sequence = Sequence.create_sequence(
+                "test_sequence", sequence_config, None, session
+            )
+            sequence.create_shot("shot", now, now, session)
+            shot = sequence.create_shot("shot", now, now, session)
+            assert shot.index == 1
+            assert len(sequence.get_shots(session)) == 2
+
+            data = {"test": 42, "test1": "test"}
+            shot.add_measures(data, session)
+            assert shot.get_measures(session) == data
+
+            parameters = {"var1": 0, "var2": 1}
+            shot.add_parameters(parameters, session)
+            assert shot.get_parameters(session) == parameters
+
+            with pytest.raises(IntegrityError):
+                shot.add_measures(data, session)
