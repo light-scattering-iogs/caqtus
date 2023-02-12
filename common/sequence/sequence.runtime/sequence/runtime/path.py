@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 
 from .model import SequencePathModel
 
-_PATH_SEPARATOR = "/"
+_PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
 _PATH_REGEX = re.compile(
-    f"^{_PATH_NAMES_REGEX}({_PATH_SEPARATOR}{_PATH_NAMES_REGEX})*$"
+    f"^{_PATH_NAMES_REGEX}(\\{_PATH_SEPARATOR}{_PATH_NAMES_REGEX})*$"
 )
 
 
@@ -75,6 +75,16 @@ class SequencePath:
         if self._path != "":  # always find at least itself if not root
             number_children -= 1
         return number_children
+
+    def get_children(self, session: Session):
+        path = self.query_model(session)
+        if path.sequence:
+            raise RuntimeError("Cannot check children of a sequence")
+        query_children = select(SequencePathModel).filter(
+            SequencePathModel.path.startswith(self._path),
+            SequencePathModel.path.count(_PATH_SEPARATOR) == self.depth + 1,
+        )
+        return [SequencePath(child.path) for child in session.execute(query_children)]
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
         ancestors = self._path.split(_PATH_SEPARATOR)

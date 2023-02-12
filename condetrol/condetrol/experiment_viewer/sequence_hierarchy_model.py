@@ -1,5 +1,3 @@
-import time
-
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 from sqlalchemy import select

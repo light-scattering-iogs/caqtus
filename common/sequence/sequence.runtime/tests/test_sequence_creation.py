@@ -49,26 +49,26 @@ class TestSequenceCreation:
         with clean_database() as session:
             before = datetime.now()
             Sequence.create_sequence(
-                SequencePath("year/month/day/name"), sequence_config, None, session
+                SequencePath("year.month.day.name"), sequence_config, None, session
             )
             after = datetime.now()
 
             # creation date is correct
             creation_date = Sequence(
-                SequencePath("year/month/day/name")
+                SequencePath("year.month.day.name")
             ).get_creation_date(session)
             assert before <= creation_date <= after
 
             # Cannot access a sequence that does not exist
             with pytest.raises(SequenceNotFoundError):
                 _ = Sequence(
-                    SequencePath("year/month/day/other_name"),
+                    SequencePath("year.month.day.other_name"),
                 ).get_creation_date(session)
 
             # Cannot create a sequence twice
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    SequencePath("year/month/day/name"),
+                    SequencePath("year.month.day.name"),
                     sequence_config,
                     None,
                     session,
@@ -77,7 +77,7 @@ class TestSequenceCreation:
             # Cannot create a sequence with an ancestor
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    SequencePath("year/month/day/name/other"),
+                    SequencePath("year.month.day.name.other"),
                     sequence_config,
                     None,
                     session,
@@ -86,13 +86,12 @@ class TestSequenceCreation:
             # Cannot create a sequence with a descendant
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    SequencePath("year/month/day"),
+                    SequencePath("year.month.day"),
                     sequence_config,
                     None,
                     session,
                 )
 
-            session.commit()
 
     def test_shot_creation(self, clean_database, sequence_config):
         with clean_database() as session:
