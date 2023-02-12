@@ -1,10 +1,10 @@
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
-from sqlalchemy import select, func
+from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker, Session
 
 from sequence.runtime import SequencePath
-from sequence.runtime.model import SequenceModel, SequencePathModel
+from sequence.runtime.model import SequencePathModel
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
@@ -95,14 +95,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self.beginInsertRows(parent, 0, len(children) - 1)
         parent_item.children = children
         self.endInsertRows()
-
-    def _get_sequence_infos(self, path_prefix: SequencePath) -> list[dict]:
-        query = select(SequenceModel.path, SequenceModel.state).filter(
-            SequenceModel.path.startswith(str(path_prefix))
-        )
-        with self._session_maker.begin() as session:
-            result = session.execute(query)
-        return [{"path": path, "state": state} for path, state in result]
 
 
 class SequenceHierarchyItem(NodeMixin):
