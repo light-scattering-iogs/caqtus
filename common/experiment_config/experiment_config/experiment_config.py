@@ -31,10 +31,6 @@ class ExperimentConfig(SettingsModel):
         default="postgresql+psycopg2://user:password@host:port/database",
         description="The url to the database where the experiment data will be stored.",
     )
-    data_path: Path = Field(
-        default_factory=lambda: Path(user_data_dir("ExperimentControl", "Caqtus"))
-        / "data/"
-    )
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
         description=(

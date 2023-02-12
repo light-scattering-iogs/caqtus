@@ -1,9 +1,8 @@
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QAbstractListModel, QModelIndex
-from PyQt6.QtWidgets import QFormLayout, QDataWidgetMapper, QWidget
+from PyQt6.QtWidgets import QFormLayout, QWidget, QLineEdit
 
-from condetrol.widgets import FolderWidget, SaveFileWidget, SettingsDelegate
+from condetrol.widgets import SaveFileWidget
 from experiment_config import ExperimentConfig, get_config_path
 from ..config_settings_editor import ConfigSettingsEditor
 
@@ -11,11 +10,13 @@ from ..config_settings_editor import ConfigSettingsEditor
 class SystemSettingsEditor(ConfigSettingsEditor):
     """A widget that allow to edit the system settings
 
-    This includes the path to store the config file and the path to store the experiment data.
+    This includes the path to store the config file and the database path to store the
+    experiment data.
     """
 
     def get_experiment_config(self) -> ExperimentConfig:
-        return self.model.get_config()
+        self.config.database_url = self.database_url_widget.text()
+        return self.config
 
     def __init__(
         self,
@@ -36,46 +37,5 @@ class SystemSettingsEditor(ConfigSettingsEditor):
         self.layout.insertRow(0, "Config path", self.config_path_widget)
         self.config_path_widget.setEnabled(False)
 
-        self.data_path_widget = FolderWidget(
-            "Edit data path...",
-        )
-        self.layout.insertRow(1, "Data path", self.data_path_widget)
-
-        self.model = SystemSettingsModel(self.config)
-        self.mapper = QDataWidgetMapper()
-        self.mapper.setOrientation(Qt.Orientation.Vertical)
-        self.mapper.setModel(self.model)
-        self.mapper.addMapping(self.data_path_widget, 0)
-        self.mapper.setItemDelegate(SettingsDelegate())
-        self.mapper.toFirst()
-
-        self.data_path_widget.folder_edited.connect(self.mapper.submit)
-
-
-class SystemSettingsModel(QAbstractListModel):
-    def __init__(self, config: ExperimentConfig):
-        super().__init__()
-        self._config: ExperimentConfig = config
-
-    def get_config(self) -> ExperimentConfig:
-        return self._config
-
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        return 1
-
-    def data(self, index: QModelIndex, role: int = ...):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
-                return str(self._config.data_path)
-
-    # noinspection PyTypeChecker
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if index.isValid():
-            return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled
-
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
-        if role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
-                self._config.data_path = value
-                return True
-        return False
+        self.database_url_widget = QLineEdit(str(self.config.database_url))
+        self.layout.insertRow(1, "Database url", self.database_url_widget)

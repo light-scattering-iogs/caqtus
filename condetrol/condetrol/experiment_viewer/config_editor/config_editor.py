@@ -13,8 +13,7 @@ from PyQt6.QtWidgets import (
     QLayout,
 )
 
-from .spincore_config_editor import SpincoreConfigEditor
-from experiment_config import ExperimentConfig, get_config_path
+from experiment_config import ExperimentConfig
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
 from .config_settings_editor import (
@@ -24,6 +23,7 @@ from .config_settings_editor import (
 from .devices_editor import DevicesEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
+from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
 
 logger = logging.getLogger(__name__)

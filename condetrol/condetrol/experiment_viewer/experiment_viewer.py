@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
 )
 
-from experiment_config import ExperimentConfig
+from experiment_config import ExperimentConfig, get_config_path
 from experiment_manager import ExperimentManager
 from sequence.configuration import (
     ShotConfiguration,
@@ -43,7 +43,6 @@ from sequence.configuration import (
     ExecuteShot,
 )
 from .config_editor import ConfigEditor
-from .config_editor import get_config_path
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_widget import SequenceWidget
 
