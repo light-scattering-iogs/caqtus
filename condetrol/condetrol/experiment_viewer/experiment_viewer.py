@@ -9,6 +9,7 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 from threading import Thread
 
+import sqlalchemy
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt
 from PyQt6.QtGui import (
@@ -33,6 +34,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QTextBrowser,
 )
+from sqlalchemy.orm import sessionmaker
 
 from experiment_config import ExperimentConfig, get_config_path
 from experiment_manager import ExperimentManager
@@ -44,6 +46,7 @@ from sequence.configuration import (
 )
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
+from .sequence_hierarchy_model import SequenceHierarchyModel
 from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
@@ -143,8 +146,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.action_edit_config.triggered.connect(self.edit_config)
         with open(get_config_path(), "r") as file:
             self.experiment_config = ExperimentConfig.from_yaml(file.read())
+        engine = sqlalchemy.create_engine(self.experiment_config.database_url)
+        self.model = SequenceHierarchyModel(session_maker=sessionmaker(engine))
         # self.model = SequenceViewerModel(self.experiment_config.data_path)
-        # self.sequences_view.setModel(self.model)
+        self.sequences_view.setModel(self.model)
         # self.sequences_view.setRootIndex(
         #     self.model.index(str(self.experiment_config.data_path))
         # )

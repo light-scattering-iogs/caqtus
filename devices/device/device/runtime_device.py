@@ -16,7 +16,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         name: A unique name given to the device. This name is checked when starting the device connection.
 
     Warnings:
-        All device classes subclassed from this class should call parent class start, apply_rt_variables and
+        All device classes subclassed from this class should call parent_item class start, apply_rt_variables and
     shutdown methods when subclassing them.
     """
 

@@ -1,4 +1,5 @@
 import enum
+import typing
 from datetime import datetime
 from typing import Optional, Any
 
@@ -7,16 +8,41 @@ from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
 
 from experiment_config import ExperimentConfig
 from sequence.configuration import SequenceConfig
-from . import SequencePath
 from .base import Base
 from .state import State
+
+if typing.TYPE_CHECKING:
+    from .path import SequencePath
+
+
+class SequencePathModel(Base):
+    __tablename__ = "sequence_path"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    path: Mapped[str] = mapped_column(unique=True, index=True)
+    creation_date: Mapped[datetime] = mapped_column()
+    sequence: Mapped[
+        list["SequenceModel"]
+    ] = relationship()  # the list will always contain either 0 or 1 element
+
+    @classmethod
+    def create_path(
+        cls,
+        path: "SequencePath",
+        session: Session,
+    ):
+        session.add(cls(path=str(path), creation_date=datetime.now()))
+        session.flush()
 
 
 class SequenceModel(Base):
     __tablename__ = "sequence"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    path: Mapped[str] = mapped_column(unique=True)
+    path_id: Mapped[str] = mapped_column(
+        ForeignKey("sequence_path.id"), unique=True, index=True
+    )
+    path: Mapped[SequencePathModel] = relationship(back_populates="sequence")
     state: Mapped[State]
 
     sequence_config_yaml: Mapped[str] = mapped_column()
@@ -40,47 +66,30 @@ class SequenceModel(Base):
     @classmethod
     def create_sequence(
         cls,
-        path: SequencePath,
+        path: "SequencePath",
         sequence_config: SequenceConfig,
         experiment_config: Optional[ExperimentConfig],
         session: Session,
     ):
-        path_ancestors = [
-            str(ancestor) for ancestor in path.get_ancestors(strict=False)
-        ]
-        query = select(SequenceModel).filter(SequenceModel.path.in_(path_ancestors))
-        sequence_ancestors = session.scalars(query).all()
 
-        if sequence_ancestors:
-            raise RuntimeError(
-                f"Cannot create sequence {path} because a sequence already exists in"
-                f" this path {sequence_ancestors}"
-            )
-
-        query = select(SequenceModel).filter(SequenceModel.path.startswith(str(path)))
-        sequence_descendants = session.scalars(query).all()
-
-        if sequence_descendants:
-            raise RuntimeError(
-                f"Cannot create sequence {path} because a sequence already exists in"
-                f" this path {sequence_descendants}"
-            )
+        query_path_id = select(SequencePathModel.id_).filter(
+            SequencePathModel.path == str(path)
+        )
+        path_id = session.scalar(query_path_id)
 
         now = datetime.now()
-        creation_args = {
-            "path": str(path),
-            "state": State.DRAFT,
-            "sequence_config_yaml": sequence_config.to_yaml(),
-            "experiment_config_yaml": experiment_config.to_yaml()
+        sequence_sql = SequenceModel(
+            path_id=path_id,
+            state=State.DRAFT,
+            sequence_config_yaml=sequence_config.to_yaml(),
+            experiment_config_yaml=experiment_config.to_yaml()
             if experiment_config
             else None,
-            "creation_date": now,
-            "modification_date": now,
-            "start_date": None,
-            "stop_date": None,
-        }
-
-        sequence_sql = SequenceModel(**creation_args)
+            creation_date=now,
+            modification_date=now,
+            start_date=None,
+            stop_date=None,
+        )
         session.add(sequence_sql)
         session.flush()
         return sequence_sql
@@ -93,7 +102,7 @@ class ShotModel(Base):
     )
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    sequence_id: Mapped[str] = mapped_column(ForeignKey("sequence.id"))
+    sequence_id: Mapped[str] = mapped_column(ForeignKey("sequence.id"), index=True)
     sequence: Mapped["SequenceModel"] = relationship(back_populates="shots")
     name: Mapped[str] = mapped_column()
     index: Mapped[int] = mapped_column()
@@ -134,11 +143,11 @@ class ShotModel(Base):
         session.flush()
         return new_shot
 
-    def add_data(self, data: dict[str, Any], origin: "DataOrigin", session: Session):
+    def add_data(self, data: dict[str, Any], type_: "DataType", session: Session):
         for key, value in data.items():
             data_sql = DataModel(
                 shot=self,
-                origin=origin,
+                type_=type_,
                 name=key,
                 value=value,
             )
@@ -146,14 +155,14 @@ class ShotModel(Base):
 
         session.flush()
 
-    def get_data(self, origin: "DataOrigin", session: Session):
+    def get_data(self, type_: "DataType", session: Session):
         query = select(DataModel).filter(
-            DataModel.shot == self, DataModel.origin == origin
+            DataModel.shot == self, DataModel.type_ == type_
         )
         return {data.name: data.value for data in session.scalars(query).all()}
 
 
-class DataOrigin(enum.Enum):
+class DataType(enum.Enum):
     PARAMETER = "parameter"
     MEASURE = "measure"
     ANALYSIS = "analysis"
@@ -162,12 +171,12 @@ class DataOrigin(enum.Enum):
 class DataModel(Base):
     __tablename__ = "data"
     __table_args__ = (
-        UniqueConstraint("shot_id", "origin", "name", name="data_identifier"),
+        UniqueConstraint("shot_id", "type_", "name", name="data_identifier"),
     )
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    shot_id: Mapped[int] = mapped_column(ForeignKey("shot.id"))
+    shot_id: Mapped[int] = mapped_column(ForeignKey("shot.id"), index=True)
     shot: Mapped["ShotModel"] = relationship(back_populates="data")
-    origin: Mapped[DataOrigin] = mapped_column()
+    type_: Mapped[DataType] = mapped_column()
     name: Mapped[str] = mapped_column()
     value = Column(PickleType)

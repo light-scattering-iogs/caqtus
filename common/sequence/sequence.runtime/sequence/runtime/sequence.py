@@ -7,16 +7,16 @@ from sqlalchemy.orm import Session
 from experiment_config import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from .model import SequenceModel, ShotModel
-from .path import SequencePath
+from .path import SequencePath, PathNotFoundError
 from .shot import Shot
 
 
 class Sequence:
-    def __init__(self, path: str):
-        self._path = SequencePath(path)
+    def __init__(self, path: SequencePath):
+        self._path = path
 
     def __str__(self):
-        return f"Sequence(\"{str(self._path)}\")"
+        return f'Sequence("{str(self._path)}")'
 
     @property
     def path(self) -> SequencePath:
@@ -41,7 +41,7 @@ class Sequence:
     @classmethod
     def create_sequence(
         cls,
-        path: str,
+        path: SequencePath,
         sequence_config: SequenceConfig,
         experiment_config: Optional[ExperimentConfig],
         session: Session,
@@ -59,15 +59,26 @@ class Sequence:
                 " ExperimentConfig"
             )
 
-        SequenceModel.create_sequence(
-            SequencePath(path), sequence_config, experiment_config, session
-        )
+        path.create(session)
+        if path.has_children(session):
+            raise RuntimeError(
+                f"Cannot create a sequence at {path} because it is a folder with"
+                " children"
+            )
+
+        SequenceModel.create_sequence(path, sequence_config, experiment_config, session)
         sequence = cls(path)
         return sequence
 
     def query_model(self, session: Optional[Session]) -> SequenceModel:
-        stmt = select(SequenceModel).where(SequenceModel.path == str(self._path))
-        result = session.execute(stmt)
+        try:
+            path = self._path.query_model(session)
+        except PathNotFoundError:
+            raise SequenceNotFoundError(
+                f"Could not find sequence '{self._path}' in database"
+            )
+        query_sequence = select(SequenceModel).where(SequenceModel.path == path)
+        result = session.execute(query_sequence)
         # noinspection PyTypeChecker
         if sequence := result.scalar():
             return sequence

@@ -3,7 +3,7 @@ import typing
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .model import ShotModel, DataOrigin
+from .model import ShotModel, DataType
 
 if typing.TYPE_CHECKING:
     from .sequence import Sequence
@@ -29,19 +29,19 @@ class Shot:
 
     def add_measures(self, data: dict[str, typing.Any], session: Session):
         shot_sql = self.query_model(session)
-        shot_sql.add_data(data, DataOrigin.MEASURE, session)
+        shot_sql.add_data(data, DataType.MEASURE, session)
 
     def get_measures(self, session: Session):
         shot_sql = self.query_model(session)
-        return shot_sql.get_data(DataOrigin.MEASURE, session)
+        return shot_sql.get_data(DataType.MEASURE, session)
 
     def add_parameters(self, parameters: dict[str, typing.Any], session: Session):
         shot_sql = self.query_model(session)
-        shot_sql.add_data(parameters, DataOrigin.PARAMETER, session)
+        shot_sql.add_data(parameters, DataType.PARAMETER, session)
 
     def get_parameters(self, session: Session):
         shot_sql = self.query_model(session)
-        return shot_sql.get_data(DataOrigin.PARAMETER, session)
+        return shot_sql.get_data(DataType.PARAMETER, session)
 
     @property
     def sequence(self):

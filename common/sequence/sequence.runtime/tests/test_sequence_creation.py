@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from sequence.configuration import SequenceConfig, SequenceSteps
 from sequence.configuration.shot import ShotConfiguration
-from sequence.runtime import Sequence, SequenceNotFoundError
+from sequence.runtime import Sequence, SequencePath, SequenceNotFoundError
 from sequence.runtime.base import Base
 
 DB_NAME = "test_database"
@@ -49,24 +49,26 @@ class TestSequenceCreation:
         with clean_database() as session:
             before = datetime.now()
             Sequence.create_sequence(
-                "year/month/day/name", sequence_config, None, session
+                SequencePath("year/month/day/name"), sequence_config, None, session
             )
             after = datetime.now()
 
-            # creation date is between correct
-            creation_date = Sequence("year/month/day/name").get_creation_date(session)
+            # creation date is correct
+            creation_date = Sequence(
+                SequencePath("year/month/day/name")
+            ).get_creation_date(session)
             assert before <= creation_date <= after
 
             # Cannot access a sequence that does not exist
             with pytest.raises(SequenceNotFoundError):
                 _ = Sequence(
-                    "year/month/day/other_name",
+                    SequencePath("year/month/day/other_name"),
                 ).get_creation_date(session)
 
             # Cannot create a sequence twice
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    "year/month/day/name",
+                    SequencePath("year/month/day/name"),
                     sequence_config,
                     None,
                     session,
@@ -75,7 +77,7 @@ class TestSequenceCreation:
             # Cannot create a sequence with an ancestor
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    "year/month/day/name/other",
+                    SequencePath("year/month/day/name/other"),
                     sequence_config,
                     None,
                     session,
@@ -84,17 +86,19 @@ class TestSequenceCreation:
             # Cannot create a sequence with a descendant
             with pytest.raises(RuntimeError):
                 Sequence.create_sequence(
-                    "year/month/day",
+                    SequencePath("year/month/day"),
                     sequence_config,
                     None,
                     session,
                 )
 
+            session.commit()
+
     def test_shot_creation(self, clean_database, sequence_config):
         with clean_database() as session:
             now = datetime.now()
             sequence = Sequence.create_sequence(
-                "test_sequence", sequence_config, None, session
+                SequencePath("test_sequence"), sequence_config, None, session
             )
             sequence.create_shot("shot", now, now, session)
             shot = sequence.create_shot("shot", now, now, session)
