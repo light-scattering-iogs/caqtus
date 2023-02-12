@@ -57,6 +57,9 @@ class SequencePathModel(Base):
     def is_sequence(self) -> bool:
         return len(self.sequence) == 1
 
+    def get_sequence(self) -> "SequenceModel":
+        return self.sequence[0]
+
 
 class SequenceModel(Base):
     __tablename__ = "sequence"

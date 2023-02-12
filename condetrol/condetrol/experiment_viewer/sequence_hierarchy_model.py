@@ -55,14 +55,28 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return len(parent.internalPointer().children)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return 1
+        return 2
 
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
             return
 
         if role == Qt.ItemDataRole.DisplayRole:
-            return index.internalPointer().sequence_path.name
+            if index.column() == 0:
+                return self.get_sequence_name(index.internalPointer())
+            if index.column() == 1:
+                return self.get_sequence_state(index.internalPointer())
+
+    def get_sequence_name(self, item: "SequenceHierarchyItem"):
+        return item.sequence_path.name
+
+    def get_sequence_state(self, item: "SequenceHierarchyItem"):
+        if item.is_sequence:
+            with self._session_maker.begin() as session:
+                path = item.sequence_path.query_model(session)
+                return str(path.get_sequence().state)
+        else:
+            return ""
 
     def hasChildren(self, parent: QModelIndex = ...) -> bool:
         if not parent.isValid():
