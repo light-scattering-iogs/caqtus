@@ -92,6 +92,7 @@ class TestSequenceCreation:
                     session,
                 )
 
+            session.commit()
 
     def test_shot_creation(self, clean_database, sequence_config):
         with clean_database() as session:

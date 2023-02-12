@@ -2,6 +2,7 @@ import re
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy_utils import Ltree
 
 from .model import SequencePathModel
 
@@ -28,7 +29,9 @@ class SequencePath:
     def exists(self, session: Session):
         return (
             session.scalar(
-                select(SequencePathModel).filter(SequencePathModel.path == self._path)
+                select(SequencePathModel).filter(
+                    SequencePathModel.path == Ltree(self._path)
+                )
             )
             is not None
         )
@@ -65,26 +68,13 @@ class SequencePath:
         return bool(self.child_count(session))
 
     def child_count(self, session: Session) -> int:
-        path = self.query_model(session)
-        if path.sequence:
-            raise RuntimeError("Cannot check children of a sequence")
-        query_children = select(SequencePathModel).filter(
-            SequencePathModel.path.startswith(self._path)
-        )
-        number_children = len(list(session.scalars(query_children)))
-        if self._path != "":  # always find at least itself if not root
-            number_children -= 1
-        return number_children
+        return len(self.get_children(session))
 
     def get_children(self, session: Session):
         path = self.query_model(session)
         if path.sequence:
             raise RuntimeError("Cannot check children of a sequence")
-        query_children = select(SequencePathModel).filter(
-            SequencePathModel.path.startswith(self._path),
-            SequencePathModel.path.count(_PATH_SEPARATOR) == self.depth + 1,
-        )
-        return [SequencePath(child.path) for child in session.execute(query_children)]
+        return [SequencePath(str(child.path)) for child in path.children]
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
         ancestors = self._path.split(_PATH_SEPARATOR)
@@ -127,7 +117,9 @@ class SequencePath:
         return False
 
     def query_model(self, session) -> SequencePathModel:
-        stmt = select(SequencePathModel).where(SequencePathModel.path == self._path)
+        stmt = select(SequencePathModel).where(
+            SequencePathModel.path == Ltree(self._path)
+        )
         result = session.execute(stmt)
         # noinspection PyTypeChecker
         if path := result.scalar():
