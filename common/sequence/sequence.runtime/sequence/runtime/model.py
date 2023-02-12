@@ -3,8 +3,17 @@ import typing
 from datetime import datetime
 from typing import Optional, Any
 
-from sqlalchemy import select, ForeignKey, UniqueConstraint, PickleType, Column
-from sqlalchemy.orm import Mapped, mapped_column, Session, relationship
+from sqlalchemy import (
+    select,
+    ForeignKey,
+    UniqueConstraint,
+    PickleType,
+    Column,
+    func,
+    Index,
+)
+from sqlalchemy.orm import Mapped, mapped_column, Session, relationship, remote, foreign
+from sqlalchemy_utils import Ltree, LtreeType
 
 from experiment_config import ExperimentConfig
 from sequence.configuration import SequenceConfig
@@ -14,16 +23,27 @@ from .state import State
 if typing.TYPE_CHECKING:
     from .path import SequencePath
 
+# Need to activate Ltree extension in Postgresql
+# In the psql shell:
+# CREATE EXTENSION IF NOT EXISTS ltree;
+
 
 class SequencePathModel(Base):
     __tablename__ = "sequence_path"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    path: Mapped[str] = mapped_column(unique=True, index=True)
+    path = Column(LtreeType, unique=True, nullable=False)
     creation_date: Mapped[datetime] = mapped_column()
+    parent: Mapped["SequencePathModel"] = relationship(
+        primaryjoin=remote(path) == foreign(func.subpath(path, 0, -1)),
+        backref="children",
+        viewonly=True,
+    )
     sequence: Mapped[
         list["SequenceModel"]
     ] = relationship()  # the list will always contain either 0 or 1 element
+
+    __table_args__ = (Index("ix_nodes_path", path, postgresql_using="gist"),)
 
     @classmethod
     def create_path(
@@ -31,7 +51,7 @@ class SequencePathModel(Base):
         path: "SequencePath",
         session: Session,
     ):
-        session.add(cls(path=str(path), creation_date=datetime.now()))
+        session.add(cls(path=Ltree(str(path)), creation_date=datetime.now()))
         session.flush()
 
 
@@ -73,7 +93,7 @@ class SequenceModel(Base):
     ):
 
         query_path_id = select(SequencePathModel.id_).filter(
-            SequencePathModel.path == str(path)
+            SequencePathModel.path == Ltree(str(path))
         )
         path_id = session.scalar(query_path_id)
 
