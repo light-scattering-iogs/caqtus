@@ -1,3 +1,5 @@
+from typing import TypedDict, Optional
+
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 from sqlalchemy import func
@@ -5,6 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from sequence.runtime import SequencePath
 from sequence.runtime.model import SequencePathModel
+from sequence.runtime.state import State
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
@@ -64,17 +67,51 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 return self.get_sequence_name(index.internalPointer())
-            if index.column() == 1:
-                return self.get_sequence_state(index.internalPointer())
+            else:
+                stats = self.get_sequence_stats(index.internalPointer())
+                return stats
 
-    def get_sequence_name(self, item: "SequenceHierarchyItem"):
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
+            if section == 0:
+                return "Name"
+            elif section == 1:
+                return "Status"
+
+    @staticmethod
+    def get_sequence_name(item: "SequenceHierarchyItem"):
         return item.sequence_path.name
+
+    def get_sequence_stats(self, item: "SequenceHierarchyItem"):
+        if item.is_sequence:
+            with self._session_maker.begin() as session:
+                sequence = item.sequence_path.query_model(session).get_sequence()
+                return SequenceStats(
+                    state=sequence.get_state(),
+                    total_number_shots=sequence.total_number_shots,
+                    number_completed_shots=sequence.get_number_completed_shots(),
+                )
+        else:
+            return None
 
     def get_sequence_state(self, item: "SequenceHierarchyItem"):
         if item.is_sequence:
             with self._session_maker.begin() as session:
-                path = item.sequence_path.query_model(session)
-                return str(path.get_sequence().state)
+                sequence = item.sequence_path.query_model(session).get_sequence()
+                return str(sequence.state)
+        else:
+            return ""
+
+    def get_sequence_progress(self, item: "SequenceHierarchyItem"):
+        if item.is_sequence:
+            with self._session_maker.begin() as session:
+                sequence = item.sequence_path.query_model(session).get_sequence()
+                return (
+                    f"{sequence.number_completed_shots}/{sequence.total_number_shots}"
+                )
         else:
             return ""
 
@@ -109,6 +146,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self.beginInsertRows(parent, 0, len(children) - 1)
         parent_item.children = children
         self.endInsertRows()
+
+
+class SequenceStats(TypedDict):
+    state: State
+    total_number_shots: Optional[int]
+    number_completed_shots: int
 
 
 class SequenceHierarchyItem(NodeMixin):

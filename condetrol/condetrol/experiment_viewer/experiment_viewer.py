@@ -11,7 +11,7 @@ from threading import Thread
 
 import sqlalchemy
 from PyQt6 import QtCore
-from PyQt6.QtCore import QSettings, QModelIndex, Qt
+from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt6.QtGui import (
     QIcon,
     QColor,
@@ -44,9 +44,10 @@ from sequence.configuration import (
     SequenceSteps,
     ExecuteShot,
 )
+from sequence.runtime.state import State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
-from .sequence_hierarchy_model import SequenceHierarchyModel
+from .sequence_hierarchy_model import SequenceHierarchyModel, SequenceStats
 from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
@@ -148,13 +149,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.experiment_config = ExperimentConfig.from_yaml(file.read())
         engine = sqlalchemy.create_engine(self.experiment_config.database_url)
         self.model = SequenceHierarchyModel(session_maker=sessionmaker(engine))
-        # self.model = SequenceViewerModel(self.experiment_config.data_path)
         self.sequences_view.setModel(self.model)
-        # self.sequences_view.setRootIndex(
-        #     self.model.index(str(self.experiment_config.data_path))
-        # )
-        # delegate = SequenceDelegate(self.sequences_view)
-        # self.sequences_view.setItemDelegateForColumn(4, delegate)
+        delegate = SequenceDelegate(self.sequences_view)
+        self.sequences_view.setItemDelegateForColumn(1, delegate)
+
+        # self.model = SequenceViewerModel(self.experiment_config.data_path)
         # self.sequences_view.setColumnHidden(1, True)
         # self.sequences_view.setColumnHidden(2, True)
         # self.sequences_view.setColumnHidden(3, True)
@@ -169,10 +168,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         # self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
         # self.sequences_view.setDragDropOverwriteMode(False)
         #
-        # self.view_update_timer = QTimer(self)
-        # self.view_update_timer.timeout.connect(self.sequences_view.update)
-        # self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        # self.view_update_timer.start(500)
+
+        # refresh the view to update the info in real time
+        self.view_update_timer = QTimer(self)
+        self.view_update_timer.timeout.connect(self.sequences_view.update)
+        self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.view_update_timer.start(500)
 
         self.dock_widget = QMainWindow()
         self.setCentralWidget(self.dock_widget)
@@ -518,42 +519,50 @@ class SequenceDelegate(QStyledItemDelegate):
     ) -> None:
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
-        if model.is_sequence_folder(index):
-            sequence: Sequence = model.data(index, Qt.ItemDataRole.DisplayRole)
+        sequence_stats: SequenceStats = model.data(
+            index, Qt.ItemDataRole.DisplayRole
+        )
+        if sequence_stats:
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect
             opt.minimum = 0
             opt.maximum = 100
             opt.textVisible = True
-            stats = sequence.stats
-            if stats.state == SequenceState.DRAFT:
+            state = sequence_stats["state"]
+            if state == State.DRAFT:
                 opt.progress = 0
                 opt.text = "draft"
-            elif stats.state == SequenceState.UNTRUSTED:
-                opt.progress = 0
-                opt.text = "untrusted"
-            elif stats.state == SequenceState.PREPARING:
+            elif state == State.PREPARING:
                 opt.progress = 0
                 opt.text = "preparing"
             else:
-                opt.maximum = sequence.total_number_shots
-                opt.progress = sequence.number_completed_shots
+                total = sequence_stats["total_number_shots"]
+                if total:
+                    opt.progress = sequence_stats["number_completed_shots"]
+                    opt.maximum = total
+                else:
+                    if state == State.RUNNING:  # filled bar with sliding reflects
+                        opt.progress = 0
+                        opt.maximum = 0
+                    else:  # filled bar
+                        opt.progress = 1
+                        opt.maximum = 1
 
-                if stats.state == SequenceState.RUNNING:
+                if state == State.RUNNING:
                     opt.text = "running"
-                elif stats.state == SequenceState.INTERRUPTED:
+                elif state == State.INTERRUPTED:
                     opt.text = "interrupted"
                     opt.palette.setColor(
                         QPalette.ColorRole.Highlight, QColor(166, 138, 13)
                     )
                     opt.palette.setColor(QPalette.ColorRole.Text, QColor(92, 79, 23))
-                elif stats.state == SequenceState.FINISHED:
+                elif state == State.FINISHED:
                     opt.text = f"finished"
                     opt.palette.setColor(
                         QPalette.ColorRole.Highlight, QColor(98, 151, 85)
                     )
                     opt.palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
-                elif stats.state == SequenceState.CRASHED:
+                elif state == State.CRASHED:
                     opt.text = "crashed"
                     opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
                     opt.palette.setColor(
