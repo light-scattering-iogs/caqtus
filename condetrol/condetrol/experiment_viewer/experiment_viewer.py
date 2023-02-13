@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import time
+from copy import deepcopy
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
@@ -44,6 +45,7 @@ from sequence.configuration import (
     SequenceSteps,
     ExecuteShot,
 )
+from sequence.runtime import Sequence
 from sequence.runtime.state import State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
@@ -152,7 +154,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         with open(get_config_path(), "r") as file:
             self.experiment_config = ExperimentConfig.from_yaml(file.read())
         engine = sqlalchemy.create_engine(self.experiment_config.database_url)
-        self.model = SequenceHierarchyModel(session_maker=sessionmaker(engine))
+        self.session_maker = sessionmaker(engine)
+        self.model = SequenceHierarchyModel(session_maker=self.session_maker)
         self.sequences_view.setModel(self.model)
 
         # special delegate that show progress bar
@@ -162,15 +165,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         # context menu that let manage a sequence/folder
         self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
-        # self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
-
-        # self.sequences_view.setDragEnabled(True)
-        # self.sequences_view.setAcceptDrops(True)
-        # self.sequences_view.setDropIndicatorShown(True)
-        # self.sequences_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        # self.sequences_view.setDefaultDropAction(Qt.DropAction.MoveAction)
-        # self.sequences_view.setDragDropOverwriteMode(False)
-        #
+        self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
@@ -201,11 +196,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.logs_listener.start()
 
     def sequence_view_double_clicked(self, index: QModelIndex):
-        # noinspection PyTypeChecker
-        model: SequenceViewerModel = index.model()
-        if model.is_sequence_folder(index):
+        if not index.isValid():
+            return
+        if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
-                Path(model.filePath(index)), get_config_path()
+                Sequence(path), deepcopy(self.experiment_config), self.session_maker
             )
             self.dock_widget.addDockWidget(
                 Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
@@ -232,6 +227,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 if state == State.DRAFT:
                     start_sequence_action = QAction("Start")
                     menu.addAction(start_sequence_action)
+                    start_sequence_action.setEnabled(False)
                     # start_sequence_action.triggered.connect(
                     #     lambda _: self.start_sequence(Path(self.model.filePath(index))),
                     # )
@@ -239,18 +235,21 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     is_deletable = False
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
+                    interrupt_sequence_action.setEnabled(False)
                     # interrupt_sequence_action.triggered.connect(
                     #     lambda _: self.experiment_manager.interrupt_sequence()
                     # )
                 else:
                     clear_sequence_action = QAction("Remove data")
                     menu.addAction(clear_sequence_action)
+                    clear_sequence_action.setEnabled(False)
                     # clear_sequence_action.triggered.connect(
                     #     partial(self.revert_to_draft, index)
                     # )
 
                 duplicate_sequence_action = QAction("Duplicate")
                 menu.addAction(duplicate_sequence_action)
+                duplicate_sequence_action.setEnabled(False)
                 # duplicate_sequence_action.triggered.connect(
                 #     partial(self.model.duplicate_sequence, index)
                 # )

@@ -9,6 +9,11 @@ from sequence.configuration import SequenceConfig
 from .model import SequenceModel, ShotModel
 from .path import SequencePath, PathNotFoundError
 from .shot import Shot
+from .state import State
+
+
+class SequenceNotEditableError(Exception):
+    pass
 
 
 class Sequence:
@@ -24,10 +29,35 @@ class Sequence:
 
     def get_creation_date(self, session: Session) -> datetime:
         sequence_sql = self.query_model(session)
+        # noinspection PyTypeChecker
         return sequence_sql.creation_date
+
+    def get_config(self, session) -> SequenceConfig:
+        yaml = self.query_model(session).sequence_config_yaml
+        # noinspection PyTypeChecker
+        return SequenceConfig.from_yaml(yaml)
+
+    def set_config(self, config: SequenceConfig, session):
+        if not isinstance(config, SequenceConfig):
+            raise TypeError(
+                f"Expected instance of <SequenceConfig>, got {type(config)}"
+            )
+        sequence = self.query_model(session)
+        if sequence.state != State.DRAFT:
+            raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
+        sequence.number_completed_shots = config.compute_total_number_of_shots()
+        sequence.sequence_config_yaml = config.to_yaml()
+        sequence.modification_date = datetime.now()
+        session.flush()
+
+    def get_state(self, session) -> State:
+        state = self.query_model(session).state
+        # noinspection PyTypeChecker
+        return state
 
     def get_shots(self, session: Session) -> list[Shot]:
         sequence_sql = self.query_model(session)
+        # noinspection PyTypeChecker
         return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots]
 
     def create_shot(

@@ -5,7 +5,6 @@ of this module is to generate and edit a yaml file that is then consumed by othe
 """
 
 import logging
-from pathlib import Path
 
 from PyQt6.QtCore import (
     QModelIndex,
@@ -20,6 +19,8 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QMenu,
 )
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig
@@ -32,8 +33,8 @@ from sequence.configuration import (
     LinspaceLoop,
     ExecuteShot,
 )
-from settings_model.settings_model import YAMLSerializable
-from .sequence_watcher import SequenceWatcher
+from sequence.runtime import Sequence
+from sequence.runtime.state import State
 from .shot_widget import ShotWidget
 from ..steps_editor import StepDelegate
 from ..steps_editor import StepsModel
@@ -45,71 +46,80 @@ logger.setLevel("DEBUG")
 class SequenceStepsModel(StepsModel):
     """Model for a view to display and manipulate the steps of a sequence
 
-    This model becomes read only if the sequence is not a draft, and it also saves any change to disk.
+    This model becomes read only if the sequence is not a draft, and it also saves any change.
     """
 
-    def __init__(self, sequence_path: Path, *args, **kwargs):
+    def __init__(
+        self, sequence: Sequence, session_maker: sessionmaker, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
-        self.sequence_watcher = SequenceWatcher(sequence_path)
-        self.config = self.sequence_watcher.read_config()
-        self.sequence_state = self.sequence_watcher.read_stats().state
+        self._sequence = sequence
+        self._session_maker = session_maker
 
-        self.sequence_watcher.config_changed.connect(self.change_sequence_config)
-        self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
+        with self._session.begin() as session:
+            self.config = self._sequence.get_config(session)
 
         self.undo_stack = UndoStack()
         self.undo_stack.push(self.config.program.to_yaml())
+
+    def get_sequence_state(self, session) -> State:
+        return self._sequence.get_state(session)
+
+    @property
+    def _session(self):
+        return self._session_maker
 
     @property
     def root(self):
         return self.config.program
 
-    def change_sequence_state(self, stats: "SequenceStats"):
-        self.beginResetModel()
-        self.sequence_state = stats.state
-        self.endResetModel()
+    # def change_sequence_state(self, stats: "SequenceStats"):
+    #     self.beginResetModel()
+    #     self.sequence_state = stats.state
+    #     self.endResetModel()
+    #
+    # def change_sequence_config(self, sequence_config):
+    #     self.beginResetModel()
+    #     self.config = sequence_config
+    #     self.undo_stack.push(self.config.program.to_yaml())
+    #     self.endResetModel()
 
-    def change_sequence_config(self, sequence_config):
-        self.beginResetModel()
-        self.config = sequence_config
-        self.undo_stack.push(self.config.program.to_yaml())
-        self.endResetModel()
-
-    def save_config(self, save_undo: bool = True) -> bool:
-        with self.sequence_watcher.block_signals():
-            YAMLSerializable.dump(self.config, self.sequence_watcher.config_path)
-            if save_undo:
-                self.undo_stack.push(self.config.program.to_yaml())
-            return True
+    def save_config(self, session: Session, save_undo: bool = True):
+        self._sequence.set_config(self.config, session)
+        if save_undo:
+            self.undo_stack.push(self.config.program.to_yaml())
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-        if self.sequence_state == SequenceState.DRAFT:
-            if result := super().setData(index, values, role):
-                self.save_config()
-            return result
-        else:
-            return False
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                if result := super().setData(index, values, role):
+                    self.save_config(session)
+                return result
+            else:
+                return False
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
             flags = super().flags(index)
-            if self.sequence_state == SequenceState.DRAFT:
-                flags |= Qt.ItemFlag.ItemIsEditable
-                if not isinstance(
-                    self.data(index, Qt.ItemDataRole.DisplayRole),
-                    (VariableDeclaration, ExecuteShot),
-                ):
-                    flags |= Qt.ItemFlag.ItemIsDropEnabled
+            with self._session.begin() as session:
+                if self.get_sequence_state(session) == State.DRAFT:
+                    flags |= Qt.ItemFlag.ItemIsEditable
+                    if not isinstance(
+                        self.data(index, Qt.ItemDataRole.DisplayRole),
+                        (VariableDeclaration, ExecuteShot),
+                    ):
+                        flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
 
     def supportedDragActions(self) -> Qt.DropAction:
-        if self.sequence_state == SequenceState.DRAFT:
-            return Qt.DropAction.MoveAction
-        else:
-            return Qt.DropAction.CopyAction
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                return Qt.DropAction.MoveAction
+            else:
+                return Qt.DropAction.CopyAction
 
     def dropMimeData(
         self,
@@ -119,65 +129,78 @@ class SequenceStepsModel(StepsModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
-        if self.sequence_state == SequenceState.DRAFT:
-            if result := super().dropMimeData(data, action, row, column, parent):
-                self.save_config()
-            return result
-        else:
-            return False
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                if result := super().dropMimeData(data, action, row, column, parent):
+                    self.save_config(session)
+                return result
+            else:
+                return False
 
     def insert_step(self, new_step: Step, index: QModelIndex):
-        if self.sequence_state == SequenceState.DRAFT:
-            super().insert_step(new_step, index)
-            self.save_config()
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                super().insert_step(new_step, index)
+                self.save_config(session)
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        if self.sequence_state == SequenceState.DRAFT:
-            if result := super().removeRows(row, count, parent):
-                self.save_config()
-            return result
-        else:
-            return False
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                if result := super().removeRows(row, count, parent):
+                    self.save_config(session)
+                return result
+            else:
+                return False
 
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        if self.sequence_state == SequenceState.DRAFT:
-            if result := super().removeRow(row, parent):
-                self.save_config()
-            return result
-        else:
-            return False
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                if result := super().removeRow(row, parent):
+                    self.save_config(session)
+                return result
+            else:
+                return False
 
     def undo(self):
-        new_yaml = self.undo_stack.undo()
-        new_steps = SequenceSteps.from_yaml(new_yaml)
-        self.beginResetModel()
-        self.config.program = new_steps
-        self.save_config(save_undo=False)
-        self.endResetModel()
-        self.layoutChanged.emit()
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                new_yaml = self.undo_stack.undo()
+                new_steps = SequenceSteps.from_yaml(new_yaml)
+
+                self.beginResetModel()
+                self.config.program = new_steps
+                self.save_config(session, save_undo=False)
+                self.endResetModel()
+                self.layoutChanged.emit()
 
     def redo(self):
-        new_yaml = self.undo_stack.redo()
-        new_steps = SequenceSteps.from_yaml(new_yaml)
-        self.beginResetModel()
-        self.config.program = new_steps
-        self.save_config(save_undo=False)
-        self.endResetModel()
-        self.layoutChanged.emit()
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                new_yaml = self.undo_stack.redo()
+                new_steps = SequenceSteps.from_yaml(new_yaml)
+                self.beginResetModel()
+                self.config.program = new_steps
+                self.save_config(session, save_undo=False)
+                self.endResetModel()
+                self.layoutChanged.emit()
 
 
 class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
 
     def __init__(
-        self, sequence_path: Path, experiment_config_path: Path, *args, **kwargs
+        self,
+        sequence: Sequence,
+        experiment_config: ExperimentConfig,
+        session_maker: sessionmaker,
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self._path = sequence_path
-        experiment_config: ExperimentConfig = YAMLSerializable.load(
-            experiment_config_path
-        )
-        self.setWindowTitle(f"{self._path.relative_to(experiment_config.data_path)}")
+        self._sequence = sequence
+        self._experiment_config = experiment_config
+        self._session_maker = session_maker
+        self.setWindowTitle(f"{str(self._sequence.path)}")
 
         self.tab_widget = QTabWidget()
         self.setWidget(self.tab_widget)
@@ -186,8 +209,8 @@ class SequenceWidget(QDockWidget):
         self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.tab_widget.addTab(self.program_tree, "Sequence")
 
-        self.shot_widget = self.create_shot_widget(experiment_config_path)
-        self.tab_widget.addTab(self.shot_widget, "Shot")
+        # self.shot_widget = self.create_shot_widget(experiment_config_path)
+        # self.tab_widget.addTab(self.shot_widget, "Shot")
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
@@ -198,12 +221,16 @@ class SequenceWidget(QDockWidget):
     def redo(self):
         self.program_tree.model().redo()
 
+    @property
+    def _session(self):
+        return self._session_maker
+
     def create_sequence_tree(self):
         tree = QTreeView()
         tree.setHeaderHidden(True)
         tree.setAnimated(True)
         tree.setContentsMargins(0, 0, 0, 0)
-        program_model = SequenceStepsModel(self._path)
+        program_model = SequenceStepsModel(self._sequence, self._session_maker)
         tree.setModel(program_model)
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
         tree.expandAll()
@@ -228,7 +255,9 @@ class SequenceWidget(QDockWidget):
         index = self.program_tree.indexAt(position)
         # noinspection PyTypeChecker
         model: SequenceStepsModel = self.program_tree.model()
-        if model.sequence_state == SequenceState.DRAFT:
+        with self._session.begin() as session:
+            state = self._sequence.get_state(session)
+        if state == State.DRAFT:
 
             menu = QMenu(self.program_tree)
 

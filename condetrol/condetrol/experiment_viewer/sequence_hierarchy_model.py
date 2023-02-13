@@ -104,24 +104,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
         else:
             return None
 
-    def get_sequence_state(self, item: "SequenceHierarchyItem"):
-        if item.is_sequence:
-            with self._session_maker.begin() as session:
-                sequence = item.sequence_path.query_model(session).get_sequence()
-                return str(sequence.state)
-        else:
-            return ""
-
-    def get_sequence_progress(self, item: "SequenceHierarchyItem"):
-        if item.is_sequence:
-            with self._session_maker.begin() as session:
-                sequence = item.sequence_path.query_model(session).get_sequence()
-                return (
-                    f"{sequence.number_completed_shots}/{sequence.total_number_shots}"
-                )
-        else:
-            return ""
-
     def hasChildren(self, parent: QModelIndex = ...) -> bool:
         if not parent.isValid():
             return True
@@ -217,7 +199,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
                     "Created more than one path and couldn't update the views"
                 )
 
-
     def delete(self, index: QModelIndex):
         if not index.isValid():
             return
@@ -241,6 +222,14 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 self.beginRemoveRows(parent_index, row, row)
                 parent_item.children = new_children
                 self.endRemoveRows()
+
+    @staticmethod
+    def get_path(index: QModelIndex) -> Optional[SequencePath]:
+        if not index.isValid():
+            return None
+        else:
+            item: "SequenceHierarchyItem" = index.internalPointer()
+            return item.sequence_path
 
     def fileIcon(self, index: QModelIndex) -> QIcon:
         if not index.isValid():
