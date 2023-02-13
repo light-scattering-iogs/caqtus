@@ -12,7 +12,15 @@ from sqlalchemy import (
     func,
     Index,
 )
-from sqlalchemy.orm import Mapped, mapped_column, Session, relationship, remote, foreign
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    Session,
+    relationship,
+    remote,
+    foreign,
+    backref,
+)
 from sqlalchemy_utils import Ltree, LtreeType
 
 from experiment_config import ExperimentConfig
@@ -36,12 +44,11 @@ class SequencePathModel(Base):
     creation_date: Mapped[datetime] = mapped_column()
     parent: Mapped[Optional["SequencePathModel"]] = relationship(
         primaryjoin=remote(path) == foreign(func.subpath(path, 0, -1)),
-        backref="children",
-        viewonly=True,
+        backref=backref("children", cascade="all, delete"),
     )
-    sequence: Mapped[
-        list["SequenceModel"]
-    ] = relationship()  # the list will always contain either 0 or 1 element
+    sequence: Mapped[list["SequenceModel"]] = relationship(
+        cascade="all, delete"
+    )  # the list will always contain either 0 or 1 element
 
     __table_args__ = (Index("ix_nodes_path", path, postgresql_using="gist"),)
 
@@ -84,7 +91,7 @@ class SequenceModel(Base):
     ] = mapped_column()  # None indicates that this number is unknown
     number_completed_shots: Mapped[int] = mapped_column()
 
-    shots: Mapped[list["ShotModel"]] = relationship()
+    shots: Mapped[list["ShotModel"]] = relationship(cascade="all, delete")
 
     def __repr__(self):
         return (
@@ -102,7 +109,6 @@ class SequenceModel(Base):
         experiment_config: Optional[ExperimentConfig],
         session: Session,
     ):
-
         query_path_id = select(SequencePathModel.id_).filter(
             SequencePathModel.path == Ltree(str(path))
         )
@@ -133,6 +139,8 @@ class SequenceModel(Base):
     def get_number_completed_shots(self) -> int:
         return self.number_completed_shots
 
+    # def delete(self, session: Session):
+
 
 class ShotModel(Base):
     __tablename__ = "shot"
@@ -149,7 +157,7 @@ class ShotModel(Base):
     start_time: Mapped[datetime] = mapped_column()
     end_time: Mapped[datetime] = mapped_column()
 
-    data: Mapped[list["DataModel"]] = relationship()
+    data: Mapped[list["DataModel"]] = relationship(cascade="all, delete")
 
     @classmethod
     def create_shot(

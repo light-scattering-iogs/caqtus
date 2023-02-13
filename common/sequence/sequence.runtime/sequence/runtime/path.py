@@ -1,6 +1,6 @@
 import re
 
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import Ltree
 
@@ -63,6 +63,49 @@ class SequencePath:
                 SequencePathModel.create_path(ancestor, session)
                 created_path.append(ancestor)
         return created_path
+
+    def delete(self, session: Session, delete_sequences: bool = False):
+        """
+        Delete the path and all its children if they exist
+
+        Warnings:
+            !!! If delete_sequences is True, all sequences in the path will be deleted
+
+        Args:
+            session: The database session to use
+            delete_sequences: If False, raise an error if the path or one of its children is a sequence
+
+        Raises:
+            RuntimeError: If the path or one of its children is a sequence and delete_sequence is False
+        """
+
+        if not delete_sequences:
+            if self.contains_sequences(session):
+                raise RuntimeError(
+                    f"Cannot delete a path that contains a sequence: {self}"
+                )
+
+        session.delete(self.query_model(session))
+        session.flush()
+
+    def contains_sequences(self, session: Session) -> bool:
+        """
+        Check if the path or one of its children is a sequence
+
+        Args:
+            session: The database session to use
+
+        Return:
+            True if the path or one of its children is a sequence
+        """
+
+        if self.is_sequence(session):
+            return True
+
+        for child in self.get_children(session):
+            if child.contains_sequences(session):
+                return True
+        return False
 
     def is_folder(self, session) -> bool:
         return not self.is_sequence(session)

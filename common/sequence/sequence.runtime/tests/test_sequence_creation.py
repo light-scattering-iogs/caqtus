@@ -1,50 +1,15 @@
 from datetime import datetime
 
 import pytest
-import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from sequence.configuration import SequenceConfig, SequenceSteps
-from sequence.configuration.shot import ShotConfiguration
 from sequence.runtime import Sequence, SequencePath, SequenceNotFoundError
-from sequence.runtime.base import Base
 
-DB_NAME = "test_database"
-
-DB_URL = f"postgresql+psycopg2://caqtus:Deardear@localhost/{DB_NAME}"
+from .setup_database import SetupDatabase, sequence_config, clean_database
 
 
-@pytest.fixture
-def clean_database():
-    engine = sa.create_engine(DB_URL, echo=False)
-    Base.metadata.create_all(engine)
-
-    session_maker = sessionmaker(engine)
-
-    return session_maker
-
-
-@pytest.fixture
-def sequence_config():
-    return SequenceConfig(
-        program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
-    )
-
-
-class TestSequenceCreation:
-    def setup_class(self):
-        engine = sa.create_engine(DB_URL, echo=False)
-
-        Base.metadata.drop_all(engine)
-
-        session = sa.orm.scoped_session(sa.orm.sessionmaker())
-        session.configure(bind=engine)
-        Base.metadata.create_all(engine)
-
-    def teardown_class(self):
-        pass
-
+class TestSequenceCreation(SetupDatabase):
     def test_sequence_creation(self, clean_database: sessionmaker, sequence_config):
         with clean_database() as session:
             before = datetime.now()
@@ -93,9 +58,11 @@ class TestSequenceCreation:
                 )
 
             Sequence.create_sequence(
-                SequencePath("year.month.day.other_name"), sequence_config, None, session
+                SequencePath("year.month.day.other_name"),
+                sequence_config,
+                None,
+                session,
             )
-            session.commit()
 
     def test_shot_creation(self, clean_database, sequence_config):
         with clean_database() as session:
