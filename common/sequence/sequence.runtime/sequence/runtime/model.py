@@ -79,6 +79,9 @@ class SequenceModel(Base):
     start_date: Mapped[Optional[datetime]] = mapped_column()
     stop_date: Mapped[Optional[datetime]] = mapped_column()
 
+    total_number_shots: Mapped[Optional[int]] = mapped_column()  # None indicates that this number is unknown
+    number_executed_shots: Mapped[int] = mapped_column()
+
     shots: Mapped[list["ShotModel"]] = relationship()
 
     def __repr__(self):
@@ -103,6 +106,7 @@ class SequenceModel(Base):
         )
         path_id = session.scalar(query_path_id)
 
+
         now = datetime.now()
         sequence_sql = SequenceModel(
             path_id=path_id,
@@ -115,6 +119,8 @@ class SequenceModel(Base):
             modification_date=now,
             start_date=None,
             stop_date=None,
+            total_number_shots=sequence_config.compute_total_number_of_shots(),
+            number_completed_shots=0
         )
         session.add(sequence_sql)
         session.flush()

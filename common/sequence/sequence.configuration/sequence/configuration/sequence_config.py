@@ -196,6 +196,18 @@ class SequenceConfig(SettingsModel):
     def get_all_variable_names(self) -> set[str]:
         return get_all_variable_names(self.program)
 
+    def compute_total_number_of_shots(self) -> Optional[int]:
+        """Return the total number of shots planned for this sequence
+
+        Returns None if this is unknown.
+        """
+
+        result = compute_number_shots(self.program)
+        if isinstance(result, int) and 0 <= result:
+            return result
+        else:
+            return None
+
 
 @singledispatch
 def get_all_variable_names(_: Step) -> set[str]:
