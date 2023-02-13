@@ -1,3 +1,4 @@
+import logging
 from typing import TypedDict, Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
@@ -8,6 +9,9 @@ from sqlalchemy.orm import sessionmaker, Session
 from sequence.runtime import SequencePath
 from sequence.runtime.model import SequencePathModel
 from sequence.runtime.state import State
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
@@ -68,7 +72,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             if index.column() == 0:
                 return self.get_sequence_name(index.internalPointer())
             else:
-                stats = self.get_sequence_stats(index.internalPointer())
+                stats = self.get_sequence_stats(index)
                 return stats
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
@@ -85,7 +89,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def get_sequence_name(item: "SequenceHierarchyItem"):
         return item.sequence_path.name
 
-    def get_sequence_stats(self, item: "SequenceHierarchyItem"):
+    def get_sequence_stats(self, index: QModelIndex) -> Optional["SequenceStats"]:
+        item: "SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
             with self._session_maker.begin() as session:
                 sequence = item.sequence_path.query_model(session).get_sequence()
@@ -147,6 +152,36 @@ class SequenceHierarchyModel(QAbstractItemModel):
         parent_item.children = children
         self.endInsertRows()
 
+    def is_sequence(self, index: QModelIndex) -> bool:
+        item: "SequenceHierarchyItem" = index.internalPointer()
+        with self._session_maker.begin() as session:
+            return item.sequence_path.query_model(session).is_sequence()
+
+    def create_new_folder(self, index: QModelIndex, name: str):
+        if index.isValid():
+            item: "SequenceHierarchyItem" = index.internalPointer()
+        else:
+            item = self._root
+        new_path = item.sequence_path / name
+
+        children = list(item.children)
+        new_row = len(children)
+        children.append(
+            SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
+        )
+        with self._session_maker.begin() as session:
+            number_created_paths = len(new_path.create(session))
+            if number_created_paths == 1:
+                self.beginInsertRows(index, new_row, new_row)
+                item.children = children
+                self.endInsertRows()
+            elif number_created_paths == 0:
+                logger.warning(f"Path \"{str(new_path)}\" already exists and was not created")
+            elif number_created_paths > 1:
+                raise RuntimeError(
+                    "Created more than one path and couldn't update the views"
+                )
+
 
 class SequenceStats(TypedDict):
     state: State
@@ -190,13 +225,16 @@ def _build_children(
     children_items = []
 
     if parent.is_root():
-        query_children = session.query(SequencePathModel).filter(
-            func.nlevel(SequencePathModel.path) == 1
+        query_children = (
+            session.query(SequencePathModel)
+            .filter(func.nlevel(SequencePathModel.path) == 1)
+            .order_by(SequencePathModel.creation_date)
         )
         children = session.scalars(query_children)
     else:
         path = parent.query_model(session)
         children = path.children
+        children.sort(key=lambda x: x.creation_date)
 
     for child in children:
         child: SequencePathModel

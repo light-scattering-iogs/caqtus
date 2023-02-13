@@ -47,7 +47,7 @@ from sequence.configuration import (
 from sequence.runtime.state import State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
-from .sequence_hierarchy_model import SequenceHierarchyModel, SequenceStats
+from .sequence_hierarchy_model import SequenceHierarchyModel, SequenceStats, SequenceHierarchyItem
 from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
@@ -150,17 +150,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         engine = sqlalchemy.create_engine(self.experiment_config.database_url)
         self.model = SequenceHierarchyModel(session_maker=sessionmaker(engine))
         self.sequences_view.setModel(self.model)
+
+        # special delegate that show progress bar
         delegate = SequenceDelegate(self.sequences_view)
         self.sequences_view.setItemDelegateForColumn(1, delegate)
 
-        # self.model = SequenceViewerModel(self.experiment_config.data_path)
-        # self.sequences_view.setColumnHidden(1, True)
-        # self.sequences_view.setColumnHidden(2, True)
-        # self.sequences_view.setColumnHidden(3, True)
-        # self.sequences_view.setColumnHidden(5, True)
+        # context menu that let manage a sequence/folder
+        self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
         # self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
-        # self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        # self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
+
         # self.sequences_view.setDragEnabled(True)
         # self.sequences_view.setAcceptDrops(True)
         # self.sequences_view.setDropIndicatorShown(True)
@@ -220,60 +219,87 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         menu = QMenu(self.sequences_view)
 
         is_deletable = True
+        can_create = False
 
-        if self.model.is_sequence_folder(index):
-            stats = self.model.data(index, Qt.ItemDataRole.DisplayRole).stats
-            if stats.state == SequenceState.RUNNING:
-                is_deletable = False
-                interrupt_sequence_action = QAction("Interrupt")
-                menu.addAction(interrupt_sequence_action)
-                interrupt_sequence_action.triggered.connect(
-                    lambda _: self.experiment_manager.interrupt_sequence()
-                ),
-            if stats.state == SequenceState.DRAFT:
-                start_sequence_action = QAction("Start")
-                menu.addAction(start_sequence_action)
-                start_sequence_action.triggered.connect(
-                    lambda _: self.start_sequence(Path(self.model.filePath(index))),
-                )
-            duplicate_sequence_action = QAction("Duplicate")
-            menu.addAction(duplicate_sequence_action)
-            duplicate_sequence_action.triggered.connect(
-                partial(self.model.duplicate_sequence, index)
-            )
+        if index.isValid():
+            if self.model.is_sequence(index):
+                stats = self.model.get_sequence_stats(index)
+                state = stats["state"]
+                if state == State.DRAFT:
+                    start_sequence_action = QAction("Start")
+                    menu.addAction(start_sequence_action)
+                    # start_sequence_action.triggered.connect(
+                    #     lambda _: self.start_sequence(Path(self.model.filePath(index))),
+                    # )
+                elif state == State.RUNNING:
+                    is_deletable = False
+                    interrupt_sequence_action = QAction("Interrupt")
+                    menu.addAction(interrupt_sequence_action)
+                    # interrupt_sequence_action.triggered.connect(
+                    #     lambda _: self.experiment_manager.interrupt_sequence()
+                    # )
+                else:
+                    clear_sequence_action = QAction("Remove data")
+                    menu.addAction(clear_sequence_action)
+                    # clear_sequence_action.triggered.connect(
+                    #     partial(self.revert_to_draft, index)
+                    # )
 
-            if (
-                stats.state != SequenceState.RUNNING
-                and stats.state != SequenceState.DRAFT
-            ):
-                clear_sequence_action = QAction("Remove data")
-                menu.addAction(clear_sequence_action)
-                clear_sequence_action.triggered.connect(
-                    partial(self.revert_to_draft, index)
-                )
-
+                duplicate_sequence_action = QAction("Duplicate")
+                menu.addAction(duplicate_sequence_action)
+                # duplicate_sequence_action.triggered.connect(
+                #     partial(self.model.duplicate_sequence, index)
+                # )
+            else:  # index is folder
+                can_create = True
         else:
+            can_create = True  # can create in the root level
+        if can_create:
             new_menu = QMenu("New...")
             menu.addMenu(new_menu)
 
             create_folder_action = QAction("folder")
             new_menu.addAction(create_folder_action)
             create_folder_action.triggered.connect(
-                partial(self.model.create_new_folder, index)
+                partial(self.create_new_folder, index)
             )
 
             create_sequence_action = QAction("sequence")
             new_menu.addAction(create_sequence_action)
-            create_sequence_action.triggered.connect(
-                partial(self.model.create_new_sequence, index)
-            )
+            # create_sequence_action.triggered.connect(
+            #     partial(self.model.create_new_sequence, index)
+            # )
 
         if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
-            delete_action.triggered.connect(partial(self.model.move_to_trash, index))
+            # delete_action.triggered.connect(partial(self.model.move_to_trash, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
+
+    def create_new_folder(self, index: QModelIndex):
+        if index.isValid():
+            item: SequenceHierarchyItem = index.internalPointer()
+            path = item.path
+        else:
+            path = "root"
+        text, ok = QInputDialog().getText(
+            None,
+            f"New folder in {path}...",
+            "Folder name:",
+            QLineEdit.EchoMode.Normal,
+            "new_folder",
+        )
+        if ok and text:
+            self.model.create_new_folder(index, text)
+            # new_folder_path = / text
+            # try:
+            #     new_folder_path.mkdir(parents=True)
+            # except:
+            #     logger.error(
+            #         f"Could not create new folder '{new_folder_path}'",
+            #         exc_info=True,
+            #     )
 
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
@@ -519,9 +545,7 @@ class SequenceDelegate(QStyledItemDelegate):
     ) -> None:
         # noinspection PyTypeChecker
         model: SequenceViewerModel = index.model()
-        sequence_stats: SequenceStats = model.data(
-            index, Qt.ItemDataRole.DisplayRole
-        )
+        sequence_stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
         if sequence_stats:
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect

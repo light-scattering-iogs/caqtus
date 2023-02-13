@@ -36,16 +36,21 @@ class SequencePath:
             is not None
         )
 
-    def create(self, session: Session):
+    def create(self, session: Session) -> list["SequencePath"]:
         """
         Create the path and all its ancestors if they don't exist
 
         Args:
             session: The database session to use
 
+        Return:
+            list of paths that were created when they didn't exist
+
         Raises:
             RuntimeError: If an ancestor exists and is a sequence
         """
+
+        created_path: list[SequencePath] = []
 
         for ancestor in self.get_ancestors(strict=False):
             if ancestor.exists(session):
@@ -56,6 +61,8 @@ class SequencePath:
                     )
             else:
                 SequencePathModel.create_path(ancestor, session)
+                created_path.append(ancestor)
+        return created_path
 
     def is_folder(self, session) -> bool:
         return not self.is_sequence(session)
@@ -118,6 +125,18 @@ class SequencePath:
         elif isinstance(other, str):
             return self._path == other
         return False
+
+    def __truediv__(self, other) -> "SequencePath":
+        if isinstance(other, str):
+            if not re.match(_PATH_NAMES_REGEX, other):
+                raise ValueError("Invalid name format")
+            if self.is_root():
+                return SequencePath(other)
+            else:
+                return SequencePath(f"{self._path}{_PATH_SEPARATOR}{other}")
+
+        else:
+            raise TypeError("Can only append str to SequencePath")
 
     def query_model(self, session) -> SequencePathModel:
         stmt = select(SequencePathModel).where(
