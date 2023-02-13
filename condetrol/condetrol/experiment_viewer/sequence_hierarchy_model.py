@@ -2,6 +2,7 @@ import logging
 from typing import TypedDict, Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PyQt6.QtGui import QIcon
 from anytree import NodeMixin
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker, Session
@@ -176,11 +177,46 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 item.children = children
                 self.endInsertRows()
             elif number_created_paths == 0:
-                logger.warning(f"Path \"{str(new_path)}\" already exists and was not created")
+                logger.warning(
+                    f'Path "{str(new_path)}" already exists and was not created'
+                )
             elif number_created_paths > 1:
                 raise RuntimeError(
                     "Created more than one path and couldn't update the views"
                 )
+
+    def delete(self, index: QModelIndex):
+        if not index.isValid():
+            return
+        parent_index = index.parent()
+        if parent_index.isValid():
+            parent_item: "SequenceHierarchyItem" = parent_index.internalPointer()
+        else:
+            parent_item = self._root.children[index.row()]
+        if parent_item.is_folder():  # should always be?
+            row = index.row()
+            new_children = list(parent_item.children)
+            new_children.pop(row)
+            with self._session_maker.begin() as session:
+                item: "SequenceHierarchyItem" = index.internalPointer()
+                if (
+                    item.is_folder()
+                ):  # don't want to risk deleting a folder containing many sequences
+                    item.sequence_path.delete(session, delete_sequences=False)
+                else:
+                    item.sequence_path.delete(session, delete_sequences=True)
+                self.beginRemoveRows(parent_index, row, row)
+                parent_item.children = new_children
+                self.endRemoveRows()
+
+    def fileIcon(self, index: QModelIndex) -> QIcon:
+        if not index.isValid():
+            return None
+        item: "SequenceHierarchyItem" = index.internalPointer()
+        if item.is_sequence:
+            return QIcon(":/icons/sequence")
+        else:
+            return None
 
 
 class SequenceStats(TypedDict):

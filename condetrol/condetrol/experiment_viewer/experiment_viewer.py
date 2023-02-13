@@ -273,7 +273,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
-            # delete_action.triggered.connect(partial(self.model.move_to_trash, index))
+            delete_action.triggered.connect(partial(self.model.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
