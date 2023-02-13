@@ -80,7 +80,7 @@ class SequenceModel(Base):
     stop_date: Mapped[Optional[datetime]] = mapped_column()
 
     total_number_shots: Mapped[Optional[int]] = mapped_column()  # None indicates that this number is unknown
-    number_executed_shots: Mapped[int] = mapped_column()
+    number_completed_shots: Mapped[int] = mapped_column()
 
     shots: Mapped[list["ShotModel"]] = relationship()
 
