@@ -47,7 +47,11 @@ from sequence.configuration import (
 from sequence.runtime.state import State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
-from .sequence_hierarchy_model import SequenceHierarchyModel, SequenceStats, SequenceHierarchyItem
+from .sequence_hierarchy_model import (
+    SequenceHierarchyModel,
+    SequenceStats,
+    SequenceHierarchyItem,
+)
 from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
@@ -266,14 +270,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
             create_sequence_action = QAction("sequence")
             new_menu.addAction(create_sequence_action)
-            # create_sequence_action.triggered.connect(
-            #     partial(self.model.create_new_sequence, index)
-            # )
+            create_sequence_action.triggered.connect(
+                partial(self.create_new_sequence, index)
+            )
 
         if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
-            delete_action.triggered.connect(partial(self.model.delete, index))
+            delete_action.triggered.connect(partial(self.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
@@ -292,14 +296,33 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
         if ok and text:
             self.model.create_new_folder(index, text)
-            # new_folder_path = / text
-            # try:
-            #     new_folder_path.mkdir(parents=True)
-            # except:
-            #     logger.error(
-            #         f"Could not create new folder '{new_folder_path}'",
-            #         exc_info=True,
-            #     )
+
+    def create_new_sequence(self, index: QModelIndex):
+        if index.isValid():
+            item: SequenceHierarchyItem = index.internalPointer()
+            path = item.path
+        else:
+            path = "root"
+        text, ok = QInputDialog().getText(
+            None,
+            f"New sequence in {path}...",
+            "Sequence name:",
+            QLineEdit.EchoMode.Normal,
+            "new_sequence",
+        )
+        if ok and text:
+            self.model.create_new_sequence(index, text)
+
+    def delete(self, index: QModelIndex):
+        if index.isValid():
+            item: "SequenceHierarchyItem" = index.internalPointer()
+            path = str(item.sequence_path)
+            message = (
+                f'You are about to delete the path "{path}".\n'
+                f"All data inside will be irremediably lost."
+            )
+            if self.exec_confirmation_message_box(message):
+                self.model.delete(index)
 
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
@@ -352,12 +375,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             if self.exec_revert_to_draft_message_box(sequence.relative_path):
                 self.model.revert_to_draft(index)
 
-    def exec_revert_to_draft_message_box(self, path: Path) -> bool:
+    def exec_confirmation_message_box(self, message: str) -> bool:
         """Show a popup box to ask if the sequence data should be erased"""
         message_box = QMessageBox(self)
         message_box.setWindowTitle("Caqtus")
-        message_box.setText(f"This will remove all shot data from sequence {path}.")
-        message_box.setInformativeText("Are you sure you want to continue?")
+        message_box.setText(message)
+        message_box.setInformativeText("Are you really sure you want to continue?")
         message_box.setStandardButtons(
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
         )

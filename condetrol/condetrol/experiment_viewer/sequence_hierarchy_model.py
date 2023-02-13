@@ -7,7 +7,8 @@ from anytree import NodeMixin
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker, Session
 
-from sequence.runtime import SequencePath
+from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
+from sequence.runtime import SequencePath, Sequence
 from sequence.runtime.model import SequencePathModel
 from sequence.runtime.state import State
 
@@ -160,12 +161,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
     def create_new_folder(self, index: QModelIndex, name: str):
         if index.isValid():
-            item: "SequenceHierarchyItem" = index.internalPointer()
+            parent_item: "SequenceHierarchyItem" = index.internalPointer()
         else:
-            item = self._root
-        new_path = item.sequence_path / name
+            parent_item = self._root
+        new_path = parent_item.sequence_path / name
 
-        children = list(item.children)
+        children = list(parent_item.children)
         new_row = len(children)
         children.append(
             SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
@@ -174,7 +175,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 self.beginInsertRows(index, new_row, new_row)
-                item.children = children
+                parent_item.children = children
                 self.endInsertRows()
             elif number_created_paths == 0:
                 logger.warning(
@@ -184,6 +185,38 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 raise RuntimeError(
                     "Created more than one path and couldn't update the views"
                 )
+
+    def create_new_sequence(self, index: QModelIndex, name: str):
+        if index.isValid():
+            parent_item: "SequenceHierarchyItem" = index.internalPointer()
+        else:
+            parent_item = self._root
+        new_path = parent_item.sequence_path / name
+
+        children = list(parent_item.children)
+        new_row = len(children)
+        children.append(
+            SequenceHierarchyItem(path=new_path, is_sequence=True, row=new_row)
+        )
+        sequence_config = SequenceConfig(
+            program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
+        )
+        with self._session_maker.begin() as session:
+            number_created_paths = len(new_path.create(session))
+            if number_created_paths == 1:
+                Sequence.create_sequence(new_path, sequence_config, None, session)
+                self.beginInsertRows(index, new_row, new_row)
+                parent_item.children = children
+                self.endInsertRows()
+            elif number_created_paths == 0:
+                logger.warning(
+                    f'Path "{str(new_path)}" already exists and was not created'
+                )
+            elif number_created_paths > 1:
+                raise RuntimeError(
+                    "Created more than one path and couldn't update the views"
+                )
+
 
     def delete(self, index: QModelIndex):
         if not index.isValid():

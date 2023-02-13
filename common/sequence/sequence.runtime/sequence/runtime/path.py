@@ -80,15 +80,15 @@ class SequencePath:
         """
 
         if not delete_sequences:
-            if self.contains_sequences(session):
+            if sub_sequences := self.get_contained_sequences(session):
                 raise RuntimeError(
-                    f"Cannot delete a path that contains a sequence: {self}"
+                    f"Cannot delete a path that contains sequences: {sub_sequences}"
                 )
 
         session.delete(self.query_model(session))
         session.flush()
 
-    def contains_sequences(self, session: Session) -> bool:
+    def get_contained_sequences(self, session: Session) -> list["SequencePath"]:
         """
         Check if the path or one of its children is a sequence
 
@@ -96,16 +96,16 @@ class SequencePath:
             session: The database session to use
 
         Return:
-            True if the path or one of its children is a sequence
+            A list of all sequences inside theis path and all its descendants
         """
 
         if self.is_sequence(session):
-            return True
+            return [self]
 
+        result = []
         for child in self.get_children(session):
-            if child.contains_sequences(session):
-                return True
-        return False
+            result += child.get_contained_sequences(session)
+        return result
 
     def is_folder(self, session) -> bool:
         return not self.is_sequence(session)
@@ -179,7 +179,7 @@ class SequencePath:
                 return SequencePath(f"{self._path}{_PATH_SEPARATOR}{other}")
 
         else:
-            raise TypeError("Can only append str to SequencePath")
+            raise TypeError(f"Can only append str to SequencePath not {type(other)}")
 
     def query_model(self, session) -> SequencePathModel:
         stmt = select(SequencePathModel).where(
