@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import Ltree
 
-from experiment_session import ExperimentSession
+from experiment.session import ExperimentSession
 from .model import SequencePathModel
 
 _PATH_SEPARATOR = "."

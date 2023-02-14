@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
-from experiment_session import ExperimentSessionMaker, ExperimentSession
+from experiment.session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     Step,

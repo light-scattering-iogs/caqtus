@@ -3,7 +3,7 @@ import typing
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from experiment_session import ExperimentSession
+from experiment.session import ExperimentSession
 from .model import ShotModel, DataType
 
 if typing.TYPE_CHECKING:

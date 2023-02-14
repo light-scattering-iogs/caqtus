@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import (
 
 from experiment.configuration import ExperimentConfig, get_config_path
 from experiment_manager import ExperimentManager
-from experiment_session import ExperimentSessionMaker
+from experiment.session import ExperimentSessionMaker
 from sequence.configuration import (
     ShotConfiguration,
     SequenceConfig,

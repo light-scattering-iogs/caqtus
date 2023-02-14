@@ -14,7 +14,7 @@ sqlalchemy-utils = "^0.40.0"
 
 sequence-configuration = {path = "../sequence.configuration", develop = true}
 experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
-experiment-session = {path = "../../experiment_session", develop = true}
+experiment-session = {path = "../../experiment/experiment.session", develop = true}
 
 
 [tool.poetry.group.test.dependencies]

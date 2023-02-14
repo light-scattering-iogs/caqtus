@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment.configuration import ExperimentConfig
-from experiment_session import ExperimentSessionMaker
+from experiment.session import ExperimentSessionMaker
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
 from sequence.runtime import Sequence
 from sequence.runtime.state import State

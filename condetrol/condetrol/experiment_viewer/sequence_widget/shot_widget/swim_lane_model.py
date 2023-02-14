@@ -8,13 +8,14 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
     QMimeData,
-    QByteArray, QTimer,
+    QByteArray,
+    QTimer,
 )
 from PyQt6.QtGui import QColor, QIcon
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig, ChannelSpecialPurpose
-from experiment_session import ExperimentSessionMaker, ExperimentSession
+from experiment.session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     DigitalLane,
@@ -371,7 +372,10 @@ class SwimLaneModel(QAbstractTableModel):
                 self.endInsertRows()
 
     def save_config(
-        self, shot_config: ShotConfiguration, session: ExperimentSession, save_undo: bool = True
+        self,
+        shot_config: ShotConfiguration,
+        session: ExperimentSession,
+        save_undo: bool = True,
     ):
         self._sequence.set_shot_config(self.shot_name, shot_config, session)
 

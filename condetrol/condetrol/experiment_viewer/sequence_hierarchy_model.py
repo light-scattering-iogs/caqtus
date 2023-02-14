@@ -6,7 +6,7 @@ from PyQt6.QtGui import QIcon
 from anytree import NodeMixin
 from sqlalchemy import func
 
-from experiment_session import ExperimentSessionMaker, ExperimentSession
+from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence
 from sequence.runtime.model import SequencePathModel
