@@ -10,7 +10,7 @@ from .setup_database import SetupDatabase, sequence_config
 
 class TestPathDeletion(SetupDatabase):
     def test_path_deletion(self, sequence_config):
-        with self.session() as session:
+        with self.session as session:
             path = SequencePath("2023.02.12.test")
             path.create(session)
             path.delete(session)
@@ -18,7 +18,7 @@ class TestPathDeletion(SetupDatabase):
 
             path = SequencePath("2023.02.12.test.deeper")
             path.create(session)
-            path_id = path._query_model(session).id_
+            path_id = path._query_model(session.get_sql_session()).id_
             SequencePath("2023").delete(session)
             for ancestor in path.get_ancestors(strict=False):
                 assert not ancestor.exists(session)
@@ -31,7 +31,7 @@ class TestPathDeletion(SetupDatabase):
             query_sequence = select(SequenceModel).filter(
                 SequenceModel.path_id == path_id
             )
-            assert not list(session.scalars(query_sequence))
+            assert not list(session.get_sql_session().scalars(query_sequence))
 
             Sequence.create_sequence(
                 SequencePath("test.sequence"), sequence_config, None, session

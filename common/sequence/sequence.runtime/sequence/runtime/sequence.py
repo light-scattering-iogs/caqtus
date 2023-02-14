@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from experiment_config import ExperimentConfig
+from experiment_session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration
 from .model import SequenceModel, ShotModel
 from .path import SequencePath, PathNotFoundError
@@ -27,22 +28,26 @@ class Sequence:
     def path(self) -> SequencePath:
         return self._path
 
-    def get_creation_date(self, session: Session) -> datetime:
-        sequence_sql = self.query_model(session)
+    def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
+        sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
         return sequence_sql.creation_date
 
-    def get_config(self, session) -> SequenceConfig:
-        yaml = self.query_model(session).sequence_config_yaml
+    def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
+        yaml = self._query_model(
+            experiment_session.get_sql_session()
+        ).sequence_config_yaml
         # noinspection PyTypeChecker
         return SequenceConfig.from_yaml(yaml)
 
-    def set_config(self, config: SequenceConfig, session):
+    def set_config(self, config: SequenceConfig, experiment_session: ExperimentSession):
         if not isinstance(config, SequenceConfig):
             raise TypeError(
                 f"Expected instance of <SequenceConfig>, got {type(config)}"
             )
-        sequence = self.query_model(session)
+
+        session = experiment_session.get_sql_session()
+        sequence = self._query_model(session)
         if sequence.state != State.DRAFT:
             raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
         sequence.number_completed_shots = config.compute_total_number_of_shots()
@@ -51,31 +56,39 @@ class Sequence:
         session.flush()
 
     def set_shot_config(
-        self, shot_name: str, shot_config: ShotConfiguration, session: Session
+        self,
+        shot_name: str,
+        shot_config: ShotConfiguration,
+        experiment_session: ExperimentSession,
     ):
         if not isinstance(shot_config, ShotConfiguration):
             raise TypeError(
                 f"Expected instance of <ShotConfiguration>, got {type(shot_config)}"
             )
-        sequence_config = self.get_config(session)
+        sequence_config = self.get_config(experiment_session)
         sequence_config.shot_configurations[shot_name] = shot_config
-        self.set_config(sequence_config, session)
+        self.set_config(sequence_config, experiment_session)
 
-    def get_state(self, session) -> State:
-        state = self.query_model(session).state
+    def get_state(self, experiment_session: ExperimentSession) -> State:
+        state = self._query_model(experiment_session.get_sql_session()).state
         # noinspection PyTypeChecker
         return state
 
-    def get_shots(self, session: Session) -> list[Shot]:
-        sequence_sql = self.query_model(session)
+    def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
+        sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
         return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots]
 
     def create_shot(
-        self, name: str, start_time: datetime, end_time: datetime, session: Session
+        self,
+        name: str,
+        start_time: datetime,
+        end_time: datetime,
+        experiment_session: ExperimentSession,
     ) -> Shot:
+        session = experiment_session.get_sql_session()
         shot = ShotModel.create_shot(
-            self.query_model(session), name, start_time, end_time, session
+            self._query_model(session), name, start_time, end_time, session
         )
         return Shot(self, shot.name, shot.index)
 
@@ -85,7 +98,7 @@ class Sequence:
         path: SequencePath,
         sequence_config: SequenceConfig,
         experiment_config: Optional[ExperimentConfig],
-        session: Session,
+        experiment_session: ExperimentSession,
     ) -> "Sequence":
         if not isinstance(sequence_config, SequenceConfig):
             raise TypeError(
@@ -100,19 +113,25 @@ class Sequence:
                 " ExperimentConfig"
             )
 
-        path.create(session)
-        if path.has_children(session):
+        path.create(experiment_session)
+        if path.has_children(experiment_session):
             raise RuntimeError(
                 f"Cannot create a sequence at {path} because it is a folder with"
                 " children"
             )
 
-        SequenceModel.create_sequence(path, sequence_config, experiment_config, session)
+        SequenceModel.create_sequence(
+            path,
+            sequence_config,
+            experiment_config,
+            experiment_session.get_sql_session(),
+        )
         sequence = cls(path)
         return sequence
 
-    def query_model(self, session: Optional[Session]) -> SequenceModel:
+    def _query_model(self, session: Optional[Session]) -> SequenceModel:
         try:
+            # noinspection PyProtectedMember
             path = self._path._query_model(session)
         except PathNotFoundError:
             raise SequenceNotFoundError(

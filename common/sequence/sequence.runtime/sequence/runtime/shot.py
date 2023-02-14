@@ -57,7 +57,7 @@ class Shot:
 
     def query_model(self, session: typing.Optional[Session]) -> ShotModel:
         query_shot = select(ShotModel).where(
-            ShotModel.sequence == self.sequence.query_model(session),
+            ShotModel.sequence == self.sequence._query_model(session),
             ShotModel.name == self.name,
             ShotModel.index == self.index,
         )
