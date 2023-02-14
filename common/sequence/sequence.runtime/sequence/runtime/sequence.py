@@ -113,7 +113,7 @@ class Sequence:
 
     def query_model(self, session: Optional[Session]) -> SequenceModel:
         try:
-            path = self._path.query_model(session)
+            path = self._path._query_model(session)
         except PathNotFoundError:
             raise SequenceNotFoundError(
                 f"Could not find sequence '{self._path}' in database"

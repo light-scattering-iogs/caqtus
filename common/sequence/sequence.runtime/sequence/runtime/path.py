@@ -1,9 +1,10 @@
 import re
 
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import Ltree
 
+from experiment_session import ExperimentSession
 from .model import SequencePathModel
 
 _PATH_SEPARATOR = "."
@@ -26,7 +27,8 @@ class SequencePath:
             return True
         return _PATH_REGEX.match(path) is not None
 
-    def exists(self, session: Session):
+    def exists(self, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
         return (
             session.scalar(
                 select(SequencePathModel).filter(
@@ -36,12 +38,12 @@ class SequencePath:
             is not None
         )
 
-    def create(self, session: Session) -> list["SequencePath"]:
+    def create(self, experiment_session: ExperimentSession) -> list["SequencePath"]:
         """
         Create the path and all its ancestors if they don't exist
 
         Args:
-            session: The database session to use
+            experiment_session: The experiment session to use
 
         Return:
             list of paths that were created when they didn't exist
@@ -49,12 +51,13 @@ class SequencePath:
         Raises:
             RuntimeError: If an ancestor exists and is a sequence
         """
+        session = experiment_session.get_sql_session()
 
         created_path: list[SequencePath] = []
 
         for ancestor in self.get_ancestors(strict=False):
-            if ancestor.exists(session):
-                if ancestor.is_sequence(session):
+            if ancestor.exists(experiment_session):
+                if ancestor.is_sequence(experiment_session):
                     raise RuntimeError(
                         f"Cannot create path {self} because a sequence already exists"
                         f" in this path {ancestor}"
@@ -64,7 +67,9 @@ class SequencePath:
                 created_path.append(ancestor)
         return created_path
 
-    def delete(self, session: Session, delete_sequences: bool = False):
+    def delete(
+        self, experiment_session: ExperimentSession, delete_sequences: bool = False
+    ):
         """
         Delete the path and all its children if they exist
 
@@ -72,59 +77,66 @@ class SequencePath:
             !!! If delete_sequences is True, all sequences in the path will be deleted
 
         Args:
-            session: The database session to use
-            delete_sequences: If False, raise an error if the path or one of its children is a sequence
+            experiment_session: The experiment session to use
+            delete_sequences: If False, raise an error if the path or one of its
+            children is a sequence
 
         Raises:
-            RuntimeError: If the path or one of its children is a sequence and delete_sequence is False
+            RuntimeError: If the path or one of its children is a sequence and
+            delete_sequence is False
         """
 
+        session = experiment_session.get_sql_session()
+
         if not delete_sequences:
-            if sub_sequences := self.get_contained_sequences(session):
+            if sub_sequences := self.get_contained_sequences(experiment_session):
                 raise RuntimeError(
                     f"Cannot delete a path that contains sequences: {sub_sequences}"
                 )
 
-        session.delete(self.query_model(session))
+        session.delete(self._query_model(session))
         session.flush()
 
-    def get_contained_sequences(self, session: Session) -> list["SequencePath"]:
+    def get_contained_sequences(
+        self, experiment_session: ExperimentSession
+    ) -> list["SequencePath"]:
         """
         Check if the path or one of its children is a sequence
 
         Args:
-            session: The database session to use
+            experiment_session: The experiment session to use
 
         Return:
             A list of all sequences inside theis path and all its descendants
         """
 
-        if self.is_sequence(session):
+        if self.is_sequence(experiment_session):
             return [self]
 
         result = []
-        for child in self.get_children(session):
-            result += child.get_contained_sequences(session)
+        for child in self.get_children(experiment_session):
+            result += child.get_contained_sequences(experiment_session)
         return result
 
-    def is_folder(self, session) -> bool:
-        return not self.is_sequence(session)
+    def is_folder(self, experiment_session: ExperimentSession) -> bool:
+        return not self.is_sequence(experiment_session)
 
-    def is_sequence(self, session) -> bool:
-        path = self.query_model(session)
+    def is_sequence(self, experiment_session: ExperimentSession) -> bool:
+        path = self._query_model(experiment_session.get_sql_session())
         return bool(path.sequence)
 
     def is_root(self) -> bool:
         return self._path == ""
 
-    def has_children(self, session: Session) -> int:
-        return bool(self.child_count(session))
+    def has_children(self, experiment_session: ExperimentSession) -> int:
+        return bool(self.child_count(experiment_session))
 
-    def child_count(self, session: Session) -> int:
-        return len(self.get_children(session))
+    def child_count(self, experiment_session: ExperimentSession) -> int:
+        return len(self.get_children(experiment_session))
 
-    def get_children(self, session: Session):
-        path = self.query_model(session)
+    def get_children(self, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        path = self._query_model(session)
         if path.sequence:
             raise RuntimeError("Cannot check children of a sequence")
         return [SequencePath(str(child.path)) for child in path.children]
@@ -181,7 +193,7 @@ class SequencePath:
         else:
             raise TypeError(f"Can only append str to SequencePath not {type(other)}")
 
-    def query_model(self, session) -> SequencePathModel:
+    def _query_model(self, session: Session) -> SequencePathModel:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path == Ltree(self._path)
         )

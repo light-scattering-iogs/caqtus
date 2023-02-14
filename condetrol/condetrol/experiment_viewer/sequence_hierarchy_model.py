@@ -95,7 +95,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         item: "SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
             with self._session_maker.begin() as session:
-                sequence = item.sequence_path.query_model(session).get_sequence()
+                sequence = item.sequence_path._query_model(session).get_sequence()
                 return SequenceStats(
                     state=sequence.get_state(),
                     total_number_shots=sequence.total_number_shots,
@@ -139,7 +139,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def is_sequence(self, index: QModelIndex) -> bool:
         item: "SequenceHierarchyItem" = index.internalPointer()
         with self._session_maker.begin() as session:
-            return item.sequence_path.query_model(session).is_sequence()
+            return item.sequence_path._query_model(session).is_sequence()
 
     def create_new_folder(self, index: QModelIndex, name: str):
         if index.isValid():
@@ -290,7 +290,7 @@ def _build_children(
         )
         children = session.scalars(query_children)
     else:
-        path = parent.query_model(session)
+        path = parent._query_model(session)
         children = path.children
         children.sort(key=lambda x: x.creation_date)
 
