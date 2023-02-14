@@ -20,11 +20,10 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QMenu,
 )
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import sessionmaker
 
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig
+from experiment_session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     Step,
@@ -52,14 +51,14 @@ class SequenceStepsModel(StepsModel):
     """
 
     def __init__(
-        self, sequence: Sequence, session_maker: sessionmaker, *args, **kwargs
+        self, sequence: Sequence, session_maker: ExperimentSessionMaker, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
 
         self._sequence = sequence
-        self._session_maker = session_maker
+        self._session = session_maker()
 
-        with self._session.begin() as session:
+        with self._session as session:
             self.config = self._sequence.get_config(session)
 
         self.undo_stack = UndoStack()
@@ -69,20 +68,16 @@ class SequenceStepsModel(StepsModel):
         return self._sequence.get_state(session)
 
     @property
-    def _session(self):
-        return self._session_maker
-
-    @property
     def root(self):
         return self.config.program
 
-    def save_config(self, session: Session, save_undo: bool = True):
+    def save_config(self, session: ExperimentSession, save_undo: bool = True):
         self._sequence.set_config(self.config, session)
         if save_undo:
             self.undo_stack.push(self.config.program.to_yaml())
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if result := super().setData(index, values, role):
                     self.save_config(session)
@@ -93,7 +88,7 @@ class SequenceStepsModel(StepsModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
             flags = super().flags(index)
-            with self._session.begin() as session:
+            with self._session as session:
                 if self.get_sequence_state(session) == State.DRAFT:
                     flags |= Qt.ItemFlag.ItemIsEditable
                     if not isinstance(
@@ -106,7 +101,7 @@ class SequenceStepsModel(StepsModel):
         return flags
 
     def supportedDragActions(self) -> Qt.DropAction:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 return Qt.DropAction.MoveAction
             else:
@@ -120,7 +115,7 @@ class SequenceStepsModel(StepsModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if result := super().dropMimeData(data, action, row, column, parent):
                     self.save_config(session)
@@ -129,13 +124,13 @@ class SequenceStepsModel(StepsModel):
                 return False
 
     def insert_step(self, new_step: Step, index: QModelIndex):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 super().insert_step(new_step, index)
                 self.save_config(session)
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if result := super().removeRows(row, count, parent):
                     self.save_config(session)
@@ -144,7 +139,7 @@ class SequenceStepsModel(StepsModel):
                 return False
 
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if result := super().removeRow(row, parent):
                     self.save_config(session)
@@ -153,7 +148,7 @@ class SequenceStepsModel(StepsModel):
                 return False
 
     def undo(self):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 new_yaml = self.undo_stack.undo()
                 new_steps = SequenceSteps.from_yaml(new_yaml)
@@ -165,7 +160,7 @@ class SequenceStepsModel(StepsModel):
                 self.layoutChanged.emit()
 
     def redo(self):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 new_yaml = self.undo_stack.redo()
                 new_steps = SequenceSteps.from_yaml(new_yaml)
@@ -183,7 +178,7 @@ class SequenceWidget(QDockWidget):
         self,
         sequence: Sequence,
         experiment_config: ExperimentConfig,
-        session_maker: sessionmaker,
+        session_maker: ExperimentSessionMaker,
         *args,
         **kwargs,
     ):
@@ -248,7 +243,7 @@ class SequenceWidget(QDockWidget):
         index = self.program_tree.indexAt(position)
         # noinspection PyTypeChecker
         model: SequenceStepsModel = self.program_tree.model()
-        with self._session.begin() as session:
+        with self._session() as session:
             state = self._sequence.get_state(session)
         if state == State.DRAFT:
 

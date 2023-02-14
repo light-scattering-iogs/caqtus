@@ -50,7 +50,7 @@ class Sequence:
         sequence = self._query_model(session)
         if sequence.state != State.DRAFT:
             raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
-        sequence.number_completed_shots = config.compute_total_number_of_shots()
+        sequence.total_number_shots = config.compute_total_number_of_shots()
         sequence.sequence_config_yaml = config.to_yaml()
         sequence.modification_date = datetime.now()
         session.flush()

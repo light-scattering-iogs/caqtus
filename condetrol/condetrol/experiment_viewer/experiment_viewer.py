@@ -1,6 +1,5 @@
 import datetime
 import logging
-import os
 import shutil
 import time
 from copy import deepcopy
@@ -203,7 +202,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             return
         if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
-                Sequence(path), deepcopy(self.experiment_config), self.session_maker
+                Sequence(path),
+                deepcopy(self.experiment_config),
+                self._experiment_session_maker,
             )
             self.dock_widget.addDockWidget(
                 Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
@@ -266,12 +267,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
             create_folder_action = QAction("folder")
             new_menu.addAction(create_folder_action)
+            # noinspection PyUnresolvedReferences
             create_folder_action.triggered.connect(
                 partial(self.create_new_folder, index)
             )
 
             create_sequence_action = QAction("sequence")
             new_menu.addAction(create_sequence_action)
+            # noinspection PyUnresolvedReferences
             create_sequence_action.triggered.connect(
                 partial(self.create_new_sequence, index)
             )
@@ -279,6 +282,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
+            # noinspection PyUnresolvedReferences
             delete_action.triggered.connect(partial(self.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
@@ -622,11 +626,3 @@ class SequenceDelegate(QStyledItemDelegate):
             )
         else:
             super().paint(painter, option, index)
-
-
-def normalize_path(path: str):
-    path = os.path.normpath(path)
-    drive, relative_path = os.path.splitdrive(path)
-    relative_path = relative_path.removeprefix("\\")
-
-    return os.path.join(drive, relative_path)
