@@ -8,13 +8,14 @@ packages = [{include = "sequence"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
 sqlalchemy = ">=2.0"
-psycopg2 = "^2.9.5"
 sqlalchemy-utils = "^0.40.0"
 
 sequence-configuration = {path = "../sequence.configuration", develop = true}
 experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../../experiment/experiment.session", develop = true}
+sql-model = {path = "../../sql_model", develop = true}
 
 
 [tool.poetry.group.test.dependencies]

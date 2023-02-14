@@ -18,8 +18,7 @@ from PyQt6.QtWidgets import (
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
-from sequence.runtime import Sequence
-from sequence.runtime.state import State
+from sequence.runtime import Sequence, State
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)

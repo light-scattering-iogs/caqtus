@@ -34,8 +34,7 @@ from sequence.configuration import (
     LinspaceLoop,
     ExecuteShot,
 )
-from sequence.runtime import Sequence
-from sequence.runtime.state import State
+from sequence.runtime import Sequence, State
 from .shot_widget import ShotWidget
 from ..steps_editor import StepDelegate
 from ..steps_editor import StepsModel

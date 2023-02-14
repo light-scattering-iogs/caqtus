@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "sql-model"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "sql_model"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+sqlalchemy-utils = "^0.40.0"
+psycopg2 = "^2.9.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

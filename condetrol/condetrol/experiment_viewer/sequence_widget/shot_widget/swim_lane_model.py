@@ -27,8 +27,7 @@ from sequence.configuration import (
     Ramp,
     ShotConfiguration,
 )
-from sequence.runtime import Sequence
-from sequence.runtime.state import State
+from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
 
 logger = logging.getLogger(__name__)

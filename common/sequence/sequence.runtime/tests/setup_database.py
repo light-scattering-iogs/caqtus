@@ -2,9 +2,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from experiment_session import ExperimentSession
+from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
-from sequence.runtime.base import Base
+from sql_model import Base
 
 DB_NAME = "test_database"
 

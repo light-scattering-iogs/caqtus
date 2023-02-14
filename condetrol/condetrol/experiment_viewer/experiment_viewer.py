@@ -43,8 +43,7 @@ from sequence.configuration import (
     SequenceSteps,
     ExecuteShot,
 )
-from sequence.runtime import Sequence
-from sequence.runtime.state import State
+from sequence.runtime import Sequence, State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_hierarchy_model import (

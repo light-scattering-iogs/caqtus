@@ -26,10 +26,7 @@ from sqlalchemy_utils import Ltree, LtreeType
 from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from .base import Base
-from .state import State
-
-if typing.TYPE_CHECKING:
-    from .path import SequencePath
+from .sequence_state import State
 
 # Need to activate Ltree extension in Postgresql
 # In the psql shell:
@@ -55,10 +52,10 @@ class SequencePathModel(Base):
     @classmethod
     def create_path(
         cls,
-        path: "SequencePath",
+        path: str,
         session: Session,
     ):
-        session.add(cls(path=Ltree(str(path)), creation_date=datetime.now()))
+        session.add(cls(path=Ltree(path), creation_date=datetime.now()))
         session.flush()
 
     def is_sequence(self) -> bool:
@@ -116,13 +113,13 @@ class SequenceModel(Base):
     @classmethod
     def create_sequence(
         cls,
-        path: "SequencePath",
+        path: str,
         sequence_config: SequenceConfig,
         experiment_config: Optional[ExperimentConfig],
         session: Session,
     ):
         query_path_id = select(SequencePathModel.id_).filter(
-            SequencePathModel.path == Ltree(str(path))
+            SequencePathModel.path == Ltree(path)
         )
         path_id = session.scalar(query_path_id)
 

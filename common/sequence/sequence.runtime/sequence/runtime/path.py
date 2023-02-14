@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy_utils import Ltree
 
 from experiment.session import ExperimentSession
-from .model import SequencePathModel
+from sql_model import SequencePathModel
 
 _PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
@@ -63,7 +63,7 @@ class SequencePath:
                         f" in this path {ancestor}"
                     )
             else:
-                SequencePathModel.create_path(ancestor, session)
+                SequencePathModel.create_path(str(ancestor), session)
                 created_path.append(ancestor)
         return created_path
 

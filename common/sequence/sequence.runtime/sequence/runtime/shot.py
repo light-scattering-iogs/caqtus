@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from experiment.session import ExperimentSession
-from .model import ShotModel, DataType
+from sql_model import ShotModel, DataType
 
 if typing.TYPE_CHECKING:
     from .sequence import Sequence

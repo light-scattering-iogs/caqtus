@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select
 
 from sequence.runtime import SequencePath, Sequence
-from sequence.runtime.model import SequenceModel
+from sql_model import SequenceModel
 
 # noinspection PyUnresolvedReferences
 from .setup_database import SetupDatabase, sequence_config

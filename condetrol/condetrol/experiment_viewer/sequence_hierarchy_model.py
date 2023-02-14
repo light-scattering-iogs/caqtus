@@ -9,8 +9,8 @@ from sqlalchemy import func
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence
-from sequence.runtime.model import SequencePathModel
-from sequence.runtime.state import State
+from sequence.runtime import State
+from sql_model import SequencePathModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

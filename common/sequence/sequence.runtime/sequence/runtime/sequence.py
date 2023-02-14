@@ -7,10 +7,9 @@ from sqlalchemy.orm import Session
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration
-from .model import SequenceModel, ShotModel
+from sql_model import SequenceModel, ShotModel, State
 from .path import SequencePath, PathNotFoundError
 from .shot import Shot
-from .state import State
 
 
 class SequenceNotEditableError(Exception):
@@ -121,7 +120,7 @@ class Sequence:
             )
 
         SequenceModel.create_sequence(
-            path,
+            str(path),
             sequence_config,
             experiment_config,
             experiment_session.get_sql_session(),
