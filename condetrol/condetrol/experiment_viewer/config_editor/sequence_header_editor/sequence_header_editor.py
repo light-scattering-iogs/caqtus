@@ -4,7 +4,7 @@ from PyQt6.QtCore import Qt, QModelIndex
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from expression import Expression
 from sequence.configuration import Step, VariableDeclaration, ExecuteShot
 from ..config_settings_editor import ConfigSettingsEditor

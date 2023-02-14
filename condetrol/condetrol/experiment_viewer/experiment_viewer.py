@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
 )
 
-from experiment_config import ExperimentConfig, get_config_path
+from experiment.configuration import ExperimentConfig, get_config_path
 from experiment_manager import ExperimentManager
 from experiment_session import ExperimentSessionMaker
 from sequence.configuration import (

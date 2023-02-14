@@ -23,7 +23,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy_utils import Ltree, LtreeType
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from .base import Base
 from .state import State

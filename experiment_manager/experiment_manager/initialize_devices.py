@@ -1,7 +1,7 @@
 from typing import Any, TypedDict
 
 from camera.configuration import CameraConfiguration
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import SequenceConfig, CameraLane
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration

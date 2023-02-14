@@ -13,7 +13,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QColor, QIcon
 
 from condetrol.utils import UndoStack
-from experiment_config import ExperimentConfig, ChannelSpecialPurpose
+from experiment.configuration import ExperimentConfig, ChannelSpecialPurpose
 from experiment_session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (

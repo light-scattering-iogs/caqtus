@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QLayout,
 )
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_config_editor
 from .config_settings_editor import (

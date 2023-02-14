@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from experiment_session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration
 from .model import SequenceModel, ShotModel

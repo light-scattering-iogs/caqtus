@@ -4,7 +4,7 @@ from typing import Any, TypedDict, Iterable
 import numpy
 
 from device_config.channel_config import ChannelSpecialPurpose
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import ShotConfiguration, CameraLane

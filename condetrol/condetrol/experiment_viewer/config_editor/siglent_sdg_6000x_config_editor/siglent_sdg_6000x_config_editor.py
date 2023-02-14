@@ -3,7 +3,7 @@ from typing import Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from siglent_sdg6000x.configuration import (
     SiglentSDG6000XConfiguration,
     SineWaveConfiguration,

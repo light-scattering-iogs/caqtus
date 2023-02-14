@@ -3,7 +3,7 @@ from typing import Optional
 from PyQt6.QtWidgets import QFormLayout, QWidget, QLineEdit
 
 from condetrol.widgets import SaveFileWidget
-from experiment_config import ExperimentConfig, get_config_path
+from experiment.configuration import ExperimentConfig, get_config_path
 from ..config_settings_editor import ConfigSettingsEditor
 
 

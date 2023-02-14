@@ -7,7 +7,7 @@ from PyQt6.QtQuick import QQuickView
 from PyQt6.QtQuickWidgets import QQuickWidget
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 from ..config_settings_editor import ConfigSettingsEditor
 
 logger = logging.getLogger(__name__)

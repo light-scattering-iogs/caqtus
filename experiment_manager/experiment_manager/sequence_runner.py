@@ -16,7 +16,7 @@ import numpy
 from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
 from device import RuntimeDevice
-from experiment_config import (
+from experiment.configuration import (
     ExperimentConfig,
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,

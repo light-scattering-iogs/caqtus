@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Type
 
 from PyQt6.QtCore import QSettings
-from appdirs import user_config_dir, user_data_dir
+from appdirs import user_config_dir
 from pydantic import Field, validator, PostgresDsn
 from pydantic.color import Color
 

@@ -4,7 +4,7 @@ from typing import Optional
 from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
-from experiment_config import ExperimentConfig
+from experiment.configuration import ExperimentConfig
 
 
 class QABCMeta(type(QObject), ABCMeta):

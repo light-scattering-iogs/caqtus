@@ -9,10 +9,11 @@ packages = [{include = "sequence"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 sqlalchemy = ">=2.0"
-sequence-configuration = {path = "../sequence.configuration", develop = true}
-experiment-config = {path = "../../experiment_config", develop = true}
 psycopg2 = "^2.9.5"
 sqlalchemy-utils = "^0.40.0"
+
+sequence-configuration = {path = "../sequence.configuration", develop = true}
+experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../../experiment_session", develop = true}
 
 

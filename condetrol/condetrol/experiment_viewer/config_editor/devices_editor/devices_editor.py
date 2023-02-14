@@ -5,7 +5,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
 from device_config import DeviceConfiguration
-from experiment_config import ExperimentConfig, SiglentSDG6000XConfiguration
+from experiment.configuration import ExperimentConfig, SiglentSDG6000XConfiguration
 from .devices_editor_editor_ui import Ui_DevicesEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
