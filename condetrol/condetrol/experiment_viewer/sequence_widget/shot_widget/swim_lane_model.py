@@ -194,11 +194,11 @@ class SwimLaneModel(QAbstractTableModel):
             flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
             if index.row() > 1:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
-                if self._sequence_state == State.DRAFT:
-                    if self.is_editable(index):
-                        flags |= Qt.ItemFlag.ItemIsEditable
-                    if index.row() > 1:
-                        flags |= Qt.ItemFlag.ItemIsDropEnabled
+            if self._sequence_state == State.DRAFT:
+                if self.is_editable(index):
+                    flags |= Qt.ItemFlag.ItemIsEditable
+                if index.row() > 1:
+                    flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
