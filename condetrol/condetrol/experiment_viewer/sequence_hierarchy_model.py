@@ -64,7 +64,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return len(parent.internalPointer().children)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return 2
+        return 3
 
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
@@ -73,9 +73,15 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 return self.get_sequence_name(index.internalPointer())
-            else:
+            elif index.column() == 1:
                 stats = self.get_sequence_stats(index)
                 return stats
+            elif index.column() == 2:
+                stats = self.get_sequence_stats(index)
+                if stats:
+                    if (total := stats["total_number_shots"]) is None:
+                        total = "--"
+                    return f"{stats['number_completed_shots']}/{total}"
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if (
@@ -86,6 +92,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 return "Name"
             elif section == 1:
                 return "Status"
+            elif section == 2:
+                return "Shots"
 
     @staticmethod
     def get_sequence_name(item: "SequenceHierarchyItem"):

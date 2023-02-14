@@ -18,10 +18,9 @@ class ExperimentSession:
 
     def __enter__(self):
         with self._lock:
-            if self._sql_session is not None:
-                self._level += 1
-            else:
+            if self._sql_session is None:
                 self._sql_session = self._session_maker().__enter__()
+            self._level += 1
             return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
