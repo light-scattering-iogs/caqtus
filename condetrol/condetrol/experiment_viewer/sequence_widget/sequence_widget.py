@@ -11,6 +11,7 @@ from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
+    QTimer,
 )
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
@@ -64,6 +65,19 @@ class SequenceStepsModel(StepsModel):
         self.undo_stack = UndoStack()
         self.undo_stack.push(self.config.program.to_yaml())
 
+        # refresh the sequence state to block the editor if the state is not DRAFT
+        self._sequence_state: State
+        self._update_state()
+        self.update_state_timer = QTimer(self)
+        # noinspection PyUnresolvedReferences
+        self.update_state_timer.timeout.connect(self._update_state)
+        self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.update_state_timer.start(500)
+
+    def _update_state(self):
+        with self._session as session:
+            self._sequence_state = self._sequence.get_state(session)
+
     def get_sequence_state(self, session) -> State:
         return self._sequence.get_state(session)
 
@@ -88,14 +102,13 @@ class SequenceStepsModel(StepsModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
             flags = super().flags(index)
-            with self._session as session:
-                if self.get_sequence_state(session) == State.DRAFT:
-                    flags |= Qt.ItemFlag.ItemIsEditable
-                    if not isinstance(
-                        self.data(index, Qt.ItemDataRole.DisplayRole),
-                        (VariableDeclaration, ExecuteShot),
-                    ):
-                        flags |= Qt.ItemFlag.ItemIsDropEnabled
+            if self._sequence_state == State.DRAFT:
+                flags |= Qt.ItemFlag.ItemIsEditable
+                if not isinstance(
+                    self.data(index, Qt.ItemDataRole.DisplayRole),
+                    (VariableDeclaration, ExecuteShot),
+                ):
+                    flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags

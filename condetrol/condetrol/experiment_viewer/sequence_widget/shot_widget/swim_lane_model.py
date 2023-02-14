@@ -8,7 +8,7 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
     QMimeData,
-    QByteArray,
+    QByteArray, QTimer,
 )
 from PyQt6.QtGui import QColor, QIcon
 
@@ -60,6 +60,19 @@ class SwimLaneModel(QAbstractTableModel):
 
         self.undo_stack = UndoStack()
         self.undo_stack.push(self.shot_config.to_yaml())
+
+        # refresh the sequence state to block the editor if the state is not DRAFT
+        self._sequence_state: State
+        self._update_state()
+        self.update_state_timer = QTimer(self)
+        # noinspection PyUnresolvedReferences
+        self.update_state_timer.timeout.connect(self._update_state)
+        self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.update_state_timer.start(500)
+
+    def _update_state(self):
+        with self._session as session:
+            self._sequence_state = self._sequence.get_state(session)
 
     def get_sequence_state(self, session) -> State:
         return self._sequence.get_state(session)
@@ -181,8 +194,7 @@ class SwimLaneModel(QAbstractTableModel):
             flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
             if index.row() > 1:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
-            with self._session as session:
-                if self.get_sequence_state(session) == State.DRAFT:
+                if self._sequence_state == State.DRAFT:
                     if self.is_editable(index):
                         flags |= Qt.ItemFlag.ItemIsEditable
                     if index.row() > 1:
