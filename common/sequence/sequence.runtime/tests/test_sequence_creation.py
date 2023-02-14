@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from sequence.runtime import Sequence, SequencePath, SequenceNotFoundError
-
+# noinspection PyUnresolvedReferences
 from .setup_database import SetupDatabase, sequence_config
 
 
@@ -63,8 +63,6 @@ class TestSequenceCreation(SetupDatabase):
                 session,
             )
 
-
-
     def test_shot_creation(self, sequence_config):
         with self.session as session:
             now = datetime.now()
@@ -83,6 +81,8 @@ class TestSequenceCreation(SetupDatabase):
             parameters = {"var1": 0, "var2": 1}
             shot.add_parameters(parameters, session)
             assert shot.get_parameters(session) == parameters
+
+            session.get_sql_session().commit()
 
             with pytest.raises(IntegrityError):
                 shot.add_measures(data, session)

@@ -36,7 +36,7 @@ class SetupDatabase:
 
         Base.metadata.create_all(engine)
 
-        self.session = ExperimentSession(DB_URL)
+        self.session = ExperimentSession(DB_URL, commit=False)
 
     def teardown_class(self):
         pass

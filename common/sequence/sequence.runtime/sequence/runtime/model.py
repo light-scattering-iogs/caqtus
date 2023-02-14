@@ -65,7 +65,20 @@ class SequencePathModel(Base):
         return len(self.sequence) == 1
 
     def get_sequence(self) -> "SequenceModel":
+        # noinspection PyTypeChecker
         return self.sequence[0]
+
+
+class SequenceConfigModel(Base):
+    __tablename__ = "sequence_config"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[str] = mapped_column(
+        ForeignKey("sequence.id"), unique=True, index=True
+    )
+    sequence: Mapped["SequenceModel"] = relationship(back_populates="config")
+    sequence_config_yaml: Mapped[str] = mapped_column()
+    # experiment_config_yaml: Mapped[Optional[str]] = mapped_column()
 
 
 class SequenceModel(Base):
@@ -78,8 +91,7 @@ class SequenceModel(Base):
     path: Mapped[SequencePathModel] = relationship(back_populates="sequence")
     state: Mapped[State]
 
-    sequence_config_yaml: Mapped[str] = mapped_column()
-    experiment_config_yaml: Mapped[Optional[str]] = mapped_column()
+    config: Mapped[list["SequenceConfigModel"]] = relationship(cascade="all")
 
     creation_date: Mapped[datetime] = mapped_column()
     modification_date: Mapped[datetime] = mapped_column()
@@ -115,13 +127,11 @@ class SequenceModel(Base):
         path_id = session.scalar(query_path_id)
 
         now = datetime.now()
+        config = SequenceConfigModel(sequence_config_yaml=sequence_config.to_yaml())
         sequence_sql = SequenceModel(
             path_id=path_id,
             state=State.DRAFT,
-            sequence_config_yaml=sequence_config.to_yaml(),
-            experiment_config_yaml=experiment_config.to_yaml()
-            if experiment_config
-            else None,
+            config=[config],
             creation_date=now,
             modification_date=now,
             start_date=None,
