@@ -1,6 +1,5 @@
 import logging
 from itertools import groupby
-from pathlib import Path
 from typing import Type, Iterable
 
 from PyQt6.QtCore import (
@@ -12,12 +11,12 @@ from PyQt6.QtCore import (
     QByteArray,
 )
 from PyQt6.QtGui import QColor, QIcon
+from sqlalchemy.orm import sessionmaker, Session
 
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig, ChannelSpecialPurpose
 from expression import Expression
 from sequence.configuration import (
-    SequenceConfig,
     DigitalLane,
     AnalogLane,
     Lane,
@@ -27,8 +26,9 @@ from sequence.configuration import (
     Ramp,
     ShotConfiguration,
 )
+from sequence.runtime import Sequence
+from sequence.runtime.state import State
 from settings_model import YAMLSerializable
-from ..sequence_watcher import SequenceWatcher
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -43,41 +43,49 @@ class SwimLaneModel(QAbstractTableModel):
     """
 
     def __init__(
-        self, sequence_path: Path, shot_name: str, experiment_config: ExperimentConfig
+        self,
+        sequence: Sequence,
+        shot_name: str,
+        experiment_config: ExperimentConfig,
+        session_maker: sessionmaker,
     ):
         super().__init__()
+        self._session_maker = session_maker
         self.experiment_config = experiment_config
-
         self.shot_name = shot_name
-        self.sequence_watcher = SequenceWatcher(sequence_path)
-        self.sequence_config = self.sequence_watcher.read_config()
-        self.sequence_state = self.sequence_watcher.read_stats().state
-        self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
-
-        self.sequence_watcher.config_changed.connect(self.change_sequence_config)
-        self.sequence_watcher.stats_changed.connect(self.change_sequence_state)
+        self._sequence = sequence
+        with self._session() as session:
+            sequence_config = sequence.get_config(session)
+        self.shot_config = sequence_config.shot_configurations[self.shot_name]
 
         self.undo_stack = UndoStack()
         self.undo_stack.push(self.shot_config.to_yaml())
 
-    def update_experiment_config(self, new_config: ExperimentConfig):
-        self.beginResetModel()
-        self.experiment_config = new_config
-        self.endResetModel()
+    @property
+    def _session(self):
+        return self._session_maker
 
-    def change_sequence_state(self, stats: "SequenceStats"):
-        self.beginResetModel()
-        self.sequence_state = stats.state
-        self.endResetModel()
-        self.layoutChanged.emit()
+    def get_sequence_state(self, session) -> State:
+        return self._sequence.get_state(session)
 
-    def change_sequence_config(self, sequence_config: SequenceConfig):
-        self.beginResetModel()
-        self.sequence_config = sequence_config
-        self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
-        self.undo_stack.push(self.shot_config.to_yaml())
-        self.endResetModel()
-        self.layoutChanged.emit()
+    # def update_experiment_config(self, new_config: ExperimentConfig):
+    #     self.beginResetModel()
+    #     self.experiment_config = new_config
+    #     self.endResetModel()
+    #
+    # def change_sequence_state(self, stats: "SequenceStats"):
+    #     self.beginResetModel()
+    #     self.sequence_state = stats.state
+    #     self.endResetModel()
+    #     self.layoutChanged.emit()
+
+    # def change_sequence_config(self, sequence_config: SequenceConfig):
+    #     self.beginResetModel()
+    #     self.sequence_config = sequence_config
+    #     self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
+    #     self.undo_stack.push(self.shot_config.to_yaml())
+    #     self.endResetModel()
+    #     self.layoutChanged.emit()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return 2 + len(self.shot_config.lanes)
@@ -122,9 +130,9 @@ class SwimLaneModel(QAbstractTableModel):
                     if lane.spans[index.column()] > 1 or isinstance(
                         lane[index.column()], Ramp
                     ):
-                        return Qt.AlignCenter
+                        return Qt.AlignmentFlag.AlignCenter
                     else:
-                        return Qt.AlignLeft
+                        return Qt.AlignmentFlag.AlignLeft
             elif isinstance(lane, CameraLane):
                 camera_action = lane[index.column()]
                 if isinstance(camera_action, TakePicture):
@@ -148,43 +156,47 @@ class SwimLaneModel(QAbstractTableModel):
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
-        if role == Qt.ItemDataRole.EditRole:
-            if index.row() == 0:
-                self.shot_config.step_names[index.column()] = value
-                edit = True
-            elif index.row() == 1:
-                previous = self.shot_config.step_durations[index.column()].body
-                try:
-                    self.shot_config.step_durations[index.column()].body = value
-                    edit = True
-                except SyntaxError as error:
-                    logger.error(error.msg)
-                    self.shot_config.step_durations[index.column()].body = previous
-            else:
-                lane = self.get_lane(index)
-                if isinstance(lane, AnalogLane):
-                    previous = lane[index.column()].body
-                    try:
-                        lane[index.column()].body = value
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                if role == Qt.ItemDataRole.EditRole:
+                    if index.row() == 0:
+                        self.shot_config.step_names[index.column()] = value
                         edit = True
-                    except SyntaxError as error:
-                        logger.error(error.msg)
-                        lane[index.column()].body = previous
+                    elif index.row() == 1:
+                        previous = self.shot_config.step_durations[index.column()].body
+                        try:
+                            self.shot_config.step_durations[index.column()].body = value
+                            edit = True
+                        except SyntaxError as error:
+                            logger.error(error.msg)
+                            self.shot_config.step_durations[
+                                index.column()
+                            ].body = previous
+                    else:
+                        lane = self.get_lane(index)
+                        if isinstance(lane, AnalogLane):
+                            previous = lane[index.column()].body
+                            try:
+                                lane[index.column()].body = value
+                                edit = True
+                            except SyntaxError as error:
+                                logger.error(error.msg)
+                                lane[index.column()].body = previous
 
-                elif isinstance(lane, DigitalLane):
-                    lane[index.column()] = value
-                    edit = True
-                elif isinstance(lane, CameraLane):
-                    if value is None or isinstance(value, CameraAction):
-                        lane[index.column()] = value
-                        edit = True
-                    elif isinstance(value, str) and isinstance(
-                        cell := lane[index.column()], TakePicture
-                    ):
-                        cell.picture_name = value
-                        edit = True
-        if edit:
-            self.save_config()
+                        elif isinstance(lane, DigitalLane):
+                            lane[index.column()] = value
+                            edit = True
+                        elif isinstance(lane, CameraLane):
+                            if value is None or isinstance(value, CameraAction):
+                                lane[index.column()] = value
+                                edit = True
+                            elif isinstance(value, str) and isinstance(
+                                cell := lane[index.column()], TakePicture
+                            ):
+                                cell.picture_name = value
+                                edit = True
+                if edit:
+                    self.save_config(self.shot_config, session)
         return edit
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
@@ -192,11 +204,12 @@ class SwimLaneModel(QAbstractTableModel):
             flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
             if index.row() > 1:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
-            if self.sequence_state == SequenceState.DRAFT:
-                if self.is_editable(index):
-                    flags |= Qt.ItemFlag.ItemIsEditable
-                if index.row() > 1:
-                    flags |= Qt.ItemFlag.ItemIsDropEnabled
+            with self._session.begin() as session:
+                if self.get_sequence_state(session) == State.DRAFT:
+                    if self.is_editable(index):
+                        flags |= Qt.ItemFlag.ItemIsEditable
+                    if index.row() > 1:
+                        flags |= Qt.ItemFlag.ItemIsDropEnabled
         else:
             flags = Qt.ItemFlag.NoItemFlags
         return flags
@@ -215,10 +228,11 @@ class SwimLaneModel(QAbstractTableModel):
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def supportedDragActions(self) -> Qt.DropAction:
-        if self.sequence_state == SequenceState.DRAFT:
-            return Qt.DropAction.MoveAction
-        else:
-            return Qt.DropAction.CopyAction
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                return Qt.DropAction.MoveAction
+            else:
+                return Qt.DropAction.CopyAction
 
     def mimeTypes(self) -> list[str]:
         return ["application/x-shot_lanes"]
@@ -283,47 +297,59 @@ class SwimLaneModel(QAbstractTableModel):
             return self.shot_config.lanes[index.row() - 2]
 
     def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        self.beginInsertColumns(parent, column, column)
-        self.shot_config.step_names.insert(column, f"...")
-        self.shot_config.step_durations.insert(column, Expression("..."))
-        for lane in self.shot_config.lanes:
-            if isinstance(lane, DigitalLane):
-                lane.insert(column, False)
-            elif isinstance(lane, AnalogLane):
-                lane.insert(column, Expression("..."))
-            elif isinstance(lane, CameraLane):
-                lane.insert(column, None)
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            self.beginInsertColumns(parent, column, column)
+            self.shot_config.step_names.insert(column, f"...")
+            self.shot_config.step_durations.insert(column, Expression("..."))
+            for lane in self.shot_config.lanes:
+                if isinstance(lane, DigitalLane):
+                    lane.insert(column, False)
+                elif isinstance(lane, AnalogLane):
+                    lane.insert(column, Expression("..."))
+                elif isinstance(lane, CameraLane):
+                    lane.insert(column, None)
 
-        self.endInsertColumns()
-        self.save_config()
-        self.layoutChanged.emit()
-        return True
+            self.endInsertColumns()
+            self.save_config(self.shot_config, session)
+            self.layoutChanged.emit()
+            return True
 
     def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        self.beginRemoveColumns(parent, column, column)
-        self.shot_config.step_names.pop(column)
-        self.shot_config.step_durations.pop(column)
-        for lane in self.shot_config.lanes:
-            lane.remove(column)
-        self.endRemoveColumns()
-        self.save_config()
-        self.layoutChanged.emit()
-        return True
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            self.beginRemoveColumns(parent, column, column)
+            self.shot_config.step_names.pop(column)
+            self.shot_config.step_durations.pop(column)
+            for lane in self.shot_config.lanes:
+                lane.remove(column)
+            self.endRemoveColumns()
+            self.save_config(self.shot_config, session)
+            self.layoutChanged.emit()
+            return True
 
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        self.beginRemoveRows(parent, row, row)
-        self.shot_config.lanes.pop(row - 2)
-        self.endRemoveRows()
-        self.save_config()
-        return True
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            self.beginRemoveRows(parent, row, row)
+            self.shot_config.lanes.pop(row - 2)
+            self.endRemoveRows()
+            self.save_config(self.shot_config, session)
+            return True
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        self.beginRemoveRows(parent, row, row + count - 1)
-        for _ in range(count):
-            self.shot_config.lanes.pop(row - 2)
-        self.endRemoveRows()
-        self.save_config()
-        return True
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            self.beginRemoveRows(parent, row, row + count - 1)
+            for _ in range(count):
+                self.shot_config.lanes.pop(row - 2)
+            self.endRemoveRows()
+            self.save_config(self.shot_config, session)
+            return True
 
     def insert_lane(self, row: int, lane_type: Type[Lane], name: str):
         new_lane = None
@@ -347,64 +373,72 @@ class SwimLaneModel(QAbstractTableModel):
                 spans=(1,) * self.columnCount(),
             )
         if new_lane:
-            self.beginInsertRows(QModelIndex(), row, row)
-            self.shot_config.lanes.insert(row - 2, new_lane)
-            self.endInsertRows()
-            self.save_config()
+            with self._session.begin() as session:
+                if self.get_sequence_state(session) != State.DRAFT:
+                    return
+                self.beginInsertRows(QModelIndex(), row, row)
+                self.shot_config.lanes.insert(row - 2, new_lane)
+                self.save_config(self.shot_config, session)
+                self.endInsertRows()
 
-    def save_config(self, save_undo: bool = True) -> bool:
-        with self.sequence_watcher.block_signals():
-            YAMLSerializable.dump(
-                self.sequence_config, self.sequence_watcher.config_path
-            )
-            if save_undo:
-                self.undo_stack.push(
-                    YAMLSerializable.dump(
-                        self.sequence_config.shot_configurations[self.shot_name]
-                    )
-                )
-            return True
+    def save_config(
+        self, shot_config: ShotConfiguration, session: Session, save_undo: bool = True
+    ):
+        self._sequence.set_shot_config(self.shot_name, shot_config, session)
+
+        if save_undo:
+            self.undo_stack.push(YAMLSerializable.dump(self.shot_config))
 
     def merge(self, indexes: Iterable[QModelIndex]):
         coordinates = [(index.row() - 2, index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
-        for lane, group in lanes:
-            l = list(group)
-            start = l[0][1]
-            stop = l[-1][1] + 1
-            self.shot_config.lanes[lane].merge(start, stop)
-        self.save_config()
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+            for lane, group in lanes:
+                l = list(group)
+                start = l[0][1]
+                stop = l[-1][1] + 1
+                self.shot_config.lanes[lane].merge(start, stop)
+            self.save_config(self.shot_config, session)
         self.layoutChanged.emit()
 
     def break_(self, indexes: Iterable[QModelIndex]):
         coordinates = [(index.row() - 2, index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
-        for lane, group in lanes:
-            l = list(group)
-            start = l[0][1]
-            stop = l[-1][1] + 1
-            self.shot_config.lanes[lane].break_(start, stop)
-        self.save_config()
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+            for lane, group in lanes:
+                l = list(group)
+                start = l[0][1]
+                stop = l[-1][1] + 1
+                self.shot_config.lanes[lane].break_(start, stop)
+            self.save_config(self.shot_config, session)
         self.layoutChanged.emit()
 
     def undo(self):
-        new_yaml = self.undo_stack.undo()
-        new_config = ShotConfiguration.from_yaml(new_yaml)
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+            new_yaml = self.undo_stack.undo()
+            new_config = ShotConfiguration.from_yaml(new_yaml)
+            self.save_config(new_config, session, save_undo=False)
         self.beginResetModel()
-        self.sequence_config.shot_configurations[self.shot_name] = new_config
         self.shot_config = new_config
-        self.save_config(save_undo=False)
         self.endResetModel()
         self.layoutChanged.emit()
 
     def redo(self):
-        new_yaml = self.undo_stack.redo()
-        new_config = ShotConfiguration.from_yaml(new_yaml)
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+            new_yaml = self.undo_stack.redo()
+            new_config = ShotConfiguration.from_yaml(new_yaml)
+            self.save_config(new_config, session, save_undo=False)
         self.beginResetModel()
-        self.sequence_config.shot_configurations[self.shot_name] = new_config
         self.shot_config = new_config
-        self.save_config(save_undo=False)
         self.endResetModel()
         self.layoutChanged.emit()

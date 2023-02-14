@@ -1,6 +1,5 @@
 import logging
 from functools import partial
-from pathlib import Path
 
 from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
@@ -15,10 +14,12 @@ from PyQt6.QtWidgets import (
     QStyle,
     QMenu,
 )
+from sqlalchemy.orm import sessionmaker
 
 from experiment_config import ExperimentConfig
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
-from settings_model import YAMLSerializable
+from sequence.runtime import Sequence
+from sequence.runtime.state import State
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class LaneCellDelegate(QStyledItemDelegate):
         self.experiment_config = experiment_config
 
     def paint(
-            self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ):
         # noinspection PyTypeChecker
         model: SwimLaneModel = index.model()
@@ -58,18 +59,32 @@ class LaneCellDelegate(QStyledItemDelegate):
 
 
 class ShotWidget(QWidget):
-    def __init__(self, sequence_path: Path, experiment_config_path: Path, *args):
-        super().__init__(*args)
-        self._sequence_path = sequence_path
+    """A widget that shows the timeline of a shot
 
-        self.experiment_config: ExperimentConfig = YAMLSerializable.load(
-            experiment_config_path
+    Columns represent the different steps of the shot. Rows represent the different
+    lanes (i.e. action channels).
+
+    """
+
+    def __init__(
+        self,
+        sequence: Sequence,
+        experiment_config: ExperimentConfig,
+        session_maker: sessionmaker,
+        *args
+    ):
+        super().__init__(*args)
+        self._sequence = sequence
+
+        self.experiment_config = experiment_config
+        self._session_maker = session_maker
+
+        self.model = SwimLaneModel(
+            self._sequence, "shot", self.experiment_config, self._session_maker
         )
 
-        self.model = SwimLaneModel(self._sequence_path, "shot", self.experiment_config)
-
         self.layout = QVBoxLayout()
-        self.layout.addWidget(SwimLaneWidget(self.model))
+        self.layout.addWidget(SwimLaneWidget(self.model, sequence, session_maker))
         self.setLayout(self.layout)
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
@@ -91,15 +106,10 @@ class SpanTableView(QTableView):
 
     def setModel(self, model: QAbstractItemModel) -> None:
         super().setModel(model)
+        # noinspection PyUnresolvedReferences
         self.model().layoutChanged.connect(self.update_span)
+        # noinspection PyUnresolvedReferences
         self.model().layoutChanged.emit()
-
-        # self.setDragEnabled(True)
-        # self.setAcceptDrops(True)
-        # self.setDropIndicatorShown(True)
-        # self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        # self.setDefaultDropAction(Qt.DropAction.MoveAction)
-        # self.setDragDropOverwriteMode(False)
 
     def update_span(self):
         self.clearSpans()
@@ -111,7 +121,13 @@ class SpanTableView(QTableView):
 
 
 class SwimLaneWidget(QWidget):
-    def __init__(self, model: SwimLaneModel, *args):
+    def __init__(
+        self,
+        model: SwimLaneModel,
+        sequence: Sequence,
+        session_maker: sessionmaker,
+        *args
+    ):
         super().__init__(*args)
 
         splitter = QSplitter()
@@ -119,6 +135,8 @@ class SwimLaneWidget(QWidget):
         self.setLayout(QVBoxLayout())
 
         self._model = model
+        self._sequence = sequence
+        self._session_maker = session_maker
 
         self.steps_view = QTableView()
         self.steps_view.setModel(self._model)
@@ -158,12 +176,15 @@ class SwimLaneWidget(QWidget):
         self.layout().addWidget(splitter)
 
         self.update_vertical_header_width()
+        # noinspection PyUnresolvedReferences
         self.steps_view.horizontalHeader().sectionResized.connect(
             self.update_section_width
         )
+        # noinspection PyUnresolvedReferences
         self.steps_view.verticalHeader().sectionResized.connect(
             self.update_section_height
         )
+        # noinspection PyUnresolvedReferences
         self.lanes_view.horizontalScrollBar().valueChanged.connect(
             self.steps_view.horizontalScrollBar().setValue
         )
@@ -171,6 +192,7 @@ class SwimLaneWidget(QWidget):
         self.steps_view.horizontalHeader().setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
+        # noinspection PyUnresolvedReferences
         self.steps_view.horizontalHeader().customContextMenuRequested.connect(
             self.show_steps_context_menu
         )
@@ -178,14 +200,23 @@ class SwimLaneWidget(QWidget):
         self.lanes_view.verticalHeader().setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
+        # noinspection PyUnresolvedReferences
         self.lanes_view.verticalHeader().customContextMenuRequested.connect(
             self.show_lanes_context_menu
         )
 
         self.lanes_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # noinspection PyUnresolvedReferences
         self.lanes_view.customContextMenuRequested.connect(
             self.show_lane_cells_context_menu
         )
+
+    @property
+    def _session(self):
+        return self._session_maker
+
+    def get_sequence_state(self, session) -> State:
+        return self._sequence.get_state(session)
 
     def hide_time_table_lanes(self, *_):
         for i in range(2, self._model.rowCount()):
@@ -204,49 +235,52 @@ class SwimLaneWidget(QWidget):
 
     def update_section_height(self, *_):
         height = (
-                self.steps_view.horizontalHeader().height()
-                + self.steps_view.rowHeight(0)
-                + self.steps_view.rowHeight(1)
-                + 5
+            self.steps_view.horizontalHeader().height()
+            + self.steps_view.rowHeight(0)
+            + self.steps_view.rowHeight(1)
+            + 5
         )
         self.steps_view.setFixedHeight(height)
 
     def show_lanes_context_menu(self, position):
-        if self._model.sequence_state == SequenceState.DRAFT:
-            menu = QMenu(self.lanes_view.verticalHeader())
-            index = self.lanes_view.verticalHeader().logicalIndexAt(position)
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+        menu = QMenu(self.lanes_view.verticalHeader())
+        index = self.lanes_view.verticalHeader().logicalIndexAt(position)
 
-            if index == -1:
-                add_lane_menu = QMenu()
-                add_lane_menu.setTitle("Add lane...")
-                menu.addMenu(add_lane_menu)
-                add_digital_lane_menu = QMenu("digital")
-                digital_actions = self.create_digital_add_lane_actions()
-                for digital_action in digital_actions:
-                    add_digital_lane_menu.addAction(digital_action)
-                add_lane_menu.addMenu(add_digital_lane_menu)
+        if index == -1:
+            add_lane_menu = QMenu()
+            add_lane_menu.setTitle("Add lane...")
+            menu.addMenu(add_lane_menu)
+            add_digital_lane_menu = QMenu("digital")
+            digital_actions = self.create_digital_add_lane_actions()
+            for digital_action in digital_actions:
+                add_digital_lane_menu.addAction(digital_action)
+            add_lane_menu.addMenu(add_digital_lane_menu)
 
-                add_analog_lane_menu = QMenu("analog")
-                analog_actions = self.create_analog_add_lane_actions()
-                for analog_action in analog_actions:
-                    add_analog_lane_menu.addAction(analog_action)
-                add_lane_menu.addMenu(add_analog_lane_menu)
+            add_analog_lane_menu = QMenu("analog")
+            analog_actions = self.create_analog_add_lane_actions()
+            for analog_action in analog_actions:
+                add_analog_lane_menu.addAction(analog_action)
+            add_lane_menu.addMenu(add_analog_lane_menu)
 
-                camera_actions = self.create_camera_add_lane_actions()
-                if len(camera_actions) > 0:
-                    add_camera_lane_menu = QMenu("camera")
-                    for camera_action in camera_actions:
-                        add_camera_lane_menu.addAction(camera_action)
-                    add_lane_menu.addMenu(add_camera_lane_menu)
+            camera_actions = self.create_camera_add_lane_actions()
+            if len(camera_actions) > 0:
+                add_camera_lane_menu = QMenu("camera")
+                for camera_action in camera_actions:
+                    add_camera_lane_menu.addAction(camera_action)
+                add_lane_menu.addMenu(add_camera_lane_menu)
 
-            else:
-                remove_lane_action = QAction("Remove")
-                menu.addAction(remove_lane_action)
-                remove_lane_action.triggered.connect(
-                    lambda: self._model.removeRow(index, QModelIndex())
-                )
+        else:
+            remove_lane_action = QAction("Remove")
+            menu.addAction(remove_lane_action)
+            # noinspection PyUnresolvedReferences
+            remove_lane_action.triggered.connect(
+                lambda: self._model.removeRow(index, QModelIndex())
+            )
 
-            menu.exec(self.lanes_view.verticalHeader().mapToGlobal(position))
+        menu.exec(self.lanes_view.verticalHeader().mapToGlobal(position))
 
     def create_digital_add_lane_actions(self):
         unused_channels = self._model.experiment_config.get_digital_channels()
@@ -255,6 +289,7 @@ class SwimLaneWidget(QWidget):
         possible_channels.sort()
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
+            # noinspection PyUnresolvedReferences
             action.triggered.connect(
                 partial(
                     self._model.insert_lane,
@@ -272,6 +307,7 @@ class SwimLaneWidget(QWidget):
         possible_channels.sort()
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
+            # noinspection PyUnresolvedReferences
             action.triggered.connect(
                 partial(
                     self._model.insert_lane,
@@ -289,6 +325,7 @@ class SwimLaneWidget(QWidget):
         possible_channels.sort()
         actions = [QAction(channel) for channel in possible_channels]
         for action in actions:
+            # noinspection PyUnresolvedReferences
             action.triggered.connect(
                 partial(
                     self._model.insert_lane,
@@ -301,82 +338,94 @@ class SwimLaneWidget(QWidget):
 
     def show_steps_context_menu(self, position):
         """Show the context menu on the step header to remove or add a new time step"""
-        # noinspection PyTypeChecker
-        if self._model.sequence_state == SequenceState.DRAFT:
-            menu = QMenu(self.steps_view.horizontalHeader())
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
 
-            index = self.steps_view.horizontalHeader().logicalIndexAt(position)
-            if index == -1:  # inserts a step after all steps
-                add_step_action = QAction("Insert after")
-                menu.addAction(add_step_action)
-                add_step_action.triggered.connect(
-                    lambda: self._model.insertColumn(
-                        self._model.columnCount(), QModelIndex()
-                    )
-                )
-            else:
-                add_step_before_action = QAction("Insert before")
-                menu.addAction(add_step_before_action)
-                add_step_before_action.triggered.connect(
-                    lambda: self._model.insertColumn(index, QModelIndex())
-                )
+        menu = QMenu(self.steps_view.horizontalHeader())
 
-                add_step_after_action = QAction("Insert after")
-                menu.addAction(add_step_after_action)
-                add_step_after_action.triggered.connect(
-                    lambda: self._model.insertColumn(index + 1, QModelIndex())
+        index = self.steps_view.horizontalHeader().logicalIndexAt(position)
+        if index == -1:  # inserts a step after all steps
+            add_step_action = QAction("Insert after")
+            menu.addAction(add_step_action)
+            # noinspection PyUnresolvedReferences
+            add_step_action.triggered.connect(
+                lambda: self._model.insertColumn(
+                    self._model.columnCount(), QModelIndex()
                 )
+            )
+        else:
+            add_step_before_action = QAction("Insert before")
+            menu.addAction(add_step_before_action)
+            # noinspection PyUnresolvedReferences
+            add_step_before_action.triggered.connect(
+                lambda: self._model.insertColumn(index, QModelIndex())
+            )
 
-                remove_step_action = QAction("Remove")
-                menu.addAction(remove_step_action)
-                remove_step_action.triggered.connect(
-                    lambda: self._model.removeColumn(index, QModelIndex())
-                )
+            add_step_after_action = QAction("Insert after")
+            menu.addAction(add_step_after_action)
+            # noinspection PyUnresolvedReferences
+            add_step_after_action.triggered.connect(
+                lambda: self._model.insertColumn(index + 1, QModelIndex())
+            )
 
-            menu.exec(self.steps_view.horizontalHeader().mapToGlobal(position))
+            remove_step_action = QAction("Remove")
+            menu.addAction(remove_step_action)
+            # noinspection PyUnresolvedReferences
+            remove_step_action.triggered.connect(
+                lambda: self._model.removeColumn(index, QModelIndex())
+            )
+
+        menu.exec(self.steps_view.horizontalHeader().mapToGlobal(position))
 
     def show_lane_cells_context_menu(self, position):
-        if self._model.sequence_state == SequenceState.DRAFT:
-            menu = QMenu(self.lanes_view.viewport())
+        with self._session.begin() as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+        menu = QMenu(self.lanes_view.viewport())
 
-            index = self.lanes_view.indexAt(position)
-            if index.isValid():
-                if len(self.lanes_view.selectionModel().selectedIndexes()) > 1:
-                    merge_action = QAction("Merge")
-                    menu.addAction(merge_action)
-                    merge_action.triggered.connect(
-                        lambda: self._model.merge(
-                            self.lanes_view.selectionModel().selectedIndexes()
+        index = self.lanes_view.indexAt(position)
+        if index.isValid():
+            if len(self.lanes_view.selectionModel().selectedIndexes()) > 1:
+                merge_action = QAction("Merge")
+                menu.addAction(merge_action)
+                # noinspection PyUnresolvedReferences
+                merge_action.triggered.connect(
+                    lambda: self._model.merge(
+                        self.lanes_view.selectionModel().selectedIndexes()
+                    )
+                )
+                break_action = QAction("Break")
+                menu.addAction(break_action)
+                # noinspection PyUnresolvedReferences
+                break_action.triggered.connect(
+                    lambda: self._model.break_(
+                        self.lanes_view.selectionModel().selectedIndexes()
+                    )
+                )
+            if isinstance(self._model.get_lane(index), CameraLane):
+                camera_action = self._model.data(index, Qt.ItemDataRole.DisplayRole)
+                if camera_action is None:
+                    take_picture_action = QAction("Take picture")
+                    menu.addAction(take_picture_action)
+                    # noinspection PyUnresolvedReferences
+                    take_picture_action.triggered.connect(
+                        lambda: self._model.setData(
+                            index,
+                            TakePicture(picture_name="..."),
+                            Qt.ItemDataRole.EditRole,
                         )
                     )
-                    break_action = QAction("Break")
-                    menu.addAction(break_action)
-                    break_action.triggered.connect(
-                        lambda: self._model.break_(
-                            self.lanes_view.selectionModel().selectedIndexes()
+                elif isinstance(camera_action, str):
+                    remove_picture_action = QAction("Remove picture")
+                    menu.addAction(remove_picture_action)
+                    # noinspection PyUnresolvedReferences
+                    remove_picture_action.triggered.connect(
+                        lambda: self._model.setData(
+                            index,
+                            None,
+                            Qt.ItemDataRole.EditRole,
                         )
                     )
-                if isinstance(self._model.get_lane(index), CameraLane):
-                    camera_action = self._model.data(index, Qt.ItemDataRole.DisplayRole)
-                    if camera_action is None:
-                        take_picture_action = QAction("Take picture")
-                        menu.addAction(take_picture_action)
-                        take_picture_action.triggered.connect(
-                            lambda: self._model.setData(
-                                index,
-                                TakePicture(picture_name="..."),
-                                Qt.ItemDataRole.EditRole,
-                            )
-                        )
-                    elif isinstance(camera_action, str):
-                        remove_picture_action = QAction("Remove picture")
-                        menu.addAction(remove_picture_action)
-                        remove_picture_action.triggered.connect(
-                            lambda: self._model.setData(
-                                index,
-                                None,
-                                Qt.ItemDataRole.EditRole,
-                            )
-                        )
 
-            menu.exec(self.lanes_view.viewport().mapToGlobal(position))
+        menu.exec(self.lanes_view.viewport().mapToGlobal(position))

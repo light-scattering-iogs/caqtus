@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from experiment_config import ExperimentConfig
-from sequence.configuration import SequenceConfig
+from sequence.configuration import SequenceConfig, ShotConfiguration
 from .model import SequenceModel, ShotModel
 from .path import SequencePath, PathNotFoundError
 from .shot import Shot
@@ -49,6 +49,17 @@ class Sequence:
         sequence.sequence_config_yaml = config.to_yaml()
         sequence.modification_date = datetime.now()
         session.flush()
+
+    def set_shot_config(
+        self, shot_name: str, shot_config: ShotConfiguration, session: Session
+    ):
+        if not isinstance(shot_config, ShotConfiguration):
+            raise TypeError(
+                f"Expected instance of <ShotConfiguration>, got {type(shot_config)}"
+            )
+        sequence_config = self.get_config(session)
+        sequence_config.shot_configurations[shot_name] = shot_config
+        self.set_config(sequence_config, session)
 
     def get_state(self, session) -> State:
         state = self.query_model(session).state

@@ -5,6 +5,7 @@ of this module is to generate and edit a yaml file that is then consumed by othe
 """
 
 import logging
+from copy import deepcopy
 
 from PyQt6.QtCore import (
     QModelIndex,
@@ -46,7 +47,8 @@ logger.setLevel("DEBUG")
 class SequenceStepsModel(StepsModel):
     """Model for a view to display and manipulate the steps of a sequence
 
-    This model becomes read only if the sequence is not a draft, and it also saves any change.
+    This model becomes read only if the sequence is not a draft, and it also saves any
+    change.
     """
 
     def __init__(
@@ -73,17 +75,6 @@ class SequenceStepsModel(StepsModel):
     @property
     def root(self):
         return self.config.program
-
-    # def change_sequence_state(self, stats: "SequenceStats"):
-    #     self.beginResetModel()
-    #     self.sequence_state = stats.state
-    #     self.endResetModel()
-    #
-    # def change_sequence_config(self, sequence_config):
-    #     self.beginResetModel()
-    #     self.config = sequence_config
-    #     self.undo_stack.push(self.config.program.to_yaml())
-    #     self.endResetModel()
 
     def save_config(self, session: Session, save_undo: bool = True):
         self._sequence.set_config(self.config, session)
@@ -206,11 +197,12 @@ class SequenceWidget(QDockWidget):
         self.setWidget(self.tab_widget)
 
         self.program_tree = self.create_sequence_tree()
+        # noinspection PyUnresolvedReferences
         self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.tab_widget.addTab(self.program_tree, "Sequence")
 
-        # self.shot_widget = self.create_shot_widget(experiment_config_path)
-        # self.tab_widget.addTab(self.shot_widget, "Shot")
+        self.shot_widget = self.create_shot_widget()
+        self.tab_widget.addTab(self.shot_widget, "Shot")
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
@@ -246,6 +238,7 @@ class SequenceWidget(QDockWidget):
         tree.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         tree.setDefaultDropAction(Qt.DropAction.MoveAction)
         tree.setDragDropOverwriteMode(False)
+        # noinspection PyUnresolvedReferences
         tree.model().rowsInserted.connect(lambda _: tree.expandAll())
 
         tree.setItemsExpandable(False)
@@ -267,6 +260,7 @@ class SequenceWidget(QDockWidget):
 
             create_variable_action = QAction("variable")
             add_menu.addAction(create_variable_action)
+            # noinspection PyUnresolvedReferences
             create_variable_action.triggered.connect(
                 lambda: model.insert_step(
                     VariableDeclaration(name="", expression=Expression("...")), index
@@ -275,6 +269,7 @@ class SequenceWidget(QDockWidget):
 
             create_shot_action = QAction("shot")
             add_menu.addAction(create_shot_action)
+            # noinspection PyUnresolvedReferences
             create_shot_action.triggered.connect(
                 lambda: model.insert_step(
                     ExecuteShot(
@@ -286,6 +281,7 @@ class SequenceWidget(QDockWidget):
 
             create_linspace_action = QAction("linspace loop")
             add_menu.addAction(create_linspace_action)
+            # noinspection PyUnresolvedReferences
             create_linspace_action.triggered.connect(
                 lambda: model.insert_step(
                     LinspaceLoop(
@@ -297,6 +293,7 @@ class SequenceWidget(QDockWidget):
 
             create_arange_action = QAction("arange loop")
             add_menu.addAction(create_arange_action)
+            # noinspection PyUnresolvedReferences
             create_arange_action.triggered.connect(
                 lambda: model.insert_step(
                     ArangeLoop(
@@ -312,14 +309,17 @@ class SequenceWidget(QDockWidget):
             if index.isValid():
                 delete_action = QAction("Delete")
                 menu.addAction(delete_action)
+                # noinspection PyUnresolvedReferences
                 delete_action.triggered.connect(
                     lambda: model.removeRow(index.row(), index.parent())
                 )
 
             menu.exec(self.program_tree.mapToGlobal(position))
 
-    def create_shot_widget(self, experiment_config_path):
-        w = ShotWidget(self._path, experiment_config_path)
+    def create_shot_widget(self):
+        w = ShotWidget(
+            self._sequence, deepcopy(self._experiment_config), self._session_maker
+        )
         return w
 
     def update_experiment_config(self, new_config: ExperimentConfig):

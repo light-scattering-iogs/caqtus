@@ -29,6 +29,8 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
     """Qt Model for sequence steps (see PyQt Model/View)
 
     This model provides data for a view to display the different steps of a sequence.
+    It is a generic model that can be used with any sequence step tree when implementing
+    the root property.
     """
 
     @property
