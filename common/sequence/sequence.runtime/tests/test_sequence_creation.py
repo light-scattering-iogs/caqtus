@@ -2,11 +2,10 @@ from datetime import datetime
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
 from sequence.runtime import Sequence, SequencePath, SequenceNotFoundError
 
-from .setup_database import SetupDatabase, sequence_config, clean_database
+from .setup_database import SetupDatabase, sequence_config
 
 
 class TestSequenceCreation(SetupDatabase):
@@ -63,6 +62,8 @@ class TestSequenceCreation(SetupDatabase):
                 None,
                 session,
             )
+
+
 
     def test_shot_creation(self, sequence_config):
         with self.session as session:

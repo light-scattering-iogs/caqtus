@@ -10,7 +10,6 @@ from multiprocessing.managers import BaseManager
 from pathlib import Path
 from threading import Thread
 
-import sqlalchemy
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt6.QtGui import (
@@ -35,10 +34,10 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QTextBrowser,
 )
-from sqlalchemy.orm import sessionmaker
 
 from experiment_config import ExperimentConfig, get_config_path
 from experiment_manager import ExperimentManager
+from experiment_session import ExperimentSessionMaker
 from sequence.configuration import (
     ShotConfiguration,
     SequenceConfig,
@@ -153,9 +152,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.action_edit_config.triggered.connect(self.edit_config)
         with open(get_config_path(), "r") as file:
             self.experiment_config = ExperimentConfig.from_yaml(file.read())
-        engine = sqlalchemy.create_engine(self.experiment_config.database_url)
-        self.session_maker = sessionmaker(engine)
-        self.model = SequenceHierarchyModel(session_maker=self.session_maker)
+        self._experiment_session_maker = ExperimentSessionMaker(
+            self.experiment_config.database_url
+        )
+        self.model = SequenceHierarchyModel(
+            session_maker=self._experiment_session_maker
+        )
         self.sequences_view.setModel(self.model)
 
         # special delegate that show progress bar
@@ -169,6 +171,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
+        # noinspection PyUnresolvedReferences
         self.view_update_timer.timeout.connect(self.sequences_view.update)
         self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.view_update_timer.start(500)
@@ -318,7 +321,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             path = str(item.sequence_path)
             message = (
                 f'You are about to delete the path "{path}".\n'
-                f"All data inside will be irremediably lost."
+                "All data inside will be irremediably lost."
             )
             if self.exec_confirmation_message_box(message):
                 self.model.delete(index)

@@ -5,8 +5,8 @@ from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from PyQt6.QtGui import QIcon
 from anytree import NodeMixin
 from sqlalchemy import func
-from sqlalchemy.orm import sessionmaker, Session
 
+from experiment_session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence
 from sequence.runtime.model import SequencePathModel
@@ -22,10 +22,10 @@ class SequenceHierarchyModel(QAbstractItemModel):
     This model stores an in-memory representation of the database sequence structure.
     """
 
-    def __init__(self, session_maker: sessionmaker):
+    def __init__(self, session_maker: ExperimentSessionMaker):
         self._session_maker = session_maker
 
-        with self._session_maker.begin() as session:
+        with self._session_maker() as session:
             self._root = SequenceHierarchyItem(
                 SequencePath.root(),
                 children=_build_children(SequencePath.root(), session),
@@ -94,7 +94,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def get_sequence_stats(self, index: QModelIndex) -> Optional["SequenceStats"]:
         item: "SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
-            with self._session_maker.begin() as session:
+            with self._session_maker() as experiment_session:
+                session = experiment_session.get_sql_session()
+                # noinspection PyProtectedMember
                 sequence = item.sequence_path._query_model(session).get_sequence()
                 return SequenceStats(
                     state=sequence.get_state(),
@@ -126,7 +128,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if parent_item.is_sequence:
             return
 
-        with self._session_maker.begin() as session:
+        with self._session_maker() as session:
             children = _build_children(
                 parent_item.sequence_path,
                 session,
@@ -138,8 +140,11 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
     def is_sequence(self, index: QModelIndex) -> bool:
         item: "SequenceHierarchyItem" = index.internalPointer()
-        with self._session_maker.begin() as session:
-            return item.sequence_path._query_model(session).is_sequence()
+        with self._session_maker() as session:
+            # noinspection PyProtectedMember
+            return item.sequence_path._query_model(
+                session.get_sql_session()
+            ).is_sequence()
 
     def create_new_folder(self, index: QModelIndex, name: str):
         if index.isValid():
@@ -153,7 +158,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         children.append(
             SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
-        with self._session_maker.begin() as session:
+        with self._session_maker() as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 self.beginInsertRows(index, new_row, new_row)
@@ -183,7 +188,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         sequence_config = SequenceConfig(
             program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
         )
-        with self._session_maker.begin() as session:
+        with self._session_maker() as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
@@ -211,7 +216,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             row = index.row()
             new_children = list(parent_item.children)
             new_children.pop(row)
-            with self._session_maker.begin() as session:
+            with self._session_maker() as session:
                 item: "SequenceHierarchyItem" = index.internalPointer()
                 if (
                     item.is_folder()
@@ -277,8 +282,10 @@ class SequenceHierarchyItem(NodeMixin):
 
 
 def _build_children(
-    parent: SequencePath, session: Session
+    parent: SequencePath, experiment_session: ExperimentSession
 ) -> list[SequenceHierarchyItem]:
+
+    session = experiment_session.get_sql_session()
 
     children_items = []
 
@@ -290,6 +297,7 @@ def _build_children(
         )
         children = session.scalars(query_children)
     else:
+        # noinspection PyProtectedMember
         path = parent._query_model(session)
         children = path.children
         children.sort(key=lambda x: x.creation_date)

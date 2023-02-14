@@ -1,3 +1,3 @@
-from .experiment_session import ExperimentSession
+from .experiment_session import ExperimentSession, ExperimentSessionMaker
 
-__all__ = ["ExperimentSession"]
+__all__ = ["ExperimentSession", "ExperimentSessionMaker"]
