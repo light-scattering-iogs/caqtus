@@ -3,6 +3,7 @@ import typing
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from experiment_session import ExperimentSession
 from .model import ShotModel, DataType
 
 if typing.TYPE_CHECKING:
@@ -27,20 +28,28 @@ class Shot:
             f" index={self._index})"
         )
 
-    def add_measures(self, data: dict[str, typing.Any], session: Session):
-        shot_sql = self.query_model(session)
+    def add_measures(
+        self, data: dict[str, typing.Any], experiment_session: ExperimentSession
+    ):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
         shot_sql.add_data(data, DataType.MEASURE, session)
 
-    def get_measures(self, session: Session):
-        shot_sql = self.query_model(session)
+    def get_measures(self, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.MEASURE, session)
 
-    def add_parameters(self, parameters: dict[str, typing.Any], session: Session):
-        shot_sql = self.query_model(session)
+    def add_parameters(
+        self, parameters: dict[str, typing.Any], experiment_session: ExperimentSession
+    ):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
         shot_sql.add_data(parameters, DataType.PARAMETER, session)
 
-    def get_parameters(self, session: Session):
-        shot_sql = self.query_model(session)
+    def get_parameters(self, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.PARAMETER, session)
 
     @property
@@ -55,7 +64,8 @@ class Shot:
     def index(self):
         return self._index
 
-    def query_model(self, session: typing.Optional[Session]) -> ShotModel:
+    def _query_model(self, session: typing.Optional[Session]) -> ShotModel:
+        # noinspection PyProtectedMember
         query_shot = select(ShotModel).where(
             ShotModel.sequence == self.sequence._query_model(session),
             ShotModel.name == self.name,

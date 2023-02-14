@@ -10,8 +10,8 @@ from .setup_database import SetupDatabase, sequence_config, clean_database
 
 
 class TestSequenceCreation(SetupDatabase):
-    def test_sequence_creation(self, clean_database: sessionmaker, sequence_config):
-        with clean_database() as session:
+    def test_sequence_creation(self, sequence_config):
+        with self.session as session:
             before = datetime.now()
             Sequence.create_sequence(
                 SequencePath("year.month.day.name"), sequence_config, None, session
@@ -64,8 +64,8 @@ class TestSequenceCreation(SetupDatabase):
                 session,
             )
 
-    def test_shot_creation(self, clean_database, sequence_config):
-        with clean_database() as session:
+    def test_shot_creation(self, sequence_config):
+        with self.session as session:
             now = datetime.now()
             sequence = Sequence.create_sequence(
                 SequencePath("test_sequence"), sequence_config, None, session
