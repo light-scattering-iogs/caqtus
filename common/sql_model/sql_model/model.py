@@ -1,4 +1,5 @@
 import enum
+import typing
 from datetime import datetime
 from typing import Optional, Any
 
@@ -22,10 +23,12 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy_utils import Ltree, LtreeType
 
-from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from .base import Base
 from .sequence_state import State
+
+if typing.TYPE_CHECKING:
+    from experiment.configuration import ExperimentConfig
 
 
 # Need to activate Ltree extension in Postgresql
@@ -38,7 +41,35 @@ class ExperimentConfigModel(Base):
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
     experiment_config_yaml: Mapped[str] = mapped_column()
-    modification_date: Mapped[datetime] = mapped_column()
+    modification_date: Mapped[datetime] = mapped_column(unique=True, index=True)
+
+    @classmethod
+    def add_config(cls, yaml: str, session: Session):
+        new_config = cls(experiment_config_yaml=yaml, modification_date=datetime.now())
+        session.add(new_config)
+        session.flush()
+
+    @classmethod
+    def get_configs(
+        cls,
+        from_date: Optional[datetime],
+        to_date: Optional[datetime],
+        session: Session,
+    ) -> dict[datetime, str]:
+        if from_date is None:
+            from_date = datetime.min
+        if to_date is None:
+            to_date = datetime.max
+
+        query = (
+            select(cls)
+            .where(cls.modification_date.between(from_date, to_date))
+            .order_by(cls.modification_date)
+        )
+        return {
+            result.modification_date: result.experiment_config_yaml
+            for result in session.scalars(query)
+        }
 
 
 class SequencePathModel(Base):
@@ -128,7 +159,7 @@ class SequenceModel(Base):
         cls,
         path: str,
         sequence_config: SequenceConfig,
-        experiment_config: Optional[ExperimentConfig],
+        experiment_config: Optional["ExperimentConfig"],
         session: Session,
     ):
         query_path_id = select(SequencePathModel.id_).filter(

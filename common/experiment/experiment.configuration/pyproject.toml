@@ -22,6 +22,7 @@ orca-quest-configuration = {path = "../../../devices/cameras/orca_quest/orca_que
 ni6738-analog-card-configuration = {path = "../../../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
 spincore-sequencer-configuration = {path = "../../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 siglent-sdg6000x-configuration = {path = "../../../devices/siglent_sdg6000X/siglent_sdg6000x.configuration", develop = true}
+experiment-session = {path = "../experiment.session", develop = true}
 
 
 [build-system]

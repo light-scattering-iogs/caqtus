@@ -1,7 +1,12 @@
+from datetime import datetime
 from threading import Lock
+from typing import Optional
 
 import sqlalchemy
 import sqlalchemy.orm
+
+from experiment.configuration import ExperimentConfig
+from sql_model.model import ExperimentConfigModel
 
 
 class ExperimentSession:
@@ -33,7 +38,27 @@ class ExperimentSession:
                 self._sql_session = None
 
     def get_sql_session(self) -> sqlalchemy.orm.Session:
+        if self._sql_session is None:
+            raise RuntimeError("Session is not active")
         return self._sql_session
+
+    def add_experiment_config(self, experiment_config: ExperimentConfig):
+        ExperimentConfigModel.add_config(
+            experiment_config.to_yaml(), self.get_sql_session()
+        )
+
+    def get_experiment_configs(
+        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+    ) -> dict[datetime, ExperimentConfig]:
+        results = ExperimentConfigModel.get_configs(
+            from_date,
+            to_date,
+            self.get_sql_session(),
+        )
+
+        return {
+            date: ExperimentConfig.from_yaml(yaml) for date, yaml in results.items()
+        }
 
 
 class ExperimentSessionMaker:
