@@ -35,7 +35,7 @@ class Sequence:
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
         yaml = self._query_model(
             experiment_session.get_sql_session()
-        ).config[0].sequence_config_yaml
+        ).config.sequence_config_yaml
         # noinspection PyTypeChecker
         return SequenceConfig.from_yaml(yaml)
 
@@ -50,7 +50,7 @@ class Sequence:
         if sequence.state != State.DRAFT:
             raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
         sequence.total_number_shots = config.compute_total_number_of_shots()
-        sequence.config[0].sequence_config_yaml = config.to_yaml()
+        sequence.config.sequence_config_yaml = config.to_yaml()
         sequence.modification_date = datetime.now()
         session.flush()
 

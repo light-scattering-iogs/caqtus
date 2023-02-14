@@ -1,5 +1,4 @@
 import enum
-import typing
 from datetime import datetime
 from typing import Optional, Any
 
@@ -28,9 +27,18 @@ from sequence.configuration import SequenceConfig
 from .base import Base
 from .sequence_state import State
 
+
 # Need to activate Ltree extension in Postgresql
 # In the psql shell:
 # CREATE EXTENSION IF NOT EXISTS ltree;
+
+
+class ExperimentConfigModel(Base):
+    __tablename__ = "experiment_config"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
+    experiment_config_yaml: Mapped[str] = mapped_column()
+    modification_date: Mapped[datetime] = mapped_column()
 
 
 class SequencePathModel(Base):
@@ -41,7 +49,7 @@ class SequencePathModel(Base):
     creation_date: Mapped[datetime] = mapped_column()
     parent: Mapped[Optional["SequencePathModel"]] = relationship(
         primaryjoin=remote(path) == foreign(func.subpath(path, 0, -1)),
-        backref=backref("children", cascade="all, delete"),
+        backref=backref("children", cascade="all, delete-orphan"),
     )
     sequence: Mapped[list["SequenceModel"]] = relationship(
         cascade="all, delete"
@@ -70,12 +78,7 @@ class SequenceConfigModel(Base):
     __tablename__ = "sequence_config"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    sequence_id: Mapped[str] = mapped_column(
-        ForeignKey("sequence.id"), unique=True, index=True
-    )
-    sequence: Mapped["SequenceModel"] = relationship(back_populates="config")
     sequence_config_yaml: Mapped[str] = mapped_column()
-    # experiment_config_yaml: Mapped[Optional[str]] = mapped_column()
 
 
 class SequenceModel(Base):
@@ -88,7 +91,17 @@ class SequenceModel(Base):
     path: Mapped[SequencePathModel] = relationship(back_populates="sequence")
     state: Mapped[State]
 
-    config: Mapped[list["SequenceConfigModel"]] = relationship(cascade="all")
+    config_id: Mapped[int] = mapped_column(
+        ForeignKey("sequence_config.id"), unique=True
+    )
+    config: Mapped[SequenceConfigModel] = relationship(cascade="all")
+
+    experiment_config_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("experiment_config.id")
+    )
+    experiment_config: Mapped[Optional[ExperimentConfigModel]] = relationship(
+        viewonly=True
+    )
 
     creation_date: Mapped[datetime] = mapped_column()
     modification_date: Mapped[datetime] = mapped_column()
@@ -100,7 +113,7 @@ class SequenceModel(Base):
     ] = mapped_column()  # None indicates that this number is unknown
     number_completed_shots: Mapped[int] = mapped_column()
 
-    shots: Mapped[list["ShotModel"]] = relationship(cascade="all, delete")
+    shots: Mapped[list["ShotModel"]] = relationship(cascade="all, delete-orphan")
 
     def __repr__(self):
         return (
@@ -128,7 +141,7 @@ class SequenceModel(Base):
         sequence_sql = SequenceModel(
             path_id=path_id,
             state=State.DRAFT,
-            config=[config],
+            config=config,
             creation_date=now,
             modification_date=now,
             start_date=None,
@@ -146,8 +159,6 @@ class SequenceModel(Base):
     def get_number_completed_shots(self) -> int:
         return self.number_completed_shots
 
-    # def delete(self, session: Session):
-
 
 class ShotModel(Base):
     __tablename__ = "shot"
@@ -164,7 +175,7 @@ class ShotModel(Base):
     start_time: Mapped[datetime] = mapped_column()
     end_time: Mapped[datetime] = mapped_column()
 
-    data: Mapped[list["DataModel"]] = relationship(cascade="all, delete")
+    data: Mapped[list["DataModel"]] = relationship(cascade="all, delete-orphan")
 
     @classmethod
     def create_shot(
