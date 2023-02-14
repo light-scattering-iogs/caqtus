@@ -82,7 +82,7 @@ class TestSequenceCreation(SetupDatabase):
             shot.add_parameters(parameters, session)
             assert shot.get_parameters(session) == parameters
 
-            session.get_sql_session().commit()
+            # session.get_sql_session().commit()
 
             with pytest.raises(IntegrityError):
                 shot.add_measures(data, session)

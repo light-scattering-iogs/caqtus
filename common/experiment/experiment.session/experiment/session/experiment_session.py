@@ -9,6 +9,10 @@ from experiment.configuration import ExperimentConfig
 from sql_model.model import ExperimentConfigModel
 
 
+class ExperimentSessionNotActiveError(RuntimeError):
+    pass
+
+
 class ExperimentSession:
     def __init__(self, database_url: str, commit: bool = True):
         self._database_url = database_url
@@ -18,28 +22,28 @@ class ExperimentSession:
         self._sql_session = None
         self._commit = commit
         self._level = 0
-
         self._lock = Lock()
 
     def __enter__(self):
         with self._lock:
-            if self._sql_session is None:
-                self._sql_session = self._session_maker().__enter__()
-            self._level += 1
+            if self._sql_session is not None:
+                raise RuntimeError("Session is already active")
+            self._sql_session = self._session_maker()
+            self._transaction = self._sql_session.begin().__enter__()
             return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         with self._lock:
-            if self._commit:
-                self._sql_session.commit()
-            self._level -= 1
-            if self._level == 0:
-                self._sql_session.__exit__(exc_type, exc_val, exc_tb)
-                self._sql_session = None
+            self._transaction.__exit__(exc_type, exc_val, exc_tb)
+            self._sql_session = None
+            self._transaction = None
 
     def get_sql_session(self) -> sqlalchemy.orm.Session:
         if self._sql_session is None:
-            raise RuntimeError("Session is not active")
+            raise ExperimentSessionNotActiveError(
+                "Every access to an experiment session must be wrapped in a single with"
+                " block"
+            )
         return self._sql_session
 
     def add_experiment_config(self, experiment_config: ExperimentConfig):
