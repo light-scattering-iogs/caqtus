@@ -14,9 +14,9 @@ from PyQt6.QtWidgets import (
     QStyle,
     QMenu,
 )
-from sqlalchemy.orm import sessionmaker
 
 from experiment_config import ExperimentConfig
+from experiment_session import ExperimentSessionMaker
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
 from sequence.runtime import Sequence
 from sequence.runtime.state import State
@@ -70,17 +70,16 @@ class ShotWidget(QWidget):
         self,
         sequence: Sequence,
         experiment_config: ExperimentConfig,
-        session_maker: sessionmaker,
+        session_maker: ExperimentSessionMaker,
         *args
     ):
         super().__init__(*args)
         self._sequence = sequence
 
         self.experiment_config = experiment_config
-        self._session_maker = session_maker
 
         self.model = SwimLaneModel(
-            self._sequence, "shot", self.experiment_config, self._session_maker
+            self._sequence, "shot", self.experiment_config, session_maker
         )
 
         self.layout = QVBoxLayout()
@@ -125,7 +124,7 @@ class SwimLaneWidget(QWidget):
         self,
         model: SwimLaneModel,
         sequence: Sequence,
-        session_maker: sessionmaker,
+        session_maker: ExperimentSessionMaker,
         *args
     ):
         super().__init__(*args)
@@ -136,7 +135,7 @@ class SwimLaneWidget(QWidget):
 
         self._model = model
         self._sequence = sequence
-        self._session_maker = session_maker
+        self._session = session_maker()
 
         self.steps_view = QTableView()
         self.steps_view.setModel(self._model)
@@ -211,10 +210,6 @@ class SwimLaneWidget(QWidget):
             self.show_lane_cells_context_menu
         )
 
-    @property
-    def _session(self):
-        return self._session_maker
-
     def get_sequence_state(self, session) -> State:
         return self._sequence.get_state(session)
 
@@ -243,7 +238,7 @@ class SwimLaneWidget(QWidget):
         self.steps_view.setFixedHeight(height)
 
     def show_lanes_context_menu(self, position):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
         menu = QMenu(self.lanes_view.verticalHeader())
@@ -338,7 +333,7 @@ class SwimLaneWidget(QWidget):
 
     def show_steps_context_menu(self, position):
         """Show the context menu on the step header to remove or add a new time step"""
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
 
@@ -379,7 +374,7 @@ class SwimLaneWidget(QWidget):
         menu.exec(self.steps_view.horizontalHeader().mapToGlobal(position))
 
     def show_lane_cells_context_menu(self, position):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
         menu = QMenu(self.lanes_view.viewport())

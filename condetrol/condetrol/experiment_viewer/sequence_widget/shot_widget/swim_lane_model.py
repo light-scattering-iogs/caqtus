@@ -11,10 +11,10 @@ from PyQt6.QtCore import (
     QByteArray,
 )
 from PyQt6.QtGui import QColor, QIcon
-from sqlalchemy.orm import sessionmaker, Session
 
 from condetrol.utils import UndoStack
 from experiment_config import ExperimentConfig, ChannelSpecialPurpose
+from experiment_session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     DigitalLane,
@@ -47,45 +47,22 @@ class SwimLaneModel(QAbstractTableModel):
         sequence: Sequence,
         shot_name: str,
         experiment_config: ExperimentConfig,
-        session_maker: sessionmaker,
+        session_maker: ExperimentSessionMaker,
     ):
         super().__init__()
-        self._session_maker = session_maker
+        self._session = session_maker()
         self.experiment_config = experiment_config
         self.shot_name = shot_name
         self._sequence = sequence
-        with self._session() as session:
+        with self._session as session:
             sequence_config = sequence.get_config(session)
         self.shot_config = sequence_config.shot_configurations[self.shot_name]
 
         self.undo_stack = UndoStack()
         self.undo_stack.push(self.shot_config.to_yaml())
 
-    @property
-    def _session(self):
-        return self._session_maker
-
     def get_sequence_state(self, session) -> State:
         return self._sequence.get_state(session)
-
-    # def update_experiment_config(self, new_config: ExperimentConfig):
-    #     self.beginResetModel()
-    #     self.experiment_config = new_config
-    #     self.endResetModel()
-    #
-    # def change_sequence_state(self, stats: "SequenceStats"):
-    #     self.beginResetModel()
-    #     self.sequence_state = stats.state
-    #     self.endResetModel()
-    #     self.layoutChanged.emit()
-
-    # def change_sequence_config(self, sequence_config: SequenceConfig):
-    #     self.beginResetModel()
-    #     self.sequence_config = sequence_config
-    #     self.shot_config = self.sequence_config.shot_configurations[self.shot_name]
-    #     self.undo_stack.push(self.shot_config.to_yaml())
-    #     self.endResetModel()
-    #     self.layoutChanged.emit()
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return 2 + len(self.shot_config.lanes)
@@ -156,7 +133,7 @@ class SwimLaneModel(QAbstractTableModel):
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if role == Qt.ItemDataRole.EditRole:
                     if index.row() == 0:
@@ -204,7 +181,7 @@ class SwimLaneModel(QAbstractTableModel):
             flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
             if index.row() > 1:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
-            with self._session.begin() as session:
+            with self._session as session:
                 if self.get_sequence_state(session) == State.DRAFT:
                     if self.is_editable(index):
                         flags |= Qt.ItemFlag.ItemIsEditable
@@ -228,7 +205,7 @@ class SwimLaneModel(QAbstractTableModel):
         return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
 
     def supportedDragActions(self) -> Qt.DropAction:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 return Qt.DropAction.MoveAction
             else:
@@ -297,7 +274,7 @@ class SwimLaneModel(QAbstractTableModel):
             return self.shot_config.lanes[index.row() - 2]
 
     def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
             self.beginInsertColumns(parent, column, column)
@@ -317,7 +294,7 @@ class SwimLaneModel(QAbstractTableModel):
             return True
 
     def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
             self.beginRemoveColumns(parent, column, column)
@@ -331,7 +308,7 @@ class SwimLaneModel(QAbstractTableModel):
             return True
 
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
             self.beginRemoveRows(parent, row, row)
@@ -341,7 +318,7 @@ class SwimLaneModel(QAbstractTableModel):
             return True
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
             self.beginRemoveRows(parent, row, row + count - 1)
@@ -373,7 +350,7 @@ class SwimLaneModel(QAbstractTableModel):
                 spans=(1,) * self.columnCount(),
             )
         if new_lane:
-            with self._session.begin() as session:
+            with self._session as session:
                 if self.get_sequence_state(session) != State.DRAFT:
                     return
                 self.beginInsertRows(QModelIndex(), row, row)
@@ -382,7 +359,7 @@ class SwimLaneModel(QAbstractTableModel):
                 self.endInsertRows()
 
     def save_config(
-        self, shot_config: ShotConfiguration, session: Session, save_undo: bool = True
+        self, shot_config: ShotConfiguration, session: ExperimentSession, save_undo: bool = True
     ):
         self._sequence.set_shot_config(self.shot_name, shot_config, session)
 
@@ -393,7 +370,7 @@ class SwimLaneModel(QAbstractTableModel):
         coordinates = [(index.row() - 2, index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
             for lane, group in lanes:
@@ -408,7 +385,7 @@ class SwimLaneModel(QAbstractTableModel):
         coordinates = [(index.row() - 2, index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
             for lane, group in lanes:
@@ -420,7 +397,7 @@ class SwimLaneModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def undo(self):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
             new_yaml = self.undo_stack.undo()
@@ -432,7 +409,7 @@ class SwimLaneModel(QAbstractTableModel):
         self.layoutChanged.emit()
 
     def redo(self):
-        with self._session.begin() as session:
+        with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return
             new_yaml = self.undo_stack.redo()
