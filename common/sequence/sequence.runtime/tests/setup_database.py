@@ -1,7 +1,8 @@
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
+from experiment_session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sequence.runtime.base import Base
 
@@ -33,9 +34,9 @@ class SetupDatabase:
 
         Base.metadata.drop_all(engine)
 
-        self.session = scoped_session(sessionmaker())
-        self.session.configure(bind=engine)
         Base.metadata.create_all(engine)
+
+        self.session = ExperimentSession(DB_URL)
 
     def teardown_class(self):
         pass

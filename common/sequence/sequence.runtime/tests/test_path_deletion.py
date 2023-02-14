@@ -18,7 +18,7 @@ class TestPathDeletion(SetupDatabase):
 
             path = SequencePath("2023.02.12.test.deeper")
             path.create(session)
-            path_id = path.query_model(session).id_
+            path_id = path._query_model(session).id_
             SequencePath("2023").delete(session)
             for ancestor in path.get_ancestors(strict=False):
                 assert not ancestor.exists(session)

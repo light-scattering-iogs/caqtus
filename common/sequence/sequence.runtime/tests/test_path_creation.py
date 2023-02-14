@@ -5,7 +5,7 @@ from .setup_database import SetupDatabase
 
 class TestPathCreation(SetupDatabase):
     def test_path_creation(self):
-        with self.session() as session:
+        with self.session as session:
             path = SequencePath("2023.02.12.test")
             path.create(session)
             for ancestor in path.get_ancestors(strict=False):
