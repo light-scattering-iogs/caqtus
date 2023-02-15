@@ -46,14 +46,19 @@ class ExperimentSession:
             )
         return self._sql_session
 
-    def add_experiment_config(self, experiment_config: ExperimentConfig):
+    def add_experiment_config(
+        self, name: str, experiment_config: ExperimentConfig, comment: Optional[str]
+    ):
         ExperimentConfigModel.add_config(
-            experiment_config.to_yaml(), self.get_sql_session()
+            name=name,
+            yaml=experiment_config.to_yaml(),
+            comment=comment,
+            session=self.get_sql_session(),
         )
 
     def get_experiment_configs(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[datetime, ExperimentConfig]:
+    ) -> dict[str, ExperimentConfig]:
         results = ExperimentConfigModel.get_configs(
             from_date,
             to_date,
@@ -61,7 +66,7 @@ class ExperimentSession:
         )
 
         return {
-            date: ExperimentConfig.from_yaml(yaml) for date, yaml in results.items()
+            name: ExperimentConfig.from_yaml(yaml) for name, yaml in results.items()
         }
 
 

@@ -40,12 +40,19 @@ class ExperimentConfigModel(Base):
     __tablename__ = "experiment_config"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
     experiment_config_yaml: Mapped[str] = mapped_column()
-    modification_date: Mapped[datetime] = mapped_column(unique=True, index=True)
+    comment: Mapped[Optional[str]] = mapped_column()
+    modification_date: Mapped[datetime] = mapped_column(index=True)
 
     @classmethod
-    def add_config(cls, yaml: str, session: Session):
-        new_config = cls(experiment_config_yaml=yaml, modification_date=datetime.now())
+    def add_config(cls, name: str, yaml: str, comment: Optional[str], session: Session):
+        new_config = cls(
+            name=name,
+            experiment_config_yaml=yaml,
+            comment=comment,
+            modification_date=datetime.now(),
+        )
         session.add(new_config)
         session.flush()
 
@@ -67,7 +74,7 @@ class ExperimentConfigModel(Base):
             .order_by(cls.modification_date)
         )
         return {
-            result.modification_date: result.experiment_config_yaml
+            result.name: result.experiment_config_yaml
             for result in session.scalars(query)
         }
 

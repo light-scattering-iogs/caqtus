@@ -209,12 +209,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
             )
 
-    def start_sequence(self, path: Path):
-        config = self.experiment_config.to_yaml()
-        self.experiment_manager.start_sequence(
-            config, path.relative_to(self.experiment_config.data_path)
-        )
-
     def show_context_menu(self, position):
         index = self.sequences_view.indexAt(position)
 
@@ -231,9 +225,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     start_sequence_action = QAction("Start")
                     menu.addAction(start_sequence_action)
                     start_sequence_action.setEnabled(False)
-                    # start_sequence_action.triggered.connect(
-                    #     lambda _: self.start_sequence(Path(self.model.filePath(index))),
-                    # )
+                    # noinspection PyUnresolvedReferences
+                    start_sequence_action.triggered.connect(
+                        lambda _: self.start_sequence(index),
+                    )
                 elif state == State.RUNNING:
                     is_deletable = False
                     interrupt_sequence_action = QAction("Interrupt")
@@ -285,6 +280,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             delete_action.triggered.connect(partial(self.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
+
+    def start_sequence(self, index: QModelIndex):
+        path = self.model.get_path(index)
+        if path:
+            self.experiment_manager.start_sequence(
+                self.experiment_config.to_yaml(), path.relative_to(self.experiment_config.data_path)
+            )
 
     def create_new_folder(self, index: QModelIndex):
         if index.isValid():
@@ -400,6 +402,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
 class SequenceViewerModel(QFileSystemModel):
     """Model for sequence explorer"""
+
+    # TODO: remove this class
 
     def __init__(self, data_root: Path, *args, **kwargs):
         self.sequence_watcher = SequenceFolderWatcher(data_root)
