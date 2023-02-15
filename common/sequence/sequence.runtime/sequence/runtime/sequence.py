@@ -4,7 +4,6 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration
 from sql_model import SequenceModel, ShotModel, State
@@ -96,20 +95,12 @@ class Sequence:
         cls,
         path: SequencePath,
         sequence_config: SequenceConfig,
-        experiment_config: Optional[ExperimentConfig],
+        experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
     ) -> "Sequence":
         if not isinstance(sequence_config, SequenceConfig):
             raise TypeError(
                 f"Type of sequence_config {type(sequence_config)} is not SequenceConfig"
-            )
-
-        if experiment_config is not None and not isinstance(
-            experiment_config, ExperimentConfig
-        ):
-            raise TypeError(
-                f"Type of experiment_config {type(experiment_config)} is not"
-                " ExperimentConfig"
             )
 
         path.create(experiment_session)
@@ -122,7 +113,7 @@ class Sequence:
         SequenceModel.create_sequence(
             str(path),
             sequence_config,
-            experiment_config,
+            experiment_config_name,
             experiment_session.get_sql_session(),
         )
         sequence = cls(path)

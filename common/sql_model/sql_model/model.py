@@ -205,7 +205,7 @@ class SequenceModel(Base):
         cls,
         path: str,
         sequence_config: SequenceConfig,
-        experiment_config: Optional["ExperimentConfig"],
+        experiment_config_name: Optional[str],
         session: Session,
     ):
         query_path_id = select(SequencePathModel.id_).filter(
