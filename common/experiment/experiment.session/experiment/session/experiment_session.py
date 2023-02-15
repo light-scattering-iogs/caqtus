@@ -6,7 +6,7 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from experiment.configuration import ExperimentConfig
-from sql_model.model import ExperimentConfigModel
+from sql_model.model import ExperimentConfigModel, CurrentExperimentConfigModel
 
 
 class ExperimentSessionNotActiveError(RuntimeError):
@@ -68,6 +68,16 @@ class ExperimentSession:
         return {
             name: ExperimentConfig.from_yaml(yaml) for name, yaml in results.items()
         }
+
+    def set_current_experiment_config(self, name: str):
+        CurrentExperimentConfigModel.set_current_experiment_config(
+            name=name, session=self.get_sql_session()
+        )
+
+    def get_current_experiment_config_name(self) -> Optional[str]:
+        return CurrentExperimentConfigModel.get_current_experiment_config_name(
+            session=self.get_sql_session()
+        )
 
 
 class ExperimentSessionMaker:

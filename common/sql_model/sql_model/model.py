@@ -12,6 +12,7 @@ from sqlalchemy import (
     func,
     Index,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -39,8 +40,7 @@ if typing.TYPE_CHECKING:
 class ExperimentConfigModel(Base):
     __tablename__ = "experiment_config"
 
-    id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(unique=True, index=True)
+    name: Mapped[str] = mapped_column(primary_key=True, index=True)
     experiment_config_yaml: Mapped[str] = mapped_column()
     comment: Mapped[Optional[str]] = mapped_column()
     modification_date: Mapped[datetime] = mapped_column(index=True)
@@ -77,6 +77,38 @@ class ExperimentConfigModel(Base):
             result.name: result.experiment_config_yaml
             for result in session.scalars(query)
         }
+
+
+class CurrentExperimentConfigModel(Base):
+    """Represent a table with a single row to store the current experiment config"""
+
+    __tablename__ = "current_experiment_config"
+
+    current_experiment_config_name: Mapped[str] = mapped_column(
+        ForeignKey("experiment_config.name"), primary_key=True
+    )
+    current_experiment_config: Mapped[ExperimentConfigModel] = relationship(
+        viewonly=True
+    )
+
+    @classmethod
+    def set_current_experiment_config(cls, name: str, session: Session):
+        query_current = select(cls)
+        result = session.scalar(query_current)
+        if result is None:
+            new_current = cls(current_experiment_config_name=name)
+            session.add(new_current)
+        else:
+            result.current_experiment_config_name = name
+        session.flush()
+
+    @classmethod
+    def get_current_experiment_config_name(cls, session: Session) -> Optional[str]:
+        query_current = select(cls)
+        result = session.scalar(query_current)
+        if result is None:
+            return None
+        return result.current_experiment_config_name
 
 
 class SequencePathModel(Base):
@@ -134,8 +166,8 @@ class SequenceModel(Base):
     )
     config: Mapped[SequenceConfigModel] = relationship(cascade="all")
 
-    experiment_config_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("experiment_config.id")
+    experiment_config_name: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("experiment_config.name")
     )
     experiment_config: Mapped[Optional[ExperimentConfigModel]] = relationship(
         viewonly=True
