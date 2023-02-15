@@ -1,10 +1,11 @@
 import logging
 from logging.handlers import QueueHandler
 from multiprocessing import Queue
-from pathlib import Path
 from threading import Lock, Event
 from typing import Optional
 
+from experiment.session import ExperimentSessionMaker
+from sequence.runtime import SequencePath
 from .sequence_runner import SequenceRunnerThread
 
 logger = logging.getLogger(__name__)
@@ -29,18 +30,24 @@ class ExperimentManager:
         self._waiting_to_interrupt = Event()
         self._sequence_runner_thread: Optional[SequenceRunnerThread] = None
 
-    def start_sequence(self, experiment_config: str, sequence_path: Path) -> bool:
+    def start_sequence(
+        self,
+        experiment_config_name: str,
+        sequence_path: SequencePath,
+        session_maker: ExperimentSessionMaker,
+    ) -> bool:
         """Attempts to start running the sequence on the setup
 
         This method is not blocking.
 
         Args:
-            experiment_config: a yaml string representing an ExperimentConfig instance.
-            sequence_path: a path relative to experiment_config.data_path that specify where to store sequence related
-                data.
-
+            experiment_config_name: an identifier referring to the experiment
+            configuration in the experiment session.
+            sequence_path: a path identifying the sequence in the experiment session
+            session_maker: a session maker to create sessions to the experiment
         Returns:
-            True if the sequence was successfully started, False if a sequence is already running.
+            True if the sequence was successfully started, False if a sequence is
+            already running.
 
         """
         with self._lock:
@@ -49,7 +56,10 @@ class ExperimentManager:
             else:
                 self._waiting_to_interrupt.clear()
                 self._sequence_runner_thread = SequenceRunnerThread(
-                    experiment_config, sequence_path, self._waiting_to_interrupt
+                    experiment_config_name,
+                    sequence_path,
+                    session_maker,
+                    self._waiting_to_interrupt,
                 )
                 self._sequence_runner_thread.start()
                 return True

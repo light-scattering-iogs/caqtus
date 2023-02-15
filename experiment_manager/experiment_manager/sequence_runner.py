@@ -17,10 +17,10 @@ from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
 from device import RuntimeDevice
 from experiment.configuration import (
-    ExperimentConfig,
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
 )
+from experiment.session import ExperimentSessionMaker, ExperimentSession
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from remote_device_client import RemoteDeviceClientManager
 from sequence.configuration import (
@@ -32,6 +32,8 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
 )
+from sequence.runtime import SequencePath, Sequence
+from sql_model import State
 from units import Quantity, units
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
@@ -49,29 +51,29 @@ logger.setLevel("DEBUG")
 
 class SequenceRunnerThread(Thread):
     def __init__(
-        self, experiment_config: str, sequence_path: Path, waiting_to_interrupt: Event
+        self,
+        experiment_config_name: str,
+        sequence_path: SequencePath,
+        session_maker: ExperimentSessionMaker,
+        waiting_to_interrupt: Event,
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
-        self.experiment_config = ExperimentConfig.from_yaml(experiment_config)
-        self.sequence = Sequence(
-            self.experiment_config.data_path / sequence_path, read_only=False
-        )
-        self.sequence_config = self.sequence.config
-        self.stats = self.sequence.get_stats()
-        self.stats.number_completed_shots = 0
-        self.stats.state = SequenceState.PREPARING
-        self.sequence.set_stats(self.stats)
-
+        self._session = session_maker()
+        self._session_maker = session_maker
+        self._sequence = Sequence(sequence_path)
         self._waiting_to_interrupt = waiting_to_interrupt
+        self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
+        self._devices: dict[str, RuntimeDevice] = {}
 
-        self.remote_device_managers: dict[
-            str, RemoteDeviceClientManager
-        ] = create_remote_device_managers(self.experiment_config.device_servers)
-
-        self.devices: dict[str, RuntimeDevice] = {}
+        with self._session as session:
+            self._experiment_config = session.get_experiment_config(
+                experiment_config_name
+            )
+            self._sequence_config = self._sequence.get_config(session)
+            self._sequence.set_experiment_config(experiment_config_name, session)
+            self._sequence.set_state(State.PREPARING, session)
 
     def run(self):
-        # noinspection PyBroadException
         try:
             self.prepare()
             self.run_sequence()
@@ -79,25 +81,26 @@ class SequenceRunnerThread(Thread):
         except Exception:
             self.record_exception()
             logger.error("An error occurred while running the sequence", exc_info=True)
+            raise
         finally:
             self.shutdown()
 
     def prepare(self):
-        self.sequence.create_shot_folder()
-        self.experiment_config.save_yaml(self.sequence.experiment_config_path)
+        self._remote_device_managers = create_remote_device_managers(
+            self._experiment_config.device_servers
+        )
         self.connect_to_device_servers()
 
-        self.devices = self.create_devices()
+        self._devices = self.create_devices()
         self.start_devices()
 
-        self.stats.state = SequenceState.RUNNING
-        self.stats.start_time = datetime.datetime.now()
-        self.sequence.set_stats(self.stats)
+        with self._session as session:
+            self._sequence.set_state(State.RUNNING, session)
 
     def connect_to_device_servers(self):
         """Start the connection to the device servers"""
 
-        for server_name, server in self.remote_device_managers.items():
+        for server_name, server in self._remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
             server.connect()
             logger.info(f"Connection established to {server_name}")
@@ -107,34 +110,32 @@ class SequenceRunnerThread(Thread):
 
         devices = {}
         for name, parameters in get_devices_initialization_parameters(
-            self.experiment_config, self.sequence_config
+            self._experiment_config, self._sequence_config
         ).items():
-            server = self.remote_device_managers[parameters["server"]]
+            server = self._remote_device_managers[parameters["server"]]
             devices[name] = getattr(server, parameters["type"])(
                 **parameters["init_kwargs"]
             )
         return devices
 
     def start_devices(self):
-        for device in self.devices.values():
+        for device in self._devices.values():
             device.start()
 
     def finish(self):
-        self.stats.stop_time = datetime.datetime.now()
-        if self.is_waiting_to_interrupt():
-            self.stats.state = SequenceState.INTERRUPTED
-        else:
-            self.stats.state = SequenceState.FINISHED
-        self.sequence.set_stats(self.stats)
+        with self._session as session:
+            if self.is_waiting_to_interrupt():
+                self._sequence.set_state(State.INTERRUPTED, session)
+            else:
+                self._sequence.set_state(State.FINISHED, session)
 
     def record_exception(self):
-        self.stats.stop_time = datetime.datetime.now()
-        self.stats.state = SequenceState.CRASHED
-        self.sequence.set_stats(self.stats)
+        with self._session:
+            self._sequence.set_state(State.CRASHED, self._session)
 
     def shutdown(self):
         exceptions = []
-        for device in self.devices.values():
+        for device in self._devices.values():
             try:
                 device.shutdown()
             except Exception as error:
@@ -147,8 +148,8 @@ class SequenceRunnerThread(Thread):
         """Execute the sequence header and program"""
 
         with SequenceContext(variables=VariableNamespace()) as context:
-            self.run_step(self.experiment_config.header, context)
-            self.run_step(self.sequence_config.program, context)
+            self.run_step(self._experiment_config.header, context)
+            self.run_step(self._sequence_config.program, context)
 
     @singledispatchmethod
     def run_step(self, step: Step, context: SequenceContext):
@@ -232,7 +233,7 @@ class SequenceRunnerThread(Thread):
         t0 = datetime.datetime.now()
         try:
             data = self.do_shot(
-                self.sequence_config.shot_configurations[shot.name], context.variables
+                self._sequence_config.shot_configurations[shot.name], context.variables
             )
         except CameraTimeoutError as error:
             logger.warning(
@@ -243,23 +244,23 @@ class SequenceRunnerThread(Thread):
             for camera in self.get_cameras().values():
                 camera.reset_acquisition()
             data = self.do_shot(
-                self.sequence_config.shot_configurations[shot.name], context.variables
+                self._sequence_config.shot_configurations[shot.name], context.variables
             )
 
         old_shot_number = context.shot_numbers.get(shot.name, 0)
         context.shot_numbers[shot.name] = old_shot_number + 1
 
-        shot_file_path = (
-            self.sequence.shot_folder
-            / f"{shot.name}_{context.shot_numbers[shot.name]}.hdf5"
-        )
-
         t1 = datetime.datetime.now()
-        self.stats.number_completed_shots += 1
-        self.sequence.set_stats(self.stats)
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
         context.delayed_executor.submit(
-            save_shot, shot_file_path, t0, t1, deepcopy(context.variables), data
+            save_shot,
+            self._sequence,
+            shot.name,
+            t0,
+            t1,
+            deepcopy(context.variables),
+            data,
+            self._session_maker(),
         )
         logger.debug(context.variables)
 
@@ -273,7 +274,7 @@ class SequenceRunnerThread(Thread):
 
     def prepare_shot(self, shot: ShotConfiguration, context: VariableNamespace):
         device_parameters = compute_shot_parameters(
-            self.experiment_config, shot, context
+            self._experiment_config, shot, context
         )
         self.update_device_parameters(device_parameters)
 
@@ -283,7 +284,7 @@ class SequenceRunnerThread(Thread):
         with ThreadPoolExecutor() as update_executor:
             for device_name, parameters in device_parameters.items():
                 future_updates[device_name] = update_executor.submit(
-                    self.devices[device_name].update_parameters, **parameters
+                    self._devices[device_name].update_parameters, **parameters
                 )
 
         exceptions = []
@@ -326,9 +327,9 @@ class SequenceRunnerThread(Thread):
     def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
         return {
             device_name: device
-            for device_name, device in self.devices.items()
+            for device_name, device in self._devices.items()
             if isinstance(
-                self.experiment_config.get_device_config(device_name),
+                self._experiment_config.get_device_config(device_name),
                 NI6738SequencerConfiguration,
             )
         }
@@ -336,9 +337,9 @@ class SequenceRunnerThread(Thread):
     def get_spincore_sequencers(self) -> dict[str, "SpincorePulseBlaster"]:
         return {
             device_name: device
-            for device_name, device in self.devices.items()
+            for device_name, device in self._devices.items()
             if isinstance(
-                self.experiment_config.get_device_config(device_name),
+                self._experiment_config.get_device_config(device_name),
                 SpincoreSequencerConfiguration,
             )
         }
@@ -346,9 +347,9 @@ class SequenceRunnerThread(Thread):
     def get_cameras(self) -> dict[str, "CCamera"]:
         return {
             device_name: device
-            for device_name, device in self.devices.items()
+            for device_name, device in self._devices.items()
             if isinstance(
-                self.experiment_config.get_device_config(device_name),
+                self._experiment_config.get_device_config(device_name),
                 CameraConfiguration,
             )
         }
@@ -358,6 +359,22 @@ class SequenceRunnerThread(Thread):
 
 
 def save_shot(
+    sequence: Sequence,
+    shot_name: str,
+    start_time: datetime.datetime,
+    end_time: datetime.datetime,
+    parameters: VariableNamespace,
+    measures: dict[str, Any],
+    session: ExperimentSession,
+):
+    with session:
+        parameters = {name: value for name, value in parameters.items()}
+        sequence.create_shot(
+            shot_name, start_time, end_time, parameters, measures, session
+        )
+
+
+def _save_shot(
     file_path: Path,
     start_time: datetime.datetime,
     end_time: datetime.datetime,

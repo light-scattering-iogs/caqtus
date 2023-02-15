@@ -224,7 +224,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 if state == State.DRAFT:
                     start_sequence_action = QAction("Start")
                     menu.addAction(start_sequence_action)
-                    start_sequence_action.setEnabled(False)
                     # noinspection PyUnresolvedReferences
                     start_sequence_action.triggered.connect(
                         lambda _: self.start_sequence(index),
@@ -282,10 +281,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         menu.exec(self.sequences_view.mapToGlobal(position))
 
     def start_sequence(self, index: QModelIndex):
-        path = self.model.get_path(index)
-        if path:
+        sequence_path = self.model.get_path(index)
+        if sequence_path:
+            with self._experiment_session_maker() as session:
+                current_experiment_config = session.get_current_experiment_config_name()
             self.experiment_manager.start_sequence(
-                self.experiment_config.to_yaml(), path.relative_to(self.experiment_config.data_path)
+                current_experiment_config,
+                sequence_path,
+                self._experiment_session_maker
             )
 
     def create_new_folder(self, index: QModelIndex):

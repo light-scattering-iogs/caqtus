@@ -28,24 +28,10 @@ class Shot:
             f" index={self._index})"
         )
 
-    def add_measures(
-        self, data: dict[str, typing.Any], experiment_session: ExperimentSession
-    ):
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        shot_sql.add_data(data, DataType.MEASURE, session)
-
     def get_measures(self, experiment_session: ExperimentSession):
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.MEASURE, session)
-
-    def add_parameters(
-        self, parameters: dict[str, typing.Any], experiment_session: ExperimentSession
-    ):
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        shot_sql.add_data(parameters, DataType.PARAMETER, session)
 
     def get_parameters(self, experiment_session: ExperimentSession):
         session = experiment_session.get_sql_session()

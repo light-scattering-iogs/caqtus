@@ -1,12 +1,13 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration
-from sql_model import SequenceModel, ShotModel, State
+from sql_model import SequenceModel, ShotModel, State, DataType
+from sql_model.sequence_state import InvalidSequenceStateError
 from .path import SequencePath, PathNotFoundError
 from .shot import Shot
 
@@ -53,6 +54,18 @@ class Sequence:
         sequence.modification_date = datetime.now()
         session.flush()
 
+    def set_experiment_config(
+        self, experiment_config: str, experiment_session: ExperimentSession
+    ):
+        if self.get_state(experiment_session) != State.DRAFT:
+            raise RuntimeError(
+                "Cannot set experiment config for a sequence that is not in draft state"
+            )
+        session = experiment_session.get_sql_session()
+        sequence = self._query_model(session)
+        sequence.set_experiment_config(experiment_config)
+        session.flush()
+
     def set_shot_config(
         self,
         shot_name: str,
@@ -72,6 +85,12 @@ class Sequence:
         # noinspection PyTypeChecker
         return state
 
+    def set_state(self, new_state: State, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        sequence = self._query_model(session)
+        sequence.set_state(new_state)
+        session.flush()
+
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
         sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
@@ -82,12 +101,21 @@ class Sequence:
         name: str,
         start_time: datetime,
         end_time: datetime,
+        parameters: dict[str, Any],
+        measures: dict[str, Any],
         experiment_session: ExperimentSession,
     ) -> Shot:
+        if self.get_state(experiment_session) != State.RUNNING:
+            raise InvalidSequenceStateError(
+                f"Can't create a shot unless the sequence is running"
+            )
         session = experiment_session.get_sql_session()
         shot = ShotModel.create_shot(
             self._query_model(session), name, start_time, end_time, session
         )
+        shot.add_data(parameters, DataType.PARAMETER, session)
+        shot.add_data(measures, DataType.MEASURE, session)
+        session.flush()
         return Shot(self, shot.name, shot.index)
 
     @classmethod

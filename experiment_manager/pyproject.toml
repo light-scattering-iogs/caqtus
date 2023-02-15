@@ -20,6 +20,7 @@ variable = {path = "../common/variable", develop = true}
 sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
+experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

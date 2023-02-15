@@ -28,7 +28,7 @@ from .base import Base
 from .sequence_state import State
 
 if typing.TYPE_CHECKING:
-    from experiment.configuration import ExperimentConfig
+    pass
 
 
 # Need to activate Ltree extension in Postgresql
@@ -225,6 +225,7 @@ class SequenceModel(Base):
             stop_date=None,
             total_number_shots=sequence_config.compute_total_number_of_shots(),
             number_completed_shots=0,
+            experiment_config_name=experiment_config_name,
         )
         session.add(sequence_sql)
         session.flush()
@@ -232,6 +233,40 @@ class SequenceModel(Base):
 
     def get_state(self) -> State:
         return self.state
+
+    # noinspection PyTypeChecker
+    def set_state(self, new_state: State):
+        previous_state = self.get_state()
+        if not State.is_transition_allowed(previous_state, new_state):
+            raise ValueError(
+                f"Sequence state can't transition from {previous_state} to {new_state}"
+            )
+        if new_state == State.PREPARING:
+            if not self.experiment_config:
+                raise RuntimeError(
+                    "Cannot set state to PREPARING without having a set experiment"
+                    " config"
+                )
+            else:
+                self.state = State.PREPARING
+        elif new_state == State.CRASHED:
+            if self.start_date:
+                self.stop_date = datetime.now()
+            self.state = State.CRASHED
+        elif new_state == State.RUNNING:
+            self.start_date = datetime.now()
+            self.state = State.RUNNING
+        elif new_state == State.INTERRUPTED:
+            self.stop_date = datetime.now()
+            self.state = State.INTERRUPTED
+        elif new_state == State.FINISHED:
+            self.stop_date = datetime.now()
+            self.state = State.FINISHED
+        else:
+            raise NotImplementedError()
+
+    def set_experiment_config(self, experiment_config_name: str):
+        self.experiment_config_name = experiment_config_name
 
     def get_number_completed_shots(self) -> int:
         return self.number_completed_shots
@@ -282,7 +317,6 @@ class ShotModel(Base):
             end_time=end_time,
         )
         session.add(new_shot)
-        session.flush()
         return new_shot
 
     def add_data(self, data: dict[str, Any], type_: "DataType", session: Session):
