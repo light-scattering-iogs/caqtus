@@ -56,6 +56,11 @@ class ExperimentSession:
             session=self.get_sql_session(),
         )
 
+    def get_experiment_config(self, name: str) -> ExperimentConfig:
+        return ExperimentConfig.from_yaml(
+            ExperimentConfigModel.get_config(name, self.get_sql_session())
+        )
+
     def get_experiment_configs(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
     ) -> dict[str, ExperimentConfig]:
@@ -78,6 +83,12 @@ class ExperimentSession:
         return CurrentExperimentConfigModel.get_current_experiment_config_name(
             session=self.get_sql_session()
         )
+
+    def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
+        name = self.get_current_experiment_config_name()
+        if name is None:
+            return None
+        return self.get_experiment_configs()[name]
 
 
 class ExperimentSessionMaker:

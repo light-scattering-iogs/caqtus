@@ -12,7 +12,6 @@ from sqlalchemy import (
     func,
     Index,
 )
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -77,6 +76,14 @@ class ExperimentConfigModel(Base):
             result.name: result.experiment_config_yaml
             for result in session.scalars(query)
         }
+
+    @classmethod
+    def get_config(cls, name: str, session: Session) -> str:
+        query = select(cls).where(cls.name == name)
+        result = session.scalar(query)
+        if result is None:
+            raise ValueError(f"Config {name} does not exist")
+        return result.experiment_config_yaml
 
 
 class CurrentExperimentConfigModel(Base):
