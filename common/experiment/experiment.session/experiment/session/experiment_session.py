@@ -47,7 +47,10 @@ class ExperimentSession:
         return self._sql_session
 
     def add_experiment_config(
-        self, name: str, experiment_config: ExperimentConfig, comment: Optional[str]
+        self,
+        experiment_config: ExperimentConfig,
+        name: Optional[str] = None,
+        comment: Optional[str] = None,
     ):
         ExperimentConfigModel.add_config(
             name=name,
