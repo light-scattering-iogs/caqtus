@@ -126,10 +126,10 @@ class SequencePathModel(Base):
     creation_date: Mapped[datetime] = mapped_column()
     parent: Mapped[Optional["SequencePathModel"]] = relationship(
         primaryjoin=remote(path) == foreign(func.subpath(path, 0, -1)),
-        backref=backref("children", cascade="all, delete-orphan"),
+        backref=backref("children", cascade="all"),
     )
     sequence: Mapped[list["SequenceModel"]] = relationship(
-        cascade="all, delete"
+        cascade="all"
     )  # the list will always contain either 0 or 1 element
 
     __table_args__ = (Index("ix_nodes_path", path, postgresql_using="gist"),)
@@ -173,7 +173,7 @@ class SequenceModel(Base):
     )
     config: Mapped[SequenceConfigModel] = relationship(cascade="all")
 
-    experiment_config_name: Mapped[Optional[int]] = mapped_column(
+    experiment_config_name: Mapped[Optional[str]] = mapped_column(
         ForeignKey("experiment_config.name")
     )
     experiment_config: Mapped[Optional[ExperimentConfigModel]] = relationship(
@@ -262,14 +262,31 @@ class SequenceModel(Base):
         elif new_state == State.FINISHED:
             self.stop_date = datetime.now()
             self.state = State.FINISHED
+        elif new_state == State.DRAFT:
+            self.experiment_config_name = None
+            self.start_date = None
+            self.stop_date = None
+            self.number_completed_shots = 0
+            self.shots[:] = []
+            self.state = State.DRAFT
         else:
             raise NotImplementedError()
 
     def set_experiment_config(self, experiment_config_name: str):
+        # noinspection PyTypeChecker
         self.experiment_config_name = experiment_config_name
 
     def get_number_completed_shots(self) -> int:
         return self.number_completed_shots
+
+    def increment_number_completed_shots(self):
+        if self.total_number_shots is not None:
+            if self.number_completed_shots + 1 > self.total_number_shots:
+                raise RuntimeError(
+                    "Number of completed shots would be greater than the total number "
+                    "of shots"
+                )
+        self.number_completed_shots += 1
 
 
 class ShotModel(Base):

@@ -110,11 +110,13 @@ class Sequence:
                 f"Can't create a shot unless the sequence is running"
             )
         session = experiment_session.get_sql_session()
+        sequence = self._query_model(session)
         shot = ShotModel.create_shot(
-            self._query_model(session), name, start_time, end_time, session
+            sequence, name, start_time, end_time, session
         )
         shot.add_data(parameters, DataType.PARAMETER, session)
         shot.add_data(measures, DataType.MEASURE, session)
+        sequence.increment_number_completed_shots()
         session.flush()
         return Shot(self, shot.name, shot.index)
 

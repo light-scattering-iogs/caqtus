@@ -2,6 +2,7 @@ import datetime
 import io
 import logging
 import pprint
+import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import deepcopy
@@ -44,6 +45,13 @@ if typing.TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
     from camera.runtime import CCamera
     from spincore_sequencer.runtime import SpincorePulseBlaster
+
+# If MOCK_EXPERIMENT is set to True, the experiment will not be run on the real
+# hardware. It will not connect to the device servers but will still compute all
+# devices parameters if possible.
+# Parameters will be saved, but there will be no data acquisition.
+
+MOCK_EXPERIMENT = True
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -99,6 +107,8 @@ class SequenceRunnerThread(Thread):
 
     def connect_to_device_servers(self):
         """Start the connection to the device servers"""
+        if MOCK_EXPERIMENT:
+            return
 
         for server_name, server in self._remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
@@ -107,6 +117,9 @@ class SequenceRunnerThread(Thread):
 
     def create_devices(self) -> dict[str, RuntimeDevice]:
         """Instantiate the devices on their respective remote server"""
+
+        if MOCK_EXPERIMENT:
+            return {}
 
         devices = {}
         for name, parameters in get_devices_initialization_parameters(
@@ -247,13 +260,10 @@ class SequenceRunnerThread(Thread):
                 self._sequence_config.shot_configurations[shot.name], context.variables
             )
 
-        old_shot_number = context.shot_numbers.get(shot.name, 0)
-        context.shot_numbers[shot.name] = old_shot_number + 1
-
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
-        context.delayed_executor.submit(
-            save_shot,
+        # context.delayed_executor.submit(
+        save_shot(
             self._sequence,
             shot.name,
             t0,
@@ -279,6 +289,8 @@ class SequenceRunnerThread(Thread):
         self.update_device_parameters(device_parameters)
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
+        if MOCK_EXPERIMENT:
+            return
         future_updates: dict[str, Future] = {}
 
         with ThreadPoolExecutor() as update_executor:
@@ -302,6 +314,8 @@ class SequenceRunnerThread(Thread):
             )
 
     def run_shot(self):
+        if MOCK_EXPERIMENT:
+            return
         for ni6738_card in self.get_ni6738_cards().values():
             ni6738_card.run()
 
@@ -319,6 +333,9 @@ class SequenceRunnerThread(Thread):
                 raise exception
 
     def extract_data(self):
+        if MOCK_EXPERIMENT:
+            return {}
+
         data = {}
         for camera_name, camera in self.get_cameras().items():
             data[camera_name] = camera.read_all_pictures()

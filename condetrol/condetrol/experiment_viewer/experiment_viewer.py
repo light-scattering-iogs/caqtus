@@ -239,10 +239,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 else:
                     clear_sequence_action = QAction("Remove data")
                     menu.addAction(clear_sequence_action)
-                    clear_sequence_action.setEnabled(False)
-                    # clear_sequence_action.triggered.connect(
-                    #     partial(self.revert_to_draft, index)
-                    # )
+                    # noinspection PyUnresolvedReferences
+                    clear_sequence_action.triggered.connect(
+                        partial(self.revert_to_draft, index)
+                    )
 
                 duplicate_sequence_action = QAction("Duplicate")
                 menu.addAction(duplicate_sequence_action)
@@ -380,9 +380,15 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def revert_to_draft(self, index: QModelIndex):
         """Remove all data files from a sequence"""
-        if self.model.is_sequence_folder(index):
-            sequence = self.model.get_sequence(index)
-            if self.exec_revert_to_draft_message_box(sequence.relative_path):
+
+        if index.isValid():
+            item: "SequenceHierarchyItem" = index.internalPointer()
+            path = str(item.sequence_path)
+            message = (
+                f'You are about to revert the sequence "{path}" to draft.\n'
+                "All associated data will be irremediably lost."
+            )
+            if self.exec_confirmation_message_box(message):
                 self.model.revert_to_draft(index)
 
     def exec_confirmation_message_box(self, message: str) -> bool:

@@ -23,9 +23,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker):
-        self._session_maker = session_maker()
+        self._session = session_maker()
 
-        with self._session_maker as session:
+        with self._session as session:
             self._root = SequenceHierarchyItem(
                 SequencePath.root(),
                 children=_build_children(SequencePath.root(), session),
@@ -102,7 +102,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def get_sequence_stats(self, index: QModelIndex) -> Optional["SequenceStats"]:
         item: "SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
-            with self._session_maker as experiment_session:
+            with self._session as experiment_session:
                 session = experiment_session.get_sql_session()
                 # noinspection PyProtectedMember
                 sequence = item.sequence_path._query_model(session).get_sequence()
@@ -136,7 +136,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if parent_item.is_sequence:
             return
 
-        with self._session_maker as session:
+        with self._session as session:
             children = _build_children(
                 parent_item.sequence_path,
                 session,
@@ -148,7 +148,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
     def is_sequence(self, index: QModelIndex) -> bool:
         item: "SequenceHierarchyItem" = index.internalPointer()
-        with self._session_maker as session:
+        with self._session as session:
             # noinspection PyProtectedMember
             return item.sequence_path._query_model(
                 session.get_sql_session()
@@ -166,7 +166,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         children.append(
             SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
-        with self._session_maker as session:
+        with self._session as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 self.beginInsertRows(index, new_row, new_row)
@@ -196,7 +196,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         sequence_config = SequenceConfig(
             program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
         )
-        with self._session_maker as session:
+        with self._session as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
@@ -224,7 +224,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             row = index.row()
             new_children = list(parent_item.children)
             new_children.pop(row)
-            with self._session_maker as session:
+            with self._session as session:
                 item: "SequenceHierarchyItem" = index.internalPointer()
                 if (
                     item.is_folder()
@@ -243,6 +243,16 @@ class SequenceHierarchyModel(QAbstractItemModel):
         else:
             item: "SequenceHierarchyItem" = index.internalPointer()
             return item.sequence_path
+
+    def revert_to_draft(self, index: QModelIndex):
+        if not index.isValid():
+            return
+        item: "SequenceHierarchyItem" = index.internalPointer()
+        if item.is_sequence:
+            sequence = Sequence(item.sequence_path)
+            with self._session as session:
+                sequence.set_state(State.DRAFT, session)
+            self.dataChanged.emit(index, index)
 
     def fileIcon(self, index: QModelIndex) -> QIcon:
         if not index.isValid():
