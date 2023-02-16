@@ -295,7 +295,7 @@ class ShotModel(Base):
         UniqueConstraint("sequence_id", "name", "index", name="shot_identifier"),
     )
 
-    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
     sequence_id: Mapped[str] = mapped_column(ForeignKey("sequence.id"), index=True)
     sequence: Mapped["SequenceModel"] = relationship(back_populates="shots")
     name: Mapped[str] = mapped_column()
