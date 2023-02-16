@@ -2,7 +2,6 @@ import datetime
 import io
 import logging
 import pprint
-import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import deepcopy
@@ -13,6 +12,7 @@ from typing import Any
 
 import h5py
 import numpy
+import numpy as np
 
 from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
@@ -334,7 +334,7 @@ class SequenceRunnerThread(Thread):
 
     def extract_data(self):
         if MOCK_EXPERIMENT:
-            return {}
+            return {"image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)}
 
         data = {}
         for camera_name, camera in self.get_cameras().items():
