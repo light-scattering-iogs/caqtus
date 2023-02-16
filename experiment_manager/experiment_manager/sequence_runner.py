@@ -46,7 +46,7 @@ if typing.TYPE_CHECKING:
     from camera.runtime import CCamera
     from spincore_sequencer.runtime import SpincorePulseBlaster
 
-# If MOCK_EXPERIMENT is set to True, the experiment will not be run on the real
+# If MOCK_EXPERIMENT is set to True, the experiment will not run the real
 # hardware. It will not connect to the device servers but will still compute all
 # devices parameters if possible.
 # Parameters will be saved, but there will be no data acquisition.

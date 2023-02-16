@@ -51,6 +51,12 @@ class ExperimentConfig(SettingsModel):
         ),
     )
 
+    @classmethod
+    def from_file(cls, path):
+        with open(path, "r") as file:
+            yaml = file.read()
+        return cls.from_yaml(yaml)
+
     @validator("device_configurations")
     def validate_device_configurations(
         cls, device_configurations: list[DeviceConfiguration]
