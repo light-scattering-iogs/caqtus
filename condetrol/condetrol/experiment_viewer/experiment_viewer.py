@@ -232,10 +232,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     is_deletable = False
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
-                    interrupt_sequence_action.setEnabled(False)
-                    # interrupt_sequence_action.triggered.connect(
-                    #     lambda _: self.experiment_manager.interrupt_sequence()
-                    # )
+                    interrupt_sequence_action.triggered.connect(
+                        lambda _: self.experiment_manager.interrupt_sequence()
+                    )
                 else:
                     clear_sequence_action = QAction("Remove data")
                     menu.addAction(clear_sequence_action)
@@ -306,6 +305,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
         if ok and text:
             self.model.create_new_folder(index, text)
+            self.sequences_view.update()
 
     def create_new_sequence(self, index: QModelIndex):
         if index.isValid():
@@ -322,6 +322,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
         if ok and text:
             self.model.create_new_sequence(index, text)
+            self.sequences_view.update()
 
     def delete(self, index: QModelIndex):
         if index.isValid():
@@ -333,6 +334,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             )
             if self.exec_confirmation_message_box(message):
                 self.model.delete(index)
+                self.sequences_view.update()
 
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
@@ -390,6 +392,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             )
             if self.exec_confirmation_message_box(message):
                 self.model.revert_to_draft(index)
+                self.sequences_view.update()
 
     def exec_confirmation_message_box(self, message: str) -> bool:
         """Show a popup box to ask if the sequence data should be erased"""
