@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional, Any, TypedDict
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -111,9 +111,7 @@ class Sequence:
             )
         session = experiment_session.get_sql_session()
         sequence = self._query_model(session)
-        shot = ShotModel.create_shot(
-            sequence, name, start_time, end_time, session
-        )
+        shot = ShotModel.create_shot(sequence, name, start_time, end_time, session)
         shot.add_data(parameters, DataType.PARAMETER, session)
         shot.add_data(measures, DataType.MEASURE, session)
         sequence.increment_number_completed_shots()
@@ -166,6 +164,28 @@ class Sequence:
             raise SequenceNotFoundError(
                 f"Could not find sequence '{self._path}' in database"
             )
+
+    def get_stats(
+        self, experiment_session: ExperimentSession
+    ) -> "SequenceStats":
+        session = experiment_session.get_sql_session()
+        # noinspection PyProtectedMember
+        sequence = self._path._query_model(session).get_sequence()
+        return SequenceStats(
+            state=sequence.get_state(),
+            total_number_shots=sequence.total_number_shots,
+            number_completed_shots=sequence.get_number_completed_shots(),
+            start_date=sequence.start_date,
+            stop_date=sequence.stop_date,
+        )
+
+
+class SequenceStats(TypedDict):
+    state: State
+    total_number_shots: Optional[int]
+    number_completed_shots: int
+    start_date: Optional[datetime]
+    stop_date: Optional[datetime]
 
 
 class SequenceNotFoundError(Exception):

@@ -1,5 +1,5 @@
 import logging
-from typing import TypedDict, Optional
+from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from PyQt6.QtGui import QIcon
@@ -8,8 +8,7 @@ from sqlalchemy import func
 
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
-from sequence.runtime import SequencePath, Sequence
-from sequence.runtime import State
+from sequence.runtime import SequencePath, Sequence, State, SequenceStats
 from sql_model import SequencePathModel
 
 logger = logging.getLogger(__name__)
@@ -103,14 +102,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         item: "SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
             with self._session as experiment_session:
-                session = experiment_session.get_sql_session()
-                # noinspection PyProtectedMember
-                sequence = item.sequence_path._query_model(session).get_sequence()
-                return SequenceStats(
-                    state=sequence.get_state(),
-                    total_number_shots=sequence.total_number_shots,
-                    number_completed_shots=sequence.get_number_completed_shots(),
-                )
+                return Sequence(item.sequence_path).get_stats(experiment_session)
         else:
             return None
 
@@ -262,12 +254,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return QIcon(":/icons/sequence")
         else:
             return None
-
-
-class SequenceStats(TypedDict):
-    state: State
-    total_number_shots: Optional[int]
-    number_completed_shots: int
 
 
 class SequenceHierarchyItem(NodeMixin):
