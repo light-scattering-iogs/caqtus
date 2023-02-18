@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
@@ -63,7 +64,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return len(parent.internalPointer().children)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
-        return 3
+        return 4
 
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
@@ -81,6 +82,43 @@ class SequenceHierarchyModel(QAbstractItemModel):
                     if (total := stats["total_number_shots"]) is None:
                         total = "--"
                     return f"{stats['number_completed_shots']}/{total}"
+            elif index.column() == 3:
+                stats = self.get_sequence_stats(index)
+                if stats:
+                    if (
+                        stats["state"] == State.DRAFT
+                        or stats["state"] == State.PREPARING
+                    ):
+                        return f"--/--"
+                    elif stats["state"] == State.RUNNING:
+                        running_duration = datetime.now() - stats["start_date"]
+                        if (
+                            stats["total_number_shots"] is None
+                            or stats["number_completed_shots"] == 0
+                        ):
+                            remaining = "--"
+                        else:
+                            remaining = (
+                                running_duration
+                                / stats["number_completed_shots"]
+                                * (
+                                    stats["total_number_shots"]
+                                    - stats["number_completed_shots"]
+                                )
+                            )
+                        if isinstance(remaining, timedelta):
+                            total = remaining + running_duration
+                            remaining = _format_seconds(total.total_seconds())
+                        running_duration = _format_seconds(
+                            running_duration.total_seconds()
+                        )
+                        return f"{running_duration}/{remaining}"
+                    elif stats["state"] == State.FINISHED:
+                        total_duration = stats["stop_date"] - stats["start_date"]
+                        total_duration = _format_seconds(
+                            total_duration.total_seconds()
+                        )
+                        return total_duration
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if (
@@ -93,6 +131,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 return "Status"
             elif section == 2:
                 return "Shots"
+            elif section == 3:
+                return "Duration"
 
     @staticmethod
     def get_sequence_name(item: "SequenceHierarchyItem"):
@@ -316,3 +356,29 @@ def _build_children(
             )
         )
     return children_items
+
+
+def _format_seconds(seconds: float) -> str:
+    """Format seconds into a string.
+
+    Args:
+        seconds: Seconds to format.
+
+    Returns:
+        Formatted string.
+    """
+
+    seconds = int(seconds)
+    result = [f"{seconds % 60}s"]
+
+    minutes = seconds // 60
+    if minutes > 0:
+        result.append(f"{minutes % 60}m")
+        hours = minutes // 60
+        if hours > 0:
+            result.append(f"{hours % 24}h")
+            days = hours // 24
+            if days > 0:
+                result.append(f"{days}d")
+
+    return ":".join(reversed(result))
