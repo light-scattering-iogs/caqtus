@@ -56,6 +56,9 @@ class LaneCellDelegate(QStyledItemDelegate):
         else:
             super().paint(painter, option, index)
 
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.experiment_config = new_config
+
 
 class ShotWidget(QWidget):
     """A widget that shows the timeline of a shot
@@ -82,7 +85,10 @@ class ShotWidget(QWidget):
         )
 
         self.layout = QVBoxLayout()
-        self.layout.addWidget(SwimLaneWidget(self.model, sequence, session_maker))
+        self.swim_lane_widget = SwimLaneWidget(
+            self.model, self._sequence, session_maker
+        )
+        self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
@@ -423,3 +429,6 @@ class SwimLaneWidget(QWidget):
                     )
 
         menu.exec(self.lanes_view.viewport().mapToGlobal(position))
+
+    def update_experiment_config(self, experiment_config):
+        self.lanes_view.setItemDelegate(LaneCellDelegate(experiment_config))

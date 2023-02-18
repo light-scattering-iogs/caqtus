@@ -27,10 +27,6 @@ logger.setLevel("DEBUG")
 
 
 class ExperimentConfig(SettingsModel):
-    database_url: PostgresDsn = Field(
-        default="postgresql+psycopg2://user:password@host:port/database",
-        description="The url to the database where the experiment data will be stored.",
-    )
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
         description=(

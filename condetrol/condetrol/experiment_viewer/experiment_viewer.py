@@ -1,4 +1,3 @@
-import datetime
 import logging
 import shutil
 import time
@@ -7,15 +6,12 @@ from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
 from pathlib import Path
-from threading import Thread
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt6.QtGui import (
-    QIcon,
     QColor,
     QPalette,
-    QFileSystemModel,
     QAction,
     QCloseEvent,
     QPainter,
@@ -35,14 +31,8 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment.configuration import ExperimentConfig, get_config_path
-from experiment_manager import ExperimentManager
 from experiment.session import ExperimentSessionMaker
-from sequence.configuration import (
-    ShotConfiguration,
-    SequenceConfig,
-    SequenceSteps,
-    ExecuteShot,
-)
+from experiment_manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
@@ -134,10 +124,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     sequence, opens it in a dockable widget.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, database_url: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
+        self._experiment_session_maker = ExperimentSessionMaker(database_url)
+        with self._experiment_session_maker() as session:
+            current_experiment_config = session.get_current_experiment_config()
+            if current_experiment_config is None:
+                raise ValueError("No experiment config was defined")
+            self._experiment_config = current_experiment_config
 
         self.setupUi(self)
 
@@ -148,11 +144,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
 
         self.action_edit_config.triggered.connect(self.edit_config)
-        with open(get_config_path(), "r") as file:
-            self.experiment_config = ExperimentConfig.from_yaml(file.read())
-        self._experiment_session_maker = ExperimentSessionMaker(
-            self.experiment_config.database_url
-        )
+
         self.model = SequenceHierarchyModel(
             session_maker=self._experiment_session_maker
         )
@@ -202,7 +194,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
                 Sequence(path),
-                deepcopy(self.experiment_config),
+                deepcopy(self._experiment_config),
                 self._experiment_session_maker,
             )
             self.dock_widget.addDockWidget(
@@ -232,10 +224,15 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     is_deletable = False
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
+                    # noinspection PyUnresolvedReferences
                     interrupt_sequence_action.triggered.connect(
                         lambda _: self.experiment_manager.interrupt_sequence()
                     )
-                else:
+                elif (
+                    state == State.FINISHED
+                    or state == State.INTERRUPTED
+                    or state == State.CRASHED
+                ):
                     clear_sequence_action = QAction("Remove data")
                     menu.addAction(clear_sequence_action)
                     # noinspection PyUnresolvedReferences
@@ -285,9 +282,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             with self._experiment_session_maker() as session:
                 current_experiment_config = session.get_current_experiment_config_name()
             self.experiment_manager.start_sequence(
-                current_experiment_config,
-                sequence_path,
-                self._experiment_session_maker
+                current_experiment_config, sequence_path, self._experiment_session_maker
             )
 
     def create_new_folder(self, index: QModelIndex):
@@ -339,20 +334,21 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
 
-        editor = ConfigEditor(self.experiment_config)
+        editor = ConfigEditor(self._experiment_config)
         editor.exec()
-        self.experiment_config = editor.get_config()
-        save_experiment_config(self.experiment_config, get_config_path())
-        self.update_experiment_config(self.experiment_config)
+        new_experiment_config = editor.get_config()
+        if self._experiment_config != new_experiment_config:
+            with self._experiment_session_maker() as session:
+                new_name = session.add_experiment_config(new_experiment_config)
+                session.set_current_experiment_config(new_name)
+            self._experiment_config = new_experiment_config
+            logger.info(f"Experiment config updated to {new_name}")
+        self.update_experiment_config(self._experiment_config)
 
     def update_experiment_config(self, new_config: ExperimentConfig):
-        self.model.setRootPath(str(self.experiment_config.data_path))
-        self.sequences_view.setRootIndex(
-            self.model.index(str(self.experiment_config.data_path))
-        )
         for sequence_widget in self.findChildren(SequenceWidget):
             sequence_widget: SequenceWidget
-            logger.debug(sequence_widget.update_experiment_config(new_config))
+            sequence_widget.update_experiment_config(new_config)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
@@ -412,183 +408,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             return True
 
 
-class SequenceViewerModel(QFileSystemModel):
-    """Model for sequence explorer"""
-
-    # TODO: remove this class
-
-    def __init__(self, data_root: Path, *args, **kwargs):
-        self.sequence_watcher = SequenceFolderWatcher(data_root)
-        logger.debug(self.sequence_watcher.data_folder)
-        super().__init__(*args, **kwargs)
-        self.setRootPath(str(data_root))
-
-    def hasChildren(self, parent: QModelIndex = ...) -> bool:
-        if self.is_sequence_folder(parent):
-            return False
-        return super().hasChildren(parent)
-
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        if self.is_sequence_folder(parent):
-            return 0
-        return super().rowCount(parent)
-
-    def columnCount(self, parent: QModelIndex = ...) -> int:
-        return super().columnCount(parent) + 2
-
-    def filePath(self, index: QModelIndex) -> str:
-        path = super().filePath(index)
-        return normalize_path(path)
-
-    def data(self, index: QModelIndex, role: int = ...):
-        if self.is_sequence_folder(index):
-            sequence = self.get_sequence(index)
-            if index.column() == 4 and role == Qt.ItemDataRole.DisplayRole:
-                return sequence
-            elif index.column() == 5 and role == Qt.ItemDataRole.DisplayRole:
-                if (
-                    sequence.state == SequenceState.DRAFT
-                    or sequence.state == SequenceState.UNTRUSTED
-                    or sequence.state == SequenceState.PREPARING
-                ):
-                    return ""
-                else:
-                    duration = datetime.timedelta(
-                        seconds=round(sequence.duration.total_seconds())
-                    )
-                    if sequence.state == SequenceState.FINISHED:
-                        return f"{duration}"
-                    else:
-                        if sequence.remaining_duration == "unknown":
-                            return ""
-                        remaining_duration = datetime.timedelta(
-                            seconds=round(sequence.remaining_duration.total_seconds())
-                        )
-                        return f"{duration}/{remaining_duration}"
-            elif role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
-                return QIcon(":/icons/sequence")
-        return super().data(index, role)
-
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
-        if (
-            role == Qt.ItemDataRole.DisplayRole
-            and orientation == Qt.Orientation.Horizontal
-        ):
-            if section == 4:
-                return "Status"
-            elif section == 5:
-                return "Duration"
-        return super().headerData(section, orientation, role)
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        flags = super().flags(index)
-        if index.isValid():
-            flags |= Qt.ItemFlag.ItemIsDragEnabled
-            file_info = self.fileInfo(index)
-            if file_info.isDir() and not self.is_sequence_folder(index):
-                flags |= Qt.ItemFlag.ItemIsDropEnabled
-        return flags
-
-    def is_sequence_folder(self, parent: QModelIndex) -> bool:
-        path = Path(self.filePath(parent))
-        return self.sequence_watcher.is_sequence_folder(path)
-
-    def fileIcon(self, index: QModelIndex) -> QIcon:
-        if self.is_sequence_folder(index):
-            return QIcon(":/icons/sequence")
-        else:
-            return super().fileIcon(index)
-
-    def move_to_trash(self, index: QModelIndex):
-        path = Path(self.filePath(index))
-        Thread(target=lambda: shutil.rmtree(path)).start()
-
-    def create_new_sequence(self, index: QModelIndex):
-        path = Path(self.rootPath()) / self.fileName(index)
-        text, ok = QInputDialog().getText(
-            None,
-            f"New sequence in {path}...",
-            "Sequence name:",
-            QLineEdit.EchoMode.Normal,
-            "new_sequence",
-        )
-        if ok and text:
-            new_sequence_path = path / text
-            # noinspection PyBroadException
-            try:
-                config = SequenceConfig(
-                    program=SequenceSteps(children=[ExecuteShot(name="shot")]),
-                    shot_configurations={"shot": ShotConfiguration()},
-                )
-                Sequence.create_new_sequence(new_sequence_path, config)
-            except Exception:
-                logger.error(
-                    f"Could not create new sequence '{new_sequence_path}'",
-                    exc_info=True,
-                )
-
-    def create_new_folder(self, index: QModelIndex):
-        path = Path(self.rootPath()) / self.fileName(index)
-        text, ok = QInputDialog().getText(
-            None,
-            f"New folder in {path}...",
-            "Folder name:",
-            QLineEdit.EchoMode.Normal,
-            "new_folder",
-        )
-        if ok and text:
-            new_folder_path = path / text
-            try:
-                new_folder_path.mkdir(parents=True)
-            except:
-                logger.error(
-                    f"Could not create new folder '{new_folder_path}'",
-                    exc_info=True,
-                )
-
-    def duplicate_sequence(self, index: QModelIndex):
-        path = Path(self.filePath(index)).relative_to(self.rootPath())
-        text, ok = QInputDialog().getText(
-            None,
-            f"Duplicate sequence {path}",
-            "New sequence name:",
-            QLineEdit.EchoMode.Normal,
-            str(path),
-        )
-        if ok and text:
-            new_sequence_path = Path(self.rootPath()) / text
-            # noinspection PyBroadException
-            try:
-                src_sequence = Sequence(Path(self.filePath(index)))
-                src_config = src_sequence.config
-                Sequence.create_new_sequence(new_sequence_path, src_config)
-            except Exception:
-                logger.error(
-                    f"Could not create new sequence '{new_sequence_path}'",
-                    exc_info=True,
-                )
-
-    def revert_to_draft(self, index: QModelIndex):
-        """Remove all data files from a sequence"""
-        if self.is_sequence_folder(index):
-            sequence = self.get_sequence(index)
-            Thread(target=sequence.revert_to_draft).start()
-
-    def get_sequence(self, index: QModelIndex) -> "Sequence":
-        path = Path(self.filePath(index))
-        if self.is_sequence_folder(index):
-            sequence = self.sequence_watcher.get_sequence(path, read_only=False)
-            return sequence
-        else:
-            raise RuntimeError(f"Folder {path} is not a sequence")
-
-
 class SequenceDelegate(QStyledItemDelegate):
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         # noinspection PyTypeChecker
-        model: SequenceViewerModel = index.model()
+        model = index.model()
         sequence_stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
         if sequence_stats:
             opt = QStyleOptionProgressBar()

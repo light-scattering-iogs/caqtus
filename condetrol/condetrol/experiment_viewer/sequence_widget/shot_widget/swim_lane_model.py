@@ -434,3 +434,8 @@ class SwimLaneModel(QAbstractTableModel):
         self.shot_config = new_config
         self.endResetModel()
         self.layoutChanged.emit()
+
+    def update_experiment_config(self, new_config: ExperimentConfig):
+        self.beginResetModel()
+        self.experiment_config = new_config
+        self.endResetModel()

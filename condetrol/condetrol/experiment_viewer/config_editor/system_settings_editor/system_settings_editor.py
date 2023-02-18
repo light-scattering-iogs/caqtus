@@ -1,9 +1,8 @@
 from typing import Optional
 
-from PyQt6.QtWidgets import QFormLayout, QWidget, QLineEdit
+from PyQt6.QtWidgets import QFormLayout, QWidget
 
-from condetrol.widgets import SaveFileWidget
-from experiment.configuration import ExperimentConfig, get_config_path
+from experiment.configuration import ExperimentConfig
 from ..config_settings_editor import ConfigSettingsEditor
 
 
@@ -15,7 +14,6 @@ class SystemSettingsEditor(ConfigSettingsEditor):
     """
 
     def get_experiment_config(self) -> ExperimentConfig:
-        self.config.database_url = self.database_url_widget.text()
         return self.config
 
     def __init__(
@@ -30,12 +28,3 @@ class SystemSettingsEditor(ConfigSettingsEditor):
         self.setLayout(self.layout)
 
         self.config = experiment_config
-
-        self.config_path_widget = SaveFileWidget(
-            get_config_path(), "Edit config path...", "config (*.yaml)"
-        )
-        self.layout.insertRow(0, "Config path", self.config_path_widget)
-        self.config_path_widget.setEnabled(False)
-
-        self.database_url_widget = QLineEdit(str(self.config.database_url))
-        self.layout.insertRow(1, "Database url", self.database_url_widget)

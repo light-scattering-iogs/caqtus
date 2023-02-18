@@ -1,3 +1,5 @@
+import logging
+import re
 from datetime import datetime
 from threading import Lock
 from typing import Optional
@@ -7,6 +9,9 @@ import sqlalchemy.orm
 
 from experiment.configuration import ExperimentConfig
 from sql_model.model import ExperimentConfigModel, CurrentExperimentConfigModel
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ExperimentSessionNotActiveError(RuntimeError):
@@ -51,13 +56,26 @@ class ExperimentSession:
         experiment_config: ExperimentConfig,
         name: Optional[str] = None,
         comment: Optional[str] = None,
-    ):
+    ) -> str:
+        if name is None:
+            name = self._get_new_experiment_config_name()
         ExperimentConfigModel.add_config(
             name=name,
             yaml=experiment_config.to_yaml(),
             comment=comment,
             session=self.get_sql_session(),
         )
+        return name
+
+    def _get_new_experiment_config_name(self) -> str:
+        session = self.get_sql_session()
+        query_names = session.query(ExperimentConfigModel.name)
+        numbers = []
+        pattern = re.compile("config_(\\d+)")
+        for name in session.scalars(query_names):
+            if match := pattern.match(name):
+                numbers.append(int(match.group(1)))
+        return f"config_{_find_first_unused_number(numbers)}"
 
     def get_experiment_config(self, name: str) -> ExperimentConfig:
         return ExperimentConfig.from_yaml(
@@ -92,6 +110,13 @@ class ExperimentSession:
         if name is None:
             return None
         return self.get_experiment_configs()[name]
+
+
+def _find_first_unused_number(numbers: list[int]) -> int:
+    for index, value in enumerate(sorted(numbers)):
+        if index != value:
+            return index
+    return len(numbers)
 
 
 class ExperimentSessionMaker:

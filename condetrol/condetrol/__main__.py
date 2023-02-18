@@ -30,8 +30,13 @@ class ExperimentProcessManager(BaseManager):
 ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
+DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@localhost/test_database"
+
 if __name__ == "__main__":
-    os.environ["QT_QUICK_CONTROLS_CONF"] = "C:\\Users\\Damien Bloch\\Desktop\\caqtus_repo\\condetrol\\qtquickcontrols2.conf"
+    os.environ["QT_QUICK_CONTROLS_CONF"] = (
+        "C:\\Users\\Damien"
+        " Bloch\\Desktop\\caqtus_repo\\condetrol\\qtquickcontrols2.conf"
+    )
     m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
     m.start()
     sys.excepthook = except_hook
@@ -45,7 +50,7 @@ if __name__ == "__main__":
         logger.error("Could not load font jetbrains-mono")
     else:
         families = QFontDatabase.applicationFontFamilies(id)
-    experiment_viewer = ExperimentViewer()
+    experiment_viewer = ExperimentViewer(DATABASE_URL)
     experiment_viewer.show()
     try:
         app.exec()
