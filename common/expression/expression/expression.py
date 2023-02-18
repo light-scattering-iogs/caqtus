@@ -159,6 +159,12 @@ class Expression(YAMLSerializable):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(body=loader.construct_scalar(node))
 
+    def __eq__(self, other):
+        if isinstance(other, Expression):
+            return self.body == other.body
+        else:
+            return False
+
 
 def add_implicit_multiplication(source: str) -> str:
     """This adds a multiplication symbol where it would be understood as

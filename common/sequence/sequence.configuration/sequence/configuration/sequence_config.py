@@ -54,6 +54,11 @@ class SequenceSteps(Step, YAMLSerializable):
             for pre, _, node in RenderTree(self)
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, SequenceSteps):
+            return False
+        return self.children == other.children
+
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
@@ -83,6 +88,11 @@ class VariableDeclaration(Step, YAMLSerializable):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         return cls(**loader.construct_mapping(node, deep=True))
+
+    def __eq__(self, other):
+        if not isinstance(other, VariableDeclaration):
+            return False
+        return self.name == other.name and self.expression == other.expression
 
 
 class LinspaceLoop(Step, YAMLSerializable):
@@ -124,6 +134,17 @@ class LinspaceLoop(Step, YAMLSerializable):
         return (
             f"For {self.name} = {self.start.body} to {self.stop.body} with"
             f" {self.num} steps"
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, LinspaceLoop):
+            return False
+        return (
+            self.name == other.name
+            and self.start == other.start
+            and self.stop == other.stop
+            and self.num == other.num
+            and self.children == other.children
         )
 
 
@@ -168,6 +189,17 @@ class ArangeLoop(Step, YAMLSerializable):
             f" {self.step.body} spacing"
         )
 
+    def __eq__(self, other):
+        if not isinstance(other, ArangeLoop):
+            return False
+        return (
+            self.name == other.name
+            and self.start == other.start
+            and self.stop == other.stop
+            and self.step == other.step
+            and self.children == other.children
+        )
+
 
 class ExecuteShot(Step, YAMLSerializable):
     def __init__(self, name: str, parent: Optional[Step] = None):
@@ -187,6 +219,11 @@ class ExecuteShot(Step, YAMLSerializable):
 
     def __str__(self):
         return f"Do {self.name}"
+
+    def __eq__(self, other):
+        if not isinstance(other, ExecuteShot):
+            return False
+        return self.name == other.name
 
 
 class SequenceConfig(SettingsModel):
