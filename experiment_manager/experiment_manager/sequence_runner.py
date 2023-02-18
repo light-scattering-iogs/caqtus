@@ -2,6 +2,7 @@ import datetime
 import io
 import logging
 import pprint
+import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import deepcopy
@@ -51,7 +52,7 @@ if typing.TYPE_CHECKING:
 # devices parameters if possible.
 # Parameters will be saved, but there will be no data acquisition.
 
-MOCK_EXPERIMENT = False
+MOCK_EXPERIMENT = True
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -262,15 +263,19 @@ class SequenceRunnerThread(Thread):
 
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
-        # context.delayed_executor.submit(
-        save_shot(
-            self._sequence,
-            shot.name,
-            t0,
-            t1,
-            deepcopy(context.variables),
-            data,
-            self._session_maker(),
+
+        # Beware, if a shot takes less than a few 10 ms, new shots might run before the
+        # previous ones have been saved.
+        context.delayed_executor.submit(
+            lambda: save_shot(
+                self._sequence,
+                shot.name,
+                t0,
+                t1,
+                deepcopy(context.variables),
+                data,
+                self._session_maker(),
+            )
         )
         logger.debug(context.variables)
 
@@ -315,6 +320,7 @@ class SequenceRunnerThread(Thread):
 
     def run_shot(self):
         if MOCK_EXPERIMENT:
+            time.sleep(0.5)
             return
         for ni6738_card in self.get_ni6738_cards().values():
             ni6738_card.run()
@@ -334,7 +340,9 @@ class SequenceRunnerThread(Thread):
 
     def extract_data(self):
         if MOCK_EXPERIMENT:
-            return {"image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)}
+            return {
+                "image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)
+            }
 
         data = {}
         for camera_name, camera in self.get_cameras().items():
