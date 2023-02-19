@@ -12,7 +12,13 @@ logger.setLevel("DEBUG")
 
 
 class AnalogUnitsMapping(SettingsModel, ABC):
-    """Abstract class for a mapping between some input quantity to an output quantity"""
+    """Abstract class for a mapping between some input quantity to an output quantity
+
+    Warnings:
+        The notion of input/output units might be confusing. It means that the convert
+        method takes input argument in input units and outputs a quantity in output
+        units.
+    """
 
     @abstractmethod
     def convert(self, input_: Quantity) -> Quantity:
@@ -25,6 +31,23 @@ class AnalogUnitsMapping(SettingsModel, ABC):
     @abstractmethod
     def get_output_units(self) -> str:
         ...
+
+    def format_units(self) -> str:
+        """Format the units of the mapping as a string"""
+        input_units = self.get_input_units()
+        if input_units == "":
+            input_units = "[]"
+        elif "/" in input_units:
+            input_units = f"[{input_units}]"
+
+        output_units = self.get_output_units()
+        if output_units == "":
+            output_units = "[]"
+        elif "/" in output_units:
+            output_units = f"[{output_units}]"
+
+        return f"{input_units}/{output_units}"
+
 
 
 class CalibratedUnitsMapping(AnalogUnitsMapping):
