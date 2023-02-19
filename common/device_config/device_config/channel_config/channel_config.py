@@ -29,6 +29,11 @@ class ChannelSpecialPurpose(SettingsModel):
     def unused(cls):
         return cls(purpose="Unused")
 
+    @property
+    @classmethod
+    def UNUSED(cls):
+        return "Unused"
+
 
 class ChannelConfiguration(SettingsModel, ABC):
     # noinspection PyPropertyDefinition
