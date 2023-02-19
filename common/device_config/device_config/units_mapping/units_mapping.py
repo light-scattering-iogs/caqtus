@@ -49,7 +49,6 @@ class AnalogUnitsMapping(SettingsModel, ABC):
         return f"{input_units}/{output_units}"
 
 
-
 class CalibratedUnitsMapping(AnalogUnitsMapping):
     """Convert between input and output quantities by interpolating a set of measured points
 

@@ -17,6 +17,7 @@ sequence-configuration = {path = "../common/sequence/sequence.configuration", de
 sqlalchemy = ">=2.0"
 anytree = "^2.8.0"
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
+pyqt6-charts = "^6.4.0"
 
 
 [tool.poetry.dev-dependencies]
