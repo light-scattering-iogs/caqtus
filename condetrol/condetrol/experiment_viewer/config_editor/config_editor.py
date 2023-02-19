@@ -21,6 +21,7 @@ from .config_settings_editor import (
     NotImplementedDeviceConfigEditor,
 )
 from .devices_editor import DevicesEditor
+from .ni6738_config_editor import NI6738ConfigEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
@@ -99,6 +100,7 @@ class ConfigEditor(QDialog, Ui_config_editor):
         type_to_widget = {
             "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor,
             "SpincorePulseBlaster": SpincoreConfigEditor,
+            "NI6738AnalogCard": NI6738ConfigEditor,
         }
 
         device_type = self.config.get_device_config(device_name).get_device_type()
