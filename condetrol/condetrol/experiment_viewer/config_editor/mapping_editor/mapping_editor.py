@@ -1,7 +1,7 @@
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import QHBoxLayout, QDialog
+from PyQt6.QtWidgets import QHBoxLayout, QDialog, QTableView
 
 from device_config.units_mapping import CalibratedUnitsMapping
 
@@ -13,7 +13,7 @@ class CalibratedMappingEditor(QDialog):
     interpolation between the points.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, input_label: str, output_label: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.setSizeGripEnabled(True)
@@ -21,6 +21,12 @@ class CalibratedMappingEditor(QDialog):
         self.resize(400, 300)
 
         self.layout = QHBoxLayout()
+
+        self.values_view = QTableView()
+        self.model = CalibratedUnitMappingModel(input_label, output_label)
+        self.values_view.setModel(self.model)
+        self.layout.addWidget(self.values_view, 0)
+
         self.series = QLineSeries()
 
         self.axis_x = QValueAxis()
@@ -40,13 +46,52 @@ class CalibratedMappingEditor(QDialog):
 
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.layout.addWidget(self.chart_view)
+        self.layout.addWidget(self.chart_view, 1)
+
         self.setLayout(self.layout)
 
     def set_unit_mapping(self, mapping: CalibratedUnitsMapping):
+        self.model.set_mapping(mapping)
+        self.values_view.resizeColumnsToContents()
         self.series.clear()
         for x, y in zip(mapping.output_values, mapping.input_values):
             self.series.append(x, y)
 
         self.axis_x.setRange(min(mapping.output_values), max(mapping.output_values))
         self.axis_y.setRange(min(mapping.input_values), max(mapping.input_values))
+
+
+class CalibratedUnitMappingModel(QAbstractTableModel):
+    def __init__(self, input_label: str, output_label: str, *args, **kwargs):
+        self._mapping: CalibratedUnitsMapping = CalibratedUnitsMapping()
+        self._input_label = input_label
+        self._output_label = output_label
+        super().__init__(*args, **kwargs)
+
+    def set_mapping(self, mapping: CalibratedUnitsMapping):
+        self.beginResetModel()
+        self._mapping = mapping
+        self.endResetModel()
+
+    def rowCount(self, parent: QModelIndex = ...) -> int:
+        return len(self._mapping.input_values)
+
+    def columnCount(self, parent: QModelIndex = ...) -> int:
+        return 2
+
+    def data(self, index: QModelIndex, role: int = ...):
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            if index.column() == 0:
+                return self._mapping.output_values[index.row()]
+            elif index.column() == 1:
+                return self._mapping.input_values[index.row()]
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                if section == 0:
+                    return f"{self._output_label} [{self._mapping.get_output_units()}]"
+                elif section == 1:
+                    return f"{self._input_label} [{self._mapping.get_input_units()}]"
+            elif orientation == Qt.Orientation.Vertical:
+                return section
