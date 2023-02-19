@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import Counter
 from typing import Optional, ClassVar
 

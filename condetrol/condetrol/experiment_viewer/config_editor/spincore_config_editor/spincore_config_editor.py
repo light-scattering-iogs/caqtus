@@ -1,20 +1,20 @@
 import logging
-from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import QUrl, Qt
-from PyQt6.QtQuick import QQuickView
-from PyQt6.QtQuickWidgets import QQuickWidget
-from PyQt6.QtWidgets import QWidget, QHBoxLayout
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
+from spincore_sequencer.configuration import SpincoreSequencerConfiguration
+from .spincore_editor_ui import Ui_SpincoreEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
+ns = 1e-9
 
-class SpincoreConfigEditor(ConfigSettingsEditor):
+
+class SpincoreConfigEditor(ConfigSettingsEditor, Ui_SpincoreEditor):
     def __init__(
         self,
         experiment_config: ExperimentConfig,
@@ -22,26 +22,26 @@ class SpincoreConfigEditor(ConfigSettingsEditor):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(experiment_config, tree_label, parent)
-        self.config = experiment_config
 
-        self.view = QQuickView()
-        qml_path = Path(__file__).parent / "test.qml"
-        self.view.setSource(QUrl.fromLocalFile(str(qml_path)))
-        self.view.setResizeMode(QQuickView.ResizeMode.SizeRootObjectToView)
+        self.device_name = self.strip_device_prefix(tree_label)
+        self.experiment_config = experiment_config
+        self.config: SpincoreSequencerConfiguration = (
+            experiment_config.get_device_config(self.device_name)
+        )
 
-        self.view.statusChanged.connect(self.on_status_changed)
-
-        self.layout = QHBoxLayout()
-        self.setLayout(self.layout)
-        widget = QWidget.createWindowContainer(self.view)
-        widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.layout.addWidget(widget, 1)
-        self.layout.addStretch(1)
+        self.setupUi(self)
+        self.setup_ui_from_config(self.config)
 
     def get_experiment_config(self) -> ExperimentConfig:
-        return self.config
+        self.write_ui_to_config(self.config)
+        self.experiment_config.set_device_config(self.device_name, self.config)
+        return self.experiment_config
 
-    def on_status_changed(self, status: QQuickWidget.Status):
-        if status == QQuickWidget.Status.Error:
-            for error in self.view.errors():
-                raise RuntimeError(error.toString())
+    def setup_ui_from_config(self, config: SpincoreSequencerConfiguration):
+        self.board_number_spinbox.setValue(config.board_number)
+        self.time_step_spinbox.setValue(config.time_step / ns)
+
+    def write_ui_to_config(self, config: SpincoreSequencerConfiguration):
+        config.board_number = self.board_number_spinbox.value()
+        config.time_step = self.time_step_spinbox.value() * ns
+        return config
