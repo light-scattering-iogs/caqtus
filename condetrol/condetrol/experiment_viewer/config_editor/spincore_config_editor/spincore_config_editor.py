@@ -5,7 +5,7 @@ from typing import Optional
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget
 
-from device_config.channel_config import ChannelSpecialPurpose
+from device_config.channel_config import ChannelSpecialPurpose, ChannelConfiguration
 from experiment.configuration import ExperimentConfig
 from settings_model import YAMLSerializable
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
@@ -103,7 +103,7 @@ class ChannelsModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
-                    return "Description"
+                    return "Channel description"
             else:
                 return section
 
