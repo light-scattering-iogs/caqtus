@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import QWidget
 from experiment.configuration import ExperimentConfig
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from .ni6738_editor_ui import Ui_NI6738Editor
+from ..channel_model import ChannelsModel
+from ..color_delegate import ColorCellDelegate
 from ..config_settings_editor import ConfigSettingsEditor
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,7 @@ class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
 
         self.setupUi(self)
         self.setup_ui_from_config(self.config)
-        # self.channels_table_view.setItemDelegateForColumn(1, ColorCellDelegate())
+        self.channels_table_view.setItemDelegateForColumn(1, ColorCellDelegate())
 
     def get_experiment_config(self) -> ExperimentConfig:
         self.write_ui_to_config(self.config)
@@ -47,8 +49,8 @@ class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
     def setup_ui_from_config(self, config: NI6738SequencerConfiguration):
         self.device_id_line_edit.setText(config.device_id)
         self.time_step_spinbox.setValue(config.time_step / us)
-        # self.channels_table_view.setModel(ChannelsModel(config))
-        # self.channels_table_view.resizeColumnsToContents()
+        self.channels_table_view.setModel(NI6738ChannelsModel(config))
+        self.channels_table_view.resizeColumnToContents(0)
 
     def write_ui_to_config(self, config: NI6738SequencerConfiguration):
         config.device_id = self.device_id_line_edit.text()
@@ -61,3 +63,7 @@ class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
             new_value = self.time_step_spinbox.value() * us
         config.time_step = new_value
         return config
+
+
+class NI6738ChannelsModel(ChannelsModel):
+    pass
