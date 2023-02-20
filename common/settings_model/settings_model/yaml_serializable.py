@@ -99,6 +99,10 @@ class YAMLSerializable(abc.ABC):
             )
         return result
 
+    @classmethod
+    def is_tag(cls, value: str):
+        return value.startswith("!")
+
 
 def path_representer(dumper: yaml.Dumper, path: Path):
     return dumper.represent_scalar("!Path", str(path))

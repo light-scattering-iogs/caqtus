@@ -52,7 +52,7 @@ if typing.TYPE_CHECKING:
 # devices parameters if possible.
 # Parameters will be saved, but there will be no data acquisition.
 
-MOCK_EXPERIMENT = True
+MOCK_EXPERIMENT = False
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
