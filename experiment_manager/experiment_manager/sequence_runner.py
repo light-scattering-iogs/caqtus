@@ -1,5 +1,4 @@
 import datetime
-import io
 import logging
 import pprint
 import time
@@ -7,11 +6,9 @@ import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import deepcopy
 from functools import singledispatchmethod
-from pathlib import Path
 from threading import Thread, Event
 from typing import Any
 
-import h5py
 import numpy
 import numpy as np
 

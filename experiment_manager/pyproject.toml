@@ -7,7 +7,6 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.23.4"
-h5py = "^3.7.0"
 units = { path = "../common/units", develop = true }
 remote_device_client = { path = "../devices/remote_device/remote_device_client", develop = true }
 camera-configuration = {path = "../devices/cameras/camera/camera.configuration", develop = true}
