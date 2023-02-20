@@ -6,5 +6,7 @@ from .lane import (
     CameraLane,
     CameraAction,
     TakePicture,
-    Ramp
+    Ramp,
+    LinearRamp,
 )
+

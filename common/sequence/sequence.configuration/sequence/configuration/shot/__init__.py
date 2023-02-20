@@ -7,6 +7,7 @@ from .lane import (
     CameraAction,
     TakePicture,
     Ramp,
+    LinearRamp,
 )
 from .shot_configuration import ShotConfiguration
 

@@ -170,14 +170,21 @@ class DigitalLane(Lane[bool]):
     pass
 
 
-class Ramp(SettingsModel):
+class Ramp(SettingsModel, ABC):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        """Build a python object from a YAML node
-
-        Overload this method in a child class to change the default construction.
-        """
+        """Build a ramp object from a YAML node"""
         return cls()
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, ramp: "Ramp"):
+        """Represent a ramp object with a yaml string with no value"""
+
+        return dumper.represent_scalar(f"!{cls.__name__}", "")
+
+
+class LinearRamp(Ramp):
+    pass
 
 
 class AnalogLane(Lane[Expression | Ramp]):
