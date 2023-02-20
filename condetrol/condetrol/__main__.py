@@ -30,7 +30,7 @@ class ExperimentProcessManager(BaseManager):
 ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
-DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@localhost/test_database"
+DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_database"
 
 if __name__ == "__main__":
     os.environ["QT_QUICK_CONTROLS_CONF"] = (
