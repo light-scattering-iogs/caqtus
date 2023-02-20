@@ -399,38 +399,6 @@ def save_shot(
         )
 
 
-def _save_shot(
-    file_path: Path,
-    start_time: datetime.datetime,
-    end_time: datetime.datetime,
-    variables: VariableNamespace,
-    data: dict[str],
-):
-    data_buffer = io.BytesIO()
-    with h5py.File(data_buffer, "w") as file:
-        file.attrs["start_time"] = start_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
-        file.attrs["end_time"] = end_time.strftime("%Y-%m-%d-%Hh%Mm%Ss%fus")
-        file.create_dataset("variables/names", data=list(variables.keys()))
-        file.create_dataset(
-            "variables/units",
-            data=[str(quantity.units) for quantity in variables.values()],
-        )
-        file.create_dataset(
-            "variables/magnitudes",
-            data=[float(quantity.magnitude) for quantity in variables.values()],
-        )
-        for device, device_data in data.items():
-            if isinstance(device_data, dict):
-                for key, value in device_data.items():
-                    file.create_dataset(f"data/{device}/{key}", data=value)
-
-    if file_path.is_file():
-        raise RuntimeError(f"{file_path} already exists and won't be overwritten.")
-    with open(file_path, "wb") as file:
-        # noinspection PyTypeChecker
-        file.write(data_buffer.getbuffer())
-
-
 def create_remote_device_managers(
     device_server_configs: dict[str, DeviceServerConfiguration]
 ) -> dict[str, RemoteDeviceClientManager]:
