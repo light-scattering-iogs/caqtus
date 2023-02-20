@@ -1,5 +1,5 @@
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
-from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
+from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex, pyqtSignal
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWidgets import QHBoxLayout, QDialog, QTableView
 
@@ -24,6 +24,7 @@ class CalibratedMappingEditor(QDialog):
 
         self.values_view = QTableView()
         self.model = CalibratedUnitMappingModel(input_label, output_label)
+        self.model.mapping_changed.connect(self.set_chart_mapping)
         self.values_view.setModel(self.model)
         self.layout.addWidget(self.values_view, 0)
 
@@ -53,6 +54,9 @@ class CalibratedMappingEditor(QDialog):
     def set_unit_mapping(self, mapping: CalibratedUnitsMapping):
         self.model.set_mapping(mapping)
         self.values_view.resizeColumnsToContents()
+        self.set_chart_mapping(mapping)
+
+    def set_chart_mapping(self, mapping: CalibratedUnitsMapping):
         self.series.clear()
         for x, y in zip(mapping.output_values, mapping.input_values):
             self.series.append(x, y)
@@ -62,6 +66,9 @@ class CalibratedMappingEditor(QDialog):
 
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
+
+    mapping_changed = pyqtSignal(CalibratedUnitsMapping)
+
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):
         self._mapping: CalibratedUnitsMapping = CalibratedUnitsMapping()
         self._input_label = input_label
@@ -85,6 +92,31 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
                 return self._mapping.output_values[index.row()]
             elif index.column() == 1:
                 return self._mapping.input_values[index.row()]
+
+    def setData(self, index: QModelIndex, value: float, role: int = ...) -> bool:
+        change = False
+        if role == Qt.ItemDataRole.EditRole:
+            if index.column() == 0:
+                new_output_values = list(self._mapping.output_values)
+                new_output_values[index.row()] = value
+                self._mapping.output_values = new_output_values
+                change = True
+            elif index.column() == 1:
+                new_input_values = list(self._mapping.input_values)
+                new_input_values[index.row()] = value
+                self._mapping.input_values = new_input_values
+                change = True
+        if change:
+            self.mapping_changed.emit(self._mapping)
+            self.dataChanged.emit(index, index)
+        return change
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+        )
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole:
