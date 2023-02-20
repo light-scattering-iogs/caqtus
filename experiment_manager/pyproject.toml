@@ -22,8 +22,8 @@ sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 
-[tool.poetry.dev-dependencies]
-pytest = "^5.2"
+[tool.poetry.group.test.dependencies]
+pytest = "^7.2.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -8,6 +8,7 @@ from pydantic import validator
 
 from expression import Expression
 from settings_model import SettingsModel
+from units import dimensionless, Quantity
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -189,6 +190,9 @@ class LinearRamp(Ramp):
 
 class AnalogLane(Lane[Expression | Ramp]):
     units: str
+
+    def has_dimension(self) -> bool:
+        return not Quantity(1, units=self.units).is_compatible_with(dimensionless)
 
 
 class CameraAction(SettingsModel, ABC):

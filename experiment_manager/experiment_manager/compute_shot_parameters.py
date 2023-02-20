@@ -2,12 +2,13 @@ from copy import copy
 from typing import Any, TypedDict, Iterable
 
 import numpy
+import numpy as np
 
 from device_config.channel_config import ChannelSpecialPurpose
 from experiment.configuration import ExperimentConfig
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from sequence.configuration import ShotConfiguration, CameraLane
+from sequence.configuration import ShotConfiguration, CameraLane, Ramp, AnalogLane
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from spincore_sequencer.runtime import (
     Instruction,
@@ -195,7 +196,16 @@ def evaluate_analog_local_times(
     return analog_times
 
 
-def _is_constant(expression: Expression):
+def _is_constant(value: Expression | Ramp) -> bool:
+    if isinstance(value, Ramp):
+        return False
+    elif isinstance(value, Expression):
+        return _is_constant_expression(value)
+    else:
+        raise TypeError(f"Unexpected type {type(value)}")
+
+
+def _is_constant_expression(expression: Expression) -> bool:
     return "t" not in expression.upstream_variables
 
 
@@ -280,50 +290,75 @@ def evaluate_analog_values(
 
     result = {}
     for lane in shot.analog_lanes:
-        lane_has_dimension = not Quantity(1, units=lane.units).is_compatible_with(
-            dimensionless
+        lane_values = evaluate_lane_values(shot.step_names, lane, analog_times, context)
+        result[lane.name] = numpy.concatenate(lane_values) * Quantity(
+            1, units=lane.units
         )
-        values = []
-        for step in range(len(shot.step_names)):
-            expression = lane.get_effective_value(step)
-            if _is_constant(expression):
-                try:
-                    value = Quantity(expression.evaluate(context | units))
-                except NameError as err:
-                    raise NameError(
-                        f"'{err.name}' is no defined in expression '{expression.body}' "
-                        f"(step: {shot.step_names[step]}, lane: {lane.name})"
-                    )
-                if value.is_compatible_with(dimensionless) and lane_has_dimension:
-                    value = Quantity(
-                        value.to(dimensionless).magnitude, units=lane.units
-                    )
-                else:
-                    value = value.to(lane.units)
-                values.append(numpy.full_like(analog_times[step], value.magnitude))
-            else:
-                try:
-                    value = Quantity(
-                        expression.evaluate(
-                            context | units | {"t": analog_times[step] * ureg.s}
-                        )
-                    )
-                except NameError as err:
-                    raise NameError(
-                        f"'{err.name}' is no defined in expression '{expression.body}' "
-                        f"(step: {shot.step_names[step]}, lane: {lane.name})"
-                    )
-                if value.is_compatible_with(dimensionless) and lane_has_dimension:
-                    value = Quantity(
-                        value.to(dimensionless).magnitude, units=lane.units
-                    )
-                else:
-                    value = value.to(lane.units)
-                values.append(value.magnitude)
-
-        result[lane.name] = numpy.concatenate(values) * Quantity(1, units=lane.units)
-
     return result
+
+
+def evaluate_lane_values(
+    step_names: list[str],
+    lane: AnalogLane,
+    analog_times: list[np.ndarray],
+    context: VariableNamespace,
+) -> list[np.ndarray]:
+    # Assume that analog_times have unwrapped times
+    values = evaluate_lane_expressions(step_names, lane, analog_times, context)
+
+    return [values[step] for step in range(len(analog_times))]
+
+
+def evaluate_lane_expressions(
+    step_names: list[str],
+    lane: AnalogLane,
+    analog_times: list[np.ndarray],
+    context: VariableNamespace,
+) -> dict[int, np.ndarray]:
+    result = {}
+
+    for step_index, step_name in enumerate(step_names):
+        cell_value = lane.get_effective_value(step_index)
+        if isinstance(cell_value, Expression):
+            values = evaluate_expression(
+                cell_value, analog_times[step_index], context, step_name, lane.name
+            )
+
+            if values.is_compatible_with(dimensionless) and lane.has_dimension():
+                values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
+            else:
+                values = values.to(lane.units)
+            result[step_index] = values.magnitude
+    return result
+
+
+def evaluate_expression(
+    expression: Expression,
+    times: np.ndarray,
+    context: VariableNamespace,
+    step_name: str,
+    lane_name: str,
+) -> Quantity:
+    if _is_constant(expression):
+        try:
+            value = Quantity(expression.evaluate(context | units))
+        except NameError as err:
+            raise NameError(
+                f"'{err.name}' is not defined in expression '{expression.body}' "
+                f"(step: {step_name}, lane: {lane_name})"
+            )
+        return numpy.full_like(times, value.magnitude) * value.units
+    else:
+        try:
+            value = Quantity(
+                expression.evaluate(context | units | {"t": times * ureg.s})
+            )
+        except NameError as err:
+            raise NameError(
+                f"'{err.name}' is no defined in expression '{expression.body}' "
+                f"(step: {step_name}, lane: {lane_name})"
+            )
+        return value
 
 
 def generate_analog_voltages(
