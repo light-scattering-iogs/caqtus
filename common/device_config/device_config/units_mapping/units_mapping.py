@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod, ABC
 
 import numpy
-from pydantic import root_validator, Field
+from pydantic import Field, validator
 
 from settings_model import SettingsModel
 from units import Quantity
@@ -60,26 +60,45 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
 
     input_units: str = ""
     output_units: str = ""
-    input_values: tuple[float, ...] = Field(default_factory=tuple)
-    output_values: tuple[float, ...] = Field(default_factory=tuple)
+    measured_data_points: tuple[tuple[float, float], ...] = Field(
+        default_factory=tuple,
+        description="Measured data points as a tuple of (input, output) tuples. The points will be rearranged to have "
+        "the inputs sorted.",
+    )
 
-    @root_validator(pre=False)
-    def order_input_values(cls, values):
-        input_values = numpy.array(values.get("input_values"))
-        output_values = numpy.array(values.get("output_values"))
-        output_values = output_values[:len(input_values)]
-        order = numpy.argsort(input_values)
-        sorted_input_values = input_values[order]
-        sorted_output_values = output_values[order]
-        values["input_values"] = tuple(sorted_input_values.tolist())
-        values["output_values"] = tuple(sorted_output_values.tolist())
-        return values
+    def __init__(self, input_units: str = "", output_units: str = "", **kwargs):
+        if "measured_data_points" in kwargs:
+            measured_data_points = kwargs.pop("measured_data_points")
+        elif "input_values" in kwargs and "output_values" in kwargs:
+            input_values = kwargs.pop("input_values")
+            output_values = kwargs.pop("output_values")
+            measured_data_points = tuple(zip(input_values, output_values))
+        else:
+            measured_data_points = tuple()
+
+        super().__init__(
+            input_units=input_units,
+            output_units=output_units,
+            measured_data_points=measured_data_points,
+        )
+
+    @validator("measured_data_points")
+    def sort_by_input(cls, measured_data_points):
+        return sorted(measured_data_points)
 
     def get_input_units(self) -> str:
         return self.input_units
 
     def get_output_units(self) -> str:
         return self.output_units
+
+    @property
+    def input_values(self) -> tuple[float]:
+        return tuple(x[0] for x in self.measured_data_points)
+
+    @property
+    def output_values(self) -> tuple[float]:
+        return tuple(x[1] for x in self.measured_data_points)
 
     def convert(self, input_: Quantity) -> Quantity:
         input_values = numpy.array(self.input_values)
@@ -93,3 +112,31 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
         max_ = numpy.max(output_values)
         clipped = numpy.clip(interp, min_, max_)
         return Quantity(clipped, units=self.get_output_units())
+
+    def __getitem__(self, index: int) -> tuple[float, float]:
+        return self.measured_data_points[index]
+
+    def __setitem__(self, index: int, values: tuple[float, float]):
+        new_data_points = list(self.measured_data_points)
+        new_data_points[index] = values
+        self.measured_data_points = tuple(new_data_points)
+
+    def set_input(self, index: int, value: float):
+        self[index] = (value, self[index][1])
+
+    def set_output(self, index: int, value: float):
+        self[index] = (self[index][0], value)
+
+    def pop(self, index: int):
+        """Remove a data point from the mapping"""
+
+        new_data_points = list(self.measured_data_points)
+        new_data_points.pop(index)
+        self.measured_data_points = tuple(new_data_points)
+
+    def insert(self, index: int, input_: float, output: float):
+        """Insert a data point into the mapping"""
+
+        new_data_points = list(self.measured_data_points)
+        new_data_points.insert(index, (input_, output))
+        self.measured_data_points = tuple(new_data_points)

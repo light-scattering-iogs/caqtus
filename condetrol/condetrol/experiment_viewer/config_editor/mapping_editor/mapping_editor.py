@@ -1,7 +1,24 @@
+from functools import partial
+
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
-from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex, pyqtSignal
+from PyQt6.QtCore import (
+    Qt,
+    QAbstractTableModel,
+    QModelIndex,
+    pyqtSignal,
+    QSortFilterProxyModel,
+)
 from PyQt6.QtGui import QPainter, QAction
-from PyQt6.QtWidgets import QHBoxLayout, QDialog, QTableView, QMenu
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QDialog,
+    QTableView,
+    QMenu,
+    QItemEditorFactory,
+    QDoubleSpinBox,
+    QWidget,
+    QStyledItemDelegate,
+)
 
 from device_config.units_mapping import CalibratedUnitsMapping
 
@@ -25,9 +42,16 @@ class CalibratedMappingEditor(QDialog):
         self.values_view = QTableView()
         self.values_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.values_view.customContextMenuRequested.connect(self.show_context_menu)
+        delegate = QStyledItemDelegate(self)
+        delegate.setItemEditorFactory(ItemEditorFactory())
+        self.values_view.setItemDelegate(delegate)
+
         self.model = CalibratedUnitMappingModel(input_label, output_label)
         self.model.mapping_changed.connect(self.set_chart_mapping)
-        self.values_view.setModel(self.model)
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setSourceModel(self.model)
+        self.values_view.setModel(self.proxy_model)
+        self.values_view.setSortingEnabled(True)
         self.layout.addWidget(self.values_view, 0)
 
         self.series = QLineSeries()
@@ -73,18 +97,21 @@ class CalibratedMappingEditor(QDialog):
 
         if index.isValid():
             remove_row = QAction("Remove row")
-            remove_row.triggered.connect(
-                lambda: self.model.removeRow(index.row(), QModelIndex())
-            )
+            remove_row.triggered.connect(lambda: index.model().removeRow(index.row(), QModelIndex()))
             menu.addAction(remove_row)
+        else:
+            index = self.values_view.model().index(-1, 0)
 
         add_row = QAction("Add row")
         add_row.triggered.connect(
-            lambda: self.model.insertRow(index.row(), QModelIndex())
+            lambda: index.model().insertRow(index.row(), QModelIndex())
         )
         menu.addAction(add_row)
 
         menu.exec(self.values_view.mapToGlobal(position))
+
+    def remove_row(self, index: QModelIndex):
+        index.model().removeRow(index.row(), QModelIndex())
 
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
@@ -119,17 +146,13 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
         change = False
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
-                new_output_values = list(self._mapping.output_values)
-                new_output_values[index.row()] = value
                 self.beginResetModel()
-                self._mapping.output_values = new_output_values
+                self._mapping.set_output(index.row(), value)
                 self.endResetModel()
                 change = True
             elif index.column() == 1:
-                new_input_values = list(self._mapping.input_values)
-                new_input_values[index.row()] = value
                 self.beginResetModel()
-                self._mapping.input_values = new_input_values
+                self._mapping.set_input(index.row(), value)
                 self.endResetModel()
                 change = True
         if change:
@@ -157,15 +180,15 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
     def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if not (0 <= row < len(self._mapping.input_values)):
             return False
-        new_output_values = list(self._mapping.output_values)
-        new_output_values.pop(row)
-        new_input_values = list(self._mapping.input_values)
-        new_input_values.pop(row)
         self.beginRemoveRows(parent, row, row)
-        self._mapping.input_values = new_input_values
-        self._mapping.output_values = new_output_values
+        self._mapping.pop(row)
         self.endRemoveRows()
         self.mapping_changed.emit(self._mapping)
+        return True
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        for _ in range(count):
+            self.removeRow(row, parent)
         return True
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
@@ -173,14 +196,26 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
             row = len(self._mapping.input_values)
         if not (0 <= row <= len(self._mapping.input_values)):
             return False
-        new_output_values = list(self._mapping.output_values)
-        new_output_values.insert(row, 0)
-        new_input_values = list(self._mapping.input_values)
-        new_input_values.insert(row, 0)
-
         self.beginInsertRows(parent, row, row)
-        self._mapping.output_values = new_output_values
-        self._mapping.input_values = new_input_values
+        self._mapping.insert(row, 0, 0)
         self.endInsertRows()
         self.mapping_changed.emit(self._mapping)
         return True
+
+    def insertRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+        for _ in range(count):
+            self.insertRow(row, parent)
+        return True
+
+
+class ItemEditorFactory(QItemEditorFactory):
+    def createEditor(self, user_type: int, parent: QWidget) -> QWidget:
+        QVARIANT_DOUBLE = 6  # can't find the ref in the Qt docs
+        if user_type == QVARIANT_DOUBLE:
+            double_spin_box = QDoubleSpinBox(parent)
+            double_spin_box.setDecimals(3)
+            double_spin_box.setMaximum(1000)
+            double_spin_box.setMinimum(-1000)
+            return double_spin_box
+        else:
+            return super().createEditor(user_type, parent)

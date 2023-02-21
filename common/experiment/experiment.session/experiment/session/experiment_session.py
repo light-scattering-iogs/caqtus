@@ -126,3 +126,10 @@ class ExperimentSessionMaker:
 
     def __call__(self) -> ExperimentSession:
         return ExperimentSession(database_url=self._database_url, commit=self._commit)
+
+
+DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_database"
+
+
+def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
+    return ExperimentSessionMaker(database_url=DATABASE_URL)
