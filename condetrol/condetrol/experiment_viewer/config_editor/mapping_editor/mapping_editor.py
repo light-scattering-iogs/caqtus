@@ -34,6 +34,9 @@ class CalibratedMappingEditor(QDialog):
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._input_label = input_label
+        self._output_label = output_label
+
         self.setSizeGripEnabled(True)
         self.setWindowTitle("Edit unit mapping...")
         self.resize(400, 300)
@@ -68,7 +71,6 @@ class CalibratedMappingEditor(QDialog):
         self.chart.addAxis(self.axis_x, Qt.AlignmentFlag.AlignBottom)
         self.chart.addAxis(self.axis_y, Qt.AlignmentFlag.AlignLeft)
         self.chart.legend().hide()
-        self.chart.setTitle("Unit interpolation")
 
         self.chart.addSeries(self.series)
 
@@ -101,6 +103,8 @@ class CalibratedMappingEditor(QDialog):
 
         self.axis_x.setRange(min(mapping.output_values), max(mapping.output_values))
         self.axis_y.setRange(min(mapping.input_values), max(mapping.input_values))
+        self.axis_x.setTitleText(f"{self._output_label} [{mapping.get_output_units()}]")
+        self.axis_y.setTitleText(f"{self._input_label} [{mapping.get_input_units()}]")
 
     def show_context_menu(self, position):
         index = self.values_view.indexAt(position)
