@@ -21,13 +21,16 @@ pyqt6-charts = "^6.4.0"
 
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
 black = "^22.6.0"
 jupyter = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^22.12.0"
 jupyter = "^1.0.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.2.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

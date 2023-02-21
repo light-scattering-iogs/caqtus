@@ -19,6 +19,8 @@ from .shot import (
     CameraLane,
     CameraAction,
     TakePicture,
+    LaneGroup,
+    LaneReference,
 )
 
 from .shot import ShotConfiguration
@@ -40,4 +42,6 @@ __all__ = [
     "CameraLane",
     "CameraAction",
     "TakePicture",
+    "LaneGroup",
+    "LaneReference",
 ]
