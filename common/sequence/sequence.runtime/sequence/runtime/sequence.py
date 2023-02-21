@@ -50,7 +50,11 @@ class Sequence:
         if sequence.state != State.DRAFT:
             raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
         sequence.total_number_shots = config.compute_total_number_of_shots()
-        sequence.config.sequence_config_yaml = config.to_yaml()
+        yaml = config.to_yaml()
+        assert (
+            SequenceConfig.from_yaml(yaml) == config
+        )  # will trigger validation before saving
+        sequence.config.sequence_config_yaml = yaml
         sequence.modification_date = datetime.now()
         session.flush()
 
@@ -165,9 +169,7 @@ class Sequence:
                 f"Could not find sequence '{self._path}' in database"
             )
 
-    def get_stats(
-        self, experiment_session: ExperimentSession
-    ) -> "SequenceStats":
+    def get_stats(self, experiment_session: ExperimentSession) -> "SequenceStats":
         session = experiment_session.get_sql_session()
         # noinspection PyProtectedMember
         sequence = self._path._query_model(session).get_sequence()
