@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (
     QItemEditorFactory,
     QDoubleSpinBox,
     QWidget,
-    QStyledItemDelegate, QSplitter,
+    QStyledItemDelegate, QSplitter, QHeaderView,
 )
 
 from device_config.units_mapping import CalibratedUnitsMapping
@@ -55,6 +55,8 @@ class CalibratedMappingEditor(QDialog):
         self.proxy_model.setSourceModel(self.model)
         self.values_view.setModel(self.proxy_model)
         self.values_view.setSortingEnabled(True)
+        self.values_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.values_view.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.splitter.addWidget(self.values_view)
 
         self.series = QLineSeries()
