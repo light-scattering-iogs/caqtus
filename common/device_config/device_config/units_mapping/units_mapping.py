@@ -67,6 +67,7 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
     def order_input_values(cls, values):
         input_values = numpy.array(values.get("input_values"))
         output_values = numpy.array(values.get("output_values"))
+        output_values = output_values[:len(input_values)]
         order = numpy.argsort(input_values)
         sorted_input_values = input_values[order]
         sorted_output_values = output_values[order]

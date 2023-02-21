@@ -1,7 +1,7 @@
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex, pyqtSignal
-from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import QHBoxLayout, QDialog, QTableView
+from PyQt6.QtGui import QPainter, QAction
+from PyQt6.QtWidgets import QHBoxLayout, QDialog, QTableView, QMenu
 
 from device_config.units_mapping import CalibratedUnitsMapping
 
@@ -23,6 +23,8 @@ class CalibratedMappingEditor(QDialog):
         self.layout = QHBoxLayout()
 
         self.values_view = QTableView()
+        self.values_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.values_view.customContextMenuRequested.connect(self.show_context_menu)
         self.model = CalibratedUnitMappingModel(input_label, output_label)
         self.model.mapping_changed.connect(self.set_chart_mapping)
         self.values_view.setModel(self.model)
@@ -64,6 +66,26 @@ class CalibratedMappingEditor(QDialog):
         self.axis_x.setRange(min(mapping.output_values), max(mapping.output_values))
         self.axis_y.setRange(min(mapping.input_values), max(mapping.input_values))
 
+    def show_context_menu(self, position):
+        index = self.values_view.indexAt(position)
+
+        menu = QMenu(self.values_view)
+
+        if index.isValid():
+            remove_row = QAction("Remove row")
+            remove_row.triggered.connect(
+                lambda: self.model.removeRow(index.row(), QModelIndex())
+            )
+            menu.addAction(remove_row)
+
+        add_row = QAction("Add row")
+        add_row.triggered.connect(
+            lambda: self.model.insertRow(index.row(), QModelIndex())
+        )
+        menu.addAction(add_row)
+
+        menu.exec(self.values_view.mapToGlobal(position))
+
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
 
@@ -99,12 +121,16 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
             if index.column() == 0:
                 new_output_values = list(self._mapping.output_values)
                 new_output_values[index.row()] = value
+                self.beginResetModel()
                 self._mapping.output_values = new_output_values
+                self.endResetModel()
                 change = True
             elif index.column() == 1:
                 new_input_values = list(self._mapping.input_values)
                 new_input_values[index.row()] = value
+                self.beginResetModel()
                 self._mapping.input_values = new_input_values
+                self.endResetModel()
                 change = True
         if change:
             self.mapping_changed.emit(self._mapping)
@@ -127,3 +153,34 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
                     return f"{self._input_label} [{self._mapping.get_input_units()}]"
             elif orientation == Qt.Orientation.Vertical:
                 return section
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        if not (0 <= row < len(self._mapping.input_values)):
+            return False
+        new_output_values = list(self._mapping.output_values)
+        new_output_values.pop(row)
+        new_input_values = list(self._mapping.input_values)
+        new_input_values.pop(row)
+        self.beginRemoveRows(parent, row, row)
+        self._mapping.input_values = new_input_values
+        self._mapping.output_values = new_output_values
+        self.endRemoveRows()
+        self.mapping_changed.emit(self._mapping)
+        return True
+
+    def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        if row == -1:
+            row = len(self._mapping.input_values)
+        if not (0 <= row <= len(self._mapping.input_values)):
+            return False
+        new_output_values = list(self._mapping.output_values)
+        new_output_values.insert(row, 0)
+        new_input_values = list(self._mapping.input_values)
+        new_input_values.insert(row, 0)
+
+        self.beginInsertRows(parent, row, row)
+        self._mapping.output_values = new_output_values
+        self._mapping.input_values = new_input_values
+        self.endInsertRows()
+        self.mapping_changed.emit(self._mapping)
+        return True
