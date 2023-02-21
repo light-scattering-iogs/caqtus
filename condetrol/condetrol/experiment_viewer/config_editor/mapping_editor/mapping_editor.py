@@ -1,12 +1,13 @@
 from functools import partial
 
+from PyQt6 import QtGui
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
 from PyQt6.QtCore import (
     Qt,
     QAbstractTableModel,
     QModelIndex,
     pyqtSignal,
-    QSortFilterProxyModel,
+    QSortFilterProxyModel, QSettings,
 )
 from PyQt6.QtGui import QPainter, QAction
 from PyQt6.QtWidgets import (
@@ -17,7 +18,7 @@ from PyQt6.QtWidgets import (
     QItemEditorFactory,
     QDoubleSpinBox,
     QWidget,
-    QStyledItemDelegate,
+    QStyledItemDelegate, QSplitter,
 )
 
 from device_config.units_mapping import CalibratedUnitsMapping
@@ -38,6 +39,8 @@ class CalibratedMappingEditor(QDialog):
         self.resize(400, 300)
 
         self.layout = QHBoxLayout()
+        self.splitter = QSplitter(orientation=Qt.Orientation.Horizontal)
+        self.layout.addWidget(self.splitter)
 
         self.values_view = QTableView()
         self.values_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -52,7 +55,7 @@ class CalibratedMappingEditor(QDialog):
         self.proxy_model.setSourceModel(self.model)
         self.values_view.setModel(self.proxy_model)
         self.values_view.setSortingEnabled(True)
-        self.layout.addWidget(self.values_view, 0)
+        self.splitter.addWidget(self.values_view)
 
         self.series = QLineSeries()
 
@@ -73,9 +76,16 @@ class CalibratedMappingEditor(QDialog):
 
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.layout.addWidget(self.chart_view, 1)
+        self.splitter.addWidget(self.chart_view)
+
+        ui_settings = QSettings("Caqtus", "ExperimentControl")
+        self.splitter.restoreState(ui_settings.value(f"{__name__}/splitter_state", self.splitter.saveState()))
 
         self.setLayout(self.layout)
+
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        ui_settings = QSettings("Caqtus", "ExperimentControl")
+        ui_settings.setValue(f"{__name__}/splitter_state", self.splitter.saveState())
 
     def set_unit_mapping(self, mapping: CalibratedUnitsMapping):
         self.model.set_mapping(mapping)
