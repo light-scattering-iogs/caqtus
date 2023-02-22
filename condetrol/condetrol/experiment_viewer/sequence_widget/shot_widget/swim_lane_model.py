@@ -196,6 +196,17 @@ class SwimLaneModel(QAbstractItemModel):
         mapped_index = self.map_to_child_index(index)
         return mapped_index.data(role)
 
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+        if orientation == Qt.Orientation.Horizontal:
+            if role == Qt.ItemDataRole.DisplayRole:
+                if section == 0:
+                    return None
+                else:
+                    return self._step_names_model.headerData(
+                        section - 1, Qt.Orientation.Vertical, role
+                    )
+        return None
+
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemDataRole.NoItemFlags

@@ -43,6 +43,13 @@ class StepNamesModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._step_names[index.row()]
 
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return "Step"
+            else:
+                return f"Step {section}"
+
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         return (
             Qt.ItemFlag.ItemIsEnabled
