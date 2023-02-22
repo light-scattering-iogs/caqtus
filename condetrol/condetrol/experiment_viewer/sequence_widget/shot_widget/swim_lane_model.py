@@ -66,6 +66,19 @@ class SwimLaneModel(QAbstractItemModel):
             self.shot_config.lanes
         )
 
+        # refresh the sequence state to block the editor if the state is not DRAFT
+        self._sequence_state: State
+        self._update_state()
+        self.update_state_timer = QTimer(self)
+        # noinspection PyUnresolvedReferences
+        self.update_state_timer.timeout.connect(self._update_state)
+        self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.update_state_timer.start(500)
+
+    def _update_state(self):
+        with self._session as session:
+            self._sequence_state = self._sequence.get_state(session)
+
     def save_config(
         self,
         shot_config: ShotConfiguration,
@@ -188,9 +201,8 @@ class SwimLaneModel(QAbstractItemModel):
             return Qt.ItemDataRole.NoItemFlags
         mapped_index = self.map_to_child_index(index)
         flags = mapped_index.flags()
-        with self._session as session:
-            if self.get_sequence_state(session) != State.DRAFT:
-                flags &= ~Qt.ItemFlag.ItemIsEditable
+        if self._sequence_state != State.DRAFT:
+            flags &= ~Qt.ItemFlag.ItemIsEditable
         return flags
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
