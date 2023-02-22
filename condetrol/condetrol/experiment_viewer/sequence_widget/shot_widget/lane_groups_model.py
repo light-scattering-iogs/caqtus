@@ -1,5 +1,3 @@
-from typing import Optional
-
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
 from sequence.configuration import LaneGroup, LaneReference
@@ -50,10 +48,10 @@ class LaneGroupModel(QAbstractItemModel):
             parent_item = child_item.parent
             return self.createIndex(parent_item.row, 0, parent_item)
 
-    def data(self, index: QModelIndex, role: int = ...) -> Optional[str]:
+    def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
             return None
-        if role == Qt.ItemDataRole.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             item = index.internalPointer()
             if isinstance(item, LaneGroup):
                 return item.name
@@ -61,3 +59,13 @@ class LaneGroupModel(QAbstractItemModel):
                 return item.lane_name
             else:
                 raise NotImplementedError(f"Unknown item type: {type(item)}")
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        base_flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        item = index.internalPointer()
+        if isinstance(item, LaneGroup):
+            return base_flags | Qt.ItemFlag.ItemIsEditable
+        elif isinstance(item, LaneReference):
+            return base_flags

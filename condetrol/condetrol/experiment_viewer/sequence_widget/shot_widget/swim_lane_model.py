@@ -35,22 +35,6 @@ class SwimLaneModel(QAbstractItemModel):
     First column corresponds the name of the lanes/lane groups.
     Other columns correspond to the steps of the sequence.
 
-    step_names:
-        - row == 0
-        - column >= 1
-        - internalPointer == None
-    step_durations:
-        - row == 1
-        - column >= 1
-        - internalPointer == None
-    lane_groups:
-        - row >= 2
-        - column == 0
-        - internalPointer == lane_group
-    lanes:
-        - row >= 2
-        - column >= 1
-        - internalPointer == lane_group
     """
 
     def __init__(
@@ -64,17 +48,37 @@ class SwimLaneModel(QAbstractItemModel):
     ):
         super().__init__(*args, **kwargs)
 
-        with session_maker() as session:
-            sequence_config = sequence.get_config(session)
+        self._session = session_maker()
+        self._sequence = sequence
+        self.shot_name = shot_name
 
-        shot_config = sequence_config.shot_configurations[shot_name]
+        with self._session:
+            sequence_config = self._sequence.get_config(self._session)
 
-        self._step_names_model = StepNamesModel(shot_config.step_names)
-        self._step_durations_model = StepDurationsModel(shot_config.step_durations)
-        self._lane_groups_model = LaneGroupModel(shot_config.lane_groups)
-        self._lanes_model = LanesModel(shot_config.lanes, experiment_config)
+        self.shot_config = sequence_config.shot_configurations[self.shot_name]
 
-        self._lanes_mapping = self._get_lane_names_to_index_mapping(shot_config.lanes)
+        self._step_names_model = StepNamesModel(self.shot_config.step_names)
+        self._step_durations_model = StepDurationsModel(self.shot_config.step_durations)
+        self._lane_groups_model = LaneGroupModel(self.shot_config.lane_groups)
+        self._lanes_model = LanesModel(self.shot_config.lanes, experiment_config)
+
+        self._lanes_mapping = self._get_lane_names_to_index_mapping(
+            self.shot_config.lanes
+        )
+
+    def save_config(
+        self,
+        shot_config: ShotConfiguration,
+        session: ExperimentSession,
+        save_undo: bool = True,
+    ):
+        self._sequence.set_shot_config(self.shot_name, shot_config, session)
+
+        # if save_undo:
+        #     self.undo_stack.push(YAMLSerializable.dump(self.shot_config))
+
+    def get_sequence_state(self, session) -> State:
+        return self._sequence.get_state(session)
 
     @staticmethod
     def _get_lane_names_to_index_mapping(lanes: list[Lane]) -> dict[str, int]:
@@ -173,35 +177,32 @@ class SwimLaneModel(QAbstractItemModel):
                     )
         return QModelIndex()
 
-    def map_to_lane_groups_model(self, index: QModelIndex) -> QModelIndex:
-        if not index.isValid():
-            return QModelIndex()
-        else:
-            return self._lane_groups_model.createIndex(
-                index.row(),
-                0,
-                index.internalPointer(),
-            )
-
-    def map_from_lane_groups_model(
-        self, column: int, index: QModelIndex
-    ) -> QModelIndex:
-        return self.createIndex(index.row(), column, index.internalPointer())
-
-    def map_to_lanes_model(self, index: QModelIndex) -> QModelIndex:
-        item = index.internalPointer()
-        if isinstance(item, LaneReference):
-            row = self._lanes_mapping[item.lane_name]
-            return self._lanes_model.index(row, index.column() - 1, QModelIndex())
-        else:
-            return QModelIndex()
-
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
             return None
-        if role == Qt.ItemDataRole.DisplayRole:
-            mapped_index = self.map_to_child_index(index)
-            return mapped_index.data(role)
+        mapped_index = self.map_to_child_index(index)
+        return mapped_index.data(role)
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemDataRole.NoItemFlags
+        mapped_index = self.map_to_child_index(index)
+        flags = mapped_index.flags()
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                flags &= ~Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+        edit = False
+        with self._session as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                mapped_index = self.map_to_child_index(index)
+                edit = mapped_index.model().setData(mapped_index, value, role)
+                if edit:
+                    self.save_config(self.shot_config, session)
+                    self.dataChanged.emit(index, index, [role])
+        return edit
 
 
 class _SwimLaneModel(QAbstractTableModel):
