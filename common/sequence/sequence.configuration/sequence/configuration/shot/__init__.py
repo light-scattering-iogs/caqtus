@@ -9,5 +9,9 @@ from .lane import (
     Ramp,
     LinearRamp,
 )
-from .shot_configuration import ShotConfiguration, LaneGroup, LaneReference
-
+from .shot_configuration import (
+    ShotConfiguration,
+    LaneGroup,
+    LaneReference,
+    LaneGroupRoot,
+)

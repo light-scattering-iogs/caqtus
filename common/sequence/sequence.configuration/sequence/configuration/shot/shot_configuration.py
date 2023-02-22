@@ -46,6 +46,10 @@ class LaneReference(YAMLSerializable, NodeMixin):
             return False
         return self._lane_name == other._lane_name
 
+    @property
+    def row(self):
+        return self.parent.children.index(self)
+
 
 class LaneGroup(YAMLSerializable, NodeMixin):
     def __init__(
@@ -83,6 +87,14 @@ class LaneGroup(YAMLSerializable, NodeMixin):
                 children[index] = LaneReference(child)
         return cls(name=name, children=children)
 
+    @property
+    def row(self):
+        return self.parent.children.index(self)
+
+    @property
+    def name(self):
+        return self._name
+
 
 class LaneGroupRoot(LaneGroup):
     def __init__(
@@ -109,6 +121,10 @@ class LaneGroupRoot(LaneGroup):
             if isinstance(child, str):
                 data[index] = LaneReference(child)
         return cls(children=data)
+
+    @property
+    def row(self):
+        return 0
 
 
 class ShotConfiguration(SettingsModel):
