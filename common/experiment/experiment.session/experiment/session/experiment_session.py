@@ -135,3 +135,7 @@ DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_databas
 
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
     return ExperimentSessionMaker(database_url=DATABASE_URL)
+
+
+def get_standard_experiment_session() -> ExperimentSession:
+    return get_standard_experiment_session_maker()()
