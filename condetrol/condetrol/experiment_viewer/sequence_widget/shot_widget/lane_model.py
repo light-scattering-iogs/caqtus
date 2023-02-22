@@ -1,7 +1,7 @@
 from functools import singledispatch
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
-from PyQt6.QtGui import QColor, QIcon
+from PyQt6.QtGui import QColor, QIcon, QBrush
 
 from device_config.channel_config import ChannelSpecialPurpose
 from experiment.configuration import ExperimentConfig
@@ -139,9 +139,22 @@ class DigitalLaneModel(LaneModel):
     ):
         super().__init__(lane, experiment_config, *args, **kwargs)
 
-    def data(self, index: QModelIndex, role: int = ...) -> bool:
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+    def data(self, index: QModelIndex, role: int = ...):
+        if role == Qt.ItemDataRole.EditRole:
             return self.lane[index.row()]
+        if role == Qt.ItemDataRole.BackgroundRole:
+            if not self.lane[index.row()]:
+                return None
+            try:
+                color = self.experiment_config.get_color(self.lane.name)
+            except ValueError:
+                brush = QBrush(QColor.fromRgb(0, 0, 0))
+            else:
+                if color is not None:
+                    brush = QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
+                else:
+                    return None
+            return brush
 
     def setData(self, index: QModelIndex, value: bool, role: int = ...) -> bool:
         if role == Qt.ItemDataRole.EditRole:

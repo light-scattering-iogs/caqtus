@@ -12,7 +12,8 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QStyle,
-    QMenu, QTreeView,
+    QMenu,
+    QTreeView,
 )
 
 from experiment.configuration import ExperimentConfig
@@ -123,13 +124,14 @@ class SpanTableView(QTableView):
                 span = self.model().span(index)
                 self.setSpan(row, column, span.height(), span.width())
 
+
 class SwimLaneWidget(QWidget):
     def __init__(
-            self,
-            model: SwimLaneModel,
-            sequence: Sequence,
-            session_maker: ExperimentSessionMaker,
-            *args
+        self,
+        model: SwimLaneModel,
+        sequence: Sequence,
+        session_maker: ExperimentSessionMaker,
+        *args
     ):
         super().__init__(*args)
 
@@ -145,6 +147,7 @@ class SwimLaneWidget(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self._view)
         self.setLayout(layout)
+
 
 class _SwimLaneWidget(QWidget):
     def __init__(
