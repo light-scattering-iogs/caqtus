@@ -12,13 +12,14 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QStyle,
-    QMenu,
+    QMenu, QTreeView,
 )
 
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
 from sequence.runtime import Sequence, State
+from .lane_groups_model import LaneGroupModel
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -85,9 +86,9 @@ class ShotWidget(QWidget):
         )
 
         self.layout = QVBoxLayout()
-        self.swim_lane_widget = SwimLaneWidget(
-            self.model, self._sequence, session_maker
-        )
+        self.swim_lane_widget = QTreeView()
+        print(self.model.rowCount(QModelIndex()))
+        self.swim_lane_widget.setModel(self.model)
         self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
 
@@ -123,8 +124,30 @@ class SpanTableView(QTableView):
                 span = self.model().span(index)
                 self.setSpan(row, column, span.height(), span.width())
 
-
 class SwimLaneWidget(QWidget):
+    def __init__(
+            self,
+            model: SwimLaneModel,
+            sequence: Sequence,
+            session_maker: ExperimentSessionMaker,
+            *args
+    ):
+        super().__init__(*args)
+
+        with session_maker() as session:
+            sequence_config = sequence.get_config(session)
+
+        shot_config = sequence_config.shot_configurations["shot"]
+
+        self._model = SwimLaneModel(sequence, "shot", shot_config, session_maker)
+        self._view = QTreeView(self)
+        self._view.setModel(self._model)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._view)
+        self.setLayout(layout)
+
+class _SwimLaneWidget(QWidget):
     def __init__(
         self,
         model: SwimLaneModel,

@@ -59,6 +59,8 @@ class LanesModel(QAbstractTableModel):
         return length
 
     def data(self, index: QModelIndex, role: int = ...):
+        if not index.isValid():
+            return None
         return self._lane_models[index.row()].data(
             self.get_lane_model_index(index), role
         )

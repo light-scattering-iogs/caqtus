@@ -7,6 +7,7 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
     QTimer,
+    QAbstractItemModel,
 )
 
 from condetrol.utils import UndoStack
@@ -15,9 +16,11 @@ from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import (
     Lane,
     ShotConfiguration,
+    LaneReference,
 )
 from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
+from .lane_groups_model import LaneGroupModel
 from .lanes_model import LanesModel
 from .step_durations_model import StepDurationsModel
 from .step_names_model import StepNamesModel
@@ -26,7 +29,120 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class SwimLaneModel(QAbstractTableModel):
+class SwimLaneModel(QAbstractItemModel):
+
+    """
+    First column corresponds the name of the lanes/lane groups.
+    Other columns correspond to the steps of the sequence.
+
+    step_names:
+        - row == 0
+        - column >= 1
+        - internalPointer == None
+    step_durations:
+        - row == 1
+        - column >= 1
+        - internalPointer == None
+    lane_groups:
+        - row >= 2
+        - column == 0
+        - internalPointer == lane_group
+    lanes:
+        - row >= 2
+        - column >= 1
+        - internalPointer == lane_group
+    """
+
+    def __init__(
+        self,
+        sequence: Sequence,
+        shot_name: str,
+        experiment_config: ExperimentConfig,
+        session_maker: ExperimentSessionMaker,
+        *args,
+        **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+
+        with session_maker() as session:
+            sequence_config = sequence.get_config(session)
+
+        shot_config = sequence_config.shot_configurations[shot_name]
+
+        self._step_names_model = StepNamesModel(shot_config.step_names)
+        self._step_durations_model = StepDurationsModel(shot_config.step_durations)
+        self._lane_groups_model = LaneGroupModel(shot_config.lane_groups)
+        self._lanes_model = LanesModel(shot_config.lanes, experiment_config)
+
+        self._lanes_mapping = self._get_lane_names_to_index_mapping(shot_config.lanes)
+
+    @staticmethod
+    def _get_lane_names_to_index_mapping(lanes: list[Lane]) -> dict[str, int]:
+        return {lane.name: i for i, lane in enumerate(lanes)}
+
+    def columnCount(self, parent: QModelIndex = ...) -> int:
+        return 1 + self._lanes_model.columnCount()
+
+    def rowCount(self, parent: QModelIndex = ...) -> int:
+        mapped_parent = self.map_to_lane_groups_model(parent)
+        row_count = self._lane_groups_model.rowCount(mapped_parent)
+        return row_count
+
+    def index(
+        self, row: int, column: int, parent: QModelIndex = QModelIndex()
+    ) -> QModelIndex:
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+        mapped_parent = self.map_to_lane_groups_model(parent)
+        mapped_child = self._lane_groups_model.index(row, 0, mapped_parent)
+        return self.createIndex(
+            mapped_child.row(), column, mapped_child.internalPointer()
+        )
+
+    def parent(self, child: QModelIndex) -> QModelIndex:
+        if not child.isValid():
+            return QModelIndex()
+        mapped_child = self.map_to_lane_groups_model(child)
+        mapped_parent = mapped_child.parent()
+        return self.map_from_lane_groups_model(child.column(), mapped_parent)
+
+    def map_to_child_index(self, index: QModelIndex) -> QModelIndex:
+        if index.column() == 0:
+            return self.map_to_lane_groups_model(index)
+        else:
+            return self.map_to_lanes_model(index)
+
+    def map_to_lane_groups_model(self, index: QModelIndex) -> QModelIndex:
+        if not index.isValid():
+            return self._lane_groups_model.index(index.row() - 2, 0, QModelIndex())
+        else:
+            return self._lane_groups_model.createIndex(
+                index.row(),
+                0,
+                index.internalPointer(),
+            )
+
+    def map_from_lane_groups_model(
+        self, column: int, index: QModelIndex
+    ) -> QModelIndex:
+        return self.createIndex(index.row(), column, index.internalPointer())
+
+    def map_to_lanes_model(self, index: QModelIndex) -> QModelIndex:
+        item = index.internalPointer()
+        if isinstance(item, LaneReference):
+            row = self._lanes_mapping[item.lane_name]
+            return self._lanes_model.index(row, index.column() - 1, QModelIndex())
+        else:
+            return QModelIndex()
+
+    def data(self, index: QModelIndex, role: int = ...):
+        if not index.isValid():
+            return None
+        mapped_index = self.map_to_child_index(index)
+        return mapped_index.data(role)
+
+
+class _SwimLaneModel(QAbstractTableModel):
     """Model for a shot parallel time steps
 
     Each column corresponds to a time step.

@@ -35,7 +35,7 @@ class LaneGroupModel(QAbstractItemModel):
             return QModelIndex()
         elif not parent.isValid():
             parent_item = self.root
-            return self.createIndex(row, column, parent_item)
+            return self.createIndex(row, column, parent_item.children[row])
         else:
             parent_item = parent.internalPointer()
             return self.createIndex(row, column, parent_item.children[row])
@@ -43,10 +43,12 @@ class LaneGroupModel(QAbstractItemModel):
     def parent(self, child: QModelIndex) -> QModelIndex:
         if not child.isValid():
             return QModelIndex()
-        parent_item = child.internalPointer().parent
-        if parent_item == self.root:
+        child_item = child.internalPointer()
+        if child_item is self.root:
             return QModelIndex()
-        return self.createIndex(parent_item.row, 0, parent_item)
+        else:
+            parent_item = child_item.parent
+            return self.createIndex(parent_item.row, 0, parent_item)
 
     def data(self, index: QModelIndex, role: int = ...) -> Optional[str]:
         if not index.isValid():
