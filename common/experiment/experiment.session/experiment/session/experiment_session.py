@@ -59,9 +59,11 @@ class ExperimentSession:
     ) -> str:
         if name is None:
             name = self._get_new_experiment_config_name()
+        yaml = experiment_config.to_yaml()
+        assert ExperimentConfig.from_yaml(yaml) == experiment_config
         ExperimentConfigModel.add_config(
             name=name,
-            yaml=experiment_config.to_yaml(),
+            yaml=yaml,
             comment=comment,
             session=self.get_sql_session(),
         )
