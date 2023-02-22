@@ -98,6 +98,10 @@ class LaneGroup(YAMLSerializable, NodeMixin):
     def name(self):
         return self._name
 
+    @name.setter
+    def name(self, value):
+        self._name = value
+
 
 class LaneGroupRoot(LaneGroup):
     def __init__(

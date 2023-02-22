@@ -69,3 +69,14 @@ class LaneGroupModel(QAbstractItemModel):
             return base_flags | Qt.ItemFlag.ItemIsEditable
         elif isinstance(item, LaneReference):
             return base_flags
+
+    def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
+        if not index.isValid():
+            return False
+        item = index.internalPointer()
+        if isinstance(item, LaneGroup):
+            item.name = value
+            self.dataChanged.emit(index, index)
+            return True
+        else:
+            return False
