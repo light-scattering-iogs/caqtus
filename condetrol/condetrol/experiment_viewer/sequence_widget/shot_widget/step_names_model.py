@@ -43,9 +43,17 @@ class StepNamesModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._step_names[index.row()]
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+        )
+
     def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
         if role == Qt.ItemDataRole.EditRole:
             self._step_names[index.row()] = value
+            self.dataChanged.emit(index, index, [role])
             return True
         else:
             return False
