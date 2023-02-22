@@ -33,7 +33,7 @@ class LaneReference(YAMLSerializable, NodeMixin):
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, obj: "LaneReference") -> yaml.Node:
-        return dumper.represent_scalar(f"!{cls.__name__}", obj._lane_name)
+        return dumper.represent_str(obj._lane_name)
 
     @classmethod
     def constructor(
@@ -76,7 +76,12 @@ class LaneGroup(YAMLSerializable, NodeMixin):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> "LaneGroup":
         data = loader.construct_mapping(node, deep=True)
-        return cls(**data)
+        name = data.pop("name")
+        children = data.pop("children")
+        for index, child in enumerate(children):
+            if isinstance(child, str):
+                children[index] = LaneReference(child)
+        return cls(name=name, children=children)
 
 
 class LaneGroupRoot(LaneGroup):
@@ -100,6 +105,9 @@ class LaneGroupRoot(LaneGroup):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> "LaneGroupRoot":
         data = loader.construct_sequence(node, deep=True)
+        for index, child in enumerate(data):
+            if isinstance(child, str):
+                data[index] = LaneReference(child)
         return cls(children=data)
 
 
