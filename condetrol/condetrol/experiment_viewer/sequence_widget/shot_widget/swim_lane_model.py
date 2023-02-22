@@ -80,41 +80,102 @@ class SwimLaneModel(QAbstractItemModel):
     def _get_lane_names_to_index_mapping(lanes: list[Lane]) -> dict[str, int]:
         return {lane.name: i for i, lane in enumerate(lanes)}
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 1 + self._lanes_model.columnCount()
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        mapped_parent = self.map_to_lane_groups_model(parent)
-        row_count = self._lane_groups_model.rowCount(mapped_parent)
-        return row_count
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if not parent.isValid():
+            return 2 + self._lane_groups_model.rowCount(QModelIndex())
+        else:
+            internal_pointer = parent.internalPointer()
+            if internal_pointer is None:
+                return 0
+            else:
+                mapped_parent = self._lane_groups_model.createIndex(
+                    parent.row(), 0, parent.internalPointer()
+                )
+                return self._lane_groups_model.rowCount(mapped_parent)
 
     def index(
         self, row: int, column: int, parent: QModelIndex = QModelIndex()
     ) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
-        mapped_parent = self.map_to_lane_groups_model(parent)
-        mapped_child = self._lane_groups_model.index(row, 0, mapped_parent)
+
+        if not parent.isValid():
+            if row < 2:
+                internal_pointer = None
+            else:
+                internal_pointer = self._lane_groups_model.index(
+                    row - 2, 0, QModelIndex()
+                ).internalPointer()
+        else:
+            mapped_parent = self._lane_groups_model.createIndex(
+                parent.row(),
+                0,
+                parent.internalPointer(),
+            )
+            mapped_child = self._lane_groups_model.index(row, 0, mapped_parent)
+            internal_pointer = mapped_child.internalPointer()
+
         return self.createIndex(
-            mapped_child.row(), column, mapped_child.internalPointer()
+            row,
+            column,
+            internal_pointer,
         )
 
     def parent(self, child: QModelIndex) -> QModelIndex:
         if not child.isValid():
             return QModelIndex()
-        mapped_child = self.map_to_lane_groups_model(child)
-        mapped_parent = mapped_child.parent()
-        return self.map_from_lane_groups_model(child.column(), mapped_parent)
+        internal_pointer = child.internalPointer()
+        if internal_pointer is None:
+            return QModelIndex()
+        if internal_pointer.parent.is_root:
+            return QModelIndex()
+        else:
+            mapped_child = self._lane_groups_model.createIndex(
+                child.row(), 0, internal_pointer
+            )
+            mapped_parent = mapped_child.parent()
+            return self.createIndex(
+                mapped_parent.row(), child.column(), mapped_parent.internalPointer()
+            )
 
     def map_to_child_index(self, index: QModelIndex) -> QModelIndex:
-        if index.column() == 0:
-            return self.map_to_lane_groups_model(index)
+        if not index.isValid():
+            return QModelIndex()
+        internal_pointer = index.internalPointer()
+        if internal_pointer is None:
+            if index.column() == 0:
+                return QModelIndex()
+            if index.row() == 0:
+                return self._step_names_model.index(
+                    index.column() - 1, 0, QModelIndex()
+                )
+            elif index.row() == 1:
+                return self._step_durations_model.index(
+                    index.column() - 1, 0, QModelIndex()
+                )
+            else:
+                raise ValueError("Cannot map to child index")
         else:
-            return self.map_to_lanes_model(index)
+            if index.column() == 0:
+                if index.parent().isValid():
+                    row = index.row()
+                else:
+                    row = index.row() - 2
+                return self._lane_groups_model.createIndex(row, 0, internal_pointer)
+            else:
+                if isinstance(internal_pointer, LaneReference):
+                    row = self._lanes_mapping[internal_pointer.lane_name]
+                    return self._lanes_model.index(
+                        row, index.column() - 1, QModelIndex()
+                    )
+        return QModelIndex()
 
     def map_to_lane_groups_model(self, index: QModelIndex) -> QModelIndex:
         if not index.isValid():
-            return self._lane_groups_model.index(index.row() - 2, 0, QModelIndex())
+            return QModelIndex()
         else:
             return self._lane_groups_model.createIndex(
                 index.row(),
@@ -138,8 +199,9 @@ class SwimLaneModel(QAbstractItemModel):
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
             return None
-        mapped_index = self.map_to_child_index(index)
-        return mapped_index.data(role)
+        if role == Qt.ItemDataRole.DisplayRole:
+            mapped_index = self.map_to_child_index(index)
+            return mapped_index.data(role)
 
 
 class _SwimLaneModel(QAbstractTableModel):

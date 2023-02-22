@@ -50,6 +50,9 @@ class LaneReference(YAMLSerializable, NodeMixin):
     def row(self):
         return self.parent.children.index(self)
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._lane_name})"
+
 
 class LaneGroup(YAMLSerializable, NodeMixin):
     def __init__(

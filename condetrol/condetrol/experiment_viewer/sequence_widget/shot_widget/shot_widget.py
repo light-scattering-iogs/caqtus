@@ -87,7 +87,6 @@ class ShotWidget(QWidget):
 
         self.layout = QVBoxLayout()
         self.swim_lane_widget = QTreeView()
-        print(self.model.rowCount(QModelIndex()))
         self.swim_lane_widget.setModel(self.model)
         self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
