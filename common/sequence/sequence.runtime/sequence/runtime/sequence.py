@@ -17,8 +17,15 @@ class SequenceNotEditableError(Exception):
 
 
 class Sequence:
-    def __init__(self, path: SequencePath):
-        self._path = path
+    def __init__(self, path: SequencePath | str):
+        if isinstance(path, SequencePath):
+            self._path = path
+        elif isinstance(path, str):
+            self._path = SequencePath(path)
+        else:
+            raise TypeError(
+                f"Expected instance of <SequencePath> or <str>, got {type(path)}"
+            )
 
     def __str__(self):
         return f'Sequence("{str(self._path)}")'
