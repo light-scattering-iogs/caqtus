@@ -16,13 +16,15 @@ pydantic = "^1.10.4"
 settings_model = { path = "../../settings_model/", develop = true }
 sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
 device_config = { path = "../../device_config/", develop = true }
+experiment-session = {path = "../experiment.session", develop = true}
+
 picomotor-configuration = {path = "../../../devices/picomotor/picomotor.configuration", develop = true}
 camera-configuration = {path = "../../../devices/cameras/camera/camera.configuration", develop = true}
 orca-quest-configuration = {path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true}
 ni6738-analog-card-configuration = {path = "../../../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
 spincore-sequencer-configuration = {path = "../../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 siglent-sdg6000x-configuration = {path = "../../../devices/siglent_sdg6000X/siglent_sdg6000x.configuration", develop = true}
-experiment-session = {path = "../experiment.session", develop = true}
+imaging-source-configuration = {path = "../../../devices/cameras/imaging_source/imaging_source.configuration", develop = true}
 
 
 [build-system]

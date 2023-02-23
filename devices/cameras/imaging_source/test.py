@@ -14,18 +14,17 @@ camera = ImagingSourceCameraDMK33GR0134(
     external_trigger=False,
     picture_names=("picture1",),
     exposures=[0.3],
-    timeout=1,
+    timeout=5,
     roi=ROI(x=0, y=0, width=100, height=100),
     gain=2.8
 )
 
-print(ImagingSourceCameraDMK33GR0134.get_device_names())
-
 with camera:
+
+    camera.save_state_to_file("test.xml")
     camera.acquire_all_pictures()
     images = camera.read_all_pictures()
 
-    camera.save_state_to_file("test.xml")
 plt.imshow(images["picture1"])
 pprint(images["picture1"])
 plt.show()

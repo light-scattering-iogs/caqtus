@@ -7,7 +7,9 @@ readme = "README.md"
 packages = [{include = "imaging_source"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
+camera-configuration = {path = "../../camera/camera.configuration", develop = true}
+pydantic = "^1.10.5"
 
 
 [build-system]
