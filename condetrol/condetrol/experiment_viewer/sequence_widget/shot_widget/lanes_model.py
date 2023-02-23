@@ -54,6 +54,8 @@ class LanesModel(QAbstractTableModel):
         return len(self._lanes)
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
+        if not self._lane_models:
+            return 0
         length = self._lane_models[0].rowCount()
         assert all(lane_model.rowCount() == length for lane_model in self._lane_models)
         return length

@@ -286,7 +286,6 @@ class _SwimLaneModel(QAbstractTableModel):
         assert (
             self._step_names_model.rowCount()
             == self._step_durations_model.rowCount()
-            == self._lanes_model.columnCount()
         )
         return self._step_names_model.rowCount()
 
