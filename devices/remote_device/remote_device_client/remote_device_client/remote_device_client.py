@@ -13,6 +13,7 @@ REGISTERED_DEVICE_TYPES: list[str] = [
     "OrcaQuestCamera",
     "SpincorePulseBlaster",
     "NI6738AnalogCard",
+    "ImagingSourceCameraDMK33GR0134",
 ]
 
 for device_type in REGISTERED_DEVICE_TYPES:
