@@ -46,7 +46,7 @@ class SwimLaneModel(QAbstractItemModel):
         experiment_config: ExperimentConfig,
         session_maker: ExperimentSessionMaker,
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -77,6 +77,10 @@ class SwimLaneModel(QAbstractItemModel):
         self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.update_state_timer.start(500)
 
+    @property
+    def sequence(self):
+        return self._sequence
+
     def _update_state(self):
         with self._session as session:
             self._sequence_state = self._sequence.get_state(session)
@@ -100,7 +104,11 @@ class SwimLaneModel(QAbstractItemModel):
         return {lane.name: i for i, lane in enumerate(lanes)}
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return 1 + self._lanes_model.columnCount()
+        assert (
+            (count := self._step_names_model.rowCount())
+            == self._step_durations_model.rowCount()
+        )
+        return 1 + count
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if not parent.isValid():
@@ -243,6 +251,7 @@ class SwimLaneModel(QAbstractItemModel):
             self._step_durations_model.insertRow(column)
             self._lanes_model.insertColumn(column)
             self.endInsertColumns()
+            logger.debug(self.shot_config.step_names)
             self.save_config(self.shot_config, session)
             return True
 
@@ -303,8 +312,7 @@ class _SwimLaneModel(QAbstractTableModel):
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         assert (
-            self._step_names_model.rowCount()
-            == self._step_durations_model.rowCount()
+            self._step_names_model.rowCount() == self._step_durations_model.rowCount()
         )
         return self._step_names_model.rowCount()
 

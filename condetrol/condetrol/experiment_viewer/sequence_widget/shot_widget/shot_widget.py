@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from typing import Optional
 
 from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
@@ -13,14 +14,13 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
     QStyle,
     QMenu,
-    QTreeView,
+    QTreeView, QHeaderView,
 )
 
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from sequence.configuration import DigitalLane, AnalogLane, CameraLane, TakePicture
 from sequence.runtime import Sequence, State
-from .lane_groups_model import LaneGroupModel
 from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class ShotWidget(QWidget):
         )
 
         self.layout = QVBoxLayout()
-        self.swim_lane_widget = QTreeView()
+        self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
         self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
@@ -103,6 +103,72 @@ class ShotWidget(QWidget):
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         self.model.update_experiment_config(new_config)
+
+
+class SwimLaneView(QTreeView):
+    def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
+        self._session = session_maker()
+        self._sequence: Optional[Sequence] = None
+
+        super().__init__(*args, **kwargs)
+        self.setAlternatingRowColors(True)
+
+        self.header().setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        # noinspection PyUnresolvedReferences
+        self.header().customContextMenuRequested.connect(
+            self.show_steps_context_menu
+        )
+        self.header().setStretchLastSection(False)
+        self.header().setSectionsMovable(False)
+        self.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+    def setModel(self, model: SwimLaneModel) -> None:
+        self._sequence = model.sequence
+        super().setModel(model)
+
+    def get_sequence_state(self, session):
+        return self._sequence.get_state(session)
+
+    def show_steps_context_menu(self, position):
+        """Show the context menu on the step header to remove or add a new time step"""
+
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+
+        menu = QMenu(self.header())
+
+        index = self.header().logicalIndexAt(position)
+        logger.debug(f"{index=}")
+        if index == 0:
+            return
+        if index == -1:
+            index = self.header().count() - 1
+        else:
+            add_step_before_action = QAction("Insert before")
+            menu.addAction(add_step_before_action)
+            # noinspection PyUnresolvedReferences
+            add_step_before_action.triggered.connect(
+                lambda: self.model().insertColumn(index, QModelIndex())
+            )
+
+        add_step_after_action = QAction("Insert after")
+        menu.addAction(add_step_after_action)
+        # noinspection PyUnresolvedReferences
+        add_step_after_action.triggered.connect(
+            lambda: self.model().insertColumn(index + 1, QModelIndex())
+        )
+
+        # remove_step_action = QAction("Remove")
+        # menu.addAction(remove_step_action)
+        # # noinspection PyUnresolvedReferences
+        # remove_step_action.triggered.connect(
+        #     lambda: self._model.removeColumn(index, QModelIndex())
+        # )
+
+        menu.exec(self.header().mapToGlobal(position))
 
 
 class SpanTableView(QTableView):
