@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "imaging-source-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "imaging_source"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+camera-configuration = {path = "../../camera/camera.configuration", develop = true}
+pydantic = "^1.10.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

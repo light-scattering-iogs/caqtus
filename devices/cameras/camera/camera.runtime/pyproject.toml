@@ -7,9 +7,10 @@ readme = "README.md"
 packages = [{include = "camera"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 device = {path = "../../../device", develop = true}
 pydantic = "^1.10.4"
+numpy = "^1.23.4"
 camera-configuration = {path = "../camera.configuration", develop = true}
 
 

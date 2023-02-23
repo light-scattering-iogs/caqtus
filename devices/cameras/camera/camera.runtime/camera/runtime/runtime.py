@@ -1,13 +1,13 @@
 import logging
+import time
 from abc import ABC, abstractmethod
 from collections import Counter
-from math import inf
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy
-from camera.configuration import ROI
 from pydantic import Field, validator
 
+from camera.configuration import ROI
 from device import RuntimeDevice
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,7 @@ class CCamera(RuntimeDevice, ABC):
         Classes inheriting of CCamera must implement _acquire_picture and subclass _read_picture.
     """
 
-    picture_names: list[str] = Field(
-        default_factory=list,
+    picture_names: tuple[str] = Field(
         description=(
             "Names to give to the pictures in order of acquisition. Each name must be"
             " unique."
@@ -35,12 +34,10 @@ class CCamera(RuntimeDevice, ABC):
     )
 
     roi: ROI = Field(
-        default_factory=ROI,
         allow_mutation=False,
         description="The region of interest to crop from a full image.",
     )
     timeout: float = Field(
-        default=inf,
         units="s",
         description=(
             "The camera must raise a CameraTimeoutError if it is didn't receive a"
@@ -49,7 +46,6 @@ class CCamera(RuntimeDevice, ABC):
         allow_mutation=True,
     )
     exposures: list[float] = Field(
-        default_factory=list,
         units="s",
         description="List of exposures to use for the pictures to acquire.",
         allow_mutation=True,
@@ -66,6 +62,7 @@ class CCamera(RuntimeDevice, ABC):
     sensor_height: ClassVar[int]
 
     _acquired_pictures: list[bool] = []
+    _pictures: list[Optional[numpy.ndarray]] = []
 
     @validator("picture_names")
     def validate_picture_names(cls, picture_names):
@@ -94,22 +91,51 @@ class CCamera(RuntimeDevice, ABC):
         super().start()
         self._acquired_pictures = [False] * self.number_pictures_to_acquire
 
-    def update_parameters(self, /, **kwargs) -> None:
-        if "exposures" in kwargs:
-            if self._acquired_pictures[0] and not self._acquired_pictures[-1]:
-                raise RuntimeError(f"Not all pictures have been acquired")
-        super().update_parameters(**kwargs)
+    def update_parameters(self, /, exposures: list[float]) -> None:
+        """Update the exposures time of the camera"""
 
-    def acquire_picture(self):
-        try:
-            next_picture_index = self._acquired_pictures.index(False)
-        except ValueError:
-            next_picture_index = 0
-            self._acquired_pictures = [False] * self.number_pictures_to_acquire
-        logger.debug("Starting picture acquisition")
-        self._acquire_picture(
-            next_picture_index, self.exposures[next_picture_index], self.timeout
-        )
+        if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
+            raise RuntimeError(
+                f"Cannot update parameters while pictures are being acquired"
+            )
+
+        super().update_parameters(exposures=exposures)
+
+    def are_all_pictures_acquired(self):
+        return all(picture is not None for picture in self._pictures)
+
+    def no_pictures_acquired(self):
+        return all(picture is None for picture in self._pictures)
+
+    def start_acquisition(self):
+        self._pictures = [None] * self.number_pictures_to_acquire
+        self._start_acquisition()
+
+    def is_acquisition_in_progress(self) -> bool:
+        return self._is_acquisition_in_progress()
+
+    def stop_acquisition(self):
+        self._stop_acquisition()
+
+    @abstractmethod
+    def _start_acquisition(self):
+        """Start the acquisition of pictures
+
+        Warnings:
+            This function must not block until all pictures have been acquired, but it must return as soon as the camera
+            starts waiting for images.
+        """
+        ...
+
+    @abstractmethod
+    def _is_acquisition_in_progress(self) -> bool:
+        """Return True if the acquisition is in progress"""
+        ...
+
+    @abstractmethod
+    def _stop_acquisition(self):
+        """Stop the acquisition of pictures"""
+        ...
 
     def acquire_all_pictures(self) -> None:
         """Take all the pictures specified by their names and exposures
@@ -117,32 +143,28 @@ class CCamera(RuntimeDevice, ABC):
         This function is blocking until all required pictures have been taken.
         """
 
-        for _ in range(self.number_pictures_to_acquire):
-            self.acquire_picture()
-
-    def reset_acquisition(self):
-        for i in range(len(self._acquired_pictures)):
-            self._acquired_pictures[i] = False
-
-    def read_picture(self, name: str) -> numpy.ndarray:
-        picture_number = self.picture_names.index(name)
-        return self._read_picture(picture_number)
+        self.start_acquisition()
+        while self.is_acquisition_in_progress():
+            time.sleep(10e-3)
+        self.stop_acquisition()
 
     def read_all_pictures(self) -> dict[str, numpy.ndarray]:
-        if not all(self._acquired_pictures):
+        if not self.are_all_pictures_acquired():
             raise TimeoutError(
-                f"Could not read all pictures on {self.name} "
-                f"({sum(self._acquired_pictures)}/{self.number_pictures_to_acquire} acquired)"
+                f"Not all pictures have been acquired for camera {self.name}"
             )
         else:
-            return {name: self.read_picture(name) for name in self.picture_names}
+            return {
+                name: self._pictures[index]
+                for index, name in enumerate(self.picture_names)
+            }
 
     def shutdown(self):
-        if not all(self._acquired_pictures):
+        if self.is_acquisition_in_progress():
+            self.stop_acquisition()
+        if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
             logger.warning(
-                f"Only {sum(self._acquired_pictures)} out of"
-                f" {self.number_pictures_to_acquire} pictures where successfully"
-                f" acquired for {self.name}."
+                f"Shutting down {self.name} while acquisition is in progress"
             )
         super().shutdown()
 
@@ -159,36 +181,3 @@ class CCamera(RuntimeDevice, ABC):
     @property
     def number_pictures_to_acquire(self):
         return len(self.picture_names)
-
-    def _has_exposure_changed(self, picture_number: int) -> bool:
-        return picture_number == 0 or (
-            self.exposures[picture_number - 1] != self.exposures[picture_number]
-        )
-
-    @abstractmethod
-    def _acquire_picture(
-        self, picture_number: int, exposure: float, timeout: float
-    ) -> None:
-        """Take a single picture
-
-        When subclassing this function, it should start a single acquisition and be blocking until the picture is
-        taken. After the acquisition, it should call the _pictured_acquired method.
-
-        Raises:
-            TimeoutError if no picture was taken within timeout
-        """
-        ...
-
-    def _picture_acquired(self, picture_number: int):
-        """Must be called when a picture has been taken"""
-        self._acquired_pictures[picture_number] = True
-
-    def _read_picture(self, picture_number: int) -> numpy.ndarray:
-        """Read a previously acquired picture
-
-        This method must be subclassed.
-        """
-        if not self._acquired_pictures[picture_number]:
-            raise RuntimeError(f"Picture {picture_number} was not yet acquired")
-        else:
-            return numpy.array([[]])
