@@ -9,8 +9,6 @@ from PyQt6.QtCore import (
     QTimer,
     QAbstractItemModel,
 )
-from PyQt6.QtGui import QFont, QGuiApplication
-from PyQt6.QtWidgets import QApplication
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
@@ -105,9 +103,8 @@ class SwimLaneModel(QAbstractItemModel):
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         assert (
-            (count := self._step_names_model.rowCount())
-            == self._step_durations_model.rowCount()
-        )
+            count := self._step_names_model.rowCount()
+        ) == self._step_durations_model.rowCount()
         return 1 + count
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
@@ -209,13 +206,13 @@ class SwimLaneModel(QAbstractItemModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if orientation == Qt.Orientation.Horizontal:
             if section == 0:
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return f"Steps:"
+                return self._step_names_model.headerData(
+                    0, Qt.Orientation.Horizontal, role
+                )
             else:
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return self._step_names_model.headerData(
-                        section - 1, Qt.Orientation.Vertical, role
-                    )
+                return self._step_names_model.headerData(
+                    section - 1, Qt.Orientation.Vertical, role
+                )
         return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:

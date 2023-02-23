@@ -42,13 +42,18 @@ class StepNamesModel(QAbstractListModel):
     def data(self, index: QModelIndex, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._step_names[index.row()]
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignHCenter
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
-        if role == Qt.ItemDataRole.DisplayRole:
-            if orientation == Qt.Orientation.Horizontal:
-                return "Step"
-            else:
+        if orientation == Qt.Orientation.Horizontal:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return "Steps"
+        else:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return f"Step {section}"
+            elif role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignHCenter
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         return (

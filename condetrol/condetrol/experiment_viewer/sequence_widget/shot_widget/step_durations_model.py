@@ -36,9 +36,11 @@ class StepDurationsModel(QAbstractListModel):
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._step_durations)
 
-    def data(self, index: QModelIndex, role: int = ...) -> str:
+    def data(self, index: QModelIndex, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._step_durations[index.row()].body
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignHCenter
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         return (
