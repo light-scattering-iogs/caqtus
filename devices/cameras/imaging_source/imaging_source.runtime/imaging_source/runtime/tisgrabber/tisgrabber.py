@@ -146,6 +146,9 @@ def declareFunctions(ic):
     ic.ENUMCODECCB = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_char_p, ctypes.py_object)
     ic.IC_enumCodecs.argtypes = (ic.ENUMCODECCB, ctypes.py_object)
 
+    ic.ENUMCB = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_char_p, ctypes.py_object)
+    ic.IC_enumProperties.argtypes = (ctypes.POINTER(HGRABBER), ic.ENUMCB, ctypes.py_object)
+
     ic.IC_GetDeviceName.restype = ctypes.c_char_p
     ic.IC_GetDevice.restype = ctypes.c_char_p
     ic.IC_GetUniqueNamefromList.restype = ctypes.c_char_p
