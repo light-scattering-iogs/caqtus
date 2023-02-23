@@ -14,7 +14,8 @@ from PyQt6.QtWidgets import (
     QStyleOptionViewItem,
     QStyle,
     QMenu,
-    QTreeView, QHeaderView,
+    QTreeView,
+    QHeaderView,
 )
 
 from experiment.configuration import ExperimentConfig
@@ -75,7 +76,7 @@ class ShotWidget(QWidget):
         sequence: Sequence,
         experiment_config: ExperimentConfig,
         session_maker: ExperimentSessionMaker,
-        *args
+        *args,
     ):
         super().__init__(*args)
         self._sequence = sequence
@@ -113,16 +114,16 @@ class SwimLaneView(QTreeView):
         super().__init__(*args, **kwargs)
         self.setAlternatingRowColors(True)
 
-        self.header().setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
+        self.header().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
-        self.header().customContextMenuRequested.connect(
-            self.show_steps_context_menu
-        )
+        self.header().customContextMenuRequested.connect(self.show_steps_context_menu)
         self.header().setStretchLastSection(False)
         self.header().setSectionsMovable(False)
         self.header().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        # noinspection PyUnresolvedReferences
+        self.customContextMenuRequested.connect(self.show_context_menu)
 
     def setModel(self, model: SwimLaneModel) -> None:
         self._sequence = model.sequence
@@ -171,6 +172,25 @@ class SwimLaneView(QTreeView):
 
         menu.exec(self.header().mapToGlobal(position))
 
+    def show_context_menu(self, position):
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+
+        menu = QMenu(self)
+
+        index = self.indexAt(position)
+        # noinspection PyTypeChecker
+        model: SwimLaneModel = self.model()
+        actions = model.get_context_actions(index)
+        if actions:
+            for action in actions:
+                menu.addAction(action)
+        else:
+            return
+
+        menu.exec(self.mapToGlobal(position))
+
 
 class SpanTableView(QTableView):
     def __init__(self):
@@ -198,7 +218,7 @@ class SwimLaneWidget(QWidget):
         model: SwimLaneModel,
         sequence: Sequence,
         session_maker: ExperimentSessionMaker,
-        *args
+        *args,
     ):
         super().__init__(*args)
 
@@ -222,7 +242,7 @@ class _SwimLaneWidget(QWidget):
         model: SwimLaneModel,
         sequence: Sequence,
         session_maker: ExperimentSessionMaker,
-        *args
+        *args,
     ):
         super().__init__(*args)
 

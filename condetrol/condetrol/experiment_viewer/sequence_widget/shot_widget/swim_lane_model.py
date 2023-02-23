@@ -1,5 +1,5 @@
 import logging
-from typing import Type, Iterable
+from typing import Type, Iterable, Optional
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -9,6 +9,7 @@ from PyQt6.QtCore import (
     QTimer,
     QAbstractItemModel,
 )
+from PyQt6.QtGui import QAction
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
@@ -17,6 +18,7 @@ from sequence.configuration import (
     Lane,
     ShotConfiguration,
     LaneReference,
+    DigitalLane,
 )
 from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
@@ -206,9 +208,8 @@ class SwimLaneModel(QAbstractItemModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if orientation == Qt.Orientation.Horizontal:
             if section == 0:
-                return self._step_names_model.headerData(
-                    0, Qt.Orientation.Horizontal, role
-                )
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return "Lanes\\Steps"
             else:
                 return self._step_names_model.headerData(
                     section - 1, Qt.Orientation.Vertical, role
@@ -267,6 +268,38 @@ class SwimLaneModel(QAbstractItemModel):
             self.endRemoveColumns()
             self.save_config(self.shot_config, session)
             return True
+
+    def get_context_actions(self, index: QModelIndex) -> list[QAction]:
+        result = []
+        if (insert_lane := self.get_insert_lane_action(index)) is not None:
+            result.append(insert_lane)
+        return result
+
+    def get_insert_lane_action(self, index: QModelIndex) -> Optional[QAction]:
+        if not index.isValid():
+            return None
+        if index.column() == 0:
+            insert_lane = QAction("Insert lane")
+            if index.row() < 2:
+                insert_lane.triggered.connect(
+                    lambda: self.insert_lane(QModelIndex(), DigitalLane, "test")
+                )
+                return insert_lane
+
+    def insert_lane(self, index: QModelIndex, lane_type: Type[Lane], name: str):
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return
+
+            if not index.isValid():  # insert as first element of root
+                self.beginInsertRows(QModelIndex(), 2, 2)
+                self._lanes_model.insert_lane(0, lane_type, name)
+                self._lane_groups_model.insert_lane(QModelIndex(), 0, name)
+                self._lanes_mapping[name] = 0
+                self.endInsertRows()
+                self.save_config(self.shot_config, session)
+            else:
+                raise NotImplementedError()
 
 
 class _SwimLaneModel(QAbstractTableModel):

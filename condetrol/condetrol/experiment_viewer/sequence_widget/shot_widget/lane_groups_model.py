@@ -80,3 +80,12 @@ class LaneGroupModel(QAbstractItemModel):
             return True
         else:
             return False
+
+    def insert_lane(self, parent: QModelIndex, row: int, name: str):
+        if not parent.isValid():
+            parent_item = self.root
+        else:
+            raise NotImplementedError
+        self.beginInsertRows(parent, row, row)
+        parent_item.insert_lane(row, name)
+        self.endInsertRows()

@@ -133,6 +133,11 @@ class LaneGroupRoot(LaneGroup):
     def row(self):
         return 0
 
+    def insert_lane(self, index: int, name: str):
+        new_children = list(self.children)
+        new_children.insert(index, LaneReference(name))
+        self.children = new_children
+
 
 class ShotConfiguration(SettingsModel):
     step_names: list[str] = ["..."]
