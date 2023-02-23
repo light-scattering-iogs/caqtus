@@ -9,6 +9,8 @@ from PyQt6.QtCore import (
     QTimer,
     QAbstractItemModel,
 )
+from PyQt6.QtGui import QFont, QGuiApplication
+from PyQt6.QtWidgets import QApplication
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
@@ -198,10 +200,11 @@ class SwimLaneModel(QAbstractItemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if orientation == Qt.Orientation.Horizontal:
-            if role == Qt.ItemDataRole.DisplayRole:
-                if section == 0:
-                    return None
-                else:
+            if section == 0:
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return f"Steps:"
+            else:
+                if role == Qt.ItemDataRole.DisplayRole:
                     return self._step_names_model.headerData(
                         section - 1, Qt.Orientation.Vertical, role
                     )
@@ -226,6 +229,22 @@ class SwimLaneModel(QAbstractItemModel):
                     self.save_config(self.shot_config, session)
                     self.dataChanged.emit(index, index, [role])
         return edit
+
+    def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            if column == 0:
+                return False
+            else:
+                column -= 1
+            self.beginInsertColumns(parent, column, column)
+            self._step_names_model.insertRow(column)
+            self._step_durations_model.insertRow(column)
+            self._lanes_model.insertColumn(column)
+            self.endInsertColumns()
+            self.save_config(self.shot_config, session)
+            return True
 
 
 class _SwimLaneModel(QAbstractTableModel):
