@@ -9,6 +9,7 @@ packages = [{include = "imaging_source"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 camera-runtime = {path = "../../camera/camera.runtime", develop = true}
+pydantic = "^1.10.5"
 
 
 [build-system]
