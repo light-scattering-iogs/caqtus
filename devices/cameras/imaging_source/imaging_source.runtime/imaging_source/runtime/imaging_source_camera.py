@@ -10,6 +10,7 @@ import os
 import pathlib
 import shutil
 import threading
+from abc import ABC, abstractmethod
 from tempfile import mkdtemp
 
 import numpy
@@ -32,7 +33,7 @@ declareFunctions(ic)
 ic.IC_InitLibrary(0)
 
 
-class ImagingSourceCamera(CCamera):
+class ImagingSourceCamera(CCamera, ABC):
 
     camera_name: str = Field(description="The name of the camera", allow_mutation=False)
 
@@ -52,17 +53,21 @@ class ImagingSourceCamera(CCamera):
         self.save_state_to_file(self._settings_file)
 
         self.reset_properties()
+        self._setup_properties()
 
         self.update_parameters(exposures=self.exposures)
 
+    @abstractmethod
+    def _setup_properties(self):
+        """Set up the properties of the camera after their reinitialization"""
+        ...
+
     def shutdown(self):
-        self.load_state_from_file(self._settings_file)
         try:
+            self.load_state_from_file(self._settings_file)
             shutil.rmtree(self._temp_dir)
         except Exception as error:
-            logger.warning(
-                f"Could not remove temporary directory {self._temp_dir}: {error}"
-            )
+            logger.warning(error)
 
         try:
             if self._grabber_handle is not None:
@@ -86,11 +91,13 @@ class ImagingSourceCamera(CCamera):
         self.set_exposure(exposure)
 
     def set_exposure(self, exposure: float):
-        return
-        ic.IC_SetExposureTime(self._grabber_handle, D(exposure))
+        ic.IC_SetPropertyAbsoluteValue(
+            self._grabber_handle, T("Exposure"), T("Value"), ctypes.c_float(exposure)
+        )
 
     def _start_acquisition(self):
-        ic.IC_StartLive(self._grabber_handle, 0)
+        if not ic.IC_StartLive(self._grabber_handle, 0):
+            raise RuntimeError(f"Failed to start live for {self.name}")
 
         def acquire_pictures():
             for picture_number in range(self.number_pictures_to_acquire):
@@ -102,11 +109,15 @@ class ImagingSourceCamera(CCamera):
         self._acquisition_thread.start()
 
     def _is_acquisition_in_progress(self) -> bool:
+        if self._acquisition_thread is None:
+            return False
         return self._acquisition_thread.is_alive()
 
     def _stop_acquisition(self):
-        self._acquisition_thread.join()
-        ic.IC_StopLive(self._grabber_handle)
+        if self._acquisition_thread is not None:
+            self._acquisition_thread.join()
+            if ic.IC_StopLive(self._grabber_handle) != IC_SUCCESS:
+                raise RuntimeError(f"Failed to stop live for {self.name}")
 
     def _snap_picture(self, picture_number: int, timeout: float) -> None:
         result = ic.IC_SnapImage(self._grabber_handle, int(timeout * 1e3))
@@ -137,7 +148,7 @@ class ImagingSourceCamera(CCamera):
             dtype=numpy.uint8,
             shape=(height.value, width.value, bytes_per_pixel),
         )
-        return image
+        return numpy.copy(image)
 
     @classmethod
     def get_device_counts(cls) -> int:
@@ -150,10 +161,88 @@ class ImagingSourceCamera(CCamera):
         ]
 
     def save_state_to_file(self, file):
-        ic.IC_SaveDeviceStateToFile(self._grabber_handle, T(str(file)))
+        if (
+            ic.IC_SaveDeviceStateToFile(self._grabber_handle, T(str(file)))
+            != IC_SUCCESS
+        ):
+            raise RuntimeError(f"Failed to save state to file {file}")
 
     def load_state_from_file(self, file):
-        ic.IC_LoadDeviceStateFromFile(self._grabber_handle, T(str(file)))
+        if (
+            error := ic.IC_LoadDeviceStateFromFile(self._grabber_handle, T(str(file)))
+        ) != IC_SUCCESS:
+            raise RuntimeError(f"Failed to load state from file {file}: {error}")
 
     def reset_properties(self):
-        ic.IC_ResetProperties(self._grabber_handle)
+        if (error := ic.IC_ResetProperties(self._grabber_handle)) != IC_SUCCESS:
+            pass  # not sure why, but the line above returns an error
+            # raise RuntimeError(f"Failed to reset properties for {self.name}: {error}")
+
+
+class ImagingSourceCameraDMK33GR0134(ImagingSourceCamera):
+    """ImagingSource camera DMK33GR0134"""
+
+    brightness: int = Field(
+        default=0,
+        ge=0,
+        le=4095,
+        description="Brightness of the camera",
+        allow_mutation=False,
+    )
+    contrast: int = Field(
+        default=0,
+        ge=-10,
+        le=30,
+        description="Contrast of the camera",
+        allow_mutation=False,
+    )
+    sharpness: int = Field(
+        default=0,
+        ge=0,
+        le=14,
+        description="Sharpness of the camera",
+        allow_mutation=False,
+    )
+    gamma: float = Field(
+        default=1.0,
+        ge=0.01,
+        le=5.0,
+        description="Gamma of the camera",
+        allow_mutation=False,
+    )
+    gain: float = Field(
+        default=0,
+        ge=0,
+        le=18.04,
+        description="Gain of the camera",
+        units="dB",
+        allow_mutation=False,
+    )
+
+    def _setup_properties(self):
+        if not ic.IC_SetPropertyValue(
+            self._grabber_handle, T("Brightness"), T("Value"), self.brightness
+        ):
+            raise RuntimeError("Failed to set brightness")
+        if not ic.IC_SetPropertyValue(
+            self._grabber_handle, T("Contrast"), T("Value"), self.contrast
+        ):
+            raise RuntimeError("Failed to set contrast")
+        if not ic.IC_SetPropertyValue(
+            self._grabber_handle, T("Sharpness"), T("Value"), self.sharpness
+        ):
+            raise RuntimeError("Failed to set sharpness")
+        if not ic.IC_SetPropertyAbsoluteValue(
+            self._grabber_handle, T("Gamma"), T("Value"), ctypes.c_float(self.gamma)
+        ):
+            raise RuntimeError("Failed to set gamma")
+        if not ic.IC_SetPropertySwitch(self._grabber_handle, T("Gain"), T("Auto"), 0):
+            raise RuntimeError("Failed to set gain to manual")
+        if not ic.IC_SetPropertyAbsoluteValue(
+            self._grabber_handle, T("Gain"), T("Value"), ctypes.c_float(self.gain)
+        ):
+            raise RuntimeError("Failed to set gain")
+        if not ic.IC_SetPropertySwitch(
+            self._grabber_handle, T("Exposure"), T("Auto"), 0
+        ):
+            raise RuntimeError("Failed to set exposure to manual")
