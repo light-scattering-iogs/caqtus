@@ -69,7 +69,7 @@ class ImagingSourceCamera(CCamera, ABC):
         self._settings_file = self._temp_dir / "settings.xml"
         self.save_state_to_file(self._settings_file)
 
-        self.reset_properties()
+        # self.reset_properties()
 
         self._setup_properties()
         self._setup_trigger()
@@ -87,7 +87,7 @@ class ImagingSourceCamera(CCamera, ABC):
 
     def shutdown(self):
         try:
-            # self.load_state_from_file(self._settings_file)
+            self.load_state_from_file(self._settings_file)
             shutil.rmtree(self._temp_dir)
         except Exception as error:
             logger.warning(error)
