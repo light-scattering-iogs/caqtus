@@ -12,6 +12,7 @@ import shutil
 import threading
 from abc import ABC, abstractmethod
 from tempfile import mkdtemp
+from typing import Literal
 
 import numpy
 from pydantic import Field
@@ -32,10 +33,26 @@ declareFunctions(ic)
 
 ic.IC_InitLibrary(0)
 
+_MAP_FORMAT = {"Y16": 4, "Y800": 0}
+
+
+def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
+    height, width, bytes_per_pixel = image.shape
+    if format_ == "Y16":
+        new_image = numpy.zeros((height, width), dtype=numpy.uint16)
+        new_image[:, :] = image[:, :, 0] + image[:, :, 1] * 256
+    elif format_ == "Y800":
+        new_image = numpy.zeros((height, width), dtype=numpy.uint8)
+        new_image[:, :] = image[:, :, 0]
+    else:
+        raise NotImplementedError(f"Format {format_} not implemented")
+    return new_image
+
 
 class ImagingSourceCamera(CCamera, ABC):
 
     camera_name: str = Field(description="The name of the camera", allow_mutation=False)
+    format: Literal["Y16", "Y800"] = Field(allow_mutation=False)
 
     _grabber_handle: ctypes.POINTER(HGRABBER) = None
     _acquisition_thread: threading.Thread = None
@@ -53,6 +70,7 @@ class ImagingSourceCamera(CCamera, ABC):
         self.save_state_to_file(self._settings_file)
 
         self.reset_properties()
+
         self._setup_properties()
 
         self.update_parameters(exposures=self.exposures)
@@ -64,7 +82,7 @@ class ImagingSourceCamera(CCamera, ABC):
 
     def shutdown(self):
         try:
-            self.load_state_from_file(self._settings_file)
+            # self.load_state_from_file(self._settings_file)
             shutil.rmtree(self._temp_dir)
         except Exception as error:
             logger.warning(error)
@@ -148,7 +166,7 @@ class ImagingSourceCamera(CCamera, ABC):
             dtype=numpy.uint8,
             shape=(height.value, width.value, bytes_per_pixel),
         )
-        return numpy.copy(image)
+        return _reformat_image(image, self.format)
 
     @classmethod
     def get_device_counts(cls) -> int:
@@ -220,6 +238,8 @@ class ImagingSourceCameraDMK33GR0134(ImagingSourceCamera):
     )
 
     def _setup_properties(self):
+        if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[self.format]):
+            raise RuntimeError("Failed to set format")
         if not ic.IC_SetPropertyValue(
             self._grabber_handle, T("Brightness"), T("Value"), self.brightness
         ):
@@ -242,6 +262,11 @@ class ImagingSourceCameraDMK33GR0134(ImagingSourceCamera):
             self._grabber_handle, T("Gain"), T("Value"), ctypes.c_float(self.gain)
         ):
             raise RuntimeError("Failed to set gain")
+        if not ic.IC_SetPropertySwitch(
+            self._grabber_handle, T("Exposure"), T("Auto"), 0
+        ):
+            raise RuntimeError("Failed to set exposure to manual")
+
         if not ic.IC_SetPropertySwitch(
             self._grabber_handle, T("Exposure"), T("Auto"), 0
         ):

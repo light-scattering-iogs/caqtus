@@ -1,28 +1,31 @@
 from pprint import pprint
 
 from camera.configuration import ROI
-from imaging_source.runtime import ImagingSourceCamera
+from imaging_source.runtime import ImagingSourceCameraDMK33GR0134
 import matplotlib.pyplot as plt
 
 mot_camera = 'DMK 33GR0134 6120749'
 test_camera = 'DMK 33GR0134 32220093'
 
-camera = ImagingSourceCamera(
+camera = ImagingSourceCameraDMK33GR0134(
     name="camera",
     camera_name=mot_camera,
+    format="Y800",
     external_trigger=False,
     picture_names=("picture1",),
-    exposures=[0.1],
+    exposures=[0.3],
     timeout=1,
     roi=ROI(x=0, y=0, width=100, height=100),
+    gain=2.8
 )
 
-print(ImagingSourceCamera.get_device_names())
+print(ImagingSourceCameraDMK33GR0134.get_device_names())
 
 with camera:
-    camera.save_state_to_file("test.xml")
     camera.acquire_all_pictures()
     images = camera.read_all_pictures()
+
+    camera.save_state_to_file("test.xml")
 plt.imshow(images["picture1"])
 pprint(images["picture1"])
 plt.show()
