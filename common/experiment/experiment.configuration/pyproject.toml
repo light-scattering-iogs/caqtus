@@ -9,7 +9,6 @@ packages = [{include = "experiment"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-appdirs = "^1.4.4"
 pyqt6 = "^6.4.1"
 pydantic = "^1.10.4"
 

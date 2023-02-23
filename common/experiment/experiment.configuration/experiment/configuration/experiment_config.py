@@ -1,11 +1,8 @@
 import copy
 import logging
-from pathlib import Path
 from typing import Optional, Type
 
-from PyQt6.QtCore import QSettings
-from appdirs import user_config_dir
-from pydantic import Field, validator, PostgresDsn
+from pydantic import Field, validator
 from pydantic.color import Color
 
 from camera.configuration import CameraConfiguration
@@ -179,15 +176,6 @@ class ExperimentConfig(SettingsModel):
         if config.device_name in self.get_device_names():
             raise ValueError(f"Device name {config.device_name} is already being used")
         self.device_configurations.append(config)
-
-
-def get_config_path() -> Path:
-    ui_settings = QSettings("Caqtus", "ExperimentControl")
-    config_folder = ui_settings.value(
-        "experiment/config_path", user_config_dir("ExperimentControl", "Caqtus")
-    )
-    config_path = Path(config_folder) / "config.yaml"
-    return config_path
 
 
 class DeviceConfigNotFoundError(RuntimeError):
