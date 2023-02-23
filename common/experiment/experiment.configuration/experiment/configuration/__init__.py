@@ -7,7 +7,6 @@ from imaging_source.configuration import ImagingSourceCameraDMK33GR0134Configura
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
-    get_config_path,
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
     CameraConfiguration,
@@ -26,7 +25,6 @@ __all__ = [
     ChannelSpecialPurpose,
     ExperimentConfig,
     DeviceConfigNotFoundError,
-    get_config_path,
     CameraConfiguration,
     DeviceServerConfiguration,
     *device_configs,

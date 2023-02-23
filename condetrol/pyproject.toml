@@ -9,7 +9,6 @@ python = "^3.11"
 Send2Trash = "^1.8.0"
 pyqt6 = "^6.4.1"
 QDarkStyle = "^3.1"
-appdirs = "^1.4.4"
 settings_model = { path = "../common/settings_model/", develop = true }
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
 experiment_manager = { path = "../experiment_manager/", develop = true }
