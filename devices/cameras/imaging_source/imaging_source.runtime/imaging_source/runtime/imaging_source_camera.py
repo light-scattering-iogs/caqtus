@@ -72,6 +72,7 @@ class ImagingSourceCamera(CCamera, ABC):
         self.reset_properties()
 
         self._setup_properties()
+        self._setup_trigger()
 
         self.update_parameters(exposures=self.exposures)
 
@@ -79,6 +80,10 @@ class ImagingSourceCamera(CCamera, ABC):
     def _setup_properties(self):
         """Set up the properties of the camera after their reinitialization"""
         ...
+
+    def _setup_trigger(self):
+        if ic.IC_EnableTrigger(self._grabber_handle, int(self.external_trigger)) != IC_SUCCESS:
+            raise RuntimeError(f"{self.name}: failed to set trigger mode")
 
     def shutdown(self):
         try:
@@ -138,7 +143,11 @@ class ImagingSourceCamera(CCamera, ABC):
                 raise RuntimeError(f"Failed to stop live for {self.name}")
 
     def _snap_picture(self, picture_number: int, timeout: float) -> None:
-        result = ic.IC_SnapImage(self._grabber_handle, int(timeout * 1e3))
+        if self.external_trigger:
+            timeout = int(timeout * 1e3)
+        else:
+            timeout = -1
+        result = ic.IC_SnapImage(self._grabber_handle, timeout)
         if result == IC_SUCCESS:
             logger.info(f"Picture {picture_number} acquired")
         else:
