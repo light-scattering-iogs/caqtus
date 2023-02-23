@@ -304,8 +304,6 @@ class SwimLaneModel(QAbstractItemModel):
                 self._lane_groups_model.insert_lane(QModelIndex(), 0, name)
                 self._lanes_mapping[name] = 0
                 self.endInsertRows()
-
-                print(self.shot_config.to_yaml())
                 self.save_config(self.shot_config, session)
             else:
                 raise NotImplementedError()
