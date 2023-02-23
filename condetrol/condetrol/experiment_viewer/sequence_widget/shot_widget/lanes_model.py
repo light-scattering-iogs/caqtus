@@ -128,9 +128,11 @@ class LanesModel(QAbstractTableModel):
         self.endRemoveRows()
         return True
 
-    def insert_lane(self, row: int, lane_type: Type[Lane], name: str) -> bool:
+    def insert_lane(
+        self, row: int, lane_type: Type[Lane], name: str, number_steps: int
+    ) -> bool:
         new_lane = create_new_lane(
-            self.columnCount(), lane_type, name, self.experiment_config
+            number_steps, lane_type, name, self.experiment_config
         )
         self.beginInsertRows(QModelIndex(), row, row)
         self._lanes.insert(row, new_lane)

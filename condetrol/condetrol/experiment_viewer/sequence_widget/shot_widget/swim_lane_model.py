@@ -271,8 +271,13 @@ class SwimLaneModel(QAbstractItemModel):
 
     def get_context_actions(self, index: QModelIndex) -> list[QAction]:
         result = []
-        if (insert_lane := self.get_insert_lane_action(index)) is not None:
-            result.append(insert_lane)
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return result
+        if (insert := self.get_insert_lane_action(index)) is not None:
+            result.append(insert)
+        if (remove := self.get_remove_lane_or_group_action(index)) is not None:
+            result.append(remove)
         return result
 
     def get_insert_lane_action(self, index: QModelIndex) -> Optional[QAction]:
@@ -293,13 +298,47 @@ class SwimLaneModel(QAbstractItemModel):
 
             if not index.isValid():  # insert as first element of root
                 self.beginInsertRows(QModelIndex(), 2, 2)
-                self._lanes_model.insert_lane(0, lane_type, name)
+                self._lanes_model.insert_lane(
+                    0, lane_type, name, self._step_names_model.rowCount()
+                )
                 self._lane_groups_model.insert_lane(QModelIndex(), 0, name)
                 self._lanes_mapping[name] = 0
                 self.endInsertRows()
+
+                print(self.shot_config.to_yaml())
                 self.save_config(self.shot_config, session)
             else:
                 raise NotImplementedError()
+
+    def get_remove_lane_or_group_action(self, index: QModelIndex) -> Optional[QAction]:
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lane_groups_model:
+            remove = QAction("Remove")
+            remove.triggered.connect(
+                lambda: self.removeRow(index.row(), index.parent())
+            )
+            return remove
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            child = self.index(row, 0, parent)
+            mapped_child = self.map_to_child_index(child)
+            if not mapped_child.model() is self._lane_groups_model:
+                return False
+            logger.debug(f"remove row {row}")
+            if not self._lane_groups_model.is_lane(mapped_child):
+                raise NotImplementedError()
+            lane_name = self._lane_groups_model.data(
+                mapped_child, Qt.ItemDataRole.DisplayRole
+            )
+            self.beginRemoveRows(parent, row, row)
+            self._lane_groups_model.removeRow(mapped_child.row(), mapped_child.parent())
+            self._lanes_model.removeRow(self._lanes_mapping.pop(lane_name))
+            self.endRemoveRows()
+            self.save_config(self.shot_config, session)
+            return True
 
 
 class _SwimLaneModel(QAbstractTableModel):

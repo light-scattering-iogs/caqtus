@@ -89,3 +89,21 @@ class LaneGroupModel(QAbstractItemModel):
         self.beginInsertRows(parent, row, row)
         parent_item.insert_lane(row, name)
         self.endInsertRows()
+
+    def is_lane(self, index: QModelIndex) -> bool:
+        if index.isValid():
+            return isinstance(index.internalPointer(), LaneReference)
+        else:
+            return False
+
+    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+        if not parent.isValid():
+            parent_item = self.root
+        else:
+            parent_item = parent.internalPointer()
+        self.beginRemoveRows(parent, row, row)
+        new_children = list(parent_item.children)
+        new_children.pop(row)
+        parent_item.children = new_children
+        self.endRemoveRows()
+        return True
