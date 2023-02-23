@@ -252,6 +252,22 @@ class SwimLaneModel(QAbstractItemModel):
             self.save_config(self.shot_config, session)
             return True
 
+    def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            if column == 0:
+                return False
+            else:
+                column -= 1
+            self.beginRemoveColumns(parent, column, column)
+            self._step_names_model.removeRow(column)
+            self._step_durations_model.removeRow(column)
+            self._lanes_model.removeColumn(column)
+            self.endRemoveColumns()
+            self.save_config(self.shot_config, session)
+            return True
+
 
 class _SwimLaneModel(QAbstractTableModel):
     """Model for a shot parallel time steps

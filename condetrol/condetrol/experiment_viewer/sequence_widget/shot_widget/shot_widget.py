@@ -161,12 +161,13 @@ class SwimLaneView(QTreeView):
             lambda: self.model().insertColumn(index + 1, QModelIndex())
         )
 
-        # remove_step_action = QAction("Remove")
-        # menu.addAction(remove_step_action)
-        # # noinspection PyUnresolvedReferences
-        # remove_step_action.triggered.connect(
-        #     lambda: self._model.removeColumn(index, QModelIndex())
-        # )
+        if index != -1:
+            remove_step_action = QAction("Remove")
+            menu.addAction(remove_step_action)
+            # noinspection PyUnresolvedReferences
+            remove_step_action.triggered.connect(
+                lambda: self.model().removeColumn(index, QModelIndex())
+            )
 
         menu.exec(self.header().mapToGlobal(position))
 
