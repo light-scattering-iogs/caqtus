@@ -115,9 +115,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
                         return f"{running_duration}/{remaining}"
                     elif stats["state"] == State.FINISHED:
                         total_duration = stats["stop_date"] - stats["start_date"]
-                        total_duration = _format_seconds(
-                            total_duration.total_seconds()
-                        )
+                        total_duration = _format_seconds(total_duration.total_seconds())
                         return total_duration
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
@@ -213,7 +211,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
                     "Created more than one path and couldn't update the views"
                 )
 
-    def create_new_sequence(self, index: QModelIndex, name: str):
+    def create_new_sequence(
+        self, index: QModelIndex, name: str
+    ) -> Optional[SequencePath]:
         if index.isValid():
             parent_item: "SequenceHierarchyItem" = index.internalPointer()
         else:
@@ -235,6 +235,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 self.beginInsertRows(index, new_row, new_row)
                 parent_item.children = children
                 self.endInsertRows()
+                return new_path
             elif number_created_paths == 0:
                 logger.warning(
                     f'Path "{str(new_path)}" already exists and was not created'
@@ -243,6 +244,14 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 raise RuntimeError(
                     "Created more than one path and couldn't update the views"
                 )
+
+    def duplicate_sequence(self, source_index: QModelIndex, target_name: str):
+        source_path = Sequence(source_index.internalPointer().sequence_path)
+        target_path = self.create_new_sequence(source_index.parent(), target_name)
+        if target_path is not None:
+            with self._session as session:
+                sequence_config = source_path.get_config(session)
+                Sequence(target_path).set_config(sequence_config, session)
 
     def delete(self, index: QModelIndex):
         if not index.isValid():

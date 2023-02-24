@@ -33,7 +33,7 @@ from PyQt6.QtWidgets import (
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from experiment_manager import ExperimentManager
-from sequence.runtime import Sequence, State
+from sequence.runtime import Sequence, State, SequencePath
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_hierarchy_model import (
@@ -242,10 +242,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
                 duplicate_sequence_action = QAction("Duplicate")
                 menu.addAction(duplicate_sequence_action)
-                duplicate_sequence_action.setEnabled(False)
-                # duplicate_sequence_action.triggered.connect(
-                #     partial(self.model.duplicate_sequence, index)
-                # )
+                duplicate_sequence_action.triggered.connect(
+                    partial(self.duplicate_sequence, index)
+                )
             else:  # index is folder
                 can_create = True
         else:
@@ -275,6 +274,25 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             delete_action.triggered.connect(partial(self.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
+
+    def duplicate_sequence(self, index: QModelIndex):
+        if not index.isValid():
+            return
+        item: SequenceHierarchyItem = index.internalPointer()
+        if not item.is_sequence:
+            return
+
+        source_path = item.path
+        text, ok = QInputDialog().getText(
+            self,
+            f"Duplicate sequence {source_path}...",
+            "Destination:",
+            QLineEdit.EchoMode.Normal,
+            "new_sequence",
+        )
+        if ok and text:
+            self.model.duplicate_sequence(index, text)
+            self.sequences_view.update()
 
     def start_sequence(self, index: QModelIndex):
         sequence_path = self.model.get_path(index)
