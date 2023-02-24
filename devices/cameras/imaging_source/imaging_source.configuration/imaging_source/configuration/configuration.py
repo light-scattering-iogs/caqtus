@@ -15,6 +15,7 @@ class ImagingSourceCameraConfiguration(CameraConfiguration, ABC):
         extra = {
             "camera_name": self.camera_name,
             "format": self.format,
+            "timeout": 1,
         }
         return super().get_device_init_args() | extra
 

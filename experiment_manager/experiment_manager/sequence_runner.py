@@ -130,8 +130,14 @@ class SequenceRunnerThread(Thread):
         return devices
 
     def start_devices(self):
-        for device in self._devices.values():
-            device.start()
+        for device_name, device in self._devices.items():
+            try:
+                device.start()
+            except Exception:
+                logger.error(
+                    f"An error occurred while starting device {device_name}"
+                )
+                raise
 
     def finish(self):
         with self._session as session:

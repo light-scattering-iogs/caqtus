@@ -19,11 +19,10 @@ camera = ImagingSourceCameraDMK33GR0134(
     gain=2.8
 )
 
-with camera:
-
-    camera.save_state_to_file("test.xml")
-    camera.acquire_all_pictures()
-    images = camera.read_all_pictures()
+camera.start()
+camera.acquire_all_pictures()
+images = camera.read_all_pictures()
+camera.shutdown()
 
 plt.imshow(images["picture1"])
 pprint(images["picture1"])
