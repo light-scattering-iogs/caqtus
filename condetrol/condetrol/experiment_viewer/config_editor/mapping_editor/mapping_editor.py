@@ -1,5 +1,3 @@
-from functools import partial
-
 from PyQt6 import QtGui
 from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
 from PyQt6.QtCore import (
@@ -7,7 +5,8 @@ from PyQt6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
     pyqtSignal,
-    QSortFilterProxyModel, QSettings,
+    QSortFilterProxyModel,
+    QSettings,
 )
 from PyQt6.QtGui import QPainter, QAction
 from PyQt6.QtWidgets import (
@@ -18,7 +17,9 @@ from PyQt6.QtWidgets import (
     QItemEditorFactory,
     QDoubleSpinBox,
     QWidget,
-    QStyledItemDelegate, QSplitter, QHeaderView,
+    QStyledItemDelegate,
+    QSplitter,
+    QHeaderView,
 )
 
 from device_config.units_mapping import CalibratedUnitsMapping
@@ -58,8 +59,12 @@ class CalibratedMappingEditor(QDialog):
         self.proxy_model.setSourceModel(self.model)
         self.values_view.setModel(self.proxy_model)
         self.values_view.setSortingEnabled(True)
-        self.values_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.values_view.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.values_view.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+        self.values_view.verticalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
         self.splitter.addWidget(self.values_view)
 
         self.series = QLineSeries()
@@ -83,7 +88,9 @@ class CalibratedMappingEditor(QDialog):
         self.splitter.addWidget(self.chart_view)
 
         ui_settings = QSettings("Caqtus", "ExperimentControl")
-        self.splitter.restoreState(ui_settings.value(f"{__name__}/splitter_state", self.splitter.saveState()))
+        self.splitter.restoreState(
+            ui_settings.value(f"{__name__}/splitter_state", self.splitter.saveState())
+        )
 
         self.setLayout(self.layout)
 
@@ -113,7 +120,9 @@ class CalibratedMappingEditor(QDialog):
 
         if index.isValid():
             remove_row = QAction("Remove row")
-            remove_row.triggered.connect(lambda: index.model().removeRow(index.row(), QModelIndex()))
+            remove_row.triggered.connect(
+                lambda: index.model().removeRow(index.row(), QModelIndex())
+            )
             menu.addAction(remove_row)
         else:
             index = self.values_view.model().index(-1, 0)
