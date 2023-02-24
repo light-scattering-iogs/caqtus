@@ -18,7 +18,7 @@ def build_dataframe_from_sequence(
     shot_to_row_converter: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
 ):
-    with session:
+    with session.activate():
         shots = sequence.get_shots(session)
 
     def map_shot_to_row(shot):

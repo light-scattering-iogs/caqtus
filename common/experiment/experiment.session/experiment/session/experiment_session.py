@@ -19,35 +19,62 @@ class ExperimentSessionNotActiveError(RuntimeError):
 
 
 class ExperimentSession:
-    def __init__(self, database_url: str, commit: bool = True):
-        self._database_url = database_url
+    """Manage the experiment session
 
-        self._engine = sqlalchemy.create_engine(database_url)
-        self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
-        self._sql_session = None
-        self._commit = commit
-        self._level = 0
+    Instances of this class manage access to the permanent storage of the experiment.
+    A session contains the history of the experiment configuration and the current configuration.
+    It also contains the sequence tree of the experiment, with the sequence states and data.
+
+    Some objects in the sequence.runtime package (Sequence, Shot) that can read and write to the experiment data storage
+    have methods that require an activated ExperimentSession.
+
+    If an error occurs within an activated session block, the session is automatically rolled back to the beginning of
+    the activation block. This prevents leaving some data in an inconsistent state.
+    """
+
+    def __init__(self, _session: sqlalchemy.orm.Session):
+        self._is_active = False
+        self._sql_session = _session
         self._lock = Lock()
+
+    def activate(self) -> "ExperimentSession":
+        """Activate the session
+
+        This method is meant to be used in a with statement.
+
+        Example:
+            # Ok
+            with session.activate():
+                config = session.get_current_experiment_config()
+
+            # Not ok
+            config = session.get_current_experiment_config()
+
+            # Not ok
+            session.activate()
+            config = session.get_current_experiment_config()
+        """
+
+        return self
 
     def __enter__(self):
         with self._lock:
-            if self._sql_session is not None:
+            if self._is_active:
                 raise RuntimeError("Session is already active")
-            self._sql_session = self._session_maker()
             self._transaction = self._sql_session.begin().__enter__()
+            self._is_active = True
             return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         with self._lock:
             self._transaction.__exit__(exc_type, exc_val, exc_tb)
-            self._sql_session = None
             self._transaction = None
+            self._is_active = False
 
     def get_sql_session(self) -> sqlalchemy.orm.Session:
-        if self._sql_session is None:
+        if not self._is_active:
             raise ExperimentSessionNotActiveError(
-                "Every access to an experiment session must be wrapped in a single with"
-                " block"
+                "Experiment session was not activated"
             )
         return self._sql_session
 
@@ -122,12 +149,23 @@ def _find_first_unused_number(numbers: list[int]) -> int:
 
 
 class ExperimentSessionMaker:
-    def __init__(self, database_url: str, commit: bool = True):
+    def __init__(self, database_url: str):
         self._database_url = database_url
-        self._commit = commit
+        self._engine = sqlalchemy.create_engine(database_url)
+        self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
 
     def __call__(self) -> ExperimentSession:
-        return ExperimentSession(database_url=self._database_url, commit=self._commit)
+        """Create a new ExperimentSession"""
+
+        return ExperimentSession(self._session_maker())
+
+    # The following methods are required to make ExperimentSessionMaker pickleable to pass it to other processes.
+    # sqlalchemy engine is not pickleable, so we just pickle the database url and create a new engine upon unpickling.
+    def __getstate__(self) -> dict:
+        return {"database_url": self._database_url}
+
+    def __setstate__(self, state: dict):
+        self.__init__(database_url=state["database_url"])
 
 
 DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_database"
