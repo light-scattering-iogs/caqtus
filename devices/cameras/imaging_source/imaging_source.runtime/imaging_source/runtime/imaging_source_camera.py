@@ -81,7 +81,10 @@ class ImagingSourceCamera(CCamera, ABC):
         ...
 
     def _setup_trigger(self):
-        if ic.IC_EnableTrigger(self._grabber_handle, int(self.external_trigger)) != IC_SUCCESS:
+        if (
+            ic.IC_EnableTrigger(self._grabber_handle, int(self.external_trigger))
+            != IC_SUCCESS
+        ):
             raise RuntimeError(f"{self.name}: failed to set trigger mode")
         logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
 
@@ -172,7 +175,12 @@ class ImagingSourceCamera(CCamera, ABC):
             dtype=numpy.uint8,
             shape=(height.value, width.value, bytes_per_pixel),
         )
-        return _reformat_image(image, self.format)
+        formatted_image = _reformat_image(image, self.format)
+        roi = (
+            slice(self.roi.x, self.roi.x + self.roi.width),
+            slice(self.roi.y, self.roi.y + self.roi.height),
+        )
+        return formatted_image[roi]
 
     @classmethod
     def get_device_counts(cls) -> int:
