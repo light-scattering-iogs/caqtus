@@ -49,7 +49,7 @@ if typing.TYPE_CHECKING:
 # devices parameters if possible.
 # Parameters will be saved, but there will be no data acquisition.
 
-MOCK_EXPERIMENT = True
+MOCK_EXPERIMENT = False
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -258,8 +258,6 @@ class SequenceRunnerThread(Thread):
                 f"{error}\n"
                 "Attempting to redo the failed shot"
             )
-            for camera in self.get_cameras().values():
-                camera.reset_acquisition()
             data = self.do_shot(
                 self._sequence_config.shot_configurations[shot.name], context.variables
             )
@@ -267,18 +265,14 @@ class SequenceRunnerThread(Thread):
         t1 = datetime.datetime.now()
         logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
 
-        # Beware, if a shot takes less than a few 10 ms, new shots might run before the
-        # previous ones have been saved.
-        context.delayed_executor.submit(
-            lambda: save_shot(
-                self._sequence,
-                shot.name,
-                t0,
-                t1,
-                deepcopy(context.variables),
-                data,
-                self._session_maker(),
-            )
+        save_shot(
+            self._sequence,
+            shot.name,
+            t0,
+            t1,
+            deepcopy(context.variables),
+            data,
+            self._session_maker(),
         )
         logger.debug(context.variables)
 
