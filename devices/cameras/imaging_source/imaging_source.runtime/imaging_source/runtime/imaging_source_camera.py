@@ -68,10 +68,6 @@ class ImagingSourceCamera(CCamera, ABC):
 
         logger.info(f"{self.name}: camera {self.camera_name} found")
 
-        self._temp_dir = pathlib.Path(mkdtemp())
-        self._settings_file = self._temp_dir / "settings.xml"
-        self.save_state_to_file(self._settings_file)
-
         # self.reset_properties()
 
         self._setup_properties()
@@ -90,12 +86,6 @@ class ImagingSourceCamera(CCamera, ABC):
         logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
 
     def shutdown(self):
-        try:
-            self.load_state_from_file(self._settings_file)
-            shutil.rmtree(self._temp_dir)
-        except Exception as error:
-            logger.warning(error)
-
         try:
             if self._grabber_handle is not None:
                 ic.IC_StopLive(self._grabber_handle)
@@ -149,6 +139,7 @@ class ImagingSourceCamera(CCamera, ABC):
                 raise RuntimeError(f"Failed to stop live for {self.name}")
 
     def _snap_picture(self, picture_number: int, timeout: float) -> None:
+        logger.debug(f"Acquiring picture {picture_number} with timeout {timeout}...")
         if self.external_trigger:
             timeout = int(timeout * 1e3)
         else:
@@ -157,7 +148,7 @@ class ImagingSourceCamera(CCamera, ABC):
         if result == IC_SUCCESS:
             logger.info(f"Picture {picture_number} acquired")
         else:
-            raise RuntimeError("Failed to acquire picture")
+            raise RuntimeError(f"Failed to acquire picture: {result}")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()

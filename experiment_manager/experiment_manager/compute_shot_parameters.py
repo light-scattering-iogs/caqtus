@@ -119,7 +119,7 @@ def compute_camera_instructions(
 
     result = {}
     camera_lanes = shot.get_lanes(CameraLane)
-    timeout = sum(step_durations)
+    shot_duration = sum(step_durations)
     for camera_name, camera_lane in camera_lanes.items():
         triggers = [False] * len(step_durations)
         exposures = []
@@ -127,7 +127,7 @@ def compute_camera_instructions(
             triggers[start:stop] = [True] * (stop - start)
             exposures.append(sum(step_durations[start:stop]))
         instructions: CameraInstructions = {
-            "timeout": timeout,
+            "timeout": shot_duration + 1,  # add a second to be safe
             "triggers": triggers,
             "exposures": exposures,
         }
