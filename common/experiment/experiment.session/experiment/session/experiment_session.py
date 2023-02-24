@@ -211,6 +211,10 @@ class ExperimentSessionMaker:
         self._async_session_maker = async_sessionmaker(self._async_engine)
 
     @overload
+    def __call__(self) -> ExperimentSession:
+        ...
+
+    @overload
     def __call__(self, async_session: Literal[False]) -> ExperimentSession:
         ...
 
