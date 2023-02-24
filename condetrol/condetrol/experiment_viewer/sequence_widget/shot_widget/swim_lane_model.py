@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from typing import Type, Iterable, Optional
 
 from PyQt6.QtCore import (
@@ -10,6 +11,7 @@ from PyQt6.QtCore import (
     QAbstractItemModel,
 )
 from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMenu
 
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
@@ -18,7 +20,7 @@ from sequence.configuration import (
     Lane,
     ShotConfiguration,
     LaneReference,
-    DigitalLane,
+    DigitalLane, AnalogLane, CameraLane,
 )
 from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
@@ -53,6 +55,7 @@ class SwimLaneModel(QAbstractItemModel):
         self._session = session_maker()
         self._sequence = sequence
         self.shot_name = shot_name
+        self._experiment_config = experiment_config
 
         with self._session:
             sequence_config = self._sequence.get_config(self._session)
@@ -62,11 +65,7 @@ class SwimLaneModel(QAbstractItemModel):
         self._step_names_model = StepNamesModel(self.shot_config.step_names)
         self._step_durations_model = StepDurationsModel(self.shot_config.step_durations)
         self._lane_groups_model = LaneGroupModel(self.shot_config.lane_groups)
-        self._lanes_model = LanesModel(self.shot_config.lanes, experiment_config)
-
-        self._lanes_mapping = self._get_lane_names_to_index_mapping(
-            self.shot_config.lanes
-        )
+        self._lanes_model = LanesModel(self.shot_config.lanes, self._experiment_config)
 
         # refresh the sequence state to block the editor if the state is not DRAFT
         self._sequence_state: State
@@ -98,10 +97,6 @@ class SwimLaneModel(QAbstractItemModel):
 
     def get_sequence_state(self, session) -> State:
         return self._sequence.get_state(session)
-
-    @staticmethod
-    def _get_lane_names_to_index_mapping(lanes: list[Lane]) -> dict[str, int]:
-        return {lane.name: i for i, lane in enumerate(lanes)}
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         assert (
@@ -193,7 +188,7 @@ class SwimLaneModel(QAbstractItemModel):
                 return self._lane_groups_model.createIndex(row, 0, internal_pointer)
             else:
                 if isinstance(internal_pointer, LaneReference):
-                    row = self._lanes_mapping[internal_pointer.lane_name]
+                    row = self._lanes_model.map_name_to_row(internal_pointer.lane_name)
                     return self._lanes_model.index(
                         row, index.column() - 1, QModelIndex()
                     )
@@ -269,7 +264,7 @@ class SwimLaneModel(QAbstractItemModel):
             self.save_config(self.shot_config, session)
             return True
 
-    def get_context_actions(self, index: QModelIndex) -> list[QAction]:
+    def get_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         result = []
         with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
@@ -280,16 +275,45 @@ class SwimLaneModel(QAbstractItemModel):
             result.append(remove)
         return result
 
-    def get_insert_lane_action(self, index: QModelIndex) -> Optional[QAction]:
+    def get_insert_lane_action(self, index: QModelIndex) -> Optional[QMenu]:
         if not index.isValid():
             return None
         if index.column() == 0:
-            insert_lane = QAction("Insert lane")
+            insert_menu = QMenu("Insert lane")
+
+            insert_digital = insert_menu.addMenu("digital")
+            insert_analog = insert_menu.addMenu("analog")
+            insert_camera = insert_menu.addMenu("camera")
+
             if index.row() < 2:
-                insert_lane.triggered.connect(
-                    lambda: self.insert_lane(QModelIndex(), DigitalLane, "test")
+                self.add_lane_create_action(insert_digital, DigitalLane, QModelIndex())
+                self.add_lane_create_action(insert_analog, AnalogLane, QModelIndex())
+                self.add_lane_create_action(insert_camera, CameraLane, QModelIndex())
+
+                return insert_menu
+
+    def add_lane_create_action(
+        self, menu: QMenu, lane_type: Type[Lane], insert_index: QModelIndex
+    ):
+        already_in_use_channels = set(self.shot_config.get_lane_names())
+
+        possible_channels = self._experiment_config.get_available_lane_names(
+            lane_type
+        )
+
+        available_channels = sorted(
+            possible_channels - already_in_use_channels
+        )
+        for channel in available_channels:
+            action = menu.addAction(channel)
+            action.triggered.connect(
+                partial(
+                    self.insert_lane,
+                    insert_index,
+                    lane_type,
+                    channel,
                 )
-                return insert_lane
+            )
 
     def insert_lane(self, index: QModelIndex, lane_type: Type[Lane], name: str):
         with self._session as session:
@@ -302,7 +326,6 @@ class SwimLaneModel(QAbstractItemModel):
                     0, lane_type, name, self._step_names_model.rowCount()
                 )
                 self._lane_groups_model.insert_lane(QModelIndex(), 0, name)
-                self._lanes_mapping[name] = 0
                 self.endInsertRows()
                 self.save_config(self.shot_config, session)
             else:
@@ -325,7 +348,6 @@ class SwimLaneModel(QAbstractItemModel):
             mapped_child = self.map_to_child_index(child)
             if not mapped_child.model() is self._lane_groups_model:
                 return False
-            logger.debug(f"remove row {row}")
             if not self._lane_groups_model.is_lane(mapped_child):
                 raise NotImplementedError()
             lane_name = self._lane_groups_model.data(
@@ -333,7 +355,7 @@ class SwimLaneModel(QAbstractItemModel):
             )
             self.beginRemoveRows(parent, row, row)
             self._lane_groups_model.removeRow(mapped_child.row(), mapped_child.parent())
-            self._lanes_model.removeRow(self._lanes_mapping.pop(lane_name))
+            self._lanes_model.removeRow(self._lanes_model.map_name_to_row(lane_name))
             self.endRemoveRows()
             self.save_config(self.shot_config, session)
             return True

@@ -185,7 +185,10 @@ class SwimLaneView(QTreeView):
         actions = model.get_context_actions(index)
         if actions:
             for action in actions:
-                menu.addAction(action)
+                if isinstance(action, QMenu):
+                    menu.addMenu(action)
+                elif isinstance(action, QAction):
+                    menu.addAction(action)
         else:
             return
 

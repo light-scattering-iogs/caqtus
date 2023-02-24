@@ -14,7 +14,13 @@ from device_config.channel_config import (
     ChannelSpecialPurpose,
 )
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from sequence.configuration import SequenceSteps
+from sequence.configuration import (
+    SequenceSteps,
+    Lane,
+    DigitalLane,
+    AnalogLane,
+    CameraLane,
+)
 from settings_model import SettingsModel
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration
@@ -122,26 +128,22 @@ class ExperimentConfig(SettingsModel):
         else:
             raise ValueError(f"Channel {channel} doesn't exists in the configuration")
 
-    def get_digital_channels(self) -> set[str]:
-        digital_channels = set()
+    def get_available_lane_names(self, lane_type: Type[Lane]) -> set[str]:
+        lanes = set()
         for device_config in self.device_configurations:
-            if isinstance(device_config, DigitalChannelConfiguration):
-                digital_channels |= device_config.get_named_channels()
-        return digital_channels
-
-    def get_analog_channels(self) -> set[str]:
-        analog_channels = set()
-        for device_config in self.device_configurations:
-            if isinstance(device_config, AnalogChannelConfiguration):
-                analog_channels |= device_config.get_named_channels()
-        return analog_channels
-
-    def get_cameras(self) -> set[str]:
-        cameras = set()
-        for device_config in self.device_configurations:
-            if isinstance(device_config, CameraConfiguration):
-                cameras.add(device_config.device_name)
-        return cameras
+            if lane_type == DigitalLane and isinstance(
+                device_config, DigitalChannelConfiguration
+            ):
+                lanes |= device_config.get_named_channels()
+            elif lane_type == AnalogLane and isinstance(
+                device_config, AnalogChannelConfiguration
+            ):
+                lanes |= device_config.get_named_channels()
+            elif lane_type == CameraLane and isinstance(
+                device_config, CameraConfiguration
+            ):
+                lanes.add(device_config.device_name)
+        return lanes
 
     def get_device_names(self):
         return (config.device_name for config in self.device_configurations)

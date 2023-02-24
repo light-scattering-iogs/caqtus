@@ -163,3 +163,8 @@ class LanesModel(QAbstractTableModel):
             stop = l[-1][1] + 1
             self._lane_models[lane].break_up(start, stop)
         self.endResetModel()
+
+    def map_name_to_row(self, name: str) -> int:
+        return next(
+            index for index, lane in enumerate(self._lanes) if lane.name == name
+        )
