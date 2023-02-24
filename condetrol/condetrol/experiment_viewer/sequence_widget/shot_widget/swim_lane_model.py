@@ -140,7 +140,7 @@ class SwimLaneModel(QAbstractTableModel):
                         return QColor.fromRgb(0, 0, 0)
                     else:
                         if color is not None:
-                            return QColor.fromRgb(*color.as_rgb_tuple())
+                            return QColor.fromRgb(*color.as_rgb_tuple()[0:3])
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         edit = False
