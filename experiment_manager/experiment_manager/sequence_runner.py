@@ -4,7 +4,6 @@ import pprint
 import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
-from copy import deepcopy
 from functools import singledispatchmethod
 from threading import Thread, Event
 from typing import Any
@@ -19,7 +18,7 @@ from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
 )
-from experiment.session import ExperimentSessionMaker, ExperimentSession
+from experiment.session import ExperimentSessionMaker
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from remote_device_client import RemoteDeviceClientManager
 from sequence.configuration import (
@@ -38,6 +37,7 @@ from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
 from .sequence_context import SequenceContext
+from .shot_saver import ShotSaver
 
 if typing.TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
@@ -134,9 +134,7 @@ class SequenceRunnerThread(Thread):
             try:
                 device.start()
             except Exception:
-                logger.error(
-                    f"An error occurred while starting device {device_name}"
-                )
+                logger.error(f"An error occurred while starting device {device_name}")
                 raise
 
     def finish(self):
@@ -164,12 +162,13 @@ class SequenceRunnerThread(Thread):
     def run_sequence(self):
         """Execute the sequence header and program"""
 
-        with SequenceContext(variables=VariableNamespace()) as context:
-            self.run_step(self._experiment_config.header, context)
-            self.run_step(self._sequence_config.program, context)
+        context = SequenceContext(variables=VariableNamespace())
+        with ShotSaver(self._sequence, self._session_maker) as shot_saver:
+            self.run_step(self._experiment_config.header, context, shot_saver)
+            self.run_step(self._sequence_config.program, context, shot_saver)
 
     @singledispatchmethod
-    def run_step(self, step: Step, context: SequenceContext):
+    def run_step(self, step: Step, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a given step of the sequence
 
         This function should be implemented for each Step type that can be run on the
@@ -181,22 +180,27 @@ class SequenceRunnerThread(Thread):
             context: a mutable object that holds information about the sequence being
             run, such as the values of the variables. Step that update variables should
             reflect this by modifying the context.
+            shot_saver: a ShotSaver object that is passed down to the children steps and is used to store shot data in
+            order.
+
         """
 
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
 
     @run_step.register
-    def _(self, steps: SequenceSteps, context: SequenceContext):
+    def _(self, steps: SequenceSteps, context: SequenceContext, shot_saver: ShotSaver):
         """Execute each child step sequentially"""
 
         for step in steps.children:
             if self.is_waiting_to_interrupt():
                 return
             else:
-                self.run_step(step, context)
+                self.run_step(step, context, shot_saver)
 
     @run_step.register
-    def _(self, declaration: VariableDeclaration, context: SequenceContext):
+    def _(
+        self, declaration: VariableDeclaration, context: SequenceContext, _: ShotSaver
+    ):
         """Add or update a variable declaration in the context"""
 
         context.variables[declaration.name] = Quantity(
@@ -204,7 +208,9 @@ class SequenceRunnerThread(Thread):
         )
 
     @run_step.register
-    def _(self, arange_loop: ArangeLoop, context: SequenceContext):
+    def _(
+        self, arange_loop: ArangeLoop, context: SequenceContext, shot_saver: ShotSaver
+    ):
         """Loop over a variable in a numpy arange like loop"""
 
         start = Quantity(arange_loop.start.evaluate(context.variables | units))
@@ -221,10 +227,15 @@ class SequenceRunnerThread(Thread):
                 if self.is_waiting_to_interrupt():
                     return
                 else:
-                    self.run_step(step, context)
+                    self.run_step(step, context, shot_saver)
 
     @run_step.register
-    def _(self, linspace_loop: LinspaceLoop, context: SequenceContext):
+    def _(
+        self,
+        linspace_loop: LinspaceLoop,
+        context: SequenceContext,
+        shot_saver: ShotSaver,
+    ):
         """Loop over a variable in a numpy linspace like loop"""
 
         start = Quantity(linspace_loop.start.evaluate(context.variables | units))
@@ -241,13 +252,13 @@ class SequenceRunnerThread(Thread):
                 if self.is_waiting_to_interrupt():
                     return
                 else:
-                    self.run_step(step, context)
+                    self.run_step(step, context, shot_saver)
 
     @run_step.register
-    def _(self, shot: ExecuteShot, context: SequenceContext):
+    def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a shot on the experiment"""
 
-        t0 = datetime.datetime.now()
+        start_time = datetime.datetime.now()
         try:
             data = self.do_shot(
                 self._sequence_config.shot_configurations[shot.name], context.variables
@@ -262,19 +273,10 @@ class SequenceRunnerThread(Thread):
                 self._sequence_config.shot_configurations[shot.name], context.variables
             )
 
-        t1 = datetime.datetime.now()
-        logger.info(f"shot executed in {(t1 - t0).total_seconds():.3f} s")
+        end_time = datetime.datetime.now()
+        logger.info(f"shot executed in {(end_time - start_time).total_seconds():.3f} s")
 
-        save_shot(
-            self._sequence,
-            shot.name,
-            t0,
-            t1,
-            deepcopy(context.variables),
-            data,
-            self._session_maker(),
-        )
-        logger.debug(context.variables)
+        shot_saver.push_shot(shot.name, start_time, end_time, context.variables, data)
 
     def do_shot(
         self, shot: ShotConfiguration, context: VariableNamespace
@@ -378,22 +380,6 @@ class SequenceRunnerThread(Thread):
 
     def is_waiting_to_interrupt(self) -> bool:
         return self._waiting_to_interrupt.is_set()
-
-
-def save_shot(
-    sequence: Sequence,
-    shot_name: str,
-    start_time: datetime.datetime,
-    end_time: datetime.datetime,
-    parameters: VariableNamespace,
-    measures: dict[str, Any],
-    session: ExperimentSession,
-):
-    with session:
-        parameters = {name: value for name, value in parameters.items()}
-        sequence.create_shot(
-            shot_name, start_time, end_time, parameters, measures, session
-        )
 
 
 def create_remote_device_managers(
