@@ -60,10 +60,13 @@ class ImagingSourceCamera(CCamera, ABC):
     _settings_file: pathlib.Path = None
 
     def start(self):
+        super().start()
         self._grabber_handle = ic.IC_CreateGrabber()
         ic.IC_OpenDevByUniqueName(self._grabber_handle, T(self.camera_name))
         if not ic.IC_IsDevValid(self._grabber_handle):
             raise RuntimeError(f"{self.name}: camera {self.camera_name} not found")
+
+        logger.info(f"{self.name}: camera {self.camera_name} found")
 
         self._temp_dir = pathlib.Path(mkdtemp())
         self._settings_file = self._temp_dir / "settings.xml"
@@ -74,7 +77,7 @@ class ImagingSourceCamera(CCamera, ABC):
         self._setup_properties()
         self._setup_trigger()
 
-        self.update_parameters(exposures=self.exposures)
+        self.update_parameters(exposures=self.exposures, timeout=self.timeout)
 
     @abstractmethod
     def _setup_properties(self):
@@ -84,6 +87,7 @@ class ImagingSourceCamera(CCamera, ABC):
     def _setup_trigger(self):
         if ic.IC_EnableTrigger(self._grabber_handle, int(self.external_trigger)) != IC_SUCCESS:
             raise RuntimeError(f"{self.name}: failed to set trigger mode")
+        logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
 
     def shutdown(self):
         try:
@@ -99,19 +103,21 @@ class ImagingSourceCamera(CCamera, ABC):
         finally:
             super().shutdown()
 
-    def update_parameters(self, /, exposures: list[float]) -> None:
+    def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""
 
         all_acquisitions_equal = all(exposures[0] == exposure for exposure in exposures)
+        logger.debug(f"{self.name}: all_acquisitions_equal = {all_acquisitions_equal}")
 
         if not all_acquisitions_equal:
             raise NotImplementedError(
                 f"Camera {self.name} does not support changing exposure"
             )
 
-        super().update_parameters(exposures=exposures)
+        super().update_parameters(exposures=exposures, timeout=timeout)
         exposure = self.exposures[0]
         self.set_exposure(exposure)
+        logger.debug(f"{self.name}: exposure set to {exposure}")
 
     def set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(

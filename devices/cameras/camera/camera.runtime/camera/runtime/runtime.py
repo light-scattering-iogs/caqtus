@@ -91,7 +91,7 @@ class CCamera(RuntimeDevice, ABC):
         super().start()
         self._acquired_pictures = [False] * self.number_pictures_to_acquire
 
-    def update_parameters(self, /, exposures: list[float]) -> None:
+    def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""
 
         if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
@@ -99,7 +99,7 @@ class CCamera(RuntimeDevice, ABC):
                 f"Cannot update parameters while pictures are being acquired"
             )
 
-        super().update_parameters(exposures=exposures)
+        super().update_parameters(exposures=exposures, timeout=timeout)
 
     def are_all_pictures_acquired(self):
         return all(picture is not None for picture in self._pictures)

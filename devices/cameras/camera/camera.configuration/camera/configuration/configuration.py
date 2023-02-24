@@ -15,6 +15,9 @@ class CameraConfiguration(DeviceConfiguration, ABC):
             "external_trigger": True,
         }
 
+    def get_default_exposure(self) -> float:
+        return 1e-3
+
 
 class ROI(SettingsModel):
     x: int = Field(

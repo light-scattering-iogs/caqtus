@@ -79,7 +79,7 @@ def get_cameras_initialization_parameters(
         camera_config = camera_configs[camera_name]
         init_kwargs = camera_config.get_device_init_args()
         init_kwargs["picture_names"] = camera_lane.get_picture_names()
-        init_kwargs["exposures"] = [0] * len(init_kwargs["picture_names"])
+        init_kwargs["exposures"] = [camera_config.get_default_exposure()] * len(init_kwargs["picture_names"])
         result[camera_name] = InitializationParameters(
             type=camera_config.get_device_type(),
             server=camera_config.remote_server,
