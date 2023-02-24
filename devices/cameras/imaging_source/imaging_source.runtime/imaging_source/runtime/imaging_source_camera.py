@@ -8,16 +8,14 @@ import ctypes
 import logging
 import os
 import pathlib
-import shutil
 import threading
 from abc import ABC, abstractmethod
-from tempfile import mkdtemp
 from typing import Literal
 
 import numpy
 from pydantic import Field
 
-from camera.runtime import CCamera
+from camera.runtime import CCamera, CameraTimeoutError
 from .tisgrabber import declareFunctions, D, T, HGRABBER, IC_SUCCESS
 
 logger = logging.getLogger(__name__)
@@ -117,12 +115,12 @@ class ImagingSourceCamera(CCamera, ABC):
             self._grabber_handle, T("Exposure"), T("Value"), ctypes.c_float(exposure)
         )
 
-    def _start_acquisition(self):
+    def _start_acquisition(self, number_pictures: int):
         if not ic.IC_StartLive(self._grabber_handle, 0):
             raise RuntimeError(f"Failed to start live for {self.name}")
 
         def acquire_pictures():
-            for picture_number in range(self.number_pictures_to_acquire):
+            for picture_number in range(number_pictures):
                 self._snap_picture(picture_number, self.timeout)
                 image = self._read_picture_from_camera()
                 self._pictures[picture_number] = image
@@ -151,7 +149,7 @@ class ImagingSourceCamera(CCamera, ABC):
         if result == IC_SUCCESS:
             logger.info(f"Picture {picture_number} acquired")
         else:
-            raise RuntimeError(f"Failed to acquire picture: {result}")
+            raise CameraTimeoutError(f"Failed to acquire picture, error code: {result}")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()

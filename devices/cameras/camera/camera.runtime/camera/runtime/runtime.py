@@ -19,10 +19,12 @@ class CameraTimeoutError(TimeoutError):
 
 
 class CCamera(RuntimeDevice, ABC):
-    """Base class for a camera device
+    """Define the interface for a camera.
 
-    Warnings:
-        Classes inheriting of CCamera must implement _acquire_picture and subclass _read_picture.
+    Classes inheriting of CCamera must implement the following methods:
+    - _start_acquisition
+    - _stop_acquisition
+    - _is_acquisition_in_progress
     """
 
     picture_names: tuple[str] = Field(
@@ -61,7 +63,6 @@ class CCamera(RuntimeDevice, ABC):
     sensor_width: ClassVar[int]
     sensor_height: ClassVar[int]
 
-    _acquired_pictures: list[bool] = []
     _pictures: list[Optional[numpy.ndarray]] = []
 
     @validator("picture_names")
@@ -89,7 +90,6 @@ class CCamera(RuntimeDevice, ABC):
 
     def start(self):
         super().start()
-        self._acquired_pictures = [False] * self.number_pictures_to_acquire
 
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""
@@ -109,7 +109,7 @@ class CCamera(RuntimeDevice, ABC):
 
     def start_acquisition(self):
         self._pictures = [None] * self.number_pictures_to_acquire
-        self._start_acquisition()
+        self._start_acquisition(self.number_pictures_to_acquire)
 
     def is_acquisition_in_progress(self) -> bool:
         return self._is_acquisition_in_progress()
@@ -118,23 +118,39 @@ class CCamera(RuntimeDevice, ABC):
         self._stop_acquisition()
 
     @abstractmethod
-    def _start_acquisition(self):
+    def _start_acquisition(self, number_pictures: int):
         """Start the acquisition of pictures
 
-        Warnings:
-            This function must not block until all pictures have been acquired, but it must return as soon as the camera
-            starts waiting for images.
+        To implement in subclasses.
+
+        Actual camera implementation must implement this method. It must start the acquisition of pictures and return as
+        soon as possible. It should raise an error if the acquisition could not be started or is already in progress.
+        The acquisition must be stopped by calling _stop_acquisition.
+
+        Args:
+            number_pictures: Number of pictures to acquire.
+
+        Raises:
+            CameraTimeoutError: If the camera didn't receive a trigger within the timeout after starting acquisition.
+            If this error is raised, the acquisition will be stopped, but it informs the experiment manager that it can
+            retry this acquisition.
         """
         ...
 
     @abstractmethod
     def _is_acquisition_in_progress(self) -> bool:
-        """Return True if the acquisition is in progress"""
+        """Return True if the acquisition is in progress, False otherwise
+
+        To implement in subclasses.
+        """
         ...
 
     @abstractmethod
     def _stop_acquisition(self):
-        """Stop the acquisition of pictures"""
+        """Stop the acquisition of pictures
+
+        To implement in subclasses.
+        """
         ...
 
     def acquire_all_pictures(self) -> None:
