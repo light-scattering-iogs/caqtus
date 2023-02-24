@@ -10,6 +10,7 @@ import qdarkstyle
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
+from experiment.session import get_standard_experiment_session_maker
 from experiment_manager import ExperimentManager, get_logs_queue
 from experiment_viewer import ExperimentViewer
 
@@ -50,7 +51,8 @@ if __name__ == "__main__":
         logger.error("Could not load font jetbrains-mono")
     else:
         families = QFontDatabase.applicationFontFamilies(id)
-    experiment_viewer = ExperimentViewer(DATABASE_URL)
+    session_maker = get_standard_experiment_session_maker()
+    experiment_viewer = ExperimentViewer(session_maker)
     experiment_viewer.show()
     try:
         app.exec()

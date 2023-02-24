@@ -9,9 +9,10 @@ packages = [{include = "experiment"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-sqlalchemy = ">=2.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.4"}
 
 sql_model = {path = "../../sql_model", develop = true}
+asyncpg = "^0.27.0"
 
 
 [build-system]

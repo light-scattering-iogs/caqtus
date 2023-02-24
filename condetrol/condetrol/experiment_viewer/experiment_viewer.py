@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker
+from experiment.session import ExperimentSessionMaker, get_standard_experiment_session_maker
 from experiment_manager import ExperimentManager
 from sequence.runtime import Sequence, State, SequencePath
 from .config_editor import ConfigEditor
@@ -124,11 +124,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     sequence, opens it in a dockable widget.
     """
 
-    def __init__(self, database_url: str, *args, **kwargs):
+    def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
-        self._experiment_session_maker = ExperimentSessionMaker(database_url)
+        self._experiment_session_maker = session_maker
         with self._experiment_session_maker() as session:
             current_experiment_config = session.get_current_experiment_config()
             if current_experiment_config is None:
