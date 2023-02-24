@@ -6,7 +6,6 @@ authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-sequence = { path = "../common/sequence/", develop = true }
 matplotlib = "^3.6.2"
 jupyter = "^1.0.0"
 pandas = "^1.5.1"
@@ -17,6 +16,7 @@ scipy = "^1.9.3"
 numdifftools = "^0.9.41"
 qutip = "^4.7.0"
 sympy = "^1.11.1"
+sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
