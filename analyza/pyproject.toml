@@ -17,6 +17,7 @@ numdifftools = "^0.9.41"
 qutip = "^4.7.0"
 sympy = "^1.11.1"
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
+experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
