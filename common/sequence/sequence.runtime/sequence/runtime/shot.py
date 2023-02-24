@@ -1,4 +1,5 @@
 import typing
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -37,6 +38,16 @@ class Shot:
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.PARAMETER, session)
+
+    def get_start_time(self, experiment_session: ExperimentSession) -> datetime:
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
+        return shot_sql.start_time
+
+    def get_end_time(self, experiment_session: ExperimentSession) -> datetime:
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
+        return shot_sql.end_time
 
     @property
     def sequence(self):
