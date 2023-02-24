@@ -130,7 +130,7 @@ class ExperimentSessionMaker:
         return ExperimentSession(database_url=self._database_url, commit=self._commit)
 
 
-DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@localhost/test_database"
+DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_database"
 
 
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
