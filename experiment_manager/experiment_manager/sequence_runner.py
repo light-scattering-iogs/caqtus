@@ -274,7 +274,9 @@ class SequenceRunnerThread(Thread):
             )
 
         end_time = datetime.datetime.now()
-        logger.info(f"shot executed in {(end_time - start_time).total_seconds():.3f} s")
+        logger.info(
+            f"Shot total duration: {(end_time - start_time).total_seconds()*1e3:.1f} ms"
+        )
 
         shot_saver.push_shot(shot.name, start_time, end_time, context.variables, data)
 
@@ -287,10 +289,19 @@ class SequenceRunnerThread(Thread):
         return data
 
     def prepare_shot(self, shot: ShotConfiguration, context: VariableNamespace):
+        initial_time = datetime.datetime.now()
         device_parameters = compute_shot_parameters(
             self._experiment_config, shot, context
         )
+        computation_time = datetime.datetime.now()
+        logger.info(
+            f"Shot parameters computation duration: {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
+        )
         self.update_device_parameters(device_parameters)
+        update_time = datetime.datetime.now()
+        logger.info(
+            f"Device parameters update duration: {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
+        )
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
         if MOCK_EXPERIMENT:
@@ -318,6 +329,7 @@ class SequenceRunnerThread(Thread):
             )
 
     def run_shot(self):
+        start_time = datetime.datetime.now()
         if MOCK_EXPERIMENT:
             time.sleep(0.5)
             return
@@ -336,6 +348,8 @@ class SequenceRunnerThread(Thread):
         for acquisition in future_acquisitions.values():
             if exception := acquisition.exception():
                 raise exception
+        stop_time = datetime.datetime.now()
+        logger.info(f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms")
 
     def extract_data(self):
         if MOCK_EXPERIMENT:
