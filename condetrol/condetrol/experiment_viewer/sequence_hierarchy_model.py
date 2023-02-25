@@ -51,11 +51,11 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if not child.isValid():
             return QModelIndex()
 
-        child: SequenceHierarchyItem = child.internalPointer()
-        if child.is_root:
+        child_item: SequenceHierarchyItem = child.internalPointer()
+        if child_item.is_root:
             return QModelIndex()
         else:
-            return self.createIndex(child.parent.row, 0, child.parent)
+            return self.createIndex(child_item.parent.row, child.column(), child_item.parent)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if not parent.isValid():
@@ -184,9 +184,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 session.get_sql_session()
             ).is_sequence()
 
-    def create_new_folder(self, index: QModelIndex, name: str):
-        if index.isValid():
-            parent_item: "SequenceHierarchyItem" = index.internalPointer()
+    def create_new_folder(self, parent: QModelIndex, name: str):
+        if parent.isValid():
+            parent_item: "SequenceHierarchyItem" = parent.internalPointer()
         else:
             parent_item = self._root
         new_path = parent_item.sequence_path / name
@@ -196,10 +196,11 @@ class SequenceHierarchyModel(QAbstractItemModel):
         children.append(
             SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
-        with self._session as session:
+        with self._session.activate() as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
-                self.beginInsertRows(index, new_row, new_row)
+                logger.info(f'Created new folder "{str(new_path)}"')
+                self.beginInsertRows(parent, new_row, new_row)
                 parent_item.children = children
                 self.endInsertRows()
             elif number_created_paths == 0:
