@@ -71,7 +71,7 @@ class SequenceRunnerThread(Thread):
         self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
         self._devices: dict[str, RuntimeDevice] = {}
 
-        with self._session as session:
+        with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
                 experiment_config_name
             )
@@ -100,7 +100,7 @@ class SequenceRunnerThread(Thread):
         self._devices = self.create_devices()
         self.start_devices()
 
-        with self._session as session:
+        with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
 
     def connect_to_device_servers(self):
