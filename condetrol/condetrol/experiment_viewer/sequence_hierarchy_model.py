@@ -212,10 +212,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 )
 
     def create_new_sequence(
-        self, index: QModelIndex, name: str
+        self, parent_index: QModelIndex, name: str
     ) -> Optional[SequencePath]:
-        if index.isValid():
-            parent_item: "SequenceHierarchyItem" = index.internalPointer()
+        """Attempt to create a new sequence with the given name under the given parent."""
+
+        if parent_index.isValid():
+            parent_item: "SequenceHierarchyItem" = parent_index.internalPointer()
         else:
             parent_item = self._root
         new_path = parent_item.sequence_path / name
@@ -232,7 +234,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
-                self.beginInsertRows(index, new_row, new_row)
+                self.beginInsertRows(parent_index, new_row, new_row)
                 parent_item.children = children
                 self.endInsertRows()
                 return new_path
@@ -245,13 +247,27 @@ class SequenceHierarchyModel(QAbstractItemModel):
                     "Created more than one path and couldn't update the views"
                 )
 
-    def duplicate_sequence(self, source_index: QModelIndex, target_name: str):
+    def duplicate_sequence(self, source_index: QModelIndex, target_name: str) -> bool:
+        """
+        Duplicates a sequence
+
+        Args:
+            source_index: The index of the sequence to duplicate
+            target_name: The target name of the new sequence in the same folder as the source sequence
+
+        Returns:
+            True if the sequence was duplicated, False otherwise
+
+        """
         source_path = Sequence(source_index.internalPointer().sequence_path)
         target_path = self.create_new_sequence(source_index.parent(), target_name)
         if target_path is not None:
             with self._session as session:
                 sequence_config = source_path.get_config(session)
                 Sequence(target_path).set_config(sequence_config, session)
+                return True
+        else:
+            return False
 
     def delete(self, index: QModelIndex):
         if not index.isValid():

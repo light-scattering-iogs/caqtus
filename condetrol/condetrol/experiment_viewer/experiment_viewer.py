@@ -275,24 +275,37 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
-    def duplicate_sequence(self, index: QModelIndex):
+    def duplicate_sequence(self, index: QModelIndex) -> bool:
+        """Duplicate a sequence
+        
+        Pop up a dialog to ask for a new name and duplicate the sequence at the given index to the new name in the same 
+        containing folder.
+        Args:
+            index: QModelIndex of the sequence to duplicate
+
+        Returns:
+            True if the sequence was successfully duplicated, False otherwise
+        """
+
         if not index.isValid():
-            return
+            return False
         item: SequenceHierarchyItem = index.internalPointer()
         if not item.is_sequence:
-            return
+            return False
 
-        source_path = item.path
+        source_path = item.sequence_path
         text, ok = QInputDialog().getText(
             self,
             f"Duplicate sequence {source_path}...",
             "Destination:",
             QLineEdit.EchoMode.Normal,
-            "new_sequence",
+            source_path.name
         )
         if ok and text:
-            self.model.duplicate_sequence(index, text)
+            duplicated = self.model.duplicate_sequence(index, text)
             self.sequences_view.update()
+            return duplicated
+        return False
 
     def start_sequence(self, index: QModelIndex):
         sequence_path = self.model.get_path(index)
@@ -306,7 +319,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def create_new_folder(self, index: QModelIndex):
         if index.isValid():
             item: SequenceHierarchyItem = index.internalPointer()
-            path = item.path
+            path = item.sequence_path
         else:
             path = "root"
         text, ok = QInputDialog().getText(
@@ -323,7 +336,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def create_new_sequence(self, index: QModelIndex):
         if index.isValid():
             item: SequenceHierarchyItem = index.internalPointer()
-            path = item.path
+            path = item.sequence_path
         else:
             path = "root"
         text, ok = QInputDialog().getText(
