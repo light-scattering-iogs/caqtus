@@ -248,40 +248,43 @@ class CameraLaneModel(LaneModel):
         super().__init__(lane, experiment_config, *args, **kwargs)
 
     def data(self, index: QModelIndex, role: int = ...):
-        camera_action = self.lane[index.row()]
-        if isinstance(camera_action, TakePicture):
-            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+        camera_action: CameraLane = self.lane[index.row()]
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            if camera_action is None:
+                return ""
+            elif isinstance(camera_action, TakePicture):
                 return camera_action.picture_name
-            elif role == Qt.ItemDataRole.DecorationRole:
-                return QIcon("icons:camera-lens.png")
-            elif role == Qt.ItemDataRole.TextColorRole:
-                try:
-                    color = self._experiment_config.get_color(
-                        ChannelSpecialPurpose(purpose=self.lane.name)
-                    )
-                except ValueError:
-                    return QColor.fromRgb(0, 0, 0)
-                else:
-                    if color is not None:
-                        return QColor.fromRgb(*color.as_rgb_tuple(alpha=False))
+        elif role == Qt.ItemDataRole.DecorationRole:
+            return QIcon("icons:camera-lens.png")
+        elif role == Qt.ItemDataRole.TextColorRole:
+            try:
+                color = self._experiment_config.get_color(
+                    ChannelSpecialPurpose(purpose=self.lane.name)
+                )
+            except ValueError:
+                return QColor.fromRgb(0, 0, 0)
+            else:
+                if color is not None:
+                    return QColor.fromRgb(*color.as_rgb_tuple(alpha=False))
 
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
         edit = False
         if role == Qt.ItemDataRole.EditRole:
-            if value is None or isinstance(value, CameraAction):
-                self.lane[index.row()] = value
+            if value == "":
+                self.lane[index.row()] = None
                 edit = True
-            elif isinstance(value, str) and isinstance(
-                cell := self.lane[index.row()], TakePicture
-            ):
-                cell.picture_name = value
+            elif isinstance(value, str):
+                value = TakePicture(picture_name=value)
+                self.lane[index.row()] = value
                 edit = True
         return edit
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        if self.data(index, Qt.ItemDataRole.EditRole) is not None:
-            f |= Qt.ItemFlag.ItemIsEditable
+        f = (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+        )
         return f
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
