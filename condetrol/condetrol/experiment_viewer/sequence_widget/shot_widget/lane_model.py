@@ -13,7 +13,6 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
     TakePicture,
-    CameraAction,
 )
 from settings_model import YAMLSerializable
 
@@ -295,4 +294,3 @@ class CameraLaneModel(LaneModel):
         self.lane.insert(row, None)
         self.endInsertRows()
         return True
-
