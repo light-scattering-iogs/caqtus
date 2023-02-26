@@ -3,8 +3,8 @@ from functools import partial
 from typing import Optional
 
 from PyQt6 import QtCore, QtGui
-from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
-from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
+from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtGui import QColor, QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
     QWidget,
     QTableView,
@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QStyle,
     QMenu,
     QTreeView,
     QHeaderView,
@@ -61,41 +60,6 @@ class SpanColumnsDelegate(QStyledItemDelegate):
                 super().paint(painter, option, index)
             else:
                 super().paint(painter, option, index)
-
-
-class LaneCellDelegate(QStyledItemDelegate):
-    def __init__(self, experiment_config: ExperimentConfig):
-        super().__init__()
-        self.experiment_config = experiment_config
-
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ):
-        # noinspection PyTypeChecker
-        model: SwimLaneModel = index.model()
-        lane = model.get_lane(index)
-        if isinstance(lane, DigitalLane):
-            if index.data(Qt.ItemDataRole.DisplayRole):
-                try:
-                    color = self.experiment_config.get_color(lane.name)
-                except ValueError:
-                    brush = QBrush(QColor.fromRgb(0, 0, 0))
-                else:
-                    if color is not None:
-                        brush = QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
-                    else:
-                        brush = QBrush(option.palette.highlightedText().color())
-                painter.fillRect(option.rect, brush)
-            if option.state & QStyle.StateFlag.State_Selected:
-                c = option.palette.highlight().color()
-                c.setAlphaF(0.8)
-                brush = QBrush(c)
-                painter.fillRect(option.rect, brush)
-        else:
-            super().paint(painter, option, index)
-
-    def update_experiment_config(self, new_config: ExperimentConfig):
-        self.experiment_config = new_config
 
 
 class ShotWidget(QWidget):
@@ -166,6 +130,8 @@ class SwimLaneView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+        self.setSelectionBehavior(QTreeView.SelectionBehavior.SelectItems)
+        self.setSelectionMode(QTreeView.SelectionMode.ContiguousSelection)
 
     def drawBranches(
         self, painter: QtGui.QPainter, rect: QtCore.QRect, index: QtCore.QModelIndex
@@ -265,50 +231,6 @@ class SwimLaneView(QTreeView):
             return
 
         menu.exec(self.mapToGlobal(position))
-
-
-class SpanTableView(QTableView):
-    def __init__(self):
-        super().__init__()
-
-    def setModel(self, model: QAbstractItemModel) -> None:
-        super().setModel(model)
-        # noinspection PyUnresolvedReferences
-        self.model().layoutChanged.connect(self.update_span)
-        # noinspection PyUnresolvedReferences
-        self.model().layoutChanged.emit()
-
-    def update_span(self):
-        self.clearSpans()
-        for row in range(self.model().rowCount()):
-            for column in range(self.model().columnCount()):
-                index = self.model().index(row, column, QModelIndex())
-                span = self.model().span(index)
-                self.setSpan(row, column, span.height(), span.width())
-
-
-class SwimLaneWidget(QWidget):
-    def __init__(
-        self,
-        model: SwimLaneModel,
-        sequence: Sequence,
-        session_maker: ExperimentSessionMaker,
-        *args,
-    ):
-        super().__init__(*args)
-
-        with session_maker() as session:
-            sequence_config = sequence.get_config(session)
-
-        shot_config = sequence_config.shot_configurations["shot"]
-
-        self._model = SwimLaneModel(sequence, "shot", shot_config, session_maker)
-        self._view = QTreeView(self)
-        self._view.setModel(self._model)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self._view)
-        self.setLayout(layout)
 
 
 class _SwimLaneWidget(QWidget):
