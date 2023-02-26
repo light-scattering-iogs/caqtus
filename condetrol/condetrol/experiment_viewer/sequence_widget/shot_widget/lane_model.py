@@ -255,7 +255,8 @@ class CameraLaneModel(LaneModel):
             elif isinstance(camera_action, TakePicture):
                 return camera_action.picture_name
         elif role == Qt.ItemDataRole.DecorationRole:
-            return QIcon("icons:camera-lens.png")
+            if isinstance(camera_action, TakePicture):
+                return QIcon("icons:camera-lens.png")
         elif role == Qt.ItemDataRole.TextColorRole:
             try:
                 color = self._experiment_config.get_color(
@@ -294,3 +295,4 @@ class CameraLaneModel(LaneModel):
         self.lane.insert(row, None)
         self.endInsertRows()
         return True
+

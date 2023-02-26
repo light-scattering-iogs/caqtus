@@ -47,7 +47,7 @@ if __name__ == "__main__":
     app.setStyleSheet(qdarkstyle.load_stylesheet())
     fonts_path = Path(__file__).parent / "resources" / "fonts"
     QtCore.QDir.addSearchPath("fonts", str(fonts_path))
-    icons_path = Path(__file__).parent / "resources" / "icons"
+    icons_path = Path(__file__).parent.parent / "resources" / "icons"
     QtCore.QDir.addSearchPath("icons", str(icons_path))
     id = QFontDatabase.addApplicationFont("fonts:jetbrains-mono")
     if id < 0:

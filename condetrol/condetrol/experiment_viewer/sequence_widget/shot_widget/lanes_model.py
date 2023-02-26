@@ -71,10 +71,10 @@ class LanesModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return f"Step {section}"
-            elif orientation == Qt.Orientation.Vertical:
-                return self._lane_models[section].headerData(
-                    0, Qt.Orientation.Horizontal, role
-                )
+        if orientation == Qt.Orientation.Vertical:
+            return self._lane_models[section].headerData(
+                0, Qt.Orientation.Horizontal, role
+            )
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         return self._lane_models[index.row()].setData(
