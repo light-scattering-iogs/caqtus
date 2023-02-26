@@ -253,7 +253,7 @@ class CameraLaneModel(LaneModel):
             if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
                 return camera_action.picture_name
             elif role == Qt.ItemDataRole.DecorationRole:
-                return QIcon(":/icons/camera-icon")
+                return QIcon("icons:camera-lens.png")
             elif role == Qt.ItemDataRole.TextColorRole:
                 try:
                     color = self._experiment_config.get_color(

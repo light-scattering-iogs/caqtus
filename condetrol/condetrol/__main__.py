@@ -5,8 +5,10 @@ import logging
 import os
 import sys
 from multiprocessing.managers import BaseManager
+from pathlib import Path
 
 import qdarkstyle
+from PyQt6 import QtCore
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
@@ -31,8 +33,6 @@ class ExperimentProcessManager(BaseManager):
 ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
 ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
-DATABASE_URL = "postgresql+psycopg2://caqtus:Deardear@192.168.137.4/test_database"
-
 if __name__ == "__main__":
     os.environ["QT_QUICK_CONTROLS_CONF"] = (
         "C:\\Users\\Damien"
@@ -45,8 +45,11 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(qdarkstyle.load_stylesheet())
-
-    id = QFontDatabase.addApplicationFont(":/fonts/jetbrains-mono")
+    fonts_path = Path(__file__).parent / "resources" / "fonts"
+    QtCore.QDir.addSearchPath("fonts", str(fonts_path))
+    icons_path = Path(__file__).parent / "resources" / "icons"
+    QtCore.QDir.addSearchPath("icons", str(icons_path))
+    id = QFontDatabase.addApplicationFont("fonts:jetbrains-mono")
     if id < 0:
         logger.error("Could not load font jetbrains-mono")
     else:
