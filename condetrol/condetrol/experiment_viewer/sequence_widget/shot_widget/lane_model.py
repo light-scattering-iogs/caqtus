@@ -203,12 +203,7 @@ class AnalogLaneModel(LaneModel):
                 if color is not None:
                     return QColor.fromRgb(*color.as_rgb_tuple())
         elif role == Qt.ItemDataRole.TextAlignmentRole:
-            if self.lane.spans[index.row()] > 1 or isinstance(
-                self.lane[index.row()], Ramp
-            ):
-                return Qt.AlignmentFlag.AlignCenter
-            else:
-                return Qt.AlignmentFlag.AlignLeft
+            return Qt.AlignmentFlag.AlignCenter
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         return (

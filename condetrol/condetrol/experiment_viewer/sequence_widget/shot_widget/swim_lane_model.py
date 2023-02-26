@@ -360,6 +360,13 @@ class SwimLaneModel(QAbstractItemModel):
             self.save_config(self.shot_config, session)
             return True
 
+    def span(self, index: QModelIndex) -> QSize:
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lanes_model:
+            return self._lanes_model.span(mapped_index)
+        else:
+            return QSize(1, 1)
+
 
 class _SwimLaneModel(QAbstractTableModel):
     """Model for a shot parallel time steps

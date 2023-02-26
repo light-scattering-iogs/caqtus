@@ -2,6 +2,7 @@ import logging
 from functools import partial
 from typing import Optional
 
+from PyQt6 import QtCore, QtGui
 from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
@@ -26,6 +27,25 @@ from .swim_lane_model import SwimLaneModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+
+class SpanColumnsDelegate(QStyledItemDelegate):
+    def __init__(self, view: QTreeView, *args, **kwargs):
+        self._view = view
+        super().__init__(*args, **kwargs)
+
+    def paint(
+        self,
+        painter: QtGui.QPainter,
+        option: "QStyleOptionViewItem",
+        index: QModelIndex,
+    ) -> None:
+        span = index.model().span(index)
+        if span.width() == 0:
+            return
+        else:
+            option.rect = self._view.visualRect(index)
+            super().paint(painter, option, index)
 
 
 class LaneCellDelegate(QStyledItemDelegate):
@@ -90,6 +110,9 @@ class ShotWidget(QWidget):
         self.layout = QVBoxLayout()
         self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
+        self.swim_lane_widget.setItemDelegate(
+            SpanColumnsDelegate(self.swim_lane_widget)
+        )
         self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
 
@@ -124,6 +147,22 @@ class SwimLaneView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def visualRect(self, index: QtCore.QModelIndex) -> QtCore.QRect:
+        if not index.isValid():
+            return super().visualRect(index)
+        span = index.model().span(index)
+        if span.width() == 0:
+            return QtCore.QRect()
+        rect = super().visualRect(index)
+
+        width = 0
+        for i in range(span.width()):
+            column = index.column() + i
+            new_index = index.model().index(index.row(), column, index.parent())
+            width += super().visualRect(new_index).width()
+        rect.setWidth(width)
+        return rect
 
     def setModel(self, model: SwimLaneModel) -> None:
         self._sequence = model.sequence
