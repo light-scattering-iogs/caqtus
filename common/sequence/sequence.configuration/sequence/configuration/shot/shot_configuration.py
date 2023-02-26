@@ -23,7 +23,7 @@ LaneName = str
 
 class LaneReference(YAMLSerializable, NodeMixin):
     def __init__(self, lane_name: LaneName, parent: Optional["LaneGroup"] = None):
-        self._lane_name = lane_name
+        self._lane_name = LaneName(lane_name)
         self.parent = parent
         self.children = []
 
@@ -39,7 +39,7 @@ class LaneReference(YAMLSerializable, NodeMixin):
     def constructor(
         cls: Type["LaneReference"], loader: yaml.Loader, node: yaml.Node
     ) -> "LaneReference":
-        return cls(node.value)
+        return cls(lane_name=node.value)
 
     def __eq__(self, other):
         if not isinstance(other, LaneReference):
@@ -61,7 +61,7 @@ class LaneGroup(YAMLSerializable, NodeMixin):
         parent: Optional["LaneGroup"] = None,
         children: Optional[list[Union["LaneGroup", LaneReference]]] = None,
     ):
-        self._name = name
+        self._name = str(name)
         self.parent = parent
         self.children = children
 
@@ -83,7 +83,7 @@ class LaneGroup(YAMLSerializable, NodeMixin):
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> "LaneGroup":
         data = loader.construct_mapping(node, deep=True)
-        name = data.pop("name")
+        name = str(data.pop("name"))
         children = data.pop("children")
         for index, child in enumerate(children):
             if isinstance(child, str):
