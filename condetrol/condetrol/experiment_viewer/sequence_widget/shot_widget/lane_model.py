@@ -121,6 +121,16 @@ class LaneModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if self.lane.spans[index.row()] > 0:
+            return (
+                    Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsEditable
+                    | Qt.ItemFlag.ItemIsSelectable
+            )
+        else:
+            return Qt.ItemFlag.ItemIsSelectable
+
     def merge(self, start, stop):
         self.beginResetModel()
         self.lane.merge(start, stop)
@@ -162,12 +172,7 @@ class DigitalLaneModel(LaneModel):
         else:
             return False
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsEditable
-            | Qt.ItemFlag.ItemIsSelectable
-        )
+
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:
@@ -205,12 +210,7 @@ class AnalogLaneModel(LaneModel):
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignCenter
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsEditable
-            | Qt.ItemFlag.ItemIsSelectable
-        )
+
 
     def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
         edit = False
@@ -274,13 +274,7 @@ class CameraLaneModel(LaneModel):
                 edit = True
         return edit
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        f = (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsEditable
-        )
-        return f
+
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:

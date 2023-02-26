@@ -130,8 +130,9 @@ class SwimLaneView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+
         self.setSelectionBehavior(QTreeView.SelectionBehavior.SelectItems)
-        self.setSelectionMode(QTreeView.SelectionMode.ContiguousSelection)
+        self.setSelectionMode(self.selectionMode().ContiguousSelection)
 
     def drawBranches(
         self, painter: QtGui.QPainter, rect: QtCore.QRect, index: QtCore.QModelIndex
@@ -162,6 +163,16 @@ class SwimLaneView(QTreeView):
             width += super().visualRect(new_index).width()
         rect.setWidth(width)
         return rect
+
+    def visualRegionForSelection(
+        self, selection: QtCore.QItemSelection
+    ) -> QtGui.QRegion:
+        region = QtGui.QRegion()
+        for index in self.selectedIndexes():
+            if index.model().span(index).width() == 0:
+                continue
+            region += self.visualRect(index)
+        return region
 
     def setModel(self, model: SwimLaneModel) -> None:
         self._sequence = model.sequence
