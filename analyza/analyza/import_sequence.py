@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Callable, Generic, TypeVar, ParamSpec
+from typing import Any, Callable, Generic, TypeVar, ParamSpec, Iterable
 
 import numpy
 import pandas
@@ -66,6 +66,44 @@ class ChainableImporter(Generic[InputTypes, OutputType], ABC):
             raise TypeError(f"Can only chain ChainableImporters, not {type(other)}")
 
 
+def rename(old_name: str, new_name: str) -> ChainableImporter:
+    def _rename(values: dict[str, Any]) -> dict[str, Any]:
+        values[new_name] = values.pop(old_name, None)
+        return values
+
+    return ChainableImporter(_rename)
+
+
+def apply(
+    func: Callable[[Any], Any], args: str | Iterable[str], result: str
+) -> ChainableImporter:
+    if isinstance(args, str):
+        args = [args]
+
+    def _apply(values: dict[str, Any]) -> dict[str, Any]:
+        values[result] = func(*[values[arg] for arg in args])
+        return values
+
+    return ChainableImporter(_apply)
+
+
+def remove(*keys: str) -> ChainableImporter:
+    def _remove(values: dict[str, Any]) -> dict[str, Any]:
+        for key in keys:
+            values.pop(key, None)
+        return values
+
+    return ChainableImporter(_remove)
+
+
+def subtract(operand1: str, operand2: str, result: str) -> ChainableImporter:
+    def _subtract(values: dict[str, Any]) -> dict[str, Any]:
+        values[result] = values[operand1] - values[operand2]
+        return values
+
+    return ChainableImporter(_subtract)
+
+
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     return shot.get_parameters(session)
 
@@ -79,8 +117,19 @@ def _import_measures(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     return result
 
 
+def _import_time(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
+    return {
+        "start_time": shot.get_start_time(session),
+        "end_time": shot.get_end_time(session),
+    }
+
+
 def _import_all(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
-    return _import_parameters(shot, session) | _import_measures(shot, session)
+    return (
+        _import_time(shot, session)
+        | _import_parameters(shot, session)
+        | _import_measures(shot, session)
+    )
 
 
 def _to_base_units(values: dict[str, Any]) -> dict[str, Any]:

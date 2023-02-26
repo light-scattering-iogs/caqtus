@@ -12,7 +12,11 @@ from .import_sequence import (
     strip_units,
     to_base_units,
     split_units,
-    array_as_float
+    array_as_float,
+    subtract,
+    rename,
+    apply,
+    remove,
 )
 
 __all__ = [
@@ -26,5 +30,9 @@ __all__ = [
     "strip_units",
     "to_base_units",
     "split_units",
-    "array_as_float"
+    "array_as_float",
+    "subtract",
+    "rename",
+    "apply",
+    "remove",
 ]
