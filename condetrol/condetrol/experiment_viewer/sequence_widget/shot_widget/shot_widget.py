@@ -40,12 +40,27 @@ class SpanColumnsDelegate(QStyledItemDelegate):
         option: "QStyleOptionViewItem",
         index: QModelIndex,
     ) -> None:
-        span = index.model().span(index)
+        model: SwimLaneModel = index.model()
+        span = model.span(index)
         if span.width() == 0:
             return
         else:
             option.rect = self._view.visualRect(index)
-            super().paint(painter, option, index)
+            if model.is_lane_cell(index) or model.is_step_cell(index):
+                super().paint(painter, option, index)
+                painter.save()
+                painter.setPen(QColor.fromRgb(69, 83, 100))
+                painter.drawRect(option.rect)
+                painter.restore()
+            elif model.is_lane_group_cell(index):
+                painter.save()
+                painter.fillRect(option.rect, QColor.fromRgb(69, 83, 100))
+                # painter.setPen(QColor.fromRgb(25, 35, 45))
+                # painter.drawLine(option.rect.topLeft(), option.rect.topRight())
+                painter.restore()
+                super().paint(painter, option, index)
+            else:
+                super().paint(painter, option, index)
 
 
 class LaneCellDelegate(QStyledItemDelegate):
@@ -106,6 +121,9 @@ class ShotWidget(QWidget):
         self.model = SwimLaneModel(
             self._sequence, "shot", self.experiment_config, session_maker
         )
+        size = QtCore.QSize(20, 40)
+        index = self.model.index(0, 0)  # row, col are your own
+        self.model.setData(index, size, Qt.ItemDataRole.SizeHintRole)
 
         self.layout = QVBoxLayout()
         self.swim_lane_widget = SwimLaneView(session_maker)
@@ -135,7 +153,8 @@ class SwimLaneView(QTreeView):
         self._sequence: Optional[Sequence] = None
 
         super().__init__(*args, **kwargs)
-        self.setAlternatingRowColors(True)
+        self.setUniformRowHeights(True)
+        # self.setAlternatingRowColors(True)
 
         self.header().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
@@ -147,6 +166,20 @@ class SwimLaneView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def drawBranches(
+        self, painter: QtGui.QPainter, rect: QtCore.QRect, index: QtCore.QModelIndex
+    ) -> None:
+        if index.isValid():
+            if not index.parent().isValid() and index.row() < 2:
+                return
+
+        painter.save()
+        painter.fillRect(rect, QColor.fromRgb(69, 83, 100))
+        # painter.setPen(QColor.fromRgb(25, 35, 45))
+        # painter.drawLine(rect.topLeft(), rect.topRight())
+        painter.restore()
+        super().drawBranches(painter, rect, index)
 
     def visualRect(self, index: QtCore.QModelIndex) -> QtCore.QRect:
         if not index.isValid():

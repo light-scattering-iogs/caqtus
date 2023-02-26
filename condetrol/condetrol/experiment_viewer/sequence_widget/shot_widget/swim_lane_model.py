@@ -20,7 +20,9 @@ from sequence.configuration import (
     Lane,
     ShotConfiguration,
     LaneReference,
-    DigitalLane, AnalogLane, CameraLane,
+    DigitalLane,
+    AnalogLane,
+    CameraLane,
 )
 from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
@@ -198,7 +200,11 @@ class SwimLaneModel(QAbstractItemModel):
         if not index.isValid():
             return None
         mapped_index = self.map_to_child_index(index)
-        return mapped_index.data(role)
+        if mapped_index.isValid():
+            return mapped_index.data(role)
+        if index.row() == 0 and index.column() == 0:
+            if role == Qt.ItemDataRole.SizeHintRole:
+                return QSize(0, 25)
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
         if orientation == Qt.Orientation.Horizontal:
@@ -225,7 +231,10 @@ class SwimLaneModel(QAbstractItemModel):
         with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 mapped_index = self.map_to_child_index(index)
-                edit = mapped_index.model().setData(mapped_index, value, role)
+                if mapped_index.isValid():
+                    edit = mapped_index.model().setData(mapped_index, value, role)
+                else:
+                    edit = super().setData(index, value, role)
                 if edit:
                     self.save_config(self.shot_config, session)
                     self.dataChanged.emit(index, index, [role])
@@ -297,13 +306,9 @@ class SwimLaneModel(QAbstractItemModel):
     ):
         already_in_use_channels = set(self.shot_config.get_lane_names())
 
-        possible_channels = self._experiment_config.get_available_lane_names(
-            lane_type
-        )
+        possible_channels = self._experiment_config.get_available_lane_names(lane_type)
 
-        available_channels = sorted(
-            possible_channels - already_in_use_channels
-        )
+        available_channels = sorted(possible_channels - already_in_use_channels)
         for channel in available_channels:
             action = menu.addAction(channel)
             action.triggered.connect(
@@ -366,6 +371,21 @@ class SwimLaneModel(QAbstractItemModel):
             return self._lanes_model.span(mapped_index)
         else:
             return QSize(1, 1)
+
+    def is_lane_cell(self, index: QModelIndex) -> bool:
+        mapped_index = self.map_to_child_index(index)
+        return mapped_index.model() is self._lanes_model
+
+    def is_lane_group_cell(self, index: QModelIndex) -> bool:
+        mapped_index = self.map_to_child_index(index)
+        return mapped_index.model() is self._lane_groups_model
+
+    def is_step_cell(self, index: QModelIndex) -> bool:
+        mapped_index = self.map_to_child_index(index)
+        return (
+            mapped_index.model() is self._step_names_model
+            or mapped_index.model() is self._step_durations_model
+        )
 
 
 class _SwimLaneModel(QAbstractTableModel):
