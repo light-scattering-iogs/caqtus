@@ -1,7 +1,9 @@
 import atexit
 import logging
+import threading
 import time
-from typing import ClassVar, Optional
+from copy import copy
+from typing import Optional
 
 import numpy
 from pydantic import Field
@@ -12,6 +14,13 @@ from .dcamapi4 import DCAM_IDPROP, DCAMPROP
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+if Dcamapi.init():
+    atexit.register(Dcamapi.uninit)
+else:
+    # If this error occurs, check that the dcam-api from hamamatsu is installed
+    # https://dcam-api.com/
+    raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr()}")
 
 
 class OrcaQuestCamera(CCamera):
@@ -34,16 +43,11 @@ class OrcaQuestCamera(CCamera):
     def start(self) -> None:
         super().start()
         self._pictures = [None] * self.number_pictures_to_acquire
-        if not Dcamapi.init():
-            raise RuntimeError(
-                f"Failed to initialize DCAM-API: {str(Dcamapi.lasterr())}"
-            )
+
+        if self.camera_number < Dcamapi.get_devicecount():
+            self._camera = Dcam(self.camera_number)
         else:
-            logger.info(f"{self.name}: DCAM-API initialized")
-            if self.camera_number < Dcamapi.get_devicecount():
-                self._camera = Dcam(self.camera_number)
-            else:
-                raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
+            raise RuntimeError(f"Could not find camera {str(self.camera_number)}")
 
         if not self._camera.dev_open():
             raise RuntimeError(
@@ -81,6 +85,8 @@ class OrcaQuestCamera(CCamera):
                     f" {str(self._camera.lasterr())}"
                 )
 
+            self._camera.lasterr()
+
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
             raise RuntimeError(
                 f"can't set subarray mode on: {str(self._camera.lasterr())}"
@@ -109,8 +115,7 @@ class OrcaQuestCamera(CCamera):
                         f"{self.name}: an error occurred while closing the camera:"
                         f" {str(self._camera.lasterr())}"
                     )
-            if Dcamapi.uninit():
-                logger.info(f"{self.name}: DCAM-API successfully released")
+
         finally:
             super().shutdown()
 
@@ -124,6 +129,63 @@ class OrcaQuestCamera(CCamera):
             property_id = self._camera.prop_getnextid(property_id)
         return result
 
+    def _start_acquisition(self, number_pictures: int):
+        exposures = copy(self.exposures)
+
+        def acquire_pictures():
+            for picture_number, exposure in enumerate(exposures):
+                self._acquire_picture(picture_number, exposure, self.timeout)
+
+        self._acquisition_thread = threading.Thread(target=acquire_pictures)
+        self._acquisition_thread.start()
+
+    def _acquire_picture(
+        self, picture_number: int, new_exposure: float, timeout: float
+    ):
+        if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
+            raise RuntimeError(
+                f"Can't set exposure of {self.name} to {new_exposure}:"
+                f" {str(self._camera.lasterr())}"
+            )
+
+        if not self._camera.cap_start():
+            raise RuntimeError(
+                f"Can't start acquisition on {self.name}: {str(self._camera.lasterr())}"
+            )
+
+        start_acquire = time.time()
+        while True:
+            if self._camera.wait_capevent_frameready(1):
+                data = self._camera.buf_getlastframedata()
+                self._pictures[picture_number] = data.T
+                logger.info(
+                    f"{self.name}: picture '{self.picture_names[picture_number]}'"
+                    f" acquired after {(time.time() - start_acquire) * 1e3:.0f} ms"
+                )
+                break
+
+            error = self._camera.lasterr()
+            if error.is_timeout():
+                if time.time() - start_acquire > self.timeout:
+                    self._camera.cap_stop()
+                    raise CameraTimeoutError(
+                        f"{self.name} timed out after {timeout*1e3:.0f} ms before"
+                        " receiving a trigger"
+                    )
+                continue
+            else:
+                raise RuntimeError(
+                    f"An error occurred while acquiring an image on {self.name}:"
+                    f" {str(error)}"
+                )
+
+    def _stop_acquisition(self):
+        if self._acquisition_thread is not None:
+            self._acquisition_thread.join()
+
+    def _is_acquisition_in_progress(self) -> bool:
+        return False
+
     @classmethod
     def list_camera_infos(cls) -> list[dict[str]]:
         result = []
@@ -136,64 +198,3 @@ class OrcaQuestCamera(CCamera):
             infos["driver version"] = camera.dev_getstring(DCAM_IDSTR.DRIVERVERSION)
             result.append(infos)
         return result
-
-    @classmethod
-    def _initialize_dcam_api(cls):
-        if not (result := cls._dcam_api_initialized):
-            result = Dcamapi.init()
-            if result:
-                cls._dcam_api_initialized = True
-                atexit.register(Dcamapi.uninit)
-            else:
-                raise RuntimeError(
-                    f"Failed to initialize DCAM-API: {str(Dcamapi.lasterr())}"
-                )
-        return result
-
-    _dcam_api_initialized: ClassVar[bool] = False
-
-    def _acquire_picture(
-        self, picture_number: int, new_exposure: float, timeout: float
-    ):
-        if self._has_exposure_changed(picture_number):
-            if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
-                raise RuntimeError(
-                    f"Can't set exposure of {self.name} to {new_exposure}:"
-                    f" {str(self._camera.lasterr())}"
-                )
-        if self._camera.cap_snapshot() is not False:
-            start_acquire = time.time()
-            while True:
-                if self._camera.wait_capevent_frameready(1):
-                    data = self._camera.buf_getlastframedata()
-                    self._pictures[picture_number] = data.T
-                    self._picture_acquired(picture_number)
-                    logger.info(
-                        f"{self.name}: picture '{self.picture_names[picture_number]}'"
-                        f" acquired after {(time.time() - start_acquire) * 1e3:.0f} ms"
-                    )
-                    break
-
-                error = self._camera.lasterr()
-                if error.is_timeout():
-                    if time.time() - start_acquire > self.timeout:
-                        self._camera.cap_stop()
-                        raise CameraTimeoutError(
-                            f"{self.name} timed out after {timeout*1e3:.0f} ms before"
-                            " receiving a trigger"
-                        )
-                    pass
-                else:
-                    raise RuntimeError(
-                        f"An error occurred while acquiring an image on {self.name}:"
-                        f" {str(error)}"
-                    )
-        else:
-            raise RuntimeError(
-                f"Failed to start capture for {self.name}:"
-                f" {str(self._camera.lasterr())}"
-            )
-
-    def _read_picture(self, picture_number: int) -> numpy.ndarray:
-        super()._read_picture(picture_number)
-        return self._pictures[picture_number]

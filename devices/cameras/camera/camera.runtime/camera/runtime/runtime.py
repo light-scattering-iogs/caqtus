@@ -27,7 +27,7 @@ class CCamera(RuntimeDevice, ABC):
     - _is_acquisition_in_progress
     """
 
-    picture_names: tuple[str] = Field(
+    picture_names: tuple[str, ...] = Field(
         description=(
             "Names to give to the pictures in order of acquisition. Each name must be"
             " unique."
