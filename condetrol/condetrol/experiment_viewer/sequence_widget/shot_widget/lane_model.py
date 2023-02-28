@@ -13,7 +13,6 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
     TakePicture,
-    CameraAction,
 )
 from settings_model import YAMLSerializable
 
@@ -122,6 +121,16 @@ class LaneModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if self.lane.spans[index.row()] > 0:
+            return (
+                    Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsEditable
+                    | Qt.ItemFlag.ItemIsSelectable
+            )
+        else:
+            return Qt.ItemFlag.ItemIsSelectable
+
     def merge(self, start, stop):
         self.beginResetModel()
         self.lane.merge(start, stop)
@@ -163,12 +172,7 @@ class DigitalLaneModel(LaneModel):
         else:
             return False
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsEditable
-            | Qt.ItemFlag.ItemIsSelectable
-        )
+
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:
@@ -204,19 +208,9 @@ class AnalogLaneModel(LaneModel):
                 if color is not None:
                     return QColor.fromRgb(*color.as_rgb_tuple())
         elif role == Qt.ItemDataRole.TextAlignmentRole:
-            if self.lane.spans[index.row()] > 1 or isinstance(
-                self.lane[index.row()], Ramp
-            ):
-                return Qt.AlignmentFlag.AlignCenter
-            else:
-                return Qt.AlignmentFlag.AlignLeft
+            return Qt.AlignmentFlag.AlignCenter
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsEditable
-            | Qt.ItemFlag.ItemIsSelectable
-        )
+
 
     def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
         edit = False
@@ -280,13 +274,7 @@ class CameraLaneModel(LaneModel):
                 edit = True
         return edit
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        f = (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsEditable
-        )
-        return f
+
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:
@@ -295,4 +283,3 @@ class CameraLaneModel(LaneModel):
         self.lane.insert(row, None)
         self.endInsertRows()
         return True
-

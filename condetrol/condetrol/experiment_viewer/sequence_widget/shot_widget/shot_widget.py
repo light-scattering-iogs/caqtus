@@ -2,8 +2,9 @@ import logging
 from functools import partial
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
-from PyQt6.QtGui import QPainter, QBrush, QColor, QKeySequence, QShortcut, QAction
+from PyQt6 import QtCore, QtGui
+from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtGui import QColor, QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
     QWidget,
     QTableView,
@@ -12,7 +13,6 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QStyle,
     QMenu,
     QTreeView,
     QHeaderView,
@@ -28,39 +28,38 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class LaneCellDelegate(QStyledItemDelegate):
-    def __init__(self, experiment_config: ExperimentConfig):
-        super().__init__()
-        self.experiment_config = experiment_config
+class SpanColumnsDelegate(QStyledItemDelegate):
+    def __init__(self, view: QTreeView, *args, **kwargs):
+        self._view = view
+        super().__init__(*args, **kwargs)
 
     def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ):
-        # noinspection PyTypeChecker
+        self,
+        painter: QtGui.QPainter,
+        option: "QStyleOptionViewItem",
+        index: QModelIndex,
+    ) -> None:
         model: SwimLaneModel = index.model()
-        lane = model.get_lane(index)
-        if isinstance(lane, DigitalLane):
-            if index.data(Qt.ItemDataRole.DisplayRole):
-                try:
-                    color = self.experiment_config.get_color(lane.name)
-                except ValueError:
-                    brush = QBrush(QColor.fromRgb(0, 0, 0))
-                else:
-                    if color is not None:
-                        brush = QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
-                    else:
-                        brush = QBrush(option.palette.highlightedText().color())
-                painter.fillRect(option.rect, brush)
-            if option.state & QStyle.StateFlag.State_Selected:
-                c = option.palette.highlight().color()
-                c.setAlphaF(0.8)
-                brush = QBrush(c)
-                painter.fillRect(option.rect, brush)
+        span = model.span(index)
+        if span.width() == 0:
+            return
         else:
-            super().paint(painter, option, index)
-
-    def update_experiment_config(self, new_config: ExperimentConfig):
-        self.experiment_config = new_config
+            option.rect = self._view.visualRect(index)
+            if model.is_lane_cell(index) or model.is_step_cell(index):
+                super().paint(painter, option, index)
+                painter.save()
+                painter.setPen(QColor.fromRgb(69, 83, 100))
+                painter.drawRect(option.rect)
+                painter.restore()
+            elif model.is_lane_group_cell(index):
+                painter.save()
+                painter.fillRect(option.rect, QColor.fromRgb(69, 83, 100))
+                # painter.setPen(QColor.fromRgb(25, 35, 45))
+                # painter.drawLine(option.rect.topLeft(), option.rect.topRight())
+                painter.restore()
+                super().paint(painter, option, index)
+            else:
+                super().paint(painter, option, index)
 
 
 class ShotWidget(QWidget):
@@ -86,10 +85,16 @@ class ShotWidget(QWidget):
         self.model = SwimLaneModel(
             self._sequence, "shot", self.experiment_config, session_maker
         )
+        size = QtCore.QSize(20, 40)
+        index = self.model.index(0, 0)  # row, col are your own
+        self.model.setData(index, size, Qt.ItemDataRole.SizeHintRole)
 
         self.layout = QVBoxLayout()
         self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
+        self.swim_lane_widget.setItemDelegate(
+            SpanColumnsDelegate(self.swim_lane_widget)
+        )
         self.layout.addWidget(self.swim_lane_widget)
         self.setLayout(self.layout)
 
@@ -112,7 +117,8 @@ class SwimLaneView(QTreeView):
         self._sequence: Optional[Sequence] = None
 
         super().__init__(*args, **kwargs)
-        self.setAlternatingRowColors(True)
+        self.setUniformRowHeights(True)
+        # self.setAlternatingRowColors(True)
 
         self.header().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
@@ -124,6 +130,49 @@ class SwimLaneView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+
+        self.setSelectionBehavior(QTreeView.SelectionBehavior.SelectItems)
+        self.setSelectionMode(self.selectionMode().ContiguousSelection)
+
+    def drawBranches(
+        self, painter: QtGui.QPainter, rect: QtCore.QRect, index: QtCore.QModelIndex
+    ) -> None:
+        if index.isValid():
+            if not index.parent().isValid() and index.row() < 2:
+                return
+
+        painter.save()
+        painter.fillRect(rect, QColor.fromRgb(69, 83, 100))
+        # painter.setPen(QColor.fromRgb(25, 35, 45))
+        # painter.drawLine(rect.topLeft(), rect.topRight())
+        painter.restore()
+        super().drawBranches(painter, rect, index)
+
+    def visualRect(self, index: QtCore.QModelIndex) -> QtCore.QRect:
+        if not index.isValid():
+            return super().visualRect(index)
+        span = index.model().span(index)
+        if span.width() == 0:
+            return QtCore.QRect()
+        rect = super().visualRect(index)
+
+        width = 0
+        for i in range(span.width()):
+            column = index.column() + i
+            new_index = index.model().index(index.row(), column, index.parent())
+            width += super().visualRect(new_index).width()
+        rect.setWidth(width)
+        return rect
+
+    def visualRegionForSelection(
+        self, selection: QtCore.QItemSelection
+    ) -> QtGui.QRegion:
+        region = QtGui.QRegion()
+        for index in self.selectedIndexes():
+            if index.model().span(index).width() == 0:
+                continue
+            region += self.visualRect(index)
+        return region
 
     def setModel(self, model: SwimLaneModel) -> None:
         self._sequence = model.sequence
@@ -193,50 +242,6 @@ class SwimLaneView(QTreeView):
             return
 
         menu.exec(self.mapToGlobal(position))
-
-
-class SpanTableView(QTableView):
-    def __init__(self):
-        super().__init__()
-
-    def setModel(self, model: QAbstractItemModel) -> None:
-        super().setModel(model)
-        # noinspection PyUnresolvedReferences
-        self.model().layoutChanged.connect(self.update_span)
-        # noinspection PyUnresolvedReferences
-        self.model().layoutChanged.emit()
-
-    def update_span(self):
-        self.clearSpans()
-        for row in range(self.model().rowCount()):
-            for column in range(self.model().columnCount()):
-                index = self.model().index(row, column, QModelIndex())
-                span = self.model().span(index)
-                self.setSpan(row, column, span.height(), span.width())
-
-
-class SwimLaneWidget(QWidget):
-    def __init__(
-        self,
-        model: SwimLaneModel,
-        sequence: Sequence,
-        session_maker: ExperimentSessionMaker,
-        *args,
-    ):
-        super().__init__(*args)
-
-        with session_maker() as session:
-            sequence_config = sequence.get_config(session)
-
-        shot_config = sequence_config.shot_configurations["shot"]
-
-        self._model = SwimLaneModel(sequence, "shot", shot_config, session_maker)
-        self._view = QTreeView(self)
-        self._view.setModel(self._model)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self._view)
-        self.setLayout(layout)
 
 
 class _SwimLaneWidget(QWidget):
