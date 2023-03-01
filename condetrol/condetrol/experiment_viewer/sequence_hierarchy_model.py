@@ -1,9 +1,9 @@
+import copy
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt, QTimer
 from anytree import NodeMixin
 from sqlalchemy import func
 
@@ -23,6 +23,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker):
+
+        super().__init__()
         self._session = session_maker()
 
         with self._session as session:
@@ -32,8 +34,17 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 row=0,
                 is_sequence=False,
             )
+            _update_stats(self._root, session)
 
-        super().__init__()
+        self.update_stats_timer = QTimer(self)
+        # noinspection PyUnresolvedReferences
+        self.update_stats_timer.timeout.connect(self._update_stats)
+        self.update_stats_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.update_stats_timer.start(500)
+
+    def _update_stats(self):
+        with self._session as session:
+            _update_stats(self._root, session)
 
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
@@ -55,7 +66,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if child_item.is_root:
             return QModelIndex()
         else:
-            return self.createIndex(child_item.parent.row, child.column(), child_item.parent)
+            return self.createIndex(
+                child_item.parent.row, child.column(), child_item.parent
+            )
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         if not parent.isValid():
@@ -69,21 +82,20 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def data(self, index: QModelIndex, role: int = ...):
         if not index.isValid():
             return
+        item: SequenceHierarchyItem = index.internalPointer()
+        stats = item.sequence_stats
 
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
-                return self.get_sequence_name(index.internalPointer())
+                return self.get_sequence_name(item)
             elif index.column() == 1:
-                stats = self.get_sequence_stats(index)
                 return stats
             elif index.column() == 2:
-                stats = self.get_sequence_stats(index)
                 if stats:
                     if (total := stats["total_number_shots"]) is None:
                         total = "--"
                     return f"{stats['number_completed_shots']}/{total}"
             elif index.column() == 3:
-                stats = self.get_sequence_stats(index)
                 if stats:
                     if (
                         stats["state"] == State.DRAFT
@@ -225,9 +237,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
         children = list(parent_item.children)
         new_row = len(children)
-        children.append(
-            SequenceHierarchyItem(path=new_path, is_sequence=True, row=new_row)
-        )
         sequence_config = SequenceConfig(
             program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
         )
@@ -235,6 +244,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
+                new_child = SequenceHierarchyItem(
+                    path=new_path,
+                    is_sequence=True,
+                    row=new_row,
+                )
+                children.append(new_child)
                 self.beginInsertRows(parent_index, new_row, new_row)
                 parent_item.children = children
                 self.endInsertRows()
@@ -312,15 +327,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 sequence.set_state(State.DRAFT, session)
             self.dataChanged.emit(index, index)
 
-    def fileIcon(self, index: QModelIndex) -> QIcon:
-        if not index.isValid():
-            return None
-        item: "SequenceHierarchyItem" = index.internalPointer()
-        if item.is_sequence:
-            return QIcon(":/icons/sequence")
-        else:
-            return None
-
 
 class SequenceHierarchyItem(NodeMixin):
     """Item in the sequence hierarchy model.
@@ -341,6 +347,7 @@ class SequenceHierarchyItem(NodeMixin):
         self.parent = parent
         self.is_sequence = is_sequence
         self.row = row
+        self._sequence_stats: Optional[SequenceStats] = None
         if children:
             self.children = children
 
@@ -349,6 +356,10 @@ class SequenceHierarchyItem(NodeMixin):
 
     def is_folder(self):
         return not self.is_sequence
+
+    @property
+    def sequence_stats(self) -> Optional[SequenceStats]:
+        return copy.deepcopy(self._sequence_stats)
 
 
 def _build_children(
@@ -408,3 +419,13 @@ def _format_seconds(seconds: float) -> str:
                 result.append(f"{days}d")
 
     return ":".join(reversed(result))
+
+
+def _update_stats(item: SequenceHierarchyItem, session: ExperimentSession):
+    if item.is_sequence:
+        sequence = Sequence(item.sequence_path)
+        stats = sequence.get_stats(session)
+        item._sequence_stats = stats
+    else:
+        for child in item.children:
+            _update_stats(child, session)
