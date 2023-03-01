@@ -10,6 +10,7 @@ ureg = pint.UnitRegistry(
     cache_folder=":auto:",
 )
 Quantity = ureg.Quantity
+UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
 dimensionless = Quantity(1, "").units

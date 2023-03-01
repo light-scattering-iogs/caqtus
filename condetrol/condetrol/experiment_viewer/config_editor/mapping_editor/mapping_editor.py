@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QSplitter,
     QHeaderView,
+    QInputDialog, QLineEdit,
 )
 
 from device_config.units_mapping import CalibratedUnitsMapping
@@ -52,6 +53,13 @@ class CalibratedMappingEditor(QDialog):
         delegate = QStyledItemDelegate(self)
         delegate.setItemEditorFactory(ItemEditorFactory())
         self.values_view.setItemDelegate(delegate)
+
+        self.values_view.horizontalHeader().setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.values_view.horizontalHeader().customContextMenuRequested.connect(
+            self.show_header_context_menu
+        )
 
         self.model = CalibratedUnitMappingModel(input_label, output_label)
         self.model.mapping_changed.connect(self.set_chart_mapping)
@@ -94,6 +102,30 @@ class CalibratedMappingEditor(QDialog):
 
         self.setLayout(self.layout)
 
+    def show_header_context_menu(self, position):
+        index = self.values_view.horizontalHeader().logicalIndexAt(position)
+
+        menu = QMenu(self.values_view)
+
+        if index == 1:
+            change_units = QAction("Change units")
+            change_units.triggered.connect(self.change_units)
+            menu.addAction(change_units)
+            menu.exec(self.values_view.mapToGlobal(position))
+
+    def change_units(self):
+        text, ok = QInputDialog().getText(
+            self,
+            f"Change units for {self._input_label}",
+            "New units:",
+            QLineEdit.EchoMode.Normal,
+            self.model.mapping.get_input_units(),
+        )
+        if ok:
+            self.model.set_input_units(text)
+            self.set_chart_mapping(self.model.mapping)
+            self.values_view.update()
+
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         ui_settings = QSettings("Caqtus", "ExperimentControl")
         ui_settings.setValue(f"{__name__}/splitter_state", self.splitter.saveState())
@@ -135,7 +167,8 @@ class CalibratedMappingEditor(QDialog):
 
         menu.exec(self.values_view.mapToGlobal(position))
 
-    def remove_row(self, index: QModelIndex):
+    @staticmethod
+    def remove_row(index: QModelIndex):
         index.model().removeRow(index.row(), QModelIndex())
 
 
@@ -153,6 +186,10 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
         self.beginResetModel()
         self._mapping = mapping
         self.endResetModel()
+
+    @property
+    def mapping(self) -> CalibratedUnitsMapping:
+        return self._mapping
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._mapping.input_values)
@@ -231,6 +268,11 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
         for _ in range(count):
             self.insertRow(row, parent)
         return True
+
+    def set_input_units(self, units: str):
+        self._mapping.input_units = units
+        self.mapping_changed.emit(self._mapping)
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, 1, 1)
 
 
 class ItemEditorFactory(QItemEditorFactory):

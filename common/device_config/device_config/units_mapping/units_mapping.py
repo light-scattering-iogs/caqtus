@@ -5,7 +5,7 @@ import numpy
 from pydantic import Field, validator
 
 from settings_model import SettingsModel
-from units import Quantity
+from units import Quantity, UndefinedUnitError
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -62,9 +62,31 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
     output_units: str = ""
     measured_data_points: tuple[tuple[float, float], ...] = Field(
         default_factory=tuple,
-        description="Measured data points as a tuple of (input, output) tuples. The points will be rearranged to have "
-        "the inputs sorted.",
+        description=(
+            "Measured data points as a tuple of (input, output) tuples. The points will"
+            " be rearranged to have the inputs sorted."
+        ),
     )
+
+    @validator("input_units")
+    def validate_input_units(cls, input_units):
+        try:
+            Quantity(1, units=input_units)
+        except UndefinedUnitError:
+            raise ValueError(f"Unknown input units: {input_units}")
+        return input_units
+
+    @validator("output_units")
+    def validate_output_units(cls, output_units):
+        try:
+            Quantity(1, units=output_units)
+        except UndefinedUnitError:
+            raise ValueError(f"Unknown output units: {output_units}")
+        return output_units
+
+    @validator("measured_data_points")
+    def sort_by_input(cls, measured_data_points):
+        return sorted(measured_data_points)
 
     def __init__(self, input_units: str = "", output_units: str = "", **kwargs):
         if "measured_data_points" in kwargs:
@@ -81,10 +103,6 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
             output_units=output_units,
             measured_data_points=measured_data_points,
         )
-
-    @validator("measured_data_points")
-    def sort_by_input(cls, measured_data_points):
-        return sorted(measured_data_points)
 
     def get_input_units(self) -> str:
         return self.input_units
