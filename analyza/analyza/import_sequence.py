@@ -1,4 +1,5 @@
 from abc import ABC
+from types import SimpleNamespace
 from typing import Any, Callable, Generic, TypeVar, ParamSpec, Iterable
 
 import numpy
@@ -104,6 +105,19 @@ def subtract(operand1: str, operand2: str, result: str) -> ChainableImporter:
     return ChainableImporter(_subtract)
 
 
+def _break_namespaces(values: dict[str, Any]) -> dict[str, Any]:
+    result = {}
+    for key, value in values.items():
+        if isinstance(value, SimpleNamespace):
+            result |= {
+                f"{key}.{sub_key}": v
+                for sub_key, v in _break_namespaces(value.__dict__).items()
+            }
+        else:
+            result[key] = value
+    return result
+
+
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     return shot.get_parameters(session)
 
@@ -168,6 +182,7 @@ def _array_as_float(values: dict[str, Any]) -> dict[str, Any]:
 
 
 import_all = ChainableImporter(_import_all)
+break_namespaces = ChainableImporter(_break_namespaces)
 to_base_units = ChainableImporter(_to_base_units)
 split_units = ChainableImporter(_split_units)
 array_as_float = ChainableImporter(_array_as_float)

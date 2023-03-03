@@ -9,6 +9,7 @@ from sequence.runtime import Sequence, Shot
 from .import_sequence import (
     build_dataframe_from_sequence,
     import_all,
+    break_namespaces,
     strip_units,
     to_base_units,
     split_units,
@@ -35,4 +36,5 @@ __all__ = [
     "rename",
     "apply",
     "remove",
+    "break_namespaces",
 ]
