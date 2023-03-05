@@ -76,7 +76,7 @@ class SwimLaneModel(QAbstractItemModel):
         # noinspection PyUnresolvedReferences
         self.update_state_timer.timeout.connect(self._update_state)
         self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self.update_state_timer.start(500)
+        self.update_state_timer.start(1000)
 
     @property
     def sequence(self):

@@ -92,6 +92,9 @@ class ShotWidget(QWidget):
         self.layout = QVBoxLayout()
         self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
+        self.swim_lane_widget.expandAll()
+        for column in range(self.model.columnCount()):
+            self.swim_lane_widget.resizeColumnToContents(column)
         self.swim_lane_widget.setItemDelegate(
             SpanColumnsDelegate(self.swim_lane_widget)
         )
