@@ -59,10 +59,12 @@ class SequenceStepsModel(StepsModel):
         self._session = session_maker()
 
         with self._session as session:
-            self.config = self._sequence.get_config(session)
+            sequence_config = self._sequence.get_config(session)
+
+        self._sequence_program = sequence_config.program
 
         self.undo_stack = UndoStack()
-        self.undo_stack.push(self.config.program.to_yaml())
+        self.undo_stack.push(self._sequence_program.to_yaml())
 
         # refresh the sequence state to block the editor if the state is not DRAFT
         self._sequence_state: State
@@ -82,12 +84,12 @@ class SequenceStepsModel(StepsModel):
 
     @property
     def root(self):
-        return self.config.program
+        return self._sequence_program
 
     def save_config(self, session: ExperimentSession, save_undo: bool = True):
-        self._sequence.set_config(self.config, session)
+        self._sequence.set_steps_program(self._sequence_program, session)
         if save_undo:
-            self.undo_stack.push(self.config.program.to_yaml())
+            self.undo_stack.push(self._sequence_program.to_yaml())
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
         with self._session as session:
@@ -166,7 +168,7 @@ class SequenceStepsModel(StepsModel):
                 new_steps = SequenceSteps.from_yaml(new_yaml)
 
                 self.beginResetModel()
-                self.config.program = new_steps
+                self._sequence_program = new_steps
                 self.save_config(session, save_undo=False)
                 self.endResetModel()
                 self.layoutChanged.emit()
@@ -177,7 +179,7 @@ class SequenceStepsModel(StepsModel):
                 new_yaml = self.undo_stack.redo()
                 new_steps = SequenceSteps.from_yaml(new_yaml)
                 self.beginResetModel()
-                self.config.program = new_steps
+                self._sequence_program = new_steps
                 self.save_config(session, save_undo=False)
                 self.endResetModel()
                 self.layoutChanged.emit()

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from experiment.session import ExperimentSession
-from sequence.configuration import SequenceConfig, ShotConfiguration
+from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sql_model import SequenceModel, ShotModel, State, DataType
 from sql_model.sequence_state import InvalidSequenceStateError
 from .path import SequencePath, PathNotFoundError
@@ -89,6 +89,17 @@ class Sequence:
             )
         sequence_config = self.get_config(experiment_session)
         sequence_config.shot_configurations[shot_name] = shot_config
+        self.set_config(sequence_config, experiment_session)
+
+    def set_steps_program(self, steps: SequenceSteps, experiment_session: ExperimentSession):
+        """Set the steps of the sequence."""
+
+        if not isinstance(steps, SequenceSteps):
+            raise TypeError(
+                f"Expected instance of <SequenceSteps>, got {type(steps)}"
+            )
+        sequence_config = self.get_config(experiment_session)
+        sequence_config.program = steps
         self.set_config(sequence_config, experiment_session)
 
     def get_state(self, experiment_session: ExperimentSession) -> State:
