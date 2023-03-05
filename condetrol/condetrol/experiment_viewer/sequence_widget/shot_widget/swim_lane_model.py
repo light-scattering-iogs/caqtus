@@ -387,6 +387,40 @@ class SwimLaneModel(QAbstractItemModel):
             or mapped_index.model() is self._step_durations_model
         )
 
+    def merge(self, indexes: Iterable[QModelIndex]) -> bool:
+        """Attempt to merge the cells of lanes"""
+
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            mapped_indexes = []
+            for index in indexes:
+                mapped_index = self.map_to_child_index(index)
+                if mapped_index.model() is self._lanes_model:
+                    mapped_indexes.append(mapped_index)
+                else:
+                    return False
+            result = self._lanes_model.merge(mapped_indexes)
+            self.save_config(self.shot_config, session)
+            return result
+
+    def break_up(self, indexes: Iterable[QModelIndex]) -> bool:
+        """Attempt to break up the cells of lanes"""
+
+        with self._session as session:
+            if self.get_sequence_state(session) != State.DRAFT:
+                return False
+            mapped_indexes = []
+            for index in indexes:
+                mapped_index = self.map_to_child_index(index)
+                if mapped_index.model() is self._lanes_model:
+                    mapped_indexes.append(mapped_index)
+                else:
+                    return False
+            result = self._lanes_model.break_up(mapped_indexes)
+            self.save_config(self.shot_config, session)
+            return result
+
 
 class _SwimLaneModel(QAbstractTableModel):
     """Model for a shot parallel time steps

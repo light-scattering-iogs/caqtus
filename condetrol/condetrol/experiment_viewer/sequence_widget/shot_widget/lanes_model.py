@@ -140,7 +140,7 @@ class LanesModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def merge(self, indexes: Iterable[QModelIndex]):
+    def merge(self, indexes: Iterable[QModelIndex]) -> bool:
         coordinates = [(index.row(), index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
@@ -151,18 +151,19 @@ class LanesModel(QAbstractTableModel):
             stop = l[-1][1] + 1
             self._lane_models[lane].merge(start, stop)
         self.endResetModel()
+        return True
 
-    def break_(self, indexes: Iterable[QModelIndex]):
+    def break_up(self, indexes: Iterable[QModelIndex]):
         coordinates = [(index.row(), index.column()) for index in indexes]
         coordinates.sort()
         lanes = groupby(coordinates, key=lambda x: x[0])
         self.beginResetModel()
         for lane, group in lanes:
             l = list(group)
-            start = l[0][1]
-            stop = l[-1][1] + 1
+            start, stop = self._lanes[lane].span(l[0][1])
             self._lane_models[lane].break_up(start, stop)
         self.endResetModel()
+        return True
 
     def map_name_to_row(self, name: str) -> int:
         return next(
