@@ -35,6 +35,7 @@ class OrcaQuestCamera(CCamera):
 
     _pictures: list[Optional[numpy.ndarray]]
     _camera: "Dcam"
+    _acquisition_thread: Optional[threading.Thread]
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
@@ -96,6 +97,7 @@ class OrcaQuestCamera(CCamera):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {str(self._camera.lasterr())}"
             )
+        logger.debug(f"{self.name}: buffer successfully allocated")
 
     def shutdown(self):
         try:
@@ -148,7 +150,7 @@ class OrcaQuestCamera(CCamera):
                 f" {str(self._camera.lasterr())}"
             )
 
-        if not self._camera.cap_start():
+        if not self._camera.cap_snapshot():
             raise RuntimeError(
                 f"Can't start acquisition on {self.name}: {str(self._camera.lasterr())}"
             )
@@ -184,7 +186,9 @@ class OrcaQuestCamera(CCamera):
             self._acquisition_thread.join()
 
     def _is_acquisition_in_progress(self) -> bool:
-        return False
+        if self._acquisition_thread is None:
+            return False
+        return self._acquisition_thread.is_alive()
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str]]:

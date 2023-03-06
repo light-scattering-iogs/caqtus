@@ -1,5 +1,9 @@
+import logging
+
 from camera.configuration import ROI
 from orca_quest.runtime import OrcaQuestCamera
+
+logging.basicConfig(level=logging.DEBUG)
 
 camera = OrcaQuestCamera(
     name="Orca quest",
