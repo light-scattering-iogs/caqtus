@@ -11,5 +11,6 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
     def get_device_init_args(self) -> dict[str]:
         extra = {
             "camera_number": self.camera_number,
+            "timeout": 1,
         }
         return super().get_device_init_args() | extra
