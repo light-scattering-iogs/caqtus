@@ -1,47 +1,28 @@
-from typing import Callable, ParamSpec
+from inspect import signature
 
 import numpy
-from pandas import DataFrame, Series
+import pandas
 from scipy.optimize import curve_fit
 
-P = ParamSpec("Parameters")
 
-
-def fit_to_data(
-    data: DataFrame,
-    function: Callable[[float, P], float],
-    var_x: str,
-    var_y: str,
-    p0: dict[str, float],
-    include_errors: bool = True,
-) -> Series:
-    x = data.groupby(var_x)[var_x].mean()
-    y = data.groupby(var_x)[var_y].mean()
-    y_err = data.groupby(var_x)[var_y].std()
-
-    def fit_function(x, *args):
-        return function(
-            x, **{parameter: value for parameter, value in zip(p0.keys(), args)}
-        )
-
+def fit_to_data(data: pandas.DataFrame, f, x: str, y: str, p0=None, include_errors: bool = False):
+    group = data.groupby(x)
+    mean = group[y].mean()
+    xdata = mean.index.values
+    ydata = mean.values
+    sigma = group[y].sem().values
+    if any(numpy.isnan(sigma)):
+        sigma = None
     popt, pcov = curve_fit(
-        fit_function,
-        x,
-        y,
-        p0=list(p0.values()),
-        sigma=y_err,
-        absolute_sigma=True,
-        check_finite=True,
+        f, xdata, ydata, p0, sigma, absolute_sigma=True, check_finite=True
     )
-    optimal_values = {parameter: value for parameter, value in zip(p0.keys(), popt)}
-    errors = {
-        f"{parameter}_error": value
-        for parameter, value in zip(p0.keys(), numpy.diag(pcov) ** 0.5)
-    }
-
+    parameters = list(signature(f).parameters)[1:]
+    result = {parameter: value for parameter, value in zip(parameters, popt)}
     if include_errors:
-        return Series(optimal_values | errors)
-    else:
-        return Series(optimal_values)
+        errors = numpy.sqrt(numpy.diag(pcov))
+        result |= {f"{parameter}.error": error for parameter, error in zip(parameters, errors)}
+    return result
+
+
 
 
