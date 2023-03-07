@@ -244,11 +244,12 @@ class SwimLaneView(QTreeView):
 
         selected_indices = self.selectionModel().selectedIndexes()
         logger.debug(len(selected_indices))
-        if len(selected_indices) > 1:
-            merge_action = QAction("Merge")
-            menu.addAction(merge_action)
-            # noinspection PyUnresolvedReferences
-            merge_action.triggered.connect(lambda: model.merge(selected_indices))
+        if len(selected_indices) == 1:
+            selected_indices = [index, self.model().index(index.row(), index.column() + 1, index.parent())]
+        merge_action = QAction("Merge")
+        menu.addAction(merge_action)
+        # noinspection PyUnresolvedReferences
+        merge_action.triggered.connect(lambda: model.merge(selected_indices))
         break_up_action = QAction("Break up")
         menu.addAction(break_up_action)
         # noinspection PyUnresolvedReferences
