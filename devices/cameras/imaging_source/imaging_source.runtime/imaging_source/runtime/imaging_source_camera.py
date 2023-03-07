@@ -173,7 +173,7 @@ class ImagingSourceCamera(CCamera, ABC):
             dtype=numpy.uint8,
             shape=(height.value, width.value, bytes_per_pixel),
         )
-        formatted_image = _reformat_image(image, self.format)
+        formatted_image = _reformat_image(image, self.format).transpose()
         roi = (
             slice(self.roi.x, self.roi.x + self.roi.width),
             slice(self.roi.y, self.roi.y + self.roi.height),
