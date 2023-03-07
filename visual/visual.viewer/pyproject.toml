@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "visual-viewer"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "visual"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+visual-sequence-watcher = {path = "../visual.sequence_watcher", develop = true}
+qdarkstyle = "^3.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
