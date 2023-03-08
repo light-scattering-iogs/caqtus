@@ -106,12 +106,17 @@ class DataframeSequenceWatcher(SequenceWatcher):
         super().reset()
         self._dataframe = pandas.DataFrame()
 
-    def process_shot(self, shot: Shot):
+    def process_shot(self, shot: Shot) -> pandas.Index:
         """Processes a shot"""
         with self._session.activate() as session:
             data = self._importer(shot, session)
-        data = pandas.DataFrame([data], index=[shot.name])
-        self._dataframe = pandas.concat((self._dataframe, data), ignore_index=True)
+        new_index = pandas.MultiIndex.from_tuples(
+            [(str(shot.sequence.path), shot.name, shot.index)],
+            names=("sequence", "shot", "index"),
+        )
+        data = pandas.DataFrame([data], index=new_index)
+        self._dataframe = pandas.concat((self._dataframe, data))
+        return new_index
 
     def get_dataframe(self) -> pandas.DataFrame:
         """Returns the dataframe"""

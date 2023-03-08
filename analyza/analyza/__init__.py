@@ -20,6 +20,8 @@ from .import_sequence import (
     remove,
 )
 
+from visual.sequence_watcher import DataframeSequenceWatcher
+
 __all__ = [
     "ExperimentSession",
     "get_standard_experiment_session",
@@ -37,4 +39,5 @@ __all__ = [
     "apply",
     "remove",
     "break_namespaces",
+    "DataframeSequenceWatcher"
 ]

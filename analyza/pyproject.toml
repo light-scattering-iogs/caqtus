@@ -18,6 +18,7 @@ qutip = "^4.7.0"
 sympy = "^1.11.1"
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
+visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -10,6 +10,11 @@ packages = [{include = "visual"}]
 python = "^3.11"
 visual-sequence-watcher = {path = "../visual.sequence_watcher", develop = true}
 qdarkstyle = "^3.1"
+experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+analyza = {path = "../../analyza", develop = true}
+pandas = "^1.5.3"
+numpy = "^1.24.2"
 
 
 [tool.poetry.group.dev.dependencies]

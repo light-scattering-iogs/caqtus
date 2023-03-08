@@ -9,8 +9,6 @@ packages = [{include = "visual"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 pandas = "^1.5.3"
-pyqt6 = "^6.4.2"
-pyqt6-charts = "^6.4.0"
 experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
 
