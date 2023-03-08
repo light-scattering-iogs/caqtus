@@ -333,7 +333,6 @@ class ShotModel(Base):
             start_time=start_time,
             end_time=end_time,
         )
-        session.add(new_shot)
         return new_shot
 
     def add_data(self, data: dict[str, Any], type_: "DataType", session: Session):

@@ -116,7 +116,7 @@ class Sequence:
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
         sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
-        return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots]
+        return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots][:sequence_sql.number_completed_shots]
 
     def create_shot(
         self,
@@ -136,6 +136,8 @@ class Sequence:
         shot = ShotModel.create_shot(sequence, name, start_time, end_time, session)
         shot.add_data(parameters, DataType.PARAMETER, session)
         shot.add_data(measures, DataType.MEASURE, session)
+        session.add(shot)
+        session.flush()
         sequence.increment_number_completed_shots()
         session.flush()
         return Shot(self, shot.name, shot.index)
