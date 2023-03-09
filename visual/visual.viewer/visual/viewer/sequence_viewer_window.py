@@ -12,7 +12,7 @@ class SequenceViewerWindow(QMainWindow):
         self._session_maker = session_maker
 
         sequence_viewer = SequenceViewer(
-            Sequence("2023.03_March.07.trace_6"), session_maker
+            Sequence("2023.03_March.08.mot_microscope_13"), session_maker
         )
 
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, sequence_viewer)

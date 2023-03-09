@@ -1,11 +1,9 @@
-from datetime import datetime
-
 import numpy
 import pandas
 from PyQt6.QtCharts import QLineSeries, QChart, QChartView, QValueAxis
-from PyQt6.QtCore import pyqtSignal, QObject, QDateTime, Qt
+from PyQt6.QtCore import pyqtSignal, QObject, Qt
 from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import QDockWidget, QVBoxLayout
+from PyQt6.QtWidgets import QDockWidget
 
 from analyza import (
     import_all,
@@ -24,15 +22,20 @@ class SignalingSequenceWatcher(DataframeSequenceWatcher, QObject):
     sequence_reset = pyqtSignal()
 
     def __init__(
-        self, sequence: Sequence, session_maker: ExperimentSessionMaker, importer
+        self,
+        sequence: Sequence,
+        session_maker: ExperimentSessionMaker,
+        importer,
+        update_interval: float = 1,
     ):
-        super().__init__(sequence, session_maker, importer)
+        super().__init__(sequence, session_maker, importer, update_interval)
         QObject.__init__(self)
 
     def process_shot(self, shot: Shot):
-        index = super().process_shot(shot)
-        # noinspection PyUnresolvedReferences
-        self.new_shot_processed.emit(index)
+        if shot.index > 0:
+            index = super().process_shot(shot)
+            # noinspection PyUnresolvedReferences
+            self.new_shot_processed.emit(index)
 
     def reset(self):
         super().reset()
@@ -68,15 +71,20 @@ class SequenceViewer(QDockWidget):
         self._sequence_watcher.new_shot_processed.connect(self._on_new_shot_processed)
 
     def _create_sequence_watcher(self, sequence: Sequence):
+        roi = (slice(50, 150), slice(50, 180))
         importer = (
             import_all
             | break_namespaces
             | split_units
             | array_as_float
-            | apply(lambda image: numpy.mean(image), "MOT camera.picture", "fluo")
+            | apply(lambda image: numpy.sum(image[roi]-201) * 0.11, "Orca Quest.picture", "fluo")
+            # | apply(lambda image, background: numpy.mean(image-background), ["MOT camera.picture", "MOT camera.background"], "fluo")
         )
         sequence_watcher = SignalingSequenceWatcher(
-            sequence, self._session_maker, importer
+            sequence,
+            self._session_maker,
+            importer,
+            update_interval=0.5
         )
         return sequence_watcher
 

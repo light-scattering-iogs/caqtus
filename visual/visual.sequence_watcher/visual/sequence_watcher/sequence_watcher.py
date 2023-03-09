@@ -1,3 +1,4 @@
+import logging
 import threading
 from copy import copy
 from datetime import datetime
@@ -7,6 +8,9 @@ import pandas
 
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class SequenceWatcher:
@@ -20,7 +24,7 @@ class SequenceWatcher:
     ):
         self._sequence = sequence
         self._sequence_start_time: Optional[datetime] = None
-        self._processed_shots: set[Shot] = set()
+        self._processed_shots: set[int] = set()
         self._session = session_maker()
         self._update_interval = update_interval
 
@@ -50,24 +54,23 @@ class SequenceWatcher:
         while not self._must_stop_watching.is_set():
             with self._session.activate() as session:
                 stats = self._sequence.get_stats(session)
+                shots = self._sequence.get_shots(session)
             if stats["start_date"] != self._sequence_start_time:
                 self.reset()
                 self._sequence_start_time = stats["start_date"]
             if stats["number_completed_shots"] > len(self._processed_shots):
-                new_shots = self._get_new_shots()
+                new_shots = self._get_new_shots(shots)
                 for shot in new_shots:
                     self.process_shot(shot)
-                    self._processed_shots.add(shot)
+                    self._processed_shots.add(shot.index)
                     if self._must_stop_watching.is_set():
                         break
             self._must_stop_watching.wait(self._update_interval)
 
-    def _get_new_shots(self) -> list[Shot]:
+    def _get_new_shots(self, shots) -> list[Shot]:
         new_shots = []
-        with self._session.activate() as session:
-            shots = self._sequence.get_shots(session)
         for shot in shots:
-            if shot not in self._processed_shots:
+            if shot.index not in self._processed_shots:
                 new_shots.append(shot)
         return new_shots
 
