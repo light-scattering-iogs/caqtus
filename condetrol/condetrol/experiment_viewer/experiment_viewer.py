@@ -158,6 +158,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
         self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
+        self.sequences_view.expanded.connect(lambda _: self.sequences_view.resizeColumnToContents(0))
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
