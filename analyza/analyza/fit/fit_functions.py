@@ -16,7 +16,7 @@ def exponential_saturation(t, A, τ, b=0, *args, **kwargs):
     return A * (1 - np.exp(-t / τ)) + b
 
 
-def lorentzian(x, x0, γ, A, b=0):
+def lorentzian(x, x0, γ, A, b=0, **kwargs):
     return A / (1 + (x - x0) ** 2 / γ**2) + b
 
 
