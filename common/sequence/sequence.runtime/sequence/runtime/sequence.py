@@ -136,8 +136,6 @@ class Sequence:
         shot = ShotModel.create_shot(sequence, name, start_time, end_time, session)
         shot.add_data(parameters, DataType.PARAMETER, session)
         shot.add_data(measures, DataType.MEASURE, session)
-        session.add(shot)
-        session.flush()
         sequence.increment_number_completed_shots()
         session.flush()
         return Shot(self, shot.name, shot.index)
