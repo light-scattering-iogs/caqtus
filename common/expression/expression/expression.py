@@ -142,7 +142,6 @@ class Expression(YAMLSerializable):
         if self._implicit_multiplication:
             expr = add_implicit_multiplication(expr)
         try:
-            # noinspection PyTypeChecker
             return ast.parse(expr, mode="eval")
         except SyntaxError as error:
             raise SyntaxError(f"Syntax error in the expression '{expr}'") from error
@@ -159,7 +158,7 @@ class Expression(YAMLSerializable):
         )
 
     @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+    def constructor(cls, loader: yaml.Loader, node: yaml.ScalarNode):
         return cls(body=loader.construct_scalar(node))
 
     def __eq__(self, other):
