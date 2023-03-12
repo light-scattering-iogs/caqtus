@@ -76,9 +76,15 @@ def evaluate_step_durations(
     for name, expression in zip(shot.step_names, shot.step_durations):
         try:
             duration = Quantity(expression.evaluate(context | units))
-            durations.append(duration.to("s").magnitude)
         except Exception as error:
             raise ValueError(f"Error evaluating duration of step '{name}'") from error
+        try:
+            seconds = duration.to("s").magnitude
+        except Exception as error:
+            raise ValueError(
+                f"Duration of step '{name}' is not a duration (got {duration})"
+            ) from error
+        durations.append(seconds)
     return durations
 
 
