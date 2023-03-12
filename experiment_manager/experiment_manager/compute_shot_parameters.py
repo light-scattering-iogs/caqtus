@@ -57,8 +57,12 @@ def compute_shot_parameters(
     experiment_config: ExperimentConfig,
     shot_config: ShotConfiguration,
     variables: VariableNamespace,
+    extra: bool = False,
 ) -> dict[str, dict[str, Any]]:
-    """Compute the parameters to be applied to the devices before a shot"""
+    """Compute the parameters to be applied to the devices before a shot
+
+    If extra is True, then the result will contain extra information that is necessary to analyze the shot afterwards.
+    """
 
     result = {}
 
@@ -94,6 +98,13 @@ def compute_shot_parameters(
     analog_values = evaluate_analog_values(shot_config, steps, variables)
     analog_voltages = generate_analog_voltages(experiment_config, analog_values)
     result[experiment_config.ni6738_config.device_name] = {"values": analog_voltages}
+
+    if extra:
+        result["extra"] = {
+            "steps": steps,
+            "analog_values": analog_values,
+            "camera_instructions": camera_instructions,
+        }
     return result
 
 
@@ -346,9 +357,7 @@ def evaluate_analog_values(
     result = {}
     for lane in shot.analog_lanes:
         lane_values = evaluate_lane_values(steps, lane, context)
-        result[lane.name] = numpy.concatenate(lane_values) * Quantity(
-            1, units=lane.units
-        )
+        result[lane.name] = numpy.concatenate(lane_values)
     return result
 
 
@@ -381,7 +390,7 @@ def evaluate_lane_expressions(
                 raise RuntimeError(
                     f"Cannot evaluate expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}'"
                 ) from error
-            result.append(values.magnitude)
+            result.append(values.to(lane.units))
         elif isinstance(cell_value, LinearRamp):
             initial_index = lane.start_index(step_index) - 1
             initial_expression = lane.get_effective_value(initial_index)
@@ -400,7 +409,7 @@ def evaluate_lane_expressions(
             values = initial_value * (
                 1 - step.analog_times / step.duration
             ) + final_value * (step.analog_times / step.duration)
-            result.append(values.magnitude)
+            result.append(values.to(lane.units))
         else:
             raise TypeError(f"Unexpected type {type(cell_value)}")
     return result
@@ -420,8 +429,6 @@ def evaluate_expression(
 
     if values.is_compatible_with(dimensionless) and lane.has_dimension():
         values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
-    else:
-        values = values.to(lane.units)
     return values.to_base_units()
 
 

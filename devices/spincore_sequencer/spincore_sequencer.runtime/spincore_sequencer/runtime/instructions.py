@@ -6,12 +6,15 @@ from pydantic import BaseModel, Field
 class Instruction(BaseModel, ABC):
     pass
 
+
 class Continue(Instruction):
     values: list[bool]
     duration: float = Field(units="s")
 
+
 class Stop(Instruction):
     values: list[bool]
+
 
 class Loop(Instruction):
     repetitions: int

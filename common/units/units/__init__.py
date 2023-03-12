@@ -9,7 +9,9 @@ ureg = pint.UnitRegistry(
     autoconvert_offset_to_baseunit=True,
     cache_folder=":auto:",
 )
-Quantity = ureg.Quantity
+unit_registry = ureg
+pint.set_application_registry(unit_registry)
+Quantity = unit_registry.Quantity
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
