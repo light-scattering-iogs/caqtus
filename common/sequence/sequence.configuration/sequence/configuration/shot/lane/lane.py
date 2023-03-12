@@ -166,6 +166,17 @@ class Lane(Generic[T], SettingsModel):
         stop = start + self.spans[start]
         return start, stop
 
+    def start_index(self, index):
+        """Return the index of the first cell in the span at the given index"""
+
+        return self.span(index)[0]
+
+    def end_index(self, index):
+        """Return the index of the first cell after the span at the given index"""
+
+        return self.span(index)[1]
+
+
 
 class DigitalLane(Lane[bool]):
     pass

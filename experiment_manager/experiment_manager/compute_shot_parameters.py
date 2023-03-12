@@ -382,6 +382,25 @@ def evaluate_lane_expressions(
                     f"Cannot evaluate expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}'"
                 ) from error
             result.append(values.magnitude)
+        elif isinstance(cell_value, LinearRamp):
+            initial_index = lane.start_index(step_index) - 1
+            initial_expression = lane.get_effective_value(initial_index)
+            initial_value = evaluate_expression(
+                initial_expression,
+                np.array([steps.durations[initial_index]]),
+                context,
+                lane,
+            )
+
+            final_index = lane.end_index(step_index)
+            final_expression = lane.get_effective_value(final_index)
+            final_value = evaluate_expression(
+                final_expression, np.array([0.0]), context, lane
+            )
+            values = initial_value * (
+                1 - step.analog_times / step.duration
+            ) + final_value * (step.analog_times / step.duration)
+            result.append(values.magnitude)
         else:
             raise TypeError(f"Unexpected type {type(cell_value)}")
     return result
@@ -403,7 +422,7 @@ def evaluate_expression(
         values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
     else:
         values = values.to(lane.units)
-    return values
+    return values.to_base_units()
 
 
 def generate_analog_voltages(
