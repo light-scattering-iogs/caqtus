@@ -124,9 +124,9 @@ class LaneModel(QAbstractListModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if self.lane.spans[index.row()] > 0:
             return (
-                    Qt.ItemFlag.ItemIsEnabled
-                    | Qt.ItemFlag.ItemIsEditable
-                    | Qt.ItemFlag.ItemIsSelectable
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsEditable
+                | Qt.ItemFlag.ItemIsSelectable
             )
         else:
             return Qt.ItemFlag.ItemIsSelectable
@@ -172,8 +172,6 @@ class DigitalLaneModel(LaneModel):
         else:
             return False
 
-
-
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:
             parent = QModelIndex()
@@ -210,13 +208,14 @@ class AnalogLaneModel(LaneModel):
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignCenter
 
-
-
     def setData(self, index: QModelIndex, value: str, role: int = ...) -> bool:
         edit = False
         if role == Qt.ItemDataRole.EditRole:
             if YAMLSerializable.is_tag(value):
-                value = YAMLSerializable.load(value)
+                try:
+                    value = YAMLSerializable.load(value)
+                except Exception as error:
+                    raise ValueError(f"Invalid tag: {value}") from error
                 if isinstance(value, Ramp):
                     self.lane[index.row()] = value
                     edit = True
@@ -273,8 +272,6 @@ class CameraLaneModel(LaneModel):
                 self.lane[index.row()] = value
                 edit = True
         return edit
-
-
 
     def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
         if parent == ...:
