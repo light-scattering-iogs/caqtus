@@ -9,7 +9,13 @@ from device_config.channel_config import ChannelSpecialPurpose
 from experiment.configuration import ExperimentConfig
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
-from sequence.configuration import ShotConfiguration, CameraLane, Ramp, AnalogLane
+from sequence.configuration import (
+    ShotConfiguration,
+    CameraLane,
+    Ramp,
+    AnalogLane,
+    LinearRamp,
+)
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from spincore_sequencer.runtime import (
     Instruction,
@@ -43,9 +49,7 @@ class RuntimeSteps:
             analog_times = self.analog_times
         return iter(
             StepProperties(name, duration, analog_times)
-            for name, duration, analog_times in zip(
-                self.names, durations, analog_times
-            )
+            for name, duration, analog_times in zip(self.names, durations, analog_times)
         )
 
 
@@ -325,8 +329,7 @@ def generate_digital_instructions(
             instructions.append(
                 Continue(
                     values=low_values,
-                    duration=step.duration
-                    - (step.analog_times[-1] + analog_time_step),
+                    duration=step.duration - (step.analog_times[-1] + analog_time_step),
                 )
             )
     instructions.append(Stop(values=values))
@@ -357,28 +360,30 @@ def evaluate_lane_values(
     # Assume that analog_times have unwrapped times
     values = evaluate_lane_expressions(steps, lane, context)
 
-    return [values[step] for step in range(len(steps))]
+    return values
 
 
 def evaluate_lane_expressions(
     steps: RuntimeSteps,
     lane: AnalogLane,
     context: VariableNamespace,
-) -> dict[int, np.ndarray]:
-    result = {}
+) -> list[np.ndarray]:
+    result = []
 
     for step_index, step in enumerate(steps):
         cell_value = lane.get_effective_value(step_index)
         if isinstance(cell_value, Expression):
-            values = evaluate_expression(
-                cell_value, step.analog_times, context, step.name, lane.name
-            )
-
-            if values.is_compatible_with(dimensionless) and lane.has_dimension():
-                values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
-            else:
-                values = values.to(lane.units)
-            result[step_index] = values.magnitude
+            try:
+                values = evaluate_expression(
+                    cell_value, step.analog_times, context, lane
+                )
+            except Exception as error:
+                raise RuntimeError(
+                    f"Cannot evaluate expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}'"
+                ) from error
+            result.append(values.magnitude)
+        else:
+            raise TypeError(f"Unexpected type {type(cell_value)}")
     return result
 
 
@@ -386,27 +391,19 @@ def evaluate_expression(
     expression: Expression,
     times: np.ndarray,
     context: VariableNamespace,
-    step_name: str,
-    lane_name: str,
+    lane: AnalogLane,
 ) -> Quantity:
     if _is_constant(expression):
-        try:
-            value = Quantity(expression.evaluate(context | units))
-        except Exception as error:
-            raise RuntimeError(
-                f"Cannot evaluate expression '{expression.body}' for step '{step_name}' in lane '{lane_name}'"
-            ) from error
-        return numpy.full_like(times, value.magnitude) * value.units
+        value = expression.evaluate(context | units)
+        values = numpy.full_like(times, value.magnitude) * value.units
     else:
-        try:
-            value = Quantity(
-                expression.evaluate(context | units | {"t": times * ureg.s})
-            )
-        except Exception as error:
-            raise RuntimeError(
-                f"Cannot evaluate expression '{expression.body}' for step '{step_name}' in lane '{lane_name}'"
-            ) from error
-        return value
+        values = expression.evaluate(context | units | {"t": times * ureg.s})
+
+    if values.is_compatible_with(dimensionless) and lane.has_dimension():
+        values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
+    else:
+        values = values.to(lane.units)
+    return values
 
 
 def generate_analog_voltages(
