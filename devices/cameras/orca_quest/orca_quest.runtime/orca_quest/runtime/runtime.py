@@ -35,7 +35,7 @@ class OrcaQuestCamera(CCamera):
 
     _pictures: list[Optional[numpy.ndarray]]
     _camera: "Dcam"
-    _acquisition_thread: Optional[threading.Thread]
+    _acquisition_thread: Optional[threading.Thread] = None
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:

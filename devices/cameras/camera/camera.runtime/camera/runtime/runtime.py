@@ -176,13 +176,15 @@ class CCamera(RuntimeDevice, ABC):
             }
 
     def shutdown(self):
-        if self.is_acquisition_in_progress():
-            self.stop_acquisition()
-        if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
-            logger.warning(
-                f"Shutting down {self.name} while acquisition is in progress"
-            )
-        super().shutdown()
+        try:
+            if self.is_acquisition_in_progress():
+                self.stop_acquisition()
+            if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
+                logger.warning(
+                    f"Shutting down {self.name} while acquisition is in progress"
+                )
+        finally:
+            super().shutdown()
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
