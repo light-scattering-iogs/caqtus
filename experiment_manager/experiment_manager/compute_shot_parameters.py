@@ -166,6 +166,15 @@ class CameraInstructions(TypedDict):
 def get_camera_parameters(
     camera_instructions: dict[str, CameraInstructions]
 ) -> dict[str, dict[str, Any]]:
+    """Extract the parameters to be applied to each camera from the instructions
+
+    This function only keeps the parameters to be applied to a camera. It removes the triggers because they will be used
+    to program a digital sequencer and not the cameras themselves.
+
+    Returns:
+        A dictionary mapping camera names to their parameters
+    """
+
     result = {}
 
     for camera, instructions in camera_instructions.items():
