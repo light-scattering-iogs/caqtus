@@ -16,7 +16,7 @@ from spincore_sequencer.runtime import (
     Loop,
     Stop,
 )
-from units import ureg, Quantity, units, DimensionalityError, dimensionless
+from units import ureg, Quantity, units, dimensionless
 from variable import VariableNamespace
 
 
@@ -74,12 +74,11 @@ def evaluate_step_durations(
 
     durations = []
     for name, expression in zip(shot.step_names, shot.step_durations):
-        duration = Quantity(expression.evaluate(context | units))
         try:
+            duration = Quantity(expression.evaluate(context | units))
             durations.append(duration.to("s").magnitude)
-        except DimensionalityError as err:
-            err.extra_msg = f" for the duration ({expression.body}) of step '{name}'"
-            raise err
+        except Exception as error:
+            raise ValueError(f"Error evaluating duration of step '{name}'") from error
     return durations
 
 
@@ -342,22 +341,20 @@ def evaluate_expression(
     if _is_constant(expression):
         try:
             value = Quantity(expression.evaluate(context | units))
-        except NameError as err:
-            raise NameError(
-                f"'{err.name}' is not defined in expression '{expression.body}' "
-                f"(step: {step_name}, lane: {lane_name})"
-            )
+        except Exception as error:
+            raise RuntimeError(
+                f"Cannot evaluate expression '{expression.body}' for step '{step_name}' in lane '{lane_name}'"
+            ) from error
         return numpy.full_like(times, value.magnitude) * value.units
     else:
         try:
             value = Quantity(
                 expression.evaluate(context | units | {"t": times * ureg.s})
             )
-        except NameError as err:
-            raise NameError(
-                f"'{err.name}' is no defined in expression '{expression.body}' "
-                f"(step: {step_name}, lane: {lane_name})"
-            )
+        except Exception as error:
+            raise RuntimeError(
+                f"Cannot evaluate expression '{expression.body}' for step '{step_name}' in lane '{lane_name}'"
+            ) from error
         return value
 
 

@@ -1,4 +1,5 @@
 import ast
+from copy import deepcopy
 from functools import cached_property
 from typing import Optional
 
@@ -105,9 +106,12 @@ class Expression(YAMLSerializable):
         if can_use_cached_value:
             return self._last_value
         else:
-            self._last_value = eval(
-                self.code, {"__builtins__": self._builtins}, variables
-            )
+            try:
+                self._last_value = eval(
+                    self.code, {"__builtins__": self._builtins}, variables
+                )
+            except Exception as error:
+                raise EvaluationError(self.body, variables) from error
             return self._last_value
 
     @cached_property
@@ -141,8 +145,7 @@ class Expression(YAMLSerializable):
             # noinspection PyTypeChecker
             return ast.parse(expr, mode="eval")
         except SyntaxError as error:
-            print(f"There is a syntax error in the expression '{expr}'")
-            raise error
+            raise SyntaxError(f"Syntax error in the expression '{expr}'") from error
 
     @cached_property
     def code(self):
@@ -207,3 +210,11 @@ def add_implicit_multiplication(source: str) -> str:
         prev_token = token
 
     return token_utils.untokenize(new_tokens)
+
+
+class EvaluationError(Exception):
+    def __init__(self, body: str, variables: dict[str]):
+        self._body = body
+        self._variables = deepcopy(variables)
+        message = f"Error while evaluating expression '{body}'"
+        super().__init__(message)
