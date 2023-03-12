@@ -1,6 +1,6 @@
 from collections import namedtuple
 from copy import copy
-from typing import Any, TypedDict, Iterable
+from typing import Any, TypedDict, Iterable, Optional
 
 import numpy
 import numpy as np
@@ -20,7 +20,33 @@ from spincore_sequencer.runtime import (
 from units import ureg, Quantity, units, dimensionless
 from variable import VariableNamespace
 
-StepProperties = namedtuple("StepProperties", ["name", "duration"])
+StepProperties = namedtuple("StepProperties", ["name", "duration", "analog_times"])
+
+
+class RuntimeSteps:
+    def __init__(self, names: list[str]):
+        self.names = names
+        self.durations: Optional[list[float]] = None
+        self.analog_times: Optional[list[np.ndarray]] = None
+
+    def __len__(self) -> int:
+        return len(self.names)
+
+    def __iter__(self) -> Iterable[StepProperties]:
+        if self.durations is None:
+            durations = [None] * len(self)
+        else:
+            durations = self.durations
+        if self.analog_times is None:
+            analog_times = [None] * len(self)
+        else:
+            analog_times = self.analog_times
+        return iter(
+            StepProperties(name, duration, analog_times)
+            for name, duration, analog_times in zip(
+                self.names, durations, analog_times
+            )
+        )
 
 
 def compute_shot_parameters(
@@ -32,16 +58,14 @@ def compute_shot_parameters(
 
     result = {}
 
-    step_durations = evaluate_step_durations(shot_config, variables)
-    steps = [
-        StepProperties(name, duration)
-        for name, duration in zip(shot_config.step_names, step_durations)
-    ]
+    steps = RuntimeSteps(names=shot_config.step_names)
+
+    steps.durations = evaluate_step_durations(shot_config, variables)
     verify_step_durations(experiment_config, steps)
     camera_instructions = compute_camera_instructions(steps, shot_config)
     result |= get_camera_parameters(camera_instructions)
 
-    analog_times = evaluate_analog_local_times(
+    steps.analog_times = evaluate_analog_local_times(
         shot_config,
         steps,
         get_analog_timestep(experiment_config),
@@ -55,7 +79,6 @@ def compute_shot_parameters(
     spincore_instructions = generate_digital_instructions(
         shot_config,
         steps,
-        analog_times,
         camera_triggers,
         experiment_config.spincore_config,
         get_analog_timestep(experiment_config),
@@ -64,7 +87,7 @@ def compute_shot_parameters(
         "instructions": spincore_instructions
     }
 
-    analog_values = evaluate_analog_values(shot_config, steps, analog_times, variables)
+    analog_values = evaluate_analog_values(shot_config, steps, variables)
     analog_voltages = generate_analog_voltages(experiment_config, analog_values)
     result[experiment_config.ni6738_config.device_name] = {"values": analog_voltages}
     return result
@@ -99,7 +122,7 @@ def evaluate_step_durations(
 
 def verify_step_durations(
     experiment_config: ExperimentConfig,
-    steps: list[StepProperties],
+    steps: RuntimeSteps,
 ) -> None:
     min_timestep = get_minimum_allowed_timestep(experiment_config)
     for step in steps:
@@ -126,7 +149,7 @@ class TimingError(ValueError):
 
 
 def compute_camera_instructions(
-    steps: list[StepProperties], shot: ShotConfiguration
+    steps: RuntimeSteps, shot: ShotConfiguration
 ) -> dict[str, "CameraInstructions"]:
     """Compute the parameters to be applied to each camera
 
@@ -142,7 +165,7 @@ def compute_camera_instructions(
         exposures = []
         for _, start, stop in camera_lane.get_picture_spans():
             triggers[start:stop] = [True] * (stop - start)
-            exposures.append(sum(step.duration for step in steps[start:stop]))
+            exposures.append(sum(steps.durations[start:stop]))
         instructions = CameraInstructions(
             timeout=shot_duration
             + 1,  # add a second to be safe and not timeout too early if the shot starts late
@@ -193,7 +216,7 @@ def get_camera_parameters(
 
 def evaluate_analog_local_times(
     shot: ShotConfiguration,
-    steps: list[StepProperties],
+    steps: RuntimeSteps,
     analog_time_step: float,
     digital_time_step: float,
 ) -> list[numpy.ndarray]:
@@ -263,8 +286,7 @@ def get_digital_time_step(experiment_config: ExperimentConfig) -> float:
 
 def generate_digital_instructions(
     shot: ShotConfiguration,
-    steps: list[StepProperties],
-    analog_times: list[numpy.ndarray],
+    steps: RuntimeSteps,
     camera_triggers: dict[str, list[bool]],
     spincore_config: SpincoreSequencerConfiguration,
     analog_time_step: float,
@@ -283,17 +305,17 @@ def generate_digital_instructions(
         for lane in shot.digital_lanes:
             channel = spincore_config.get_channel_index(lane.name)
             values[channel] = lane.get_effective_value(step_index)
-        if len(analog_times[step_index]) > 0:
-            duration = analog_times[step_index][0]
+        if len(step.analog_times) > 0:
+            duration = step.analog_times[0]
         else:
             duration = step.duration
         instructions.append(Continue(values=values, duration=duration))
-        if len(analog_times[step_index]) > 0:
+        if len(step.analog_times) > 0:
             (low_values := copy(values))[analog_clock_channel] = False
             (high_values := copy(low_values))[analog_clock_channel] = True
             instructions.append(
                 Loop(
-                    repetitions=len(analog_times[step_index]),
+                    repetitions=len(step.analog_times),
                     start_values=high_values,
                     start_duration=analog_time_step / 2,
                     end_values=low_values,
@@ -304,7 +326,7 @@ def generate_digital_instructions(
                 Continue(
                     values=low_values,
                     duration=step.duration
-                    - (analog_times[step_index][-1] + analog_time_step),
+                    - (step.analog_times[-1] + analog_time_step),
                 )
             )
     instructions.append(Stop(values=values))
@@ -313,15 +335,14 @@ def generate_digital_instructions(
 
 def evaluate_analog_values(
     shot: ShotConfiguration,
-    steps: list[StepProperties],
-    analog_times: list[numpy.ndarray],
+    steps: RuntimeSteps,
     context: VariableNamespace,
 ) -> dict[str, Quantity]:
     """Computes the analog values of each lane, in lane units"""
 
     result = {}
     for lane in shot.analog_lanes:
-        lane_values = evaluate_lane_values(steps, lane, analog_times, context)
+        lane_values = evaluate_lane_values(steps, lane, context)
         result[lane.name] = numpy.concatenate(lane_values) * Quantity(
             1, units=lane.units
         )
@@ -329,21 +350,19 @@ def evaluate_analog_values(
 
 
 def evaluate_lane_values(
-    steps: list[StepProperties],
+    steps: RuntimeSteps,
     lane: AnalogLane,
-    analog_times: list[np.ndarray],
     context: VariableNamespace,
 ) -> list[np.ndarray]:
     # Assume that analog_times have unwrapped times
-    values = evaluate_lane_expressions(steps, lane, analog_times, context)
+    values = evaluate_lane_expressions(steps, lane, context)
 
-    return [values[step] for step in range(len(analog_times))]
+    return [values[step] for step in range(len(steps))]
 
 
 def evaluate_lane_expressions(
-    steps: list[StepProperties],
+    steps: RuntimeSteps,
     lane: AnalogLane,
-    analog_times: list[np.ndarray],
     context: VariableNamespace,
 ) -> dict[int, np.ndarray]:
     result = {}
@@ -352,7 +371,7 @@ def evaluate_lane_expressions(
         cell_value = lane.get_effective_value(step_index)
         if isinstance(cell_value, Expression):
             values = evaluate_expression(
-                cell_value, analog_times[step_index], context, step.name, lane.name
+                cell_value, step.analog_times, context, step.name, lane.name
             )
 
             if values.is_compatible_with(dimensionless) and lane.has_dimension():
