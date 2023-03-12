@@ -122,7 +122,11 @@ class TimingError(ValueError):
 def compute_camera_instructions(
     step_durations: list[float], shot: ShotConfiguration
 ) -> dict[str, "CameraInstructions"]:
-    """Compute the parameters to be applied to each camera"""
+    """Compute the parameters to be applied to each camera
+
+    Returns:
+        A dictionary mapping camera names to their parameters
+    """
 
     result = {}
     camera_lanes = shot.get_lanes(CameraLane)
@@ -133,22 +137,25 @@ def compute_camera_instructions(
         for _, start, stop in camera_lane.get_picture_spans():
             triggers[start:stop] = [True] * (stop - start)
             exposures.append(sum(step_durations[start:stop]))
-        instructions: CameraInstructions = {
-            "timeout": shot_duration + 1,  # add a second to be safe
-            "triggers": triggers,
-            "exposures": exposures,
-        }
+        instructions = CameraInstructions(
+            timeout=shot_duration
+            + 1,  # add a second to be safe and not timeout too early if the shot starts late
+            triggers=triggers,
+            exposures=exposures,
+        )
         result[camera_name] = instructions
     return result
 
 
 class CameraInstructions(TypedDict):
-    """Instruction to take picture for a camera
+    """Instruction to take pictures for a camera
 
     Attributes:
         timeout: Maximum time to wait for the camera to take the picture
-        exposures: Duration of each exposure in s
-        triggers: Whether to camera trigger should be up or down at each step
+        exposures: Duration of each exposure in seconds. The length of this list should be the same as the number of
+        pictures.
+        triggers: Whether to camera trigger should be up or down at each step. The length of this list should be the
+        same as the number of steps.
     """
 
     timeout: float
