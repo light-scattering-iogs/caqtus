@@ -1,17 +1,17 @@
 import logging
-from contextlib import closing
 from dataclasses import dataclass, field
 from typing import Sequence
 
 import numpy as np
-from awg import AWG
 
+from awg import initialize_awg
 from monitor_trap_intensities import TrapIntensitiesMeasurer
+from trap_signal_generator.configuration import StaticTrapConfiguration
+from trap_signal_generator.runtime import StaticTrapGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 logging.basicConfig()
-
 
 @dataclass
 class HomogenizeTraps:
@@ -28,6 +28,8 @@ class HomogenizeTraps:
     phi_y: list[float]
     awg_amplitude_x: int
     awg_amplitude_y: int
+    config_x: StaticTrapConfiguration
+    config_y: StaticTrapConfiguration
 
     trap_intensity_measure: TrapIntensitiesMeasurer = field(init=False)
 
@@ -45,18 +47,33 @@ class HomogenizeTraps:
         )
 
     def image_traps(self, a_x, a_y, n_bits):
-        with closing(AWG()) as awg_device:
-            awg_device.ConnectCard()
-            awg_device.setupAWG(self.awg_amplitude_x, self.awg_amplitude_y)
+        AWG = initialize_awg(self.config_x, self.config_y)
+        with AWG as awg_device:
+            self.config_x.amplitudes = a_x
+            self.config_y.amplitudes = a_y
+            static_trap_generator_x = StaticTrapGenerator.from_configuration(self.config_x)
+            static_trap_generator_y = StaticTrapGenerator.from_configuration(self.config_y)
+            data_0 = np.int16(
+                (
+                    static_trap_generator_x.compute_signal(),
+                    static_trap_generator_y.compute_signal(),
+                )
+            )
+            static_trap_generator_y.frequencies = (
+                    np.array(static_trap_generator_y.frequencies) + 4e6
+            )
+            data_1 = np.int16(
+                (
+                    static_trap_generator_x.compute_signal(),
+                    static_trap_generator_y.compute_signal(),
+                )
+            )
 
-            data = awg_device.write_data_xy(self.fx, self.phi_x, a_x,
-                                            self.fy, self.phi_y, a_y)
-
-            awg_device.writeSegmentData(0, len(data) // 2, data, 0)
-            awg_device.setFirstSegment(0)
-            awg_device.start_output()
+            awg_device.write_segment_data("segment_0", data_0)
+            awg_device.write_segment_data("segment_1", data_1)
+            awg_device.run()
             image = self.trap_intensity_measure.take_photo(n_bits)
-            awg_device.stop_output()
+            awg_device.stop()
             return image
 
     def homogenize(self):
