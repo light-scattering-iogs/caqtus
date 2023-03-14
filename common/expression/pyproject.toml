@@ -5,9 +5,10 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.12"
 token-utils = "^0.1.8"
 numpy = "^1.24.0"
+scipy = "^1.10.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2"

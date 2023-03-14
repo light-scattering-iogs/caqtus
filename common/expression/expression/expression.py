@@ -4,6 +4,7 @@ from functools import cached_property
 from typing import Optional
 
 import numpy
+from scipy.signal import sawtooth
 import token_utils
 import yaml
 
@@ -32,6 +33,7 @@ BUILTINS = {
     "sqrt": numpy.sqrt,
     "tan": numpy.tan,
     "tanh": numpy.tanh,
+    "sawtooth": sawtooth,
 }
 
 
