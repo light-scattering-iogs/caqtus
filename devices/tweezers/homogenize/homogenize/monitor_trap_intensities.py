@@ -1,8 +1,11 @@
-import numpy as np
-import cv2
-from dataclasses import dataclass
-from pixelfly import PixelflyBoard, Mode, BinMode, PixelDepth
 from contextlib import closing
+from dataclasses import dataclass
+
+import cv2
+import numpy as np
+
+from pixelfly import PixelflyBoard, Mode, BinMode, PixelDepth
+
 
 @dataclass
 class TrapIntensitiesMeasurer:
