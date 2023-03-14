@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from awg import AWG
+from awg import initialize_awg
 from monitor_trap_intensities import TrapIntensitiesMeasurer
 from trap_homogeneity import HomogenizeTraps
 from trap_signal_generator.configuration import StaticTrapConfiguration
@@ -11,6 +11,7 @@ number_iterations = 10
 exposure_time = 5
 threshold = 0.21
 beta_power = 0.5
+
 
 with open("../tweezers.utilities.run_awg/config_x.yaml", "r") as f:
     config_x = StaticTrapConfiguration.from_yaml(f.read())
@@ -30,10 +31,9 @@ amplitude_one_tone = 0.135
 awg_amplitude_x = int(np.sqrt(n_tones_x) * amplitude_one_tone)
 awg_amplitude_y = int(np.sqrt(n_tones_y) * amplitude_one_tone)
 
-awg_device = AWG(number_samples=19533 * 32)
-segment_frequency = awg_device.segment_frequency()
+print(frequencies_x)
 
-
+awg_device = initialize_awg(config_x, config_y)
 
 
 def run_homogenization():
@@ -61,6 +61,8 @@ def run_homogenization():
         awg_amplitude_y=awg_amplitude_y,
         threshold=threshold,
         beta=beta_power,
+        config_x=config_x,
+        config_y=config_y
     )
     image = homogenizer.image_traps(amplitudes_x, amplitudes_y, 12)
     new_amp_x, new_amp_y, image_before, image_after, matrix_of_sorted_intensities_before, matrix_of_sorted_intensities_after, std_dev = homogenizer.homogenize()
