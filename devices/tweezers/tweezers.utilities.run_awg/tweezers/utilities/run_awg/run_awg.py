@@ -40,8 +40,8 @@ with SpectrumAWGM4i66xxX8(
     steps={
         "step_0": StepConfiguration(
             segment="segment_0",
-            next_step="step_1",
-            repetition=100,
+            next_step="step_0",
+            repetition=1,
             change_condition=StepChangeCondition.ALWAYS,
         ),
         "step_1": StepConfiguration(
