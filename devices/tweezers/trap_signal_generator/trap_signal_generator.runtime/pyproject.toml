@@ -8,7 +8,6 @@ packages = [{include = "trap_signal_generator"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.12"
-numba = "^0.56.4"
 pydantic = "^1.10.4"
 scipy = "^1.10.0"
 trap-signal-generator-configuration = {path = "../trap_signal_generator.configuration", develop = true}
