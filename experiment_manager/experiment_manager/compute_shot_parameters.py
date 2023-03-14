@@ -423,9 +423,16 @@ def evaluate_expression(
 ) -> Quantity:
     if _is_constant(expression):
         value = expression.evaluate(context | units)
-        values = numpy.full_like(times, value.magnitude) * value.units
+        if isinstance(value, Quantity):
+            values = numpy.full_like(times, value.magnitude) * value.units
+        else:
+            values = Quantity(numpy.full_like(times, value), units="")
+
     else:
         values = expression.evaluate(context | units | {"t": times * ureg.s})
+
+    if not isinstance(values, Quantity):
+        values = Quantity(values, units="")
 
     if values.is_compatible_with(dimensionless) and lane.has_dimension():
         values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
