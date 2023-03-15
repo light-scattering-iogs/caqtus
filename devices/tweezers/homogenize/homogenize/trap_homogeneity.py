@@ -62,15 +62,8 @@ class HomogenizeTraps:
             static_trap_generator_y.frequencies = (
                     np.array(static_trap_generator_y.frequencies) + 4e6
             )
-            data_1 = np.int16(
-                (
-                    static_trap_generator_x.compute_signal(),
-                    static_trap_generator_y.compute_signal(),
-                )
-            )
 
             awg_device.write_segment_data("segment_0", data_0)
-            awg_device.write_segment_data("segment_1", data_1)
             awg_device.run()
             image = self.trap_intensity_measure.take_photo(n_bits)
             awg_device.stop()
