@@ -7,8 +7,8 @@ from trap_homogeneity import HomogenizeTraps
 from trap_signal_generator.configuration import StaticTrapConfiguration
 
 flip_horizontal = False
-number_iterations = 1
-exposure_time = 500
+number_iterations = 5
+exposure_time = 50
 threshold = 0.21
 beta_power = 0.5
 
@@ -63,38 +63,38 @@ def run_homogenization():
         config_x=config_x,
         config_y=config_y
     )
-    image = homogenizer.image_traps(amplitudes_x, amplitudes_y, 12)
-    # new_amp_x, new_amp_y, image_before, image_after, matrix_of_sorted_intensities_before, matrix_of_sorted_intensities_after, std_dev = homogenizer.homogenize()
-    # intensities_before = np.reshape(matrix_of_sorted_intensities_before[:, :, -1], (1, n_tones_x*n_tones_y))[0]
-    # intensities_after = np.reshape(matrix_of_sorted_intensities_after[:, :, -1], (1, n_tones_x*n_tones_y))[0]
-    # print("New x amplitude =", new_amp_x)
-    # print("New y amplitude =", new_amp_y)
+    # image_before = homogenizer.image_traps(amplitudes_x, amplitudes_y, 12)
+    new_amp_x, new_amp_y, image_before, image_after, matrix_of_sorted_intensities_before, matrix_of_sorted_intensities_after, std_dev = homogenizer.homogenize()
+    intensities_before = np.reshape(matrix_of_sorted_intensities_before[:, :, -1], (1, n_tones_x*n_tones_y))[0]
+    intensities_after = np.reshape(matrix_of_sorted_intensities_after[:, :, -1], (1, n_tones_x*n_tones_y))[0]
+    print("New x amplitude =", new_amp_x)
+    print("New y amplitude =", new_amp_y)
 
     plt.figure(1)
-    plt.imshow(image)
+    plt.imshow(image_before)
     plt.title('Before homog')
     plt.show()
-    #
-    # plt.figure(2)
-    # plt.imshow(image_after)
-    # plt.title('After homog')
-    # plt.show()
-    #
-    # plt.figure(3)
-    # plt.hist(intensities_before, label="before homog")
-    # plt.hist(intensities_after, label="after 10 iterations of homog")
-    # plt.xlabel("intensity of trap")
-    # plt.ylabel("number of traps")
-    # plt.legend()
-    # plt.show()
-    #
-    # plt.figure(4)
-    # plt.plot(std_dev[:, 0], label='vertical')
-    # plt.plot(std_dev[:, 1], label='horizontal')
-    # plt.plot(std_dev[:, 2], label='all traps')
-    # plt.xlabel('iteration')
-    # plt.ylabel('std/mean')
-    # plt.legend()
-    # plt.show()
+
+    plt.figure(2)
+    plt.imshow(image_after)
+    plt.title('After homog')
+    plt.show()
+
+    plt.figure(3)
+    plt.hist(intensities_before, label="before homog")
+    plt.hist(intensities_after, label="after 10 iterations of homog")
+    plt.xlabel("intensity of trap")
+    plt.ylabel("number of traps")
+    plt.legend()
+    plt.show()
+
+    plt.figure(4)
+    plt.plot(std_dev[:, 0], label='vertical')
+    plt.plot(std_dev[:, 1], label='horizontal')
+    plt.plot(std_dev[:, 2], label='all traps')
+    plt.xlabel('iteration')
+    plt.ylabel('std/mean')
+    plt.legend()
+    plt.show()
 
 run_homogenization()

@@ -77,8 +77,8 @@ class SequenceViewer(QDockWidget):
             | break_namespaces
             | split_units
             | array_as_float
-            | apply(lambda image: numpy.sum(image[roi]-201) * 0.11, "Orca Quest.picture", "fluo")
-            # | apply(lambda image, background: numpy.mean(image-background), ["MOT camera.picture", "MOT camera.background"], "fluo")
+            # | apply(lambda image: numpy.sum(image[roi]-201) * 0.11, "Orca Quest.picture", "fluo")
+            | apply(lambda image, background: numpy.mean(image-background), ["MOT camera.picture", "MOT camera.background"], "fluo")
         )
         sequence_watcher = SignalingSequenceWatcher(
             sequence,

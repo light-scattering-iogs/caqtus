@@ -36,6 +36,8 @@ class HomogenizeTraps:
     threshold: float = 0.3
     beta: float = 0.5
     n_bits: int = 12
+    number_samples = 19539 * 32
+    sampling_rate = 625_000_000
 
     def __post_init__(self):
         self.trap_intensity_measure = TrapIntensitiesMeasurer(
@@ -47,12 +49,38 @@ class HomogenizeTraps:
         )
 
     def image_traps(self, a_x, a_y, n_bits):
+
+        static_trap_generator_x = StaticTrapGenerator(
+            frequencies=self.fx,
+            amplitudes=self.awg_amplitudes(a_x),
+            phases=np.random.uniform(0, 2 * np.pi, self.nx),
+            sampling_rate=self.sampling_rate,
+            number_samples=self.number_samples,
+        )
+        static_trap_generator_y = StaticTrapGenerator(
+            frequencies=self.fy,
+            amplitudes=self.awg_amplitudes(a_y),
+            phases=np.random.uniform(0, 2 * np.pi, self.ny),
+            sampling_rate=self.sampling_rate,
+            number_samples=self.number_samples,
+        )
+
+        config_x = static_trap_generator_x.get_configuration()
+        config_y = static_trap_generator_y.get_configuration()
+        file_x = "../tweezers.utilities.run_awg/config_x.yaml"
+        file_y = "../tweezers.utilities.run_awg/config_y.yaml"
+        with open(file_x, "w") as f:
+            f.write(config_x.to_yaml())
+        with open(file_y, "w") as f:
+            f.write(config_y.to_yaml())
+
         AWG = initialize_awg(self.config_x, self.config_y)
+
         with AWG as awg_device:
-            self.config_x.amplitudes = a_x
-            self.config_y.amplitudes = a_y
-            static_trap_generator_x = StaticTrapGenerator.from_configuration(self.config_x)
-            static_trap_generator_y = StaticTrapGenerator.from_configuration(self.config_y)
+            # self.config_x.amplitudes = a_x
+            # self.config_y.amplitudes = a_y
+            # static_trap_generator_x = StaticTrapGenerator.from_configuration(self.config_x)
+            # static_trap_generator_y = StaticTrapGenerator.from_configuration(self.config_y)
             data_0 = np.int16(
                 (
                     static_trap_generator_x.compute_signal(),
@@ -68,6 +96,13 @@ class HomogenizeTraps:
             image = self.trap_intensity_measure.take_photo(n_bits)
             awg_device.stop()
             return image
+
+    def awg_amplitudes(self, a):
+        new_a = []
+        n = len(a)
+        for i in range(0, n):
+            new_a.append(a[i] / n * (2**15 - 1))
+        return new_a
 
     def homogenize(self):
         new_amp_x, new_amp_y = self.amplitudes_x, self.amplitudes_y
