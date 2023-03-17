@@ -5,7 +5,7 @@ description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.12"
 matplotlib = "^3.6.2"
 jupyter = "^1.0.0"
 pandas = "^1.5.1"
