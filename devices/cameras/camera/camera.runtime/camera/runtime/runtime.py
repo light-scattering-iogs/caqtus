@@ -166,7 +166,7 @@ class CCamera(RuntimeDevice, ABC):
 
     def read_all_pictures(self) -> dict[str, numpy.ndarray]:
         if not self.are_all_pictures_acquired():
-            raise TimeoutError(
+            raise CameraTimeoutError(
                 f"Not all pictures have been acquired for camera {self.name}"
             )
         else:
