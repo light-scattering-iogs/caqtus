@@ -92,7 +92,7 @@ class MovingTrapGenerator(BaseModel):
 
     def compute_phases(
         self,
-    ) -> np.ndarray[("number_tones", "number_samples"), np.float]:
+    ) -> np.ndarray[("number_tones", "number_samples"), np.float64]:
         frequencies = self.compute_frequencies()
         starting_phases = np.array(self.starting_phases)[..., np.newaxis]
 
@@ -102,7 +102,7 @@ class MovingTrapGenerator(BaseModel):
 
     def compute_frequencies(
         self,
-    ) -> np.ndarray[("number_tones", "number_samples"), np.float]:
+    ) -> np.ndarray[("number_tones", "number_samples"), np.float64]:
         starting_frequencies = np.array(self.starting_frequencies)[..., np.newaxis]
         target_frequencies = np.array(self.target_frequencies)[..., np.newaxis]
 

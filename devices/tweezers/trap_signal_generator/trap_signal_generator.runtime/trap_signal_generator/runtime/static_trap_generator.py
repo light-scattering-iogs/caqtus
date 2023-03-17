@@ -5,7 +5,8 @@ from itertools import product, chain
 from typing import Iterable
 
 import numpy as np
-from numba import njit, float64, prange
+
+# from numba import njit, float64, prange
 from pydantic import validator, Field, BaseModel
 from scipy.optimize import basinhopping
 from trap_signal_generator.configuration import StaticTrapConfiguration
@@ -49,7 +50,7 @@ class StaticTrapGenerator(BaseModel):
         return tuple(phases)
 
     def compute_signal(self) -> np.ndarray["number_samples", np.float32]:
-        return compute_signal_numba(
+        return compute_signal(
             times=np.array(self.times, dtype=np.float64),
             amplitudes=np.array(self.amplitudes, dtype=np.float64),
             frequencies=np.array(self.frequencies, dtype=np.float64),
@@ -132,23 +133,32 @@ class StaticTrapGenerator(BaseModel):
         )
 
 
-@njit(parallel=True)
-def compute_signal_numba(
-    times: float64[:],
-    amplitudes: float64[:],
-    frequencies: float64[:],
-    phases: float64[:],
-) -> float64[:]:
-    result = np.zeros_like(times)
-    t = times
-    number_tones = len(amplitudes)
-    for tone in prange(number_tones):
-        amplitude = amplitudes[tone]
-        frequency = frequencies[tone]
-        phase = phases[tone]
+def compute_signal(times, amplitudes, frequencies, phases):
+    return sum(
+        amplitude * np.sin(2 * np.pi * times * frequency + phase)
+        for amplitude, frequency, phase in zip(
+            amplitudes, frequencies, phases, strict=True
+        )
+    )
 
-        result += amplitude * np.sin(2 * np.pi * t * frequency + phase)
-    return result
+
+# @njit(parallel=True)
+# def compute_signal_numba(
+#     times: float64[:],
+#     amplitudes: float64[:],
+#     frequencies: float64[:],
+#     phases: float64[:],
+# ) -> float64[:]:
+#     result = np.zeros_like(times)
+#     t = times
+#     number_tones = len(amplitudes)
+#     for tone in prange(number_tones):
+#         amplitude = amplitudes[tone]
+#         frequency = frequencies[tone]
+#         phase = phases[tone]
+#
+#         result += amplitude * np.sin(2 * np.pi * t * frequency + phase)
+#     return result
 
 
 def compute_optimized_phases(
