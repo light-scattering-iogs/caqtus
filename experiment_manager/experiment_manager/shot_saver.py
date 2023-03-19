@@ -5,7 +5,7 @@ from threading import Event, Thread
 from typing import Any
 
 from experiment.session import ExperimentSessionMaker, ExperimentSession
-from sequence.runtime import Sequence
+from sequence.runtime import Sequence, Shot
 from variable import VariableNamespace
 
 
@@ -30,6 +30,7 @@ class ShotSaver:
         self._active = Event()
 
         self._save_thread = Thread(target=self._save_thread_func)
+        self._saved_shots: list[Shot] = []
 
     def __enter__(self):
         self._queue = Queue()
@@ -75,17 +76,25 @@ class ShotSaver:
     def _save_thread_func(self):
         while self._active.is_set():
             try:
-                shot = self._queue.get(timeout=0.1)
-                _save_shot(
-                    sequence=self._sequence, session=self._session_maker(), **shot
+                shot_to_save = self._queue.get(timeout=0.1)
+                saved_shot = _save_shot(
+                    sequence=self._sequence, session=self._session_maker(), **shot_to_save
                 )
+                self._saved_shots.append(saved_shot)
                 self._queue.task_done()
             except Empty:
                 continue
 
     def wait(self):
         """Wait for the queue to be empty"""
+
         self._queue.join()
+
+    @property
+    def saved_shots(self) -> tuple[Shot, ...]:
+        """All the shots that have been saved so far"""
+
+        return tuple(self._saved_shots)
 
 
 def _save_shot(
@@ -96,9 +105,9 @@ def _save_shot(
     parameters: VariableNamespace,
     measures: dict[str, Any],
     session: ExperimentSession,
-):
+) -> Shot:
     with session:
         parameters = {name: value for name, value in parameters.items()}
-        sequence.create_shot(
+        return sequence.create_shot(
             shot_name, start_time, end_time, parameters, measures, session
         )

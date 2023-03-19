@@ -265,19 +265,20 @@ class SequenceRunnerThread(Thread):
     ):
         optimizer = Optimizer(optimization_loop.variables, context.variables | units)
         evaluator = Evaluator()
+        shot_saver.wait()
         for loop_iteration in range(optimization_loop.repetitions):
-            if self.is_waiting_to_interrupt():
-                return
+            old_shots = shot_saver.saved_shots
             new_values = optimizer.suggest_values()
             context.variables |= new_values
 
             for step in optimization_loop.children:
+                self.run_step(step, context, shot_saver)
                 if self.is_waiting_to_interrupt():
                     return
-                else:
-                    self.run_step(step, context, shot_saver)
             shot_saver.wait()
-            score = evaluator.compute_score()
+
+            new_shots = shot_saver.saved_shots[len(old_shots) :]
+            score = evaluator.compute_score(new_shots)
             optimizer.register(new_values, score)
 
     @run_step.register

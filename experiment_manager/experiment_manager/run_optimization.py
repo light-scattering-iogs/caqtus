@@ -1,6 +1,7 @@
 import copy
 
 from sequence.configuration import OptimizationVariableInfo
+from sequence.runtime import Shot
 from units import Quantity
 
 
@@ -59,5 +60,6 @@ def evaluate_initial_values(
 
 
 class Evaluator:
-    def compute_score(self) -> float:
+    def compute_score(self, shots: tuple[Shot, ...]) -> float:
+        print(shots)
         return 0
