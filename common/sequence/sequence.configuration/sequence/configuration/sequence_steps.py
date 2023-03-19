@@ -13,7 +13,7 @@ from units import Quantity, units
 
 class Step(NodeMixin, ABC):
     def __init__(
-        self, parent: Optional["Step"] = None, children: Optional[list["Step"]] = None
+        self, parent: Optional[Self] = None, children: Optional[list[Self]] = None
     ):
         self.parent = parent
         if children is not None:
@@ -42,18 +42,22 @@ class Step(NodeMixin, ABC):
 
 class SequenceSteps(Step, YAMLSerializable):
     def __init__(
-        self, parent: Optional["Step"] = None, children: Optional[list["Step"]] = None
+        self, parent: Optional[Step] = None, children: Optional[list[Step]] = None
     ):
         if not children:
             children = []
         super().__init__(parent, children)
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: "SequenceSteps"):
+    def representer(cls, dumper: yaml.Dumper, step: Self):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {"children": [child for child in step.children]},
         )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
 
     def __repr__(self):
         return f"SequenceSteps(parent={self.parent}, children={self.children})"
@@ -69,17 +73,13 @@ class SequenceSteps(Step, YAMLSerializable):
             return False
         return self.children == other.children
 
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        return cls(**loader.construct_mapping(node, deep=True))
-
     def expected_number_shots(self) -> Optional[int]:
         return _compute_total_number_shots(self.children)
 
 
 class VariableDeclaration(Step, YAMLSerializable):
     def __init__(
-        self, name: str, expression: Expression, parent: Optional["Step"] = None
+        self, name: str, expression: Expression, parent: Optional[Step] = None
     ):
         super().__init__(parent, None)
         self.name = name
@@ -92,7 +92,7 @@ class VariableDeclaration(Step, YAMLSerializable):
         return f"{self.name} = {self.expression.body}"
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: "VariableDeclaration"):
+    def representer(cls, dumper: yaml.Dumper, step: Self):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {"name": step.name, "expression": step.expression},
@@ -118,8 +118,8 @@ class LinspaceLoop(Step, YAMLSerializable):
         start: Expression,
         stop: Expression,
         num: int,
-        parent: Optional["Step"] = None,
-        children: Optional[list["Step"]] = None,
+        parent: Optional[Step] = None,
+        children: Optional[list[Step]] = None,
     ):
         if not children:
             children = []
@@ -130,7 +130,7 @@ class LinspaceLoop(Step, YAMLSerializable):
         self.num = num
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: "LinspaceLoop"):
+    def representer(cls, dumper: yaml.Dumper, step: Self):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {
@@ -177,8 +177,8 @@ class ArangeLoop(Step, YAMLSerializable):
         start: Expression,
         stop: Expression,
         step: Expression,
-        parent: Optional["Step"] = None,
-        children: Optional[list["Step"]] = None,
+        parent: Optional[Step] = None,
+        children: Optional[list[Step]] = None,
     ):
         if not children:
             children = []
@@ -189,7 +189,7 @@ class ArangeLoop(Step, YAMLSerializable):
         self.step = step
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: "ArangeLoop"):
+    def representer(cls, dumper: yaml.Dumper, step: Self):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {
@@ -251,7 +251,7 @@ class ExecuteShot(Step, YAMLSerializable):
         self.name = name
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: "ExecuteShot"):
+    def representer(cls, dumper: yaml.Dumper, step: Self):
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {"name": step.name},
@@ -316,10 +316,10 @@ class OptimizationLoop(Step, YAMLSerializable):
         if not isinstance(other, OptimizationLoop):
             return False
         return (
-                self.optimizer_name == other.optimizer_name
-                and self.variables == other.variables
-                and self.repetitions == other.repetitions
-                and self.children == other.children
+            self.optimizer_name == other.optimizer_name
+            and self.variables == other.variables
+            and self.repetitions == other.repetitions
+            and self.children == other.children
         )
 
     def expected_number_shots(self) -> Optional[int]:
