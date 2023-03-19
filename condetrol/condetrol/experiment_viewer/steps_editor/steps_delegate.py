@@ -13,12 +13,14 @@ from sequence.configuration import (
     LinspaceLoop,
     VariableDeclaration,
     ExecuteShot,
+    OptimizationLoop,
 )
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
+    Ui_OptimizationDeclaration,
 )
 from .steps_model import QABCMeta
 
@@ -165,6 +167,22 @@ class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
         )
 
 
+class OptimizationIterationWidget(Ui_OptimizationDeclaration, StepWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi(self)
+
+    def set_step_data(self, data: OptimizationLoop):
+        self.repetition_spin_box.setValue(data.repetitions)
+        # self.name_edit.setText(data.name)
+        # self.start_edit.setText(data.start.body)
+        # self.stop_edit.setText(data.stop.body)
+        # self.step_edit.setText(data.step.body)
+
+    def get_step_data(self):
+        return {}
+
+
 @singledispatch
 def create_editor(step: Step, _: QWidget) -> StepWidget:
     """Create an editor for a step depending on its type"""
@@ -189,3 +207,8 @@ def _(_: LinspaceLoop, parent: QWidget):
 @create_editor.register
 def _(_: ArangeLoop, parent: QWidget):
     return ArangeIterationWidget(parent)
+
+
+@create_editor.register
+def _(_: OptimizationLoop, parent: QWidget):
+    return OptimizationIterationWidget(parent)
