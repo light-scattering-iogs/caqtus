@@ -1,17 +1,13 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from typing import Optional
 
-from PyQt6.QtCore import QObject
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from experiment.configuration import ExperimentConfig
+from qabc import QABC
 
 
-class QABCMeta(type(QObject), ABCMeta):
-    pass
-
-
-class ConfigSettingsEditor(QWidget, metaclass=QABCMeta):
+class ConfigSettingsEditor(QWidget, QABC):
     """An abstract interface defining how a widget should edit a group of settings
 
     Every time a settings group is selected in the config editor, a widget is created to edit that group.

@@ -17,6 +17,8 @@ sqlalchemy = ">=2.0"
 anytree = "^2.8.0"
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 pyqt6-charts = "^6.4.0"
+qabc = {path = "../common/widgets/qabc", develop = true}
+yaml-clipboard-mixin = {path = "../common/widgets/yaml_clipboard_mixin", develop = true}
 
 
 [tool.poetry.dev-dependencies]
