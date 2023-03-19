@@ -29,7 +29,7 @@
      <item row="1" column="0">
       <widget class="QLabel" name="scriptPathLabel">
        <property name="text">
-        <string>Script path</string>
+        <string>Script</string>
        </property>
       </widget>
      </item>

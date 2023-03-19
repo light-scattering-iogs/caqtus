@@ -52,6 +52,6 @@ class Ui_OptimizerEditor(object):
         _translate = QtCore.QCoreApplication.translate
         OptimizerEditor.setWindowTitle(_translate("OptimizerEditor", "Form"))
         self.descriptionLabel.setText(_translate("OptimizerEditor", "Description"))
-        self.scriptPathLabel.setText(_translate("OptimizerEditor", "Script path"))
+        self.scriptPathLabel.setText(_translate("OptimizerEditor", "Script"))
         self.parametersLabel.setText(_translate("OptimizerEditor", "Parameters"))
         self.workingDirectoryLabel.setText(_translate("OptimizerEditor", "Working directory"))
