@@ -83,6 +83,10 @@ class ShotSaver:
             except Empty:
                 continue
 
+    def wait(self):
+        """Wait for the queue to be empty"""
+        self._queue.join()
+
 
 def _save_shot(
     sequence: Sequence,

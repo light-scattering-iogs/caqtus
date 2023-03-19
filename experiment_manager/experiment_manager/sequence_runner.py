@@ -37,6 +37,7 @@ from units import Quantity, units
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
+from .run_optimization import Optimizer, Evaluator
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
 
@@ -262,32 +263,22 @@ class SequenceRunnerThread(Thread):
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
-        minimum_bounds = {}
-        maximum_bounds = {}
-
-        for variable in optimization_loop.variables:
-            name = variable["name"]
-            first_bound = variable["first_bound"].evaluate(context.variables | units)
-            second_bound = variable["second_bound"].evaluate(context.variables | units)
-            minimum = min(first_bound, second_bound)
-            maximum = max(first_bound, second_bound)
-            minimum_bounds[name] = minimum
-            maximum_bounds[name] = maximum
-
-            initial_value = variable["initial_value"].evaluate(
-                context.variables | units
-            )
-            if not (minimum <= initial_value <= maximum):
-                raise ValueError(
-                    f"Initial value {initial_value} for variable {name} is not in the range [{minimum}, {maximum}]"
-                )
-            context.variables[name] = initial_value
-
-        for step in optimization_loop.children:
+        optimizer = Optimizer(optimization_loop.variables, context.variables | units)
+        evaluator = Evaluator()
+        for loop_iteration in range(optimization_loop.repetitions):
             if self.is_waiting_to_interrupt():
                 return
-            else:
-                self.run_step(step, context, shot_saver)
+            new_values = optimizer.suggest_values()
+            context.variables |= new_values
+
+            for step in optimization_loop.children:
+                if self.is_waiting_to_interrupt():
+                    return
+                else:
+                    self.run_step(step, context, shot_saver)
+            shot_saver.wait()
+            score = evaluator.compute_score()
+            optimizer.register(new_values, score)
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):

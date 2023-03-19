@@ -5,8 +5,7 @@ description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-Send2Trash = "^1.8.0"
+python = "^3.11, <3.12"
 pyqt6 = "^6.4.1"
 QDarkStyle = "^3.1"
 settings_model = { path = "../common/settings_model/", develop = true }
