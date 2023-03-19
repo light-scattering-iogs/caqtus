@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import singledispatch
-from typing import Optional, Iterable
+from typing import Optional, Iterable, TypedDict, Self
 
 import numpy
 import yaml
@@ -33,6 +33,10 @@ class Step(NodeMixin, ABC):
 
         Returns None if this is unknown.
         """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __eq__(self, other):
         raise NotImplementedError()
 
 
@@ -267,6 +271,62 @@ class ExecuteShot(Step, YAMLSerializable):
 
     def expected_number_shots(self) -> Optional[int]:
         return 1
+
+
+class OptimizationVariableInfo(TypedDict):
+    name: str
+    first_bound: Expression
+    second_bound: Expression
+    initial_value: Expression
+
+
+class OptimizationLoop(Step, YAMLSerializable):
+    def __init__(
+        self,
+        optimizer_name: str,
+        variables: list[OptimizationVariableInfo],
+        repetitions: int,
+        parent: Optional[Step] = None,
+        children: Optional[list[Step]] = None,
+    ):
+        if not children:
+            children = []
+        super().__init__(parent, children)
+        self.optimizer_name = optimizer_name
+        self.variables = variables
+        self.repetitions = repetitions
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, optimization_step: Self):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "optimizer_name": optimization_step.optimizer_name,
+                "variables": optimization_step.variables,
+                "repetitions": optimization_step.repetitions,
+                "children": [child for child in optimization_step.children],
+            },
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    def __eq__(self, other):
+        if not isinstance(other, OptimizationLoop):
+            return False
+        return (
+                self.optimizer_name == other.optimizer_name
+                and self.variables == other.variables
+                and self.repetitions == other.repetitions
+                and self.children == other.children
+        )
+
+    def expected_number_shots(self) -> Optional[int]:
+        number_sub_steps = _compute_total_number_shots(self.children)
+        if number_sub_steps is None:
+            return None
+        return self.repetitions * number_sub_steps
 
 
 @singledispatch
