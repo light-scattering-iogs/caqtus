@@ -1,9 +1,9 @@
 __version__ = "0.1.0"
 
 from device_config.channel_config import ChannelSpecialPurpose
+from imaging_source.configuration import ImagingSourceCameraDMK33GR0134Configuration
 from orca_quest.configuration import OrcaQuestCameraConfiguration
 from siglent_sdg6000x.configuration import SiglentSDG6000XConfiguration
-from imaging_source.configuration import ImagingSourceCameraDMK33GR0134Configuration
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
@@ -12,6 +12,7 @@ from .experiment_config import (
     CameraConfiguration,
     DeviceServerConfiguration,
 )
+from .optimization_config import OptimizerConfiguration
 
 device_configs = [
     SpincoreSequencerConfiguration,
@@ -27,5 +28,6 @@ __all__ = [
     DeviceConfigNotFoundError,
     CameraConfiguration,
     DeviceServerConfiguration,
+    OptimizerConfiguration,
     *device_configs,
 ]
