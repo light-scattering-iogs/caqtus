@@ -29,6 +29,7 @@ from sequence.configuration import (
     LinspaceLoop,
     VariableDeclaration,
     ExecuteShot,
+    OptimizationLoop,
 )
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
@@ -255,6 +256,40 @@ class SequenceRunnerThread(Thread):
                     self.run_step(step, context, shot_saver)
 
     @run_step.register
+    def _(
+        self,
+        optimization_loop: OptimizationLoop,
+        context: SequenceContext,
+        shot_saver: ShotSaver,
+    ):
+        minimum_bounds = {}
+        maximum_bounds = {}
+
+        for variable in optimization_loop.variables:
+            name = variable["name"]
+            first_bound = variable["first_bound"].evaluate(context.variables | units)
+            second_bound = variable["second_bound"].evaluate(context.variables | units)
+            minimum = min(first_bound, second_bound)
+            maximum = max(first_bound, second_bound)
+            minimum_bounds[name] = minimum
+            maximum_bounds[name] = maximum
+
+            initial_value = variable["initial_value"].evaluate(
+                context.variables | units
+            )
+            if not (minimum <= initial_value <= maximum):
+                raise ValueError(
+                    f"Initial value {initial_value} for variable {name} is not in the range [{minimum}, {maximum}]"
+                )
+            context.variables[name] = initial_value
+
+        for step in optimization_loop.children:
+            if self.is_waiting_to_interrupt():
+                return
+            else:
+                self.run_step(step, context, shot_saver)
+
+    @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a shot on the experiment"""
 
@@ -349,7 +384,9 @@ class SequenceRunnerThread(Thread):
             if exception := acquisition.exception():
                 raise exception
         stop_time = datetime.datetime.now()
-        logger.info(f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms")
+        logger.info(
+            f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+        )
 
     def extract_data(self):
         if MOCK_EXPERIMENT:
