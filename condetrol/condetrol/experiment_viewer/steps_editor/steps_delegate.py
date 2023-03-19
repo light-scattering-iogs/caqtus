@@ -1,8 +1,9 @@
+import copy
 import logging
 from abc import abstractmethod
 from functools import singledispatch
 
-from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize
+from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize, QAbstractTableModel
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
 
@@ -14,6 +15,7 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
     OptimizationLoop,
+    OptimizationVariableInfo,
 )
 from .step_uis import (
     Ui_ArangeDeclaration,
@@ -171,16 +173,84 @@ class OptimizationIterationWidget(Ui_OptimizationDeclaration, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
+        self.variables_view.verticalHeader().setHidden(True)
+        self.variables_view.resizeColumnToContents(0)
+        self.optimizer_combobox.setEnabled(False)
 
     def set_step_data(self, data: OptimizationLoop):
         self.repetition_spin_box.setValue(data.repetitions)
-        # self.name_edit.setText(data.name)
-        # self.start_edit.setText(data.start.body)
-        # self.stop_edit.setText(data.stop.body)
-        # self.step_edit.setText(data.step.body)
+        self.variables_view.setModel(VariableOptimizationModel(data.variables))
+        self.optimizer_combobox.addItem(data.optimizer_name)
 
     def get_step_data(self):
-        return {}
+        return dict(
+            repetitions=self.repetition_spin_box.value(),
+            variables=self.variables_view.model().variables,
+        )
+
+
+class VariableOptimizationModel(QAbstractTableModel):
+    def __init__(self, variables: list[OptimizationVariableInfo]):
+        super().__init__()
+        self._variables = copy.deepcopy(variables)
+
+    @property
+    def variables(self):
+        return self._variables
+
+    def rowCount(self, parent: QModelIndex = ...) -> int:
+        return len(self._variables)
+
+    def columnCount(self, parent: QModelIndex = ...) -> int:
+        return 4
+
+    def data(self, index: QModelIndex, role: int = ...):
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            if index.column() == 0:
+                return self._variables[index.row()]["name"]
+            elif index.column() == 1:
+                return self._variables[index.row()]["first_bound"].body
+            elif index.column() == 2:
+                return self._variables[index.row()]["second_bound"].body
+            elif index.column() == 3:
+                return self._variables[index.row()]["initial_value"].body
+        return None
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+        if (
+            role == Qt.ItemDataRole.DisplayRole
+            and orientation == Qt.Orientation.Horizontal
+        ):
+            if section == 0:
+                return "Variable"
+            elif section == 1:
+                return "From"
+            elif section == 2:
+                return "To"
+            elif section == 3:
+                return "Initial value"
+        return None
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+        )
+
+    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+        if role == Qt.ItemDataRole.EditRole:
+            if index.column() == 0:
+                self._variables[index.row()]["name"] = value
+            elif index.column() == 1:
+                self._variables[index.row()]["first_bound"] = Expression(value)
+            elif index.column() == 2:
+                self._variables[index.row()]["second_bound"] = Expression(value)
+            elif index.column() == 3:
+                self._variables[index.row()]["initial_value"] = Expression(value)
+            self.dataChanged.emit(index, index)
+            return True
+        return False
 
 
 @singledispatch
