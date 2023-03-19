@@ -35,6 +35,7 @@ from sequence.configuration import (
     ArangeLoop,
     LinspaceLoop,
     ExecuteShot,
+    OptimizationLoop,
 )
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
@@ -297,6 +298,19 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
                     start=Expression("..."),
                     stop=Expression("..."),
                     step=Expression("..."),
+                ),
+                index,
+            )
+        )
+
+        create_optimization_action = QAction("optimization loop")
+        add_menu.addAction(create_optimization_action)
+        create_optimization_action.triggered.connect(
+            lambda: model.insert_step(
+                OptimizationLoop(
+                    optimizer_name="",
+                    variables=[],
+                    repetitions=10,
                 ),
                 index,
             )

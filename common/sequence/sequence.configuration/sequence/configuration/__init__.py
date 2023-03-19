@@ -9,6 +9,7 @@ from .sequence_steps import (
     ArangeLoop,
     LinspaceLoop,
     ExecuteShot,
+    OptimizationLoop,
 )
 
 
@@ -35,6 +36,7 @@ __all__ = [
     "ArangeLoop",
     "LinspaceLoop",
     "ExecuteShot",
+    "OptimizationLoop",
     "ShotConfiguration",
     "Lane",
     "DigitalLane",
