@@ -6,12 +6,14 @@ of this module is to generate and edit a yaml file that is then consumed by othe
 
 import logging
 from copy import deepcopy
+from typing import Optional
 
 from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
-    QTimer, QAbstractItemModel,
+    QTimer,
+    QAbstractItemModel,
 )
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
@@ -58,6 +60,7 @@ class SequenceStepsModel(StepsModel):
 
         self._sequence = sequence
         self._session = session_maker()
+        self._edit_session = session_maker()
 
         with self._session as session:
             sequence_config = self._sequence.get_config(session)
@@ -84,7 +87,9 @@ class SequenceStepsModel(StepsModel):
         with self._session as session:
             self._sequence_state = self._sequence.get_state(session)
 
-    def get_sequence_state(self, session) -> State:
+    def get_sequence_state(self, session: Optional[ExperimentSession]) -> State:
+        if session is None:
+            return self._sequence_state
         return self._sequence.get_state(session)
 
     @property
@@ -97,7 +102,7 @@ class SequenceStepsModel(StepsModel):
             self.undo_stack.push(self._sequence_program.to_yaml())
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-        with self._session as session:
+        with self._edit_session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 if result := super().setData(index, values, role):
                     self.save_config(session)
@@ -196,7 +201,7 @@ class SequenceStepsModel(StepsModel):
                 self.save_config(session)
 
 
-class SequenceTreeView(QTreeView):
+class SequenceTreeView(QTreeView, YAMLClipboardMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setHeaderHidden(True)
@@ -219,13 +224,96 @@ class SequenceTreeView(QTreeView):
 
         self.setItemsExpandable(False)
 
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
     def setModel(self, model: QAbstractItemModel):
         super().setModel(model)
         self.model().rowsInserted.connect(lambda _: self.expandAll())
         self.expandAll()
 
+    def convert_to_external_use(self):
+        # noinspection PyTypeChecker
+        model: SequenceStepsModel = self.model()
+        return model.program.children
 
-class SequenceWidget(QDockWidget, YAMLClipboardMixin):
+    def update_from_external_source(self, steps: list[Step]):
+        # noinspection PyTypeChecker
+        model: SequenceStepsModel = self.model()
+        model.set_steps(steps)
+
+    def show_context_menu(self, position):
+        index = self.indexAt(position)
+        # noinspection PyTypeChecker
+        model: SequenceStepsModel = self.model()
+        if model.get_sequence_state(None) != State.DRAFT:
+            return
+
+        menu = QMenu(self)
+
+        add_menu = QMenu()
+        add_menu.setTitle("Add...")
+        menu.addMenu(add_menu)
+
+        create_variable_action = QAction("variable")
+        add_menu.addAction(create_variable_action)
+        # noinspection PyUnresolvedReferences
+        create_variable_action.triggered.connect(
+            lambda: model.insert_step(
+                VariableDeclaration(name="", expression=Expression("...")), index
+            )
+        )
+
+        create_shot_action = QAction("shot")
+        add_menu.addAction(create_shot_action)
+        # noinspection PyUnresolvedReferences
+        create_shot_action.triggered.connect(
+            lambda: model.insert_step(
+                ExecuteShot(
+                    name="shot",
+                ),
+                index,
+            )
+        )
+
+        create_linspace_action = QAction("linspace loop")
+        add_menu.addAction(create_linspace_action)
+        # noinspection PyUnresolvedReferences
+        create_linspace_action.triggered.connect(
+            lambda: model.insert_step(
+                LinspaceLoop(
+                    name="", start=Expression("..."), stop=Expression("..."), num=10
+                ),
+                index,
+            )
+        )
+
+        create_arange_action = QAction("arange loop")
+        add_menu.addAction(create_arange_action)
+        # noinspection PyUnresolvedReferences
+        create_arange_action.triggered.connect(
+            lambda: model.insert_step(
+                ArangeLoop(
+                    name="",
+                    start=Expression("..."),
+                    stop=Expression("..."),
+                    step=Expression("..."),
+                ),
+                index,
+            )
+        )
+
+        if index.isValid():
+            delete_action = QAction("Delete")
+            menu.addAction(delete_action)
+            # noinspection PyUnresolvedReferences
+            delete_action.triggered.connect(
+                lambda: model.removeRow(index.row(), index.parent())
+            )
+
+        menu.exec(self.mapToGlobal(position))
+
+
+class SequenceWidget(QDockWidget):
     """Dockable widget that shows the sequence steps and shot"""
 
     def __init__(
@@ -247,7 +335,6 @@ class SequenceWidget(QDockWidget, YAMLClipboardMixin):
 
         self.program_tree = self.create_sequence_tree()
         # noinspection PyUnresolvedReferences
-        self.program_tree.customContextMenuRequested.connect(self.show_context_menu)
         self.tab_widget.addTab(self.program_tree, "Sequence")
 
         self.shot_widget = self.create_shot_widget()
@@ -262,16 +349,6 @@ class SequenceWidget(QDockWidget, YAMLClipboardMixin):
     def redo(self):
         self.program_tree.model().redo()
 
-    def convert_to_external_use(self):
-        # noinspection PyTypeChecker
-        model: SequenceStepsModel = self.program_tree.model()
-        return model.program.children
-
-    def update_from_external_source(self, steps: list[Step]):
-        # noinspection PyTypeChecker
-        model: SequenceStepsModel = self.program_tree.model()
-        model.set_steps(steps)
-
     @property
     def _session(self):
         return self._session_maker
@@ -283,78 +360,6 @@ class SequenceWidget(QDockWidget, YAMLClipboardMixin):
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
         program_model.rowsInserted.connect(lambda _: tree.expandAll())
         return tree
-
-    def show_context_menu(self, position):
-        index = self.program_tree.indexAt(position)
-        # noinspection PyTypeChecker
-        model: SequenceStepsModel = self.program_tree.model()
-        with self._session() as session:
-            state = self._sequence.get_state(session)
-        if state == State.DRAFT:
-
-            menu = QMenu(self.program_tree)
-
-            add_menu = QMenu()
-            add_menu.setTitle("Add...")
-            menu.addMenu(add_menu)
-
-            create_variable_action = QAction("variable")
-            add_menu.addAction(create_variable_action)
-            # noinspection PyUnresolvedReferences
-            create_variable_action.triggered.connect(
-                lambda: model.insert_step(
-                    VariableDeclaration(name="", expression=Expression("...")), index
-                )
-            )
-
-            create_shot_action = QAction("shot")
-            add_menu.addAction(create_shot_action)
-            # noinspection PyUnresolvedReferences
-            create_shot_action.triggered.connect(
-                lambda: model.insert_step(
-                    ExecuteShot(
-                        name="shot",
-                    ),
-                    index,
-                )
-            )
-
-            create_linspace_action = QAction("linspace loop")
-            add_menu.addAction(create_linspace_action)
-            # noinspection PyUnresolvedReferences
-            create_linspace_action.triggered.connect(
-                lambda: model.insert_step(
-                    LinspaceLoop(
-                        name="", start=Expression("..."), stop=Expression("..."), num=10
-                    ),
-                    index,
-                )
-            )
-
-            create_arange_action = QAction("arange loop")
-            add_menu.addAction(create_arange_action)
-            # noinspection PyUnresolvedReferences
-            create_arange_action.triggered.connect(
-                lambda: model.insert_step(
-                    ArangeLoop(
-                        name="",
-                        start=Expression("..."),
-                        stop=Expression("..."),
-                        step=Expression("..."),
-                    ),
-                    index,
-                )
-            )
-
-            if index.isValid():
-                delete_action = QAction("Delete")
-                menu.addAction(delete_action)
-                # noinspection PyUnresolvedReferences
-                delete_action.triggered.connect(
-                    lambda: model.removeRow(index.row(), index.parent())
-                )
-
-            menu.exec(self.program_tree.mapToGlobal(position))
 
     def create_shot_widget(self):
         w = ShotWidget(
