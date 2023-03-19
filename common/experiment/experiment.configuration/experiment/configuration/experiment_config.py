@@ -24,6 +24,7 @@ from sequence.configuration import (
 from settings_model import SettingsModel
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration
+from .optimization_config import OptimizerConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -48,6 +49,10 @@ class ExperimentConfig(SettingsModel):
         description=(
             "All the static configurations of the devices present on the experiment."
         ),
+    )
+    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
+        default_factory=dict,
+        description="Possible configurations to choose from when running an optimization.",
     )
 
     @classmethod
