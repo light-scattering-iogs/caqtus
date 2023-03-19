@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
-    QTimer,
+    QTimer, QAbstractItemModel,
 )
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import (
@@ -35,6 +35,7 @@ from sequence.configuration import (
     ExecuteShot,
 )
 from sequence.runtime import Sequence, State
+from yaml_clipboard_mixin import YAMLClipboardMixin
 from .shot_widget import ShotWidget
 from ..steps_editor import StepDelegate
 from ..steps_editor import StepsModel
@@ -74,6 +75,10 @@ class SequenceStepsModel(StepsModel):
         self.update_state_timer.timeout.connect(self._update_state)
         self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.update_state_timer.start(1000)
+
+    @property
+    def program(self):
+        return self._sequence_program
 
     def _update_state(self):
         with self._session as session:
@@ -184,8 +189,43 @@ class SequenceStepsModel(StepsModel):
                 self.endResetModel()
                 self.layoutChanged.emit()
 
+    def set_steps(self, steps: list[Step]):
+        with self._session as session:
+            if self.get_sequence_state(session) == State.DRAFT:
+                super().set_steps(steps)
+                self.save_config(session)
 
-class SequenceWidget(QDockWidget):
+
+class SequenceTreeView(QTreeView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setHeaderHidden(True)
+        self.setAnimated(True)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.expandAll()
+        delegate = StepDelegate()
+        self.setItemDelegate(delegate)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        # noinspection PyUnresolvedReferences
+
+        self.setItemsExpandable(False)
+
+    def setModel(self, model: QAbstractItemModel):
+        super().setModel(model)
+        self.model().rowsInserted.connect(lambda _: self.expandAll())
+        self.expandAll()
+
+
+class SequenceWidget(QDockWidget, YAMLClipboardMixin):
     """Dockable widget that shows the sequence steps and shot"""
 
     def __init__(
@@ -222,35 +262,26 @@ class SequenceWidget(QDockWidget):
     def redo(self):
         self.program_tree.model().redo()
 
+    def convert_to_external_use(self):
+        # noinspection PyTypeChecker
+        model: SequenceStepsModel = self.program_tree.model()
+        return model.program.children
+
+    def update_from_external_source(self, steps: list[Step]):
+        # noinspection PyTypeChecker
+        model: SequenceStepsModel = self.program_tree.model()
+        model.set_steps(steps)
+
     @property
     def _session(self):
         return self._session_maker
 
     def create_sequence_tree(self):
-        tree = QTreeView()
-        tree.setHeaderHidden(True)
-        tree.setAnimated(True)
-        tree.setContentsMargins(0, 0, 0, 0)
+        tree = SequenceTreeView()
         program_model = SequenceStepsModel(self._sequence, self._session_maker)
         tree.setModel(program_model)
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
-        tree.expandAll()
-        delegate = StepDelegate()
-        tree.setItemDelegate(delegate)
-        tree.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
-
-        tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        tree.setDragEnabled(True)
-        tree.setAcceptDrops(True)
-        tree.setDropIndicatorShown(True)
-        tree.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        tree.setDefaultDropAction(Qt.DropAction.MoveAction)
-        tree.setDragDropOverwriteMode(False)
-        # noinspection PyUnresolvedReferences
-        tree.model().rowsInserted.connect(lambda _: tree.expandAll())
-
-        tree.setItemsExpandable(False)
+        program_model.rowsInserted.connect(lambda _: tree.expandAll())
         return tree
 
     def show_context_menu(self, position):

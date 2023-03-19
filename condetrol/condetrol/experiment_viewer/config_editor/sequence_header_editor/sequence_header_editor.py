@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu
 
 from experiment.configuration import ExperimentConfig
 from expression import Expression
-from sequence.configuration import Step, VariableDeclaration, ExecuteShot, SequenceSteps
+from sequence.configuration import Step, VariableDeclaration, ExecuteShot
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from ..config_settings_editor import ConfigSettingsEditor
 from ...steps_editor import StepDelegate, StepsModel
@@ -95,16 +95,6 @@ class SequenceHeaderModel(StepsModel):
 
     def get_config(self) -> ExperimentConfig:
         return copy.deepcopy(self._config)
-
-    def set_steps(self, steps: list[Step]):
-        if not isinstance(steps, list):
-            raise TypeError("Only lists are allowed in the sequence header")
-        if not all(isinstance(step, Step) for step in steps):
-            raise TypeError("Only steps are allowed in the sequence header")
-        self.beginResetModel()
-        header = SequenceSteps(children=steps)
-        self._config.header = header
-        self.endResetModel()
 
     @property
     def root(self) -> Step:

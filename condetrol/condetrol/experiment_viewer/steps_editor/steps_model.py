@@ -17,7 +17,7 @@ from PyQt6.QtCore import (
     QObject,
 )
 
-from sequence.configuration import Step, VariableDeclaration, ExecuteShot
+from sequence.configuration import Step, VariableDeclaration, ExecuteShot, SequenceSteps
 from settings_model import YAMLSerializable
 
 
@@ -35,7 +35,7 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
 
     @property
     @abstractmethod
-    def root(self) -> Step:
+    def root(self) -> SequenceSteps:
         ...
 
     def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
@@ -190,3 +190,12 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
         parent.children = new_children
         self.endRemoveRows()
         return True
+
+    def set_steps(self, steps: list[Step]):
+        if not isinstance(steps, list):
+            raise TypeError(f"Expected a list of {Step.__name__} instances, got {type(steps)}")
+        if not all(isinstance(step, Step) for step in steps):
+            raise TypeError(f"Expected a list of {Step.__name__} instances")
+        self.beginResetModel()
+        self.root.children = steps
+        self.endResetModel()
