@@ -1,7 +1,8 @@
 __version__ = "0.1.0"
 
-from .sequence_config import (
-    SequenceConfig,
+from .sequence_config import SequenceConfig
+
+from .sequence_steps import (
     Step,
     SequenceSteps,
     VariableDeclaration,
@@ -9,6 +10,7 @@ from .sequence_config import (
     LinspaceLoop,
     ExecuteShot,
 )
+
 
 from .shot import (
     Lane,
