@@ -10,7 +10,7 @@ from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from .ni6738_editor_ui import Ui_NI6738Editor
 from ..channel_model import ChannelsModel
 from ..color_delegate import ColorCellDelegate
-from ..config_settings_editor import ConfigSettingsEditor
+from ..config_settings_editor import ConfigSettingsEditor, DeviceConfigEditor
 from ..mapping_editor import MappingDelegate
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger.setLevel(logging.DEBUG)
 us = 1e-6
 
 
-class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
+class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
     """NI 6738 analog card configuration widget
 
     This widget has fields for the device ID and the time step, as well as a table
@@ -34,21 +34,20 @@ class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
     ):
         super().__init__(experiment_config, tree_label, parent)
 
-        self.device_name = self.strip_device_prefix(tree_label)
-        self.experiment_config = experiment_config
-        self.config: NI6738SequencerConfiguration = experiment_config.get_device_config(
+        config: NI6738SequencerConfiguration = self._experiment_config.get_device_config(
             self.device_name
         )
 
         self.color_delegate = ColorCellDelegate()
         self.mapping_delegate = MappingDelegate()
         self.setupUi(self)
-        self.setup_ui_from_config(self.config)
+        self.setup_ui_from_config(config)
 
     def get_experiment_config(self) -> ExperimentConfig:
-        self.write_ui_to_config(self.config)
-        self.experiment_config.set_device_config(self.device_name, self.config)
-        return self.experiment_config
+        new_config = self._experiment_config.get_device_config(self.device_name)
+        self.write_ui_to_config(new_config)
+        self._experiment_config.set_device_config(self.device_name, new_config)
+        return self._experiment_config
 
     def setup_ui_from_config(self, config: NI6738SequencerConfiguration):
         self.device_id_line_edit.setText(config.device_id)
@@ -69,6 +68,10 @@ class NI6738ConfigEditor(ConfigSettingsEditor, Ui_NI6738Editor):
             new_value = self.time_step_spinbox.value() * us
         config.time_step = new_value
         return config
+
+    def update_from_external_source(self, new_config: NI6738SequencerConfiguration):
+        super().update_from_external_source(new_config)
+        self.setup_ui_from_config(new_config)
 
 
 class AnalogChannelsModel(ChannelsModel):
