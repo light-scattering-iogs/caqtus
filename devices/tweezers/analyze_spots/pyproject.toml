@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "tweezers-locate-spots"
+name = "analyze-spots"
 version = "0.1.0"
 description = ""
 authors = ["Damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
-packages = [{include = "tweezers"}]
+packages = [{include = "analyze_spots"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"

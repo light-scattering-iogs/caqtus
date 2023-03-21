@@ -21,7 +21,7 @@ experiment-session = {path = "../common/experiment/experiment.session", develop 
 visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop = true}
 jupyterlab = "^3.6.2"
 ipympl = "^0.9.3"
-tweezers-locate-spots = {path = "../devices/tweezers/tweezers.locate_spots", develop = true}
+analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
