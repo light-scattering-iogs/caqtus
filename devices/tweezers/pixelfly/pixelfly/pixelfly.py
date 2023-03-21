@@ -4,6 +4,7 @@ from enum import IntFlag, IntEnum
 
 import numpy
 
+from device import RuntimeDevice
 from .pixelfly_error import ErrCodes
 
 
@@ -22,6 +23,7 @@ class Mode(IntFlag):
 
     ex: HW_TRIGGER | ASYNC_SHUTTER
     """
+
     # trigger mode
     HW_TRIGGER = 0
     SW_TRIGGER = 1
@@ -36,50 +38,114 @@ class Mode(IntFlag):
 def load_pixelfly_library() -> CDLL:
     pf_cam_lib = find_library("pf_cam")
     if pf_cam_lib is None:
-        raise RuntimeError("Could not find pixelfly shared library pf_cam.\n"
-                           "Try to install the pixelfly SDK from "
-                           "https://www.pco.de/support/software/scientific-cameras-1/pixelfly-qe/")
+        raise RuntimeError(
+            "Could not find pixelfly shared library pf_cam.\n"
+            "Try to install the pixelfly SDK from "
+            "https://www.pco.de/support/software/scientific-cameras-1/pixelfly-qe/"
+        )
 
     lib = CDLL(pf_cam_lib)
     lib.CHECK_BOARD_AVAILABILITY.argtypes = [c_int]
     lib.CHECK_BOARD_AVAILABILITY.restyps = c_int
-    lib.SETMODE.argtypes = [c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int, c_int]
+    lib.SETMODE.argtypes = [
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+        c_int,
+    ]
     lib.SETMODE.restyps = c_int
     lib.READ_IMAGE.argtypes = [c_int, c_int, c_int, c_void_p, c_int]
     lib.READ_IMAGE.restyps = c_int
     return lib
 
 
-class PixelflyBoard:
-    def __init__(self, board_number: int):
-        """Initialize the board driver
+class PixelflyBoard(RuntimeDevice):
+    board_number: int
+    mode: Mode
+    exp_time: int
+    hbin: BinMode = BinMode.BIN_1X
+    vbin: BinMode = BinMode.BIN_1X
+    gain: bool = False
+    bit_pix: PixelDepth = PixelDepth.BITS_12
+    exp_level: int = 0
 
-        :param board_number: an integer between 0 and 7 to indicate which board to use
-        """
+    _lib = CDLL
+    _handle = c_int
 
+    """
+    Args:
+        mode: Set the camera operation mode. Not all modes work with all camera types.
+        In video mode a stream of exposures is started with the next trigger. If exposure time is shorter than readout
+        time the exposure of the actual image is done at the end of the CCD readout of the previous image. If exposure
+        time is longer than the readout time the actual exposure is directly following the previous exposure. In all
+        other modes only one exposure is released by a hardware or a software trigger. The exposure time starts
+        directly after the trigger followed by the readout of the CCD.
+
+    exp_level: Only available on cameras with auto-exposure capability. Set the level at which the auto
+        exposure mode is stopped. The camera measures the incoming light and stops the exposure if the light exceeds
+        the set exposure level. Only valid if mode is set to auto exposure. Can be set between 0 and 200.
+
+    exp_time: Set the exposure time of the camera. In video mode the value represents times in ms. In all
+        other modes the exposure time is in μs. In video mode, can be set between 1 and 65535. In other modes, can be
+        set between 5 and 65535.
+
+    hbin: Set the horizontal binning and region of the camera. This setting affects the readout of the
+        CCD-Chip. Fewer data is transferred but the readout time is not affected.
+
+    vbin: Set the vertical binning. This setting affects the readout of the CCD-Chip. Fewer data is
+        transferred and the readout time is decreased.
+
+    gain: Set the analog gain of the camera.
+
+    bit_pix: Set the bit width of the transferred pixels.
+    """
+
+    def start(self):
+        super().start()
         self._lib = load_pixelfly_library()
-        if self._lib.CHECK_BOARD_AVAILABILITY(board_number) != ErrCodes.NOERR:
-            raise RuntimeError(f"Board {board_number} is not available.")
+        if self._lib.CHECK_BOARD_AVAILABILITY(self.board_number) != ErrCodes.NOERR:
+            raise RuntimeError(f"Board {self.board_number} is not available.")
 
         self._handle = c_int(0)
-        if self._lib.INITBOARD(board_number, byref(self._handle)) != ErrCodes.NOERR:
-            raise RuntimeError(f"Could not initialize board {board_number}")
+        if (
+            self._lib.INITBOARD(self.board_number, byref(self._handle))
+            != ErrCodes.NOERR
+        ):
+            raise RuntimeError(f"Could not initialize board {self.board_number}")
 
-        self._board_number = board_number
+        self.set_mode(
+            self.mode,
+            self.exp_time,
+            self.hbin,
+            self.vbin,
+            self.gain,
+            self.bit_pix,
+            self.exp_level,
+        )
 
-    def close(self):
+    def shutdown(self):
         """Must be called to close the board driver"""
         try:
             self.stop_camera()
-        finally:
             if self._lib.CLOSEBOARD(byref(self._handle)) != ErrCodes.NOERR:
-                raise RuntimeError(f"An error occurred while closing the board {self._board_number}")
+                raise RuntimeError(
+                    f"An error occurred while closing the board {self.board_number}"
+                )
+        finally:
+            super().shutdown()
 
     def start_camera(self):
         """Start the camera
 
         A new exposure can be initiated with a hardware or software trigger, depending on which mode the camera is set.
         """
+
         if self._lib.START_CAMERA(self._handle) != ErrCodes.NOERR:
             raise RuntimeError(f"Could not start the camera")
 
@@ -103,38 +169,33 @@ class PixelflyBoard:
         if self._lib.TRIGGER_CAMERA(self._handle) != ErrCodes.NOERR:
             raise RuntimeError(f"Could not trigger the camera")
 
-    def set_mode(self, mode: Mode, exp_time: int, hbin: BinMode = BinMode.BIN_1X, vbin: BinMode = BinMode.BIN_1X,
-                 gain: bool = False, bit_pix: PixelDepth = PixelDepth.BITS_12, exp_level: int = 0):
-        """Sets the parameters of the next exposures
+    def set_mode(
+        self,
+        mode: Mode,
+        exp_time: int,
+        hbin: BinMode = BinMode.BIN_1X,
+        vbin: BinMode = BinMode.BIN_1X,
+        gain: bool = False,
+        bit_pix: PixelDepth = PixelDepth.BITS_12,
+        exp_level: int = 0,
+    ):
+        """Sets the parameters of the next exposures"""
 
-        :param mode: Set the camera operation mode. Not all modes work with all camera types.
-        In video mode a stream of exposures is started with the next trigger. If exposure time is shorter than readout
-        time the exposure of the actual image is done at the end of the CCD readout of the previous image. If exposure
-        time is longer than the readout time the actual exposure is directly following the previous exposure. In all
-        other modes only one exposure is released by a hardware or a software trigger. The exposure time starts
-        directly after the trigger followed by the readout of the CCD.
-
-        :param exp_level: Only available on cameras with auto-exposure capability. Set the level at which the auto
-        exposure mode is stopped. The camera measures the incoming light and stops the exposure if the light exceeds
-        the set exposure level. Only valid if mode is set to auto exposure. Can be set between 0 and 200.
-
-        :param exp_time: Set the exposure time of the camera. In video mode the value represents times in ms. In all
-        other modes the exposure time is in μs. In video mode, can be set between 1 and 65535. In other modes, can be
-        set between 5 and 65535.
-
-        :param hbin: Set the horizontal binning and region of the camera. This setting affects the readout of the
-        CCD-Chip. Fewer data is transferred but the readout time is not affected.
-
-        :param vbin: Set the vertical binning. This setting affects the readout of the CCD-Chip. Fewer data is
-        transferred and the readout time is decreased.
-
-        :param gain: Set the analog gain of the camera.
-
-        :param bit_pix: Set the bit width of the transferred pixels.
-        """
-
-        if self._lib.SETMODE(self._handle, mode, exp_level, exp_time, hbin, vbin, int(gain), 0, bit_pix,
-                             0) != ErrCodes.NOERR:
+        if (
+            self._lib.SETMODE(
+                self._handle,
+                mode,
+                exp_level,
+                exp_time,
+                hbin,
+                vbin,
+                int(gain),
+                0,
+                bit_pix,
+                0,
+            )
+            != ErrCodes.NOERR
+        ):
             raise ValueError("Could not set the desired parameters")
 
     def read_image(self, timeout: int) -> numpy.ndarray:
@@ -149,8 +210,17 @@ class PixelflyBoard:
         ccd_x_size, ccd_y_size = c_int(), c_int()
         actual_x_size, actual_y_size = c_int(), c_int()
         bit_pix = c_int()
-        if self._lib.GETSIZES(self._handle, byref(ccd_y_size), byref(ccd_y_size), byref(actual_x_size),
-                              byref(actual_y_size), byref(bit_pix)) != ErrCodes.NOERR:
+        if (
+            self._lib.GETSIZES(
+                self._handle,
+                byref(ccd_y_size),
+                byref(ccd_y_size),
+                byref(actual_x_size),
+                byref(actual_y_size),
+                byref(bit_pix),
+            )
+            != ErrCodes.NOERR
+        ):
             raise RuntimeError("An error occurred while reading the image size")
 
         if bit_pix.value == 12:
@@ -163,9 +233,15 @@ class PixelflyBoard:
             c_type = c_int8
         else:
             raise ValueError(f"Unknown bit format {bit_pix.value}")
-        image = numpy.zeros((actual_x_size.value, actual_y_size.value), dtype=dtype, order="F")
-        if err := self._lib.READ_IMAGE(self._handle, 0, size, image.ctypes.data_as(POINTER(c_type)),
-                                       timeout) != ErrCodes.NOERR:
+        image = numpy.zeros(
+            (actual_x_size.value, actual_y_size.value), dtype=dtype, order="F"
+        )
+        if (
+            err := self._lib.READ_IMAGE(
+                self._handle, 0, size, image.ctypes.data_as(POINTER(c_type)), timeout
+            )
+            != ErrCodes.NOERR
+        ):
             raise RuntimeError(f"An error occurred while reading the image")
         return image
 
@@ -175,6 +251,9 @@ class PixelflyBoard:
         The temperature range is from -55°C to +125°C.
         """
         temperature = c_int()
-        if self._lib.READTEMPERATURE(self._handle, byref(temperature)) != ErrCodes.NOERR:
+        if (
+            self._lib.READTEMPERATURE(self._handle, byref(temperature))
+            != ErrCodes.NOERR
+        ):
             raise RuntimeError(f"Could not read the camera temperature")
         return float(temperature.value)
