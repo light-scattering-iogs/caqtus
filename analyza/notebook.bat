@@ -1,1 +1,1 @@
-poetry run jupyter-notebook --notebook-dir=%UserProfile%\Dropbox\Dy\Scripts
+poetry run jupyter lab --notebook-dir=%UserProfile%\Dropbox\Dy\Scripts
