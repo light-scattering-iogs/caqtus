@@ -21,6 +21,7 @@ from .import_sequence import (
 )
 
 from visual.sequence_watcher import DataframeSequenceWatcher
+from tweezers.locate_spots import locate_spots
 
 __all__ = [
     "ExperimentSession",
@@ -39,5 +40,6 @@ __all__ = [
     "apply",
     "remove",
     "break_namespaces",
-    "DataframeSequenceWatcher"
+    "DataframeSequenceWatcher",
+    "locate_spots",
 ]
