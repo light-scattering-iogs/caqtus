@@ -75,6 +75,11 @@ class GridSpotIntensitiesMeasurer(SpotIntensitiesMeasurer):
             reference_image, relative_threshold, radius
         )
 
+        if len(self._centroids) != self._number_rows * self._number_columns:
+            raise ValueError(
+                f"Expected {self._number_rows * self._number_columns} spots, found {len(self._centroids)}"
+            )
+
         def sort_along_x(value):
             index_, (x, y) = value
             return x

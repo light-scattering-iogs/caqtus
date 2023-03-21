@@ -132,7 +132,7 @@ class PixelflyBoard(RuntimeDevice):
     def shutdown(self):
         """Must be called to close the board driver"""
         try:
-            self.stop_camera()
+            self.stop_acquisition()
             if self._lib.CLOSEBOARD(byref(self._handle)) != ErrCodes.NOERR:
                 raise RuntimeError(
                     f"An error occurred while closing the board {self.board_number}"
@@ -140,7 +140,7 @@ class PixelflyBoard(RuntimeDevice):
         finally:
             super().shutdown()
 
-    def start_camera(self):
+    def start_acquisition(self):
         """Start the camera
 
         A new exposure can be initiated with a hardware or software trigger, depending on which mode the camera is set.
@@ -149,7 +149,7 @@ class PixelflyBoard(RuntimeDevice):
         if self._lib.START_CAMERA(self._handle) != ErrCodes.NOERR:
             raise RuntimeError(f"Could not start the camera")
 
-    def stop_camera(self):
+    def stop_acquisition(self):
         """Stop the camera
 
         Before setting any of the camera parameters, like binning or gain etc., the camera has to be stopped.

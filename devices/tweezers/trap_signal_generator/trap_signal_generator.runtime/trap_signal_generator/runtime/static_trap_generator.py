@@ -132,6 +132,10 @@ class StaticTrapGenerator(BaseModel):
             number_samples=config.number_samples,
         )
 
+    @property
+    def number_tones(self):
+        return len(self.frequencies)
+
 
 def compute_signal(times, amplitudes, frequencies, phases):
     return sum(
