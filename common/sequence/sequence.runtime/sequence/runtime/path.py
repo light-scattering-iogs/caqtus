@@ -1,4 +1,5 @@
 import re
+from typing import Self
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -193,6 +194,9 @@ class SequencePath:
         else:
             raise TypeError(f"Can only append str to SequencePath not {type(other)}")
 
+    def __hash__(self):
+        return hash(self._path)
+
     def _query_model(self, session: Session) -> SequencePathModel:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path == Ltree(self._path)
@@ -203,6 +207,14 @@ class SequencePath:
             return path
         else:
             raise PathNotFoundError(f"Could not find path '{self._path}' in database")
+
+    @classmethod
+    def query_path_models(cls, paths: list[Self], session: ExperimentSession) -> list[SequencePathModel]:
+        stmt = select(SequencePathModel).where(
+            SequencePathModel.path.in_([Ltree(path._path) for path in paths])
+        )
+        result = session.get_sql_session().execute(stmt)
+        return result.scalars().all()
 
 
 class PathNotFoundError(Exception):
