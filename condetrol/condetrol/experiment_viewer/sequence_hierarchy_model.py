@@ -72,6 +72,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self._stats_updater.start()
 
     def _update_stats(self):
+        logger.debug(self._root.list_sequences())
         with self._stats_update_session as session:
             _update_stats(self._root, session)
 
@@ -389,6 +390,17 @@ class SequenceHierarchyItem(NodeMixin):
     @property
     def sequence_stats(self) -> Optional[SequenceStats]:
         return copy.deepcopy(self._sequence_stats)
+
+    def list_sequences(self) -> list[Sequence]:
+        """List all sequences under this item"""
+
+        if self.is_sequence:
+            return [Sequence(self.sequence_path)]
+        else:
+            sequences = []
+            for child in self.children:
+                sequences.extend(child.list_sequences())
+            return sequences
 
 
 def _build_children(
