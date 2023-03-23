@@ -341,7 +341,6 @@ class SequenceWidget(QDockWidget):
         self._sequence = sequence
         self._experiment_config = experiment_config
         self._session_maker = session_maker
-        self.setWindowTitle(f"{str(self._sequence.path)}")
 
         self.tab_widget = QTabWidget()
         self.setWidget(self.tab_widget)
@@ -354,6 +353,16 @@ class SequenceWidget(QDockWidget):
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
+
+        self._state_updater = SequenceStateWatcher(
+            sequence, session_maker, on_state_changed=self.update_title, watch_interval=0.5
+        )
+        self._state_updater.start()
+        self.destroyed.connect(self._state_updater.stop)
+
+    def update_title(self, state: State):
+        self.setWindowTitle(f"{str(self._sequence.path)} [{state.name}]")
+
 
     def undo(self):
         self.program_tree.model().undo()
