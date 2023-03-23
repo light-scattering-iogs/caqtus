@@ -31,9 +31,9 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker, get_standard_experiment_session_maker
+from experiment.session import ExperimentSessionMaker
 from experiment_manager import ExperimentManager
-from sequence.runtime import Sequence, State, SequencePath
+from sequence.runtime import Sequence, State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_hierarchy_model import (
@@ -158,7 +158,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.sequences_view.customContextMenuRequested.connect(self.show_context_menu)
         self.sequences_view.doubleClicked.connect(self.sequence_view_double_clicked)
-        self.sequences_view.expanded.connect(lambda _: self.sequences_view.resizeColumnToContents(0))
+        self.sequences_view.expanded.connect(
+            lambda _: self.sequences_view.resizeColumnToContents(0)
+        )
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
@@ -278,8 +280,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def duplicate_sequence(self, index: QModelIndex) -> bool:
         """Duplicate a sequence
-        
-        Pop up a dialog to ask for a new name and duplicate the sequence at the given index to the new name in the same 
+
+        Pop up a dialog to ask for a new name and duplicate the sequence at the given index to the new name in the same
         containing folder.
         Args:
             index: QModelIndex of the sequence to duplicate
@@ -300,7 +302,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             f"Duplicate sequence {source_path}...",
             "Destination:",
             QLineEdit.EchoMode.Normal,
-            source_path.name
+            source_path.name,
         )
         if ok and text:
             duplicated = self.model.duplicate_sequence(index, text)
