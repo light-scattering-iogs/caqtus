@@ -23,9 +23,9 @@ class SequenceHierarchyModel(QAbstractItemModel):
     This model stores an in-memory representation of the database sequence structure.
     """
 
-    def __init__(self, session_maker: ExperimentSessionMaker):
+    def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self._session = session_maker()
         self._stats_update_session = session_maker()
 
@@ -40,6 +40,10 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
         self._stats_updater = ConcurrentUpdater(self._update_stats, watch_interval=0.5)
         self._stats_updater.start()
+        self.destroyed.connect(self.on_destroy)
+
+    def on_destroy(self):
+        self._stats_updater.stop()
 
     def _update_stats(self):
         with self._stats_update_session as session:

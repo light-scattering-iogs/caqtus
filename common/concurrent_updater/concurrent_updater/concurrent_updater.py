@@ -1,6 +1,6 @@
 import logging
 import threading
-from typing import Callable
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -9,10 +9,12 @@ logger.setLevel(logging.DEBUG)
 class ConcurrentUpdater:
     """Calls a function periodically in a separate thread"""
 
-    def __init__(self, target: Callable, watch_interval: float = 1):
+    def __init__(self, target: Callable, watch_interval: float = 1, name: Optional[str] = None):
         self._target = target
         self._watch_interval = watch_interval
-        self._thread = threading.Thread(target=self._watch)
+        if name is None:
+            name = target.__name__
+        self._thread = threading.Thread(target=self._watch, name=name)
         self._must_stop = threading.Event()
         self._lock = threading.Lock()
 

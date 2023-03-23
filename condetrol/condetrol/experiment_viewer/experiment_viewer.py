@@ -146,7 +146,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.action_edit_config.triggered.connect(self.edit_config)
 
         self.model = SequenceHierarchyModel(
-            session_maker=self._experiment_session_maker
+            session_maker=self._experiment_session_maker, parent=self.sequences_view
         )
         self.sequences_view.setModel(self.model)
 
@@ -408,6 +408,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
         self.logs_listener.stop()
+        self.model.on_destroy()
         super().closeEvent(event)
 
     def revert_to_draft(self, index: QModelIndex):
