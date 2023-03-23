@@ -7,7 +7,9 @@ readme = "README.md"
 packages = [{include = "concurrent_updater"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11,<3.12"
+sequence-runtime = {path = "../sequence/sequence.runtime", develop = true}
+experiment-session = {path = "../experiment/experiment.session", develop = true}
 
 
 [build-system]

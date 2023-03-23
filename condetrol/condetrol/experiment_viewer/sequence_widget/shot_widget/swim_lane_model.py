@@ -6,12 +6,12 @@ from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QSize,
-    QTimer,
     QAbstractItemModel,
 )
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 
+from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import (
@@ -66,22 +66,19 @@ class SwimLaneModel(QAbstractItemModel):
         self._lane_groups_model = LaneGroupModel(self.shot_config.lane_groups)
         self._lanes_model = LanesModel(self.shot_config.lanes, self._experiment_config)
 
-        # refresh the sequence state to block the editor if the state is not DRAFT
-        self._sequence_state: State
-        self._update_state()
-        self.update_state_timer = QTimer(self)
-        # noinspection PyUnresolvedReferences
-        self.update_state_timer.timeout.connect(self._update_state)
-        self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self.update_state_timer.start(1000)
+        self._state_updater = SequenceStateWatcher(
+            sequence, session_maker, watch_interval=0.5
+        )
+        self._state_updater.start()
+        self.destroyed.connect(self._state_updater.stop)
+
+    @property
+    def sequence_state(self) -> State:
+        return self._state_updater.sequence_state
 
     @property
     def sequence(self):
         return self._sequence
-
-    def _update_state(self):
-        with self._session as session:
-            self._sequence_state = self._sequence.get_state(session)
 
     def save_config(
         self,
@@ -232,7 +229,7 @@ class SwimLaneModel(QAbstractItemModel):
             return Qt.ItemDataRole.NoItemFlags
         mapped_index = self.map_to_child_index(index)
         flags = mapped_index.flags()
-        if self._sequence_state != State.DRAFT:
+        if self.sequence_state != State.DRAFT:
             flags &= ~Qt.ItemFlag.ItemIsEditable
         return flags
 

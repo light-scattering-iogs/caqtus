@@ -79,15 +79,16 @@ class ShotWidget(QWidget, YAMLClipboardMixin):
 
         self.experiment_config = experiment_config
 
+        self.swim_lane_widget = SwimLaneView(session_maker, parent=self)
+
         self.model = SwimLaneModel(
-            self._sequence, "shot", self.experiment_config, self._session_maker
+            self._sequence, "shot", self.experiment_config, self._session_maker, parent=self.swim_lane_widget
         )
         size = QtCore.QSize(20, 40)
-        index = self.model.index(0, 0)  # row, col are your own
+        index = self.model.index(0, 0)
         self.model.setData(index, size, Qt.ItemDataRole.SizeHintRole)
 
         self.layout = QVBoxLayout()
-        self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
         self.swim_lane_widget.expandAll()
         self.swim_lane_widget.resizeColumnToContents(0)
