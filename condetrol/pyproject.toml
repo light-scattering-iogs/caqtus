@@ -18,6 +18,7 @@ sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true
 pyqt6-charts = "^6.4.0"
 qabc = {path = "../common/widgets/qabc", develop = true}
 yaml-clipboard-mixin = {path = "../common/widgets/yaml_clipboard_mixin", develop = true}
+concurrent-updater = {path = "../common/concurrent_updater", develop = true}
 
 
 [tool.poetry.dev-dependencies]
