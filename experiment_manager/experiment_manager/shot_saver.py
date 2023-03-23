@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy, copy
 from datetime import datetime
 from queue import Queue, Empty
@@ -7,6 +8,9 @@ from typing import Any
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
 from variable import VariableNamespace
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ShotSaver:
@@ -72,13 +76,16 @@ class ShotSaver:
             },
             block=True,
         )
+        logger.debug(f"Queue size: {self._queue.qsize()}")
 
     def _save_thread_func(self):
         while self._active.is_set():
             try:
                 shot_to_save = self._queue.get(timeout=0.1)
                 saved_shot = _save_shot(
-                    sequence=self._sequence, session=self._session_maker(), **shot_to_save
+                    sequence=self._sequence,
+                    session=self._session_maker(),
+                    **shot_to_save,
                 )
                 self._saved_shots.append(saved_shot)
                 self._queue.task_done()
