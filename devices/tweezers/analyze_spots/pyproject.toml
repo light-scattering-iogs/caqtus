@@ -1,14 +1,15 @@
 [tool.poetry]
-name = "pixelfly"
+name = "analyze-spots"
 version = "0.1.0"
 description = ""
 authors = ["Damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
+packages = [{include = "analyze_spots"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^1.23"
-device = {path = "../../device", develop = true}
+python = "^3.9"
+numpy = "^1.24.2"
+opencv-python = "^4.7.0.72"
 
 
 [build-system]

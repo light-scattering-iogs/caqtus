@@ -35,7 +35,6 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
             raise ValueError(f"A device with name {self.name} is already in use")
         else:
             self._devices_already_in_use[self.name] = self
-        pass
 
     def update_parameters(self, **kwargs) -> None:
         """Apply argument parameters or previous value changes to the device

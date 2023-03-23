@@ -14,6 +14,10 @@ trap-signal-generator-runtime = {path = "../trap_signal_generator/trap_signal_ge
 numpy = "^1.24.2"
 pixelfly = {path = "../pixelfly", develop = true}
 trap-signal-generator-configuration = {path = "../trap_signal_generator/trap_signal_generator.configuration", develop = true}
+jupyter = "^1.0.0"
+analyze-spots = {path = "../analyze_spots", develop = true}
+jupyterlab = "^3.6.2"
+ipympl = "^0.9.3"
 
 
 [tool.poetry.group.dev.dependencies]
