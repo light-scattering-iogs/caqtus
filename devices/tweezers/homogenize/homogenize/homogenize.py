@@ -18,7 +18,7 @@ logger.setLevel("DEBUG")
 logging.basicConfig()
 
 BETA = 0.1
-NUMBER_ITERATIONS = 50
+NUMBER_ITERATIONS = 25
 ROI_RADIUS = 30
 TRAP_RELATIVE_THRESHOLD = 0.3
 
