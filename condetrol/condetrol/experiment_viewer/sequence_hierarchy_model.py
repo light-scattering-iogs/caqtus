@@ -72,7 +72,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self._stats_updater.start()
 
     def _update_stats(self):
-        logger.debug(self._root.list_sequences())
         with self._stats_update_session as session:
             _update_stats(self._root, session)
 
@@ -384,6 +383,9 @@ class SequenceHierarchyItem(NodeMixin):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.sequence_path})"
 
+    def __str__(self):
+        return str(self.sequence_path)
+
     def is_folder(self):
         return not self.is_sequence
 
@@ -462,11 +464,37 @@ def _format_seconds(seconds: float) -> str:
     return ":".join(reversed(result))
 
 
+def query_sequence_stats(
+    sequences: list[Sequence], session: ExperimentSession
+) -> list[SequenceStats]:
+    """Query the stats for a list of sequences.
+
+    Args:
+        sequences: List of sequences to query.
+        session: Experiment session.
+
+    Returns:
+        List of sequence stats.
+    """
+
+    stats = []
+    for sequence in sequences:
+        stats.append(sequence.get_stats(session))
+    return stats
+
+
 def _update_stats(item: SequenceHierarchyItem, session: ExperimentSession):
+    """Update the stats for a sequence hierarchy item."""
+
+    stats = Sequence.query_sequence_stats(item.list_sequences(), session)
+    _apply_stats(item, stats)
+
+
+def _apply_stats(item: SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]):
+    """Apply stats to a sequence hierarchy item."""
+
     if item.is_sequence:
-        sequence = Sequence(item.sequence_path)
-        stats = sequence.get_stats(session)
-        item._sequence_stats = stats
+        item._sequence_stats = stats.get(item.sequence_path, None)
     else:
         for child in item.children:
-            _update_stats(child, session)
+            _apply_stats(child, stats)
