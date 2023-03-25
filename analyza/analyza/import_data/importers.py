@@ -86,6 +86,11 @@ def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]
     return shot.get_parameters(session)
 
 
+def _import_scores(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
+    scores = shot.get_scores(session)
+    return {f"{key}.score": value for key, value in scores.items()}
+
+
 def _import_measures(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     result = {}
     data = shot.get_measures(session)
@@ -105,6 +110,7 @@ def _import_time(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
 def _import_all(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     return (
         _import_time(shot, session)
+        | _import_scores(shot, session)
         | _import_parameters(shot, session)
         | _import_measures(shot, session)
     )

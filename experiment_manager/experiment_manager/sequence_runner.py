@@ -296,7 +296,7 @@ class SequenceRunnerThread(Thread):
                 optimizer.register(new_values, score)
                 with self._session.activate():
                     for shot in new_shots:
-                        shot.add_score({optimization_loop.optimizer_name: score}, self._session)
+                        shot.add_scores({optimization_loop.optimizer_name: score}, self._session)
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
