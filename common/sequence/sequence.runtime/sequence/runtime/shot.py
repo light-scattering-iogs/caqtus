@@ -39,6 +39,17 @@ class Shot:
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.PARAMETER, session)
 
+    def get_score(self, experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
+        return shot_sql.get_data(DataType.SCORE, session)
+
+    def add_score(self, score: dict[str, float], experiment_session: ExperimentSession):
+        session = experiment_session.get_sql_session()
+        shot_sql = self._query_model(session)
+        shot_sql.add_data(score, DataType.SCORE, session)
+        session.flush()
+
     def get_start_time(self, experiment_session: ExperimentSession) -> datetime:
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)

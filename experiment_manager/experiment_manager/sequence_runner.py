@@ -294,6 +294,9 @@ class SequenceRunnerThread(Thread):
                 new_shots = shot_saver.saved_shots[len(old_shots) :]
                 score = evaluator.compute_score(new_shots)
                 optimizer.register(new_values, score)
+                with self._session.activate():
+                    for shot in new_shots:
+                        shot.add_score({optimization_loop.optimizer_name: score}, self._session)
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
