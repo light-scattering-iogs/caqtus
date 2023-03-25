@@ -1,19 +1,36 @@
+import typing
 from abc import ABC
 from types import SimpleNamespace
 from typing import Any, Callable, Generic, TypeVar, ParamSpec, Iterable
 
 import numpy
 import pandas
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 from experiment.session import ExperimentSession
 from sequence.runtime import Sequence, Shot
 
 
-# pint_pandas.PintType.ureg = ureg
-# pint_pandas.PintType.ureg.default_format = "P~"
-#
-# tqdm.pandas()
+def build_dataframe_from_sequences(
+    sequences: Iterable[Sequence],
+    importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
+    session: ExperimentSession,
+) -> pandas.DataFrame:
+    """Constructs a pandas dataframe from an experiment  sequence
+
+    Args:
+        sequences: The sequences to construct the dataframe from
+        importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
+        dictionary will be the columns of the dataframe.
+        session: The session to use to read the shot data. It must be inactive.
+    """
+
+    with session.activate():
+        shots = []
+        for sequence in sequences:
+            shots.extend(sequence.get_shots(session))
+
+    return build_dataframe_from_shots(shots, importer, session)
 
 
 def build_dataframe_from_sequence(
@@ -21,17 +38,34 @@ def build_dataframe_from_sequence(
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
 ) -> pandas.DataFrame:
+    """Constructs a pandas dataframe from an experiment  sequence
+
+    Args:
+        sequence: The shots to construct the dataframe from
+        importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
+        dictionary will be the columns of the dataframe.
+        session: The session to use to read the shot data. It must be inactive.
+    """
+
+    with session.activate():
+        shots = sequence.get_shots(session)
+
+    return build_dataframe_from_shots(shots, importer, session)
+
+
+def build_dataframe_from_shots(
+    shots: typing.Sequence[Shot],
+    importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
+    session: ExperimentSession,
+) -> pandas.DataFrame:
     """Constructs a pandas dataframe from a sequence of shot
 
     Args:
-        sequence: The sequence to construct the dataframe from
-        importer: A function that takes a shot and a session and returns a dictionary. The keys of the dictionary will
-        be the columns of the dataframe.
-        session: The session to use to read the sequence data
-
+        shots: The shots to construct the dataframe from
+        importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
+        dictionary will be the columns of the dataframe.
+        session: The session to use to read the shot data. It must be inactive.
     """
-    with session.activate():
-        shots = sequence.get_shots(session)
 
     def map_shot_to_row(shot):
         with session:
