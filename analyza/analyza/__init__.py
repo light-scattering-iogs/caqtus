@@ -1,6 +1,6 @@
 __version__ = "0.1.0"
 
-from analyze_spots import GridSpotIntensitiesMeasurer, SpotIntensitiesMeasurer
+from analyze_spots import GridSpotAnalyzer, SpotAnalyzer
 from experiment.session import (
     ExperimentSession,
     get_standard_experiment_session,
@@ -40,6 +40,6 @@ __all__ = [
     "remove",
     "break_namespaces",
     "DataframeSequenceWatcher",
-    "SpotIntensitiesMeasurer",
-    "GridSpotIntensitiesMeasurer",
+    "SpotAnalyzer",
+    "GridSpotAnalyzer",
 ]
