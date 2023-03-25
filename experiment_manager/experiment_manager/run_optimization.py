@@ -1,8 +1,11 @@
 import copy
+from typing import Union
 
 from sequence.configuration import OptimizationVariableInfo
 from sequence.runtime import Shot
 from units import Quantity
+
+AnalogValues = Union[float | Quantity]
 
 
 class Optimizer:
@@ -28,17 +31,17 @@ class Optimizer:
                     f"Initial value {initial_value} for variable {variable_name} is not in the range [{minimum}, {maximum}]"
                 )
 
-    def suggest_values(self) -> dict[str]:
+    def suggest_values(self) -> dict[str, AnalogValues]:
         return self._initial_values
 
-    def register(self, values: dict[str], score: float):
+    def register(self, values: dict[str, AnalogValues], score: float):
         pass
 
 
 def evaluate_optimization_bounds(
     optimization_variables: list[OptimizationVariableInfo],
     context_variables: dict,
-) -> dict[str, tuple[Quantity, Quantity]]:
+) -> dict[str, tuple[AnalogValues, AnalogValues]]:
     bounds = {}
     for variable in optimization_variables:
         name = variable["name"]
@@ -52,7 +55,7 @@ def evaluate_optimization_bounds(
 
 def evaluate_initial_values(
     optimization_variables: list[OptimizationVariableInfo], context_variables: dict
-) -> dict[str]:
+) -> dict[str, AnalogValues]:
     return {
         variable["name"]: variable["initial_value"].evaluate(context_variables)
         for variable in optimization_variables

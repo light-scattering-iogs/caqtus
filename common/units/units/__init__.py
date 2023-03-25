@@ -1,6 +1,7 @@
 __version__ = "0.1.0"
 
 from pathlib import Path
+from typing import Type
 
 import pint
 
@@ -11,7 +12,7 @@ ureg = pint.UnitRegistry(
 )
 unit_registry = ureg
 pint.set_application_registry(unit_registry)
-Quantity = unit_registry.Quantity
+Quantity: Type[pint.quantity.Quantity] = unit_registry.Quantity
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
@@ -39,7 +40,14 @@ CURRENT_UNITS = {"A", "mA"}
 
 VOLTAGE_UNITS = {"V", "mV"}
 
-UNITS = TIME_UNITS | FREQUENCY_UNITS | POWER_UNITS | DIMENSIONLESS_UNITS | CURRENT_UNITS | VOLTAGE_UNITS
+UNITS = (
+    TIME_UNITS
+    | FREQUENCY_UNITS
+    | POWER_UNITS
+    | DIMENSIONLESS_UNITS
+    | CURRENT_UNITS
+    | VOLTAGE_UNITS
+)
 
 
 units = {unit: getattr(ureg, unit) for unit in UNITS}
