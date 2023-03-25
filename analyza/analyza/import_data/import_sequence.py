@@ -12,6 +12,7 @@ def build_dataframe_from_sequences(
     sequences: Iterable[Sequence],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
+    show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from multiple experiment sequences
 
@@ -32,13 +33,14 @@ def build_dataframe_from_sequences(
         for sequence in sequences:
             shots.extend(sequence.get_shots(session))
 
-    return build_dataframe_from_shots(shots, importer, session)
+    return build_dataframe_from_shots(shots, importer, session, show_progress)
 
 
 def build_dataframe_from_sequence(
     sequence: Sequence,
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
+    show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from an experiment sequence
 
@@ -57,13 +59,14 @@ def build_dataframe_from_sequence(
     with session.activate():
         shots = sequence.get_shots(session)
 
-    return build_dataframe_from_shots(shots, importer, session)
+    return build_dataframe_from_shots(shots, importer, session, show_progress)
 
 
 def build_dataframe_from_shots(
     shots: typing.Sequence[Shot],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
+    show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from a sequence of shot
 
@@ -85,6 +88,9 @@ def build_dataframe_from_shots(
 
     indices = [(str(shot.sequence.path), shot.index) for shot in shots]
     index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
-    rows = list(map(map_shot_to_row, shots))
+    if show_progress:
+        rows = list(tqdm(map(map_shot_to_row, shots), total=len(shots)))
+    else:
+        rows = list(map(map_shot_to_row, shots))
     return pandas.DataFrame(rows, index=index)
 
