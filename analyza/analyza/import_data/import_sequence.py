@@ -21,6 +21,7 @@ def build_dataframe_from_sequences(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+        show_progress: If True, a progress bar will be shown.
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
@@ -49,6 +50,7 @@ def build_dataframe_from_sequence(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+        show_progress: If True, a progress bar will be shown.
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
@@ -75,6 +77,7 @@ def build_dataframe_from_shots(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+        show_progress: If True, a progress bar will be shown.
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
