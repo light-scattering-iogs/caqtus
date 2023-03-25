@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QApplication
 
 from experiment.session import get_standard_experiment_session_maker
 from experiment_manager import ExperimentManager, get_logs_queue
-from experiment_viewer import ExperimentViewer
+from condetrol.experiment_viewer import ExperimentViewer
 
 
 def except_hook(cls, exception, traceback):

@@ -164,7 +164,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
-        # noinspection PyUnresolvedReferences
         self.view_update_timer.timeout.connect(self.sequences_view.update)
         self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
         self.view_update_timer.start(500)
@@ -182,12 +181,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             address=("localhost", 60000), authkey=b"Deardear"
         )
         self.experiment_process_manager.connect()
-        # noinspection PyUnresolvedReferences
         self.experiment_manager: ExperimentManager = (
-            self.experiment_process_manager.ExperimentManager()
+            self.experiment_process_manager.ExperimentManager()  # type: ignore
         )
         self.logs_listener = QueueListener(
-            self.experiment_process_manager.get_logs_queue(), self.logs_handler
+            self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
         )
         self.logs_listener.start()
 
@@ -227,7 +225,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     is_deletable = False
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
-                    # noinspection PyUnresolvedReferences
                     interrupt_sequence_action.triggered.connect(
                         lambda _: self.experiment_manager.interrupt_sequence()
                     )
@@ -238,7 +235,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 ):
                     clear_sequence_action = QAction("Remove data")
                     menu.addAction(clear_sequence_action)
-                    # noinspection PyUnresolvedReferences
                     clear_sequence_action.triggered.connect(
                         partial(self.revert_to_draft, index)
                     )
@@ -258,14 +254,12 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
             create_folder_action = QAction("folder")
             new_menu.addAction(create_folder_action)
-            # noinspection PyUnresolvedReferences
             create_folder_action.triggered.connect(
                 partial(self.create_new_folder, index)
             )
 
             create_sequence_action = QAction("sequence")
             new_menu.addAction(create_sequence_action)
-            # noinspection PyUnresolvedReferences
             create_sequence_action.triggered.connect(
                 partial(self.create_new_sequence, index)
             )
@@ -273,7 +267,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if index.isValid() and is_deletable:
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
-            # noinspection PyUnresolvedReferences
             delete_action.triggered.connect(partial(self.delete, index))
 
         menu.exec(self.sequences_view.mapToGlobal(position))
@@ -322,11 +315,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def create_new_folder(self, index: QModelIndex):
         if index.isValid():
             item: SequenceHierarchyItem = index.internalPointer()
-            path = item.sequence_path
+            path = str(item.sequence_path)
         else:
             path = "root"
         text, ok = QInputDialog().getText(
-            None,
+            self,
             f"New folder in {path}...",
             "Folder name:",
             QLineEdit.EchoMode.Normal,
@@ -339,11 +332,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def create_new_sequence(self, index: QModelIndex):
         if index.isValid():
             item: SequenceHierarchyItem = index.internalPointer()
-            path = item.sequence_path
+            path = str(item.sequence_path)
         else:
             path = "root"
         text, ok = QInputDialog().getText(
-            None,
+            self,
             f"New sequence in {path}...",
             "Sequence name:",
             QLineEdit.EchoMode.Normal,
@@ -381,7 +374,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         for sequence_widget in self.findChildren(SequenceWidget):
-            sequence_widget: SequenceWidget
             sequence_widget.update_experiment_config(new_config)
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -426,7 +418,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.sequences_view.update()
 
     def exec_confirmation_message_box(self, message: str) -> bool:
-        """Show a popup box to ask if the sequence data should be erased"""
+        """Show a popup box to ask  a question"""
+
         message_box = QMessageBox(self)
         message_box.setWindowTitle("Caqtus")
         message_box.setText(message)
@@ -439,15 +432,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         result = message_box.exec()
         if result == QMessageBox.StandardButton.Cancel:
             return False
-        elif result == QMessageBox.StandardButton.Yes:
-            return True
+        return True
 
 
 class SequenceDelegate(QStyledItemDelegate):
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
-        # noinspection PyTypeChecker
         model = index.model()
         sequence_stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
         if sequence_stats:
