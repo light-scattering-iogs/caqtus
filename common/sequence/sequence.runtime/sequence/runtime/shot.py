@@ -75,6 +75,14 @@ class Shot:
         else:
             raise ShotNotFoundError(f"Could not find shot {self!s} in database")
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, Shot)
+            and self.sequence == other.sequence
+            and self.name == other.name
+            and self.index == other.index
+        )
+
 
 class ShotNotFoundError(Exception):
     pass

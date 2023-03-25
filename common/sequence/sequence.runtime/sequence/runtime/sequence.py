@@ -224,6 +224,11 @@ class Sequence:
             for sequence in result.scalars()
         }
 
+    def __eq__(self, other):
+        if isinstance(other, Sequence):
+            return self.path == other.path
+        return False
+
 
 class SequenceStats(TypedDict):
     state: State

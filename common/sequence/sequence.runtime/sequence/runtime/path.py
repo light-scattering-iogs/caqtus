@@ -20,7 +20,7 @@ class SequencePath:
         if self.is_valid_path(path):
             self._path = path
         else:
-            raise ValueError(f"Invalid path format: {path}")
+            raise ValueError(f"Invalid path format: '{path}'")
 
     @classmethod
     def is_valid_path(cls, path: str) -> bool:
