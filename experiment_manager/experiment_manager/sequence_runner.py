@@ -355,7 +355,7 @@ class SequenceRunnerThread(Thread):
                 "Errors occurred when updating device parameters", exceptions
             )
 
-    def run_shot(self):
+    def run_shot(self) -> None:
         start_time = datetime.datetime.now()
         if MOCK_EXPERIMENT:
             time.sleep(0.5)
@@ -393,7 +393,7 @@ class SequenceRunnerThread(Thread):
 
     def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
@@ -403,7 +403,7 @@ class SequenceRunnerThread(Thread):
 
     def get_spincore_sequencers(self) -> dict[str, "SpincorePulseBlaster"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
@@ -413,7 +413,7 @@ class SequenceRunnerThread(Thread):
 
     def get_cameras(self) -> dict[str, "CCamera"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
