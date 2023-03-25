@@ -23,6 +23,11 @@ def build_dataframe_from_sequences(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+
+    Returns:
+        A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
+        the first level, the shot name as the second level and the shot index as the third level. The columns will be
+        the keys of the dictionaries returned by the importer function.
     """
 
     with session.activate():
@@ -45,6 +50,11 @@ def build_dataframe_from_sequence(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+
+    Returns:
+        A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
+        the first level, the shot name as the second level and the shot index as the third level. The columns will be
+        the keys of the dictionaries returned by the importer function.
     """
 
     with session.activate():
@@ -65,6 +75,11 @@ def build_dataframe_from_shots(
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
         session: The session to use to read the shot data. It must be inactive.
+
+    Returns:
+        A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
+        the first level, the shot name as the second level and the shot index as the third level. The columns will be
+        the keys of the dictionaries returned by the importer function.
     """
 
     def map_shot_to_row(shot):
