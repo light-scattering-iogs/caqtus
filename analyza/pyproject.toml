@@ -22,6 +22,7 @@ visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop =
 jupyterlab = "^3.6.2"
 ipympl = "^0.9.3"
 analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
+parse-optimization = {path = "../common/parse_optimization", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
