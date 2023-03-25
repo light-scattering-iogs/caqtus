@@ -1,4 +1,4 @@
-from parse_input import parse_shots
+from parse_optimization import parse_shots, write_shots
 
 from sequence.runtime import Sequence, Shot
 
@@ -26,3 +26,10 @@ def test_parse_shots():
     string3 = ""
     expected_result3 = []
     assert parse_shots(string3) == expected_result3
+
+
+def test_round_trip():
+    sequence1 = Sequence("Sequence1")
+    shots = [Shot(sequence1, "shot", 0), Shot(sequence1, "shot", 1)]
+    string = write_shots(shots)
+    assert parse_shots(string) == shots

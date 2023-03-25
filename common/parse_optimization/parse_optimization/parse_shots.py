@@ -43,7 +43,7 @@ def write_shots(shots: list[Shot]) -> str:
     """
 
     return ", ".join(
-        f"{shot.sequence.name}:{shot.name}:{shot.index}"
+        f"{shot.sequence.path}:{shot.name}:{shot.index}"
         for shot in sorted(shots, key=_shots_order)
     )
 

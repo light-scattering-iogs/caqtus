@@ -11,6 +11,9 @@ python = "^3.11, <3.12"
 sequence-runtime = {path = "../sequence/sequence.runtime", develop = true}
 
 
+[tool.poetry.group.test.dependencies]
+pytest = "^7.2.2"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
