@@ -9,7 +9,6 @@ packages = [{include = "experiment"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-pyqt6 = "^6.4.1"
 pydantic = "^1.10.4"
 
 settings_model = { path = "../../settings_model/", develop = true }
