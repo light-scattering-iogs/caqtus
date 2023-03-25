@@ -8,7 +8,7 @@ from experiment.session import (
 )
 from sequence.runtime import Sequence, Shot
 from visual.sequence_watcher import DataframeSequenceWatcher
-from .import_sequence import (
+from .import_data import (
     build_dataframe_from_sequence,
     import_all,
     break_namespaces,
