@@ -16,7 +16,7 @@ def build_dataframe_from_sequences(
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
 ) -> pandas.DataFrame:
-    """Constructs a pandas dataframe from an experiment  sequence
+    """Constructs a pandas dataframe from multiple experiment sequences
 
     Args:
         sequences: The sequences to construct the dataframe from
@@ -38,7 +38,7 @@ def build_dataframe_from_sequence(
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session: ExperimentSession,
 ) -> pandas.DataFrame:
-    """Constructs a pandas dataframe from an experiment  sequence
+    """Constructs a pandas dataframe from an experiment sequence
 
     Args:
         sequence: The shots to construct the dataframe from
