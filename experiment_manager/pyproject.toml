@@ -5,8 +5,9 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11,<3.12"
 numpy = "^1.23.4"
+bayesian-optimization = "^1.4.2"
 units = { path = "../common/units", develop = true }
 remote_device_client = { path = "../devices/remote_device/remote_device_client", develop = true }
 camera-configuration = {path = "../devices/cameras/camera/camera.configuration", develop = true}
@@ -20,7 +21,7 @@ sequence-configuration = {path = "../common/sequence/sequence.configuration", de
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
-bayesian-optimization = "^1.4.2"
+parse-optimization = {path = "../common/parse_optimization", develop = true}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.2.1"

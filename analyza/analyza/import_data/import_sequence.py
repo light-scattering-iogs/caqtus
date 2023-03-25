@@ -85,6 +85,6 @@ def build_dataframe_from_shots(
 
     indices = [(str(shot.sequence.path), shot.index) for shot in shots]
     index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
-    rows = list(tqdm(map(map_shot_to_row, shots), total=len(shots)))
+    rows = list(map(map_shot_to_row, shots))
     return pandas.DataFrame(rows, index=index)
 

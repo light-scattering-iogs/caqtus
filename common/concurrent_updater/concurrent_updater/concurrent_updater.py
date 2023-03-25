@@ -14,7 +14,7 @@ class ConcurrentUpdater:
         self._watch_interval = watch_interval
         if name is None:
             name = target.__name__
-        self._thread = threading.Thread(target=self._watch, name=name)
+        self._thread = threading.Thread(target=self._watch, name=name, daemon=True)
         self._must_stop = threading.Event()
         self._lock = threading.Lock()
 

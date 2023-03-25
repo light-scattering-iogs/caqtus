@@ -1,3 +1,5 @@
+import typing
+
 from sequence.runtime import Sequence, Shot
 
 
@@ -31,7 +33,7 @@ def parse_shots(string: str) -> list[Shot]:
     return sorted(shots, key=_shots_order)
 
 
-def write_shots(shots: list[Shot]) -> str:
+def write_shots(shots: typing.Iterable[Shot]) -> str:
     """Write a list of Shot objects to a string.
 
     Args:

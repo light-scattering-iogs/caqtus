@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import numpy as np
 
@@ -30,10 +31,13 @@ def main():
         help="Path to the reference sequence that is used to find the traps.",
     )
     args = parser.parse_args()
+    print(args)
     spot_analyzer = create_spot_analyzer(Sequence(args.reference_sequence_path))
+    print("READY")
 
     while shots := parse_shots(input()):
-        print(compute_cost(shots, spot_analyzer))
+        score = compute_cost(shots, spot_analyzer)
+        print(f"SCORE {score}")
 
 
 def create_spot_analyzer(reference_sequence: Sequence) -> SpotAnalyzer:

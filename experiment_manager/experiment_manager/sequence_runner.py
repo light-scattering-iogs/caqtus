@@ -37,7 +37,7 @@ from units import Quantity, units
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
-from .run_optimization import Optimizer, Evaluator
+from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
 
@@ -263,23 +263,37 @@ class SequenceRunnerThread(Thread):
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
+        if (
+            optimization_loop.optimizer_name
+            not in self._experiment_config.optimization_configurations
+        ):
+            raise ValueError(
+                f"Optimizer {optimization_loop.optimizer_name} not found in configuration"
+            )
+        optimizer_config = self._experiment_config.optimization_configurations[
+            optimization_loop.optimizer_name
+        ]
         optimizer = Optimizer(optimization_loop.variables, context.variables | units)
-        evaluator = Evaluator()
         shot_saver.wait()
-        for loop_iteration in range(optimization_loop.repetitions):
-            old_shots = shot_saver.saved_shots
-            new_values = optimizer.suggest_values()
-            context.variables |= new_values
-
-            for step in optimization_loop.children:
-                self.run_step(step, context, shot_saver)
+        with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
+            while not evaluator.is_ready():
                 if self.is_waiting_to_interrupt():
+                    evaluator.interrupt()
                     return
-            shot_saver.wait()
+            for loop_iteration in range(optimization_loop.repetitions):
+                old_shots = shot_saver.saved_shots
+                new_values = optimizer.suggest_values()
+                context.variables |= new_values
 
-            new_shots = shot_saver.saved_shots[len(old_shots) :]
-            score = evaluator.compute_score(new_shots)
-            optimizer.register(new_values, score)
+                for step in optimization_loop.children:
+                    self.run_step(step, context, shot_saver)
+                    if self.is_waiting_to_interrupt():
+                        return
+                shot_saver.wait()
+
+                new_shots = shot_saver.saved_shots[len(old_shots) :]
+                score = evaluator.compute_score(new_shots)
+                optimizer.register(new_values, score)
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
