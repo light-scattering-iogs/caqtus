@@ -96,7 +96,7 @@ class CostEvaluatorProcess:
         for line in self._evaluation_process.stdout:
             self._stdout_queue.put(line)
 
-    def compute_score(self, shots: tuple[Shot, ...], timeout=5) -> float:
+    def compute_score(self, shots: tuple[Shot, ...], timeout=10) -> float:
         if not self._evaluation_process:
             raise RuntimeError("Evaluator is not running")
 
