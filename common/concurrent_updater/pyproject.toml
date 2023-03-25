@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "concurrent-updater"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "concurrent_updater"}]
+
+[tool.poetry.dependencies]
+python = "^3.11,<3.12"
+sequence-runtime = {path = "../sequence/sequence.runtime", develop = true}
+experiment-session = {path = "../experiment/experiment.session", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

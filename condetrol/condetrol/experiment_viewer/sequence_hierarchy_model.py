@@ -1,13 +1,13 @@
 import copy
 import logging
-import threading
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 from sqlalchemy import func
 
+from concurrent_updater import ConcurrentUpdater
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence, State, SequenceStats
@@ -17,45 +17,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class ConcurrentUpdater:
-    """Calls a function periodically in a separate thread"""
-
-    def __init__(self, target: Callable, watch_interval: float = 1):
-        self._target = target
-        self._watch_interval = watch_interval
-        self._thread = threading.Thread(target=self._watch)
-        self._must_stop = threading.Event()
-        self._lock = threading.Lock()
-
-    def __del__(self):
-        self.stop()
-
-    def start(self):
-        with self._lock:
-            self._must_stop.clear()
-            self._thread.start()
-
-    def _watch(self):
-        while not self._must_stop.is_set():
-            self._target()
-            self._must_stop.wait(self._watch_interval)
-
-    def stop(self):
-        with self._lock:
-            self._must_stop.set()
-            if self._thread.is_alive():
-                self._thread.join()
-
-
 class SequenceHierarchyModel(QAbstractItemModel):
     """Tree model for sequence hierarchy.
 
     This model stores an in-memory representation of the database sequence structure.
     """
 
-    def __init__(self, session_maker: ExperimentSessionMaker):
+    def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
 
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self._session = session_maker()
         self._stats_update_session = session_maker()
 
@@ -70,6 +40,10 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
         self._stats_updater = ConcurrentUpdater(self._update_stats, watch_interval=0.5)
         self._stats_updater.start()
+        self.destroyed.connect(self.on_destroy)
+
+    def on_destroy(self):
+        self._stats_updater.stop()
 
     def _update_stats(self):
         with self._stats_update_session as session:
@@ -383,12 +357,26 @@ class SequenceHierarchyItem(NodeMixin):
     def __repr__(self):
         return f"{self.__class__.__name__}({self.sequence_path})"
 
+    def __str__(self):
+        return str(self.sequence_path)
+
     def is_folder(self):
         return not self.is_sequence
 
     @property
     def sequence_stats(self) -> Optional[SequenceStats]:
         return copy.deepcopy(self._sequence_stats)
+
+    def list_sequences(self) -> list[Sequence]:
+        """List all sequences under this item"""
+
+        if self.is_sequence:
+            return [Sequence(self.sequence_path)]
+        else:
+            sequences = []
+            for child in self.children:
+                sequences.extend(child.list_sequences())
+            return sequences
 
 
 def _build_children(
@@ -450,11 +438,37 @@ def _format_seconds(seconds: float) -> str:
     return ":".join(reversed(result))
 
 
+def query_sequence_stats(
+    sequences: list[Sequence], session: ExperimentSession
+) -> list[SequenceStats]:
+    """Query the stats for a list of sequences.
+
+    Args:
+        sequences: List of sequences to query.
+        session: Experiment session.
+
+    Returns:
+        List of sequence stats.
+    """
+
+    stats = []
+    for sequence in sequences:
+        stats.append(sequence.get_stats(session))
+    return stats
+
+
 def _update_stats(item: SequenceHierarchyItem, session: ExperimentSession):
+    """Update the stats for a sequence hierarchy item."""
+
+    stats = Sequence.query_sequence_stats(item.list_sequences(), session)
+    _apply_stats(item, stats)
+
+
+def _apply_stats(item: SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]):
+    """Apply stats to a sequence hierarchy item."""
+
     if item.is_sequence:
-        sequence = Sequence(item.sequence_path)
-        stats = sequence.get_stats(session)
-        item._sequence_stats = stats
+        item._sequence_stats = stats.get(item.sequence_path, None)
     else:
         for child in item.children:
-            _update_stats(child, session)
+            _apply_stats(child, stats)

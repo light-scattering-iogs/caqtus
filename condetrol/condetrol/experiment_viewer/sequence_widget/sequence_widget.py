@@ -12,7 +12,6 @@ from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
-    QTimer,
     QAbstractItemModel,
 )
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction
@@ -24,6 +23,7 @@ from PyQt6.QtWidgets import (
     QMenu,
 )
 
+from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from condetrol.utils import UndoStack
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker, ExperimentSession
@@ -35,6 +35,7 @@ from sequence.configuration import (
     ArangeLoop,
     LinspaceLoop,
     ExecuteShot,
+    OptimizationLoop,
 )
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
@@ -70,26 +71,23 @@ class SequenceStepsModel(StepsModel):
         self.undo_stack = UndoStack()
         self.undo_stack.push(self._sequence_program.to_yaml())
 
-        # refresh the sequence state to block the editor if the state is not DRAFT
-        self._sequence_state: State
-        self._update_state()
-        self.update_state_timer = QTimer(self)
-        # noinspection PyUnresolvedReferences
-        self.update_state_timer.timeout.connect(self._update_state)
-        self.update_state_timer.setTimerType(Qt.TimerType.CoarseTimer)
-        self.update_state_timer.start(1000)
+        self._state_updater = SequenceStateWatcher(
+            sequence, session_maker, watch_interval=0.5
+        )
+        self._state_updater.start()
+        self.destroyed.connect(self._state_updater.stop)
+
+    @property
+    def sequence_state(self) -> State:
+        return self._state_updater.sequence_state
 
     @property
     def program(self):
         return self._sequence_program
 
-    def _update_state(self):
-        with self._session as session:
-            self._sequence_state = self._sequence.get_state(session)
-
     def get_sequence_state(self, session: Optional[ExperimentSession]) -> State:
         if session is None:
-            return self._sequence_state
+            return self.sequence_state
         return self._sequence.get_state(session)
 
     @property
@@ -113,7 +111,7 @@ class SequenceStepsModel(StepsModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if index.isValid() and index.column() == 0:
             flags = super().flags(index)
-            if self._sequence_state == State.DRAFT:
+            if self.sequence_state == State.DRAFT:
                 flags |= Qt.ItemFlag.ItemIsEditable
                 if not isinstance(
                     self.data(index, Qt.ItemDataRole.DisplayRole),
@@ -302,6 +300,19 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
             )
         )
 
+        create_optimization_action = QAction("optimization loop")
+        add_menu.addAction(create_optimization_action)
+        create_optimization_action.triggered.connect(
+            lambda: model.insert_step(
+                OptimizationLoop(
+                    optimizer_name="",
+                    variables=[],
+                    repetitions=10,
+                ),
+                index,
+            )
+        )
+
         if index.isValid():
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
@@ -325,16 +336,16 @@ class SequenceWidget(QDockWidget):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
         self._sequence = sequence
         self._experiment_config = experiment_config
         self._session_maker = session_maker
-        self.setWindowTitle(f"{str(self._sequence.path)}")
 
         self.tab_widget = QTabWidget()
         self.setWidget(self.tab_widget)
 
         self.program_tree = self.create_sequence_tree()
-        # noinspection PyUnresolvedReferences
         self.tab_widget.addTab(self.program_tree, "Sequence")
 
         self.shot_widget = self.create_shot_widget()
@@ -342,6 +353,16 @@ class SequenceWidget(QDockWidget):
 
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
+
+        self._state_updater = SequenceStateWatcher(
+            sequence, session_maker, on_state_changed=self.update_title, watch_interval=0.5
+        )
+        self._state_updater.start()
+        self.destroyed.connect(self._state_updater.stop)
+
+    def update_title(self, state: State):
+        self.setWindowTitle(f"{str(self._sequence.path)} [{state.name}]")
+
 
     def undo(self):
         self.program_tree.model().undo()
@@ -355,7 +376,9 @@ class SequenceWidget(QDockWidget):
 
     def create_sequence_tree(self):
         tree = SequenceTreeView()
-        program_model = SequenceStepsModel(self._sequence, self._session_maker)
+        program_model = SequenceStepsModel(
+            self._sequence, self._session_maker, parent=tree
+        )
         tree.setModel(program_model)
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
         program_model.rowsInserted.connect(lambda _: tree.expandAll())

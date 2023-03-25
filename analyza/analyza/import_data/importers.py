@@ -3,45 +3,9 @@ from types import SimpleNamespace
 from typing import Any, Callable, Generic, TypeVar, ParamSpec, Iterable
 
 import numpy
-import pandas
-from tqdm.notebook import tqdm
 
 from experiment.session import ExperimentSession
-from sequence.runtime import Sequence, Shot
-
-
-# pint_pandas.PintType.ureg = ureg
-# pint_pandas.PintType.ureg.default_format = "P~"
-#
-# tqdm.pandas()
-
-
-def build_dataframe_from_sequence(
-    sequence: Sequence,
-    importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
-    session: ExperimentSession,
-) -> pandas.DataFrame:
-    """Constructs a pandas dataframe from a sequence of shot
-
-    Args:
-        sequence: The sequence to construct the dataframe from
-        importer: A function that takes a shot and a session and returns a dictionary. The keys of the dictionary will
-        be the columns of the dataframe.
-        session: The session to use to read the sequence data
-
-    """
-    with session.activate():
-        shots = sequence.get_shots(session)
-
-    def map_shot_to_row(shot):
-        with session:
-            return importer(shot, session)
-
-    indices = [(str(shot.sequence.path), shot.index) for shot in shots]
-    index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
-    rows = list(tqdm(map(map_shot_to_row, shots), total=len(shots)))
-    return pandas.DataFrame(rows, index=index)
-
+from sequence.runtime import Shot
 
 InputTypes = ParamSpec("InputTypes")
 OutputType = TypeVar("OutputType")

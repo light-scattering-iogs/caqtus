@@ -26,6 +26,7 @@ from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
+from .optimizer_config_editor import OptimizerConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -56,6 +57,9 @@ class ConfigEditor(QDialog, Ui_config_editor):
         self.constants_item = QTreeWidgetItem(self.category_tree)
         self.constants_item.setText(0, "Constants")
 
+        self.optimization_item = QTreeWidgetItem(self.category_tree)
+        self.optimization_item.setText(0, "Optimization")
+
         self.devices_item = QTreeWidgetItem(self.category_tree)
         self.devices_item.setText(0, "Devices")
 
@@ -84,6 +88,8 @@ class ConfigEditor(QDialog, Ui_config_editor):
             return SystemSettingsEditor(deepcopy(self.config), tree_label)
         elif tree_label == "Constants":
             return SequenceHeaderEditor(deepcopy(self.config), tree_label)
+        elif tree_label == "Optimization":
+            return OptimizerConfigEditor(deepcopy(self.config), tree_label)
         elif tree_label == "Devices":
             editor = DevicesEditor(deepcopy(self.config), tree_label)
             editor.device_added.connect(self.on_device_added)

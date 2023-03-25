@@ -150,6 +150,9 @@ class SequencePathModel(Base):
         # noinspection PyTypeChecker
         return self.sequence[0]
 
+    def __str__(self):
+        return str(self.path)
+
 
 class SequenceConfigModel(Base):
     __tablename__ = "sequence_config"
@@ -358,6 +361,7 @@ class DataType(enum.Enum):
     PARAMETER = "parameter"
     MEASURE = "measure"
     ANALYSIS = "analysis"
+    SCORE = "score"
 
 
 class DataModel(Base):

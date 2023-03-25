@@ -29,6 +29,7 @@ from sequence.configuration import (
     LinspaceLoop,
     VariableDeclaration,
     ExecuteShot,
+    OptimizationLoop,
 )
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
@@ -36,6 +37,7 @@ from units import Quantity, units
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
+from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
 
@@ -255,6 +257,48 @@ class SequenceRunnerThread(Thread):
                     self.run_step(step, context, shot_saver)
 
     @run_step.register
+    def _(
+        self,
+        optimization_loop: OptimizationLoop,
+        context: SequenceContext,
+        shot_saver: ShotSaver,
+    ):
+        if (
+            optimization_loop.optimizer_name
+            not in self._experiment_config.optimization_configurations
+        ):
+            raise ValueError(
+                f"Optimizer {optimization_loop.optimizer_name} not found in configuration"
+            )
+        optimizer_config = self._experiment_config.optimization_configurations[
+            optimization_loop.optimizer_name
+        ]
+        optimizer = Optimizer(optimization_loop.variables, context.variables | units)
+        shot_saver.wait()
+        with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
+            while not evaluator.is_ready():
+                if self.is_waiting_to_interrupt():
+                    evaluator.interrupt()
+                    return
+            for loop_iteration in range(optimization_loop.repetitions):
+                old_shots = shot_saver.saved_shots
+                new_values = optimizer.suggest_values()
+                context.variables |= new_values
+
+                for step in optimization_loop.children:
+                    self.run_step(step, context, shot_saver)
+                    if self.is_waiting_to_interrupt():
+                        return
+                shot_saver.wait()
+
+                new_shots = shot_saver.saved_shots[len(old_shots) :]
+                score = evaluator.compute_score(new_shots)
+                optimizer.register(new_values, score)
+                with self._session.activate():
+                    for shot in new_shots:
+                        shot.add_score({optimization_loop.optimizer_name: score}, self._session)
+
+    @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a shot on the experiment"""
 
@@ -328,7 +372,7 @@ class SequenceRunnerThread(Thread):
                 "Errors occurred when updating device parameters", exceptions
             )
 
-    def run_shot(self):
+    def run_shot(self) -> None:
         start_time = datetime.datetime.now()
         if MOCK_EXPERIMENT:
             time.sleep(0.5)
@@ -349,7 +393,9 @@ class SequenceRunnerThread(Thread):
             if exception := acquisition.exception():
                 raise exception
         stop_time = datetime.datetime.now()
-        logger.info(f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms")
+        logger.info(
+            f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+        )
 
     def extract_data(self):
         if MOCK_EXPERIMENT:
@@ -364,7 +410,7 @@ class SequenceRunnerThread(Thread):
 
     def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
@@ -374,7 +420,7 @@ class SequenceRunnerThread(Thread):
 
     def get_spincore_sequencers(self) -> dict[str, "SpincorePulseBlaster"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
@@ -384,7 +430,7 @@ class SequenceRunnerThread(Thread):
 
     def get_cameras(self) -> dict[str, "CCamera"]:
         return {
-            device_name: device
+            device_name: device  # type: ignore
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),

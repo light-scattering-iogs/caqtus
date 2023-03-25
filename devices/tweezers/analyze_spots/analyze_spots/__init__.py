@@ -1,7 +1,7 @@
 from .locate_spots import locate_spots
 from .spot_intensity_measurer import (
-    SpotIntensitiesMeasurer,
-    GridSpotIntensitiesMeasurer,
+    SpotAnalyzer,
+    GridSpotAnalyzer,
 )
 
-__all__ = ["locate_spots", "SpotIntensitiesMeasurer", "GridSpotIntensitiesMeasurer"]
+__all__ = ["locate_spots", "SpotAnalyzer", "GridSpotAnalyzer"]

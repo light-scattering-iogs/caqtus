@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QTreeView,
     QHeaderView,
+    QPushButton, QAbstractItemView,
 )
 
 from experiment.configuration import ExperimentConfig
@@ -24,7 +25,58 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class SpanColumnsDelegate(QStyledItemDelegate):
+class CheckedButton(QPushButton):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setCheckable(True)
+        self.toggled.connect(self.on_toggled)
+
+    def setChecked(self, a0: bool) -> None:
+        super().setChecked(a0)
+        self.on_toggled(a0)
+
+    def on_toggled(self, checked: bool):
+        if checked:
+            self.setText("Enabled")
+        else:
+            self.setText("Disabled")
+
+
+class SwimlaneCellDelegate(QStyledItemDelegate):
+    """Delegate that allows to edit boolean cells with a push button"""
+    def createEditor(
+        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+    ) -> QWidget:
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
+        if isinstance(value, bool):
+            editor = CheckedButton(parent)
+            return editor
+        else:
+            return super().createEditor(parent, option, index)
+
+    def setEditorData(self, editor: QWidget, index: QtCore.QModelIndex) -> None:
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
+        if isinstance(value, bool):
+            editor: QPushButton
+            editor.setChecked(value)
+        else:
+            super().setEditorData(editor, index)
+
+    def setModelData(
+        self,
+        editor: QWidget,
+        model: QtCore.QAbstractItemModel,
+        index: QtCore.QModelIndex,
+    ) -> None:
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
+        if isinstance(value, bool):
+            editor: QPushButton
+            model.setData(index, editor.isChecked(), Qt.ItemDataRole.EditRole)
+        else:
+            super().setModelData(editor, model, index)
+
+
+class SpanColumnsDelegate(SwimlaneCellDelegate):
     def __init__(self, view: QTreeView, *args, **kwargs):
         self._view = view
         super().__init__(*args, **kwargs)
@@ -79,15 +131,21 @@ class ShotWidget(QWidget, YAMLClipboardMixin):
 
         self.experiment_config = experiment_config
 
+        self.swim_lane_widget = SwimLaneView(session_maker, parent=self)
+        self.swim_lane_widget.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+
         self.model = SwimLaneModel(
-            self._sequence, "shot", self.experiment_config, self._session_maker
+            self._sequence,
+            "shot",
+            self.experiment_config,
+            self._session_maker,
+            parent=self.swim_lane_widget,
         )
         size = QtCore.QSize(20, 40)
-        index = self.model.index(0, 0)  # row, col are your own
+        index = self.model.index(0, 0)
         self.model.setData(index, size, Qt.ItemDataRole.SizeHintRole)
 
         self.layout = QVBoxLayout()
-        self.swim_lane_widget = SwimLaneView(session_maker)
         self.swim_lane_widget.setModel(self.model)
         self.swim_lane_widget.expandAll()
         self.swim_lane_widget.resizeColumnToContents(0)

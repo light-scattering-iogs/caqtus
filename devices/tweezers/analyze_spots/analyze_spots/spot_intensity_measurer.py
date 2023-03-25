@@ -6,7 +6,7 @@ from .masks import circular_mask
 from .locate_spots import locate_spots
 
 
-class SpotIntensitiesMeasurer:
+class SpotAnalyzer:
     """Computes the intensities of spots in an image."""
 
     def __init__(self):
@@ -58,8 +58,12 @@ class SpotIntensitiesMeasurer:
         intensities = [method(image[mask]) for mask in self._masks]
         return intensities
 
+    @property
+    def number_spots(self) -> int:
+        return len(self._centroids)
 
-class GridSpotIntensitiesMeasurer(SpotIntensitiesMeasurer):
+
+class GridSpotAnalyzer(SpotAnalyzer):
     """Computes the intensities of spots in an image, assuming that the spots are arranged in a grid."""
 
     def __init__(self, number_rows: int, number_columns: int):

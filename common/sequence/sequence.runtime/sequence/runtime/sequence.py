@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, TypedDict
+from typing import Optional, Any, TypedDict, Self
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -91,13 +91,13 @@ class Sequence:
         sequence_config.shot_configurations[shot_name] = shot_config
         self.set_config(sequence_config, experiment_session)
 
-    def set_steps_program(self, steps: SequenceSteps, experiment_session: ExperimentSession):
+    def set_steps_program(
+        self, steps: SequenceSteps, experiment_session: ExperimentSession
+    ):
         """Set the steps of the sequence."""
 
         if not isinstance(steps, SequenceSteps):
-            raise TypeError(
-                f"Expected instance of <SequenceSteps>, got {type(steps)}"
-            )
+            raise TypeError(f"Expected instance of <SequenceSteps>, got {type(steps)}")
         sequence_config = self.get_config(experiment_session)
         sequence_config.program = steps
         self.set_config(sequence_config, experiment_session)
@@ -116,7 +116,9 @@ class Sequence:
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
         sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
-        return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots][:sequence_sql.number_completed_shots]
+        return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots][
+            : sequence_sql.number_completed_shots
+        ]
 
     def create_shot(
         self,
@@ -198,6 +200,34 @@ class Sequence:
             start_date=sequence.start_date,
             stop_date=sequence.stop_date,
         )
+
+    @classmethod
+    def query_sequence_stats(
+        cls, sequences: list[Self], experiment_session: ExperimentSession
+    ) -> dict[SequencePath, "SequenceStats"]:
+        session = experiment_session.get_sql_session()
+        paths = SequencePath.query_path_models(
+            [sequence.path for sequence in sequences], experiment_session
+        )
+        query = select(SequenceModel).where(
+            SequenceModel.path_id.in_(path.id_ for path in paths)
+        )
+        result = session.execute(query)
+        return {
+            SequencePath(str(sequence.path)): SequenceStats(
+                state=sequence.get_state(),
+                total_number_shots=sequence.total_number_shots,
+                number_completed_shots=sequence.get_number_completed_shots(),
+                start_date=sequence.start_date,
+                stop_date=sequence.stop_date,
+            )
+            for sequence in result.scalars()
+        }
+
+    def __eq__(self, other):
+        if isinstance(other, Sequence):
+            return self.path == other.path
+        return False
 
 
 class SequenceStats(TypedDict):

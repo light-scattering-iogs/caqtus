@@ -3,7 +3,7 @@ import logging
 
 import numpy as np
 
-from analyze_spots import GridSpotIntensitiesMeasurer
+from analyze_spots import GridSpotAnalyzer
 from pixelfly import PixelflyBoard, Mode, BinMode, PixelDepth
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from spectum_awg_m4i66xx_x8.runtime import (
@@ -102,7 +102,7 @@ def homogenize(
         awg.run()
         picture = acquire_picture() - background_picture
 
-    spot_analyzer = GridSpotIntensitiesMeasurer(
+    spot_analyzer = GridSpotAnalyzer(
         number_rows=signal_generator_x.number_tones,
         number_columns=signal_generator_y.number_tones,
     )
