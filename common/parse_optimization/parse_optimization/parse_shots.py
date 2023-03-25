@@ -6,7 +6,7 @@ def parse_shots(string: str) -> list[Shot]:
 
     Args:
         string: String of shots to parse. The string should be formatted like this:
-        "sequence_name:shot_name:shot_index, sequence_name:shot_name:shot_index, ..."
+        "sequence_path:shot_name:shot_index, sequence_path:shot_name:shot_index, ..."
 
     Returns:
         List of Shot objects parsed from the string. This function doesn't check that the sequences or shots
@@ -29,6 +29,23 @@ def parse_shots(string: str) -> list[Shot]:
         shots.append(Shot(sequence, shot_name, int(shot_index)))
 
     return sorted(shots, key=_shots_order)
+
+
+def write_shots(shots: list[Shot]) -> str:
+    """Write a list of Shot objects to a string.
+
+    Args:
+        shots: List of Shot objects to write.
+
+    Returns:
+        String of shots. The string is formatted like this:
+        "sequence_path:shot_name:shot_index, sequence_path:shot_name:shot_index, ..."
+    """
+
+    return ", ".join(
+        f"{shot.sequence.name}:{shot.name}:{shot.index}"
+        for shot in sorted(shots, key=_shots_order)
+    )
 
 
 def _shots_order(shot: Shot) -> tuple[str, str, int]:
