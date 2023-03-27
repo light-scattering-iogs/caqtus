@@ -1,4 +1,5 @@
 import abc
+from functools import cached_property
 from typing import TypeVar
 
 import pydantic
@@ -22,6 +23,7 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
         validate_assignment = True
         arbitrary_types_allowed = True
         validate_all = True
+        keep_untouched = (cached_property,)
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: Self):

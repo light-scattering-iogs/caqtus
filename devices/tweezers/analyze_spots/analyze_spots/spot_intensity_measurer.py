@@ -1,9 +1,14 @@
-from typing import Callable
+import copy
+from itertools import chain
+from typing import Callable, Sequence
 
 import numpy as np
 
-from .masks import circular_mask
+from roi import RegionOfInterest, ArbitraryShapedRegionOfInterest
 from .locate_spots import locate_spots
+from .masks import circular_mask
+
+EvaluationFunction = Callable[[np.ma.MaskedArray], float]
 
 
 class SpotAnalyzer:
@@ -11,7 +16,11 @@ class SpotAnalyzer:
 
     def __init__(self):
         self._centroids: list[tuple[float, float]] = []
-        self._masks: list[np.ndarray] = []
+        self._rois: list[RegionOfInterest] = []
+
+    @property
+    def centroids(self) -> list[tuple[float, float]]:
+        return copy.deepcopy(self._centroids)
 
     def register_regions_of_interest(
         self, reference_image: np.ndarray, relative_threshold: float, radius: float
@@ -33,16 +42,19 @@ class SpotAnalyzer:
         self._centroids = locate_spots(
             reference_image, threshold=np.max(reference_image) * relative_threshold
         )
-        self._masks = [
+        masks = [
             np.logical_not(circular_mask(reference_image, trap_center, radius))
             for trap_center in self._centroids
         ]
+        self._rois = [ArbitraryShapedRegionOfInterest.from_mask(mask) for mask in masks]
 
-        mask_union = np.logical_or.reduce(self._masks)
+        mask_union = np.logical_or.reduce(masks)
         return np.ma.masked_array(reference_image, np.logical_not(mask_union))
 
     def compute_intensity(
-        self, image: np.ndarray, method: Callable[[np.ndarray], float] = np.mean
+        self,
+        image: np.ndarray,
+        method: EvaluationFunction | Sequence[EvaluationFunction] = np.mean,
     ) -> list[float]:
         """Compute the intensity of each spot in the image.
 
@@ -54,13 +66,27 @@ class SpotAnalyzer:
             The intensity of each spot in the image. The (random) order of the intensities is the same as the order of
             the spots found in the image.
         """
+        if not isinstance(method, Sequence):
+            method = [method] * self.number_spots
 
-        intensities = [method(image[mask]) for mask in self._masks]
+        if len(method) != self.number_spots:
+            raise ValueError(
+                f"Expected {self.number_spots} methods, found {len(method)}"
+            )
+
+        intensities = []
+        for roi, method in zip(self._rois, method):
+            masked_image = np.ma.masked_array(image, np.logical_not(roi.mask))
+            intensities.append(method(masked_image))
         return intensities
 
     @property
     def number_spots(self) -> int:
         return len(self._centroids)
+
+    @property
+    def rois(self) -> list[RegionOfInterest]:
+        return copy.deepcopy(self._rois)
 
 
 class GridSpotAnalyzer(SpotAnalyzer):
@@ -70,7 +96,15 @@ class GridSpotAnalyzer(SpotAnalyzer):
         super().__init__()
         self._number_rows = number_rows
         self._number_columns = number_columns
-        self._indices: list[tuple[int, int]] = []
+        self._coordinates: list[tuple[int, int]] = []
+
+    @property
+    def number_rows(self) -> int:
+        return self._number_rows
+
+    @property
+    def number_columns(self) -> int:
+        return self._number_columns
 
     def register_regions_of_interest(
         self, reference_image: np.ndarray, relative_threshold: float, radius: float
@@ -95,26 +129,28 @@ class GridSpotAnalyzer(SpotAnalyzer):
         centroids = sorted(enumerate(self._centroids), key=sort_along_x)
 
         rows = [
-            centroids[self._number_columns * row: self._number_columns * (row + 1)]
+            centroids[self._number_columns * row : self._number_columns * (row + 1)]
             for row in range(self._number_rows)
         ]
         for row in rows:
             row.sort(key=sort_along_y)
 
-        self._indices = []
-
-        for row_number, row in enumerate(rows):
-            for column_number, (index, _) in enumerate(row):
-                self._indices.append((row_number, column_number))
+        ordered_indices = list(chain.from_iterable(rows))
+        self._centroids = [self._centroids[index] for index, _ in ordered_indices]
+        self._rois = [self._rois[index] for index, _ in ordered_indices]
+        self._coordinates = [
+            (index // self._number_columns, index % self._number_columns)
+            for index, _ in ordered_indices
+        ]
         return result
 
-    def compute_intensity(
-        self, image: np.ndarray, method: Callable[[np.ndarray], float] = np.mean
+    def compute_intensity_matrix(
+        self, image: np.ndarray, method: EvaluationFunction = np.mean
     ) -> np.ndarray[float]:
         intensities = super().compute_intensity(image, method=method)
         matrix_intensities = np.zeros(
             (self._number_rows, self._number_columns), dtype=float
         )
-        for index, (row, column) in enumerate(self._indices):
+        for index, (row, column) in enumerate(self._coordinates):
             matrix_intensities[row, column] = intensities[index]
         return matrix_intensities
