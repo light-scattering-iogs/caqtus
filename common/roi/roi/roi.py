@@ -10,5 +10,16 @@ class RegionOfInterest(SettingsModel, ABC):
 
     @property
     @abstractmethod
-    def roi_indices(self) -> np.ndarray:
+    def roi_indices(self) -> tuple[tuple[int, int], ...]:
+        """The indices of the pixels in the original image that are part of the region of interest"""
         ...
+
+
+class ArbitraryShapedRegionOfInterest(RegionOfInterest):
+    roi_indices: tuple[tuple[int, int], ...] = Field(
+        description="The indices of the pixels in the original image that are part of the region of interest"
+    )
+
+    @property
+    def roi_indices(self) -> tuple[tuple[int, int], ...]:
+        return self.roi_indices
