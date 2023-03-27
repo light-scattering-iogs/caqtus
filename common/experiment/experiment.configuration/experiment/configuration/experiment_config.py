@@ -184,6 +184,14 @@ class ExperimentConfig(SettingsModel):
             raise ValueError(f"Device name {config.device_name} is already being used")
         self.device_configurations.append(config)
 
+    def get_optimizer_config(self, optimizer_name: str) -> OptimizerConfiguration:
+        try:
+            return self.optimization_configurations[optimizer_name]
+        except KeyError:
+            raise ValueError(
+                f"Could not find an optimizer configuration named {optimizer_name}"
+            )
+
 
 class DeviceConfigNotFoundError(RuntimeError):
     pass
