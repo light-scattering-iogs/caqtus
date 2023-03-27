@@ -6,6 +6,7 @@ from copy import copy
 from typing import Optional
 
 import numpy
+import numpy as np
 from pydantic import Field
 
 from camera.runtime import CCamera, CameraTimeoutError
@@ -36,6 +37,7 @@ class OrcaQuestCamera(CCamera):
     _pictures: list[Optional[numpy.ndarray]]
     _camera: "Dcam"
     _acquisition_thread: Optional[threading.Thread] = None
+    _current_exposure: Optional[float] = None
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
@@ -144,11 +146,13 @@ class OrcaQuestCamera(CCamera):
     def _acquire_picture(
         self, picture_number: int, new_exposure: float, timeout: float
     ):
-        if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
-            raise RuntimeError(
-                f"Can't set exposure of {self.name} to {new_exposure}:"
-                f" {str(self._camera.lasterr())}"
-            )
+        if self._current_exposure != new_exposure:
+            if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
+                raise RuntimeError(
+                    f"Can't set exposure of {self.name} to {new_exposure}:"
+                    f" {str(self._camera.lasterr())}"
+                )
+            self._current_exposure = new_exposure
 
         if not self._camera.cap_snapshot():
             raise RuntimeError(
@@ -170,6 +174,8 @@ class OrcaQuestCamera(CCamera):
             if error.is_timeout():
                 if time.time() - start_acquire > self.timeout:
                     self._camera.cap_stop()
+                    for picture_number in range(picture_number, len(self.exposures)):
+                        self._pictures[picture_number] = np.full((self.roi.width, self.roi.height), np.nan)
                     raise CameraTimeoutError(
                         f"{self.name} timed out after {timeout*1e3:.0f} ms before"
                         " receiving a trigger"
