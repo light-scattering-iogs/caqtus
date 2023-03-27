@@ -6,10 +6,12 @@ import time
 from queue import Queue, Empty
 from typing import Union, Optional
 
+from bayes_opt import BayesianOptimization, UtilityFunction
+
 from experiment.configuration import OptimizerConfiguration
+from parse_optimization import write_shots
 from sequence.configuration import OptimizationVariableInfo
 from sequence.runtime import Shot, Sequence
-from parse_optimization import write_shots
 from units import Quantity
 
 logger = logging.getLogger(__name__)
@@ -38,14 +40,67 @@ class Optimizer:
             minimum, maximum = self._bounds[variable_name]
             if not (minimum <= initial_value <= maximum):
                 raise ValueError(
-                    f"Initial value {initial_value} for variable {variable_name} is not in the range [{minimum}, {maximum}]"
+                    f"Initial value {initial_value} for variable {variable_name} is not in the range "
+                    f"[{minimum}, {maximum}]"
                 )
 
+        # noinspection PyTypeChecker
+        self._optimizer = BayesianOptimization(
+            f=None,
+            pbounds=self.convert_bounds_to_float(self._bounds),
+            allow_duplicate_points=True,
+        )
+        self._utility_function = UtilityFunction(kind="ucb", kappa=2.5, xi=0)
+        self._optimizer.set_gp_params(alpha=0.1)
+        self._first_time_called = True
+        self._optimizer.probe(self.convert_to_float(self._initial_values), lazy=True)
+
     def suggest_values(self) -> dict[str, AnalogValues]:
-        return self._initial_values
+        if self._first_time_called:
+            self._first_time_called = False
+            return self._initial_values
+        else:
+            raw_values = self._optimizer.suggest(self._utility_function)
+            return self.convert_to_quantity(raw_values)
 
     def register(self, values: dict[str, AnalogValues], score: float):
-        pass
+        self._optimizer.register(params=self.convert_to_float(values), target=score)
+
+    def convert_to_float(self, values: dict[str, AnalogValues]) -> dict[str, float]:
+        result = {}
+        for variable_name, initial_value in self._initial_values.items():
+            value = values[variable_name]
+            if isinstance(initial_value, Quantity):
+                if not isinstance(value, Quantity):
+                    raise ValueError(
+                        f"Value for variable {variable_name} must have units {initial_value.units}"
+                    )
+                value = value.to(initial_value.units).magnitude
+            result[variable_name] = value
+        return result
+
+    def convert_bounds_to_float(
+        self, bounds: dict[str, tuple[AnalogValues, AnalogValues]]
+    ) -> dict[str, tuple[float, float]]:
+        minimums = {bound_name: bound[0] for bound_name, bound in bounds.items()}
+        maximums = {bound_name: bound[1] for bound_name, bound in bounds.items()}
+
+        minimums = self.convert_to_float(minimums)
+        maximums = self.convert_to_float(maximums)
+
+        return {
+            bound_name: (minimums[bound_name], maximums[bound_name])
+            for bound_name in minimums
+        }
+
+    def convert_to_quantity(self, values: dict[str, float]) -> dict[str, AnalogValues]:
+        result = {}
+        for variable_name, initial_value in self._initial_values.items():
+            value = values[variable_name]
+            if isinstance(initial_value, Quantity):
+                value = value * initial_value.units
+            result[variable_name] = value
+        return result
 
 
 def evaluate_optimization_bounds(
@@ -112,7 +167,9 @@ class CostEvaluatorProcess:
                 if line.startswith("SCORE"):
                     return float(line.split(" ")[1])
                 else:
-                    logger.debug(f"Received line from evaluation process that cannot be interpreted: {line}")
+                    logger.debug(
+                        f"Received line from evaluation process that cannot be interpreted: {line}"
+                    )
             except Empty:
                 continue
         raise TimeoutError("Evaluation process did not return score in time")

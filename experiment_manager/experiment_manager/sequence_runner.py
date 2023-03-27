@@ -263,16 +263,7 @@ class SequenceRunnerThread(Thread):
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
-        if (
-            optimization_loop.optimizer_name
-            not in self._experiment_config.optimization_configurations
-        ):
-            raise ValueError(
-                f"Optimizer {optimization_loop.optimizer_name} not found in configuration"
-            )
-        optimizer_config = self._experiment_config.optimization_configurations[
-            optimization_loop.optimizer_name
-        ]
+        optimizer_config = self._experiment_config.get_optimizer_config(optimization_loop.optimizer_name)
         optimizer = Optimizer(optimization_loop.variables, context.variables | units)
         shot_saver.wait()
         with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
@@ -293,6 +284,8 @@ class SequenceRunnerThread(Thread):
 
                 new_shots = shot_saver.saved_shots[len(old_shots) :]
                 score = evaluator.compute_score(new_shots)
+                logger.info(f"Values for iteration {loop_iteration}: {new_values}")
+                logger.info(f"Score for iteration {loop_iteration}: {score}")
                 optimizer.register(new_values, score)
                 with self._session.activate():
                     for shot in new_shots:
