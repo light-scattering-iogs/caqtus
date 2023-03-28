@@ -4,6 +4,7 @@ from typing import Optional, Any, TypedDict, Self
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sql_model import SequenceModel, ShotModel, State, DataType
@@ -76,6 +77,16 @@ class Sequence:
         sequence = self._query_model(session)
         sequence.set_experiment_config(experiment_config)
         session.flush()
+
+    def get_experiment_config(self, experiment_session: ExperimentSession) -> Optional[ExperimentConfig]:
+        session = experiment_session.get_sql_session()
+        sequence = self._query_model(session)
+
+        experience_config_model = sequence.get_experiment_config()
+        if experience_config_model is None:
+            return None
+        return ExperimentConfig.from_yaml(experience_config_model.experiment_config_yaml)
+
 
     def set_shot_config(
         self,

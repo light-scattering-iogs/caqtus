@@ -279,6 +279,9 @@ class SequenceModel(Base):
         # noinspection PyTypeChecker
         self.experiment_config_name = experiment_config_name
 
+    def get_experiment_config(self) -> Optional[ExperimentConfigModel]:
+        return self.experiment_config
+
     def get_number_completed_shots(self) -> int:
         return self.number_completed_shots
 
