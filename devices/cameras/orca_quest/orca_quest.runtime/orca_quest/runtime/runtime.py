@@ -1,7 +1,7 @@
 import atexit
 import logging
-import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
 from typing import Optional
 
@@ -36,8 +36,10 @@ class OrcaQuestCamera(CCamera):
 
     _pictures: list[Optional[numpy.ndarray]]
     _camera: "Dcam"
-    _acquisition_thread: Optional[threading.Thread] = None
+    # _acquisition_thread: Optional[threading.Thread] = None
     _current_exposure: Optional[float] = None
+    _thread_pool_executor: ThreadPoolExecutor
+    _future: Optional[Future] = None
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
@@ -45,6 +47,7 @@ class OrcaQuestCamera(CCamera):
 
     def start(self) -> None:
         super().start()
+        self._thread_pool_executor = ThreadPoolExecutor(max_workers=1)
         self._pictures = [None] * self.number_pictures_to_acquire
 
         if self.camera_number < Dcamapi.get_devicecount():
@@ -95,7 +98,7 @@ class OrcaQuestCamera(CCamera):
                 f"can't set subarray mode on: {str(self._camera.lasterr())}"
             )
 
-        if not self._camera.buf_alloc(1):
+        if not self._camera.buf_alloc(self.number_pictures_to_acquire):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {str(self._camera.lasterr())}"
             )
@@ -135,17 +138,7 @@ class OrcaQuestCamera(CCamera):
 
     def _start_acquisition(self, number_pictures: int):
         exposures = copy(self.exposures)
-
-        def acquire_pictures():
-            for picture_number, exposure in enumerate(exposures):
-                self._acquire_picture(picture_number, exposure, self.timeout)
-
-        self._acquisition_thread = threading.Thread(target=acquire_pictures)
-        self._acquisition_thread.start()
-
-    def _acquire_picture(
-        self, picture_number: int, new_exposure: float, timeout: float
-    ):
+        new_exposure = exposures[0]
         if self._current_exposure != new_exposure:
             if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
                 raise RuntimeError(
@@ -153,12 +146,30 @@ class OrcaQuestCamera(CCamera):
                     f" {str(self._camera.lasterr())}"
                 )
             self._current_exposure = new_exposure
-
-        if not self._camera.cap_snapshot():
+        if not self._camera.cap_start(bSequence=True):
             raise RuntimeError(
                 f"Can't start acquisition on {self.name}: {str(self._camera.lasterr())}"
             )
 
+        def acquire_pictures():
+            try:
+                for picture_number, exposure in enumerate(exposures):
+                    if self._current_exposure != exposure:
+                        if not self._camera.prop_setvalue(
+                            DCAM_IDPROP.EXPOSURETIME, exposure
+                        ):
+                            raise RuntimeError(
+                                f"Can't set exposure of {self.name} to {exposure}:"
+                                f" {str(self._camera.lasterr())}"
+                            )
+                        self._current_exposure = exposure
+                    self._acquire_picture(picture_number, self.timeout)
+            finally:
+                self._camera.cap_stop()
+
+        self._future = self._thread_pool_executor.submit(acquire_pictures)
+
+    def _acquire_picture(self, picture_number: int, timeout: float):
         start_acquire = time.time()
         while True:
             if self._camera.wait_capevent_frameready(1):
@@ -173,9 +184,10 @@ class OrcaQuestCamera(CCamera):
             error = self._camera.lasterr()
             if error.is_timeout():
                 if time.time() - start_acquire > self.timeout:
-                    self._camera.cap_stop()
                     for picture_number in range(picture_number, len(self.exposures)):
-                        self._pictures[picture_number] = np.full((self.roi.width, self.roi.height), np.nan)
+                        self._pictures[picture_number] = np.full(
+                            (self.roi.width, self.roi.height), np.nan
+                        )
                     raise CameraTimeoutError(
                         f"{self.name} timed out after {timeout*1e3:.0f} ms before"
                         " receiving a trigger"
@@ -188,13 +200,13 @@ class OrcaQuestCamera(CCamera):
                 )
 
     def _stop_acquisition(self):
-        if self._acquisition_thread is not None:
-            self._acquisition_thread.join()
+        if self._future is not None:
+            self._future.result()
 
     def _is_acquisition_in_progress(self) -> bool:
-        if self._acquisition_thread is None:
+        if self._future is None:
             return False
-        return self._acquisition_thread.is_alive()
+        return not self._future.done()
 
     @classmethod
     def list_camera_infos(cls) -> list[dict[str]]:
