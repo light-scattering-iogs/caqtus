@@ -32,7 +32,7 @@ class SequenceWatcher(ConcurrentUpdater):
         self,
         sequence: Sequence,
         session_maker: ExperimentSessionMaker,
-        target: Callable[[Iterable[Shot], ...], Any],
+        target: Callable[[list[Shot], ...], Any],
         watch_interval: float = DEFAULT_WATCH_INTERVAL,
         name: Optional[str] = None,
         chunk_size: Optional[int] = DEFAULT_CHUNK_SIZE,
@@ -105,12 +105,12 @@ class DataframeSequenceWatcher(SequenceWatcher):
             sequence=sequence,
             session_maker=session_maker,
             watch_interval=watch_interval,
-            target=self.process_shot,
+            target=self.process_shots,
             name=f"DataframeSequenceWatcher(sequence={sequence.path})",
             chunk_size=chunk_size,
         )
 
-    def process_shot(self, new_shots: Iterable[Shot]) -> pandas.Index:
+    def process_shots(self, new_shots: list[Shot]) -> pandas.Index:
         """Processes the new shots and adds them to the dataframe"""
 
         shots_data = []
