@@ -115,7 +115,6 @@ class DataframeSequenceWatcher(SequenceWatcher):
 
         shots_data = []
         indices = []
-        logger.debug(f"Processing new shots")
         for shot in new_shots:
             with self._session.activate() as session:
                 shots_data.append(self._importer(shot, session))

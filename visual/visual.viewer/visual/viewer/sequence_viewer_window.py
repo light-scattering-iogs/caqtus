@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QDockWidget
 
 from analyza.import_data import (
     import_all,
@@ -17,7 +17,7 @@ class SequenceViewerWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         sequence_watcher = SignalingSequenceWatcher(
-            sequence=Sequence("2023.03_March.29.hist_vs_exposure"),
+            sequence=Sequence("2023.03_March.29.hist_fun"),
             importer=(
                 import_all
                 | break_namespaces
@@ -36,5 +36,8 @@ class SequenceViewerWindow(QMainWindow):
 
         image_viewer = ImageViewerWidget(sequence_watcher)
 
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, image_viewer)
+        dock_widget = QDockWidget("Image viewer", self)
+        dock_widget.setWidget(image_viewer)
+
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock_widget)
         sequence_watcher.start()
