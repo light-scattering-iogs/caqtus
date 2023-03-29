@@ -25,6 +25,7 @@ analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
 parse-optimization = {path = "../common/parse_optimization", develop = true}
 jupyterlab-code-formatter = "^1.5.3"
 diptest = "^0.5.2"
+atom-detector = {path = "../devices/tweezers/atom_detector", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
