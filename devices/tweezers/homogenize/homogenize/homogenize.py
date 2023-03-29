@@ -125,7 +125,7 @@ def homogenize(
             awg.run()
             picture = acquire_picture() - background_picture
 
-        intensity_matrix = spot_analyzer.compute_intensity(picture, method=np.sum)
+        intensity_matrix = spot_analyzer.compute_intensity_matrix(picture, method=np.sum)
         intensities.append(intensity_matrix)
 
         error = np.std(intensity_matrix) / np.mean(intensity_matrix)
