@@ -5,7 +5,7 @@ import numpy as np
 import yaml
 
 from settings_model import YAMLSerializable
-from .atom_signal_calculator import AtomSignalCalculator
+from .atom_signal_calculator import WeightedAtomSignalCalculator
 
 
 class AtomDetector(YAMLSerializable):
@@ -15,8 +15,8 @@ class AtomDetector(YAMLSerializable):
     members of this class since the way atoms are detected may change.
     """
 
-    def __init__(self, atom_signal_calculator: AtomSignalCalculator, threshold: float):
-        if not isinstance(atom_signal_calculator, AtomSignalCalculator):
+    def __init__(self, atom_signal_calculator: WeightedAtomSignalCalculator, threshold: float):
+        if not isinstance(atom_signal_calculator, WeightedAtomSignalCalculator):
             raise TypeError(
                 f"atom_signal_calculator must be an AtomSignalCalculator, not {type(atom_signal_calculator)}"
             )
