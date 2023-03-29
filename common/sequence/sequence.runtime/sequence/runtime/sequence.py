@@ -78,15 +78,18 @@ class Sequence:
         sequence.set_experiment_config(experiment_config)
         session.flush()
 
-    def get_experiment_config(self, experiment_session: ExperimentSession) -> Optional[ExperimentConfig]:
+    def get_experiment_config(
+        self, experiment_session: ExperimentSession
+    ) -> Optional[ExperimentConfig]:
         session = experiment_session.get_sql_session()
         sequence = self._query_model(session)
 
         experience_config_model = sequence.get_experiment_config()
         if experience_config_model is None:
             return None
-        return ExperimentConfig.from_yaml(experience_config_model.experiment_config_yaml)
-
+        return ExperimentConfig.from_yaml(
+            experience_config_model.experiment_config_yaml
+        )
 
     def set_shot_config(
         self,
@@ -239,6 +242,9 @@ class Sequence:
         if isinstance(other, Sequence):
             return self.path == other.path
         return False
+
+    def __hash__(self):
+        return hash(self.path)
 
 
 class SequenceStats(TypedDict):

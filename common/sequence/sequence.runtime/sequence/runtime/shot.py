@@ -94,6 +94,9 @@ class Shot:
             and self.index == other.index
         )
 
+    def __hash__(self):
+        return hash((self.sequence, self.name, self.index))
+
 
 class ShotNotFoundError(Exception):
     pass

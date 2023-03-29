@@ -23,16 +23,16 @@ class ConcurrentUpdater:
     """
 
     def __init__(self, target: Callable, watch_interval: float = 1, name: Optional[str] = None, *args, **kwargs):
-        self._target = target
-        self._args = args
-        self._kwargs = kwargs
-        self._watch_interval = watch_interval
+        self.__target = target
+        self.__args = args
+        self.__kwargs = kwargs
+        self.__watch_interval = watch_interval
         if name is None:
             name = target.__name__
-        self._name = name
-        self._thread = threading.Thread(target=self._update, name=self._name, daemon=True)
+        self.__name = name
+        self.__thread = threading.Thread(target=self._update, name=self.__name, daemon=True)
         self._must_stop = threading.Event()
-        self._lock = threading.Lock()
+        self.__lock = threading.Lock()
 
     def __del__(self):
         self.stop()
@@ -40,18 +40,19 @@ class ConcurrentUpdater:
     def start(self):
         """Starts the to execute the target function periodically"""
 
-        with self._lock:
+        with self.__lock:
             self._must_stop.clear()
-            self._thread.start()
+            self.__thread.start()
 
     def _update(self):
+        logger.debug(f"Updating {self.__name}")
         while not self._must_stop.is_set():
             try:
-                self._target(*self._args, **self._kwargs)
+                self.__target(*self.__args, **self.__kwargs)
             except Exception:
-                logger.exception(f"Error in thread {self._name}", exc_info=True)
+                logger.exception(f"Error in thread {self.__name}", exc_info=True)
                 raise
-            self._must_stop.wait(self._watch_interval)
+            self._must_stop.wait(self.__watch_interval)
 
     def stop(self):
         """Stops the daemon thread as soon as possible
@@ -59,7 +60,7 @@ class ConcurrentUpdater:
         If the thread is currently executing the target function, it will finish before stopping.
         """
 
-        with self._lock:
+        with self.__lock:
             self._must_stop.set()
-            if self._thread.is_alive():
-                self._thread.join()
+            if self.__thread.is_alive():
+                self.__thread.join()
