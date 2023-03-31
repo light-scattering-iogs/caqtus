@@ -1,5 +1,6 @@
 import copy
 import logging
+import time
 
 import numpy as np
 
@@ -17,25 +18,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 logging.basicConfig()
 
-BETA = 0.1
-NUMBER_ITERATIONS = 25
-ROI_RADIUS = 30
-TRAP_RELATIVE_THRESHOLD = 0.3
 
-
-pixelfly = PixelflyBoard(
-    name="pixelfly",
-    board_number=0,
-    mode=Mode.SW_TRIGGER | Mode.ASYNC_SHUTTER,
-    exp_time=15,  # in µs
-    hbin=BinMode.BIN_1X,
-    vbin=BinMode.BIN_1X,
-    gain=False,
-    bit_pix=PixelDepth.BITS_12,
-)
-
-
-def acquire_picture():
+def acquire_picture(pixelfly):
     with pixelfly:
         pixelfly.start_acquisition()
         picture = pixelfly.read_image(1000).astype(float)
@@ -77,7 +61,38 @@ def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: in
 def homogenize(
     initial_signal_generator_x: StaticTrapGenerator,
     initial_signal_generator_y: StaticTrapGenerator,
+    exposure: int = 30,
+    roi_radius: float = 20,
+    beta=0.3,
+    number_iterations=25,
+    relative_threshold=0.3,
 ):
+    """Attempts to homogenize the trap by adjusting the AWG power in each tone.
+
+    This function execute a loop in which, at, each step, it takes a picture, measure the intensity of the spots and
+    then feedback on the AWG power to try to homogenize the trap.
+
+    Args:
+        initial_signal_generator_x: contains the initial values to generate the AWG signal along x
+        initial_signal_generator_y: contains the initial values to generate the AWG signal along y
+        exposure: exposure time in µs for the camera
+        roi_radius: radius of the region of interest in pixels around each trap
+        beta: feedback coefficient, the higher, the more aggressive the feedback, typically between 0.1 and 0.5
+        number_iterations: number of iterations to perform before stopping the homogenization
+        relative_threshold: threshold to detect the spots in the picture
+    """
+
+    pixelfly = PixelflyBoard(
+        name="pixelfly",
+        board_number=0,
+        mode=Mode.SW_TRIGGER | Mode.ASYNC_SHUTTER,
+        exp_time=exposure,  # in µs
+        hbin=BinMode.BIN_1X,
+        vbin=BinMode.BIN_1X,
+        gain=False,
+        bit_pix=PixelDepth.BITS_12,
+    )
+
     signal_generator_x = copy.deepcopy(initial_signal_generator_x)
     signal_generator_y = copy.deepcopy(initial_signal_generator_y)
 
@@ -89,7 +104,8 @@ def homogenize(
 
     with awg:
         awg.stop()
-    background_picture = acquire_picture()
+
+    background_picture = acquire_picture(pixelfly)
 
     with awg:
         data = np.int16(
@@ -100,20 +116,20 @@ def homogenize(
         )
         awg.write_segment_data("segment_0", data)
         awg.run()
-        picture = acquire_picture() - background_picture
+        picture = acquire_picture(pixelfly) - background_picture
 
     spot_analyzer = GridSpotAnalyzer(
         number_rows=signal_generator_x.number_tones,
         number_columns=signal_generator_y.number_tones,
     )
     spot_analyzer.register_regions_of_interest(
-        picture, relative_threshold=TRAP_RELATIVE_THRESHOLD, radius=ROI_RADIUS
+        picture, relative_threshold=relative_threshold, radius=roi_radius
     )
 
     intensities = []
     amplitudes_x = []
     amplitudes_y = []
-    for repetition in range(NUMBER_ITERATIONS):
+    for repetition in range(number_iterations):
         with awg:
             data = np.int16(
                 (
@@ -123,9 +139,12 @@ def homogenize(
             )
             awg.write_segment_data("segment_0", data)
             awg.run()
-            picture = acquire_picture() - background_picture
+            time.sleep(0.05)
+            picture = acquire_picture(pixelfly) - background_picture
 
-        intensity_matrix = spot_analyzer.compute_intensity_matrix(picture, method=np.sum)
+        intensity_matrix = spot_analyzer.compute_intensity_matrix(
+            picture, method=np.sum
+        )
         intensities.append(intensity_matrix)
 
         error = np.std(intensity_matrix) / np.mean(intensity_matrix)
@@ -134,7 +153,7 @@ def homogenize(
         # Beware how to flip the intensity matrix depending on the imaging setup
         new_row_amplitudes, new_column_amplitudes = compute_new_amplitudes(
             intensity_matrix[::, ::-1],
-            BETA,
+            beta,
             np.array(signal_generator_x.amplitudes),
             np.array(signal_generator_y.amplitudes),
         )
