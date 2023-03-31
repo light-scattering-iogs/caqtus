@@ -152,6 +152,10 @@ def _array_as_float(values: dict[str, Any]) -> dict[str, Any]:
 
 
 import_all = ChainableImporter(_import_all)
+import_parameters = ChainableImporter(_import_parameters)
+import_scores = ChainableImporter(_import_scores)
+import_measures = ChainableImporter(_import_measures)
+import_time = ChainableImporter(_import_time)
 break_namespaces = ChainableImporter(_break_namespaces)
 to_base_units = ChainableImporter(_to_base_units)
 split_units = ChainableImporter(_split_units)

@@ -6,64 +6,80 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationTool
 from matplotlib.figure import Figure
 
 from experiment.session import (
+    ExperimentSession,
+)
+from experiment.session import (
     ExperimentSessionMaker,
     get_standard_experiment_session_maker,
-    ExperimentSession,
 )
 from sequence.runtime import Shot
 from visual.viewer.sequence_viewer import SignalingSequenceWatcher
 
 
-class ImageViewerCanvas(FigureCanvasQTAgg):
+class CurveViewerCanvas(FigureCanvasQTAgg):
     def __init__(self, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
 
-        self.image = self.axes.imshow(
-            numpy.zeros((100, 100)), origin="lower", cmap="Reds"
+        (self.line,) = self.axes.plot(
+            [],
+            [],
+            "o",
+            color="black",
+            markersize=2,
+            markerfacecolor="black",
+            markeredgecolor="black",
+            markeredgewidth=0.5,
         )
-        fig.colorbar(self.image, ax=self.axes)
 
-    def set_image(self, image):
-        self.image.set_data(image.T)
-        self.image.set_clim(vmin=0, vmax=image.max())
+    def add_point(self, x, y):
+        self.line.set_xdata(numpy.append(self.line.get_xdata(), x))
+        self.line.set_ydata(numpy.append(self.line.get_ydata(), y))
 
     def set_title(self, title):
         self.axes.set_title(title)
+
+    def rescale(self):
+        self.axes.relim()
+        self.axes.autoscale_view()
 
     def update_plot(self):
         self.draw()
 
 
-class ImageViewerWidget(QWidget):
+class CurveViewerWidget(QWidget):
     def __init__(
         self,
         sequence_watcher: SignalingSequenceWatcher,
         importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
-        image_label: str,
+        x: str,
+        y: str,
         session_maker: Optional[ExperimentSessionMaker] = None,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent=parent)
         self._sequence_watcher = sequence_watcher
-        self._image_viewer_canvas = ImageViewerCanvas()
+        self._curve_viewer_canvas = CurveViewerCanvas()
+        self._importer = importer
+        self._x = x
+        self._y = y
         self.setLayout(QVBoxLayout())
-        navigation_toolbar = NavigationToolbar2QT(self._image_viewer_canvas, self)
+        navigation_toolbar = NavigationToolbar2QT(self._curve_viewer_canvas, self)
         self.layout().addWidget(navigation_toolbar)
-        self.layout().addWidget(self._image_viewer_canvas)
+        self.layout().addWidget(self._curve_viewer_canvas)
 
         if session_maker is None:
             session_maker = get_standard_experiment_session_maker()
         self._session = session_maker()
         self._sequence_watcher.new_shots_processed.connect(self.on_new_shots_added)
-        self._importer = importer
-        self._image_label = image_label
 
     def on_new_shots_added(self, new_shots: list[Shot]):
         with self._session.activate():
-            data = self._importer(new_shots[-1], self._session)
-        image = data[self._image_label]
-        self._image_viewer_canvas.set_image(image)
-        self._image_viewer_canvas.set_title(f"Shot {new_shots[-1].index}")
-        self._image_viewer_canvas.update_plot()
+            new_data = [self._importer(shot, self._session) for shot in new_shots]
+        x = [data[self._x] for data in new_data]
+        y = [data[self._y] for data in new_data]
+        self._curve_viewer_canvas.add_point(x, y)
+        self._curve_viewer_canvas.set_title(f"Shot {new_shots[-1].index}")
+        self._curve_viewer_canvas.rescale()
+        self._curve_viewer_canvas.update_plot()
