@@ -72,6 +72,10 @@ class ChannelConfiguration(SettingsModel, ABC):
         return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
 
     def get_channel_index(self, description: str | ChannelSpecialPurpose):
+        if description not in self.channel_descriptions:
+            raise ValueError(
+                f"Channel '{description}' doesn't exists in the experiment configuration"
+            )
         return self.channel_descriptions.index(description)
 
 
