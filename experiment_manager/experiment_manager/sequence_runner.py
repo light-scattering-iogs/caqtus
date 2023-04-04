@@ -10,10 +10,8 @@ from typing import Any
 
 import numpy
 import numpy as np
-
 from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
-from device import RuntimeDevice
 from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
@@ -34,6 +32,8 @@ from sequence.configuration import (
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
 from units import Quantity, units
+
+from device import RuntimeDevice
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
@@ -112,7 +112,13 @@ class SequenceRunnerThread(Thread):
 
         for server_name, server in self._remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
-            server.connect()
+            try:
+                server.connect()
+            except ConnectionRefusedError as error:
+                raise ConnectionRefusedError(
+                    f"The remote server '{server_name}' rejected the connection. It is possible "
+                    f"that the server is not running or that the port is not open."
+                ) from error
             logger.info(f"Connection established to {server_name}")
 
     def create_devices(self) -> dict[str, RuntimeDevice]:
@@ -263,7 +269,9 @@ class SequenceRunnerThread(Thread):
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
-        optimizer_config = self._experiment_config.get_optimizer_config(optimization_loop.optimizer_name)
+        optimizer_config = self._experiment_config.get_optimizer_config(
+            optimization_loop.optimizer_name
+        )
         optimizer = Optimizer(optimization_loop.variables, context.variables | units)
         shot_saver.wait()
         with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
@@ -289,7 +297,9 @@ class SequenceRunnerThread(Thread):
                 optimizer.register(new_values, score)
                 with self._session.activate():
                     for shot in new_shots:
-                        shot.add_scores({optimization_loop.optimizer_name: score}, self._session)
+                        shot.add_scores(
+                            {optimization_loop.optimizer_name: score}, self._session
+                        )
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
