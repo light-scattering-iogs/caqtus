@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Self
 
 from device_config import DeviceConfiguration
 from expression import Expression
@@ -44,3 +44,13 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
         else:
             extra["initial_position"] = self.position.evaluate(units)
         return super().get_device_init_args() | extra
+
+    @classmethod
+    def get_default_config(cls, device_name: str, remote_server: str) -> Self:
+        return cls(
+            device_name=device_name,
+            remote_server=remote_server,
+            serial_port="COM0",
+            device_id=0,
+            position=Expression("0"),
+        )

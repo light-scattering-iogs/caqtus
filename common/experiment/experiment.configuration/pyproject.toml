@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "experiment"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.12"
 
 pydantic = "^1.10.4"
 
@@ -23,6 +23,7 @@ ni6738-analog-card-configuration = {path = "../../../devices/ni6738_analog_card/
 spincore-sequencer-configuration = {path = "../../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 siglent-sdg6000x-configuration = {path = "../../../devices/siglent_sdg6000X/siglent_sdg6000x.configuration", develop = true}
 imaging-source-configuration = {path = "../../../devices/cameras/imaging_source/imaging_source.configuration", develop = true}
+elliptec-ell14-configuration = {path = "../../../devices/elliptec_ell14/elliptec_ell14.configuration", develop = true}
 
 
 [build-system]

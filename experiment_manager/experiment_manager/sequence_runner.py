@@ -5,13 +5,16 @@ import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from functools import singledispatchmethod
+from multiprocessing.managers import RemoteError
 from threading import Thread, Event
 from typing import Any
 
 import numpy
 import numpy as np
+
 from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
+from device import RuntimeDevice
 from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
@@ -32,8 +35,6 @@ from sequence.configuration import (
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
 from units import Quantity, units
-
-from device import RuntimeDevice
 from variable import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
@@ -132,9 +133,19 @@ class SequenceRunnerThread(Thread):
             self._experiment_config, self._sequence_config
         ).items():
             server = self._remote_device_managers[parameters["server"]]
-            devices[name] = getattr(server, parameters["type"])(
-                **parameters["init_kwargs"]
-            )
+            if not hasattr(server, parameters["type"]):
+                raise ValueError(
+                    f"The device '{name}' is of type '{parameters['type']}' but this type is not registered for the "
+                    f"remote device client."
+                )
+            remote_class = getattr(server, parameters["type"])
+            try:
+                devices[name] = remote_class(**parameters["init_kwargs"])
+            except RemoteError as error:
+                raise RuntimeError(
+                    f"Remote servers {parameters['server']} could not instantiate device '{name}'"
+                ) from error
+
         return devices
 
     def start_devices(self):
