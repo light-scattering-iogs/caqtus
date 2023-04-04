@@ -1,7 +1,12 @@
+import logging
 from typing import Any
 
 from device_config import DeviceConfiguration
 from expression import Expression
+from units import units
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
@@ -30,4 +35,12 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
             "serial_port": self.serial_port,
             "device_id": self.device_id,
         }
+        dependent_variables = self.position.upstream_variables.difference(units.keys())
+        if dependent_variables:
+            logger.warning(
+                f"{self.device_name} position depends on variables {dependent_variables} and will be "
+                f"undefined until these variables are set"
+            )
+        else:
+            extra["initial_position"] = self.position.evaluate(units)
         return super().get_device_init_args() | extra

@@ -1,5 +1,6 @@
 """This package defines a RuntimeDevice class that is used to control Thorlabs Elliptec ELL14 rotation stages."""
 import time
+from typing import Optional
 
 from serial import SerialException
 from thorlabs_elliptec import ELLx, ELLStatus
@@ -20,6 +21,7 @@ class ElliptecELL14RotationStage(RuntimeDevice):
 
     serial_port: str = Field(allow_mutation=False)
     device_id: int = Field(allow_mutation=False)
+    initial_position: Optional[float] = Field(default=None, allow_mutation=False)
 
     _device: ELLx = None
 
@@ -28,6 +30,7 @@ class ElliptecELL14RotationStage(RuntimeDevice):
 
     def start(self) -> None:
         """Connect to the device and initialize it."""
+
         super().start()
 
         try:
@@ -40,6 +43,9 @@ class ElliptecELL14RotationStage(RuntimeDevice):
             )
         while self._device.status != ELLStatus.OK:
             time.sleep(0.1)
+
+        if self.initial_position is not None:
+            self._update_position(self.initial_position)
 
     def update_parameters(self, position: float) -> None:
         """Move the stage to the given position.
