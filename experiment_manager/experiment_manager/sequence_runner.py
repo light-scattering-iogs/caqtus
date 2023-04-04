@@ -186,6 +186,15 @@ class SequenceRunnerThread(Thread):
             self.run_step(self._experiment_config.header, context, shot_saver)
             self.run_step(self._sequence_config.program, context, shot_saver)
 
+    def update_variable_value(self, name: str, value: Any, context: SequenceContext):
+        """Update the value of a variable.
+
+        This method update the value of a variable in the dictionary-like context. It also gives a chance to the devices
+         to update their state if needed.
+        """
+
+        context.variables[name] = value
+
     @singledispatchmethod
     def run_step(self, step: Step, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a given step of the sequence
@@ -222,8 +231,10 @@ class SequenceRunnerThread(Thread):
     ):
         """Add or update a variable declaration in the context"""
 
-        context.variables[declaration.name] = Quantity(
-            declaration.expression.evaluate(context.variables | units)
+        self.update_variable_value(
+            declaration.name,
+            Quantity(declaration.expression.evaluate(context.variables | units)),
+            context,
         )
 
     @run_step.register
@@ -241,7 +252,7 @@ class SequenceRunnerThread(Thread):
         for value in numpy.arange(
             start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
         ):
-            context.variables[arange_loop.name] = value * unit
+            self.update_variable_value(arange_loop.name, value * unit, context)
             for step in arange_loop.children:
                 if self.is_waiting_to_interrupt():
                     return
@@ -266,7 +277,7 @@ class SequenceRunnerThread(Thread):
         for value in numpy.linspace(
             start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
-            context.variables[linspace_loop.name] = value * unit
+            self.update_variable_value(linspace_loop.name, value * unit, context)
             for step in linspace_loop.children:
                 if self.is_waiting_to_interrupt():
                     return
@@ -293,7 +304,8 @@ class SequenceRunnerThread(Thread):
             for loop_iteration in range(optimization_loop.repetitions):
                 old_shots = shot_saver.saved_shots
                 new_values = optimizer.suggest_values()
-                context.variables |= new_values
+                for name, value in new_values.items():
+                    self.update_variable_value(name, value, context)
 
                 for step in optimization_loop.children:
                     self.run_step(step, context, shot_saver)
