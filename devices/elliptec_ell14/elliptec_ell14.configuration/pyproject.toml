@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "elliptec-ell14-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "elliptec_ell14"}]
+
+[tool.poetry.dependencies]
+python = "^3.8, <3.12"
+device-config = {path = "../../../common/device_config", develop = true}
+expression = {path = "../../../common/expression", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
