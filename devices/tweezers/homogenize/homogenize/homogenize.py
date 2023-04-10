@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+from typing import Optional
 
 import numpy as np
 
@@ -66,6 +67,7 @@ def homogenize(
     beta=0.3,
     number_iterations=25,
     relative_threshold=0.3,
+    weight_matrix: Optional[np.array] = None,
 ):
     """Attempts to homogenize the trap by adjusting the AWG power in each tone.
 
@@ -81,6 +83,13 @@ def homogenize(
         number_iterations: number of iterations to perform before stopping the homogenization
         relative_threshold: threshold to detect the spots in the picture
     """
+    if weight_matrix is None:
+        weight_matrix = np.ones(
+            (
+                initial_signal_generator_x.number_tones,
+                initial_signal_generator_y.number_tones,
+            )
+        )
 
     pixelfly = PixelflyBoard(
         name="pixelfly",
@@ -152,7 +161,7 @@ def homogenize(
 
         # Beware how to flip the intensity matrix depending on the imaging setup
         new_row_amplitudes, new_column_amplitudes = compute_new_amplitudes(
-            intensity_matrix[::, ::-1],
+            intensity_matrix[::, ::-1] * weight_matrix,
             beta,
             np.array(signal_generator_x.amplitudes),
             np.array(signal_generator_y.amplitudes),
