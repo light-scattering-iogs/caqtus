@@ -18,6 +18,7 @@ from .importers import (
     rename,
     apply,
     remove,
+    drop_heavy,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     rename,
     apply,
     remove,
+    drop_heavy,
 ]

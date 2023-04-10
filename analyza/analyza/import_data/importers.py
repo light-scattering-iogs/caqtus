@@ -1,3 +1,4 @@
+import sys
 from abc import ABC
 from types import SimpleNamespace
 from typing import Any, Callable, Generic, TypeVar, ParamSpec, Iterable
@@ -151,6 +152,12 @@ def _array_as_float(values: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _drop_heavy(values: dict[str, Any], limit: float) -> dict[str, Any]:
+    """Drop values that are heavier than the given limit in bytes."""
+
+    return {key: value for key, value in values.items() if sys.getsizeof(value) < limit}
+
+
 import_all = ChainableImporter(_import_all)
 import_parameters = ChainableImporter(_import_parameters)
 import_scores = ChainableImporter(_import_scores)
@@ -161,3 +168,4 @@ to_base_units = ChainableImporter(_to_base_units)
 split_units = ChainableImporter(_split_units)
 array_as_float = ChainableImporter(_array_as_float)
 strip_units = ChainableImporter(_strip_units)
+drop_heavy = ChainableImporter(_drop_heavy)
