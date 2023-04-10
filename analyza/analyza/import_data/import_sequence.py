@@ -1,17 +1,21 @@
 import typing
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Optional
 
 import pandas
 from tqdm import tqdm
 
-from experiment.session import ExperimentSession
+from experiment.session import (
+    ExperimentSessionMaker,
+    ExperimentSession,
+    get_standard_experiment_session_maker,
+)
 from sequence.runtime import Sequence, Shot
 
 
 def build_dataframe_from_sequences(
     sequences: Iterable[Sequence],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
-    session: ExperimentSession,
+    session_maker: Optional[ExperimentSessionMaker] = None,
     show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from multiple experiment sequences
@@ -20,7 +24,8 @@ def build_dataframe_from_sequences(
         sequences: The sequences to construct the dataframe from
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
-        session: The session to use to read the shot data. It must be inactive.
+        session_maker: The session maker used to create the session to read the shot data. If None, a standard session
+            maker will be used.
         show_progress: If True, a progress bar will be shown.
 
     Returns:
@@ -29,18 +34,23 @@ def build_dataframe_from_sequences(
         the keys of the dictionaries returned by the importer function.
     """
 
+    if session_maker is None:
+        session_maker = get_standard_experiment_session_maker()
+
+    session = session_maker()
+
     with session.activate():
         shots = []
         for sequence in sequences:
             shots.extend(sequence.get_shots(session))
 
-    return build_dataframe_from_shots(shots, importer, session, show_progress)
+    return build_dataframe_from_shots(shots, importer, session_maker, show_progress)
 
 
 def build_dataframe_from_sequence(
     sequence: Sequence,
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
-    session: ExperimentSession,
+    session_maker: Optional[ExperimentSessionMaker] = None,
     show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from an experiment sequence
@@ -49,7 +59,8 @@ def build_dataframe_from_sequence(
         sequence: The shots to construct the dataframe from
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
-        session: The session to use to read the shot data. It must be inactive.
+        session_maker: The session maker used to create the session to read the shot data. If None, a standard session
+            maker will be used.
         show_progress: If True, a progress bar will be shown.
 
     Returns:
@@ -58,16 +69,21 @@ def build_dataframe_from_sequence(
         the keys of the dictionaries returned by the importer function.
     """
 
+    if session_maker is None:
+        session_maker = get_standard_experiment_session_maker()
+
+    session = session_maker()
+
     with session.activate():
         shots = sequence.get_shots(session)
 
-    return build_dataframe_from_shots(shots, importer, session, show_progress)
+    return build_dataframe_from_shots(shots, importer, session_maker, show_progress)
 
 
 def build_dataframe_from_shots(
     shots: typing.Sequence[Shot],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
-    session: ExperimentSession,
+    session_maker: Optional[ExperimentSessionMaker] = None,
     show_progress: bool = False,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from a sequence of shot
@@ -76,7 +92,8 @@ def build_dataframe_from_shots(
         shots: The shots to construct the dataframe from
         importer: A function that takes a shot and a session and returns a dictionary. The keys of the returned
         dictionary will be the columns of the dataframe.
-        session: The session to use to read the shot data. It must be inactive.
+        session_maker: The session maker used to create the session to read the shot data. If None, a standard session
+            maker will be used.
         show_progress: If True, a progress bar will be shown.
 
     Returns:
@@ -84,6 +101,11 @@ def build_dataframe_from_shots(
         the first level, the shot name as the second level and the shot index as the third level. The columns will be
         the keys of the dictionaries returned by the importer function.
     """
+
+    if session_maker is None:
+        session_maker = get_standard_experiment_session_maker()
+
+    session = session_maker()
 
     def map_shot_to_row(shot):
         with session:
@@ -96,4 +118,3 @@ def build_dataframe_from_shots(
     else:
         rows = list(map(map_shot_to_row, shots))
     return pandas.DataFrame(rows, index=index)
-

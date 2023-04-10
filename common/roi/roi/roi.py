@@ -31,7 +31,7 @@ class RegionOfInterest(SettingsModel, ABC):
 class ArbitraryShapedRegionOfInterest(RegionOfInterest):
     roi_indices: tuple[tuple[int, int], ...] = Field(
         description="The indices of the pixels in the original image that are part of the region of interest",
-        allow_mutation=False
+        allow_mutation=False,
     )
 
     @property
@@ -46,4 +46,6 @@ class ArbitraryShapedRegionOfInterest(RegionOfInterest):
             mask: A boolean array with the same shape as the original image. True values indicate that the pixel is part
             of the region of interest.
         """
-        return cls(original_image_size=mask.shape, roi_indices=np.argwhere(mask).tolist())
+        return cls(
+            original_image_size=mask.shape, roi_indices=np.argwhere(mask).tolist()
+        )
