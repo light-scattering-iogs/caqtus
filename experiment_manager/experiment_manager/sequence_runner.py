@@ -41,6 +41,7 @@ from .initialize_devices import get_devices_initialization_parameters
 from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
+from .variable_change import compute_parameters_on_variable_update
 
 if typing.TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
@@ -194,6 +195,10 @@ class SequenceRunnerThread(Thread):
         """
 
         context.variables[name] = value
+        parameters = compute_parameters_on_variable_update(
+            name, self._experiment_config, context.variables
+        )
+        self.update_device_parameters(parameters)
 
     @singledispatchmethod
     def run_step(self, step: Step, context: SequenceContext, shot_saver: ShotSaver):
@@ -380,9 +385,10 @@ class SequenceRunnerThread(Thread):
 
         with ThreadPoolExecutor() as update_executor:
             for device_name, parameters in device_parameters.items():
-                future_updates[device_name] = update_executor.submit(
-                    self._devices[device_name].update_parameters, **parameters
-                )
+                if parameters:
+                    future_updates[device_name] = update_executor.submit(
+                        self._devices[device_name].update_parameters, **parameters
+                    )
 
         exceptions = []
         for device_name, update in future_updates.items():
