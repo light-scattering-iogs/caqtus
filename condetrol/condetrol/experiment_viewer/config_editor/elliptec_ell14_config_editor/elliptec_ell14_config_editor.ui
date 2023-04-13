@@ -45,7 +45,7 @@
      <item row="2" column="0">
       <widget class="QLabel" name="deviceIdLabel">
        <property name="toolTip">
-        <string>The device ID of the device. This is what is referred as the address in the thorlabs Ello software.
+        <string>The ID of the device. This is what is referred as the address in the thorlabs Ello software.
 If the device is used in multi-port mode, a single serial port can control multiple devices with different
 device IDs. However, this is not supported at the moment and only one device can be instantiated for a given
 serial port.</string>
@@ -61,7 +61,7 @@ serial port.</string>
      <item row="3" column="0">
       <widget class="QLabel" name="angleLabel">
        <property name="toolTip">
-        <string>The position of the stage in degrees. This can be an expression that depends on other variables.
+        <string>The position of the stage, in degrees. This can be an expression that depends on other variables.
 When these variables change, the new position will be recalculated in consequence and the stage will move to
 the new position.</string>
        </property>

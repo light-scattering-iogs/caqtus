@@ -57,12 +57,12 @@ class Ui_ElliptecELL14RotationStageConfigEditor(object):
         self.remoteServerLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Remote server"))
         self.serialPortLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The serial port to use to communicate with the device. e.g. \"COM9\""))
         self.serialPortLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Serial port"))
-        self.deviceIdLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The device ID of the device. This is what is referred as the address in the thorlabs Ello software.\n"
+        self.deviceIdLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The ID of the device. This is what is referred as the address in the thorlabs Ello software.\n"
 "If the device is used in multi-port mode, a single serial port can control multiple devices with different\n"
 "device IDs. However, this is not supported at the moment and only one device can be instantiated for a given\n"
 "serial port."))
         self.deviceIdLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Device id"))
-        self.angleLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The position of the stage in degrees. This can be an expression that depends on other variables.\n"
+        self.angleLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The position of the stage, in degrees. This can be an expression that depends on other variables.\n"
 "When these variables change, the new position will be recalculated in consequence and the stage will move to\n"
 "the new position."))
         self.angleLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Angle"))
