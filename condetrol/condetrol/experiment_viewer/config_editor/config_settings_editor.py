@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from copy import deepcopy
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
@@ -53,7 +54,7 @@ class DeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
     ):
         super().__init__(config=experiment_config, tree_label=tree_label, parent=parent)
 
-        self._experiment_config = experiment_config
+        self._experiment_config = deepcopy(experiment_config)
         self.device_name = self.strip_device_prefix(tree_label)
 
     def convert_to_external_use(self):

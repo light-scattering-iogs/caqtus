@@ -10,7 +10,7 @@ from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from .ni6738_editor_ui import Ui_NI6738Editor
 from ..channel_model import ChannelsModel
 from ..color_delegate import ColorCellDelegate
-from ..config_settings_editor import ConfigSettingsEditor, DeviceConfigEditor
+from ..config_settings_editor import DeviceConfigEditor
 from ..mapping_editor import MappingDelegate
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,8 @@ class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
     ):
         super().__init__(experiment_config, tree_label, parent)
 
-        config: NI6738SequencerConfiguration = self._experiment_config.get_device_config(
-            self.device_name
+        config: NI6738SequencerConfiguration = (
+            self._experiment_config.get_device_config(self.device_name)
         )
 
         self.color_delegate = ColorCellDelegate()

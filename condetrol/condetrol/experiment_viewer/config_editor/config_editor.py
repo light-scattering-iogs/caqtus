@@ -27,6 +27,7 @@ from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
+from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -133,6 +134,7 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
             "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor,
             "SpincorePulseBlaster": SpincoreConfigEditor,
             "NI6738AnalogCard": NI6738ConfigEditor,
+            "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
         }
 
         device_type = self._config.get_device_config(device_name).get_device_type()

@@ -3,6 +3,7 @@ from typing import Any, Self
 
 from device_config import DeviceConfiguration
 from expression import Expression
+from settings_model import Field
 from units import units
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
 
     Attributes:
         serial_port: The serial port to use to communicate with the device. e.g. "COM9"
-        device_id: The device ID of the device. This is what is referred as the address in the thorlabs Ello software.
+        device_id: The ID of the device. This is what is referred as the address in the thorlabs Ello software.
             If the device is used in multi-port mode, a single serial port can control multiple devices with different
             device IDs. However, this is not supported at the moment and only one device can be instantiated for a given
             serial port.
@@ -24,7 +25,7 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
     """
 
     serial_port: str
-    device_id: int
+    device_id: int = Field(ge=0, le=255)
     position: Expression
 
     def get_device_type(self) -> str:
@@ -38,8 +39,9 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
         dependent_variables = self.position.upstream_variables.difference(units.keys())
         if dependent_variables:
             logger.warning(
-                f"{self.device_name} position depends on variables {dependent_variables} and will be "
-                f"undefined until these variables are set"
+                f"{self.device_name} position depends on variables"
+                f" {dependent_variables} and will be undefined until these variables"
+                " are set"
             )
         else:
             extra["initial_position"] = self.position.evaluate(units)
