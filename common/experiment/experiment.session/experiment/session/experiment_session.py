@@ -24,7 +24,7 @@ class ExperimentSessionNotActiveError(RuntimeError):
 
 
 class _ExperimentSession(ABC):
-    """Manage the experiment session
+    """Manage the experiment session.
 
     Instances of this class manage access to the permanent storage of the experiment.
     A session contains the history of the experiment configuration and the current
@@ -251,8 +251,8 @@ class ExperimentSessionMaker:
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
     """Create a default ExperimentSessionMaker.
 
-    This function loads the parameters from ./default_experiment_session.yaml. The file
-    must follow the format of the following example:
+    This function loads the parameters from a user config file. The file must follow the
+    format of the following example:
 
     user: the_name_of_the_database_user
     ip: 192.168.137.1  # The ip of the database server
@@ -260,14 +260,14 @@ def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
     database: the_name_of_the_database
     """
 
-    config_path = platformdirs.user_config_path(
+    config_folder = platformdirs.user_config_path(
         appname="ExperimentControl", appauthor="Caqtus"
     )
-    path = Path(config_path) / "default_experiment_session.yaml"
+    path = Path(config_folder) / "default_experiment_session.yaml"
     if not path.exists():
         raise FileNotFoundError(
             "Could not find default_experiment_session.yaml. "
-            f"Please create the file at {path}"
+            f"Please create the file at {path}."
         )
     with open(path) as file:
         kwargs = yaml.safe_load(file)
