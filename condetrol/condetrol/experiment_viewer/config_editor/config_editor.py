@@ -1,6 +1,5 @@
 import logging
 from copy import deepcopy
-from pathlib import Path
 from typing import Optional
 
 from PyQt6 import QtGui
@@ -10,24 +9,22 @@ from PyQt6.QtCore import (
 from PyQt6.QtWidgets import (
     QDialog,
     QTreeWidgetItem,
-    QLayout,
 )
 
 from experiment.configuration import ExperimentConfig
-from settings_model import YAMLSerializable
 from .config_editor_ui import Ui_ConfigEditor
 from .config_settings_editor import (
     ConfigSettingsEditor,
     NotImplementedDeviceConfigEditor,
 )
 from .devices_editor import DevicesEditor
+from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
 from .ni6738_config_editor import NI6738ConfigEditor
 from .optimizer_config_editor import OptimizerConfigEditor
 from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
-from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -48,6 +45,8 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
     def __init__(self, experiment_config: ExperimentConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._config = deepcopy(experiment_config)
+
         self._ui_settings = QSettings("Caqtus", "ExperimentControl")
         self._setup_ui(self._ui_settings)
 
@@ -55,7 +54,6 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
             raise TypeError(
                 f"Expected <ExperimentConfig> got {type(experiment_config)}"
             )
-        self._config = deepcopy(experiment_config)
         self.update_device_tree()
 
     def _setup_ui(self, ui_settings: QSettings):
@@ -90,8 +88,8 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         self._devices_item = QTreeWidgetItem(self._category_tree)
         self._devices_item.setText(0, "Devices")
         self._devices_item.setToolTip(0, "Settings for each device.")
-
         self._category_tree.currentItemChanged.connect(self.change_displayed_widget)
+        self._category_tree.setCurrentItem(self._system_item)
 
     def get_config(self) -> ExperimentConfig:
         """Return a copy of the current config shown in the widget"""
@@ -112,7 +110,7 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         tree_label: str,
     ) -> ConfigSettingsEditor:
         if tree_label == "System":
-            return SystemSettingsEditor(deepcopy(self._config), tree_label)
+            return SystemSettingsEditor(self._config, tree_label)
         elif tree_label == "Constants":
             return SequenceHeaderEditor(deepcopy(self._config), tree_label)
         elif tree_label == "Optimization":
@@ -159,7 +157,7 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
 
         label = item.text(0)
 
-        if old_widget := self.get_current_widget():
+        if (old_widget := self.get_current_widget()) is not None:
             config = old_widget.get_experiment_config()
             if not isinstance(config, ExperimentConfig):
                 raise TypeError(
@@ -171,7 +169,6 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         if item.parent() is self._devices_item:
             label = f"Devices\\{label}"
         new_widget = self.create_editor_widget(label)
-
         self._widget_layout.addWidget(new_widget)
 
     def get_current_widget(self) -> Optional[ConfigSettingsEditor]:
@@ -179,34 +176,3 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
             return self._widget_layout.itemAt(0).widget()
         else:
             return None
-
-
-def clear_layout(layout: QLayout):
-    while layout.count():
-        child = layout.takeAt(0)
-        if child.widget():
-            child.widget().deleteLater()
-
-
-def load_config(config_path: Path) -> ExperimentConfig:
-    """Loads or creates the experiment config"""
-
-    if config_path.exists():
-        # noinspection PyBroadException
-        try:
-            with open(config_path, "r") as file:
-                config = YAMLSerializable.load(file)
-            if not isinstance(config, ExperimentConfig):
-                raise TypeError(f"Config is not correct: {config}")
-        except Exception:
-            logger.warning(
-                (
-                    f"Unable to load {config_path}. Loading a default configuration"
-                    " instead."
-                ),
-                exc_info=True,
-            )
-            config = ExperimentConfig()
-    else:
-        config = ExperimentConfig()
-    return config
