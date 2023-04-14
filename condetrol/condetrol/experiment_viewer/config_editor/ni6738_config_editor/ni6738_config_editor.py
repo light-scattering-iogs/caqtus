@@ -47,7 +47,7 @@ class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
         new_config = self._experiment_config.get_device_config(self.device_name)
         self.write_ui_to_config(new_config)
         self._experiment_config.set_device_config(self.device_name, new_config)
-        return self._experiment_config
+        return super().get_experiment_config()
 
     def setup_ui_from_config(self, config: NI6738SequencerConfiguration):
         self.device_id_line_edit.setText(config.device_id)
@@ -78,6 +78,13 @@ class AnalogChannelsModel(ChannelsModel):
     """Add a unit column to the channel model"""
 
     def __init__(self, config: AnalogChannelConfiguration, *args, **kwargs):
+        """Initialize the model.
+
+        Args:
+            config: The configuration object to use for the model. The model will keep a
+            reference to this object and edit it directly. No copy is made.
+        """
+
         super().__init__(config, *args, **kwargs)
         self._config: AnalogChannelConfiguration = config
 

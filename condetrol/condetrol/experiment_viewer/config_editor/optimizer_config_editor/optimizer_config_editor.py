@@ -15,12 +15,11 @@ class OptimizerConfigEditor(
 ):
     def __init__(
         self,
-        config: ExperimentConfig,
+        experiment_config: ExperimentConfig,
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(config=config, tree_label=tree_label, parent=parent)
-        self._experiment_config = config
+        super().__init__(experiment_config, tree_label, parent)
 
         self.setupUi(self)
         self.list_view.doubleClicked.connect(self.on_list_view_clicked)
@@ -60,7 +59,7 @@ class OptimizerConfigEditor(
 
     def get_experiment_config(self) -> ExperimentConfig:
         self.read_current_optimizer()
-        return self._experiment_config
+        return super().get_experiment_config()
 
     def convert_to_external_use(self):
         self.read_current_optimizer()

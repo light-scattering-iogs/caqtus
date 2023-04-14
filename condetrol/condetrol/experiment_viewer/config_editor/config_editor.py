@@ -109,14 +109,16 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         self,
         tree_label: str,
     ) -> ConfigSettingsEditor:
+
+        config = self._config.copy(deep=True)
         if tree_label == "System":
-            return SystemSettingsEditor(self._config, tree_label)
+            return SystemSettingsEditor(config, tree_label)
         elif tree_label == "Constants":
-            return SequenceHeaderEditor(deepcopy(self._config), tree_label)
+            return SequenceHeaderEditor(config, tree_label)
         elif tree_label == "Optimization":
-            return OptimizerConfigEditor(deepcopy(self._config), tree_label)
+            return OptimizerConfigEditor(config, tree_label)
         elif tree_label == "Devices":
-            editor = DevicesEditor(deepcopy(self._config), tree_label)
+            editor = DevicesEditor(config, tree_label)
             editor.device_added.connect(self.on_device_added)
             return editor
         elif tree_label.startswith("Devices\\"):
@@ -138,7 +140,7 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         device_type = self._config.get_device_config(device_name).get_device_type()
 
         widget_type = type_to_widget.get(device_type, NotImplementedDeviceConfigEditor)
-        return widget_type(deepcopy(self._config), f"Devices\\{device_name}")
+        return widget_type(self._config.copy(deep=True), f"Devices\\{device_name}")
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         if widget := self.get_current_widget():

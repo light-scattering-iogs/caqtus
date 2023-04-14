@@ -37,7 +37,7 @@ class SpincoreConfigEditor(DeviceConfigEditor, Ui_SpincoreEditor):
         new_config = self._experiment_config.get_device_config(self.device_name)
         self.write_ui_to_config(new_config)
         self._experiment_config.set_device_config(self.device_name, new_config)
-        return self._experiment_config
+        return super().get_experiment_config()
 
     def setup_ui_from_config(self, config: SpincoreSequencerConfiguration):
         self.board_number_spinbox.setValue(config.board_number)

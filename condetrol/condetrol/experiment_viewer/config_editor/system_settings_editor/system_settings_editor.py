@@ -1,7 +1,6 @@
-from copy import deepcopy
 from typing import Optional
 
-from PyQt6.QtWidgets import QFormLayout, QWidget
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
 from .system_settings_editor_ui import Ui_SystemSettingsEditor
@@ -14,21 +13,17 @@ class SystemSettingsEditor(ConfigSettingsEditor, Ui_SystemSettingsEditor):
     Only the mock experiment checkbox is currently shown.
     """
 
-    def get_experiment_config(self) -> ExperimentConfig:
-        self.config = self.update_config(self.config)
-        return deepcopy(self.config)
-
     def __init__(
         self,
         experiment_config: ExperimentConfig,
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
+
         super().__init__(experiment_config, tree_label, parent)
 
-        self.config = deepcopy(experiment_config)
         self.setupUi(self)
-        self.update_ui(self.config)
+        self.update_ui(self._experiment_config)
 
     def update_ui(self, experiment_config: ExperimentConfig):
         """Update the UI to match the experiment config."""
@@ -38,6 +33,12 @@ class SystemSettingsEditor(ConfigSettingsEditor, Ui_SystemSettingsEditor):
     def update_config(self, config: ExperimentConfig) -> ExperimentConfig:
         """Update the experiment config to match the UI."""
 
-        config = deepcopy(config)
+        config = config.copy(deep=True)
         config.mock_experiment = self._mock_experiment_checkbox.isChecked()
         return config
+
+    def get_experiment_config(self) -> ExperimentConfig:
+        """Return a copy of the experiment config currently shown in the UI."""
+
+        self._experiment_config = self.update_config(self._experiment_config)
+        return super().get_experiment_config()
