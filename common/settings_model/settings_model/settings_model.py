@@ -55,8 +55,18 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, ABC):
 class VersionedSettingsModel(SettingsModel, ABC):
     """A settings model that has a version number.
 
-    Attributes:
+    When making non-backward compatible changes to a child class, the major version of
+    this child class __version__ should be incremented. It is also necessary to overload
+    the method 'update_parameters_version' that takes care of updating the old stored
+    parameters into the new format.
 
+    Attributes:
+        __version__: The current version of the class. When making non-backward
+            compatible changes to a child class, the major version should be
+            incremented.
+        version: The version of the instance. When creating an instance, the methode
+            'update_parameters_version' will be called to translate the parameters to be
+             compatible with the current version.
     """
 
     __version__: ClassVar[str]
@@ -79,6 +89,13 @@ class VersionedSettingsModel(SettingsModel, ABC):
 
     @classmethod
     def update_parameters_version(cls, kwargs: dict) -> dict:
+        """Update the parameters to be compatible with the current version of the class.
+
+        The default implementation does nothing but set the version to 0.0.0 if it is
+        not present in the parameters. This method should be overloaded in child
+        classes.
+        """
+
         if "version" not in kwargs:
             kwargs["version"] = Version(major=0, minor=0, patch=0)
         return kwargs
