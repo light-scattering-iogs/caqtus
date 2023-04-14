@@ -2,11 +2,14 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
 from typing import Optional, overload, Literal
 
+import platformdirs
 import sqlalchemy
 import sqlalchemy.orm
+import yaml
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from experiment.configuration import ExperimentConfig
@@ -24,14 +27,17 @@ class _ExperimentSession(ABC):
     """Manage the experiment session
 
     Instances of this class manage access to the permanent storage of the experiment.
-    A session contains the history of the experiment configuration and the current configuration.
-    It also contains the sequence tree of the experiment, with the sequence states and data.
+    A session contains the history of the experiment configuration and the current
+    configuration. It also contains the sequence tree of the experiment, with the
+    sequence states and data.
 
-    Some objects in the sequence.runtime package (Sequence, Shot) that can read and write to the experiment data storage
-    have methods that require an activated ExperimentSession.
+    Some objects in the sequence.runtime package (Sequence, Shot) that can read and
+    write to the experiment data storage have methods that require an activated
+    ExperimentSession.
 
-    If an error occurs within an activated session block, the session is automatically rolled back to the beginning of
-    the activation block. This prevents leaving some data in an inconsistent state.
+    If an error occurs within an activated session block, the session state is
+    automatically rolled back to the beginning of the activation block. This prevents
+    leaving some data in an inconsistent state.
     """
 
     def __init__(self):
@@ -46,11 +52,11 @@ class _ExperimentSession(ABC):
     ) -> str:
         if name is None:
             name = self._get_new_experiment_config_name()
-        yaml = experiment_config.to_yaml()
-        assert ExperimentConfig.from_yaml(yaml) == experiment_config
+        yaml_ = experiment_config.to_yaml()
+        assert ExperimentConfig.from_yaml(yaml_) == experiment_config
         ExperimentConfigModel.add_config(
             name=name,
-            yaml=yaml,
+            yaml=yaml_,
             comment=comment,
             session=self.get_sql_session(),
         )
@@ -81,7 +87,7 @@ class _ExperimentSession(ABC):
         )
 
         return {
-            name: ExperimentConfig.from_yaml(yaml) for name, yaml in results.items()
+            name: ExperimentConfig.from_yaml(yaml_) for name, yaml_ in results.items()
         }
 
     def set_current_experiment_config(self, name: str):
@@ -232,8 +238,9 @@ class ExperimentSessionMaker:
         else:
             return AsyncExperimentSession(self._async_session_maker())
 
-    # The following methods are required to make ExperimentSessionMaker pickleable to pass it to other processes.
-    # sqlalchemy engine is not pickleable, so we just pickle the database url and create a new engine upon unpickling.
+    # The following methods are required to make ExperimentSessionMaker pickleable to
+    # pass it to other processes. Since sqlalchemy engine is not pickleable, so we just
+    # pickle the database info and create a new engine upon unpickling.
     def __getstate__(self) -> dict:
         return self._kwargs
 
@@ -242,12 +249,30 @@ class ExperimentSessionMaker:
 
 
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
-    return ExperimentSessionMaker(
-        user="caqtus",
-        ip="192.168.137.4",
-        password="Deardear",
-        database="test_database",
+    """Create a default ExperimentSessionMaker.
+
+    This function loads the parameters from ./default_experiment_session.yaml. The file
+    must follow the format of the following example:
+
+    user: the_name_of_the_database_user
+    ip: 192.168.137.1  # The ip of the database server
+    password: the_password_to_the_database
+    database: the_name_of_the_database
+    """
+
+    config_path = platformdirs.user_config_path(
+        appname="ExperimentControl", appauthor="Caqtus"
     )
+    path = Path(config_path) / "default_experiment_session.yaml"
+    if not path.exists():
+        raise FileNotFoundError(
+            "Could not find default_experiment_session.yaml. "
+            f"Please create the file at {path}"
+        )
+    with open(path) as file:
+        kwargs = yaml.safe_load(file)
+
+    return ExperimentSessionMaker(**kwargs)
 
 
 def get_standard_experiment_session() -> ExperimentSession:
