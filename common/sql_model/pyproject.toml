@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "sql_model"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.8"
 
 sqlalchemy-utils = "^0.40.0"
 psycopg2 = "^2.9.5"

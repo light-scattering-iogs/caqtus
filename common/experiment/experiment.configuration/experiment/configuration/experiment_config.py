@@ -20,7 +20,7 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
 )
-from settings_model import SettingsModel
+from settings_model import VersionedSettingsModel, Version
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class ExperimentConfig(SettingsModel):
+class ExperimentConfig(VersionedSettingsModel):
     """Holds static configuration of the experiment.
 
     This configuration is used to instantiate the devices and to run the experiment. It
@@ -51,6 +51,8 @@ class ExperimentConfig(SettingsModel):
          there will be no actual data acquisition. This is meant to be used for testing.
     """
 
+    __version__ = "1.0.0"
+
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
     )
@@ -71,6 +73,12 @@ class ExperimentConfig(SettingsModel):
     )
 
     mock_experiment: bool = False
+
+    @classmethod
+    def update_parameters_version(cls, config: dict) -> dict:
+        if "version" not in config:
+            config["version"] = Version(major=1, minor=0, patch=0)
+        return config
 
     @validator("device_configurations")
     def validate_device_configurations(

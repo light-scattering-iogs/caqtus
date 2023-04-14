@@ -7,14 +7,13 @@ readme = "README.md"
 packages = [{include = "experiment"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.8, <3.12"
 
 pydantic = "^1.10.4"
 
 settings_model = { path = "../../settings_model/", develop = true }
 sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
 device_config = { path = "../../device_config/", develop = true }
-experiment-session = {path = "../experiment.session", develop = true}
 
 picomotor-configuration = {path = "../../../devices/picomotor/picomotor.configuration", develop = true}
 camera-configuration = {path = "../../../devices/cameras/camera/camera.configuration", develop = true}

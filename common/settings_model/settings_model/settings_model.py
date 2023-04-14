@@ -1,16 +1,20 @@
-import abc
+import logging
+from abc import ABC
 from functools import cached_property
-from typing import TypeVar
+from typing import Self, ClassVar
 
 import pydantic
 import yaml
+from pydantic import validator
 
+from .version import Version
 from .yaml_serializable import YAMLSerializable
 
-Self = TypeVar("Self", bound="SettingsModel")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
-class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
+class SettingsModel(YAMLSerializable, pydantic.BaseModel, ABC):
     """Allows to store and load experiment configuration with type validation
 
     All instances of a subclass of this class can be (de)serialized (from) to yaml based
@@ -31,6 +35,7 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
 
         Overload this method in a child class to change the default representation.
         """
+
         return dumper.represent_mapping(
             f"!{cls.__name__}",
             {field: getattr(settings, field) for field in cls.__fields__},
@@ -45,3 +50,35 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, abc.ABC):
         kwargs = loader.construct_mapping(node, deep=True)
         # noinspection PyArgumentList
         return cls(**kwargs)
+
+
+class VersionedSettingsModel(SettingsModel, ABC):
+    """A settings model that has a version number.
+
+    Attributes:
+
+    """
+
+    __version__: ClassVar[str]
+    version: Version
+
+    def __init__(self, **kwargs):
+        updated_kwargs = self.update_parameters_version(kwargs)
+        super().__init__(**updated_kwargs)
+
+    @validator("version")
+    def validate_version(cls, version: Version):
+        current_version = Version.parse(cls.__version__)
+        if version.is_compatible(current_version):
+            return version
+        else:
+            raise ValueError(
+                f"Version {version} is not compatible with current version"
+                f" {current_version} for {cls.__name__}"
+            )
+
+    @classmethod
+    def update_parameters_version(cls, kwargs: dict) -> dict:
+        if "version" not in kwargs:
+            kwargs["version"] = Version(major=0, minor=0, patch=0)
+        return kwargs

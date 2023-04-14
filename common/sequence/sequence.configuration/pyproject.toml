@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "sequence"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.8"
 anytree = "^2.8.0"
 pydantic = "^1.10.4"
 expression = {path = "../../expression", develop = true}

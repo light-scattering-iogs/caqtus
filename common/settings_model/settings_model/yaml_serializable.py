@@ -1,13 +1,13 @@
 import abc
 from enum import Enum
 from pathlib import Path, WindowsPath
-from typing import Type, TypeVar
+from typing import Type, Self
 
 import yaml
 from pydantic import SecretStr, PostgresDsn
 from pydantic.color import Color
 
-Self = TypeVar("Self", bound="YAMLSerializable")
+from .version import Version
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
 
@@ -138,3 +138,10 @@ def secret_str_representer(dumper: yaml.Dumper, secret: SecretStr):
 
 
 YAMLSerializable.get_dumper().add_representer(SecretStr, secret_str_representer)
+
+
+def version_representer(dumper: yaml.Dumper, version: Version):
+    return dumper.represent_data(str(version))
+
+
+YAMLSerializable.get_dumper().add_representer(Version, version_representer)
