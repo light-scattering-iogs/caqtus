@@ -48,13 +48,6 @@ if typing.TYPE_CHECKING:
     from camera.runtime import CCamera
     from spincore_sequencer.runtime import SpincorePulseBlaster
 
-# If MOCK_EXPERIMENT is set to True, the experiment will not run the real
-# hardware. It will not connect to the device servers but will still compute all
-# devices parameters if possible.
-# Parameters will be saved, but there will be no data acquisition.
-
-MOCK_EXPERIMENT = False
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -108,8 +101,9 @@ class SequenceRunnerThread(Thread):
             self._sequence.set_state(State.RUNNING, session)
 
     def connect_to_device_servers(self):
-        """Start the connection to the device servers"""
-        if MOCK_EXPERIMENT:
+        """Start the connection to the device servers."""
+
+        if self._experiment_config.mock_experiment:
             return
 
         for server_name, server in self._remote_device_managers.items():
@@ -118,15 +112,22 @@ class SequenceRunnerThread(Thread):
                 server.connect()
             except ConnectionRefusedError as error:
                 raise ConnectionRefusedError(
-                    f"The remote server '{server_name}' rejected the connection. It is possible "
-                    f"that the server is not running or that the port is not open."
+                    f"The remote server '{server_name}' rejected the connection. It is"
+                    " possible that the server is not running or that the port is not"
+                    " open."
+                ) from error
+            except TimeoutError as error:
+                raise TimeoutError(
+                    f"The remote server '{server_name}' did not respond to the"
+                    " connection request. It is possible that the server is not"
+                    " running or that the port is not open."
                 ) from error
             logger.info(f"Connection established to {server_name}")
 
     def create_devices(self) -> dict[str, RuntimeDevice]:
         """Instantiate the devices on their respective remote server"""
 
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return {}
 
         devices = {}
@@ -136,15 +137,16 @@ class SequenceRunnerThread(Thread):
             server = self._remote_device_managers[parameters["server"]]
             if not hasattr(server, parameters["type"]):
                 raise ValueError(
-                    f"The device '{name}' is of type '{parameters['type']}' but this type is not registered for the "
-                    f"remote device client."
+                    f"The device '{name}' is of type '{parameters['type']}' but this"
+                    " type is not registered for the remote device client."
                 )
             remote_class = getattr(server, parameters["type"])
             try:
                 devices[name] = remote_class(**parameters["init_kwargs"])
             except RemoteError as error:
                 raise RuntimeError(
-                    f"Remote servers {parameters['server']} could not instantiate device '{name}'"
+                    f"Remote servers {parameters['server']} could not instantiate"
+                    f" device '{name}'"
                 ) from error
 
         return devices
@@ -370,16 +372,18 @@ class SequenceRunnerThread(Thread):
         )
         computation_time = datetime.datetime.now()
         logger.info(
-            f"Shot parameters computation duration: {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
+            "Shot parameters computation duration:"
+            f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
         )
         self.update_device_parameters(device_parameters)
         update_time = datetime.datetime.now()
         logger.info(
-            f"Device parameters update duration: {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
+            "Device parameters update duration:"
+            f" {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
         )
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return
         future_updates: dict[str, Future] = {}
 
@@ -406,7 +410,7 @@ class SequenceRunnerThread(Thread):
 
     def run_shot(self) -> None:
         start_time = datetime.datetime.now()
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             time.sleep(0.5)
             return
         for ni6738_card in self.get_ni6738_cards().values():
@@ -426,11 +430,12 @@ class SequenceRunnerThread(Thread):
                 raise exception
         stop_time = datetime.datetime.now()
         logger.info(
-            f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+            "Shot execution duration:"
+            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
         )
 
     def extract_data(self):
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return {
                 "image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)
             }

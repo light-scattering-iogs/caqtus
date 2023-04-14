@@ -31,35 +31,47 @@ logger.setLevel("DEBUG")
 
 
 class ExperimentConfig(SettingsModel):
+    """Holds static configuration of the experiment.
+
+    This configuration is used to instantiate the devices and to run the experiment. It
+    contains information about the machine that should change rarely (not at each
+    sequence).
+
+    Attributes:
+        device_servers: The configurations of the servers that will actually instantiate
+            devices.
+        header: Steps that are always executed before a sequence. At the moment, it is
+            only used to pre-define constant before running the sequences.
+        device_configurations: All the static configurations of the devices present on
+            the experiment.
+        optimization_configurations: Possible configurations to choose from when running
+            an optimization loop.
+        mock_experiment: If True, the experiment will not run the real hardware. It will
+         not connect to the device servers but will still compute all devices parameters
+         if possible. Parameters will be saved and random images will be generated, but
+         there will be no actual data acquisition. This is meant to be used for testing.
+    """
+
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
-        description=(
-            "The configurations of the servers that will actually instantiate devices."
-        ),
-    )
-    header: SequenceSteps = Field(
-        default_factory=SequenceSteps,
-        description=(
-            "Steps that are always executed before a sequence. At the moment, it is"
-            " only used to pre-define 'constant variables'."
-        ),
-    )
-    device_configurations: list[DeviceConfiguration] = Field(
-        default_factory=list,
-        description=(
-            "All the static configurations of the devices present on the experiment."
-        ),
-    )
-    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
-        default_factory=dict,
-        description="Possible configurations to choose from when running an optimization.",
     )
 
-    @classmethod
-    def from_file(cls, path):
-        with open(path, "r") as file:
-            yaml = file.read()
-        return cls.from_yaml(yaml)
+    header: SequenceSteps = Field(
+        default_factory=SequenceSteps,
+    )
+
+    # It would be better to use a dict[str, DeviceConfiguration] instead of a list to
+    # enforce name uniqueness, but this would invalidate all previous configuration
+    # files.
+    device_configurations: list[DeviceConfiguration] = Field(
+        default_factory=list,
+    )
+
+    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
+        default_factory=dict,
+    )
+
+    mock_experiment: bool = False
 
     @validator("device_configurations")
     def validate_device_configurations(
@@ -81,6 +93,12 @@ class ExperimentConfig(SettingsModel):
 
     @property
     def spincore_config(self) -> SpincoreSequencerConfiguration:
+        """Return the configuration of the spincore sequencer.
+
+        It assumes that there is exactly one spincore sequencer in the experiment for
+        now.
+        """
+
         for device_config in self.device_configurations:
             if isinstance(device_config, SpincoreSequencerConfiguration):
                 return device_config
@@ -88,6 +106,11 @@ class ExperimentConfig(SettingsModel):
 
     @property
     def ni6738_config(self) -> NI6738SequencerConfiguration:
+        """Return the configuration of the NI6738 sequencer.
+
+        It assumes that there is exactly one NI6738 sequencer in the experiment for now.
+        """
+
         for device_config in self.device_configurations:
             if isinstance(device_config, NI6738SequencerConfiguration):
                 return device_config
@@ -156,7 +179,11 @@ class ExperimentConfig(SettingsModel):
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
     ) -> dict[str, DeviceConfigType]:
-        """Return a dictionary of all device configurations matching a given type"""
+        """Return a dictionary of all device configurations matching a given type.
+
+        The keys of the dictionary are the device names.
+        """
+
         return {
             config.device_name: config
             for config in self.device_configurations
@@ -164,17 +191,23 @@ class ExperimentConfig(SettingsModel):
         }
 
     def get_device_config(self, device_name: str) -> DeviceConfigType:
+        """Return a device configuration from the experiment configuration."""
+
         for config in self.device_configurations:
             if config.device_name == device_name:
                 return copy.deepcopy(config)
         raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
 
     def set_device_config(self, device_name: str, config: DeviceConfiguration):
+        """Change a device configuration in the experiment configuration."""
+
         names = [config.device_name for config in self.device_configurations]
         index = names.index(device_name)
         self.device_configurations[index] = copy.deepcopy(config)
 
     def add_device_config(self, config: DeviceConfiguration):
+        """Add a device configuration to the experiment configuration."""
+
         if not isinstance(config, DeviceConfiguration):
             raise TypeError(
                 f"Trying to create a configuration that is not an instance of"
