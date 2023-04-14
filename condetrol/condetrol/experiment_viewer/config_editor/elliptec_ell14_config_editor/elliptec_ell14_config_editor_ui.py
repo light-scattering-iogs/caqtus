@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_ElliptecELL14RotationStageConfigEditor(object):
     def setupUi(self, ElliptecELL14RotationStageConfigEditor):
         ElliptecELL14RotationStageConfigEditor.setObjectName("ElliptecELL14RotationStageConfigEditor")
-        ElliptecELL14RotationStageConfigEditor.resize(554, 409)
+        ElliptecELL14RotationStageConfigEditor.resize(539, 617)
         self.horizontalLayout = QtWidgets.QHBoxLayout(ElliptecELL14RotationStageConfigEditor)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.formLayout = QtWidgets.QFormLayout()
@@ -53,18 +53,13 @@ class Ui_ElliptecELL14RotationStageConfigEditor(object):
     def retranslateUi(self, ElliptecELL14RotationStageConfigEditor):
         _translate = QtCore.QCoreApplication.translate
         ElliptecELL14RotationStageConfigEditor.setWindowTitle(_translate("ElliptecELL14RotationStageConfigEditor", "Form"))
-        self.remoteServerLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The name of the server that will actually instantiate the device."))
+        self.remoteServerLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "<html><head/><body><p>The name of the server that will actually instantiate the device.</p></body></html>"))
         self.remoteServerLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Remote server"))
-        self.serialPortLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The serial port to use to communicate with the device. e.g. \"COM9\""))
+        self.serialPortLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "<html><head/><body><p>The serial port to use to communicate with the device. e.g. &quot;COM9&quot;.</p></body></html>"))
         self.serialPortLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Serial port"))
-        self.deviceIdLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The ID of the device. This is what is referred as the address in the thorlabs Ello software.\n"
-"If the device is used in multi-port mode, a single serial port can control multiple devices with different\n"
-"device IDs. However, this is not supported at the moment and only one device can be instantiated for a given\n"
-"serial port."))
+        self.deviceIdLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "<html><head/><body><p>The ID of the device. This is what is referred as the address in the thorlabs Ello software.<br>If the device is used in multi-port mode, a single serial port can control multiple devices with different device IDs. However, this is not supported at the moment and only one device can be instantiated for a given serial port.</p></body></html>"))
         self.deviceIdLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Device id"))
-        self.angleLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "The position of the stage, in degrees. This can be an expression that depends on other variables.\n"
-"When these variables change, the new position will be recalculated in consequence and the stage will move to\n"
-"the new position."))
+        self.angleLabel.setToolTip(_translate("ElliptecELL14RotationStageConfigEditor", "<html><head/><body><p>The position of the stage, in degrees.<br>This can be an expression that depends on other variables. When these variables change, the new position will be recalculated in consequence and the stage will move to the new position.</p></body></html>"))
         self.angleLabel.setText(_translate("ElliptecELL14RotationStageConfigEditor", "Angle"))
 from expression_widget import ExpressionWidget
 from remote_server_combobox import RemoteServerComboBox

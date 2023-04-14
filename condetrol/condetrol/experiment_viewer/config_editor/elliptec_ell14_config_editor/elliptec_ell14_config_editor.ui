@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>554</width>
-    <height>409</height>
+    <width>539</width>
+    <height>617</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="remoteServerLabel">
        <property name="toolTip">
-        <string>The name of the server that will actually instantiate the device.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The name of the server that will actually instantiate the device.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Remote server</string>
@@ -32,7 +32,7 @@
      <item row="1" column="0">
       <widget class="QLabel" name="serialPortLabel">
        <property name="toolTip">
-        <string>The serial port to use to communicate with the device. e.g. &quot;COM9&quot;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The serial port to use to communicate with the device. e.g. &amp;quot;COM9&amp;quot;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Serial port</string>
@@ -45,10 +45,7 @@
      <item row="2" column="0">
       <widget class="QLabel" name="deviceIdLabel">
        <property name="toolTip">
-        <string>The ID of the device. This is what is referred as the address in the thorlabs Ello software.
-If the device is used in multi-port mode, a single serial port can control multiple devices with different
-device IDs. However, this is not supported at the moment and only one device can be instantiated for a given
-serial port.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The ID of the device. This is what is referred as the address in the thorlabs Ello software.&lt;br&gt;If the device is used in multi-port mode, a single serial port can control multiple devices with different device IDs. However, this is not supported at the moment and only one device can be instantiated for a given serial port.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Device id</string>
@@ -61,9 +58,7 @@ serial port.</string>
      <item row="3" column="0">
       <widget class="QLabel" name="angleLabel">
        <property name="toolTip">
-        <string>The position of the stage, in degrees. This can be an expression that depends on other variables.
-When these variables change, the new position will be recalculated in consequence and the stage will move to
-the new position.</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The position of the stage, in degrees.&lt;br&gt;This can be an expression that depends on other variables. When these variables change, the new position will be recalculated in consequence and the stage will move to the new position.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="text">
         <string>Angle</string>
