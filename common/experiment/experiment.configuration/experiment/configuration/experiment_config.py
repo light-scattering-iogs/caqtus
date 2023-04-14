@@ -191,11 +191,21 @@ class ExperimentConfig(SettingsModel):
         }
 
     def get_device_config(self, device_name: str) -> DeviceConfigType:
-        """Return a device configuration from the experiment configuration."""
+        """Return the configuration of a given device.
+
+        Args:
+            device_name: The name of the device to get the configuration for.
+        Returns:
+            A copy of the device configuration. Changing the returned device
+            configuration will not affect the experiment configuration.
+        Raises:
+            DeviceConfigNotFoundError: If there is no device configuration with this
+            name.
+        """
 
         for config in self.device_configurations:
             if config.device_name == device_name:
-                return copy.deepcopy(config)
+                return config.copy(deep=True)
         raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
 
     def set_device_config(self, device_name: str, config: DeviceConfiguration):

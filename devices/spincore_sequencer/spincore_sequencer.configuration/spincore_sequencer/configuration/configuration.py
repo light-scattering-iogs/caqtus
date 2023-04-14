@@ -5,6 +5,14 @@ from device_config.channel_config import DigitalChannelConfiguration
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
+    """Holds the static configuration of a spincore sequencer device.
+
+    Attributes:
+        board_number: The number of the board to use. With only one board connected,
+            this number is usually 0.
+        time_step: The quantization time step used. All times during a run are multiples
+            of this value.
+    """
     # noinspection PyPropertyDefinition
     @classmethod
     @property
@@ -16,10 +24,6 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
         default=50e-9,
         ge=50e-9,
         units="s",
-        description=(
-            "The quantization time step used when converting step times to"
-            " instructions."
-        ),
     )
 
     def get_device_type(self) -> str:
