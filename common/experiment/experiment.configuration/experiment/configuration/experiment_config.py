@@ -1,4 +1,3 @@
-import copy
 import logging
 from typing import Optional, Type
 
@@ -209,11 +208,25 @@ class ExperimentConfig(SettingsModel):
         raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
 
     def set_device_config(self, device_name: str, config: DeviceConfiguration):
-        """Change a device configuration in the experiment configuration."""
+        """Change a device configuration in the experiment configuration.
+
+        Args:
+            device_name: The name of the device to change the configuration for.
+            config: The new configuration for the device. A copy of this object is made
+                and stored in the experiment configuration.
+        Raises:
+            DeviceConfigNotFoundError: If there is no device configuration with this
+                name.
+        """
 
         names = [config.device_name for config in self.device_configurations]
-        index = names.index(device_name)
-        self.device_configurations[index] = copy.deepcopy(config)
+        try:
+            index = names.index(device_name)
+        except ValueError:
+            raise DeviceConfigNotFoundError(
+                f"Could not find a device named {device_name}"
+            )
+        self.device_configurations[index] = config.copy(deep=True)
 
     def add_device_config(self, config: DeviceConfiguration):
         """Add a device configuration to the experiment configuration."""

@@ -79,6 +79,8 @@ class DeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
         return self._experiment_config.get_device_config(self.device_name)
 
     def update_from_external_source(self, new_config: DeviceConfiguration):
+        """Update the device config."""
+
         if new_config.device_name != self.device_name:
             raise ValueError(
                 f"Cannot change device name from {self.device_name} to"

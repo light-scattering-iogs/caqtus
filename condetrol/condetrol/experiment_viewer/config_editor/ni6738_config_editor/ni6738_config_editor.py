@@ -34,32 +34,41 @@ class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
     ):
         super().__init__(experiment_config, tree_label, parent)
 
-        config: NI6738SequencerConfiguration = (
-            self._experiment_config.get_device_config(self.device_name)
-        )
-
         self.color_delegate = ColorCellDelegate()
         self.mapping_delegate = MappingDelegate()
         self.setupUi(self)
-        self.setup_ui_from_config(config)
+        self.channels_table_view.setItemDelegateForColumn(1, self.color_delegate)
+        self.channels_table_view.setItemDelegateForColumn(2, self.mapping_delegate)
+
+        self.update_ui(self._experiment_config)
 
     def get_experiment_config(self) -> ExperimentConfig:
-        new_config = self._experiment_config.get_device_config(self.device_name)
-        self.write_ui_to_config(new_config)
-        self._experiment_config.set_device_config(self.device_name, new_config)
+        self._experiment_config = self.update_config(self._experiment_config)
         return super().get_experiment_config()
 
-    def setup_ui_from_config(self, config: NI6738SequencerConfiguration):
+    def update_ui(self, experiment_config: ExperimentConfig):
+        config: NI6738SequencerConfiguration = experiment_config.get_device_config(
+            self.device_name
+        )
         self.device_id_line_edit.setText(config.device_id)
         self.time_step_spinbox.setValue(config.time_step / us)
         self.channels_table_view.setModel(AnalogChannelsModel(config))
         self.channels_table_view.resizeColumnToContents(0)
-        self.channels_table_view.setItemDelegateForColumn(1, self.color_delegate)
-        self.channels_table_view.setItemDelegateForColumn(2, self.mapping_delegate)
 
-    def write_ui_to_config(self, config: NI6738SequencerConfiguration):
+    def update_config(self, experiment_config: ExperimentConfig) -> ExperimentConfig:
+        experiment_config = experiment_config.copy(deep=True)
+        config: NI6738SequencerConfiguration = experiment_config.get_device_config(
+            self.device_name
+        )
+
+        model: AnalogChannelsModel = self.channels_table_view.model()
+        table_config = model.get_config()
+
+        config.channel_descriptions = table_config.channel_descriptions
+        config.channel_mappings = table_config.channel_mappings
+        config.channel_colors = table_config.channel_colors
+
         config.device_id = self.device_id_line_edit.text()
-
         # There is an issue here because 2.5 * 1e-6 == 2.4999999999999998e-06 which is
         # lower than the minimum limit of 2.5e-06, so we deal with this value explicitly
         if self.time_step_spinbox.value() == 2.5:
@@ -67,11 +76,12 @@ class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
         else:
             new_value = self.time_step_spinbox.value() * us
         config.time_step = new_value
-        return config
+        experiment_config.set_device_config(self.device_name, config)
+        return experiment_config
 
     def update_from_external_source(self, new_config: NI6738SequencerConfiguration):
         super().update_from_external_source(new_config)
-        self.setup_ui_from_config(new_config)
+        self.update_ui(self._experiment_config)
 
 
 class AnalogChannelsModel(ChannelsModel):
@@ -87,6 +97,10 @@ class AnalogChannelsModel(ChannelsModel):
 
         super().__init__(config, *args, **kwargs)
         self._config: AnalogChannelConfiguration = config
+
+    def get_config(self) -> AnalogChannelConfiguration:
+        # noinspection PyTypeChecker
+        return super().get_config()
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return super().columnCount(parent) + 1

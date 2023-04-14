@@ -25,19 +25,18 @@ class SpincoreConfigEditor(DeviceConfigEditor, Ui_SpincoreEditor):
     ):
         super().__init__(experiment_config, tree_label, parent)
 
-        config: SpincoreSequencerConfiguration = (
-            self._experiment_config.get_device_config(self.device_name)
-        )
-
         self.setupUi(self)
-        self.update_ui(config)
+        self.update_ui(self._experiment_config)
         self.channels_table_view.setItemDelegateForColumn(1, ColorCellDelegate())
 
     def get_experiment_config(self) -> ExperimentConfig:
         self._experiment_config = self.update_config(self._experiment_config)
         return super().get_experiment_config()
 
-    def update_ui(self, config: SpincoreSequencerConfiguration):
+    def update_ui(self, experiment_config: ExperimentConfig):
+        config: SpincoreSequencerConfiguration = experiment_config.get_device_config(
+            self.device_name
+        )
         self.board_number_spinbox.setValue(config.board_number)
         self.time_step_spinbox.setValue(config.time_step / ns)
         self.channels_table_view.setModel(SpincoreChannelsModel(config))
@@ -61,7 +60,7 @@ class SpincoreConfigEditor(DeviceConfigEditor, Ui_SpincoreEditor):
 
     def update_from_external_source(self, new_config: SpincoreSequencerConfiguration):
         super().update_from_external_source(new_config)
-        self.update_ui(new_config)
+        self.update_ui(self._experiment_config)
 
 
 class SpincoreChannelsModel(ChannelsModel):
