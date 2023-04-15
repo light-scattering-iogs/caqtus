@@ -22,9 +22,9 @@ class CCamera(RuntimeDevice, ABC):
     """Define the interface for a camera.
 
     This is an abstract class that must be subclassed to implement a specific camera.
-    When using a device inheriting from this class , it is required to know the number
-    of pictures that will be acquired before starting an acquisitions. Devices of this
-    class are not meant to be used in video mode.
+    When using a device inheriting from this class , it is required to know the
+    number of pictures that will be acquired before starting an acquisitions. Devices
+    of this class are not meant to be used in video mode.
 
     Attributes:
         picture_names: Names to give to the pictures in order of acquisition. Each name
@@ -118,17 +118,18 @@ class CCamera(RuntimeDevice, ABC):
 
         To implement in subclasses.
 
-        Actual camera implementation must implement this method. It must start the acquisition of pictures and return as
-        soon as possible. It should raise an error if the acquisition could not be started or is already in progress.
-        The acquisition must be stopped by calling _stop_acquisition.
+        Actual camera implementation must implement this method. It must start the
+        acquisition of pictures and return as soon as possible. It should raise an
+        error if the acquisition could not be started or is already in progress. The
+        acquisition must be stopped by calling _stop_acquisition.
 
         Args:
             number_pictures: Number of pictures to acquire.
 
-        Raises:
-            CameraTimeoutError: If the camera didn't receive a trigger within the timeout after starting acquisition.
-            If this error is raised, the acquisition will be stopped, but it informs the experiment manager that it can
-            retry this acquisition.
+        Raises: CameraTimeoutError: If the camera didn't receive a trigger within the
+        timeout after starting acquisition. If this error is raised, the acquisition
+        will be stopped, but it informs the experiment manager that it can retry this
+        acquisition.
         """
         ...
 
