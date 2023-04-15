@@ -1,9 +1,7 @@
 from abc import ABC
 
-from pydantic import Field
-
 from device_config import DeviceConfiguration
-from settings_model import SettingsModel
+from .camera_roi import ROI
 
 
 class CameraConfiguration(DeviceConfiguration, ABC):
@@ -15,7 +13,7 @@ class CameraConfiguration(DeviceConfiguration, ABC):
         roi: The region of interest to keep from the image taken by the camera.
     """
 
-    roi: "ROI"
+    roi: ROI
 
     def get_device_init_args(self) -> dict[str]:
         return super().get_device_init_args() | {
@@ -26,15 +24,3 @@ class CameraConfiguration(DeviceConfiguration, ABC):
     @staticmethod
     def get_default_exposure() -> float:
         return 1e-3
-
-
-class ROI(SettingsModel):
-    x: int = Field(
-        description="horizontal coordinate of the corner of the roi",
-    )
-    width: int = Field(description="width of the roi")
-    y: int = Field(description="x coordinate of the corner of the roi")
-    height: int = Field(description="height of the roi")
-
-
-CameraConfiguration.update_forward_refs()
