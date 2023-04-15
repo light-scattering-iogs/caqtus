@@ -23,7 +23,7 @@ class CCamera(RuntimeDevice, ABC):
 
     This is an abstract class that must be subclassed to implement a specific camera.
     When using a device inheriting from this class , it is required to know the
-    number of pictures that will be acquired before starting an acquisitions. Devices
+    number of pictures that will be acquired before starting an acquisition. Devices
     of this class are not meant to be used in video mode.
 
     Attributes:
