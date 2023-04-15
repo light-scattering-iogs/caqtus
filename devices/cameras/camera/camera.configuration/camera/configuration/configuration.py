@@ -7,6 +7,14 @@ from settings_model import SettingsModel
 
 
 class CameraConfiguration(DeviceConfiguration, ABC):
+    """Contains static information to initialize a camera.
+
+    This class is meant to be subclassed to add device-specific attributes.
+
+    Attributes:
+        roi: The region of interest to keep from the image taken by the camera.
+    """
+
     roi: "ROI"
 
     def get_device_init_args(self) -> dict[str]:
@@ -15,7 +23,8 @@ class CameraConfiguration(DeviceConfiguration, ABC):
             "external_trigger": True,
         }
 
-    def get_default_exposure(self) -> float:
+    @staticmethod
+    def get_default_exposure() -> float:
         return 1e-3
 
 

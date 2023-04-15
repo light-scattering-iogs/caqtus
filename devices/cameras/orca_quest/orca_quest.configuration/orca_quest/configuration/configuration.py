@@ -2,6 +2,11 @@ from camera.configuration import CameraConfiguration
 
 
 class OrcaQuestCameraConfiguration(CameraConfiguration):
+    """Holds the configuration for an OrcaQuest camera.
+
+    Attributes:
+        camera_number: The number of the camera to use.
+    """
     camera_number: int
 
     @classmethod

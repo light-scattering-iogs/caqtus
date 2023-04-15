@@ -21,44 +21,39 @@ class CameraTimeoutError(TimeoutError):
 class CCamera(RuntimeDevice, ABC):
     """Define the interface for a camera.
 
+    This is an abstract class that must be subclassed to implement a specific camera.
+    When using a device inheriting from this class , it is required to know the number
+    of pictures that will be acquired before starting an acquisitions. Devices of this
+    class are not meant to be used in video mode.
+
+    Attributes:
+        picture_names: Names to give to the pictures in order of acquisition. Each name
+            must be unique. This will define the number of picture to take during one
+            acquisition, and it is frozen after initialization.
+        roi: The region of interest to keep from the full sensor image. Depending on the
+            device, this can be enforced before or after retrieving the image from the
+            camera.
+        timeout: The camera must raise a CameraTimeoutError if it didn't receive a
+            trigger within this time after starting acquisition.
+            The timeout is in seconds.
+        exposures: List of exposures to use for the pictures to acquire. The length of
+            the list must match the length of picture_names.
+            Each exposure is in seconds.
+        external_trigger: Specify if the camera should wait for an external trigger to
+            take a picture. If set to False, it should acquire images as fast as
+            possible.
+
     Classes inheriting of CCamera must implement the following methods:
     - _start_acquisition
     - _stop_acquisition
     - _is_acquisition_in_progress
     """
 
-    picture_names: tuple[str, ...] = Field(
-        description=(
-            "Names to give to the pictures in order of acquisition. Each name must be"
-            " unique."
-        ),
-        allow_mutation=False,
-    )
-
-    roi: ROI = Field(
-        allow_mutation=False,
-        description="The region of interest to crop from a full image.",
-    )
-    timeout: float = Field(
-        units="s",
-        description=(
-            "The camera must raise a CameraTimeoutError if it is didn't receive a"
-            " trigger within this time after starting acquisition."
-        ),
-        allow_mutation=True,
-    )
-    exposures: list[float] = Field(
-        units="s",
-        description="List of exposures to use for the pictures to acquire.",
-        allow_mutation=True,
-    )
-    external_trigger: bool = Field(
-        description=(
-            "Specify if the camera should wait for an external trigger to take a"
-            " picture. If set to False, it will acquire images as fast as possible."
-        ),
-        allow_mutation=False,
-    )
+    picture_names: tuple[str, ...] = Field(allow_mutation=False)
+    roi: ROI = Field(allow_mutation=False)
+    timeout: float = Field(units="s", allow_mutation=True)
+    exposures: list[float] = Field(units="s", allow_mutation=True)
+    external_trigger: bool = Field(allow_mutation=False)
 
     sensor_width: ClassVar[int]
     sensor_height: ClassVar[int]
