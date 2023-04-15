@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import TypeVar, Any
 
-from settings_model import SettingsModel, Field
+from settings_model import SettingsModel
 
 
 class DeviceConfiguration(SettingsModel, ABC):
