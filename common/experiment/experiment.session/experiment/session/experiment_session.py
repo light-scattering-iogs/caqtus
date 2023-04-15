@@ -104,7 +104,7 @@ class _ExperimentSession(ABC):
     def get_experiment_configs(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
     ) -> dict[str, ExperimentConfig]:
-        """Get the experiment configurations.
+        """Get the experiment configurations available within the session.
 
         Args:
             from_date: Only query experiment configurations that were modified
@@ -142,6 +142,21 @@ class _ExperimentSession(ABC):
             session=self.get_sql_session()
         )
 
+    def get_current_experiment_config_yaml(self) -> Optional[str]:
+        """Get the yaml representation of the current experiment configuration.
+
+        Returns:
+            The yaml representation of the current experiment configuration if one is
+            set, None otherwise. The yaml representation is not guaranteed to be valid
+            if the way the experiment configuration is represented changed.
+        """
+
+        name = self.get_current_experiment_config_name()
+        if name is None:
+            return None
+        experiment_config_yaml = self.get_experiment_config_yamls()[name]
+        return experiment_config_yaml
+
     def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
         """Get the current experiment configuration.
 
@@ -152,17 +167,17 @@ class _ExperimentSession(ABC):
             configuration is invalid.
         """
 
-        name = self.get_current_experiment_config_name()
-        if name is None:
+        experiment_config_yaml = self.get_current_experiment_config_yaml()
+        if experiment_config_yaml is None:
             return None
-        experiment_config_yaml = self.get_experiment_config_yamls()[name]
+
         try:
-            experiment_config = ExperimentConfig.from_yaml(experiment_config_yaml)
+            return ExperimentConfig.from_yaml(experiment_config_yaml)
         except Exception as e:
+            name = self.get_current_experiment_config_name()
             raise ValueError(
                 f"Failed to load experiment config '{name}'"
             ) from e
-        return experiment_config
 
     def activate(self):
         """Activate the session
