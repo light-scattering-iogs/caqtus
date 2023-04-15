@@ -77,18 +77,60 @@ class _ExperimentSession(ABC):
             ExperimentConfigModel.get_config(name, self.get_sql_session())
         )
 
-    def get_experiment_configs(
+    def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[str, ExperimentConfig]:
+    ) -> dict[str, str]:
+        """Get the experiment configuration raw yaml strings.
+
+        Args:
+            from_date: Only query experiment configurations that were modified
+                after this date.
+            to_date: Only query experiment configurations that were modified before
+                this date.
+
+        Returns:
+            A dictionary mapping experiment configuration names to their yaml string
+            representation. The yaml representations are not guaranteed to be valid if
+            the way the experiment configuration is represented changes.
+        """
+
         results = ExperimentConfigModel.get_configs(
             from_date,
             to_date,
             self.get_sql_session(),
         )
+        return {name: yaml_ for name, yaml_ in results.items()}
 
-        return {
-            name: ExperimentConfig.from_yaml(yaml_) for name, yaml_ in results.items()
-        }
+    def get_experiment_configs(
+        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+    ) -> dict[str, ExperimentConfig]:
+        """Get the experiment configurations.
+
+        Args:
+            from_date: Only query experiment configurations that were modified
+                after this date.
+            to_date: Only query experiment configurations that were modified before
+                this date.
+
+        Returns:
+            A dictionary mapping experiment configuration names to the corresponding
+            ExperimentConfig object.
+
+        Raises:
+            ValueError: If the yaml representation of an experiment configuration is
+                invalid.
+        """
+
+        raw_yamls = self.get_experiment_config_yamls(from_date, to_date)
+        results = {}
+
+        for name, yaml_ in raw_yamls.items():
+            try:
+                results[name] = ExperimentConfig.from_yaml(yaml_)
+            except Exception as e:
+                raise ValueError(f"Failed to load experiment config '{name}'") from e
+
+        return results
 
     def set_current_experiment_config(self, name: str):
         CurrentExperimentConfigModel.set_current_experiment_config(
@@ -101,10 +143,26 @@ class _ExperimentSession(ABC):
         )
 
     def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
+        """Get the current experiment configuration.
+
+        Returns:
+            The current experiment configuration if one is set, None otherwise.
+        Raises:
+            ValueError: If the yaml representation of the current experiment
+            configuration is invalid.
+        """
+
         name = self.get_current_experiment_config_name()
         if name is None:
             return None
-        return self.get_experiment_configs()[name]
+        experiment_config_yaml = self.get_experiment_config_yamls()[name]
+        try:
+            experiment_config = ExperimentConfig.from_yaml(experiment_config_yaml)
+        except Exception as e:
+            raise ValueError(
+                f"Failed to load experiment config '{name}'"
+            ) from e
+        return experiment_config
 
     def activate(self):
         """Activate the session
