@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterable
 from typing import Optional, Type
 
 from pydantic import Field, validator
@@ -255,6 +256,18 @@ class ExperimentConfig(VersionedSettingsModel):
             raise ValueError(
                 f"Could not find an optimizer configuration named {optimizer_name}"
             )
+
+    def get_device_runtime_type(self, device_name) -> str:
+        """Return the runtime type of a device."""
+
+        device_config = self.get_device_config(device_name)
+        device_type = device_config.get_device_type()
+        return device_type
+
+    def get_device_server_names(self) -> Iterable[str]:
+        """Return the names of all device servers registered in the configuration."""
+
+        return list(self.device_servers.keys())
 
 
 class DeviceConfigNotFoundError(RuntimeError):

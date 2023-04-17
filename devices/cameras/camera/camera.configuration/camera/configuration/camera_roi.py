@@ -57,3 +57,27 @@ class ROI(SettingsModel):
         if values["y"] + height > values["original_height"]:
             raise ValueError("y + height must be smaller than original_height")
         return height
+
+    @property
+    def left(self) -> int:
+        """Return the left column (included) of the roi."""
+
+        return self.x
+
+    @property
+    def right(self) -> int:
+        """Return the right column (included) of the roi."""
+
+        return self.x + self.width - 1
+
+    @property
+    def bottom(self) -> int:
+        """Return the bottom row (included) of the roi."""
+
+        return self.y
+
+    @property
+    def top(self) -> int:
+        """Return the top row (included) of the roi."""
+
+        return self.y + self.height - 1

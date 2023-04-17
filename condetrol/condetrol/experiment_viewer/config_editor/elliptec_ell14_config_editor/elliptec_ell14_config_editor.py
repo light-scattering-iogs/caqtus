@@ -35,7 +35,7 @@ class ElliptecELL14RotationStageConfigEditor(
             experiment_config.get_device_config(self.device_name)
         )
         self._remote_server_combobox.set_servers(
-            experiment_config.device_servers.keys()
+            experiment_config.get_device_server_names()
         )
         self._remote_server_combobox.set_current_server(config.remote_server)
         self._serial_port_widget.set_port(config.serial_port)

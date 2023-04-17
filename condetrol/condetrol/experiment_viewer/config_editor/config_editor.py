@@ -15,6 +15,7 @@ from experiment.configuration import ExperimentConfig
 from .config_editor_ui import Ui_ConfigEditor
 from .config_settings_editor import (
     ConfigSettingsEditor,
+    DeviceConfigEditor,
     NotImplementedDeviceConfigEditor,
 )
 from .devices_editor import DevicesEditor
@@ -25,6 +26,7 @@ from .sequence_header_editor import SequenceHeaderEditor
 from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
+from .orca_quest_config_editor import OrcaQuestConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -129,15 +131,25 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         self.change_displayed_widget(self._devices_item, None)
         self.update_device_tree()
 
-    def create_widget_for_device(self, device_name: str):
+    def create_widget_for_device(self, device_name: str) -> DeviceConfigEditor:
+        """Create a widget to edit the config of a device.
+
+        This function asks the experiment config what is the device type associated
+        with the device name and create the appropriate widget to edit this kind of
+        device. If there is no widget registered for this device type,
+        a NotImplementedDeviceConfigEditor is returned that only displays the device
+        type.
+        """
+
         type_to_widget = {
             "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor,
             "SpincorePulseBlaster": SpincoreConfigEditor,
             "NI6738AnalogCard": NI6738ConfigEditor,
             "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
+            "OrcaQuestCamera": OrcaQuestConfigEditor,
         }
 
-        device_type = self._config.get_device_config(device_name).get_device_type()
+        device_type = self._config.get_device_runtime_type(device_name)
 
         widget_type = type_to_widget.get(device_type, NotImplementedDeviceConfigEditor)
         return widget_type(self._config.copy(deep=True), f"Devices\\{device_name}")
