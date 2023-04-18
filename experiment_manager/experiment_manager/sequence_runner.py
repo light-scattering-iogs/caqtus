@@ -32,16 +32,21 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
     OptimizationLoop,
+    UserInputLoop,
+    VariableRange,
 )
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
-from units import Quantity, units
+from units import Quantity, units, get_unit, magnitude_in_unit
 from variable import VariableNamespace
+from variable_name import VariableName
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
 from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
+from .user_input_loop import exec_user_input
+from .user_input_loop.input_widget import EvaluatedVariableRange
 from .variable_change import compute_parameters_on_variable_update
 
 if typing.TYPE_CHECKING:
@@ -358,6 +363,23 @@ class SequenceRunnerThread(Thread):
 
         shot_saver.push_shot(shot.name, start_time, end_time, context.variables, data)
 
+    @run_step.register
+    def _(self, loop: UserInputLoop, context: SequenceContext, shot_saver: ShotSaver):
+        """Repeat its child steps while asking the user the value of some variables."""
+
+        evaluated_variable_ranges = evaluate_variable_ranges(
+            loop.iteration_variables, context.variables | units
+        )
+
+        with ThreadPoolExecutor() as executor:
+            result = executor.submit(
+                exec_user_input,
+                title=str(self._sequence.path),
+                variable_ranges=evaluated_variable_ranges,
+            )
+        if result.exception():
+            raise result.exception()
+
     def do_shot(
         self, shot: ShotConfiguration, context: VariableNamespace
     ) -> dict[str, Any]:
@@ -502,3 +524,31 @@ def raise_multiple_exceptions(
     if len(exceptions) == 1:
         raise exceptions[0]
     raise ExceptionGroup(message, exceptions)
+
+
+def evaluate_variable_ranges(
+    variable_ranges: dict[VariableName, VariableRange],
+    context_variables: dict[str, Any],
+) -> dict[VariableName, EvaluatedVariableRange]:
+    """Replace expressions in variable ranges with their real values."""
+
+    evaluated_variable_ranges: dict[str, EvaluatedVariableRange] = {}
+    for variable_name, variable_range in variable_ranges.items():
+        initial_value = variable_range.initial_value.evaluate(context_variables)
+        unit = get_unit(initial_value)
+
+        first_bound = variable_range.first_bound.evaluate(context_variables)
+        first_bound = magnitude_in_unit(first_bound, unit)
+        second_bound = variable_range.second_bound.evaluate(context_variables)
+        second_bound = magnitude_in_unit(second_bound, unit)
+
+        minimum = min(first_bound, second_bound)
+        maximum = max(first_bound, second_bound)
+        evaluated_range = EvaluatedVariableRange(
+            initial_value=initial_value,
+            minimum=minimum,
+            maximum=maximum,
+            unit=unit,
+        )
+        evaluated_variable_ranges[variable_name] = evaluated_range
+    return evaluated_variable_ranges
