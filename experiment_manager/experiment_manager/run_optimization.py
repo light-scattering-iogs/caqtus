@@ -10,20 +10,23 @@ from bayes_opt import BayesianOptimization, UtilityFunction
 
 from experiment.configuration import OptimizerConfiguration
 from parse_optimization import write_shots
-from sequence.configuration import OptimizationVariableInfo
+from sequence.configuration import VariableRange
 from sequence.runtime import Shot, Sequence
 from units import Quantity
+from variable_name import VariableName
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 AnalogValues = Union[float | Quantity]  # type: ignore
 
+# Warning this module is currently broken!
+
 
 class Optimizer:
     def __init__(
         self,
-        optimization_variables: list[OptimizationVariableInfo],
+        optimization_variables: dict[VariableName, VariableRange],
         context_variables: dict,
     ):
         self._optimization_variables = optimization_variables
@@ -50,8 +53,8 @@ class Optimizer:
             pbounds=self.convert_bounds_to_float(self._bounds),
             allow_duplicate_points=True,
         )
-        self._utility_function = UtilityFunction(kind="ucb", kappa=2.5, xi=0)
-        self._optimizer.set_gp_params(alpha=0.1)
+        self._utility_function = UtilityFunction(kind="ucb", kappa=1.5, xi=0)
+        self._optimizer.set_gp_params(alpha=1)
         self._first_time_called = True
         self._optimizer.probe(self.convert_to_float(self._initial_values), lazy=True)
 
@@ -104,7 +107,7 @@ class Optimizer:
 
 
 def evaluate_optimization_bounds(
-    optimization_variables: list[OptimizationVariableInfo],
+    optimization_variables: dict[VariableName, VariableRange],
     context_variables: dict,
 ) -> dict[str, tuple[AnalogValues, AnalogValues]]:
     bounds = {}
@@ -119,7 +122,7 @@ def evaluate_optimization_bounds(
 
 
 def evaluate_initial_values(
-    optimization_variables: list[OptimizationVariableInfo], context_variables: dict
+    optimization_variables: dict[VariableName, VariableRange], context_variables: dict
 ) -> dict[str, AnalogValues]:
     return {
         variable["name"]: variable["initial_value"].evaluate(context_variables)
