@@ -45,7 +45,7 @@ from .initialize_devices import get_devices_initialization_parameters
 from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
-from .user_input_loop import exec_user_input
+from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import EvaluatedVariableRange
 from .variable_change import compute_parameters_on_variable_update
 
@@ -55,7 +55,7 @@ if typing.TYPE_CHECKING:
     from spincore_sequencer.runtime import SpincorePulseBlaster
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class SequenceRunnerThread(Thread):
@@ -372,11 +372,26 @@ class SequenceRunnerThread(Thread):
         )
 
         with ThreadPoolExecutor() as executor:
-            result = executor.submit(
-                exec_user_input,
+            runner = ExecUserInput(
                 title=str(self._sequence.path),
                 variable_ranges=evaluated_variable_ranges,
             )
+            result = executor.submit(runner.run)
+            child_step_index = 0
+            while not result.done():
+                logger.debug(runner.get_current_values())
+                if self.is_waiting_to_interrupt():
+                    result.cancel()
+                    break
+                else:
+                    if child_step_index < len(loop.children):
+                        self.run_step(
+                            loop.children[child_step_index], context, shot_saver
+                        )
+                        child_step_index += 1
+                    else:
+                        child_step_index = 0
+
         if result.exception():
             raise result.exception()
 
@@ -536,6 +551,7 @@ def evaluate_variable_ranges(
     for variable_name, variable_range in variable_ranges.items():
         initial_value = variable_range.initial_value.evaluate(context_variables)
         unit = get_unit(initial_value)
+        initial_value = magnitude_in_unit(initial_value, unit)
 
         first_bound = variable_range.first_bound.evaluate(context_variables)
         first_bound = magnitude_in_unit(first_bound, unit)
