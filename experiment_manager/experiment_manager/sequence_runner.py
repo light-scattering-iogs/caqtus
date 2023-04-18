@@ -396,12 +396,13 @@ class SequenceRunnerThread(Thread):
 
         exceptions = []
         for device_name, update in future_updates.items():
-            if isinstance(exception := update.exception(), Exception):
-                exception.add_note(
+            if (exception := update.exception()) is not None:
+                new_exception = RuntimeError(
                     f"Failed to update device {device_name} with parameters:\n"
                     f"{pprint.pformat(device_parameters[device_name])}"
                 )
-                exceptions.append(exception)
+                new_exception.__cause__ = exception
+                exceptions.append(new_exception)
 
         if exceptions:
             raise ExceptionGroup(
