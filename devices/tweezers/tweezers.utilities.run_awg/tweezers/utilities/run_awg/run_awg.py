@@ -33,8 +33,8 @@ with SpectrumAWGM4i66xxX8(
     name="AWG",
     board_id="/dev/spcm0",
     channel_settings=(
-        ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-7),
-        ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-7),
+        ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-6),
+        ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-6),
     ),
     segment_names=frozenset(["segment_0", "segment_1"]),
     steps={
