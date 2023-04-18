@@ -201,7 +201,6 @@ class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
         self.variables_view.setModel(VariableRangeModel(data.iteration_variables))
 
     def get_step_data(self):
-        print("get_step_data")
         return dict(
             iteration_variables=self.variables_view.model().variables,
         )
