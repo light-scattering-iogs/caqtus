@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import logging
 import pprint
@@ -178,7 +179,7 @@ class SequenceRunnerThread(Thread):
             except Exception as error:
                 exceptions.append(error)
         if exceptions:
-            raise ExceptionGroup("Errors occurred while shutting down", exceptions)
+            raise_multiple_exceptions(exceptions, "Errors occurred while shutting down")
         logger.info("Sequence finished")
 
     def run_sequence(self):
@@ -405,8 +406,8 @@ class SequenceRunnerThread(Thread):
                 exceptions.append(new_exception)
 
         if exceptions:
-            raise ExceptionGroup(
-                "Errors occurred when updating device parameters", exceptions
+            raise raise_multiple_exceptions(
+                exceptions, "Errors occurred when updating device parameters"
             )
 
     def run_shot(self) -> None:
@@ -491,3 +492,13 @@ def create_remote_device_managers(
             address=address, authkey=authkey
         )
     return remote_device_managers
+
+
+def raise_multiple_exceptions(
+    exceptions: collections.abc.Sequence[Exception], message: str
+):
+    if not exceptions:
+        return
+    if len(exceptions) == 1:
+        raise exceptions[0]
+    raise ExceptionGroup(message, exceptions)
