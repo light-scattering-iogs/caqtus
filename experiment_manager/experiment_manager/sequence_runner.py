@@ -5,6 +5,7 @@ import time
 import typing
 from concurrent.futures import ThreadPoolExecutor, Future
 from functools import singledispatchmethod
+from multiprocessing.managers import RemoteError
 from threading import Thread, Event
 from typing import Any
 
@@ -40,18 +41,12 @@ from .initialize_devices import get_devices_initialization_parameters
 from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
+from .variable_change import compute_parameters_on_variable_update
 
 if typing.TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
     from camera.runtime import CCamera
     from spincore_sequencer.runtime import SpincorePulseBlaster
-
-# If MOCK_EXPERIMENT is set to True, the experiment will not run the real
-# hardware. It will not connect to the device servers but will still compute all
-# devices parameters if possible.
-# Parameters will be saved, but there will be no data acquisition.
-
-MOCK_EXPERIMENT = False
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -106,19 +101,33 @@ class SequenceRunnerThread(Thread):
             self._sequence.set_state(State.RUNNING, session)
 
     def connect_to_device_servers(self):
-        """Start the connection to the device servers"""
-        if MOCK_EXPERIMENT:
+        """Start the connection to the device servers."""
+
+        if self._experiment_config.mock_experiment:
             return
 
         for server_name, server in self._remote_device_managers.items():
             logger.info(f"Connecting to device server {server_name}...")
-            server.connect()
+            try:
+                server.connect()
+            except ConnectionRefusedError as error:
+                raise ConnectionRefusedError(
+                    f"The remote server '{server_name}' rejected the connection. It is"
+                    " possible that the server is not running or that the port is not"
+                    " open."
+                ) from error
+            except TimeoutError as error:
+                raise TimeoutError(
+                    f"The remote server '{server_name}' did not respond to the"
+                    " connection request. It is possible that the server is not"
+                    " running or that the port is not open."
+                ) from error
             logger.info(f"Connection established to {server_name}")
 
     def create_devices(self) -> dict[str, RuntimeDevice]:
         """Instantiate the devices on their respective remote server"""
 
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return {}
 
         devices = {}
@@ -126,9 +135,20 @@ class SequenceRunnerThread(Thread):
             self._experiment_config, self._sequence_config
         ).items():
             server = self._remote_device_managers[parameters["server"]]
-            devices[name] = getattr(server, parameters["type"])(
-                **parameters["init_kwargs"]
-            )
+            if not hasattr(server, parameters["type"]):
+                raise ValueError(
+                    f"The device '{name}' is of type '{parameters['type']}' but this"
+                    " type is not registered for the remote device client."
+                )
+            remote_class = getattr(server, parameters["type"])
+            try:
+                devices[name] = remote_class(**parameters["init_kwargs"])
+            except RemoteError as error:
+                raise RuntimeError(
+                    f"Remote servers {parameters['server']} could not instantiate"
+                    f" device '{name}'"
+                ) from error
+
         return devices
 
     def start_devices(self):
@@ -169,6 +189,19 @@ class SequenceRunnerThread(Thread):
             self.run_step(self._experiment_config.header, context, shot_saver)
             self.run_step(self._sequence_config.program, context, shot_saver)
 
+    def update_variable_value(self, name: str, value: Any, context: SequenceContext):
+        """Update the value of a variable.
+
+        This method update the value of a variable in the dictionary-like context. It also gives a chance to the devices
+         to update their state if needed.
+        """
+
+        context.variables[name] = value
+        parameters = compute_parameters_on_variable_update(
+            name, self._experiment_config, context.variables
+        )
+        self.update_device_parameters(parameters)
+
     @singledispatchmethod
     def run_step(self, step: Step, context: SequenceContext, shot_saver: ShotSaver):
         """Execute a given step of the sequence
@@ -205,8 +238,10 @@ class SequenceRunnerThread(Thread):
     ):
         """Add or update a variable declaration in the context"""
 
-        context.variables[declaration.name] = Quantity(
-            declaration.expression.evaluate(context.variables | units)
+        self.update_variable_value(
+            declaration.name,
+            Quantity(declaration.expression.evaluate(context.variables | units)),
+            context,
         )
 
     @run_step.register
@@ -224,7 +259,7 @@ class SequenceRunnerThread(Thread):
         for value in numpy.arange(
             start.to(unit).magnitude, stop.to(unit).magnitude, step.to(unit).magnitude
         ):
-            context.variables[arange_loop.name] = value * unit
+            self.update_variable_value(arange_loop.name, value * unit, context)
             for step in arange_loop.children:
                 if self.is_waiting_to_interrupt():
                     return
@@ -249,7 +284,7 @@ class SequenceRunnerThread(Thread):
         for value in numpy.linspace(
             start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
-            context.variables[linspace_loop.name] = value * unit
+            self.update_variable_value(linspace_loop.name, value * unit, context)
             for step in linspace_loop.children:
                 if self.is_waiting_to_interrupt():
                     return
@@ -263,7 +298,9 @@ class SequenceRunnerThread(Thread):
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
-        optimizer_config = self._experiment_config.get_optimizer_config(optimization_loop.optimizer_name)
+        optimizer_config = self._experiment_config.get_optimizer_config(
+            optimization_loop.optimizer_name
+        )
         optimizer = Optimizer(optimization_loop.variables, context.variables | units)
         shot_saver.wait()
         with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
@@ -274,7 +311,8 @@ class SequenceRunnerThread(Thread):
             for loop_iteration in range(optimization_loop.repetitions):
                 old_shots = shot_saver.saved_shots
                 new_values = optimizer.suggest_values()
-                context.variables |= new_values
+                for name, value in new_values.items():
+                    self.update_variable_value(name, value, context)
 
                 for step in optimization_loop.children:
                     self.run_step(step, context, shot_saver)
@@ -289,7 +327,9 @@ class SequenceRunnerThread(Thread):
                 optimizer.register(new_values, score)
                 with self._session.activate():
                     for shot in new_shots:
-                        shot.add_scores({optimization_loop.optimizer_name: score}, self._session)
+                        shot.add_scores(
+                            {optimization_loop.optimizer_name: score}, self._session
+                        )
 
     @run_step.register
     def _(self, shot: ExecuteShot, context: SequenceContext, shot_saver: ShotSaver):
@@ -332,24 +372,27 @@ class SequenceRunnerThread(Thread):
         )
         computation_time = datetime.datetime.now()
         logger.info(
-            f"Shot parameters computation duration: {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
+            "Shot parameters computation duration:"
+            f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
         )
         self.update_device_parameters(device_parameters)
         update_time = datetime.datetime.now()
         logger.info(
-            f"Device parameters update duration: {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
+            "Device parameters update duration:"
+            f" {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
         )
 
     def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return
         future_updates: dict[str, Future] = {}
 
         with ThreadPoolExecutor() as update_executor:
             for device_name, parameters in device_parameters.items():
-                future_updates[device_name] = update_executor.submit(
-                    self._devices[device_name].update_parameters, **parameters
-                )
+                if parameters:
+                    future_updates[device_name] = update_executor.submit(
+                        self._devices[device_name].update_parameters, **parameters
+                    )
 
         exceptions = []
         for device_name, update in future_updates.items():
@@ -367,7 +410,7 @@ class SequenceRunnerThread(Thread):
 
     def run_shot(self) -> None:
         start_time = datetime.datetime.now()
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             time.sleep(0.5)
             return
         for ni6738_card in self.get_ni6738_cards().values():
@@ -387,11 +430,12 @@ class SequenceRunnerThread(Thread):
                 raise exception
         stop_time = datetime.datetime.now()
         logger.info(
-            f"Shot execution duration: {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+            "Shot execution duration:"
+            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
         )
 
     def extract_data(self):
-        if MOCK_EXPERIMENT:
+        if self._experiment_config.mock_experiment:
             return {
                 "image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)
             }

@@ -2,11 +2,14 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
 from typing import Optional, overload, Literal
 
+import platformdirs
 import sqlalchemy
 import sqlalchemy.orm
+import yaml
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from experiment.configuration import ExperimentConfig
@@ -21,17 +24,20 @@ class ExperimentSessionNotActiveError(RuntimeError):
 
 
 class _ExperimentSession(ABC):
-    """Manage the experiment session
+    """Manage the experiment session.
 
     Instances of this class manage access to the permanent storage of the experiment.
-    A session contains the history of the experiment configuration and the current configuration.
-    It also contains the sequence tree of the experiment, with the sequence states and data.
+    A session contains the history of the experiment configuration and the current
+    configuration. It also contains the sequence tree of the experiment, with the
+    sequence states and data.
 
-    Some objects in the sequence.runtime package (Sequence, Shot) that can read and write to the experiment data storage
-    have methods that require an activated ExperimentSession.
+    Some objects in the sequence.runtime package (Sequence, Shot) that can read and
+    write to the experiment data storage have methods that require an activated
+    ExperimentSession.
 
-    If an error occurs within an activated session block, the session is automatically rolled back to the beginning of
-    the activation block. This prevents leaving some data in an inconsistent state.
+    If an error occurs within an activated session block, the session state is
+    automatically rolled back to the beginning of the activation block. This prevents
+    leaving some data in an inconsistent state.
     """
 
     def __init__(self):
@@ -46,11 +52,11 @@ class _ExperimentSession(ABC):
     ) -> str:
         if name is None:
             name = self._get_new_experiment_config_name()
-        yaml = experiment_config.to_yaml()
-        assert ExperimentConfig.from_yaml(yaml) == experiment_config
+        yaml_ = experiment_config.to_yaml()
+        assert ExperimentConfig.from_yaml(yaml_) == experiment_config
         ExperimentConfigModel.add_config(
             name=name,
-            yaml=yaml,
+            yaml=yaml_,
             comment=comment,
             session=self.get_sql_session(),
         )
@@ -71,18 +77,60 @@ class _ExperimentSession(ABC):
             ExperimentConfigModel.get_config(name, self.get_sql_session())
         )
 
-    def get_experiment_configs(
+    def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[str, ExperimentConfig]:
+    ) -> dict[str, str]:
+        """Get the experiment configuration raw yaml strings.
+
+        Args:
+            from_date: Only query experiment configurations that were modified
+                after this date.
+            to_date: Only query experiment configurations that were modified before
+                this date.
+
+        Returns:
+            A dictionary mapping experiment configuration names to their yaml string
+            representation. The yaml representations are not guaranteed to be valid if
+            the way the experiment configuration is represented changes.
+        """
+
         results = ExperimentConfigModel.get_configs(
             from_date,
             to_date,
             self.get_sql_session(),
         )
+        return {name: yaml_ for name, yaml_ in results.items()}
 
-        return {
-            name: ExperimentConfig.from_yaml(yaml) for name, yaml in results.items()
-        }
+    def get_experiment_configs(
+        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
+    ) -> dict[str, ExperimentConfig]:
+        """Get the experiment configurations available within the session.
+
+        Args:
+            from_date: Only query experiment configurations that were modified
+                after this date.
+            to_date: Only query experiment configurations that were modified before
+                this date.
+
+        Returns:
+            A dictionary mapping experiment configuration names to the corresponding
+            ExperimentConfig object.
+
+        Raises:
+            ValueError: If the yaml representation of an experiment configuration is
+                invalid.
+        """
+
+        raw_yamls = self.get_experiment_config_yamls(from_date, to_date)
+        results = {}
+
+        for name, yaml_ in raw_yamls.items():
+            try:
+                results[name] = ExperimentConfig.from_yaml(yaml_)
+            except Exception as e:
+                raise ValueError(f"Failed to load experiment config '{name}'") from e
+
+        return results
 
     def set_current_experiment_config(self, name: str):
         CurrentExperimentConfigModel.set_current_experiment_config(
@@ -94,11 +142,42 @@ class _ExperimentSession(ABC):
             session=self.get_sql_session()
         )
 
-    def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
+    def get_current_experiment_config_yaml(self) -> Optional[str]:
+        """Get the yaml representation of the current experiment configuration.
+
+        Returns:
+            The yaml representation of the current experiment configuration if one is
+            set, None otherwise. The yaml representation is not guaranteed to be valid
+            if the way the experiment configuration is represented changed.
+        """
+
         name = self.get_current_experiment_config_name()
         if name is None:
             return None
-        return self.get_experiment_configs()[name]
+        experiment_config_yaml = self.get_experiment_config_yamls()[name]
+        return experiment_config_yaml
+
+    def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
+        """Get the current experiment configuration.
+
+        Returns:
+            The current experiment configuration if one is set, None otherwise.
+        Raises:
+            ValueError: If the yaml representation of the current experiment
+            configuration is invalid.
+        """
+
+        experiment_config_yaml = self.get_current_experiment_config_yaml()
+        if experiment_config_yaml is None:
+            return None
+
+        try:
+            return ExperimentConfig.from_yaml(experiment_config_yaml)
+        except Exception as e:
+            name = self.get_current_experiment_config_name()
+            raise ValueError(
+                f"Failed to load experiment config '{name}'"
+            ) from e
 
     def activate(self):
         """Activate the session
@@ -232,8 +311,9 @@ class ExperimentSessionMaker:
         else:
             return AsyncExperimentSession(self._async_session_maker())
 
-    # The following methods are required to make ExperimentSessionMaker pickleable to pass it to other processes.
-    # sqlalchemy engine is not pickleable, so we just pickle the database url and create a new engine upon unpickling.
+    # The following methods are required to make ExperimentSessionMaker pickleable to
+    # pass it to other processes. Since sqlalchemy engine is not pickleable, so we just
+    # pickle the database info and create a new engine upon unpickling.
     def __getstate__(self) -> dict:
         return self._kwargs
 
@@ -242,12 +322,30 @@ class ExperimentSessionMaker:
 
 
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
-    return ExperimentSessionMaker(
-        user="caqtus",
-        ip="192.168.137.4",
-        password="Deardear",
-        database="test_database",
+    """Create a default ExperimentSessionMaker.
+
+    This function loads the parameters from a user config file. The file must follow the
+    format of the following example:
+
+    user: the_name_of_the_database_user
+    ip: 192.168.137.1  # The ip of the database server
+    password: the_password_to_the_database
+    database: the_name_of_the_database
+    """
+
+    config_folder = platformdirs.user_config_path(
+        appname="ExperimentControl", appauthor="Caqtus"
     )
+    path = Path(config_folder) / "default_experiment_session.yaml"
+    if not path.exists():
+        raise FileNotFoundError(
+            "Could not find default_experiment_session.yaml. "
+            f"Please create the file at {path}."
+        )
+    with open(path) as file:
+        kwargs = yaml.safe_load(file)
+
+    return ExperimentSessionMaker(**kwargs)
 
 
 def get_standard_experiment_session() -> ExperimentSession:

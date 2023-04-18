@@ -1,20 +1,17 @@
 from typing import Optional
 
-from PyQt6.QtWidgets import QFormLayout, QWidget
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
+from .system_settings_editor_ui import Ui_SystemSettingsEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
 
-class SystemSettingsEditor(ConfigSettingsEditor):
-    """A widget that allow to edit the system settings
+class SystemSettingsEditor(ConfigSettingsEditor, Ui_SystemSettingsEditor):
+    """A widget that allow to edit the system settings.
 
-    This includes the path to store the config file and the database path to store the
-    experiment data.
+    Only the mock experiment checkbox is currently shown.
     """
-
-    def get_experiment_config(self) -> ExperimentConfig:
-        return self.config
 
     def __init__(
         self,
@@ -22,9 +19,26 @@ class SystemSettingsEditor(ConfigSettingsEditor):
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
+
         super().__init__(experiment_config, tree_label, parent)
 
-        self.layout = QFormLayout()
-        self.setLayout(self.layout)
+        self.setupUi(self)
+        self.update_ui(self._experiment_config)
 
-        self.config = experiment_config
+    def update_ui(self, experiment_config: ExperimentConfig):
+        """Update the UI to match the experiment config."""
+
+        self._mock_experiment_checkbox.setChecked(experiment_config.mock_experiment)
+
+    def update_config(self, config: ExperimentConfig) -> ExperimentConfig:
+        """Update the experiment config to match the UI."""
+
+        config = config.copy(deep=True)
+        config.mock_experiment = self._mock_experiment_checkbox.isChecked()
+        return config
+
+    def get_experiment_config(self) -> ExperimentConfig:
+        """Return a copy of the experiment config currently shown in the UI."""
+
+        self._experiment_config = self.update_config(self._experiment_config)
+        return super().get_experiment_config()

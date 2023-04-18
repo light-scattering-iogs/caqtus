@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "siglent_sdg6000x"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.8"
 device-config = {path = "../../../common/device_config", develop = true}
 settings-model = {path = "../../../common/settings_model", develop = true}
 units = {path = "../../../common/units", develop = true}

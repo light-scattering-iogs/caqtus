@@ -1,5 +1,5 @@
-import copy
 import logging
+from collections.abc import Iterable
 from typing import Optional, Type
 
 from pydantic import Field, validator
@@ -21,7 +21,7 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
 )
-from settings_model import SettingsModel
+from settings_model import VersionedSettingsModel, Version
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
@@ -30,36 +30,56 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class ExperimentConfig(SettingsModel):
+class ExperimentConfig(VersionedSettingsModel):
+    """Holds static configuration of the experiment.
+
+    This configuration is used to instantiate the devices and to run the experiment. It
+    contains information about the machine that should change rarely (not at each
+    sequence).
+
+    Attributes:
+        device_servers: The configurations of the servers that will actually instantiate
+            devices.
+        header: Steps that are always executed before a sequence. At the moment, it is
+            only used to pre-define constant before running the sequences.
+        device_configurations: All the static configurations of the devices present on
+            the experiment.
+        optimization_configurations: Possible configurations to choose from when running
+            an optimization loop.
+        mock_experiment: If True, the experiment will not run the real hardware. It will
+         not connect to the device servers but will still compute all devices parameters
+         if possible. Parameters will be saved and random images will be generated, but
+         there will be no actual data acquisition. This is meant to be used for testing.
+    """
+
+    __version__ = "1.0.0"
+
     device_servers: dict[str, DeviceServerConfiguration] = Field(
         default_factory=dict,
-        description=(
-            "The configurations of the servers that will actually instantiate devices."
-        ),
-    )
-    header: SequenceSteps = Field(
-        default_factory=SequenceSteps,
-        description=(
-            "Steps that are always executed before a sequence. At the moment, it is"
-            " only used to pre-define 'constant variables'."
-        ),
-    )
-    device_configurations: list[DeviceConfiguration] = Field(
-        default_factory=list,
-        description=(
-            "All the static configurations of the devices present on the experiment."
-        ),
-    )
-    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
-        default_factory=dict,
-        description="Possible configurations to choose from when running an optimization.",
     )
 
+    header: SequenceSteps = Field(
+        default_factory=SequenceSteps,
+    )
+
+    # It would be better to use a dict[str, DeviceConfiguration] instead of a list to
+    # enforce name uniqueness, but this would invalidate all previous configuration
+    # files.
+    device_configurations: list[DeviceConfiguration] = Field(
+        default_factory=list,
+    )
+
+    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
+        default_factory=dict,
+    )
+
+    mock_experiment: bool = False
+
     @classmethod
-    def from_file(cls, path):
-        with open(path, "r") as file:
-            yaml = file.read()
-        return cls.from_yaml(yaml)
+    def update_parameters_version(cls, config: dict) -> dict:
+        if "version" not in config:
+            config["version"] = Version(major=1, minor=0, patch=0)
+        return config
 
     @validator("device_configurations")
     def validate_device_configurations(
@@ -81,6 +101,12 @@ class ExperimentConfig(SettingsModel):
 
     @property
     def spincore_config(self) -> SpincoreSequencerConfiguration:
+        """Return the configuration of the spincore sequencer.
+
+        It assumes that there is exactly one spincore sequencer in the experiment for
+        now.
+        """
+
         for device_config in self.device_configurations:
             if isinstance(device_config, SpincoreSequencerConfiguration):
                 return device_config
@@ -88,6 +114,11 @@ class ExperimentConfig(SettingsModel):
 
     @property
     def ni6738_config(self) -> NI6738SequencerConfiguration:
+        """Return the configuration of the NI6738 sequencer.
+
+        It assumes that there is exactly one NI6738 sequencer in the experiment for now.
+        """
+
         for device_config in self.device_configurations:
             if isinstance(device_config, NI6738SequencerConfiguration):
                 return device_config
@@ -156,7 +187,11 @@ class ExperimentConfig(SettingsModel):
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
     ) -> dict[str, DeviceConfigType]:
-        """Return a dictionary of all device configurations matching a given type"""
+        """Return a dictionary of all device configurations matching a given type.
+
+        The keys of the dictionary are the device names.
+        """
+
         return {
             config.device_name: config
             for config in self.device_configurations
@@ -164,17 +199,47 @@ class ExperimentConfig(SettingsModel):
         }
 
     def get_device_config(self, device_name: str) -> DeviceConfigType:
+        """Return the configuration of a given device.
+
+        Args:
+            device_name: The name of the device to get the configuration for.
+        Returns:
+            A copy of the device configuration. Changing the returned device
+            configuration will not affect the experiment configuration.
+        Raises:
+            DeviceConfigNotFoundError: If there is no device configuration with this
+            name.
+        """
+
         for config in self.device_configurations:
             if config.device_name == device_name:
-                return copy.deepcopy(config)
+                return config.copy(deep=True)
         raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
 
     def set_device_config(self, device_name: str, config: DeviceConfiguration):
+        """Change a device configuration in the experiment configuration.
+
+        Args:
+            device_name: The name of the device to change the configuration for.
+            config: The new configuration for the device. A copy of this object is made
+                and stored in the experiment configuration.
+        Raises:
+            DeviceConfigNotFoundError: If there is no device configuration with this
+                name.
+        """
+
         names = [config.device_name for config in self.device_configurations]
-        index = names.index(device_name)
-        self.device_configurations[index] = copy.deepcopy(config)
+        try:
+            index = names.index(device_name)
+        except ValueError:
+            raise DeviceConfigNotFoundError(
+                f"Could not find a device named {device_name}"
+            )
+        self.device_configurations[index] = config.copy(deep=True)
 
     def add_device_config(self, config: DeviceConfiguration):
+        """Add a device configuration to the experiment configuration."""
+
         if not isinstance(config, DeviceConfiguration):
             raise TypeError(
                 f"Trying to create a configuration that is not an instance of"
@@ -191,6 +256,18 @@ class ExperimentConfig(SettingsModel):
             raise ValueError(
                 f"Could not find an optimizer configuration named {optimizer_name}"
             )
+
+    def get_device_runtime_type(self, device_name) -> str:
+        """Return the runtime type of a device."""
+
+        device_config = self.get_device_config(device_name)
+        device_type = device_config.get_device_type()
+        return device_type
+
+    def get_device_server_names(self) -> Iterable[str]:
+        """Return the names of all device servers registered in the configuration."""
+
+        return list(self.device_servers.keys())
 
 
 class DeviceConfigNotFoundError(RuntimeError):

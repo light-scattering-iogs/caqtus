@@ -1,4 +1,3 @@
-import copy
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QModelIndex
@@ -21,18 +20,15 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
     Only allows to declare constants at the moment.
     """
 
-    def get_experiment_config(self) -> ExperimentConfig:
-        return self.model.get_config()
-
     def __init__(
         self,
-        config: ExperimentConfig,
+        experiment_config: ExperimentConfig,
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(config=config, tree_label=tree_label, parent=parent)
+        super().__init__(experiment_config, tree_label, parent)
 
-        self.model = SequenceHeaderModel(config)
+        self.model = SequenceHeaderModel(self._experiment_config)
         self.setModel(self.model)
         delegate = StepDelegate()
         self.setItemDelegate(delegate)
@@ -60,6 +56,11 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
 
         # noinspection PyUnresolvedReferences
         self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def get_experiment_config(self) -> ExperimentConfig:
+        # self.model is working on a reference to self._experiment_config so this
+        # attribute is always up-to-date with the UI.
+        return super().get_experiment_config()
 
     def convert_to_external_use(self):
         return self.get_experiment_config().header.children
@@ -92,9 +93,6 @@ class SequenceHeaderModel(StepsModel):
     def __init__(self, config: ExperimentConfig):
         super().__init__()
         self._config = config
-
-    def get_config(self) -> ExperimentConfig:
-        return copy.deepcopy(self._config)
 
     @property
     def root(self) -> Step:

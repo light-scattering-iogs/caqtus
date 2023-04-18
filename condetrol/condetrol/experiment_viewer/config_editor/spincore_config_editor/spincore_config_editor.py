@@ -25,35 +25,50 @@ class SpincoreConfigEditor(DeviceConfigEditor, Ui_SpincoreEditor):
     ):
         super().__init__(experiment_config, tree_label, parent)
 
-        config: SpincoreSequencerConfiguration = (
-            self._experiment_config.get_device_config(self.device_name)
-        )
-
         self.setupUi(self)
-        self.setup_ui_from_config(config)
+        self.update_ui(self._experiment_config)
         self.channels_table_view.setItemDelegateForColumn(1, ColorCellDelegate())
 
     def get_experiment_config(self) -> ExperimentConfig:
-        new_config = self._experiment_config.get_device_config(self.device_name)
-        self.write_ui_to_config(new_config)
-        self._experiment_config.set_device_config(self.device_name, new_config)
-        return self._experiment_config
+        self._experiment_config = self.update_config(self._experiment_config)
+        return super().get_experiment_config()
 
-    def setup_ui_from_config(self, config: SpincoreSequencerConfiguration):
+    def update_ui(self, experiment_config: ExperimentConfig):
+        config: SpincoreSequencerConfiguration = experiment_config.get_device_config(
+            self.device_name
+        )
         self.board_number_spinbox.setValue(config.board_number)
         self.time_step_spinbox.setValue(config.time_step / ns)
         self.channels_table_view.setModel(SpincoreChannelsModel(config))
         self.channels_table_view.resizeColumnToContents(0)
 
-    def write_ui_to_config(self, config: SpincoreSequencerConfiguration):
+    def update_config(self, experiment_config: ExperimentConfig) -> ExperimentConfig:
+        experiment_config = experiment_config.copy(deep=True)
+        config: SpincoreSequencerConfiguration = experiment_config.get_device_config(
+            self.device_name
+        )
+
+        model: SpincoreChannelsModel = self.channels_table_view.model()
+        table_config: SpincoreSequencerConfiguration = model.get_config()
+        config.channel_descriptions = table_config.channel_descriptions
+        config.channel_colors = table_config.channel_colors
+
         config.board_number = self.board_number_spinbox.value()
         config.time_step = self.time_step_spinbox.value() * ns
-        return config
+        experiment_config.set_device_config(self.device_name, config)
+        return experiment_config
 
     def update_from_external_source(self, new_config: SpincoreSequencerConfiguration):
         super().update_from_external_source(new_config)
-        self.setup_ui_from_config(new_config)
+        self.update_ui(self._experiment_config)
 
 
 class SpincoreChannelsModel(ChannelsModel):
-    pass
+    def __init__(self, config: SpincoreSequencerConfiguration, *args, **kwargs):
+        super().__init__(config, *args, **kwargs)
+
+    def get_config(self) -> SpincoreSequencerConfiguration:
+        config = super().get_config()
+        if not isinstance(config, SpincoreSequencerConfiguration):
+            raise TypeError("Expected SpincoreSequencerConfiguration")
+        return config

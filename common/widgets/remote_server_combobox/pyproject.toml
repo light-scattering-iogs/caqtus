@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "remote-server-combobox"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "remote_server_combobox"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pyqt6 = "^6.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -15,10 +15,10 @@ from .amplitude_modulation_editor_ui import Ui_AmplitudeModulationEditor
 from .channel_editor_ui import Ui_ChannelEditor
 from .editor_widget_ui import Ui_EditorWidget
 from .sine_editor_ui import Ui_SineEditor
-from ..config_settings_editor import ConfigSettingsEditor
+from ..config_settings_editor import DeviceConfigEditor
 
 
-class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
+class SiglentSDG6000XConfigEditor(DeviceConfigEditor, Ui_EditorWidget):
     def __init__(
         self,
         experiment_config: ExperimentConfig,
@@ -28,10 +28,8 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         super().__init__(experiment_config, tree_label, parent)
         self.setupUi(self)
 
-        self.config = experiment_config
-        self.device_name = self.strip_device_prefix(tree_label)
         self.siglent_config: SiglentSDG6000XConfiguration = (
-            self.config.get_device_config(self.device_name)
+            self._experiment_config.get_device_config(self.device_name)
         )
 
         self.waveform_editors = []
@@ -42,7 +40,7 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         self.setup_channels()
 
     def setup_server_combobox(self):
-        for remote_server in self.config.device_servers:
+        for remote_server in self._experiment_config.device_servers:
             self.remote_server_combobox.addItem(remote_server)
         self.remote_server_combobox.setCurrentText(self.siglent_config.remote_server)
 
@@ -68,8 +66,8 @@ class SiglentSDG6000XConfigEditor(ConfigSettingsEditor, Ui_EditorWidget):
         self.read_visa_resource()
         self.read_channels()
         # self.read_waveforms()
-        self.config.set_device_config(self.device_name, self.siglent_config)
-        return self.config
+        self._experiment_config.set_device_config(self.device_name, self.siglent_config)
+        return super().get_experiment_config()
 
     def read_server_combobox(self):
         self.siglent_config.remote_server = self.remote_server_combobox.currentText()

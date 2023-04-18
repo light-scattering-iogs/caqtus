@@ -1,10 +1,13 @@
 from typing import Any, TypedDict
 
-from camera.configuration import CameraConfiguration
-from experiment.configuration import ExperimentConfig
-from ni6738_analog_card.configuration import NI6738SequencerConfiguration
+from experiment.configuration import (
+    ExperimentConfig,
+    SpincoreSequencerConfiguration,
+    NI6738SequencerConfiguration,
+    CameraConfiguration,
+    ElliptecELL14RotationStageConfiguration,
+)
 from sequence.configuration import SequenceConfig, CameraLane
-from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 
 
 class InitializationParameters(TypedDict):
@@ -26,6 +29,7 @@ def get_devices_initialization_parameters(
         get_spincore_initialization_parameters(experiment_config, sequence_config)
         | get_ni6738_initialization_parameters(experiment_config, sequence_config)
         | get_cameras_initialization_parameters(experiment_config, sequence_config)
+        | get_elliptec_initialization_parameters(experiment_config, sequence_config)
     )
 
 
@@ -79,13 +83,31 @@ def get_cameras_initialization_parameters(
         camera_config = camera_configs[camera_name]
         init_kwargs = camera_config.get_device_init_args()
         init_kwargs["picture_names"] = camera_lane.get_picture_names()
-        init_kwargs["exposures"] = [camera_config.get_default_exposure()] * len(init_kwargs["picture_names"])
+        init_kwargs["exposures"] = [camera_config.get_default_exposure()] * len(
+            init_kwargs["picture_names"]
+        )
         result[camera_name] = InitializationParameters(
             type=camera_config.get_device_type(),
             server=camera_config.remote_server,
             init_kwargs=init_kwargs,
         )
 
+    return result
+
+
+def get_elliptec_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[str, InitializationParameters]:
+
+    result = {}
+    for name, config in experiment_config.get_device_configs(
+        ElliptecELL14RotationStageConfiguration
+    ).items():
+        result[name] = InitializationParameters(
+            type=config.get_device_type(),
+            server=config.remote_server,
+            init_kwargs=config.get_device_init_args(),
+        )
     return result
 
 

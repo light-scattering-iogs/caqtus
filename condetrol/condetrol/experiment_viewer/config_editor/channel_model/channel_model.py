@@ -8,11 +8,21 @@ from settings_model import YAMLSerializable
 
 
 class ChannelsModel(QAbstractTableModel):
-    """A model used to display and edit the channel descriptions and colors of a device"""
+    """A model to display and edit the channel descriptions and colors of a device."""
 
     def __init__(self, config: ChannelConfiguration, *args, **kwargs):
+        """Initialize the model.
+
+        Args:
+            config: The channel configuration to display and edit. The model will keep a
+            reference to this object and edit it directly. No copy is made.
+        """
+
         self._config = config
         super().__init__(*args, **kwargs)
+
+    def get_config(self) -> ChannelConfiguration:
+        return self._config.copy(deep=True)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return self._config.number_channels

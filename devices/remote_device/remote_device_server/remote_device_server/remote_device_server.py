@@ -12,6 +12,15 @@ logging.basicConfig()
 imported_devices: dict[str, Type[RuntimeDevice]] = {}
 
 try:
+    from elliptec_ell14.runtime import ElliptecELL14RotationStage
+
+    imported_devices["ElliptecELL14RotationStage"] = ElliptecELL14RotationStage
+    logger.info("ElliptecELL14RotationStage imported")
+except Exception:
+    pass
+
+
+try:
     from orca_quest.runtime import OrcaQuestCamera
 
     imported_devices["OrcaQuestCamera"] = OrcaQuestCamera

@@ -14,6 +14,7 @@ REGISTERED_DEVICE_TYPES: list[str] = [
     "SpincorePulseBlaster",
     "NI6738AnalogCard",
     "ImagingSourceCameraDMK33GR0134",
+    "ElliptecELL14RotationStage",
 ]
 
 for device_type in REGISTERED_DEVICE_TYPES:

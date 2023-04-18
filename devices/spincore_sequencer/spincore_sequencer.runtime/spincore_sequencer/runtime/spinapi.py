@@ -29,6 +29,7 @@ FREQ_REGS = 1
 try:
     spinapi = ctypes.CDLL("spinapi64")
 except:
+    logger.warning("Could not load spinapi64.dll, trying spinapi.dll")
     spinapi = ctypes.CDLL("spinapi")
 
 
