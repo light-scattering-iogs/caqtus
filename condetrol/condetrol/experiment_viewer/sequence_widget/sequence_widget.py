@@ -36,6 +36,7 @@ from sequence.configuration import (
     LinspaceLoop,
     ExecuteShot,
     OptimizationLoop,
+    UserInputLoop,
 )
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
@@ -252,7 +253,7 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
         add_menu.setTitle("Add...")
         menu.addMenu(add_menu)
 
-        create_variable_action = QAction("variable")
+        create_variable_action = QAction("Variable")
         add_menu.addAction(create_variable_action)
         # noinspection PyUnresolvedReferences
         create_variable_action.triggered.connect(
@@ -261,7 +262,7 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
             )
         )
 
-        create_shot_action = QAction("shot")
+        create_shot_action = QAction("Shot")
         add_menu.addAction(create_shot_action)
         # noinspection PyUnresolvedReferences
         create_shot_action.triggered.connect(
@@ -273,7 +274,7 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
             )
         )
 
-        create_linspace_action = QAction("linspace loop")
+        create_linspace_action = QAction("Linspace loop")
         add_menu.addAction(create_linspace_action)
         # noinspection PyUnresolvedReferences
         create_linspace_action.triggered.connect(
@@ -285,7 +286,7 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
             )
         )
 
-        create_arange_action = QAction("arange loop")
+        create_arange_action = QAction("Arange loop")
         add_menu.addAction(create_arange_action)
         # noinspection PyUnresolvedReferences
         create_arange_action.triggered.connect(
@@ -300,15 +301,24 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
             )
         )
 
-        create_optimization_action = QAction("optimization loop")
-        add_menu.addAction(create_optimization_action)
-        create_optimization_action.triggered.connect(
+        optimization_menu = QMenu()
+        optimization_menu.setTitle("Optimization loop...")
+        add_menu.addMenu(optimization_menu)
+
+        create_bayesian_optimization_action = QAction("Bayesian")
+        optimization_menu.addAction(create_bayesian_optimization_action)
+        create_bayesian_optimization_action.triggered.connect(
             lambda: model.insert_step(
-                OptimizationLoop(
-                    optimizer_name="",
-                    variables=[],
-                    repetitions=10,
-                ),
+                OptimizationLoop.empty_loop(),
+                index,
+            )
+        )
+
+        create_human_optimization_action = QAction("Human")
+        optimization_menu.addAction(create_human_optimization_action)
+        create_human_optimization_action.triggered.connect(
+            lambda: model.insert_step(
+                UserInputLoop.empty_loop(),
                 index,
             )
         )
@@ -355,14 +365,16 @@ class SequenceWidget(QDockWidget):
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
 
         self._state_updater = SequenceStateWatcher(
-            sequence, session_maker, on_state_changed=self.update_title, watch_interval=0.5
+            sequence,
+            session_maker,
+            on_state_changed=self.update_title,
+            watch_interval=0.5,
         )
         self._state_updater.start()
         self.destroyed.connect(self._state_updater.stop)
 
     def update_title(self, state: State):
         self.setWindowTitle(f"{str(self._sequence.path)} [{state.name}]")
-
 
     def undo(self):
         self.program_tree.model().undo()

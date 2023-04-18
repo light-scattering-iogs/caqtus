@@ -11,6 +11,8 @@ from .sequence_steps import (
     ExecuteShot,
     OptimizationLoop,
     OptimizationVariableInfo,
+    UserInputLoop,
+    VariableRange,
 )
 
 
@@ -39,6 +41,8 @@ __all__ = [
     "ExecuteShot",
     "OptimizationLoop",
     "OptimizationVariableInfo",
+    "UserInputLoop",
+    "VariableRange",
     "ShotConfiguration",
     "Lane",
     "DigitalLane",

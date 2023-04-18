@@ -330,6 +330,10 @@ class OptimizationLoop(Step, YAMLSerializable):
             return None
         return self.repetitions * number_sub_steps
 
+    @classmethod
+    def empty_loop(cls):
+        return cls("", [], 0)
+
 
 class VariableRange(SettingsModel):
     first_bound: Expression
@@ -381,6 +385,10 @@ class UserInputLoop(Step, YAMLSerializable):
         # We don't when the user will stop the loop,
         # so we return None
         return None
+
+    @classmethod
+    def empty_loop(cls) -> Self:
+        return cls({})
 
 
 @singledispatch
