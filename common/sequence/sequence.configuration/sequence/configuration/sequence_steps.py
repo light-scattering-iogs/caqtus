@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import singledispatch
-from typing import Optional, Iterable, TypedDict, Self
+from typing import Optional, Iterable, Self
 
 import numpy
 import pydantic
@@ -275,8 +275,7 @@ class ExecuteShot(Step, YAMLSerializable):
         return 1
 
 
-class OptimizationVariableInfo(TypedDict):
-    name: str
+class VariableRange(SettingsModel):
     first_bound: Expression
     second_bound: Expression
     initial_value: Expression
@@ -286,7 +285,7 @@ class OptimizationLoop(Step, YAMLSerializable):
     def __init__(
         self,
         optimizer_name: str,
-        variables: list[OptimizationVariableInfo],
+        variables: dict[VariableName, VariableRange],
         repetitions: int,
         parent: Optional[Step] = None,
         children: Optional[list[Step]] = None,
@@ -332,13 +331,7 @@ class OptimizationLoop(Step, YAMLSerializable):
 
     @classmethod
     def empty_loop(cls):
-        return cls("", [], 0)
-
-
-class VariableRange(SettingsModel):
-    first_bound: Expression
-    second_bound: Expression
-    initial_value: Expression
+        return cls("", {}, 0)
 
 
 class UserInputLoop(Step, YAMLSerializable):

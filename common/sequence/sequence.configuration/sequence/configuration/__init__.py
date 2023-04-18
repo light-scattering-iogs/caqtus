@@ -10,7 +10,6 @@ from .sequence_steps import (
     LinspaceLoop,
     ExecuteShot,
     OptimizationLoop,
-    OptimizationVariableInfo,
     UserInputLoop,
     VariableRange,
 )
@@ -40,7 +39,6 @@ __all__ = [
     "LinspaceLoop",
     "ExecuteShot",
     "OptimizationLoop",
-    "OptimizationVariableInfo",
     "UserInputLoop",
     "VariableRange",
     "ShotConfiguration",
