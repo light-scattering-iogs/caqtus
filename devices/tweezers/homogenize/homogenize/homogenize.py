@@ -29,7 +29,7 @@ def acquire_picture(pixelfly):
 
 
 def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: int):
-    amplitude_one_tone = 0.135
+    amplitude_one_tone = 0.16
     scale_x = number_tones_x**0.5 * amplitude_one_tone
     scale_y = number_tones_y**0.5 * amplitude_one_tone
 
@@ -38,10 +38,10 @@ def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: in
         board_id="/dev/spcm0",
         channel_settings=(
             ChannelSettings(
-                name="X", enabled=True, amplitude=scale_x, maximum_power=-6
+                name="X", enabled=True, amplitude=scale_x, maximum_power=-4
             ),
             ChannelSettings(
-                name="Y", enabled=True, amplitude=scale_y, maximum_power=-6
+                name="Y", enabled=True, amplitude=scale_y, maximum_power=-4
             ),
         ),
         segment_names=frozenset(["segment_0"]),
