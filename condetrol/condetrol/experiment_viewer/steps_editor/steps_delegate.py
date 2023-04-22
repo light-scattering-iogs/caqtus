@@ -15,14 +15,17 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
     OptimizationLoop,
-    OptimizationVariableInfo,
+    UserInputLoop,
+    VariableRange,
 )
+from variable_name import VariableName
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
     Ui_OptimizationDeclaration,
+    Ui_UserInputLoop,
 )
 from .steps_model import QABCMeta
 
@@ -179,7 +182,7 @@ class OptimizationIterationWidget(Ui_OptimizationDeclaration, StepWidget):
 
     def set_step_data(self, data: OptimizationLoop):
         self.repetition_spin_box.setValue(data.repetitions)
-        self.variables_view.setModel(VariableOptimizationModel(data.variables))
+        self.variables_view.setModel(VariableRangeModel(data.variables))
         self.optimizer_combobox.addItem(data.optimizer_name)
 
     def get_step_data(self):
@@ -189,14 +192,29 @@ class OptimizationIterationWidget(Ui_OptimizationDeclaration, StepWidget):
         )
 
 
-class VariableOptimizationModel(QAbstractTableModel):
-    def __init__(self, variables: list[OptimizationVariableInfo]):
+class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setupUi(self)
+
+    def set_step_data(self, data: UserInputLoop):
+        self.variables_view.setModel(VariableRangeModel(data.iteration_variables))
+
+    def get_step_data(self):
+        print("get_step_data")
+        return dict(
+            iteration_variables=self.variables_view.model().variables,
+        )
+
+
+class VariableRangeModel(QAbstractTableModel):
+    def __init__(self, variables: dict[VariableName, VariableRange]):
         super().__init__()
         self._variables = copy.deepcopy(variables)
 
     @property
     def variables(self):
-        return self._variables
+        return copy.deepcopy(self._variables)
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self._variables)
@@ -206,14 +224,15 @@ class VariableOptimizationModel(QAbstractTableModel):
 
     def data(self, index: QModelIndex, role: int = ...):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            variable_name = list(self._variables.keys())[index.row()]
             if index.column() == 0:
-                return self._variables[index.row()]["name"]
+                return variable_name
             elif index.column() == 1:
-                return self._variables[index.row()]["first_bound"].body
+                return self._variables[variable_name].first_bound.body
             elif index.column() == 2:
-                return self._variables[index.row()]["second_bound"].body
+                return self._variables[variable_name].second_bound.body
             elif index.column() == 3:
-                return self._variables[index.row()]["initial_value"].body
+                return self._variables[variable_name].initial_value.body
         return None
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
@@ -240,14 +259,16 @@ class VariableOptimizationModel(QAbstractTableModel):
 
     def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
         if role == Qt.ItemDataRole.EditRole:
+            variable_name = list(self._variables.keys())[index.row()]
             if index.column() == 0:
-                self._variables[index.row()]["name"] = value
+                variable_range = self._variables.pop(variable_name)
+                self._variables[value] = variable_range
             elif index.column() == 1:
-                self._variables[index.row()]["first_bound"] = Expression(value)
+                self._variables[variable_name].first_bound = Expression(value)
             elif index.column() == 2:
-                self._variables[index.row()]["second_bound"] = Expression(value)
+                self._variables[variable_name].second_bound = Expression(value)
             elif index.column() == 3:
-                self._variables[index.row()]["initial_value"] = Expression(value)
+                self._variables[variable_name].initial_value = Expression(value)
             self.dataChanged.emit(index, index)
             return True
         return False
@@ -282,3 +303,8 @@ def _(_: ArangeLoop, parent: QWidget):
 @create_editor.register
 def _(_: OptimizationLoop, parent: QWidget):
     return OptimizationIterationWidget(parent)
+
+
+@create_editor.register
+def _(_: UserInputLoop, parent: QWidget):
+    return UserInputLoopWidget(parent)

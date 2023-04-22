@@ -1,0 +1,1 @@
+VariableName = str

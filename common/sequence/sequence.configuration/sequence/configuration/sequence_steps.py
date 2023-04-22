@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
 from functools import singledispatch
-from typing import Optional, Iterable, TypedDict, Self
+from typing import Optional, Iterable, Self
 
 import numpy
+import pydantic
 import yaml
 from anytree import NodeMixin, RenderTree
 
 from expression import Expression
-from settings_model import YAMLSerializable
+from settings_model import YAMLSerializable, SettingsModel
 from units import Quantity, units
+from variable_name import VariableName
 
 
 class Step(NodeMixin, ABC):
@@ -273,8 +275,7 @@ class ExecuteShot(Step, YAMLSerializable):
         return 1
 
 
-class OptimizationVariableInfo(TypedDict):
-    name: str
+class VariableRange(SettingsModel):
     first_bound: Expression
     second_bound: Expression
     initial_value: Expression
@@ -284,7 +285,7 @@ class OptimizationLoop(Step, YAMLSerializable):
     def __init__(
         self,
         optimizer_name: str,
-        variables: list[OptimizationVariableInfo],
+        variables: dict[VariableName, VariableRange],
         repetitions: int,
         parent: Optional[Step] = None,
         children: Optional[list[Step]] = None,
@@ -327,6 +328,60 @@ class OptimizationLoop(Step, YAMLSerializable):
         if number_sub_steps is None:
             return None
         return self.repetitions * number_sub_steps
+
+    @classmethod
+    def empty_loop(cls):
+        return cls("", {}, 0)
+
+
+class UserInputLoop(Step, YAMLSerializable):
+    """Holds the information for a loop asking the user to input variable values."""
+
+    def __init__(
+        self,
+        iteration_variables: dict[VariableName, VariableRange],
+        parent: Optional[Step] = None,
+        children: Optional[list[Step]] = None,
+    ):
+        pydantic.parse_obj_as(
+            dict[VariableName, VariableRange],
+            iteration_variables,
+        )
+        if not children:
+            children = []
+        super().__init__(parent, children)
+        self.iteration_variables = iteration_variables
+
+    @classmethod
+    def representer(cls, dumper: yaml.Dumper, user_input_loop: Self):
+        return dumper.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "iteration_variables": user_input_loop.iteration_variables,
+                "children": [child for child in user_input_loop.children],
+            },
+        )
+
+    @classmethod
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> Self:
+        return cls(**loader.construct_mapping(node, deep=True))
+
+    def __eq__(self, other):
+        if not isinstance(other, UserInputLoop):
+            return False
+        return (
+            self.iteration_variables == other.iteration_variables
+            and self.children == other.children
+        )
+
+    def expected_number_shots(self) -> Optional[int]:
+        # We don't when the user will stop the loop,
+        # so we return None
+        return None
+
+    @classmethod
+    def empty_loop(cls) -> Self:
+        return cls({})
 
 
 @singledispatch
