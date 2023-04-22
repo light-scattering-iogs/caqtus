@@ -37,6 +37,10 @@ class CurveViewerCanvas(FigureCanvasQTAgg):
         self.line.set_xdata(numpy.append(self.line.get_xdata(), x))
         self.line.set_ydata(numpy.append(self.line.get_ydata(), y))
 
+    def add_points(self, x, y):
+        self.line.set_xdata(numpy.concatenate((self.line.get_xdata(), x)))
+        self.line.set_ydata(numpy.concatenate((self.line.get_ydata(), y)))
+
     def set_title(self, title):
         self.axes.set_title(title)
 
@@ -75,11 +79,18 @@ class CurveViewerWidget(QWidget):
         self._sequence_watcher.new_shots_processed.connect(self.on_new_shots_added)
 
     def on_new_shots_added(self, new_shots: list[Shot]):
+        x = []
+        y = []
         with self._session.activate():
-            new_data = [self._importer(shot, self._session) for shot in new_shots]
-        x = [data[self._x] for data in new_data]
-        y = [data[self._y] for data in new_data]
-        self._curve_viewer_canvas.add_point(x, y)
+            for shot in new_shots:
+                data = self._importer(shot, self._session)
+                y_values = data[self._y]
+                y += y_values
+                x += [shot.index] * len(y_values)
+            # new_data = [self._importer(shot, self._session) for shot in new_shots]
+        # x = [data[self._x] for data in new_data]
+        # y = [data[self._y] for data in new_data]
+        self._curve_viewer_canvas.add_points(x, y)
         self._curve_viewer_canvas.set_title(f"Shot {new_shots[-1].index}")
         self._curve_viewer_canvas.rescale()
         self._curve_viewer_canvas.update_plot()
