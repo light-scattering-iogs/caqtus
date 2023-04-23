@@ -36,3 +36,11 @@ def magnitude_in_unit(value: AnalogValue, unit: Optional[Unit]) -> Real:
         if isinstance(value, Quantity):
             return value.to(unit).magnitude
         raise ValueError(f"Value {value} has no unit but unit {unit} was given")
+
+
+def add_unit(magnitude: Real, unit: Optional[Unit]) -> AnalogValue:
+    """Add a unit to a magnitude."""
+
+    if unit is None:
+        return magnitude
+    return Quantity(magnitude, unit)
