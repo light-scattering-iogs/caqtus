@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "atom_detector"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.8"
 settings-model = {path = "../../../common/settings_model", develop = true}
 numpy = "^1.24.2"
 roi = {path = "../../../common/roi", develop = true}

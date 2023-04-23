@@ -5,8 +5,9 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 Pint = "^0.19.2"
+variable-name = {path = "../variable/variable.name", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

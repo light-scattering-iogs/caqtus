@@ -16,15 +16,16 @@ scipy = "^1.9.3"
 numdifftools = "^0.9.41"
 qutip = "^4.7.0"
 sympy = "^1.11.1"
+jupyterlab = "^3.6.2"
+ipympl = "^0.9.3"
+jupyterlab-code-formatter = "^1.5.3"
+diptest = "^0.5.2"
+
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop = true}
-jupyterlab = "^3.6.2"
-ipympl = "^0.9.3"
 analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
 parse-optimization = {path = "../common/parse_optimization", develop = true}
-jupyterlab-code-formatter = "^1.5.3"
-diptest = "^0.5.2"
 atom-detector = {path = "../devices/tweezers/atom_detector", develop = true}
 
 [tool.poetry.dev-dependencies]

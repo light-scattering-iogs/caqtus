@@ -3,9 +3,7 @@ from collections import UserString
 from collections.abc import Iterable
 from typing import Self
 
-import yaml
-
-from settings_model import YAMLSerializable
+from settings_model import yaml, YAMLSerializable
 
 NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 

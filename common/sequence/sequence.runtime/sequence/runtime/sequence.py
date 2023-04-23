@@ -35,6 +35,9 @@ class Sequence:
     def path(self) -> SequencePath:
         return self._path
 
+    def exists(self, experiment_session: ExperimentSession) -> bool:
+        return self._query_model(experiment_session.get_sql_session()) is not None
+
     def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
         sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
@@ -237,6 +240,19 @@ class Sequence:
             )
             for sequence in result.scalars()
         }
+
+    @classmethod
+    def get_all_sequence_names(cls, experiment_session: ExperimentSession) -> list[str]:
+        """Get all the sequence names within a given session.
+
+        Args:
+            experiment_session: The activated experiment session in which to query the sequences.
+        """
+
+        session = experiment_session.get_sql_session()
+        query = select(SequenceModel)
+        result = session.execute(query)
+        return [str(sequence.path) for sequence in result.scalars()]
 
     def __eq__(self, other):
         if isinstance(other, Sequence):

@@ -4,7 +4,7 @@ from collections.abc import MutableMapping, Mapping
 from types import SimpleNamespace
 from typing import Any
 
-from ..name import VariableName, DottedVariableName
+from variable.name import VariableName, DottedVariableName
 
 
 class VariableNamespace(MutableMapping):

@@ -21,6 +21,8 @@ from .importers import (
     drop_heavy,
 )
 
+from .sequence_finder import sequences
+
 __all__ = [
     build_dataframe_from_shots,
     build_dataframe_from_sequence,
@@ -36,4 +38,5 @@ __all__ = [
     apply,
     remove,
     drop_heavy,
+    sequences,
 ]
