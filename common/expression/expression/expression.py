@@ -4,11 +4,19 @@ from functools import cached_property
 from typing import Optional
 
 import numpy
-from scipy.signal import sawtooth
 import token_utils
 import yaml
+from scipy.signal import sawtooth, square
 
 from settings_model import YAMLSerializable
+
+
+def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
+    return (
+        square(2 * numpy.pi * t / period, duty_cycle) * (high - low) / 2
+        + (high + low) / 2
+    )
+
 
 BUILTINS = {
     "abs": numpy.abs,
@@ -34,6 +42,7 @@ BUILTINS = {
     "tan": numpy.tan,
     "tanh": numpy.tanh,
     "sawtooth": sawtooth,
+    "square_wave": square_wave,
 }
 
 
