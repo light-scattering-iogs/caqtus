@@ -13,7 +13,7 @@ from parse_optimization import write_shots
 from sequence.configuration import VariableRange
 from sequence.runtime import Shot, Sequence
 from units import Quantity
-from variable_name import VariableName
+from variable.name import DottedVariableName
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -26,7 +26,7 @@ AnalogValues = Union[float | Quantity]  # type: ignore
 class Optimizer:
     def __init__(
         self,
-        optimization_variables: dict[VariableName, VariableRange],
+        optimization_variables: dict[DottedVariableName, VariableRange],
         context_variables: dict,
     ):
         self._optimization_variables = optimization_variables
@@ -58,7 +58,7 @@ class Optimizer:
         self._first_time_called = True
         self._optimizer.probe(self.convert_to_float(self._initial_values), lazy=True)
 
-    def suggest_values(self) -> dict[str, AnalogValues]:
+    def suggest_values(self) -> dict[DottedVariableName, AnalogValues]:
         if self._first_time_called:
             self._first_time_called = False
             return self._initial_values
@@ -66,7 +66,7 @@ class Optimizer:
             raw_values = self._optimizer.suggest(self._utility_function)
             return self.convert_to_quantity(raw_values)
 
-    def register(self, values: dict[str, AnalogValues], score: float):
+    def register(self, values: dict[DottedVariableName, AnalogValues], score: float):
         self._optimizer.register(params=self.convert_to_float(values), target=score)
 
     def convert_to_float(self, values: dict[str, AnalogValues]) -> dict[str, float]:
@@ -107,9 +107,9 @@ class Optimizer:
 
 
 def evaluate_optimization_bounds(
-    optimization_variables: dict[VariableName, VariableRange],
+    optimization_variables: dict[DottedVariableName, VariableRange],
     context_variables: dict,
-) -> dict[str, tuple[AnalogValues, AnalogValues]]:
+) -> dict[DottedVariableName, tuple[AnalogValues, AnalogValues]]:
     bounds = {}
     for variable in optimization_variables:
         name = variable["name"]
@@ -122,8 +122,8 @@ def evaluate_optimization_bounds(
 
 
 def evaluate_initial_values(
-    optimization_variables: dict[VariableName, VariableRange], context_variables: dict
-) -> dict[str, AnalogValues]:
+    optimization_variables: dict[DottedVariableName, VariableRange], context_variables: dict
+) -> dict[DottedVariableName, AnalogValues]:
     return {
         variable["name"]: variable["initial_value"].evaluate(context_variables)
         for variable in optimization_variables

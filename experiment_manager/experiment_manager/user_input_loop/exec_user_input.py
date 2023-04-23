@@ -5,7 +5,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QApplication
 
-from variable_name import VariableName
+from variable.name import DottedVariableName
 from .input_widget import UserInputDialog, RawVariableRange
 
 
@@ -13,7 +13,7 @@ class ExecUserInput:
     def __init__(
         self,
         title: str,
-        variable_ranges: dict[VariableName, RawVariableRange],
+        variable_ranges: dict[DottedVariableName, RawVariableRange],
     ):
         self._lock = threading.Lock()
         self._widget: Optional[UserInputDialog] = None
@@ -28,8 +28,7 @@ class ExecUserInput:
         self._widget.show()
         app.exec()
 
-
-    def get_current_values(self) -> dict[VariableName, Real]:
+    def get_current_values(self) -> dict[DottedVariableName, Real]:
         with self._lock:
             if self._widget is None:
                 return {}

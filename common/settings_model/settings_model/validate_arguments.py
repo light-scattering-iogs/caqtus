@@ -4,7 +4,7 @@ from typing import Callable, get_type_hints
 from pydantic import parse_obj_as
 
 
-def validate_arguments(function: Callable):
+def validate_argument_types(function: Callable):
     argspec = getfullargspec(function)
     arg_names = argspec.args
     if arg_names[0] == "self":

@@ -7,7 +7,7 @@ from typing import Any
 
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
-from variable import VariableNamespace
+from variable.namespace import VariableNamespace
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -114,7 +114,7 @@ def _save_shot(
     session: ExperimentSession,
 ) -> Shot:
     with session:
-        parameters = {name: value for name, value in parameters.items()}
+        parameters = {str(name): value for name, value in parameters.items()}
         return sequence.create_shot(
             shot_name, start_time, end_time, parameters, measures, session
         )

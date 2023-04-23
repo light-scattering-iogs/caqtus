@@ -18,7 +18,7 @@ from sequence.configuration import (
     UserInputLoop,
     VariableRange,
 )
-from variable_name import VariableName
+from variable.name import DottedVariableName
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
@@ -108,8 +108,8 @@ class VariableDeclarationWidget(Ui_VariableDeclaration, StepWidget):
         self.setupUi(self)
 
     def set_step_data(self, declaration: VariableDeclaration):
-        self.name_edit.setText(declaration.name)
-        self.expression_edit.setText(declaration.expression.body)
+        self.name_edit.setText(str(declaration.name))
+        self.expression_edit.setText(str(declaration.expression.body))
 
     def get_step_data(self) -> dict[str]:
         return dict(
@@ -124,7 +124,7 @@ class ExecuteShotWidget(Ui_ExecuteShot, StepWidget):
         self.setupUi(self)
 
     def set_step_data(self, shot: ExecuteShot):
-        self.name_edit.setText(shot.name)
+        self.name_edit.setText(str(shot.name))
 
     def get_step_data(self) -> dict[str]:
         return dict(
@@ -138,9 +138,9 @@ class LinspaceIterationWidget(Ui_LinspaceDeclaration, StepWidget):
         self.setupUi(self)
 
     def set_step_data(self, data: LinspaceLoop):
-        self.name_edit.setText(data.name)
-        self.start_edit.setText(data.start.body)
-        self.stop_edit.setText(data.stop.body)
+        self.name_edit.setText(str(data.name))
+        self.start_edit.setText(str(data.start.body))
+        self.stop_edit.setText(str(data.stop.body))
         self.num_edit.setValue(data.num)
 
     def get_step_data(self):
@@ -158,10 +158,10 @@ class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
         self.setupUi(self)
 
     def set_step_data(self, data: ArangeLoop):
-        self.name_edit.setText(data.name)
-        self.start_edit.setText(data.start.body)
-        self.stop_edit.setText(data.stop.body)
-        self.step_edit.setText(data.step.body)
+        self.name_edit.setText(str(data.name))
+        self.start_edit.setText(str(data.start.body))
+        self.stop_edit.setText(str(data.stop.body))
+        self.step_edit.setText(str(data.step.body))
 
     def get_step_data(self):
         return dict(
@@ -207,7 +207,7 @@ class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
 
 
 class VariableRangeModel(QAbstractTableModel):
-    def __init__(self, variables: dict[VariableName, VariableRange]):
+    def __init__(self, variables: dict[DottedVariableName, VariableRange]):
         super().__init__()
         self._variables = copy.deepcopy(variables)
 
@@ -225,7 +225,7 @@ class VariableRangeModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             variable_name = list(self._variables.keys())[index.row()]
             if index.column() == 0:
-                return variable_name
+                return str(variable_name)
             elif index.column() == 1:
                 return self._variables[variable_name].first_bound.body
             elif index.column() == 2:

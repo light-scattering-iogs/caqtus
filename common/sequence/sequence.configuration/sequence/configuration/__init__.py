@@ -1,20 +1,6 @@
 __version__ = "0.1.0"
 
 from .sequence_config import SequenceConfig
-
-from .sequence_steps import (
-    Step,
-    SequenceSteps,
-    VariableDeclaration,
-    ArangeLoop,
-    LinspaceLoop,
-    ExecuteShot,
-    OptimizationLoop,
-    UserInputLoop,
-    VariableRange,
-)
-
-
 from .shot import (
     Lane,
     DigitalLane,
@@ -27,8 +13,18 @@ from .shot import (
     LaneGroup,
     LaneReference,
 )
-
 from .shot import ShotConfiguration
+from .steps import (
+    Step,
+    SequenceSteps,
+    VariableDeclaration,
+    ArangeLoop,
+    LinspaceLoop,
+    ExecuteShot,
+    OptimizationLoop,
+    UserInputLoop,
+    VariableRange,
+)
 
 __all__ = [
     "SequenceConfig",

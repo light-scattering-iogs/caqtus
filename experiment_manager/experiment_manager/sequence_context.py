@@ -1,4 +1,4 @@
-from variable import VariableNamespace
+from variable.namespace import VariableNamespace
 
 
 class SequenceContext:

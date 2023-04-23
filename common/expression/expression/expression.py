@@ -9,6 +9,7 @@ import yaml
 from scipy.signal import sawtooth, square
 
 from settings_model import YAMLSerializable
+from variable.name import VariableName
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
@@ -126,7 +127,7 @@ class Expression(YAMLSerializable):
             return self._last_value
 
     @cached_property
-    def upstream_variables(self) -> frozenset[str]:
+    def upstream_variables(self) -> frozenset[VariableName]:
         """Return the name of the other variables the expression depend on"""
 
         variables = set()
@@ -137,7 +138,7 @@ class Expression(YAMLSerializable):
             def visit_Name(self, node: ast.Name):
                 if isinstance(node.ctx, ast.Load):
                     if node.id not in builtins:
-                        variables.add(node.id)
+                        variables.add(VariableName(node.id))
 
         FindNameVisitor().visit(self.ast)
         return frozenset(variables)
@@ -177,6 +178,19 @@ class Expression(YAMLSerializable):
             return self.body == other.body
         else:
             return False
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, Expression):
+            return v
+        elif isinstance(v, str):
+            return Expression(v)
+        else:
+            raise TypeError("Expression must be a string or Expression object")
 
 
 def add_implicit_multiplication(source: str) -> str:

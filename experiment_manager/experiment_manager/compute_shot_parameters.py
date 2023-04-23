@@ -24,7 +24,7 @@ from spincore_sequencer.runtime import (
     Stop,
 )
 from units import ureg, Quantity, units, dimensionless
-from variable import VariableNamespace
+from variable.namespace import VariableNamespace
 
 StepProperties = namedtuple("StepProperties", ["name", "duration", "analog_times"])
 

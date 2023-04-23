@@ -1,7 +1,9 @@
+import inspect
 import logging
+import pprint
 from abc import ABC
 from functools import cached_property
-from typing import Self, ClassVar
+from typing import Self, ClassVar, no_type_check
 
 import pydantic
 import yaml
@@ -14,7 +16,28 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class SettingsModel(YAMLSerializable, pydantic.BaseModel, ABC):
+class BaseModel(pydantic.BaseModel):
+    @no_type_check
+    def __setattr__(self, name, value):
+        """
+        To be able to use properties with setters
+        """
+        try:
+            super().__setattr__(name, value)
+        except ValueError as e:
+            setters = inspect.getmembers(
+                self.__class__,
+                predicate=lambda x: isinstance(x, property) and x.fset is not None,
+            )
+            for setter_name, func in setters:
+                if setter_name == name:
+                    object.__setattr__(self, name, value)
+                    break
+            else:
+                raise e
+
+
+class SettingsModel(YAMLSerializable, BaseModel, ABC):
     """Allows to store and load experiment configuration with type validation
 
     All instances of a subclass of this class can be (de)serialized (from) to yaml based
@@ -27,7 +50,10 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, ABC):
         validate_assignment = True
         arbitrary_types_allowed = True
         validate_all = True
-        keep_untouched = (cached_property,)
+        keep_untouched = (
+            cached_property,
+        )
+        extra = "allow"
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: Self):
@@ -47,9 +73,13 @@ class SettingsModel(YAMLSerializable, pydantic.BaseModel, ABC):
 
         Overload this method in a child class to change the default construction.
         """
+
         kwargs = loader.construct_mapping(node, deep=True)
-        # noinspection PyArgumentList
-        return cls(**kwargs)
+
+        try:
+            return cls(**kwargs)
+        except Exception as e:
+            raise ValueError(f"Could not construct {cls.__name__} from\n {pprint.pformat(kwargs)}") from e
 
 
 class VersionedSettingsModel(SettingsModel, ABC):

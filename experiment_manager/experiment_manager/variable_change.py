@@ -3,11 +3,12 @@ from typing import Any
 from experiment.configuration import ElliptecELL14RotationStageConfiguration
 from experiment.configuration import ExperimentConfig
 from units import units, Quantity
-from variable import VariableNamespace
+from variable.name import DottedVariableName
+from variable.namespace import VariableNamespace
 
 
 def compute_parameters_on_variable_update(
-    updated_variable: str,
+    updated_variable: DottedVariableName,
     experiment_config: ExperimentConfig,
     variables: VariableNamespace,
 ) -> dict[str, dict[str, Any]]:
@@ -26,7 +27,7 @@ def compute_parameters_on_variable_update(
 
 
 def compute_parameters_for_ell14_devices(
-    updated_variable: str,
+    updated_variable: DottedVariableName,
     ell14_configurations: dict[str, ElliptecELL14RotationStageConfiguration],
     variables: VariableNamespace,
 ) -> dict[str, dict[str, Any]]:
@@ -39,7 +40,7 @@ def compute_parameters_for_ell14_devices(
 
 
 def compute_parameter_for_ell14_device(
-    updated_variable: str,
+    updated_variable: DottedVariableName,
     ell14_config: ElliptecELL14RotationStageConfiguration,
     variables: VariableNamespace,
 ) -> dict[str, Any]:

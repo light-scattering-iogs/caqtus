@@ -39,8 +39,8 @@ from sequence.runtime import SequencePath, Sequence
 from sql_model import State
 from units import Quantity, units, get_unit, magnitude_in_unit
 from units.analog_value import add_unit
-from variable import VariableNamespace
-from variable_name import VariableName
+from variable.name import DottedVariableName
+from variable.namespace import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
 from .initialize_devices import get_devices_initialization_parameters
 from .run_optimization import Optimizer, CostEvaluatorProcess
@@ -196,7 +196,9 @@ class SequenceRunnerThread(Thread):
             self.run_step(self._experiment_config.header, context, shot_saver)
             self.run_step(self._sequence_config.program, context, shot_saver)
 
-    def update_variable_value(self, name: str, value: Any, context: SequenceContext):
+    def update_variable_value(
+        self, name: DottedVariableName, value: Any, context: SequenceContext
+    ):
         """Update the value of a variable.
 
         This method update the value of a variable in the dictionary-like context. It also gives a chance to the devices
@@ -568,12 +570,12 @@ def raise_multiple_exceptions(
 
 
 def evaluate_variable_ranges(
-    variable_ranges: dict[VariableName, VariableRange],
+    variable_ranges: dict[DottedVariableName, VariableRange],
     context_variables: dict[str, Any],
-) -> dict[VariableName, EvaluatedVariableRange]:
+) -> dict[DottedVariableName, EvaluatedVariableRange]:
     """Replace expressions in variable ranges with their real values."""
 
-    evaluated_variable_ranges: dict[str, EvaluatedVariableRange] = {}
+    evaluated_variable_ranges: dict[DottedVariableName, EvaluatedVariableRange] = {}
     for variable_name, variable_range in variable_ranges.items():
         initial_value = variable_range.initial_value.evaluate(context_variables)
 
@@ -592,11 +594,11 @@ def evaluate_variable_ranges(
 
 
 def strip_unit_from_variable_ranges(
-    variable_ranges: dict[VariableName, EvaluatedVariableRange],
-) -> dict[VariableName, RawVariableRange]:
+    variable_ranges: dict[DottedVariableName, EvaluatedVariableRange],
+) -> dict[DottedVariableName, RawVariableRange]:
     """Replace expressions in variable ranges with their real values."""
 
-    raw_variable_ranges: dict[str, RawVariableRange] = {}
+    raw_variable_ranges: dict[DottedVariableName, RawVariableRange] = {}
     for variable_name, variable_range in variable_ranges.items():
         initial_value = variable_range.initial_value
         unit = get_unit(initial_value)

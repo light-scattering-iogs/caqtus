@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from units import Unit, unit_registry, AnalogValue
-from variable_name import VariableName
+from variable.name import DottedVariableName
 
 
 class EvaluatedVariableRange(NamedTuple):
@@ -32,7 +32,7 @@ class UserInputDialog(QDialog):
     def __init__(
         self,
         title: str,
-        variable_ranges: dict[VariableName, RawVariableRange],
+        variable_ranges: dict[DottedVariableName, RawVariableRange],
     ):
         super().__init__()
         self.setWindowTitle(title)
@@ -53,7 +53,7 @@ class UserInputDialog(QDialog):
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
 
-    def get_current_values(self) -> dict[VariableName, Real]:
+    def get_current_values(self) -> dict[DottedVariableName, Real]:
         return {
             variable_name: widget.value
             for variable_name, widget in self._selector_widgets.items()

@@ -32,7 +32,7 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def representer(cls, dumper: yaml.Dumper, obj: "YAMLSerializable") -> yaml.Node:
+    def representer(cls, dumper: yaml.Dumper, obj: Self) -> yaml.Node:
         """Represent a python object with a yaml string
 
         Overload this method in a child class to provide a yaml representation for a given type.
@@ -41,7 +41,7 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def constructor(cls: Type[Self], loader: yaml.Loader, node: yaml.Node) -> Self:
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> Self:
         """Build a python object from a YAML node
 
         Overload this method in a child class to provide a constructor for a given type from a yaml node.

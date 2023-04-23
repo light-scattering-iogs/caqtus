@@ -7,6 +7,7 @@ from device_config import DeviceConfiguration
 from expression import Expression
 from sequence.configuration import VariableDeclaration
 from settings_model import SettingsModel
+from variable.name import VariableName
 
 
 class SiglentSDG6000XModulationConfiguration(SettingsModel, ABC):
@@ -22,10 +23,10 @@ class FrequencyModulationConfiguration(SiglentSDG6000XModulationConfiguration):
 
 
 class SineWaveConfiguration(SettingsModel):
-    frequency: VariableDeclaration = VariableDeclaration("", Expression("..."))
-    amplitude: VariableDeclaration = VariableDeclaration("", Expression("..."))
-    offset: VariableDeclaration = VariableDeclaration("", Expression("..."))
-    phase: VariableDeclaration = VariableDeclaration("", Expression("..."))
+    frequency: VariableDeclaration = VariableDeclaration(VariableName("frequency"), Expression("..."))
+    amplitude: VariableDeclaration = VariableDeclaration(VariableName("amplitude"), Expression("..."))
+    offset: VariableDeclaration = VariableDeclaration(VariableName("offset"), Expression("..."))
+    phase: VariableDeclaration = VariableDeclaration(VariableName("phase"), Expression("..."))
 
 
 class SiglentSDG6000XChannelConfiguration(SettingsModel):
