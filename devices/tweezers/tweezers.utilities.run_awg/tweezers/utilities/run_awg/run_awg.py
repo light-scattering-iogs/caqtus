@@ -19,7 +19,7 @@ with open("./config_x.yaml", "r") as f:
 with open("./config_y.yaml", "r") as f:
     config_y = StaticTrapConfiguration.from_yaml(f.read())
 
-amplitude_one_tone = 0.135
+amplitude_one_tone = 0.165
 scale_x = np.sqrt(config_x.number_tones) * amplitude_one_tone
 scale_y = np.sqrt(config_y.number_tones) * amplitude_one_tone
 
@@ -33,8 +33,8 @@ with SpectrumAWGM4i66xxX8(
     name="AWG",
     board_id="/dev/spcm0",
     channel_settings=(
-        ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-7),
-        ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-7),
+        ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-4),
+        ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-4),
     ),
     segment_names=frozenset(["segment_0", "segment_1"]),
     steps={

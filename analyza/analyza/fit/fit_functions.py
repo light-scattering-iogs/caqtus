@@ -69,8 +69,9 @@ def lorentzian(x, x0, γ, A, b=0, **kwargs):
 
     return A / (1 + (x - x0) ** 2 / γ**2) + b
 
+
 def gaussian(x, x0, σ, A, b=0, **kwargs):
-    """ Compute a Gaussian function.
+    """Compute a Gaussian function.
 
     This function is defined as:
     .. math::
@@ -84,7 +85,7 @@ def gaussian(x, x0, σ, A, b=0, **kwargs):
         b: The background offset.
     """
 
-    return A*np.exp(-(x-x0)**2/(2*σ**2)) + b
+    return A * np.exp(-((x - x0) ** 2) / (2 * σ**2)) + b
 
 
 def voigt(x, x0, σ, γ, A, b=0):

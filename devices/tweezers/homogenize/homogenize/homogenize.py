@@ -29,7 +29,7 @@ def acquire_picture(pixelfly):
 
 
 def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: int):
-    amplitude_one_tone = 0.135
+    amplitude_one_tone = 0.16
     scale_x = number_tones_x**0.5 * amplitude_one_tone
     scale_y = number_tones_y**0.5 * amplitude_one_tone
 
@@ -38,10 +38,10 @@ def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: in
         board_id="/dev/spcm0",
         channel_settings=(
             ChannelSettings(
-                name="X", enabled=True, amplitude=scale_x, maximum_power=-7
+                name="X", enabled=True, amplitude=scale_x, maximum_power=-4
             ),
             ChannelSettings(
-                name="Y", enabled=True, amplitude=scale_y, maximum_power=-7
+                name="Y", enabled=True, amplitude=scale_y, maximum_power=-4
             ),
         ),
         segment_names=frozenset(["segment_0"]),
@@ -66,7 +66,7 @@ def homogenize(
     roi_radius: float = 20,
     beta=0.3,
     number_iterations=25,
-    relative_threshold=0.3,
+    relative_threshold=0.2,
     weight_matrix: Optional[np.array] = None,
 ):
     """Attempts to homogenize the trap by adjusting the AWG power in each tone.
@@ -128,8 +128,8 @@ def homogenize(
         picture = acquire_picture(pixelfly) - background_picture
 
     spot_analyzer = GridSpotAnalyzer(
-        number_rows=signal_generator_x.number_tones,
-        number_columns=signal_generator_y.number_tones,
+        number_rows=signal_generator_y.number_tones,
+        number_columns=signal_generator_x.number_tones,
     )
     spot_analyzer.register_regions_of_interest(
         picture, relative_threshold=relative_threshold, radius=roi_radius
@@ -161,7 +161,7 @@ def homogenize(
 
         # Beware how to flip the intensity matrix depending on the imaging setup
         new_row_amplitudes, new_column_amplitudes = compute_new_amplitudes(
-            intensity_matrix[::, ::-1] * weight_matrix,
+            intensity_matrix[::-1, ::] * weight_matrix,
             beta,
             np.array(signal_generator_x.amplitudes),
             np.array(signal_generator_y.amplitudes),

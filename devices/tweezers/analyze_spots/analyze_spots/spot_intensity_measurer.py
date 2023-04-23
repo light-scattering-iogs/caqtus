@@ -128,18 +128,20 @@ class GridSpotAnalyzer(SpotAnalyzer):
 
         centroids = sorted(enumerate(self._centroids), key=sort_along_x)
 
-        rows = [
-            centroids[self._number_columns * row : self._number_columns * (row + 1)]
-            for row in range(self._number_rows)
+        columns = [
+            centroids[self._number_rows * column : self._number_rows * (column + 1)]
+            for column in range(self._number_columns)
         ]
-        for row in rows:
-            row.sort(key=sort_along_y)
 
-        ordered_indices = list(chain.from_iterable(rows))
+        for column in columns:
+            column.sort(key=sort_along_y)
+
+        ordered_indices = list(chain.from_iterable(columns))
+
         self._centroids = [self._centroids[index] for index, _ in ordered_indices]
         self._rois = [self._rois[index] for index, _ in ordered_indices]
         self._coordinates = [
-            (index // self._number_columns, index % self._number_columns)
+            (index // self._number_rows, index % self._number_rows)
             for index, _ in ordered_indices
         ]
         return result
@@ -149,8 +151,8 @@ class GridSpotAnalyzer(SpotAnalyzer):
     ) -> np.ndarray[float]:
         intensities = super().compute_intensity(image, method=method)
         matrix_intensities = np.zeros(
-            (self._number_rows, self._number_columns), dtype=float
+            (self._number_columns, self._number_rows), dtype=float
         )
-        for index, (row, column) in enumerate(self._coordinates):
-            matrix_intensities[row, column] = intensities[index]
+        for index, (column, row) in enumerate(self._coordinates):
+            matrix_intensities[column, row] = intensities[index]
         return matrix_intensities
