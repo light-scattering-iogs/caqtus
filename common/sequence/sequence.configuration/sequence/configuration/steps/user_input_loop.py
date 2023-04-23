@@ -11,8 +11,6 @@ from .optimization_loop import VariableRange
 class UserInputLoop(Step, YAMLSerializable):
     """Holds the information for a loop asking the user to input variable values."""
 
-    iteration_variables: dict[DottedVariableName, VariableRange]
-
     def __init__(
         self,
         iteration_variables: dict[DottedVariableName, VariableRange],
@@ -22,7 +20,7 @@ class UserInputLoop(Step, YAMLSerializable):
         self.iteration_variables = iteration_variables
         if not children:
             children = []
-        Step.__init__(self, parent, children)
+        super().__init__(parent, children)
 
     @property
     def iteration_variables(self) -> dict[DottedVariableName, VariableRange]:
@@ -47,7 +45,7 @@ class UserInputLoop(Step, YAMLSerializable):
 
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        mapping = loader.construct_mapping(node)
+        mapping = loader.construct_mapping(node, deep=True)
         try:
             return cls(**mapping)
         except Exception as e:
@@ -69,3 +67,6 @@ class UserInputLoop(Step, YAMLSerializable):
     @classmethod
     def empty_loop(cls) -> Self:
         return cls({})
+
+    def __repr__(self):
+        return f"UserInputLoop({self.iteration_variables}, {self.children})"

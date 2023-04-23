@@ -23,7 +23,7 @@ class SequenceSteps(Step, YAMLSerializable):
 
     @classmethod
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        mapping = loader.construct_mapping(node)
+        mapping = loader.construct_mapping(node, deep=True)
         try:
             return cls(**mapping)
         except Exception as e:
