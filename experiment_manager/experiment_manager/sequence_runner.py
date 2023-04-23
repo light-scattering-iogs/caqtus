@@ -38,6 +38,7 @@ from sequence.configuration import (
 from sequence.runtime import SequencePath, Sequence
 from sql_model import State
 from units import Quantity, units, get_unit, magnitude_in_unit
+from units.analog_value import add_unit
 from variable import VariableNamespace
 from variable_name import VariableName
 from .compute_shot_parameters import compute_shot_parameters
@@ -46,7 +47,7 @@ from .run_optimization import Optimizer, CostEvaluatorProcess
 from .sequence_context import SequenceContext
 from .shot_saver import ShotSaver
 from .user_input_loop.exec_user_input import ExecUserInput
-from .user_input_loop.input_widget import EvaluatedVariableRange
+from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
 from .variable_change import compute_parameters_on_variable_update
 
 if typing.TYPE_CHECKING:
@@ -281,8 +282,18 @@ class SequenceRunnerThread(Thread):
     ):
         """Loop over a variable in a numpy linspace like loop"""
 
-        start = Quantity(linspace_loop.start.evaluate(context.variables | units))
-        stop = Quantity(linspace_loop.stop.evaluate(context.variables | units))
+        try:
+            start = linspace_loop.start.evaluate(context.variables | units)
+        except Exception as error:
+            raise ValueError(
+                f"Could not evaluate start of linspace loop {linspace_loop.name}"
+            ) from error
+        try:
+            stop = linspace_loop.stop.evaluate(context.variables | units)
+        except Exception as error:
+            raise ValueError(
+                f"Could not evaluate stop of linspace loop {linspace_loop.name}"
+            ) from error
         num = int(linspace_loop.num)
 
         unit = start.units
@@ -370,16 +381,31 @@ class SequenceRunnerThread(Thread):
         evaluated_variable_ranges = evaluate_variable_ranges(
             loop.iteration_variables, context.variables | units
         )
+        raw_variable_ranges = strip_unit_from_variable_ranges(evaluated_variable_ranges)
+        variable_units = {
+            name: value.unit for name, value in raw_variable_ranges.items()
+        }
 
         with ThreadPoolExecutor() as executor:
             runner = ExecUserInput(
                 title=str(self._sequence.path),
-                variable_ranges=evaluated_variable_ranges,
+                variable_ranges=raw_variable_ranges,
             )
             result = executor.submit(runner.run)
             child_step_index = 0
             while not result.done():
-                logger.debug(runner.get_current_values())
+                raw_values = runner.get_current_values()
+                for variable_name, raw_value in raw_values.items():
+                    minimum = evaluated_variable_ranges[variable_name].minimum
+                    maximum = evaluated_variable_ranges[variable_name].maximum
+                    value = add_unit(raw_value, variable_units[variable_name])
+                    if not (minimum <= value <= maximum):
+                        raise ValueError(
+                            f"Value {value} for variable {variable_name} is not in the "
+                            f"range [{minimum}, {maximum}]"
+                        )
+                    self.update_variable_value(variable_name, value, context)
+
                 if self.is_waiting_to_interrupt():
                     result.cancel()
                     break
@@ -550,13 +576,9 @@ def evaluate_variable_ranges(
     evaluated_variable_ranges: dict[str, EvaluatedVariableRange] = {}
     for variable_name, variable_range in variable_ranges.items():
         initial_value = variable_range.initial_value.evaluate(context_variables)
-        unit = get_unit(initial_value)
-        initial_value = magnitude_in_unit(initial_value, unit)
 
         first_bound = variable_range.first_bound.evaluate(context_variables)
-        first_bound = magnitude_in_unit(first_bound, unit)
         second_bound = variable_range.second_bound.evaluate(context_variables)
-        second_bound = magnitude_in_unit(second_bound, unit)
 
         minimum = min(first_bound, second_bound)
         maximum = max(first_bound, second_bound)
@@ -564,7 +586,32 @@ def evaluate_variable_ranges(
             initial_value=initial_value,
             minimum=minimum,
             maximum=maximum,
-            unit=unit,
         )
         evaluated_variable_ranges[variable_name] = evaluated_range
     return evaluated_variable_ranges
+
+
+def strip_unit_from_variable_ranges(
+    variable_ranges: dict[VariableName, EvaluatedVariableRange],
+) -> dict[VariableName, RawVariableRange]:
+    """Replace expressions in variable ranges with their real values."""
+
+    raw_variable_ranges: dict[str, RawVariableRange] = {}
+    for variable_name, variable_range in variable_ranges.items():
+        initial_value = variable_range.initial_value
+        unit = get_unit(initial_value)
+        initial_value = magnitude_in_unit(initial_value, unit)
+
+        minimum = variable_range.minimum
+        minimum = magnitude_in_unit(minimum, unit)
+        maximum = variable_range.maximum
+        maximum = magnitude_in_unit(maximum, unit)
+
+        evaluated_range = RawVariableRange(
+            initial_value=initial_value,
+            minimum=minimum,
+            maximum=maximum,
+            unit=unit,
+        )
+        raw_variable_ranges[variable_name] = evaluated_range
+    return raw_variable_ranges

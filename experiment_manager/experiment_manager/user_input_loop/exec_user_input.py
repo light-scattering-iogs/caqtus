@@ -6,14 +6,14 @@ from typing import Optional
 from PyQt6.QtWidgets import QApplication
 
 from variable_name import VariableName
-from .input_widget import UserInputDialog, EvaluatedVariableRange
+from .input_widget import UserInputDialog, RawVariableRange
 
 
 class ExecUserInput:
     def __init__(
         self,
         title: str,
-        variable_ranges: dict[VariableName, EvaluatedVariableRange],
+        variable_ranges: dict[VariableName, RawVariableRange],
     ):
         self._lock = threading.Lock()
         self._widget: Optional[UserInputDialog] = None
