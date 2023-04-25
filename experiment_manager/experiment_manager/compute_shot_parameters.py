@@ -1,3 +1,4 @@
+import logging
 from collections import namedtuple
 from copy import copy
 from typing import Any, TypedDict, Iterable, Optional
@@ -24,7 +25,11 @@ from spincore_sequencer.runtime import (
     Stop,
 )
 from units import ureg, Quantity, units, dimensionless
+from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 StepProperties = namedtuple("StepProperties", ["name", "duration", "analog_times"])
 
@@ -131,7 +136,7 @@ def evaluate_step_durations(
             raise ValueError(
                 f"Duration '{expression.body}' of step '{name}' is not a duration (got {duration})"
             ) from error
-        durations.append(seconds)
+        durations.append(float(seconds))
     return durations
 
 
@@ -394,6 +399,7 @@ def evaluate_lane_expressions(
         elif isinstance(cell_value, LinearRamp):
             initial_index = lane.start_index(step_index) - 1
             initial_expression = lane.get_effective_value(initial_index)
+
             initial_value = evaluate_expression(
                 initial_expression,
                 np.array([steps.durations[initial_index]]),
@@ -406,6 +412,7 @@ def evaluate_lane_expressions(
             final_value = evaluate_expression(
                 final_expression, np.array([0.0]), context, lane
             )
+            logger.debug(f"{str(final_value)=}")
             values = initial_value * (
                 1 - step.analog_times / step.duration
             ) + final_value * (step.analog_times / step.duration)
@@ -429,7 +436,9 @@ def evaluate_expression(
             values = Quantity(numpy.full_like(times, value), units="")
 
     else:
-        values = expression.evaluate(context | units | {"t": times * ureg.s})
+        values = expression.evaluate(
+            context | units | {DottedVariableName("t"): times * ureg.s}
+        )
 
     if not isinstance(values, Quantity):
         values = Quantity(values, units="")
