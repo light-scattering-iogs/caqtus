@@ -285,13 +285,13 @@ class SequenceRunnerThread(Thread):
         """Loop over a variable in a numpy linspace like loop"""
 
         try:
-            start = linspace_loop.start.evaluate(context.variables | units)
+            start = Quantity(linspace_loop.start.evaluate(context.variables | units))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate start of linspace loop {linspace_loop.name}"
             ) from error
         try:
-            stop = linspace_loop.stop.evaluate(context.variables | units)
+            stop = Quantity(linspace_loop.stop.evaluate(context.variables | units))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate stop of linspace loop {linspace_loop.name}"
