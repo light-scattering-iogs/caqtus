@@ -80,6 +80,18 @@ class SpincorePulseBlaster(RuntimeDevice):
 
     @_program_instruction.register
     def _(self, continue_: Continue):
+        if continue_.duration * self.core_clock > 2 ** 32:
+            raise ValueError(
+                f"The duration of the continue instruction is too long. "
+                f"Maximum duration is {2**32/self.core_clock} s"
+            )
+
+        if continue_.duration < self.time_step:
+            raise ValueError(
+                f"The duration of the continue instruction is too short. "
+                f"Minimum duration is {self.time_step} s"
+            )
+
         flags = self._state_to_flags(continue_.values)
         if (
             spinapi.pb_inst_pbonly(
