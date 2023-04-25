@@ -15,6 +15,7 @@ from .experiment_config import (
 )
 from .optimization_config import OptimizerConfiguration
 from .device_name import DeviceName
+from .device_parameter import DeviceParameter
 
 device_configs = [
     SpincoreSequencerConfiguration,
@@ -33,5 +34,6 @@ __all__ = [
     DeviceServerConfiguration,
     OptimizerConfiguration,
     DeviceName,
+    DeviceParameter,
     *device_configs,
 ]

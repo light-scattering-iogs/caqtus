@@ -1,7 +1,7 @@
 import ast
 from copy import deepcopy
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Any
 
 import numpy
 import token_utils
@@ -104,7 +104,7 @@ class Expression(YAMLSerializable):
     def __repr__(self):
         return f"Expression({self.body})"
 
-    def evaluate(self, variables: dict[str]):
+    def evaluate(self, variables: dict[str]) -> Any:
         """Evaluate an expression on specific values for its variables"""
         # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.

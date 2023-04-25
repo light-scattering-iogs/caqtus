@@ -7,7 +7,7 @@ import numpy
 import numpy as np
 
 from device_config.channel_config import ChannelSpecialPurpose
-from experiment.configuration import ExperimentConfig
+from experiment.configuration import ExperimentConfig, DeviceName, DeviceParameter
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import (
@@ -63,13 +63,13 @@ def compute_shot_parameters(
     shot_config: ShotConfiguration,
     variables: VariableNamespace,
     extra: bool = False,
-) -> dict[str, dict[str, Any]]:
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
     """Compute the parameters to be applied to the devices before a shot
 
     If extra is True, then the result will contain extra information that is necessary to analyze the shot afterwards.
     """
 
-    result = {}
+    result: dict[DeviceName, dict[DeviceParameter, Any]] = {}
 
     steps = RuntimeSteps(names=shot_config.step_names)
 
@@ -311,7 +311,7 @@ def generate_digital_instructions(
     spincore_config: SpincoreSequencerConfiguration,
     analog_time_step: float,
 ) -> list[Instruction]:
-    instructions = []
+    instructions: list[Instruction] = []
     # noinspection PyTypeChecker
     analog_clock_channel = spincore_config.get_channel_index(
         ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
