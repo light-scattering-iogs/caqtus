@@ -16,13 +16,14 @@ ni6738-analog-card-configuration = {path = "../devices/ni6738_analog_card/ni6738
 ni6738-analog-card-runtime = {path = "../devices/ni6738_analog_card/ni6738_analog_card.runtime", develop = true}
 spincore-sequencer-configuration = {path = "../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
 spincore-sequencer-runtime = {path = "../devices/spincore_sequencer/spincore_sequencer.runtime", develop = true}
-variable = {path = "../common/variable", develop = true}
 sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 parse-optimization = {path = "../common/parse_optimization", develop = true}
 pyqt6 = "^6.5.0"
+variable-name = {path = "../common/variable/variable.name", develop = true}
+variable-namespace = {path = "../common/variable/variable.namespace", develop = true}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.2.1"
