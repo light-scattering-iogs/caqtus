@@ -3,7 +3,7 @@ from typing import Optional, Self
 import yaml
 
 from expression import Expression
-from settings_model import YAMLSerializable
+from settings_model import YAMLSerializable, validate_arguments
 from variable.name import DottedVariableName
 from .step import Step, compute_total_number_shots
 
@@ -25,6 +25,42 @@ class LinspaceLoop(Step, YAMLSerializable):
         if not children:
             children = []
         Step.__init__(self, parent, children)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    @validate_arguments
+    def name(self, value: DottedVariableName):
+        self._name = value
+
+    @property
+    def start(self):
+        return self._start
+
+    @start.setter
+    @validate_arguments
+    def start(self, value: Expression):
+        self._start = value
+
+    @property
+    def stop(self):
+        return self._stop
+
+    @stop.setter
+    @validate_arguments
+    def stop(self, value: Expression):
+        self._stop = value
+
+    @property
+    def num(self):
+        return self._num
+
+    @num.setter
+    @validate_arguments
+    def num(self, value: int):
+        self._num = value
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, step: Self):
