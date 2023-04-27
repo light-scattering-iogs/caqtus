@@ -1,5 +1,4 @@
 import asyncio
-import collections.abc
 import datetime
 import logging
 import pprint
@@ -590,16 +589,6 @@ def create_remote_device_managers(
             address=address, authkey=authkey
         )
     return remote_device_managers
-
-
-def raise_multiple_exceptions(
-    exceptions: collections.abc.Sequence[Exception], message: str
-):
-    if not exceptions:
-        return
-    if len(exceptions) == 1:
-        raise exceptions[0]
-    raise ExceptionGroup(message, exceptions)
 
 
 def evaluate_variable_ranges(
