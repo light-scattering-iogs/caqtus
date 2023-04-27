@@ -182,12 +182,9 @@ class SequenceRunnerThread(Thread):
                 raise RuntimeError(f"Could not start device '{device.name}'") from error
 
         async def _start_devices() -> None:
-            tasks: dict[DeviceName, asyncio.Task] = {}
             async with asyncio.TaskGroup() as start_group:
                 for device_name, device in self._devices.items():
-                    tasks[device_name] = start_group.create_task(
-                        asyncio.to_thread(start_device, device)
-                    )
+                    start_group.create_task(asyncio.to_thread(start_device, device))
 
         asyncio.run(_start_devices())
 
@@ -203,14 +200,22 @@ class SequenceRunnerThread(Thread):
             self._sequence.set_state(State.CRASHED, self._session)
 
     def shutdown(self):
-        exceptions = []
-        for device in self._devices.values():
+        def shutdown_device(device: RuntimeDevice):
             try:
                 device.shutdown()
             except Exception as error:
-                exceptions.append(error)
-        if exceptions:
-            raise_multiple_exceptions(exceptions, "Errors occurred while shutting down")
+                raise RuntimeError(
+                    f"Failed to shut down device '{device.name}' properly."
+                ) from error
+
+        async def _shutdown_devices() -> None:
+            async with asyncio.TaskGroup() as shutdown_group:
+                for device in self._devices.values():
+                    shutdown_group.create_task(
+                        asyncio.to_thread(shutdown_device, device)
+                    )
+
+        asyncio.run(_shutdown_devices())
         logger.info("Sequence finished")
 
     def run_sequence(self):
