@@ -14,7 +14,6 @@ from .experiment_config import (
     DeviceServerConfiguration,
 )
 from .optimization_config import OptimizerConfiguration
-from .device_name import DeviceName
 from .device_parameter import DeviceParameter
 
 device_configs = [
@@ -33,7 +32,6 @@ __all__ = [
     CameraConfiguration,
     DeviceServerConfiguration,
     OptimizerConfiguration,
-    DeviceName,
     DeviceParameter,
     *device_configs,
 ]

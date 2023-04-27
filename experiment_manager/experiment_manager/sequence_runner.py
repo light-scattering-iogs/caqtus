@@ -15,11 +15,10 @@ import numpy as np
 
 from camera.configuration import CameraConfiguration
 from camera.runtime import CameraTimeoutError
-from device import RuntimeDevice
+from device import RuntimeDevice, DeviceName
 from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
-    DeviceName,
 )
 from experiment.session import ExperimentSessionMaker
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration

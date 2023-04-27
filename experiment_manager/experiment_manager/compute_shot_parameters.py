@@ -6,8 +6,9 @@ from typing import Any, TypedDict, Iterable, Optional
 import numpy
 import numpy as np
 
+from device import DeviceName
 from device_config.channel_config import ChannelSpecialPurpose
-from experiment.configuration import ExperimentConfig, DeviceName, DeviceParameter
+from experiment.configuration import ExperimentConfig, DeviceParameter
 from expression import Expression
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import (

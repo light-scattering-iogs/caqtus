@@ -1,11 +1,12 @@
 from typing import Any, TypedDict
 
+from device import DeviceName
 from experiment.configuration import (
     ExperimentConfig,
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
     CameraConfiguration,
-    ElliptecELL14RotationStageConfiguration, DeviceName,
+    ElliptecELL14RotationStageConfiguration,
 )
 from sequence.configuration import SequenceConfig, CameraLane
 
