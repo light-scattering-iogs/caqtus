@@ -19,6 +19,7 @@ from device import RuntimeDevice
 from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
+    DeviceName,
 )
 from experiment.session import ExperimentSessionMaker
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
@@ -131,29 +132,42 @@ class SequenceRunnerThread(Thread):
                 ) from error
             logger.info(f"Connection established to {server_name}")
 
-    def create_devices(self) -> dict[str, RuntimeDevice]:
-        """Instantiate the devices on their respective remote server"""
+    def create_devices(self) -> dict[DeviceName, RuntimeDevice]:
+        """Instantiate the devices on their respective remote server.
+
+        This function computes the parameters necessary to instantiate the device objects and then creates them on
+        the remote servers. The device objects are then returned as a dictionary matching the device names to a proxy to
+        the associated device.
+
+        This function only creates the device objects but does not start them. No communication with the actual devices
+        is performed at this stage.
+        """
 
         if self._experiment_config.mock_experiment:
             return {}
 
-        devices = {}
-        for name, parameters in get_devices_initialization_parameters(
+        initialization_parameters = get_devices_initialization_parameters(
             self._experiment_config, self._sequence_config
-        ).items():
+        )
+
+        devices: dict[DeviceName, RuntimeDevice] = {}
+
+        for device_name, parameters in initialization_parameters.items():
             server = self._remote_device_managers[parameters["server"]]
-            if not hasattr(server, parameters["type"]):
-                raise ValueError(
-                    f"The device '{name}' is of type '{parameters['type']}' but this"
-                    " type is not registered for the remote device client."
-                )
-            remote_class = getattr(server, parameters["type"])
             try:
-                devices[name] = remote_class(**parameters["init_kwargs"])
+                remote_class = getattr(server, parameters["type"])
+            except AttributeError:
+                raise ValueError(
+                    f"The device '{device_name}' is of type '{parameters['type']}' but"
+                    " this type is not registered for the remote device client."
+                )
+
+            try:
+                devices[device_name] = remote_class(**parameters["init_kwargs"])
             except RemoteError as error:
                 raise RuntimeError(
                     f"Remote servers {parameters['server']} could not instantiate"
-                    f" device '{name}'"
+                    f" device '{device_name}'"
                 ) from error
 
         return devices

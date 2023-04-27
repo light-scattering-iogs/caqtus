@@ -5,7 +5,7 @@ from experiment.configuration import (
     SpincoreSequencerConfiguration,
     NI6738SequencerConfiguration,
     CameraConfiguration,
-    ElliptecELL14RotationStageConfiguration,
+    ElliptecELL14RotationStageConfiguration, DeviceName,
 )
 from sequence.configuration import SequenceConfig, CameraLane
 
@@ -18,7 +18,7 @@ class InitializationParameters(TypedDict):
 
 def get_devices_initialization_parameters(
     experiment_config: ExperimentConfig, sequence_config: SequenceConfig
-) -> dict[str, InitializationParameters]:
+) -> dict[DeviceName, InitializationParameters]:
     """Compute the initialization parameters for all devices.
 
     Returns:
