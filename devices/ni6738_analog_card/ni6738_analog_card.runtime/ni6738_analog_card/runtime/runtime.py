@@ -54,6 +54,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
     def update_parameters(self, /, **kwargs) -> None:
         super().update_parameters(**kwargs)
+        self._task.wait_until_done(timeout=0)
         self._task.stop()
         self._task.timing.cfg_samp_clk_timing(
             rate=1 / self.time_step,
@@ -66,11 +67,12 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         if numpy.any(numpy.isnan(values)):
             raise ValueError(f"Analog voltages can't be nan")
 
-        self._task.write(
+        if self._task.write(
             values,
             auto_start=False,
             timeout=nidaqmx.constants.WAIT_INFINITELY,
-        )
+        ) != self.values.shape[1]:
+            raise RuntimeError("Could not write all values to the analog card")
 
         # only take into account a trigger pulse if it is long enough to avoid
         # triggering on glitches
@@ -81,11 +83,11 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.start()
 
     def shutdown(self):
-        # noinspection PyBroadException
         try:
+            self._task.wait_until_done(timeout=0)
             self._task.stop()
             self._task.close()
         except Exception as err:
-            raise err
+            raise RuntimeError(f"An error occurred while shutting down {self.name}") from err
         finally:
             super().shutdown()
