@@ -54,7 +54,8 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
     def update_parameters(self, /, **kwargs) -> None:
         super().update_parameters(**kwargs)
-        self._task.wait_until_done(timeout=0)
+        if not self._task.is_task_done():
+            self._task.wait_until_done(timeout=0)
         self._task.stop()
         self._task.timing.cfg_samp_clk_timing(
             rate=1 / self.time_step,
@@ -80,11 +81,17 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.timing.samp_clk_dig_fltr_enable = True
 
     def run(self):
+        """Starts the voltage generation task and return as soon as possible."""
+
         self._task.start()
+
+    def stop(self):
+        self._task.wait_until_done(timeout=0)
+        self._task.stop()
 
     def shutdown(self):
         try:
-            self._task.wait_until_done(timeout=0)
+            self._task.wait_until_done(timeout=1)
             self._task.stop()
             self._task.close()
         except Exception as err:

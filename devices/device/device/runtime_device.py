@@ -76,9 +76,12 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.shutdown()
 
+    def get_name(self) -> DeviceName:
+        return self.name
+
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "start", "update_parameters", "shutdown"
+        return "start", "update_parameters", "shutdown", "get_name"
 
     class Config:
         validate_assignment = True

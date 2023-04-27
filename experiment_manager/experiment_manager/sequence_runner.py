@@ -2,9 +2,8 @@ import asyncio
 import datetime
 import logging
 import pprint
-import time
 import typing
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor
 from functools import singledispatchmethod
 from multiprocessing.managers import RemoteError
 from threading import Thread, Event
@@ -179,7 +178,9 @@ class SequenceRunnerThread(Thread):
             try:
                 device.start()
             except Exception as error:
-                raise RuntimeError(f"Could not start device '{device.name}'") from error
+                raise RuntimeError(
+                    f"Could not start device '{device.get_name()}'"
+                ) from error
 
         async def _start_devices() -> None:
             async with asyncio.TaskGroup() as start_group:
@@ -205,7 +206,7 @@ class SequenceRunnerThread(Thread):
                 device.shutdown()
             except Exception as error:
                 raise RuntimeError(
-                    f"Failed to shut down device '{device.name}' properly."
+                    f"Failed to shut down device '{device.get_name()}' properly."
                 ) from error
 
         async def _shutdown_devices() -> None:
@@ -457,7 +458,14 @@ class SequenceRunnerThread(Thread):
         self, shot: ShotConfiguration, context: VariableNamespace
     ) -> dict[str, Any]:
         self.prepare_shot(shot, context)
-        self.run_shot()
+
+        start_time = datetime.datetime.now()
+        asyncio.run(self.run_shot())
+        stop_time = datetime.datetime.now()
+        logger.info(
+            "Shot execution duration:"
+            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+        )
         data = self.extract_data()
         return data
 
@@ -492,7 +500,7 @@ class SequenceRunnerThread(Thread):
                     device.update_parameters(**parameters)
             except Exception as error:
                 raise RuntimeError(
-                    f"Failed to update device {device.name} with parameters:\n"
+                    f"Failed to update device {device.get_name()} with parameters:\n"
                     f"{pprint.pformat(parameters)}"
                 ) from error
 
@@ -507,31 +515,21 @@ class SequenceRunnerThread(Thread):
 
         asyncio.run(update_device_async())
 
-    def run_shot(self) -> None:
-        start_time = datetime.datetime.now()
+    async def run_shot(self) -> None:
+        """Execute the shot by controlling each device asynchronously."""
+
         if self._experiment_config.mock_experiment:
-            time.sleep(0.5)
+            await asyncio.sleep(0.5)
             return
+
         for ni6738_card in self.get_ni6738_cards().values():
             ni6738_card.run()
 
-        future_acquisitions: dict[str, Future] = {}
-        with ThreadPoolExecutor() as acquisition_executor:
-            for camera_name, camera in self.get_cameras().items():
-                future_acquisitions[camera_name] = acquisition_executor.submit(
-                    camera.acquire_all_pictures
-                )
+        async with asyncio.TaskGroup() as run_group:
+            for camera in self.get_cameras().values():
+                run_group.create_task(asyncio.to_thread(camera.acquire_all_pictures))
             for spincore_sequencer in self.get_spincore_sequencers().values():
-                spincore_sequencer.run()
-
-        for acquisition in future_acquisitions.values():
-            if exception := acquisition.exception():
-                raise exception
-        stop_time = datetime.datetime.now()
-        logger.info(
-            "Shot execution duration:"
-            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
-        )
+                run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
 
     def extract_data(self):
         if self._experiment_config.mock_experiment:
