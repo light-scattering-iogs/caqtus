@@ -20,6 +20,7 @@ from device import RuntimeDevice, DeviceName
 from experiment.configuration import (
     SpincoreSequencerConfiguration,
     DeviceServerConfiguration,
+    DeviceParameter,
 )
 from experiment.session import ExperimentSessionMaker
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
@@ -478,32 +479,34 @@ class SequenceRunnerThread(Thread):
             f" {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
         )
 
-    def update_device_parameters(self, device_parameters: dict[str, dict[str, Any]]):
+    def update_device_parameters(
+        self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
+    ):
         if self._experiment_config.mock_experiment:
             return
-        future_updates: dict[str, Future] = {}
 
-        with ThreadPoolExecutor() as update_executor:
-            for device_name, parameters in device_parameters.items():
+        def update_device(
+            device: RuntimeDevice, parameters: dict[DeviceParameter, Any]
+        ):
+            try:
                 if parameters:
-                    future_updates[device_name] = update_executor.submit(
-                        self._devices[device_name].update_parameters, **parameters
+                    device.update_parameters(**parameters)
+            except Exception as error:
+                raise RuntimeError(
+                    f"Failed to update device {device.name} with parameters:\n"
+                    f"{pprint.pformat(parameters)}"
+                ) from error
+
+        async def update_device_async():
+            async with asyncio.TaskGroup() as update_group:
+                for device_name, parameters in device_parameters.items():
+                    update_group.create_task(
+                        asyncio.to_thread(
+                            update_device, self._devices[device_name], parameters
+                        )
                     )
 
-        exceptions = []
-        for device_name, update in future_updates.items():
-            if (exception := update.exception()) is not None:
-                new_exception = RuntimeError(
-                    f"Failed to update device {device_name} with parameters:\n"
-                    f"{pprint.pformat(device_parameters[device_name])}"
-                )
-                new_exception.__cause__ = exception
-                exceptions.append(new_exception)
-
-        if exceptions:
-            raise raise_multiple_exceptions(
-                exceptions, "Errors occurred when updating device parameters"
-            )
+        asyncio.run(update_device_async())
 
     def run_shot(self) -> None:
         start_time = datetime.datetime.now()
