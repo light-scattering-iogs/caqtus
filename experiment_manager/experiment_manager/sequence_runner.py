@@ -1,3 +1,4 @@
+import asyncio
 import collections.abc
 import datetime
 import logging
@@ -172,12 +173,23 @@ class SequenceRunnerThread(Thread):
         return devices
 
     def start_devices(self):
-        for device_name, device in self._devices.items():
+        """Start the communication with the devices."""
+
+        def start_device(device: RuntimeDevice):
             try:
                 device.start()
-            except Exception:
-                logger.error(f"An error occurred while starting device {device_name}")
-                raise
+            except Exception as error:
+                raise RuntimeError(f"Could not start device '{device.name}'") from error
+
+        async def _start_devices() -> None:
+            tasks: dict[DeviceName, asyncio.Task] = {}
+            async with asyncio.TaskGroup() as start_group:
+                for device_name, device in self._devices.items():
+                    tasks[device_name] = start_group.create_task(
+                        asyncio.to_thread(start_device, device)
+                    )
+
+        asyncio.run(_start_devices())
 
     def finish(self):
         with self._session as session:
