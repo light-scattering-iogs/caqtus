@@ -23,7 +23,7 @@ class ElliptecELL14RotationStage(RuntimeDevice):
     device_id: int = Field(allow_mutation=False)
     initial_position: Optional[float] = Field(default=None, allow_mutation=False)
 
-    _device: ELLx = None
+    _device: Optional[ELLx] = None
 
     class Config(RuntimeDevice.Config):
         validate_all = False
@@ -68,7 +68,8 @@ class ElliptecELL14RotationStage(RuntimeDevice):
         """Close the connection to the device."""
 
         try:
-            self._device.close()
+            if self._device is not None:
+                self._device.close()
         finally:
             super().shutdown()
 
