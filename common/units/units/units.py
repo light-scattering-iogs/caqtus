@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Type
 
 import pint
 
@@ -12,7 +11,7 @@ ureg = pint.UnitRegistry(
 )
 unit_registry = ureg
 pint.set_application_registry(unit_registry)
-Quantity: Type[pint.quantity.Quantity] = unit_registry.Quantity
+Quantity = pint.quantity.Quantity
 Unit = pint.unit.Unit
 UndefinedUnitError = pint.UndefinedUnitError
 
@@ -51,4 +50,6 @@ UNITS = (
 )
 
 
-units = {VariableName(unit): getattr(ureg, unit) for unit in UNITS}
+units: dict[VariableName, Quantity] = {
+    VariableName(unit): getattr(ureg, unit) for unit in UNITS
+}

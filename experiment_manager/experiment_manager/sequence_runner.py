@@ -3,6 +3,7 @@ import datetime
 import logging
 import pprint
 import typing
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from functools import singledispatchmethod
 from multiprocessing.managers import RemoteError
@@ -236,7 +237,7 @@ class SequenceRunnerThread(Thread):
          to update their state if needed.
         """
 
-        context.variables[name] = value
+        context.variables.update({name: value})
         parameters = compute_parameters_on_variable_update(
             name, self._experiment_config, context.variables
         )
@@ -290,9 +291,11 @@ class SequenceRunnerThread(Thread):
     ):
         """Loop over a variable in a numpy arange like loop"""
 
-        start = Quantity(arange_loop.start.evaluate(context.variables | units))
-        stop = Quantity(arange_loop.stop.evaluate(context.variables | units))
-        step = Quantity(arange_loop.step.evaluate(context.variables | units))
+        variables = context.variables | units
+
+        start = Quantity(arange_loop.start.evaluate(variables))
+        stop = Quantity(arange_loop.stop.evaluate(variables))
+        step = Quantity(arange_loop.step.evaluate(variables))
 
         unit = start.units
 
@@ -315,14 +318,16 @@ class SequenceRunnerThread(Thread):
     ):
         """Loop over a variable in a numpy linspace like loop"""
 
+        variables = context.variables | units
+
         try:
-            start = Quantity(linspace_loop.start.evaluate(context.variables | units))
+            start = Quantity(linspace_loop.start.evaluate(variables))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate start of linspace loop {linspace_loop.name}"
             ) from error
         try:
-            stop = Quantity(linspace_loop.stop.evaluate(context.variables | units))
+            stop = Quantity(linspace_loop.stop.evaluate(variables))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate stop of linspace loop {linspace_loop.name}"
@@ -590,8 +595,8 @@ def create_remote_device_managers(
 
 
 def evaluate_variable_ranges(
-    variable_ranges: dict[DottedVariableName, VariableRange],
-    context_variables: dict[str, Any],
+    variable_ranges: Mapping[DottedVariableName, VariableRange],
+    context_variables: Mapping[DottedVariableName, Any],
 ) -> dict[DottedVariableName, EvaluatedVariableRange]:
     """Replace expressions in variable ranges with their real values."""
 

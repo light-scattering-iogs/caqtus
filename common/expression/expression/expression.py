@@ -10,7 +10,7 @@ import yaml
 from scipy.signal import sawtooth, square
 
 from settings_model import YAMLSerializable
-from variable.name import VariableName
+from variable.name import VariableName, DottedVariableName
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
@@ -105,7 +105,7 @@ class Expression(YAMLSerializable):
     def __repr__(self):
         return f"Expression({self.body})"
 
-    def evaluate(self, variables: Mapping[str, Any]) -> Any:
+    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables"""
         # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.

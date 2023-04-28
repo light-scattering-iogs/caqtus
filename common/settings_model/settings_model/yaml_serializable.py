@@ -1,7 +1,7 @@
 import abc
 from enum import Enum
 from pathlib import Path, WindowsPath
-from typing import Type, Self
+from typing import Type, Self, TypeVar
 
 import yaml
 from pydantic import SecretStr, PostgresDsn
@@ -10,6 +10,8 @@ from pydantic.color import Color
 from .version import Version
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
+
+YamlNode = TypeVar("YamlNode", bound=yaml.Node)
 
 
 class YAMLSerializable(abc.ABC):
@@ -41,7 +43,7 @@ class YAMLSerializable(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> Self:
+    def constructor(cls, loader: yaml.Loader, node: YamlNode) -> Self:
         """Build a python object from a YAML node
 
         Overload this method in a child class to provide a constructor for a given type from a yaml node.
@@ -74,8 +76,11 @@ class YAMLSerializable(abc.ABC):
         def representer(dumper: yaml.Dumper, value):
             return dumper.represent_scalar(f"!{enum_class.__name__}", value.name)
 
-        def constructor(loader: yaml.Loader, node: yaml.Node):
-            return enum_class[loader.construct_scalar(node)]
+        def constructor(loader: yaml.Loader, node: yaml.ScalarNode):
+            scalar = loader.construct_scalar(node)
+            if not isinstance(scalar, str):
+                raise ValueError(f"Expected a string, got {type(scalar)}")
+            return enum_class[scalar]
 
         cls.get_dumper().add_representer(enum_class, representer)
         cls.get_loader().add_constructor(f"!{enum_class.__name__}", constructor)
@@ -112,8 +117,11 @@ YAMLSerializable.get_dumper().add_representer(Path, path_representer)
 YAMLSerializable.get_dumper().add_representer(WindowsPath, path_representer)
 
 
-def path_constructor(loader: yaml.Loader, node: yaml.Node):
-    return Path(loader.construct_scalar(node))
+def path_constructor(loader: yaml.Loader, node: yaml.ScalarNode):
+    value = loader.construct_scalar(node)
+    if not isinstance(value, str):
+        raise ValueError(f"Expected a string, got {type(value)}")
+    return Path(value)
 
 
 YAMLSerializable.get_loader().add_constructor(f"!Path", path_constructor)

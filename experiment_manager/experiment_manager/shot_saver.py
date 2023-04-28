@@ -114,7 +114,7 @@ def _save_shot(
     session: ExperimentSession,
 ) -> Shot:
     with session:
-        parameters = {str(name): value for name, value in parameters.items()}
+        params = {str(name): value for name, value in parameters.to_dict().items()}
         return sequence.create_shot(
-            shot_name, start_time, end_time, parameters, measures, session
+            shot_name, start_time, end_time, params, measures, session
         )

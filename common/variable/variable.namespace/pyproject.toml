@@ -9,6 +9,7 @@ packages = [{include = "variable"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 variable-name = {path = "../variable.name", develop = true}
+python-benedict = "^0.30.0"
 
 
 [build-system]
