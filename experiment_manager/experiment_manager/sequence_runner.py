@@ -228,7 +228,7 @@ class SequenceRunnerThread(Thread):
         async with asyncio.TaskGroup() as background_task_group:
             background_task_group.create_task(self.watch_for_interruption())
             async with SequenceTaskGroup() as sequence_task_group:
-                await self.run_step(
+                context = await self.run_step(
                     self._experiment_config.header, context, sequence_task_group
                 )
                 await self.run_step(
@@ -329,9 +329,7 @@ class SequenceRunnerThread(Thread):
                 f" compatible with start units ({unit})"
             )
 
-        for value in numpy.arange(
-            start.magnitude, stop.magnitude, step.magnitude
-        ):
+        for value in numpy.arange(start.magnitude, stop.magnitude, step.magnitude):
             context = await self.update_variable_value(
                 arange_loop.name,
                 value * unit,
@@ -420,28 +418,18 @@ class SequenceRunnerThread(Thread):
                         )
 
     @run_step.register
-    async def _(self, shot: ExecuteShot, context: StepContext, task_group: SequenceTaskGroup):
-        """Execute a shot on the experiment"""
+    async def _(
+        self, shot: ExecuteShot, context: StepContext, task_group: SequenceTaskGroup
+    ) -> StepContext:
+        """Execute a shot on the experiment."""
 
-        start_time = datetime.datetime.now()
-        try:
-            data = self.do_shot(
-                self._sequence_config.shot_configurations[shot.name], context.variables
-            )
-        except CameraTimeoutError as error:
-            logger.warning(
-                "A camera timeout error occurred:\n"
-                f"{error}\n"
-                "Attempting to redo the failed shot"
-            )
-            data = self.do_shot(
-                self._sequence_config.shot_configurations[shot.name], context.variables
-            )
+        shot_configuration = self._sequence_config.shot_configurations[shot.name]
 
-        end_time = datetime.datetime.now()
-        logger.info(
-            f"Shot total duration: {(end_time - start_time).total_seconds()*1e3:.1f} ms"
+        shot_parameters = await self.compute_shot_parameters(
+            shot_configuration, context
         )
+        task_group.create_hardware_task(self.do_shot_with_retry(shot_parameters))
+        return context.clone()
 
         shot_saver.push_shot(shot.name, start_time, end_time, context.variables, data)
 
@@ -513,8 +501,14 @@ class SequenceRunnerThread(Thread):
             self._experiment_config,
             context.variables,
         )
-        task_group.create_hardware_task(self.update_device_parameters(parameters))
+        task_group.create_hardware_task(self.update_device_parameters_with_lock(parameters))
         return context
+
+    async def update_device_parameters_with_lock(
+        self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
+    ):
+        async with self._hardware_lock:
+            await self.update_device_parameters(device_parameters)
 
     async def update_device_parameters(
         self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
@@ -522,7 +516,7 @@ class SequenceRunnerThread(Thread):
         if self._experiment_config.mock_experiment:
             return
 
-        async with self._hardware_lock, asyncio.TaskGroup() as update_group:
+        async with asyncio.TaskGroup() as update_group:
             for device_name, parameters in device_parameters.items():
                 update_group.create_task(
                     asyncio.to_thread(
@@ -530,13 +524,48 @@ class SequenceRunnerThread(Thread):
                     )
                 )
 
-    def do_shot(
-        self, shot: ShotConfiguration, context: VariableNamespace
+    async def compute_shot_parameters(
+        self,
+        shot: ShotConfiguration,
+        context: StepContext,
+    ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+        initial_time = datetime.datetime.now()
+        device_parameters = await asyncio.to_thread(
+            compute_shot_parameters, self._experiment_config, shot, context.variables
+        )
+        computation_time = datetime.datetime.now()
+        logger.info(
+            "Shot parameters computation duration:"
+            f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
+        )
+        return device_parameters
+
+    async def do_shot_with_retry(
+        self,
+        device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[str, Any]:
-        self.prepare_shot(shot, context)
+        number_of_attempts = 2  # must >= 1
+        async with self._hardware_lock:
+            for attempt in range(number_of_attempts):
+                try:
+                    return await self.do_shot(device_parameters)
+                except CameraTimeoutError:
+                    logger.warning(
+                        "A camera timeout error occurred, attempting to redo the failed shot"
+                    )
+        raise CameraTimeoutError(
+            f"Could not execute shot after {number_of_attempts} attempts"
+        )
+
+    async def do_shot(
+        self,
+        device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
+    ) -> dict[str, Any]:
+
+        await self.update_device_parameters(device_parameters)
 
         start_time = datetime.datetime.now()
-        asyncio.run(self.run_shot())
+        await self.run_shot()
         stop_time = datetime.datetime.now()
         logger.info(
             "Shot execution duration:"
@@ -544,23 +573,6 @@ class SequenceRunnerThread(Thread):
         )
         data = self.extract_data()
         return data
-
-    def prepare_shot(self, shot: ShotConfiguration, context: VariableNamespace):
-        initial_time = datetime.datetime.now()
-        device_parameters = compute_shot_parameters(
-            self._experiment_config, shot, context
-        )
-        computation_time = datetime.datetime.now()
-        logger.info(
-            "Shot parameters computation duration:"
-            f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
-        )
-        self.update_device_parameters(device_parameters)
-        update_time = datetime.datetime.now()
-        logger.info(
-            "Device parameters update duration:"
-            f" {(update_time - computation_time).total_seconds() * 1e3:.1f} ms"
-        )
 
     async def run_shot(self) -> None:
         """Execute the shot by controlling each device asynchronously."""

@@ -413,7 +413,6 @@ def evaluate_lane_expressions(
             final_value = evaluate_expression(
                 final_expression, np.array([0.0]), context, lane
             )
-            logger.debug(f"{str(final_value)=}")
             values = initial_value * (
                 1 - step.analog_times / step.duration
             ) + final_value * (step.analog_times / step.duration)
