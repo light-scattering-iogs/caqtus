@@ -87,7 +87,10 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-        self._headsup = asyncio.Semaphore(25)
+
+        # Used to limit the number of concurrent computations of the shot parameters if it is too much in advance with
+        # respect to the shot execution.
+        self._computation_heads_up = asyncio.Semaphore(25)
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -349,10 +352,10 @@ class SequenceRunnerThread(Thread):
         return context
 
     @run_step.register
-    def _(
+    async def _(
         self,
         linspace_loop: LinspaceLoop,
-        context: SequenceContext,
+        context: StepContext,
         shot_saver: ShotSaver,
     ):
         """Loop over a variable in a numpy linspace like loop"""
@@ -430,7 +433,7 @@ class SequenceRunnerThread(Thread):
 
         shot_configuration = self._sequence_config.shot_configurations[shot.name]
 
-        await self._headsup.acquire()
+        await self._computation_heads_up.acquire()
         change_parameters = await self.compute_change_parameters(
             shot_configuration, context
         )
@@ -565,7 +568,7 @@ class SequenceRunnerThread(Thread):
                             shot_name, start_time, end_time, variables, data
                         )
                     )
-                    self._headsup.release()
+                    self._computation_heads_up.release()
                     return
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
