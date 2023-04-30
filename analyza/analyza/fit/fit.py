@@ -1,3 +1,4 @@
+import warnings
 from inspect import signature
 from typing import Optional
 
@@ -55,10 +56,11 @@ def fit_to_data(
         popt, pcov = curve_fit(
             f, xdata, ydata, p0, sigma, absolute_sigma=True, check_finite=True
         )
-    except RuntimeError:
+    except Exception as e:
         if raise_error:
             raise
         else:
+            warnings.warn(f"Fit failed: {e}")
             estimated_parameters = {
                 parameter: numpy.nan for parameter in get_parameters(f)
             }
