@@ -22,7 +22,7 @@ camera = ImagingSourceCameraDMK33GR0134(
 camera.initialize()
 camera.acquire_all_pictures()
 images = camera.read_all_pictures()
-camera.shutdown()
+camera.close()
 
 plt.imshow(images["picture1"])
 pprint(images["picture1"])

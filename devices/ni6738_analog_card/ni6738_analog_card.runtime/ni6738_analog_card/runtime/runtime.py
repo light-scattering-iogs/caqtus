@@ -89,7 +89,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.wait_until_done(timeout=0)
         self._task.stop()
 
-    def shutdown(self):
+    def close(self):
         try:
             self._task.wait_until_done(timeout=1)
             self._task.stop()
@@ -97,4 +97,4 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         except Exception as err:
             raise RuntimeError(f"An error occurred while shutting down {self.name}") from err
         finally:
-            super().shutdown()
+            super().close()

@@ -104,7 +104,7 @@ class OrcaQuestCamera(CCamera):
             )
         logger.debug(f"{self.name}: buffer successfully allocated")
 
-    def shutdown(self):
+    def close(self):
         try:
             if self._camera.buf_release():
                 logger.info(f"{self.name}: DCAM buffer successfully released")
@@ -124,7 +124,7 @@ class OrcaQuestCamera(CCamera):
                     )
 
         finally:
-            super().shutdown()
+            super().close()
 
     def list_properties(self) -> list:
         result = []

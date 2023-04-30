@@ -129,7 +129,7 @@ class PixelflyBoard(RuntimeDevice):
             self.exp_level,
         )
 
-    def shutdown(self):
+    def close(self):
         """Must be called to close the board driver"""
         try:
             self.stop_acquisition()
@@ -138,7 +138,7 @@ class PixelflyBoard(RuntimeDevice):
                     f"An error occurred while closing the board {self.board_number}"
                 )
         finally:
-            super().shutdown()
+            super().close()
 
     def start_acquisition(self):
         """Start the camera

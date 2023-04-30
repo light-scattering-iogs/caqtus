@@ -87,4 +87,4 @@ class TrapManager(BaseModel):
         self._awg.stop()
 
     def shutdown(self):
-        self._awg.shutdown()
+        self._awg.close()

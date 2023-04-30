@@ -163,13 +163,13 @@ class SpincorePulseBlaster(RuntimeDevice):
         while spinapi.pb_read_status() & SpincoreStatus.Running:
             time.sleep(0.01)
 
-    def shutdown(self):
+    def close(self):
         error_msg = None
         try:
             if spinapi.pb_close() != 0:
                 error_msg = spinapi.pb_get_error()
         finally:
-            super().shutdown()
+            super().close()
 
         if error_msg is not None:
             raise ConnectionError(

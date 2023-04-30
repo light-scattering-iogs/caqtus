@@ -217,7 +217,7 @@ class SequenceRunnerThread(Thread):
     def shutdown(self):
         def shutdown_device(device: RuntimeDevice):
             try:
-                device.shutdown()
+                device.close()
             except Exception as error:
                 raise RuntimeError(
                     f"Failed to shut down device '{device.get_name()}' properly."
@@ -619,7 +619,7 @@ class SequenceRunnerThread(Thread):
             for spincore_sequencer in self.get_spincore_sequencers().values():
                 run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
 
-    def extract_data(self):
+    def extract_data(self) -> dict[DeviceName, Any]:
         if self._experiment_config.mock_experiment:
             return {
                 "image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)
@@ -636,7 +636,7 @@ class SequenceRunnerThread(Thread):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
         parameters: VariableNamespace,
-        measures: dict[str, Any],
+        measures: dict[DeviceName, Any],
     ):
         async with self._database_lock:
             return await asyncio.to_thread(
@@ -649,7 +649,7 @@ class SequenceRunnerThread(Thread):
         start_time: datetime.datetime,
         end_time: datetime.datetime,
         parameters: VariableNamespace,
-        measures: dict[str, Any],
+        measures: dict[DeviceName, Any],
     ) -> Shot:
         with self._save_session as session:
             params = {str(name): value for name, value in parameters.to_dict().items()}
