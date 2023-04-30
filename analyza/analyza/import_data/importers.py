@@ -78,6 +78,11 @@ def _break_namespaces(values: dict[str, Any]) -> dict[str, Any]:
                 f"{key}.{sub_key}": v
                 for sub_key, v in _break_namespaces(value.__dict__).items()
             }
+        elif isinstance(value, dict):
+            result |= {
+                f"{key}.{sub_key}": v
+                for sub_key, v in _break_namespaces(value).items()
+            }
         else:
             result[key] = value
     return result
