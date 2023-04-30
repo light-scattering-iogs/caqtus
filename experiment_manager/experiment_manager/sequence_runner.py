@@ -36,7 +36,7 @@ from sequence.configuration import (
     UserInputLoop,
     VariableRange,
 )
-from sequence.runtime import SequencePath, Sequence
+from sequence.runtime import SequencePath, Sequence, Shot
 from sql_model import State
 from units import Quantity, units, get_unit, magnitude_in_unit, DimensionalityError
 from units.analog_value import add_unit
@@ -71,12 +71,14 @@ class SequenceRunnerThread(Thread):
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self._session = session_maker()
+        self._save_session = session_maker()
         self._session_maker = session_maker
         self._sequence = Sequence(sequence_path)
         self._waiting_to_interrupt = waiting_to_interrupt
         self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
         self._devices: dict[str, RuntimeDevice] = {}
         self._hardware_lock = asyncio.Lock()
+        self._database_lock = asyncio.Lock()
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -428,10 +430,12 @@ class SequenceRunnerThread(Thread):
         shot_parameters = await self.compute_shot_parameters(
             shot_configuration, context
         )
-        task_group.create_hardware_task(self.do_shot_with_retry(shot_parameters))
+        task_group.create_hardware_task(
+            self.do_shot_with_retry(
+                shot.name, context.variables, shot_parameters, task_group
+            )
+        )
         return context.clone()
-
-        shot_saver.push_shot(shot.name, start_time, end_time, context.variables, data)
 
     @run_step.register
     def _(self, loop: UserInputLoop, context: SequenceContext, shot_saver: ShotSaver):
@@ -501,7 +505,9 @@ class SequenceRunnerThread(Thread):
             self._experiment_config,
             context.variables,
         )
-        task_group.create_hardware_task(self.update_device_parameters_with_lock(parameters))
+        task_group.create_hardware_task(
+            self.update_device_parameters_with_lock(parameters)
+        )
         return context
 
     async def update_device_parameters_with_lock(
@@ -542,17 +548,30 @@ class SequenceRunnerThread(Thread):
 
     async def do_shot_with_retry(
         self,
+        shot_name: str,
+        variables: VariableNamespace,
         device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
-    ) -> dict[str, Any]:
+        task_group: SequenceTaskGroup,
+    ) -> None:
         number_of_attempts = 2  # must >= 1
         async with self._hardware_lock:
             for attempt in range(number_of_attempts):
                 try:
-                    return await self.do_shot(device_parameters)
+                    start_time = datetime.datetime.now()
+                    data = await self.do_shot(device_parameters)
+                    end_time = datetime.datetime.now()
                 except CameraTimeoutError:
                     logger.warning(
                         "A camera timeout error occurred, attempting to redo the failed shot"
                     )
+                else:
+                    await task_group.create_hardware_task(
+                        self.save_shot_with_lock(
+                            shot_name, start_time, end_time, variables, data
+                        )
+                    )
+                    return
+
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
         )
@@ -562,7 +581,13 @@ class SequenceRunnerThread(Thread):
         device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[str, Any]:
 
+        start_time = datetime.datetime.now()
         await self.update_device_parameters(device_parameters)
+        stop_time = datetime.datetime.now()
+        logger.info(
+            "Device parameters update duration:"
+            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+        )
 
         start_time = datetime.datetime.now()
         await self.run_shot()
@@ -600,6 +625,33 @@ class SequenceRunnerThread(Thread):
         for camera_name, camera in self.get_cameras().items():
             data[camera_name] = camera.read_all_pictures()
         return data
+
+    async def save_shot_with_lock(
+        self,
+        shot_name: str,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        parameters: VariableNamespace,
+        measures: dict[str, Any],
+    ):
+        async with self._database_lock:
+            return await asyncio.to_thread(
+                self.save_shot, shot_name, start_time, end_time, parameters, measures
+            )
+
+    def save_shot(
+        self,
+        shot_name: str,
+        start_time: datetime.datetime,
+        end_time: datetime.datetime,
+        parameters: VariableNamespace,
+        measures: dict[str, Any],
+    ) -> Shot:
+        with self._save_session as session:
+            params = {str(name): value for name, value in parameters.to_dict().items()}
+            return self._sequence.create_shot(
+                shot_name, start_time, end_time, params, measures, session
+            )
 
     def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
         return {

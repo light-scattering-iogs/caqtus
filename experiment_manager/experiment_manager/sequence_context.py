@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Awaitable
 from copy import deepcopy
 from typing import Generic, TypeVar, Self
 
@@ -37,14 +37,19 @@ class StepContext(Generic[T]):
 class SequenceTaskGroup:
     def __init__(self) -> None:
         self._hardware_task_group: asyncio.TaskGroup = asyncio.TaskGroup()
+        self._database_task_group: asyncio.TaskGroup = asyncio.TaskGroup()
         self._exit_stack = contextlib.AsyncExitStack()
 
     def create_hardware_task(self, coro: Coroutine) -> asyncio.Task:
         return self._hardware_task_group.create_task(coro)
 
+    def create_database_task(self, coro: Coroutine) -> Awaitable:
+        return asyncio.shield(self._database_task_group.create_task(coro))
+
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
         await self._exit_stack.enter_async_context(self._hardware_task_group)
+        await self._exit_stack.enter_async_context(self._database_task_group)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
