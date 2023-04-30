@@ -1,5 +1,6 @@
 """This package defines a RuntimeDevice class that is used to control Thorlabs Elliptec ELL14 rotation stages."""
 import time
+from contextlib import closing
 from typing import Optional
 
 from serial import SerialException
@@ -34,8 +35,10 @@ class ElliptecELL14RotationStage(RuntimeDevice):
         super().initialize()
 
         try:
-            self._device = ELLx(
-                serial_port=self.serial_port, x=14, device_id=self.device_id
+            self._device = self._enter_context(
+                closing(
+                    ELLx(serial_port=self.serial_port, x=14, device_id=self.device_id)
+                )
             )
         except SerialException:
             raise SerialException(
@@ -63,15 +66,6 @@ class ElliptecELL14RotationStage(RuntimeDevice):
             raise RuntimeError(
                 f"Could not move device {self.name} to position {position}"
             ) from error
-
-    def close(self):
-        """Close the connection to the device."""
-
-        try:
-            if self._device is not None:
-                self._device.close()
-        finally:
-            super().close()
 
     @property
     def position(self) -> float:
