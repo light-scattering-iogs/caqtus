@@ -4,7 +4,6 @@ experiment viewer/sequences editor in the current process"""
 import logging
 import os
 import sys
-from multiprocessing.managers import BaseManager
 from pathlib import Path
 
 import qdarkstyle
@@ -12,9 +11,8 @@ from PyQt6 import QtCore
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
-from experiment.session import get_standard_experiment_session_maker
-from experiment_manager import ExperimentManager, get_logs_queue
 from condetrol.experiment_viewer import ExperimentViewer
+from experiment.session import get_standard_experiment_session_maker
 
 
 def except_hook(cls, exception, traceback):
@@ -26,20 +24,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class ExperimentProcessManager(BaseManager):
-    pass
-
-
-ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
-ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
-
 if __name__ == "__main__":
     os.environ["QT_QUICK_CONTROLS_CONF"] = (
         "C:\\Users\\Damien"
         " Bloch\\Desktop\\caqtus_repo\\condetrol\\qtquickcontrols2.conf"
     )
-    m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
-    m.start()
+
     sys.excepthook = except_hook
 
     app = QApplication(sys.argv)
@@ -61,4 +51,3 @@ if __name__ == "__main__":
         app.exec()
     except Exception:
         logger.error("An exception occurred.", exc_info=True)
-    m.shutdown()
