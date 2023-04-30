@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import logging
 import pprint
@@ -91,6 +92,9 @@ class SequenceRunnerThread(Thread):
         # respect to the shot execution.
         self._computation_heads_up = asyncio.Semaphore(25)
 
+        # This stack is used to ensure that all the devices are closed when the sequence is finished.
+        self._shutdown_stack = contextlib.AsyncExitStack()
+
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
                 experiment_config_name
@@ -101,8 +105,7 @@ class SequenceRunnerThread(Thread):
 
     def run(self):
         try:
-            self.prepare()
-            asyncio.run(self.run_sequence())
+            asyncio.run(self.async_run())
         except* SequenceFinished:
             self.finish(State.FINISHED)
             logger.info("Sequence finished")
@@ -116,14 +119,26 @@ class SequenceRunnerThread(Thread):
         finally:
             self.shutdown()
 
-    def prepare(self):
+    async def async_run(self):
+        async with asyncio.TaskGroup() as task_group:
+            task_group.create_task(self.prepare())
+            task_group.create_task(self.run_sequence())
+
+    async def prepare(self):
         self._remote_device_managers = create_remote_device_managers(
             self._experiment_config.device_servers
         )
         self.connect_to_device_servers()
 
         self._devices = self.create_devices()
-        self.start_devices()
+        async with self._hardware_lock:
+            # We initialize the devices through the stack to unsure that they are closed if an error occurs.
+            self._devices = {
+                device_name: await self._shutdown_stack.enter_async_context(
+                    open_device(device)
+                )
+                for device_name, device in self._devices.items()
+            }
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
@@ -192,46 +207,13 @@ class SequenceRunnerThread(Thread):
 
         return devices
 
-    def start_devices(self):
-        """Start the communication with the devices."""
-
-        def start_device(device: RuntimeDevice):
-            try:
-                device.initialize()
-            except Exception as error:
-                raise RuntimeError(
-                    f"Could not start device '{device.get_name()}'"
-                ) from error
-
-        async def _start_devices() -> None:
-            async with asyncio.TaskGroup() as start_group:
-                for device_name, device in self._devices.items():
-                    start_group.create_task(asyncio.to_thread(start_device, device))
-
-        asyncio.run(_start_devices())
-
     def finish(self, state: State):
         with self._session as session:
             self._sequence.set_state(state, session)
 
     def shutdown(self):
-        def shutdown_device(device: RuntimeDevice):
-            try:
-                device.close()
-            except Exception as error:
-                raise RuntimeError(
-                    f"Failed to shut down device '{device.get_name()}' properly."
-                ) from error
-
-        async def _shutdown_devices() -> None:
-            async with asyncio.TaskGroup() as shutdown_group:
-                for device in self._devices.values():
-                    shutdown_group.create_task(
-                        asyncio.to_thread(shutdown_device, device)
-                    )
-
-        asyncio.run(_shutdown_devices())
-        logger.info("Devices shut down")
+        asyncio.run(self._shutdown_stack.aclose())
+        logger.info("All devices shut down")
 
     async def run_sequence(self):
         """Execute the sequence header and program"""
@@ -712,6 +694,15 @@ def update_device(device: RuntimeDevice, parameters: dict[DeviceParameter, Any])
         ) from error
 
 
+def shutdown_device(device: RuntimeDevice):
+    try:
+        device.close()
+    except Exception as error:
+        raise RuntimeError(
+            f"Failed to shut down device '{device.get_name()}' properly."
+        ) from error
+
+
 def evaluate_variable_ranges(
     variable_ranges: Mapping[DottedVariableName, VariableRange],
     context_variables: Mapping[DottedVariableName, Any],
@@ -760,6 +751,33 @@ def strip_unit_from_variable_ranges(
         )
         raw_variable_ranges[variable_name] = evaluated_range
     return raw_variable_ranges
+
+
+@contextlib.asynccontextmanager
+async def open_device(device: RuntimeDevice):
+    def initialize_device():
+        try:
+            device.initialize()
+        except Exception as error:
+            raise RuntimeError(
+                f"Could not start device '{device.get_name()}'"
+            ) from error
+
+    def close_device():
+        try:
+            device.close()
+        except Exception as error:
+            raise RuntimeError(
+                f"An error occurred while closing '{device.get_name()}'"
+            ) from error
+
+    try:
+        await asyncio.to_thread(initialize_device)
+        logger.info(f"Device '{device.get_name()}' initialized.")
+        yield device
+    finally:
+        await asyncio.to_thread(close_device)
+        logger.info(f"Device '{device.get_name()}' shut down.")
 
 
 class SequenceInterrupted(Exception):
