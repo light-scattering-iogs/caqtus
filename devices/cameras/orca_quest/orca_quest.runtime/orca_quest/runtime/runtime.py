@@ -3,7 +3,7 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
-from typing import Optional
+from typing import Optional, Any
 
 import numpy
 import numpy as np
@@ -35,7 +35,7 @@ class OrcaQuestCamera(CCamera):
     sensor_height = 2304
 
     _pictures: list[Optional[numpy.ndarray]]
-    _camera: "Dcam"
+    _camera: Dcam
     # _acquisition_thread: Optional[threading.Thread] = None
     _current_exposure: Optional[float] = None
     _thread_pool_executor: ThreadPoolExecutor
@@ -59,8 +59,8 @@ class OrcaQuestCamera(CCamera):
             raise RuntimeError(
                 f"Failed to open camera {self.name}: {str(self._camera.lasterr())}"
             )
-        else:
-            logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
+        self._add_closing_callback(self._camera.dev_close)
+        logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
 
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.OFF):
             raise RuntimeError(
@@ -102,29 +102,8 @@ class OrcaQuestCamera(CCamera):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {str(self._camera.lasterr())}"
             )
+        self._add_closing_callback(self._camera.buf_release)
         logger.debug(f"{self.name}: buffer successfully allocated")
-
-    def close(self):
-        try:
-            if self._camera.buf_release():
-                logger.info(f"{self.name}: DCAM buffer successfully released")
-            else:
-                logger.warning(
-                    f"{self.name}: an error occurred while releasing DCAM buffer:"
-                    f" {str(self._camera.lasterr())}"
-                )
-
-            if self._camera.is_opened():
-                if self._camera.dev_close():
-                    logger.info(f"{self.name}: camera successfully released")
-                else:
-                    logger.warning(
-                        f"{self.name}: an error occurred while closing the camera:"
-                        f" {str(self._camera.lasterr())}"
-                    )
-
-        finally:
-            super().close()
 
     def list_properties(self) -> list:
         result = []
@@ -209,7 +188,7 @@ class OrcaQuestCamera(CCamera):
         return not self._future.done()
 
     @classmethod
-    def list_camera_infos(cls) -> list[dict[str]]:
+    def list_camera_infos(cls) -> list[dict[str, Any]]:
         result = []
         for camera_index in range(Dcamapi.get_devicecount()):
             infos = {}
