@@ -87,7 +87,9 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-        self._headsup = asyncio.Semaphore(2)
+        # Used to limit the number of concurrent computations of the shot parameters if it is too much in advance with
+        # respect to the shot execution.
+        self._computation_heads_up = asyncio.Semaphore(25)
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -349,10 +351,10 @@ class SequenceRunnerThread(Thread):
         return context
 
     @run_step.register
-    def _(
+    async def _(
         self,
         linspace_loop: LinspaceLoop,
-        context: SequenceContext,
+        context: StepContext,
         shot_saver: ShotSaver,
     ):
         """Loop over a variable in a numpy linspace like loop"""
@@ -365,25 +367,27 @@ class SequenceRunnerThread(Thread):
             raise ValueError(
                 f"Could not evaluate start of linspace loop {linspace_loop.name}"
             ) from error
+        unit = start.units
         try:
             stop = Quantity(linspace_loop.stop.evaluate(variables))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate stop of linspace loop {linspace_loop.name}"
             ) from error
+        try:
+            stop = stop.to(unit)
+        except DimensionalityError:
+            raise ValueError(
+                f"Stop units of linspace loop '{linspace_loop.name}' ({stop.units}) is not"
+                f" compatible with start units ({unit})"
+            )
         num = int(linspace_loop.num)
 
-        unit = start.units
-
-        for value in numpy.linspace(
-            start.to(unit).magnitude, stop.to(unit).magnitude, num
-        ):
-            self.update_variable_value(linspace_loop.name, value * unit, context)
+        for value in numpy.linspace(start.magnitude, stop.magnitude, num):
+            context = context.update_variable(linspace_loop.name, value * unit)
             for step in linspace_loop.children:
-                if self.is_waiting_to_interrupt():
-                    return
-                else:
-                    self.run_step(step, context, shot_saver)
+                await self.run_step(step, context, shot_saver)
+        return context
 
     @run_step.register
     def _(
@@ -433,7 +437,7 @@ class SequenceRunnerThread(Thread):
 
         shot_configuration = self._sequence_config.shot_configurations[shot.name]
 
-        await self._headsup.acquire()
+        await self._computation_heads_up.acquire()
         change_parameters = await self.compute_change_parameters(
             shot_configuration, context
         )
@@ -563,12 +567,12 @@ class SequenceRunnerThread(Thread):
                         "A camera timeout error occurred, attempting to redo the failed shot"
                     )
                 else:
-                    await task_group.create_hardware_task(
+                    task_group.create_hardware_task(
                         self.save_shot_with_lock(
                             shot_name, start_time, end_time, variables, data
                         )
                     )
-                    self._headsup.release()
+                    self._computation_heads_up.release()
                     return
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
