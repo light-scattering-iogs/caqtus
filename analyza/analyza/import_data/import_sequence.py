@@ -113,8 +113,10 @@ def build_dataframe_from_shots(
 
     indices = [(str(shot.sequence.path), shot.index) for shot in shots]
     index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
+
+    iterator = map(map_shot_to_row, shots)
     if show_progress:
-        rows = list(tqdm(map(map_shot_to_row, shots), total=len(shots)))
-    else:
-        rows = list(map(map_shot_to_row, shots))
+        iterator = tqdm(iterator, total=len(shots))
+    rows = list(iterator)
+
     return pandas.DataFrame(rows, index=index)
