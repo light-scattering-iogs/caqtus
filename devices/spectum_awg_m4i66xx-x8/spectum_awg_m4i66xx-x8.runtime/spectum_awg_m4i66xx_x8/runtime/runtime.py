@@ -7,14 +7,14 @@ from typing import ClassVar
 
 import numpy as np
 from pydantic import Field, validator
+from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 
 from device import RuntimeDevice
 from settings_model import SettingsModel
-from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
-from .pyspcm.spcm_tools import pvAllocMemPageAligned
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
+from .pyspcm.spcm_tools import pvAllocMemPageAligned
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -96,6 +96,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self._board_handle = spcm.spcm_hOpen(self.board_id)
         if not self._board_handle:
             raise RuntimeError(f"Could not find {self.board_id} board")
+        self._add_closing_callback(spcm.spcm_vClose, self._board_handle)
 
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_RESET
@@ -360,14 +361,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_STOP
         )
         self.check_error()
-
-    def close(self):
-        try:
-            spcm.spcm_vClose(self._board_handle)
-        except Exception as error:
-            raise error
-        finally:
-            super().close()
 
     def check_error(self):
         buffer = ctypes.create_string_buffer(ERRORTEXTLEN)
