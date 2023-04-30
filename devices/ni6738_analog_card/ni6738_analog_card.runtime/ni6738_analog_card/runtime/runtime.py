@@ -36,8 +36,8 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
             raise ValueError(f"Analog voltages can't be nan")
         return analog_voltages
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
         system = nidaqmx.system.System.local()
         if self.device_id not in system.devices:
             raise ConnectionError(f"Could not find device {self.device_id}")

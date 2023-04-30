@@ -91,8 +91,8 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             )
         return channel_settings
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
         self._board_handle = spcm.spcm_hOpen(self.board_id)
         if not self._board_handle:
             raise RuntimeError(f"Could not find {self.board_id} board")

@@ -195,7 +195,7 @@ class SequenceRunnerThread(Thread):
 
         def start_device(device: RuntimeDevice):
             try:
-                device.start()
+                device.initialize()
             except Exception as error:
                 raise RuntimeError(
                     f"Could not start device '{device.get_name()}'"

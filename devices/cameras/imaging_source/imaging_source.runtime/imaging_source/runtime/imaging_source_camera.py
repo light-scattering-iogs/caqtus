@@ -57,8 +57,8 @@ class ImagingSourceCamera(CCamera, ABC):
     _temp_dir: pathlib.Path = None
     _settings_file: pathlib.Path = None
 
-    def start(self):
-        super().start()
+    def initialize(self):
+        super().initialize()
         self._grabber_handle = ic.IC_CreateGrabber()
         ic.IC_OpenDevByUniqueName(self._grabber_handle, T(self.camera_name))
         if not ic.IC_IsDevValid(self._grabber_handle):

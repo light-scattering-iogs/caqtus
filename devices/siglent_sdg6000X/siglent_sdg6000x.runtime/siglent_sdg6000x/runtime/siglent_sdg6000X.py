@@ -57,8 +57,8 @@ class SiglentSDG6000XWaveformGenerator(RuntimeDevice):
         resource_manager = pyvisa.ResourceManager()
         return resource_manager.list_resources()
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
 
         resource_manager = pyvisa.ResourceManager()
 

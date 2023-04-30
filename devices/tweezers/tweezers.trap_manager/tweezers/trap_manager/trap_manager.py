@@ -81,7 +81,7 @@ class TrapManager(BaseModel):
             steps=steps,
             first_step="initial_trap_step",
         )
-        self._awg.start()
+        self._awg.initialize()
 
     def stop(self):
         self._awg.stop()

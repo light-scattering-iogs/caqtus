@@ -17,7 +17,7 @@ if __name__ == "__main__":
             bit_pix=PixelDepth.BITS_12,
         )
     ) as board:
-        board.start()
+        board.initialize()
         board.start_camera()
         im = board.read_image(1000)
         board.stop_camera()

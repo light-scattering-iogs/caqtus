@@ -28,10 +28,10 @@ class ElliptecELL14RotationStage(RuntimeDevice):
     class Config(RuntimeDevice.Config):
         validate_all = False
 
-    def start(self) -> None:
+    def initialize(self) -> None:
         """Connect to the device and initialize it."""
 
-        super().start()
+        super().initialize()
 
         try:
             self._device = ELLx(

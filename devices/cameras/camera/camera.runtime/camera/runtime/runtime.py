@@ -83,8 +83,8 @@ class CCamera(RuntimeDevice, ABC):
             raise ValueError(f"Exposure is longer than timeout")
         return exposures
 
-    def start(self):
-        super().start()
+    def initialize(self):
+        super().initialize()
 
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""

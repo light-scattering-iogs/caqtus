@@ -34,8 +34,8 @@ class SpincorePulseBlaster(RuntimeDevice):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("run",)
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
 
         spinapi.pb_set_debug(self.spincore_lib_debug)
 
