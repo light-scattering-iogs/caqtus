@@ -17,7 +17,7 @@ try:
     imported_devices["ElliptecELL14RotationStage"] = ElliptecELL14RotationStage
     logger.info("ElliptecELL14RotationStage imported")
 except Exception:
-    pass
+    logger.info("Did not import ElliptecELL14RotationStage")
 
 
 try:
@@ -26,7 +26,7 @@ try:
     imported_devices["OrcaQuestCamera"] = OrcaQuestCamera
     logger.info("OrcaQuestCamera imported")
 except Exception:
-    pass
+    logger.info("Did not import OrcaQuestCamera")
 
 try:
     from spincore_sequencer.runtime import SpincorePulseBlaster
@@ -34,7 +34,7 @@ try:
     imported_devices["SpincorePulseBlaster"] = SpincorePulseBlaster
     logger.info("SpincorePulseBlaster imported")
 except Exception:
-    pass
+    logger.info("Did not import SpincorePulseBlaster")
 
 try:
     from ni6738_analog_card.runtime import NI6738AnalogCard
@@ -42,7 +42,7 @@ try:
     imported_devices["NI6738AnalogCard"] = NI6738AnalogCard
     logger.info("NI6738AnalogCard imported")
 except Exception:
-    pass
+    logger.info("Did not import NI6738AnalogCard")
 
 try:
     from imaging_source.runtime import ImagingSourceCameraDMK33GR0134
@@ -50,7 +50,7 @@ try:
     imported_devices["ImagingSourceCameraDMK33GR0134"] = ImagingSourceCameraDMK33GR0134
     logger.info("ImagingSourceCameraDMK33GR0134 imported")
 except Exception:
-    pass
+    logger.info("Did not import ImagingSourceCameraDMK33GR0134")
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -76,5 +76,4 @@ manager = RemoteDeviceServerManager(
     address=("", 65000), authkey=bytes(password, encoding="utf-8")
 )
 server = manager.get_server()
-print(f"Server instantiated at {server.address}")
 server.serve_forever()
