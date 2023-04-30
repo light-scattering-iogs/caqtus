@@ -217,7 +217,7 @@ class SequenceRunnerThread(Thread):
     def shutdown(self):
         def shutdown_device(device: RuntimeDevice):
             try:
-                device.shutdown()
+                device.close()
             except Exception as error:
                 raise RuntimeError(
                     f"Failed to shut down device '{device.get_name()}' properly."

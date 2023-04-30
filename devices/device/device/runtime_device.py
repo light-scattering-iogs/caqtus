@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from contextlib import ExitStack, closing
 from functools import singledispatchmethod
-from typing import ClassVar, Self
+from typing import ClassVar, Self, Optional
 
 import pydantic
 from pydantic import Field, Extra
@@ -20,11 +21,11 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
     Methods:
         __init__: The constructor of the class. It is used to initialize the device parameters. No communication
             to the device should be done here, it is only used to set the parameters.
-        start: This method must be called once before attempting any communication with the actual device. It is used to
-            initiate the communication to the device.
+        initialize: This method must be called once before attempting any communication with the actual device. It is
+            used to initiate the communication to the device.
         update_parameters: This method is used to change the values of some parameters of the device. It can be called
             as many times as needed.
-        shutdown: This method must be called once when use of the device is finished. It is used to close the
+        close: This method must be called once when use of the device is finished. It is used to close the
             communication to the device and free the resources used by the device.
 
     Warnings:
@@ -34,19 +35,35 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
 
     name: DeviceName = Field(allow_mutation=False)
 
+    _close_stack: Optional[ExitStack] = None
+
     @abstractmethod
     def initialize(self) -> None:
         """Initiate the communication to the device.
 
-        This method is meant to be reimplemented for each specific device.
-        The base class implementation registers the device in the list of devices already in use. It should be called
-        when subclassing this class.
+        This method is meant to be reimplemented for each specific device. The base class implementation registers the
+        device in the list of devices already in use. It must be called when subclassing this class.
         """
+
+        self._close_stack = ExitStack().__enter__()
 
         if self.name in self._devices_already_in_use:
             raise ValueError(f"A device with name {self.name} is already in use")
-        else:
-            self._devices_already_in_use[self.name] = self
+        self._devices_already_in_use[self.name] = self
+        self._add_closing_callback(self._devices_already_in_use.pop, self.name)
+
+    def _add_closing_callback(self, callback, /, *args, **kwargs):
+        """Add a callback function to be called when the device is closed.
+
+        Callbacks will be called in the reverse order they were added. The callback is called with the same arguments as
+        passed to this method.
+        """
+
+        if self._close_stack is None:
+            raise UninitializedDeviceError(
+                f"Method RuntimeDevice.initialize must be called on the instance before adding shutdown callbacks."
+            )
+        self._close_stack.callback(callback, *args, **kwargs)
 
     @abstractmethod
     def update_parameters(self, **kwargs) -> None:
@@ -59,29 +76,33 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         for name, value in kwargs.items():
             setattr(self, name, value)
 
-    @abstractmethod
-    def shutdown(self) -> None:
+    def close(self) -> None:
         """Close the communication to the device and free the resources used by the device.
 
-        This method is meant to be reimplemented for each specific device. It must be called once when use of the device
-        is finished. The base class implementation unregisters the device from the list of devices in use.
+        This method must be called once when use of the device is finished. The base class implementation unwinds the
+        stack of closing callbacks.
         """
 
-        del self._devices_already_in_use[self.name]
+        if self._close_stack is None:
+            raise UninitializedDeviceError(
+                f"method initialize of RuntimeDevice must be called before calling close."
+            )
+        self._close_stack.__exit__(None, None, None)
+        self._close_stack = None
 
     def __enter__(self):
         self.initialize()
-        return self
+        return closing(self)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.shutdown()
+        self.close()
 
     def get_name(self) -> DeviceName:
         return self.name
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "initialize", "update_parameters", "shutdown", "get_name"
+        return "initialize", "update_parameters", "close", "get_name"
 
     class Config:
         validate_assignment = True
@@ -92,3 +113,9 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         extra = Extra.allow
 
     _devices_already_in_use: ClassVar[dict[DeviceName, Self]] = {}
+
+
+class UninitializedDeviceError(Exception):
+    """Raised when a device is used before being initialized"""
+
+    pass

@@ -82,13 +82,13 @@ class SiglentSDG6000XWaveformGenerator(RuntimeDevice):
         self._setup_modulations()
         self._setup_outputs()
 
-    def shutdown(self):
+    def close(self):
         try:
             self._device.close()
         except Exception as error:
             raise error
         finally:
-            super().shutdown()
+            super().close()
 
     def get_identity(self) -> str:
         return self._device.query("*IDN?")

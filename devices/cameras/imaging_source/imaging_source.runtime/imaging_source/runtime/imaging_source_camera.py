@@ -86,13 +86,13 @@ class ImagingSourceCamera(CCamera, ABC):
             raise RuntimeError(f"{self.name}: failed to set trigger mode")
         logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
 
-    def shutdown(self):
+    def close(self):
         try:
             if self._grabber_handle is not None:
                 ic.IC_StopLive(self._grabber_handle)
                 ic.IC_ReleaseGrabber(self._grabber_handle)
         finally:
-            super().shutdown()
+            super().close()
 
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""

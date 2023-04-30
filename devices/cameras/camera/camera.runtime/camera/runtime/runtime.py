@@ -171,7 +171,7 @@ class CCamera(RuntimeDevice, ABC):
                 for index, name in enumerate(self.picture_names)
             }
 
-    def shutdown(self):
+    def close(self):
         try:
             if self.is_acquisition_in_progress():
                 self.stop_acquisition()
@@ -180,7 +180,7 @@ class CCamera(RuntimeDevice, ABC):
                     f"Shutting down {self.name} while acquisition is in progress"
                 )
         finally:
-            super().shutdown()
+            super().close()
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:

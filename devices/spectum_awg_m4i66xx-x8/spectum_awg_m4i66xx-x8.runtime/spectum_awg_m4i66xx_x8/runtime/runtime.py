@@ -361,13 +361,13 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def shutdown(self):
+    def close(self):
         try:
             spcm.spcm_vClose(self._board_handle)
         except Exception as error:
             raise error
         finally:
-            super().shutdown()
+            super().close()
 
     def check_error(self):
         buffer = ctypes.create_string_buffer(ERRORTEXTLEN)

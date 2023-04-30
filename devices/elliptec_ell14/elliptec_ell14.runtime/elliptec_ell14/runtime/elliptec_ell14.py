@@ -64,14 +64,14 @@ class ElliptecELL14RotationStage(RuntimeDevice):
                 f"Could not move device {self.name} to position {position}"
             ) from error
 
-    def shutdown(self):
+    def close(self):
         """Close the connection to the device."""
 
         try:
             if self._device is not None:
                 self._device.close()
         finally:
-            super().shutdown()
+            super().close()
 
     @property
     def position(self) -> float:
