@@ -60,13 +60,17 @@ class ImagingSourceCamera(CCamera, ABC):
     def initialize(self):
         super().initialize()
         self._grabber_handle = ic.IC_CreateGrabber()
+        self._add_closing_callback(ic.IC_ReleaseGrabber, self._grabber_handle)
+
         ic.IC_OpenDevByUniqueName(self._grabber_handle, T(self.camera_name))
         if not ic.IC_IsDevValid(self._grabber_handle):
             raise RuntimeError(f"{self.name}: camera {self.camera_name} not found")
+        self._add_closing_callback(
+            ic.IC_CloseDev, self._grabber_handle
+        )  # TODO: check if this is necessary
+        self._add_closing_callback(ic.IC_StopLive, self._grabber_handle)
 
         logger.info(f"{self.name}: camera {self.camera_name} found")
-
-        # self.reset_properties()
 
         self._setup_properties()
         self._setup_trigger()
@@ -85,14 +89,6 @@ class ImagingSourceCamera(CCamera, ABC):
         ):
             raise RuntimeError(f"{self.name}: failed to set trigger mode")
         logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
-
-    def close(self):
-        try:
-            if self._grabber_handle is not None:
-                ic.IC_StopLive(self._grabber_handle)
-                ic.IC_ReleaseGrabber(self._grabber_handle)
-        finally:
-            super().close()
 
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""
