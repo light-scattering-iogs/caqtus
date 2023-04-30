@@ -1,4 +1,5 @@
 import logging
+from contextlib import closing
 from typing import ClassVar
 
 import nidaqmx
@@ -42,7 +43,8 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         if self.device_id not in system.devices:
             raise ConnectionError(f"Could not find device {self.device_id}")
 
-        self._task = nidaqmx.Task()
+        self._task = self._enter_context(closing(nidaqmx.Task()))
+        self._add_closing_callback(self._task.stop)
 
         for ch in range(self.channel_number):
             self._task.ao_channels.add_ao_voltage_chan(
@@ -89,12 +91,3 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.wait_until_done(timeout=0)
         self._task.stop()
 
-    def close(self):
-        try:
-            self._task.wait_until_done(timeout=1)
-            self._task.stop()
-            self._task.close()
-        except Exception as err:
-            raise RuntimeError(f"An error occurred while shutting down {self.name}") from err
-        finally:
-            super().close()
