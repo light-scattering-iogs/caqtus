@@ -1,7 +1,8 @@
 import ast
+from collections.abc import Mapping
 from copy import deepcopy
 from functools import cached_property
-from typing import Optional, Any
+from typing import Optional, Any, Self
 
 import numpy
 import token_utils
@@ -9,7 +10,7 @@ import yaml
 from scipy.signal import sawtooth, square
 
 from settings_model import YAMLSerializable
-from variable.name import VariableName
+from variable.name import VariableName, DottedVariableName
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
@@ -56,7 +57,7 @@ class Expression(YAMLSerializable):
     def __init__(
         self,
         body: str,
-        builtins: Optional[dict[str]] = None,
+        builtins: Optional[dict[str, Any]] = None,
         implicit_multiplication: bool = True,
         allow_percentage: bool = True,
         cache_evaluation: bool = True,
@@ -104,14 +105,14 @@ class Expression(YAMLSerializable):
     def __repr__(self):
         return f"Expression({self.body})"
 
-    def evaluate(self, variables: dict[str]) -> Any:
+    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables"""
         # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.
         useful_variables = set(variables) & self.upstream_variables
         return self._evaluate({expr: variables[expr] for expr in useful_variables})
 
-    def _evaluate(self, variables: dict[str]):
+    def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         can_use_cached_value = self._cache_evaluation and (
             variables == self._last_evaluation_variables
         )
@@ -163,15 +164,30 @@ class Expression(YAMLSerializable):
         return compile(self.ast, filename="<string>", mode="eval")
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, expr: "Expression"):
+    def representer(cls, dumper: yaml.Dumper, expr: Self):
         return dumper.represent_scalar(
             f"!{cls.__name__}",
             expr.body,
         )
 
     @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.ScalarNode):
-        return cls(body=loader.construct_scalar(node))
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        if not isinstance(node, yaml.ScalarNode):
+            raise yaml.constructor.ConstructorError(
+                None,
+                None,
+                f"Expected a scalar node but got {type(node)}",
+                node.start_mark,
+            )
+        value = loader.construct_scalar(node)
+        if not isinstance(value, str):
+            raise yaml.constructor.ConstructorError(
+                None,
+                None,
+                "Expected a string",
+                node.start_mark,
+            )
+        return cls(body=value)
 
     def __eq__(self, other):
         if isinstance(other, Expression):
@@ -237,7 +253,7 @@ def add_implicit_multiplication(source: str) -> str:
 
 
 class EvaluationError(Exception):
-    def __init__(self, body: str, variables: dict[str]):
+    def __init__(self, body: str, variables: Mapping[str, Any]):
         self._body = body
         self._variables = deepcopy(variables)
         message = f"Error while evaluating expression '{body}'"

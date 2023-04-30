@@ -45,8 +45,8 @@ class OrcaQuestCamera(CCamera):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("list_properties",)
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
         self._thread_pool_executor = ThreadPoolExecutor(max_workers=1)
         self._pictures = [None] * self.number_pictures_to_acquire
 

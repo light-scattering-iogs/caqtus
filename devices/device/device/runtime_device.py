@@ -35,7 +35,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
     name: DeviceName = Field(allow_mutation=False)
 
     @abstractmethod
-    def start(self) -> None:
+    def initialize(self) -> None:
         """Initiate the communication to the device.
 
         This method is meant to be reimplemented for each specific device.
@@ -70,7 +70,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         del self._devices_already_in_use[self.name]
 
     def __enter__(self):
-        self.start()
+        self.initialize()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -81,7 +81,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "start", "update_parameters", "shutdown", "get_name"
+        return "initialize", "update_parameters", "shutdown", "get_name"
 
     class Config:
         validate_assignment = True

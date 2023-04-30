@@ -19,7 +19,7 @@ camera = ImagingSourceCameraDMK33GR0134(
     gain=2.8
 )
 
-camera.start()
+camera.initialize()
 camera.acquire_all_pictures()
 images = camera.read_all_pictures()
 camera.shutdown()

@@ -106,8 +106,8 @@ class PixelflyBoard(RuntimeDevice):
     bit_pix: Set the bit width of the transferred pixels.
     """
 
-    def start(self):
-        super().start()
+    def initialize(self):
+        super().initialize()
         self._lib = load_pixelfly_library()
         if self._lib.CHECK_BOARD_AVAILABILITY(self.board_number) != ErrCodes.NOERR:
             raise RuntimeError(f"Board {self.board_number} is not available.")

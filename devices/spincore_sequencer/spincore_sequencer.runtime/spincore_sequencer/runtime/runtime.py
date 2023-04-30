@@ -34,8 +34,8 @@ class SpincorePulseBlaster(RuntimeDevice):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("run",)
 
-    def start(self) -> None:
-        super().start()
+    def initialize(self) -> None:
+        super().initialize()
 
         spinapi.pb_set_debug(self.spincore_lib_debug)
 
@@ -80,7 +80,7 @@ class SpincorePulseBlaster(RuntimeDevice):
 
     @_program_instruction.register
     def _(self, continue_: Continue):
-        if continue_.duration * self.core_clock > 2 ** 32:
+        if continue_.duration * self.core_clock > 2**32:
             raise ValueError(
                 f"The duration of the continue instruction is too long. "
                 f"Maximum duration is {2**32/self.core_clock} s"
@@ -160,7 +160,7 @@ class SpincorePulseBlaster(RuntimeDevice):
         if spinapi.pb_start() != 0:
             raise RuntimeError(f"Can't start the sequence. {spinapi.pb_get_error()}")
 
-        while (status := spinapi.pb_read_status()) & SpincoreStatus.Running:
+        while spinapi.pb_read_status() & SpincoreStatus.Running:
             time.sleep(0.01)
 
     def shutdown(self):
