@@ -22,6 +22,9 @@ class VariableNamespace(Generic[T]):
     def to_dict(self) -> dict[VariableName, T]:
         return {VariableName(name): value for name, value in self._dict.items()}
 
+    def __getitem__(self, item: DottedVariableName) -> T:
+        return self._dict[str(item)]
+
     def __or__(
         self, other: Mapping[DottedVariableName, T]
     ) -> Mapping[DottedVariableName, T]:
