@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from collections.abc import Coroutine, Awaitable
 from copy import deepcopy
-from typing import Generic, TypeVar, Self
+from typing import Generic, TypeVar, Self, Optional
 
 from units import AnalogValue
 from variable.name import DottedVariableName
@@ -18,15 +18,34 @@ T = TypeVar("T")
 
 
 class StepContext(Generic[T]):
-    def __init__(self, variables: VariableNamespace[T]):
-        self._variables = variables
+    """Immutable context that contains the variables of a given step.
+
+    This object contains the value of some variables, and it also contains the previous value of the variables since the
+    last time this object history was reset.
+    """
+    def __init__(self) -> None:
+        self._variables = VariableNamespace[T]()
+
+        # This is a dictionary of variables that have changed since the last time this object was reset.
+        # The key is the variable name, and the value is the previous value of the variable.
+        self._variables_that_changed: dict[DottedVariableName, Optional[T]] = {}
 
     def clone(self) -> Self:
         return deepcopy(self)
 
     def update_variable(self, name: DottedVariableName, value: T) -> Self:
         clone = self.clone()
+        if name in clone._variables_that_changed:
+            # We keep the last previous value as the correct previous value
+            pass
+        else:
+            clone._variables_that_changed[name] = clone._variables[name]
         clone._variables.update({name: value})
+        return clone
+
+    def reset_history(self) -> Self:
+        clone = self.clone()
+        clone._variables_that_changed = {}
         return clone
 
     @property
