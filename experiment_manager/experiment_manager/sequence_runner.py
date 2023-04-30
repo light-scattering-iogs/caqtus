@@ -39,7 +39,7 @@ from sequence.configuration import (
 from sequence.runtime import SequencePath, Sequence, Shot
 from sql_model import State
 from units import Quantity, units, get_unit, magnitude_in_unit, DimensionalityError
-from units.analog_value import add_unit
+from units.analog_value import add_unit, AnalogValue
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .compute_shot_parameters import compute_shot_parameters
@@ -50,7 +50,7 @@ from .sequence_context import StepContext
 from .shot_saver import ShotSaver
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
-from .variable_change import compute_parameters_on_variable_update
+from .variable_change import compute_parameters_on_variables_update
 
 if typing.TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
@@ -60,6 +60,8 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
+
 
 class SequenceRunnerThread(Thread):
     def __init__(
@@ -67,16 +69,22 @@ class SequenceRunnerThread(Thread):
         experiment_config_name: str,
         sequence_path: SequencePath,
         session_maker: ExperimentSessionMaker,
-        waiting_to_interrupt: Event,
+        must_interrupt: Event,
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self._session = session_maker()
         self._save_session = session_maker()
-        self._session_maker = session_maker
         self._sequence = Sequence(sequence_path)
-        self._waiting_to_interrupt = waiting_to_interrupt
         self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
         self._devices: dict[str, RuntimeDevice] = {}
+
+        # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
+        self._must_interrupt = must_interrupt
+
+        # These locks are used to prevent concurrent access to the hardware and the database. Since lock access is fair,
+        # the first shot to require the locks will be the first to get them, so shot execution order and save order will
+        # be preserved. There should be no interleaving between lock acquisitions and releases within a shot.
+
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
@@ -225,7 +233,7 @@ class SequenceRunnerThread(Thread):
     async def run_sequence(self):
         """Execute the sequence header and program"""
 
-        context = StepContext(variables=VariableNamespace())
+        context = StepContext[AnalogValue]()
 
         async with asyncio.TaskGroup() as background_task_group:
             background_task_group.create_task(self.watch_for_interruption())
@@ -239,9 +247,11 @@ class SequenceRunnerThread(Thread):
             raise SequenceFinished()
 
     async def watch_for_interruption(self):
+        """Raise SequenceInterrupted if the sequence must be interrupted."""
+
         while True:
-            await asyncio.sleep(0.1)
-            if self.is_waiting_to_interrupt():
+            await asyncio.sleep(WATCH_FOR_INTERRUPTION_INTERVAL)
+            if self._must_interrupt.is_set():
                 raise SequenceInterrupted()
 
     @singledispatchmethod
@@ -251,16 +261,18 @@ class SequenceRunnerThread(Thread):
         """Execute a given step of the sequence
 
         This function should be implemented for each Step type that can be run on the
-        experiment. It should also return as soon as possible if the sequence needs to
-        be interrupted.
+        experiment.
 
         Args:
             step: the step of the sequence currently executed
-            context: a mutable object that holds information about the sequence being
-            run, such as the values of the variables. Step that update variables should
-            reflect this by modifying the context.
-            task_group:
+            context: Contains the values of the variables before this step.
+            task_group: A task group that can be used to create long-running tasks. Tasks in this group will be awaited
+            before the sequence is completed in any way. If the sequence is interrupted or an error occurs, the
+            remaining tasks will be cancelled. Tasks that must not be cancelled should be shielded.
 
+        Returns:
+            A new context object that contains the values of the variables after this step. This context object must be
+            a new object.
         """
 
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
@@ -272,7 +284,11 @@ class SequenceRunnerThread(Thread):
         context: StepContext,
         task_group: SequenceTaskGroup,
     ) -> StepContext:
-        """Execute each child step sequentially"""
+        """Execute the steps of a SequenceSteps.
+
+        This function executes the child steps of a SequenceSteps in order. The context is updated after each step and
+        the updated context is passed to the next step.
+        """
 
         for step in steps.children:
             context = await self.run_step(step, context, task_group)
@@ -285,19 +301,13 @@ class SequenceRunnerThread(Thread):
         context: StepContext,
         task_group: SequenceTaskGroup,
     ) -> StepContext:
-        """Update the value of a given variable.
+        """Execute a VariableDeclaration step.
 
-        If a device depends on this variable, the parameters of the device are updated accordingly.
+        This function evaluates the expression of the declaration and updates the value of the variable in the context.
         """
 
         value = Quantity(declaration.expression.evaluate(context.variables | units))
-
-        return await self.update_variable_value(
-            declaration.name,
-            value,
-            context,
-            task_group,
-        )
+        return context.update_variable(declaration.name, value)
 
     @run_step.register
     async def _(
@@ -332,12 +342,7 @@ class SequenceRunnerThread(Thread):
             )
 
         for value in numpy.arange(start.magnitude, stop.magnitude, step.magnitude):
-            context = await self.update_variable_value(
-                arange_loop.name,
-                value * unit,
-                context,
-                task_group,
-            )
+            context = context.update_variable(arange_loop.name, value * unit)
             for step in arange_loop.children:
                 context = await self.run_step(step, context, task_group)
         return context
@@ -427,15 +432,22 @@ class SequenceRunnerThread(Thread):
 
         shot_configuration = self._sequence_config.shot_configurations[shot.name]
 
+        change_parameters = await self.compute_change_parameters(
+            shot_configuration, context
+        )
         shot_parameters = await self.compute_shot_parameters(
             shot_configuration, context
         )
         task_group.create_hardware_task(
             self.do_shot_with_retry(
-                shot.name, context.variables, shot_parameters, task_group
+                shot.name,
+                context.variables,
+                change_parameters,
+                shot_parameters,
+                task_group,
             )
         )
-        return context.clone()
+        return context.reset_history()
 
     @run_step.register
     def _(self, loop: UserInputLoop, context: SequenceContext, shot_saver: ShotSaver):
@@ -484,38 +496,6 @@ class SequenceRunnerThread(Thread):
         if result.exception():
             raise result.exception()
 
-    async def update_variable_value(
-        self,
-        name: DottedVariableName,
-        value: Any,
-        context: StepContext,
-        task_group: SequenceTaskGroup,
-    ) -> StepContext:
-        """Update the value of a variable.
-
-        This method update the value of a variable in the context. It also gives a chance to the devices to update their
-        state if needed.
-        """
-
-        context = context.update_variable(name, value)
-
-        parameters = await asyncio.to_thread(
-            compute_parameters_on_variable_update,
-            name,
-            self._experiment_config,
-            context.variables,
-        )
-        task_group.create_hardware_task(
-            self.update_device_parameters_with_lock(parameters)
-        )
-        return context
-
-    async def update_device_parameters_with_lock(
-        self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
-    ):
-        async with self._hardware_lock:
-            await self.update_device_parameters(device_parameters)
-
     async def update_device_parameters(
         self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
     ):
@@ -523,12 +503,27 @@ class SequenceRunnerThread(Thread):
             return
 
         async with asyncio.TaskGroup() as update_group:
+            # There is no need to shield the tasks from cancellation because they are running synchronous functions
+            # in other threads and cannot be cancelled in middle of execution.
+            # Some devices might be updated while others not if an exception is raised, but I don't think it is a
+            # problem.
             for device_name, parameters in device_parameters.items():
-                update_group.create_task(
-                    asyncio.to_thread(
-                        update_device, self._devices[device_name], parameters
-                    )
+                task = asyncio.to_thread(
+                    update_device, self._devices[device_name], parameters
                 )
+                update_group.create_task(task)
+
+    async def compute_change_parameters(
+        self, shot: ShotConfiguration, context: StepContext
+    ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+
+        change_parameters = await asyncio.to_thread(
+            compute_parameters_on_variables_update,
+            context.updated_variables,
+            context.variables,
+            self._experiment_config,
+        )
+        return change_parameters
 
     async def compute_shot_parameters(
         self,
@@ -536,7 +531,7 @@ class SequenceRunnerThread(Thread):
         context: StepContext,
     ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
         initial_time = datetime.datetime.now()
-        device_parameters = await asyncio.to_thread(
+        shot_parameters = await asyncio.to_thread(
             compute_shot_parameters, self._experiment_config, shot, context.variables
         )
         computation_time = datetime.datetime.now()
@@ -544,13 +539,14 @@ class SequenceRunnerThread(Thread):
             "Shot parameters computation duration:"
             f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
         )
-        return device_parameters
+        return shot_parameters
 
     async def do_shot_with_retry(
         self,
         shot_name: str,
         variables: VariableNamespace,
-        device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
+        change_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
+        shot_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
         task_group: SequenceTaskGroup,
     ) -> None:
         number_of_attempts = 2  # must >= 1
@@ -558,7 +554,7 @@ class SequenceRunnerThread(Thread):
             for attempt in range(number_of_attempts):
                 try:
                     start_time = datetime.datetime.now()
-                    data = await self.do_shot(device_parameters)
+                    data = await self.do_shot(change_parameters, shot_parameters)
                     end_time = datetime.datetime.now()
                 except CameraTimeoutError:
                     logger.warning(
@@ -571,17 +567,18 @@ class SequenceRunnerThread(Thread):
                         )
                     )
                     return
-
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
         )
 
     async def do_shot(
         self,
+        change_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
         device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[str, Any]:
 
         start_time = datetime.datetime.now()
+        await self.update_device_parameters(change_parameters)
         await self.update_device_parameters(device_parameters)
         stop_time = datetime.datetime.now()
         logger.info(
@@ -682,9 +679,6 @@ class SequenceRunnerThread(Thread):
                 CameraConfiguration,
             )
         }
-
-    def is_waiting_to_interrupt(self) -> bool:
-        return self._waiting_to_interrupt.is_set()
 
 
 def create_remote_device_managers(

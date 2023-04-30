@@ -1,17 +1,21 @@
 from typing import Any
 
-from experiment.configuration import ElliptecELL14RotationStageConfiguration
+from device import DeviceName
+from experiment.configuration import (
+    ElliptecELL14RotationStageConfiguration,
+    DeviceParameter,
+)
 from experiment.configuration import ExperimentConfig
 from units import units, Quantity
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 
 
-def compute_parameters_on_variable_update(
-    updated_variable: DottedVariableName,
-    experiment_config: ExperimentConfig,
+def compute_parameters_on_variables_update(
+    updated_variables: set[DottedVariableName],
     variables: VariableNamespace,
-) -> dict[str, dict[str, Any]]:
+    experiment_config: ExperimentConfig,
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
     """Compute the new parameters to apply to the devices when a variable changes."""
 
     new_parameters = {}
@@ -20,33 +24,33 @@ def compute_parameters_on_variable_update(
     )
     new_parameters.update(
         compute_parameters_for_ell14_devices(
-            updated_variable, ell14_configurations, variables
+            updated_variables, variables, ell14_configurations
         )
     )
     return new_parameters
 
 
 def compute_parameters_for_ell14_devices(
-    updated_variable: DottedVariableName,
-    ell14_configurations: dict[str, ElliptecELL14RotationStageConfiguration],
+    updated_variables: set[DottedVariableName],
     variables: VariableNamespace,
-) -> dict[str, dict[str, Any]]:
+    ell14_configurations: dict[DeviceName, ElliptecELL14RotationStageConfiguration],
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
     new_parameters = {}
     for name, ell14_config in ell14_configurations.items():
         new_parameters[name] = compute_parameter_for_ell14_device(
-            updated_variable, ell14_config, variables
+            updated_variables, variables, ell14_config
         )
     return new_parameters
 
 
 def compute_parameter_for_ell14_device(
-    updated_variable: DottedVariableName,
-    ell14_config: ElliptecELL14RotationStageConfiguration,
+    updated_variables: set[DottedVariableName],
     variables: VariableNamespace,
-) -> dict[str, Any]:
+    ell14_config: ElliptecELL14RotationStageConfiguration,
+) -> dict[DeviceParameter, Any]:
     new_parameters = {}
     upstream_variables = ell14_config.position.upstream_variables.difference(units)
-    if updated_variable in upstream_variables:
+    if upstream_variables.intersection(updated_variables):
         value = ell14_config.position.evaluate(variables | units)
         if isinstance(value, Quantity):
             value = value.to_base_units().magnitude

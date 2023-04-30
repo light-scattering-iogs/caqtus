@@ -39,7 +39,14 @@ class StepContext(Generic[T]):
             # We keep the last previous value as the correct previous value
             pass
         else:
-            clone._variables_that_changed[name] = clone._variables[name]
+            if name in clone._variables:
+                if clone._variables[name] == value:
+                    # No need to register the change if the value is the same
+                    pass
+                else:
+                    clone._variables_that_changed[name] = clone._variables[name]
+            else:
+                clone._variables_that_changed[name] = None
         clone._variables.update({name: value})
         return clone
 
@@ -48,9 +55,15 @@ class StepContext(Generic[T]):
         clone._variables_that_changed = {}
         return clone
 
+
+
     @property
     def variables(self):
         return deepcopy(self._variables)
+
+    @property
+    def updated_variables(self) -> set[DottedVariableName]:
+        return set(self._variables_that_changed.keys())
 
 
 class SequenceTaskGroup:

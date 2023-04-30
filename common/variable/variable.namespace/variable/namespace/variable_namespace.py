@@ -25,6 +25,9 @@ class VariableNamespace(Generic[T]):
     def __getitem__(self, item: DottedVariableName) -> T:
         return self._dict[str(item)]
 
+    def __contains__(self, item: DottedVariableName) -> bool:
+        return str(item) in self._dict
+
     def __or__(
         self, other: Mapping[DottedVariableName, T]
     ) -> Mapping[DottedVariableName, T]:
