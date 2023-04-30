@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
-from contextlib import ExitStack, closing
+from contextlib import ExitStack, closing, AbstractContextManager
 from functools import singledispatchmethod
-from typing import ClassVar, Self, Optional
+from typing import ClassVar, Self, Optional, TypeVar
 
 import pydantic
 from pydantic import Field, Extra
 
 from .device_name import DeviceName
+
+_T = TypeVar("_T")
 
 
 class RuntimeDevice(pydantic.BaseModel, ABC):
@@ -36,6 +38,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
     name: DeviceName = Field(allow_mutation=False)
 
     _close_stack: Optional[ExitStack] = None
+    __devices_already_in_use: ClassVar[dict[DeviceName, Self]] = {}
 
     @abstractmethod
     def initialize(self) -> None:
@@ -47,10 +50,10 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
 
         self._close_stack = ExitStack().__enter__()
 
-        if self.name in self._devices_already_in_use:
+        if self.name in self.__devices_already_in_use:
             raise ValueError(f"A device with name {self.name} is already in use")
-        self._devices_already_in_use[self.name] = self
-        self._add_closing_callback(self._devices_already_in_use.pop, self.name)
+        self.__devices_already_in_use[self.name] = self
+        self._add_closing_callback(self.__devices_already_in_use.pop, self.name)
 
     def _add_closing_callback(self, callback, /, *args, **kwargs):
         """Add a callback function to be called when the device is closed.
@@ -64,6 +67,15 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
                 f"Method RuntimeDevice.initialize must be called on the instance before adding shutdown callbacks."
             )
         self._close_stack.callback(callback, *args, **kwargs)
+
+    def _enter_context(self, cm: AbstractContextManager[_T]) -> _T:
+        """Enter a context manager to be closed when the device is closed."""
+
+        if self._close_stack is None:
+            raise UninitializedDeviceError(
+                f"Method RuntimeDevice.initialize must be called on the instance before entering context managers."
+            )
+        return self._close_stack.enter_context(cm)
 
     @abstractmethod
     def update_parameters(self, **kwargs) -> None:
@@ -111,8 +123,6 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         keep_untouched = (singledispatchmethod,)
         arbitrary_types_allowed = True
         extra = Extra.allow
-
-    _devices_already_in_use: ClassVar[dict[DeviceName, Self]] = {}
 
 
 class UninitializedDeviceError(Exception):
