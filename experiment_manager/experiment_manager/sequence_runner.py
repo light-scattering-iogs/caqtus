@@ -84,9 +84,10 @@ class SequenceRunnerThread(Thread):
         # These locks are used to prevent concurrent access to the hardware and the database. Since lock access is fair,
         # the first shot to require the locks will be the first to get them, so shot execution order and save order will
         # be preserved. There should be no interleaving between lock acquisitions and releases within a shot.
-
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
+
+        self._headsup = asyncio.Semaphore(2)
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -432,6 +433,7 @@ class SequenceRunnerThread(Thread):
 
         shot_configuration = self._sequence_config.shot_configurations[shot.name]
 
+        await self._headsup.acquire()
         change_parameters = await self.compute_change_parameters(
             shot_configuration, context
         )
@@ -566,6 +568,7 @@ class SequenceRunnerThread(Thread):
                             shot_name, start_time, end_time, variables, data
                         )
                     )
+                    self._headsup.release()
                     return
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
