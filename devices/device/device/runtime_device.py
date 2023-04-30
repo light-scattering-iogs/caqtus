@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from contextlib import ExitStack, closing, AbstractContextManager
+from contextlib import ExitStack, AbstractContextManager
 from functools import singledispatchmethod
 from typing import ClassVar, Self, Optional, TypeVar
 
@@ -48,7 +48,7 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
         device in the list of devices already in use. It must be called when subclassing this class.
         """
 
-        self._close_stack = ExitStack().__enter__()
+        self._close_stack = ExitStack()
 
         if self.name in self.__devices_already_in_use:
             raise ValueError(f"A device with name {self.name} is already in use")
@@ -99,12 +99,12 @@ class RuntimeDevice(pydantic.BaseModel, ABC):
             raise UninitializedDeviceError(
                 f"method initialize of RuntimeDevice must be called before calling close."
             )
-        self._close_stack.__exit__(None, None, None)
+        self._close_stack.close()
         self._close_stack = None
 
     def __enter__(self):
         self.initialize()
-        return closing(self)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
