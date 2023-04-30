@@ -87,7 +87,7 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-        self._headsup = asyncio.Semaphore(2)
+        self._headsup = asyncio.Semaphore(25)
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -378,12 +378,9 @@ class SequenceRunnerThread(Thread):
         for value in numpy.linspace(
             start.to(unit).magnitude, stop.to(unit).magnitude, num
         ):
-            self.update_variable_value(linspace_loop.name, value * unit, context)
+            context = context.update_variable_value(linspace_loop.name, value * unit)
             for step in linspace_loop.children:
-                if self.is_waiting_to_interrupt():
-                    return
-                else:
-                    self.run_step(step, context, shot_saver)
+                await self.run_step(step, context, shot_saver)
 
     @run_step.register
     def _(
@@ -563,7 +560,7 @@ class SequenceRunnerThread(Thread):
                         "A camera timeout error occurred, attempting to redo the failed shot"
                     )
                 else:
-                    await task_group.create_hardware_task(
+                    task_group.create_hardware_task(
                         self.save_shot_with_lock(
                             shot_name, start_time, end_time, variables, data
                         )
