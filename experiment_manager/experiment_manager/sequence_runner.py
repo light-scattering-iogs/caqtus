@@ -87,7 +87,6 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-
         # Used to limit the number of concurrent computations of the shot parameters if it is too much in advance with
         # respect to the shot execution.
         self._computation_heads_up = asyncio.Semaphore(25)
@@ -368,22 +367,27 @@ class SequenceRunnerThread(Thread):
             raise ValueError(
                 f"Could not evaluate start of linspace loop {linspace_loop.name}"
             ) from error
+        unit = start.units
         try:
             stop = Quantity(linspace_loop.stop.evaluate(variables))
         except Exception as error:
             raise ValueError(
                 f"Could not evaluate stop of linspace loop {linspace_loop.name}"
             ) from error
+        try:
+            stop = stop.to(unit)
+        except DimensionalityError:
+            raise ValueError(
+                f"Stop units of linspace loop '{linspace_loop.name}' ({stop.units}) is not"
+                f" compatible with start units ({unit})"
+            )
         num = int(linspace_loop.num)
 
-        unit = start.units
-
-        for value in numpy.linspace(
-            start.to(unit).magnitude, stop.to(unit).magnitude, num
-        ):
-            context = context.update_variable_value(linspace_loop.name, value * unit)
+        for value in numpy.linspace(start.magnitude, stop.magnitude, num):
+            context = context.update_variable(linspace_loop.name, value * unit)
             for step in linspace_loop.children:
                 await self.run_step(step, context, shot_saver)
+        return context
 
     @run_step.register
     def _(
