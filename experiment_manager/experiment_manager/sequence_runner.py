@@ -116,29 +116,26 @@ class SequenceRunnerThread(Thread):
             self.finish(State.CRASHED)
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
-        finally:
-            self.shutdown()
 
     async def async_run(self):
-        async with asyncio.TaskGroup() as task_group:
+        async with self._shutdown_stack, asyncio.TaskGroup() as task_group:
             task_group.create_task(self.prepare())
             task_group.create_task(self.run_sequence())
 
     async def prepare(self):
-        self._remote_device_managers = create_remote_device_managers(
-            self._experiment_config.device_servers
-        )
-        self.connect_to_device_servers()
-
-        self._devices = self.create_devices()
         async with self._hardware_lock:
-            # We initialize the devices through the stack to unsure that they are closed if an error occurs.
-            self._devices = {
-                device_name: await self._shutdown_stack.enter_async_context(
-                    open_device(device)
+            self._remote_device_managers = create_remote_device_managers(
+                self._experiment_config.device_servers
+            )
+            self.connect_to_device_servers()
+
+            devices = self.create_devices()
+
+            for device_name, device in devices.items():
+                # We initialize the devices through the stack to unsure that they are closed if an error occurs.
+                self._devices[device_name] = await asyncio.to_thread(
+                    self._shutdown_stack.enter_context, DeviceContextManager(device)
                 )
-                for device_name, device in self._devices.items()
-            }
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
@@ -210,10 +207,6 @@ class SequenceRunnerThread(Thread):
     def finish(self, state: State):
         with self._session as session:
             self._sequence.set_state(state, session)
-
-    def shutdown(self):
-        asyncio.run(self._shutdown_stack.aclose())
-        logger.info("All devices shut down")
 
     async def run_sequence(self):
         """Execute the sequence header and program"""
@@ -694,15 +687,6 @@ def update_device(device: RuntimeDevice, parameters: dict[DeviceParameter, Any])
         ) from error
 
 
-def shutdown_device(device: RuntimeDevice):
-    try:
-        device.close()
-    except Exception as error:
-        raise RuntimeError(
-            f"Failed to shut down device '{device.get_name()}' properly."
-        ) from error
-
-
 def evaluate_variable_ranges(
     variable_ranges: Mapping[DottedVariableName, VariableRange],
     context_variables: Mapping[DottedVariableName, Any],
@@ -753,31 +737,34 @@ def strip_unit_from_variable_ranges(
     return raw_variable_ranges
 
 
-@contextlib.asynccontextmanager
-async def open_device(device: RuntimeDevice):
-    def initialize_device():
+class DeviceContextManager(typing.ContextManager[RuntimeDevice]):
+    def __init__(self, device: RuntimeDevice):
+        self._device = device
+
+    def __enter__(self) -> RuntimeDevice:
+        self.initialize()
+        return self._device
+
+    def initialize(self):
         try:
-            device.initialize()
+            self._device.initialize()
+            logger.debug(f"Device '{self._device.get_name()}' started.")
         except Exception as error:
             raise RuntimeError(
-                f"Could not start device '{device.get_name()}'"
+                f"Could not start device '{self._device.get_name()}'"
             ) from error
 
-    def close_device():
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
+    def close(self):
         try:
-            device.close()
+            self._device.close()
+            logger.debug(f"Device '{self._device.get_name()}' shut down.")
         except Exception as error:
             raise RuntimeError(
-                f"An error occurred while closing '{device.get_name()}'"
+                f"An error occurred while closing '{self._device.get_name()}'"
             ) from error
-
-    try:
-        await asyncio.to_thread(initialize_device)
-        logger.info(f"Device '{device.get_name()}' initialized.")
-        yield device
-    finally:
-        await asyncio.to_thread(close_device)
-        logger.info(f"Device '{device.get_name()}' shut down.")
 
 
 class SequenceInterrupted(Exception):
