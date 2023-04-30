@@ -54,6 +54,7 @@ class SpincorePulseBlaster(RuntimeDevice):
             raise ConnectionError(
                 f"Can't initialize board {self.board_number}\n{spinapi.pb_get_error()}"
             )
+        self._add_closing_callback(spinapi.pb_close)
 
         spinapi.pb_core_clock(self.core_clock / 1e6)
 
@@ -162,16 +163,3 @@ class SpincorePulseBlaster(RuntimeDevice):
 
         while spinapi.pb_read_status() & SpincoreStatus.Running:
             time.sleep(0.01)
-
-    def close(self):
-        error_msg = None
-        try:
-            if spinapi.pb_close() != 0:
-                error_msg = spinapi.pb_get_error()
-        finally:
-            super().close()
-
-        if error_msg is not None:
-            raise ConnectionError(
-                f"An error occurred when closing board {self.board_number}: {error_msg}"
-            )
