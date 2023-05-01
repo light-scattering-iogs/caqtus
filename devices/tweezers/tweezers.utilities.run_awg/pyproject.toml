@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "tweezers"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10, <3.12"
+python = ">=3.11, <3.12"
 spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
 trap-signal-generator-configuration = {path = "../trap_signal_generator/trap_signal_generator.configuration", develop = true}
 trap-signal-generator-runtime = {path = "../trap_signal_generator/trap_signal_generator.runtime", develop = true}

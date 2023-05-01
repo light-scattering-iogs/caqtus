@@ -123,7 +123,7 @@ def homogenize(
                 signal_generator_y.compute_signal(),
             )
         )
-        awg.write_segment_data("segment_0", data)
+        awg.update_parameters(segment_data={"segment_0": data})
         awg.run()
         picture = acquire_picture(pixelfly) - background_picture
 
@@ -146,7 +146,7 @@ def homogenize(
                     signal_generator_y.compute_signal(),
                 )
             )
-            awg.write_segment_data("segment_0", data)
+            awg.update_parameters(segment_data={"segment_0": data})
             awg.run()
             time.sleep(0.05)
             picture = acquire_picture(pixelfly) - background_picture

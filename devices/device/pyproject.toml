@@ -6,7 +6,7 @@ authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11"
 pydantic = "^1.9.1"
 
 

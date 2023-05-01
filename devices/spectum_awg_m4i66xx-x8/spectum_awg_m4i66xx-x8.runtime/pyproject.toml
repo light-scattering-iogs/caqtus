@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "spectum_awg_m4i66xx_x8"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 device = {path = "../../device", develop = true}
 pydantic = "^1.10.4"
 settings-model = {path = "../../../common/settings_model"}

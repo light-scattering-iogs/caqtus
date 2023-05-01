@@ -115,7 +115,7 @@ with SpectrumAWGM4i66xxX8(
         )
     )
 
-    awg.write_segment_data("all_static_traps", data)
+    awg.update_parameters(segment_data={"all_static_traps": data})
 
     y_scan_generator.starting_frequencies = [75e6]
     y_scan_generator.target_frequencies = [70e6]
@@ -127,7 +127,7 @@ with SpectrumAWGM4i66xxX8(
         )
     )
 
-    awg.write_segment_data("moving_traps", data)
+    awg.update_parameters(segment_data={"moving_traps": data})
 
     y_scan_generator.starting_frequencies = [70e6]
     y_scan_generator.target_frequencies = [65e6]
@@ -137,7 +137,7 @@ with SpectrumAWGM4i66xxX8(
             data_y[2 * config_x.number_samples :],
         )
     )
-    awg.write_segment_data("target_traps", data)
+    awg.update_parameters(segment_data={"target_traps": data})
 
     awg.run()
     input()
