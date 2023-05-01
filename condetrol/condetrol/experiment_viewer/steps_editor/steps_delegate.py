@@ -2,10 +2,12 @@ import copy
 import logging
 from abc import abstractmethod
 from functools import singledispatch
+from typing import Any
 
 from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize, QAbstractTableModel
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
+from rename_dict_key import rename_dict_key
 
 from expression import Expression
 from sequence.configuration import (
@@ -41,7 +43,7 @@ class StepWidget(QWidget, metaclass=QABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_step_data(self) -> dict[str]:
+    def get_step_data(self) -> dict[str, Any]:
         raise NotImplementedError()
 
 
@@ -260,8 +262,7 @@ class VariableRangeModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.EditRole:
             variable_name = list(self._variables.keys())[index.row()]
             if index.column() == 0:
-                variable_range = self._variables.pop(variable_name)
-                self._variables[value] = variable_range
+                self._variables = rename_dict_key(self._variables, variable_name, value)
             elif index.column() == 1:
                 self._variables[variable_name].first_bound = Expression(value)
             elif index.column() == 2:
