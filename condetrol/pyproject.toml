@@ -22,7 +22,7 @@ concurrent-updater = {path = "../common/concurrent_updater", develop = true}
 remote-server-combobox = {path = "../common/widgets/remote_server_combobox", develop = true}
 serial-port-widget = {path = "../common/widgets/serial_port_widget", develop = true}
 expression-widget = {path = "../common/widgets/expression_widget", develop = true}
-rename-dict-key = {path = "../common/rename_dict_key", develop = true}
+variable-range-widget = {path = "../common/widgets/variable_range_widget", develop = true}
 
 
 [tool.poetry.dev-dependencies]

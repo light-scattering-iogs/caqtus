@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "variable-range-widget"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "variable_range_widget"}]
+
+[tool.poetry.dependencies]
+python = "^3.8, <3.12"
+pyqt6 = "^6.5.0"
+expression = {path = "../../expression", develop = true}
+rename-dict-key = {path = "../../rename_dict_key", develop = true}
+variable-name = {path = "../../variable/variable.name", develop = true}
+sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

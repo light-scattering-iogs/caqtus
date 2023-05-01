@@ -93,7 +93,7 @@
        </widget>
       </item>
       <item alignment="Qt::AlignTop">
-       <widget class="QTableView" name="variables_view">
+       <widget class="VariableRangeTable" name="variables_view">
         <property name="maximumSize">
          <size>
           <width>16777215</width>
@@ -138,6 +138,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VariableRangeTable</class>
+   <extends>QTableView</extends>
+   <header>variable_range_widget.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../../resources/resources.qrc"/>
  </resources>

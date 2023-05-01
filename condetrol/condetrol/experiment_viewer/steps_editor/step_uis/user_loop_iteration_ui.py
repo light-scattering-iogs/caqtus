@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\steps_editor\step_uis\user_loop_iteration.ui'
+# Form implementation generated from reading ui file '.\user_loop_iteration.ui'
 #
 # Created by: PyQt6 UI code generator 6.5.0
 #
@@ -47,7 +47,7 @@ class Ui_UserInputLoop(object):
         self.label.setStyleSheet("color: #CC7832")
         self.label.setObjectName("label")
         self.horizontalLayout_2.addWidget(self.label, 0, QtCore.Qt.AlignmentFlag.AlignTop)
-        self.variables_view = QtWidgets.QTableView(parent=self.frame)
+        self.variables_view = VariableRangeTable(parent=self.frame)
         self.variables_view.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.variables_view.setObjectName("variables_view")
         self.horizontalLayout_2.addWidget(self.variables_view, 0, QtCore.Qt.AlignmentFlag.AlignTop)
@@ -72,3 +72,4 @@ class Ui_UserInputLoop(object):
         UserInputLoop.setWindowTitle(_translate("UserInputLoop", "Form"))
         self.label.setText(_translate("UserInputLoop", "Ask"))
         self.label_3.setText(_translate("UserInputLoop", "to user:"))
+from variable_range_widget import VariableRangeTable

@@ -1,13 +1,11 @@
-import copy
 import logging
 from abc import abstractmethod
 from functools import singledispatch
 from typing import Any
 
-from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize, QAbstractTableModel
+from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
-from rename_dict_key import rename_dict_key
 
 from expression import Expression
 from sequence.configuration import (
@@ -18,9 +16,8 @@ from sequence.configuration import (
     ExecuteShot,
     OptimizationLoop,
     UserInputLoop,
-    VariableRange,
 )
-from variable.name import DottedVariableName
+from variable_range_widget import VariableRangeModel
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
@@ -198,80 +195,16 @@ class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
+        self._model = VariableRangeModel({})
 
     def set_step_data(self, data: UserInputLoop):
-        self.variables_view.setModel(VariableRangeModel(data.iteration_variables))
+        self._model.variables = data.iteration_variables
+        self.variables_view.setModel(self._model)
 
     def get_step_data(self):
         return dict(
             iteration_variables=self.variables_view.model().variables,
         )
-
-
-class VariableRangeModel(QAbstractTableModel):
-    def __init__(self, variables: dict[DottedVariableName, VariableRange]):
-        super().__init__()
-        self._variables = copy.deepcopy(variables)
-
-    @property
-    def variables(self):
-        return copy.deepcopy(self._variables)
-
-    def rowCount(self, parent: QModelIndex = ...) -> int:
-        return len(self._variables)
-
-    def columnCount(self, parent: QModelIndex = ...) -> int:
-        return 4
-
-    def data(self, index: QModelIndex, role: int = ...):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            variable_name = list(self._variables.keys())[index.row()]
-            if index.column() == 0:
-                return str(variable_name)
-            elif index.column() == 1:
-                return self._variables[variable_name].first_bound.body
-            elif index.column() == 2:
-                return self._variables[variable_name].second_bound.body
-            elif index.column() == 3:
-                return self._variables[variable_name].initial_value.body
-        return None
-
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
-        if (
-            role == Qt.ItemDataRole.DisplayRole
-            and orientation == Qt.Orientation.Horizontal
-        ):
-            if section == 0:
-                return "Variable"
-            elif section == 1:
-                return "From"
-            elif section == 2:
-                return "To"
-            elif section == 3:
-                return "Initial value"
-        return None
-
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsEditable
-        )
-
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
-        if role == Qt.ItemDataRole.EditRole:
-            variable_name = list(self._variables.keys())[index.row()]
-            if index.column() == 0:
-                self._variables = rename_dict_key(self._variables, variable_name, value)
-            elif index.column() == 1:
-                self._variables[variable_name].first_bound = Expression(value)
-            elif index.column() == 2:
-                self._variables[variable_name].second_bound = Expression(value)
-            elif index.column() == 3:
-                self._variables[variable_name].initial_value = Expression(value)
-            self.dataChanged.emit(index, index)
-            return True
-        return False
 
 
 @singledispatch
