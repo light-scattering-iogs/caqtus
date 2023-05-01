@@ -6,9 +6,9 @@ from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sql_model import Base
 
-DB_NAME = "test_database"
+DB_NAME = "..."
 
-DB_URL = f"postgresql+psycopg2://caqtus:Deardear@localhost/{DB_NAME}"
+DB_URL = f"..."
 
 
 @pytest.fixture
