@@ -70,8 +70,7 @@ with SpectrumAWGM4i66xxX8(
         )
     )
 
-    awg.write_segment_data("segment_0", data_0)
-    awg.write_segment_data("segment_1", data_1)
+    awg.update_parameters(segment_data={"segment_0": data_0, "segment_1": data_1})
     awg.run()
     input()
     awg.stop()

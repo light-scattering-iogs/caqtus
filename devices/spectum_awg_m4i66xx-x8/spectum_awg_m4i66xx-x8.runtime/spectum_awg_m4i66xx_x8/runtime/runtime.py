@@ -2,6 +2,7 @@ import copy
 import ctypes
 import logging
 import math
+from collections.abc import Mapping
 from enum import Enum
 from typing import ClassVar
 
@@ -26,6 +27,10 @@ AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP3,
 )
 
+SegmentName = str
+SegmentData = np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16]
+StepName = str
+
 
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
     """Class to control the Spectrum M4i.66xx.x8 AWG
@@ -43,18 +48,18 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     channel_settings: tuple["ChannelSettings", ...] = Field(
         description="The configuration of the output channels", allow_mutation=False
     )
-    segment_names: frozenset[str] = Field(
+    segment_names: frozenset[SegmentName] = Field(
         description="The names of the segments to split the AWG memory into",
         allow_mutation=False,
     )
 
-    first_step: str = Field(allow_mutation=False)
+    first_step: StepName = Field(allow_mutation=False)
 
     _board_handle: spcm.drv_handle
-    _segment_indices: dict[str, int]
-    _steps: dict[str, "StepConfiguration"]
-    _step_indices: dict[str, int]
-    _step_names: dict[int, str]
+    _segment_indices: dict[SegmentName, int]
+    _steps: dict[StepName, "StepConfiguration"]
+    _step_indices: dict[StepName, int]
+    _step_names: dict[int, StepName]
     _bytes_per_sample: int
 
     def __init__(
@@ -63,9 +68,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         board_id: str,
         sampling_rate: int,
         channel_settings: tuple["ChannelSettings", ...],
-        segment_names: frozenset[str],
-        steps: dict[str, "StepConfiguration"],
-        first_step: str,
+        segment_names: set[SegmentName],
+        steps: dict[StepName, "StepConfiguration"],
+        first_step: StepName,
     ):
         super().__init__(
             name=name,
@@ -181,11 +186,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         self._set_first_step(self.first_step)
 
-    def setup_step(self, step_name: str, config: "StepConfiguration") -> None:
-        self._setup_step(step_name, config)
-        self._steps[step_name] = config
-
-    def _setup_step(self, step_name: str, config: "StepConfiguration"):
+    def _setup_step(self, step_name: StepName, config: "StepConfiguration"):
         step_index = self._step_indices[step_name]
         segment_index = self._segment_indices[config.segment]
         next_step_index = self._step_indices[config.next_step]
@@ -211,7 +212,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def _set_first_step(self, first_step: str):
+    def _set_first_step(self, first_step: StepName):
         first_step_index = self._step_indices[first_step]
 
         spcm.spcm_dwSetParam_i64(
@@ -233,10 +234,14 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         self.check_error()
 
-    def write_segment_data(
+    def update_parameters(self, segment_data: Mapping[SegmentName, SegmentData]) -> None:
+        for segment_name, data in segment_data.items():
+            self._check_and_write_segment_data(segment_name, data)
+
+    def _check_and_write_segment_data(
         self,
-        segment_name: str,
-        data: np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16],
+        segment_name: SegmentName,
+        data: SegmentData,
     ):
         data = np.array(data, dtype=np.int16)
         if data.shape[0] != self.number_channels_enabled:
@@ -284,7 +289,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     def _write_segment_data(
         self,
         segment_index: int,
-        data: np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16],
+        data: SegmentData,
     ):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_SEQMODE_WRITESEGMENT, segment_index
@@ -348,7 +353,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def get_current_step(self) -> str:
+    def get_current_step(self) -> SegmentName:
         step_index = ctypes.c_int64(-1)
         spcm.spcm_dwGetParam_i64(
             self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index)
