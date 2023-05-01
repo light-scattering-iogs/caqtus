@@ -93,9 +93,9 @@ class VariableRangeModel(QAbstractTableModel):
             return True
         return False
 
-    def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
+    def insertRow(self, row: int, parent: QModelIndex) -> bool:
         self.beginInsertRows(parent, row, row)
-        variable_name = DottedVariableName("new_variable")
+        variable_name = self._get_first_available_variable_name("variable")
         self._variables[variable_name] = VariableRange(
             first_bound=Expression("..."),
             second_bound=Expression("..."),
@@ -104,7 +104,22 @@ class VariableRangeModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+    def _get_first_available_variable_name(
+        self, variable_name: str
+    ) -> DottedVariableName:
+        """Return the first available variable name starting from the given one."""
+
+        variable_name: DottedVariableName = DottedVariableName(variable_name)
+        if variable_name not in self._variables:
+            return variable_name
+        i = 1
+        while True:
+            new_variable_name = DottedVariableName(f"{variable_name}_{i}")
+            if new_variable_name not in self._variables:
+                return new_variable_name
+            i += 1
+
+    def removeRow(self, row: int, parent: QModelIndex) -> bool:
         variable_name = list(self._variables.keys())[row]
         self.beginRemoveRows(parent, row, row)
         self._variables.pop(variable_name)

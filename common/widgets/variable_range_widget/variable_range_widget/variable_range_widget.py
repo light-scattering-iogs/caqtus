@@ -1,5 +1,6 @@
 from typing import Optional
 
+from PyQt6.QtCore import QModelIndex
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 
 from sequence.configuration import VariableRange
@@ -40,7 +41,10 @@ class VariableRangeWidget(QWidget):
         self._model.variable_ranges = variable_ranges
 
     def _add_variable(self):
-        pass
+        self._model.insertRow(self._model.rowCount(), QModelIndex())
 
     def _remove_variable(self):
-        pass
+        rows = [index.row() for index in self._table.selectedIndexes()]
+        rows.sort(reverse=True)
+        for row in rows:
+            self._model.removeRow(row, QModelIndex())
