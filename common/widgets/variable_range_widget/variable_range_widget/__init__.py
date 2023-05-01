@@ -1,4 +1,3 @@
-from .variable_range_model import VariableRangeModel
-from .variable_range_table import VariableRangeTable
+from .variable_range_widget import VariableRangeWidget
 
-__all__ = ["VariableRangeModel", "VariableRangeTable"]
+__all__ = ["VariableRangeWidget"]

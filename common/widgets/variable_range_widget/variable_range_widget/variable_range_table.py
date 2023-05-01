@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QTableView
 
 from sequence.configuration import VariableRange
 from variable.name import DottedVariableName
-from variable_range_widget import VariableRangeModel
+from .variable_range_model import VariableRangeModel
 
 
 class VariableRangeTable(QTableView):

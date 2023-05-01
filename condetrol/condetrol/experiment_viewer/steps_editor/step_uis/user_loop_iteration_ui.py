@@ -47,10 +47,9 @@ class Ui_UserInputLoop(object):
         self.label.setStyleSheet("color: #CC7832")
         self.label.setObjectName("label")
         self.horizontalLayout_2.addWidget(self.label, 0, QtCore.Qt.AlignmentFlag.AlignTop)
-        self.variables_view = VariableRangeTable(parent=self.frame)
-        self.variables_view.setMaximumSize(QtCore.QSize(16777215, 16777215))
-        self.variables_view.setObjectName("variables_view")
-        self.horizontalLayout_2.addWidget(self.variables_view, 0, QtCore.Qt.AlignmentFlag.AlignTop)
+        self.variable_range_widget = VariableRangeWidget(parent=self.frame)
+        self.variable_range_widget.setObjectName("variable_range_widget")
+        self.horizontalLayout_2.addWidget(self.variable_range_widget)
         self.label_3 = QtWidgets.QLabel(parent=self.frame)
         font = QtGui.QFont()
         font.setFamily("JetBrains Mono")
@@ -61,7 +60,6 @@ class Ui_UserInputLoop(object):
         self.horizontalLayout_2.addWidget(self.label_3)
         spacerItem = QtWidgets.QSpacerItem(296, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
-        self.horizontalLayout_2.setStretch(1, 1)
         self.horizontalLayout.addWidget(self.frame, 0, QtCore.Qt.AlignmentFlag.AlignTop)
 
         self.retranslateUi(UserInputLoop)
@@ -72,4 +70,4 @@ class Ui_UserInputLoop(object):
         UserInputLoop.setWindowTitle(_translate("UserInputLoop", "Form"))
         self.label.setText(_translate("UserInputLoop", "Ask"))
         self.label_3.setText(_translate("UserInputLoop", "to user:"))
-from variable_range_widget import VariableRangeTable
+from variable_range_widget import VariableRangeWidget

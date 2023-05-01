@@ -17,7 +17,6 @@ from sequence.configuration import (
     OptimizationLoop,
     UserInputLoop,
 )
-from variable_range_widget import VariableRangeModel
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
@@ -195,15 +194,13 @@ class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setupUi(self)
-        self._model = VariableRangeModel({})
 
     def set_step_data(self, data: UserInputLoop):
-        self._model.variables = data.iteration_variables
-        self.variables_view.setModel(self._model)
+        self.variable_range_widget.variable_ranges = data.iteration_variables
 
     def get_step_data(self):
         return dict(
-            iteration_variables=self.variables_view.model().variables,
+            iteration_variables=self.variable_range_widget.variable_ranges,
         )
 
 
