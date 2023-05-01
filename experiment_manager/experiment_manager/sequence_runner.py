@@ -5,7 +5,6 @@ import logging
 import pprint
 import typing
 from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor
 from functools import singledispatchmethod
 from multiprocessing.managers import RemoteError
 from threading import Thread, Event
@@ -87,10 +86,6 @@ class SequenceRunnerThread(Thread):
         # be preserved. There should be no interleaving between lock acquisitions and releases within a shot.
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
-
-        # Used to limit the number of concurrent computations of the shot parameters if it is too much in advance with
-        # respect to the shot execution.
-        self._computation_heads_up = asyncio.Semaphore(25)
 
         # This stack is used to ensure that all the devices are closed when the sequence is finished.
         self._shutdown_stack = contextlib.AsyncExitStack()
@@ -277,7 +272,7 @@ class SequenceRunnerThread(Thread):
         self,
         declaration: VariableDeclaration,
         context: StepContext,
-        task_group: SequenceTaskGroup,
+        _: SequenceTaskGroup,
     ) -> StepContext:
         """Execute a VariableDeclaration step.
 
@@ -365,12 +360,92 @@ class SequenceRunnerThread(Thread):
         return context
 
     @run_step.register
+    async def _(
+        self, shot: ExecuteShot, context: StepContext, task_group: SequenceTaskGroup
+    ) -> StepContext:
+        """Execute a shot on the experiment."""
+
+        shot_configuration = self._sequence_config.shot_configurations[shot.name]
+
+        async def compute_parameters():
+            change_params = await self.compute_change_parameters(
+                shot_configuration, context
+            )
+            shot_params = await self.compute_shot_parameters(
+                shot_configuration, context
+            )
+            return change_params, shot_params
+
+        computation_task = await task_group.create_computation_task(
+            compute_parameters()
+        )
+        change_parameters, shot_parameters = await computation_task
+
+        task_group.create_hardware_task(
+            self.do_shot_with_retry(
+                shot.name,
+                context.variables,
+                change_parameters,
+                shot_parameters,
+                task_group,
+            )
+        )
+        return context.reset_history()
+
+    @run_step.register
+    async def _(
+        self, loop: UserInputLoop, context: StepContext, task_group: SequenceTaskGroup
+    ) -> StepContext:
+        """Repeat its child steps while asking the user the value of some variables."""
+
+        evaluated_variable_ranges = evaluate_variable_ranges(
+            loop.iteration_variables, context.variables | units
+        )
+        raw_variable_ranges = strip_unit_from_variable_ranges(evaluated_variable_ranges)
+        variable_units = {
+            name: value.unit for name, value in raw_variable_ranges.items()
+        }
+
+        runner = ExecUserInput(
+            title=str(self._sequence.path),
+            variable_ranges=raw_variable_ranges,
+        )
+
+        async with asyncio.TaskGroup() as background_task_group:
+            task = background_task_group.create_task(asyncio.to_thread(runner.run))
+
+            child_step_index = 0
+            while not task.done():
+                raw_values = runner.get_current_values()
+                for variable_name, raw_value in raw_values.items():
+                    minimum = evaluated_variable_ranges[variable_name].minimum
+                    maximum = evaluated_variable_ranges[variable_name].maximum
+                    value = add_unit(raw_value, variable_units[variable_name])
+                    if not (minimum <= value <= maximum):
+                        raise ValueError(
+                            f"Value {value} for variable {variable_name} is not in the "
+                            f"range [{minimum}, {maximum}]"
+                        )
+                    context = context.update_variable(variable_name, value)
+
+                if child_step_index < len(loop.children):
+                    context = await self.run_step(
+                        loop.children[child_step_index], context, task_group
+                    )
+                    child_step_index += 1
+                else:
+                    child_step_index = 0
+                await task_group.wait_shots_completed()
+        return context
+
+    @run_step.register
     def _(
         self,
         optimization_loop: OptimizationLoop,
         context: SequenceContext,
         shot_saver: ShotSaver,
     ):
+        raise NotImplementedError()
         optimizer_config = self._experiment_config.get_optimizer_config(
             optimization_loop.optimizer_name
         )
@@ -403,79 +478,6 @@ class SequenceRunnerThread(Thread):
                         shot.add_scores(
                             {optimization_loop.optimizer_name: score}, self._session
                         )
-
-    @run_step.register
-    async def _(
-        self, shot: ExecuteShot, context: StepContext, task_group: SequenceTaskGroup
-    ) -> StepContext:
-        """Execute a shot on the experiment."""
-
-        shot_configuration = self._sequence_config.shot_configurations[shot.name]
-
-        await self._computation_heads_up.acquire()
-        change_parameters = await self.compute_change_parameters(
-            shot_configuration, context
-        )
-        shot_parameters = await self.compute_shot_parameters(
-            shot_configuration, context
-        )
-        task_group.create_hardware_task(
-            self.do_shot_with_retry(
-                shot.name,
-                context.variables,
-                change_parameters,
-                shot_parameters,
-                task_group,
-            )
-        )
-        return context.reset_history()
-
-    @run_step.register
-    def _(self, loop: UserInputLoop, context: SequenceContext, shot_saver: ShotSaver):
-        """Repeat its child steps while asking the user the value of some variables."""
-
-        evaluated_variable_ranges = evaluate_variable_ranges(
-            loop.iteration_variables, context.variables | units
-        )
-        raw_variable_ranges = strip_unit_from_variable_ranges(evaluated_variable_ranges)
-        variable_units = {
-            name: value.unit for name, value in raw_variable_ranges.items()
-        }
-
-        with ThreadPoolExecutor() as executor:
-            runner = ExecUserInput(
-                title=str(self._sequence.path),
-                variable_ranges=raw_variable_ranges,
-            )
-            result = executor.submit(runner.run)
-            child_step_index = 0
-            while not result.done():
-                raw_values = runner.get_current_values()
-                for variable_name, raw_value in raw_values.items():
-                    minimum = evaluated_variable_ranges[variable_name].minimum
-                    maximum = evaluated_variable_ranges[variable_name].maximum
-                    value = add_unit(raw_value, variable_units[variable_name])
-                    if not (minimum <= value <= maximum):
-                        raise ValueError(
-                            f"Value {value} for variable {variable_name} is not in the "
-                            f"range [{minimum}, {maximum}]"
-                        )
-                    self.update_variable_value(variable_name, value, context)
-
-                if self.is_waiting_to_interrupt():
-                    result.cancel()
-                    break
-                else:
-                    if child_step_index < len(loop.children):
-                        self.run_step(
-                            loop.children[child_step_index], context, shot_saver
-                        )
-                        child_step_index += 1
-                    else:
-                        child_step_index = 0
-
-        if result.exception():
-            raise result.exception()
 
     async def update_device_parameters(
         self, device_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
@@ -542,12 +544,11 @@ class SequenceRunnerThread(Thread):
                         "A camera timeout error occurred, attempting to redo the failed shot"
                     )
                 else:
-                    task_group.create_hardware_task(
+                    task_group.create_database_task(
                         self.save_shot_with_lock(
                             shot_name, start_time, end_time, variables, data
                         )
                     )
-                    self._computation_heads_up.release()
                     return
         raise CameraTimeoutError(
             f"Could not execute shot after {number_of_attempts} attempts"
