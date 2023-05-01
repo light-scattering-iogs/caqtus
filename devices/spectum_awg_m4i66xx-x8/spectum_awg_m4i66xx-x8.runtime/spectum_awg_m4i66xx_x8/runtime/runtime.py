@@ -289,7 +289,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     def _write_segment_data(
         self,
         segment_index: int,
-        data: np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16],
+        data: SegmentData,
     ):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_SEQMODE_WRITESEGMENT, segment_index
@@ -353,7 +353,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def get_current_step(self) -> str:
+    def get_current_step(self) -> SegmentName:
         step_index = ctypes.c_int64(-1)
         spcm.spcm_dwGetParam_i64(
             self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index)
