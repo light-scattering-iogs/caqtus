@@ -87,8 +87,9 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-        # This stack is used to ensure that all the devices are closed when the sequence is finished.
-        self._shutdown_stack = contextlib.AsyncExitStack()
+        # This stack is used to ensure that proper cleanup is done when an error occurs.
+        # For now, it is only used to close the devices properly.
+        self._shutdown_stack = contextlib.ExitStack()
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -100,7 +101,7 @@ class SequenceRunnerThread(Thread):
 
     def run(self):
         try:
-            asyncio.run(self.async_run())
+            self._run()
         except* SequenceFinished:
             self.finish(State.FINISHED)
             logger.info("Sequence finished")
@@ -112,8 +113,12 @@ class SequenceRunnerThread(Thread):
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
 
+    def _run(self):
+        with self._shutdown_stack:
+            asyncio.run(self.async_run())
+
     async def async_run(self):
-        async with self._shutdown_stack, asyncio.TaskGroup() as task_group:
+        async with asyncio.TaskGroup() as task_group:
             task_group.create_task(self.prepare())
             task_group.create_task(self.run_sequence())
 
