@@ -88,6 +88,9 @@ class SequenceTaskGroup:
         self._hardware_tasks.add(task)
         return task
 
+    def create_background_task(self, coro: Coroutine) -> asyncio.Task:
+        return self._task_group.create_task(coro)
+
     async def wait_shots_completed(self):
         await asyncio.gather(*self._hardware_tasks)
         self._hardware_tasks.clear()

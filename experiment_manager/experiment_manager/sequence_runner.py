@@ -212,16 +212,15 @@ class SequenceRunnerThread(Thread):
 
         context = StepContext[AnalogValue]()
 
-        async with asyncio.TaskGroup() as background_task_group:
-            background_task_group.create_task(self.watch_for_interruption())
-            async with SequenceTaskGroup() as sequence_task_group:
-                context = await self.run_step(
-                    self._experiment_config.header, context, sequence_task_group
-                )
-                await self.run_step(
-                    self._sequence_config.program, context, sequence_task_group
-                )
-            raise SequenceFinished()
+        async with SequenceTaskGroup() as sequence_task_group:
+            sequence_task_group.create_background_task(self.watch_for_interruption())
+            context = await self.run_step(
+                self._experiment_config.header, context, sequence_task_group
+            )
+            await self.run_step(
+                self._sequence_config.program, context, sequence_task_group
+            )
+        raise SequenceFinished()
 
     async def watch_for_interruption(self):
         """Raise SequenceInterrupted if the sequence must be interrupted."""
