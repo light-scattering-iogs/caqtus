@@ -101,9 +101,6 @@ class SequenceRunnerThread(Thread):
     def run(self):
         try:
             self._run()
-        except* SequenceFinished:
-            self.finish(State.FINISHED)
-            logger.info("Sequence finished")
         except* SequenceInterrupted:
             self.finish(State.INTERRUPTED)
             logger.info("Sequence interrupted")
@@ -111,6 +108,9 @@ class SequenceRunnerThread(Thread):
             self.finish(State.CRASHED)
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
+        else:
+            self.finish(State.FINISHED)
+            logger.info("Sequence finished")
 
     def _run(self):
         with self._shutdown_stack:
@@ -213,14 +213,17 @@ class SequenceRunnerThread(Thread):
         context = StepContext[AnalogValue]()
 
         async with SequenceTaskGroup() as sequence_task_group:
-            sequence_task_group.create_background_task(self.watch_for_interruption())
+            watch_interruption = sequence_task_group.create_background_task(
+                self.watch_for_interruption()
+            )
             context = await self.run_step(
                 self._experiment_config.header, context, sequence_task_group
             )
             await self.run_step(
                 self._sequence_config.program, context, sequence_task_group
             )
-        raise SequenceFinished()
+            await sequence_task_group.wait_shots_completed()
+            watch_interruption.cancel()
 
     async def watch_for_interruption(self):
         """Raise SequenceInterrupted if the sequence must be interrupted."""
