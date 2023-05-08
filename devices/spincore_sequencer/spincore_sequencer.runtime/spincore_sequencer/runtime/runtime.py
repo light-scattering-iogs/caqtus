@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from device import RuntimeDevice
+from device.runtime import RuntimeDevice
 from . import spinapi
 from .instructions import Instruction, Continue, Loop, Stop
 

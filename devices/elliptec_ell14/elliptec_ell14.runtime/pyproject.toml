@@ -8,8 +8,12 @@ packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+
+pydantic = "^1.10.7"
+pyserial = "^3.5"
 thorlabs-elliptec = "^1.1.0"
-device = {path = "../../device", develop = true}
+
+device-runtime = {path = "../../device/device.runtime", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

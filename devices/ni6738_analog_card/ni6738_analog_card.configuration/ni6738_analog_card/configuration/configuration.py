@@ -1,10 +1,10 @@
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import Field, validator
 
-from device_config import DeviceConfiguration
-from device_config.channel_config import AnalogChannelConfiguration
-from device_config.units_mapping import AnalogUnitsMapping
+from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration.channel_config import AnalogChannelConfiguration
+from device.configuration.units_mapping import AnalogUnitsMapping
 from units import Quantity
 
 
@@ -44,7 +44,7 @@ class NI6738SequencerConfiguration(DeviceConfiguration, AnalogChannelConfigurati
     def get_device_type(self) -> str:
         return "NI6738AnalogCard"
 
-    def get_device_init_args(self) -> dict[str]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         extra = {
             "device_id": self.device_id,
             "time_step": self.time_step,

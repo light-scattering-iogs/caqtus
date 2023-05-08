@@ -3,7 +3,7 @@ import os
 from multiprocessing.managers import BaseManager
 from typing import Type
 
-from device import RuntimeDevice
+from device.runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

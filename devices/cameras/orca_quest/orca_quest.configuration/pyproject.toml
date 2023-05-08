@@ -7,8 +7,10 @@ readme = "README.md"
 packages = [{include = "orca_quest"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11"
+
 camera-configuration = {path = "../../camera/camera.configuration", develop = true}
+device-config = {path = "../../../device/device.configuration", develop = true}
 
 
 [build-system]

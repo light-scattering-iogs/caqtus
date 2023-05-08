@@ -1,7 +1,8 @@
 from abc import ABC
+from typing import Any
 
-from device_config import DeviceConfiguration
-from .camera_roi import ROI
+from device.configuration import DeviceConfiguration, DeviceParameter
+from roi import RectangularROI
 
 
 class CameraConfiguration(DeviceConfiguration, ABC):
@@ -13,9 +14,9 @@ class CameraConfiguration(DeviceConfiguration, ABC):
         roi: The region of interest to keep from the image taken by the camera.
     """
 
-    roi: ROI
+    roi: RectangularROI
 
-    def get_device_init_args(self) -> dict[str]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         return super().get_device_init_args() | {
             "roi": self.roi,
             "external_trigger": True,

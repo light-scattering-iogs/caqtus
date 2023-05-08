@@ -8,8 +8,10 @@ packages = [{include = "sequence"}]
 
 [tool.poetry.dependencies]
 python = "^3.8, <3.12"
+
 anytree = "^2.8.0"
 pydantic = "^1.10.4"
+
 expression = {path = "../../expression", develop = true}
 units = {path = "../../units", develop = true}
 settings-model = {path = "../../settings_model", develop = true}

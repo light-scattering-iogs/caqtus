@@ -5,11 +5,10 @@ from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
 from typing import Optional, Any
 
-import numpy
 import numpy as np
 from pydantic import Field
 
-from camera.runtime import CCamera, CameraTimeoutError
+from camera.runtime import Camera, CameraTimeoutError
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP
 
@@ -24,7 +23,7 @@ else:
     raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr()}")
 
 
-class OrcaQuestCamera(CCamera):
+class OrcaQuestCamera(Camera):
     # only some specific roi values are allowed for this camera !
     camera_number: int = Field(
         description="The camera number used to identify the specific camera.",
@@ -34,9 +33,8 @@ class OrcaQuestCamera(CCamera):
     sensor_width = 4096
     sensor_height = 2304
 
-    _pictures: list[Optional[numpy.ndarray]]
+    _pictures: list[Optional[np.ndarray]]
     _camera: Dcam
-    # _acquisition_thread: Optional[threading.Thread] = None
     _current_exposure: Optional[float] = None
     _thread_pool_executor: ThreadPoolExecutor
     _future: Optional[Future] = None

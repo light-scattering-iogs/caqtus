@@ -1,1 +1,0 @@
-DeviceParameter = str

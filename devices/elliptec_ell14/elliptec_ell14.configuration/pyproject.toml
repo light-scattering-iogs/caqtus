@@ -7,8 +7,11 @@ readme = "README.md"
 packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
-device-config = {path = "../../../common/device_config", develop = true}
+python = "^3.10, <3.12"
+
+pydantic = "^1.10.7"
+
+device-config = {path = "../../device/device.configuration", develop = true}
 expression = {path = "../../../common/expression", develop = true}
 units = {path = "../../../common/units", develop = true}
 

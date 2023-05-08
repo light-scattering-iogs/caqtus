@@ -1,9 +1,10 @@
 from abc import ABC
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import Field
 
 from camera.configuration import CameraConfiguration
+from device.configuration import DeviceParameter
 
 
 class ImagingSourceCameraConfiguration(CameraConfiguration, ABC):
@@ -11,7 +12,7 @@ class ImagingSourceCameraConfiguration(CameraConfiguration, ABC):
     camera_name: str = Field(description="The name of the camera")
     format: Literal["Y16", "Y800"]
 
-    def get_device_init_args(self) -> dict[str]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         extra = {
             "camera_name": self.camera_name,
             "format": self.format,

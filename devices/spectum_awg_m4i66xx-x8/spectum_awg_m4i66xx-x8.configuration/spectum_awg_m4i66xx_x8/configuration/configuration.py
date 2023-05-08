@@ -1,8 +1,8 @@
-from typing import ClassVar
+from typing import ClassVar, Any
 
 from pydantic import Field
 
-from device_config import DeviceConfiguration
+from device.configuration import DeviceConfiguration, DeviceParameter
 from settings_model import SettingsModel
 
 
@@ -20,7 +20,7 @@ class SpectrumAWGM4i66xxX8Configuration(DeviceConfiguration):
     def get_device_type(self) -> str:
         return "SpectrumAWGM4i66xxX8"
 
-    def get_device_init_args(self) -> dict[str]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         kwargs = {
             "board_id": self.board_id,
             "sampling_rate": self.sampling_rate,

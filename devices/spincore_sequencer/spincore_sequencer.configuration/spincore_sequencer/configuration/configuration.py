@@ -1,7 +1,9 @@
+from typing import Any
+
 from pydantic import Field
 
-from device_config import DeviceConfiguration
-from device_config.channel_config import DigitalChannelConfiguration
+from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration.channel_config import DigitalChannelConfiguration
 
 
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
@@ -13,6 +15,7 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
         time_step: The quantization time step used. All times during a run are multiples
             of this value.
     """
+
     # noinspection PyPropertyDefinition
     @classmethod
     @property
@@ -29,7 +32,7 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
     def get_device_type(self) -> str:
         return "SpincorePulseBlaster"
 
-    def get_device_init_args(self) -> dict[str]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         extra = {
             "board_number": self.board_number,
             "time_step": self.time_step,

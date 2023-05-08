@@ -3,7 +3,7 @@ from functools import singledispatch
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
 from PyQt6.QtGui import QColor, QIcon, QBrush
 
-from device_config.channel_config import ChannelSpecialPurpose
+from device.configuration.channel_config import ChannelSpecialPurpose
 from experiment.configuration import ExperimentConfig
 from expression import Expression
 from sequence.configuration import (

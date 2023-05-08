@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QInputDialog, QLineEdit,
 )
 
-from device_config.units_mapping import CalibratedUnitsMapping
+from device.configuration.units_mapping import CalibratedUnitsMapping
 
 
 class CalibratedMappingEditor(QDialog):

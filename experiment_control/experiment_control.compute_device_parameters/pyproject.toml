@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "experiment-control-compute-device-parameters"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "experiment_control"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+device-config = {path = "../../devices/device/device.configuration", develop = true}
+numpy = "^1.24.3"
+experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
+expression = {path = "../../common/expression", develop = true}
+sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
+spincore-sequencer-runtime = {path = "../../devices/spincore_sequencer/spincore_sequencer.runtime", develop = true}
+units = {path = "../../common/units", develop = true}
+variable-name = {path = "../../common/variable/variable.name", develop = true}
+variable-namespace = {path = "../../common/variable/variable.namespace", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

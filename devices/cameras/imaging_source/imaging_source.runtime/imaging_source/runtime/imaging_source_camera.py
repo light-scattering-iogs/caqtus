@@ -15,7 +15,7 @@ from typing import Literal
 import numpy
 from pydantic import Field
 
-from camera.runtime import CCamera, CameraTimeoutError
+from camera.runtime import Camera, CameraTimeoutError
 from .tisgrabber import declareFunctions, D, T, HGRABBER, IC_SUCCESS
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
     return new_image
 
 
-class ImagingSourceCamera(CCamera, ABC):
+class ImagingSourceCamera(Camera, ABC):
 
     camera_name: str = Field(description="The name of the camera", allow_mutation=False)
     format: Literal["Y16", "Y800"] = Field(allow_mutation=False)

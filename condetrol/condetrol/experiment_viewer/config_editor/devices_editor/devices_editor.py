@@ -4,16 +4,15 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from device_config import DeviceConfiguration
+from device.configuration import DeviceConfiguration
 from experiment.configuration import (
     ExperimentConfig,
-    SiglentSDG6000XConfiguration,
     ElliptecELL14RotationStageConfiguration,
 )
 from .devices_editor_editor_ui import Ui_DevicesEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
-DEVICE_TYPES = ["SiglentSDG6000XWaveformGenerator", "ElliptecELL14RotationStage"]
+DEVICE_TYPES = ["ElliptecELL14RotationStage"]
 
 
 class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
@@ -51,11 +50,7 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
     def create_default_device_config(
             device_type: str, device_name: str, remote_server: str
     ) -> DeviceConfiguration:
-        if device_type == "SiglentSDG6000XWaveformGenerator":
-            return SiglentSDG6000XConfiguration(
-                device_name=device_name, remote_server=remote_server
-            )
-        elif device_type == "ElliptecELL14RotationStage":
+        if device_type == "ElliptecELL14RotationStage":
             config = ElliptecELL14RotationStageConfiguration.get_default_config(
                 device_name, remote_server
             )

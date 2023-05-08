@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "experiment-control-manager"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "experiment_control"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
+experiment-control-sequence-runner = {path = "../experiment_control.sequence_runner", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

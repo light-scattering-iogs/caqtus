@@ -1,9 +1,10 @@
 import logging
 from typing import Any, Self
 
-from device_config import DeviceConfiguration
+from pydantic import Field
+
+from device.configuration import DeviceConfiguration, DeviceParameter
 from expression import Expression
-from settings_model import Field
 from units import units
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
     def get_device_type(self) -> str:
         return "ElliptecELL14RotationStage"
 
-    def get_device_init_args(self) -> dict[str, Any]:
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         extra = {
             "serial_port": self.serial_port,
             "device_id": self.device_id,

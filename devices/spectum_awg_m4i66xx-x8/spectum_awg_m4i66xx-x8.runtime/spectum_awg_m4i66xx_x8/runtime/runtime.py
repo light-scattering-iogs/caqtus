@@ -10,7 +10,7 @@ import numpy as np
 from pydantic import Field, validator
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 
-from device import RuntimeDevice
+from device.runtime import RuntimeDevice
 from settings_model import SettingsModel
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
@@ -234,7 +234,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         self.check_error()
 
-    def update_parameters(self, segment_data: Mapping[SegmentName, SegmentData]) -> None:
+    def update_parameters(
+        self, segment_data: Mapping[SegmentName, SegmentData]
+    ) -> None:
         for segment_name, data in segment_data.items():
             self._check_and_write_segment_data(segment_name, data)
 

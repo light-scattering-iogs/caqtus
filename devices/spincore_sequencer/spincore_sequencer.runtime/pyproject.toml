@@ -7,9 +7,11 @@ readme = "README.md"
 packages = [{include = "spincore_sequencer"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.8"
+
 pydantic = "^1.10.4"
-device-config = {path = "../../../common/device_config", develop = true}
+
+device-runtime = {path = "../../device/device.runtime", develop = true}
 
 
 [build-system]

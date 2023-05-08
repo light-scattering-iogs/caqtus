@@ -1,1 +1,1 @@
-from .runtime import CCamera, CameraTimeoutError
+from .runtime import Camera, CameraTimeoutError

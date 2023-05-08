@@ -7,12 +7,15 @@ readme = "README.md"
 packages = [{include = "spectum_awg_m4i66xx_x8"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-device = {path = "../../device", develop = true}
-pydantic = "^1.10.4"
-settings-model = {path = "../../../common/settings_model"}
+python = "^3.10"
+
 numpy = ">=1.18"
+pydantic = "^1.10.4"
+
 spectum-awg-m4i66xx-x8-configuration = {path = "../spectum_awg_m4i66xx-x8.configuration", develop = true}
+
+device-runtime = {path = "../../device/device.runtime", develop = true}
+settings-model = {path = "../../../common/settings_model"}
 
 
 [tool.poetry.group.dev.dependencies]

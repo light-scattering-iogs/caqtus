@@ -6,16 +6,17 @@ authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
+
 pyqt6 = "^6.4.1"
+pyqt6-charts = "^6.5.0"
 QDarkStyle = "^3.1"
-settings_model = { path = "../common/settings_model/", develop = true }
-experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
-experiment_manager = { path = "../experiment_manager/", develop = true }
-sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
 sqlalchemy = ">=2.0"
 anytree = "^2.8.0"
+
+settings_model = { path = "../common/settings_model/", develop = true }
+experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
+sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
-pyqt6-charts = "^6.4.0"
 qabc = {path = "../common/widgets/qabc", develop = true}
 yaml-clipboard-mixin = {path = "../common/widgets/yaml_clipboard_mixin", develop = true}
 concurrent-updater = {path = "../common/concurrent_updater", develop = true}
@@ -23,6 +24,8 @@ remote-server-combobox = {path = "../common/widgets/remote_server_combobox", dev
 serial-port-widget = {path = "../common/widgets/serial_port_widget", develop = true}
 expression-widget = {path = "../common/widgets/expression_widget", develop = true}
 variable-range-widget = {path = "../common/widgets/variable_range_widget", develop = true}
+experiment-control-manager = {path = "../experiment_control/experiment_control.manager", develop = true}
+device-config = {path = "../devices/device/device.configuration", develop = true}
 
 
 [tool.poetry.dev-dependencies]

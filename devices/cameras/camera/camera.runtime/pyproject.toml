@@ -8,10 +8,11 @@ packages = [{include = "camera"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-device = {path = "../../../device", develop = true}
 pydantic = "^1.10.4"
 numpy = "^1.23.4"
+
 camera-configuration = {path = "../camera.configuration", develop = true}
+device-runtime = {path = "../../../device/device.runtime", develop = true}
 
 
 [build-system]

@@ -3,7 +3,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
-from device_config import DeviceConfiguration
+from device.configuration import DeviceConfiguration
 from experiment.configuration import ExperimentConfig
 from qabc import QABC
 from yaml_clipboard_mixin import YAMLClipboardMixin

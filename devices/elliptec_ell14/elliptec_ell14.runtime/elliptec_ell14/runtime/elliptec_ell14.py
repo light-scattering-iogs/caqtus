@@ -3,10 +3,11 @@ import time
 from contextlib import closing
 from typing import Optional
 
+from pydantic import Field
 from serial import SerialException
 from thorlabs_elliptec import ELLx, ELLStatus
 
-from device import RuntimeDevice, Field
+from device.runtime import RuntimeDevice
 
 
 class ElliptecELL14RotationStage(RuntimeDevice):

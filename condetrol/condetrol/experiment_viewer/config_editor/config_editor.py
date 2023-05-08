@@ -22,11 +22,10 @@ from .devices_editor import DevicesEditor
 from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
 from .ni6738_config_editor import NI6738ConfigEditor
 from .optimizer_config_editor import OptimizerConfigEditor
+from .orca_quest_config_editor import OrcaQuestConfigEditor
 from .sequence_header_editor import SequenceHeaderEditor
-from .siglent_sdg_6000x_config_editor import SiglentSDG6000XConfigEditor
 from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
-from .orca_quest_config_editor import OrcaQuestConfigEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -142,7 +141,6 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         """
 
         type_to_widget = {
-            "SiglentSDG6000XWaveformGenerator": SiglentSDG6000XConfigEditor,
             "SpincorePulseBlaster": SpincoreConfigEditor,
             "NI6738AnalogCard": NI6738ConfigEditor,
             "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,

@@ -7,8 +7,8 @@ from typing import ClassVar, Optional
 import numpy
 from pydantic import Field, validator
 
-from camera.configuration import ROI
-from device import RuntimeDevice
+from camera.configuration import RectangularROI
+from device.runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -18,7 +18,7 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-class CCamera(RuntimeDevice, ABC):
+class Camera(RuntimeDevice, ABC):
     """Define the interface for a camera.
 
     This is an abstract class that must be subclassed to implement a specific camera.
@@ -50,7 +50,7 @@ class CCamera(RuntimeDevice, ABC):
     """
 
     picture_names: tuple[str, ...] = Field(allow_mutation=False)
-    roi: ROI = Field(allow_mutation=False)
+    roi: RectangularROI = Field(allow_mutation=False)
     timeout: float = Field(units="s", allow_mutation=True)
     exposures: list[float] = Field(units="s", allow_mutation=True)
     external_trigger: bool = Field(allow_mutation=False)

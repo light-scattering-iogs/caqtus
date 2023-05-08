@@ -6,8 +6,8 @@ from pydantic import Field, validator
 from pydantic.color import Color
 
 from camera.configuration import CameraConfiguration
-from device_config import DeviceConfiguration, DeviceConfigType
-from device_config.channel_config import (
+from device.configuration import DeviceName, DeviceConfiguration, DeviceConfigType
+from device.configuration.channel_config import (
     AnalogChannelConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
@@ -187,7 +187,7 @@ class ExperimentConfig(VersionedSettingsModel):
 
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
-    ) -> dict[str, DeviceConfigType]:
+    ) -> dict[DeviceName, DeviceConfigType]:
         """Return a dictionary of all device configurations matching a given type.
 
         The keys of the dictionary are the device names.

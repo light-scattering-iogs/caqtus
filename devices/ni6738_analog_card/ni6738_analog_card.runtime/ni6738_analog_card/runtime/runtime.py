@@ -6,8 +6,9 @@ import nidaqmx
 import nidaqmx.constants
 import nidaqmx.system
 import numpy
-from device import RuntimeDevice
 from pydantic import Extra, Field, validator
+
+from device.runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -70,11 +71,14 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         if numpy.any(numpy.isnan(values)):
             raise ValueError(f"Analog voltages can't be nan")
 
-        if self._task.write(
-            values,
-            auto_start=False,
-            timeout=nidaqmx.constants.WAIT_INFINITELY,
-        ) != self.values.shape[1]:
+        if (
+            self._task.write(
+                values,
+                auto_start=False,
+                timeout=nidaqmx.constants.WAIT_INFINITELY,
+            )
+            != self.values.shape[1]
+        ):
             raise RuntimeError("Could not write all values to the analog card")
 
         # only take into account a trigger pulse if it is long enough to avoid
@@ -90,4 +94,3 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     def stop(self):
         self._task.wait_until_done(timeout=0)
         self._task.stop()
-
