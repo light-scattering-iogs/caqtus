@@ -74,7 +74,7 @@ class SequenceTaskGroup:
     def __init__(self) -> None:
         self._task_group: asyncio.TaskGroup = asyncio.TaskGroup()
         self._exit_stack = contextlib.AsyncExitStack()
-        self._hardware_tasks: set[asyncio.Task] = set()
+        self._shot_tasks: set[asyncio.Task] = set()
 
         # Used to limit the number of computation tasks in advance with respect to the number of hardware tasks.
         # If we let computations run freely ahead, they will quickly fill up the memory with all the devices parameters.
@@ -84,24 +84,30 @@ class SequenceTaskGroup:
         async def wrapped():
             await coro
             self._computation_heads_up.release()
+
         task = self._task_group.create_task(wrapped())
-        self._hardware_tasks.add(task)
+        self._shot_tasks.add(task)
         return task
 
+    def create_background_task(self, coro: Coroutine) -> asyncio.Task:
+        return self._task_group.create_task(coro)
+
     async def wait_shots_completed(self):
-        await asyncio.gather(*self._hardware_tasks)
-        self._hardware_tasks.clear()
+        await asyncio.gather(*self._shot_tasks)
+        self._shot_tasks.clear()
 
     async def create_computation_task(self, coro: Coroutine) -> asyncio.Task:
         await self._computation_heads_up.acquire()
         return self._task_group.create_task(coro)
 
     def create_database_task(self, coro: Coroutine) -> asyncio.Task:
-        return self._task_group.create_task(coro)
+        task = self._task_group.create_task(coro)
+        self._shot_tasks.add(task)
+        return task
 
     async def __aenter__(self):
         await self._exit_stack.enter_async_context(self._task_group)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._exit_stack.aclose()
+        await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)

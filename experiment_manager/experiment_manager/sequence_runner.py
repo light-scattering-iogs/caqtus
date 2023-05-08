@@ -3,12 +3,11 @@ import contextlib
 import datetime
 import logging
 import pprint
-import typing
 from collections.abc import Mapping
 from functools import singledispatchmethod
 from multiprocessing.managers import RemoteError
 from threading import Thread, Event
-from typing import Any
+from typing import TYPE_CHECKING, Any, Self
 
 import numpy
 import numpy as np
@@ -52,7 +51,7 @@ from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
 from .variable_change import compute_parameters_on_variables_update
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from ni6738_analog_card.runtime import NI6738AnalogCard
     from camera.runtime import CCamera
     from spincore_sequencer.runtime import SpincorePulseBlaster
@@ -87,8 +86,9 @@ class SequenceRunnerThread(Thread):
         self._hardware_lock = asyncio.Lock()
         self._database_lock = asyncio.Lock()
 
-        # This stack is used to ensure that all the devices are closed when the sequence is finished.
-        self._shutdown_stack = contextlib.AsyncExitStack()
+        # This stack is used to ensure that proper cleanup is done when an error occurs.
+        # For now, it is only used to close the devices properly.
+        self._shutdown_stack = contextlib.ExitStack()
 
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
@@ -100,10 +100,7 @@ class SequenceRunnerThread(Thread):
 
     def run(self):
         try:
-            asyncio.run(self.async_run())
-        except* SequenceFinished:
-            self.finish(State.FINISHED)
-            logger.info("Sequence finished")
+            self._run()
         except* SequenceInterrupted:
             self.finish(State.INTERRUPTED)
             logger.info("Sequence interrupted")
@@ -111,9 +108,16 @@ class SequenceRunnerThread(Thread):
             self.finish(State.CRASHED)
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
+        else:
+            self.finish(State.FINISHED)
+            logger.info("Sequence finished")
+
+    def _run(self):
+        with self._shutdown_stack:
+            asyncio.run(self.async_run())
 
     async def async_run(self):
-        async with self._shutdown_stack, asyncio.TaskGroup() as task_group:
+        async with asyncio.TaskGroup() as task_group:
             task_group.create_task(self.prepare())
             task_group.create_task(self.run_sequence())
 
@@ -208,16 +212,18 @@ class SequenceRunnerThread(Thread):
 
         context = StepContext[AnalogValue]()
 
-        async with asyncio.TaskGroup() as background_task_group:
-            background_task_group.create_task(self.watch_for_interruption())
-            async with SequenceTaskGroup() as sequence_task_group:
-                context = await self.run_step(
-                    self._experiment_config.header, context, sequence_task_group
-                )
-                await self.run_step(
-                    self._sequence_config.program, context, sequence_task_group
-                )
-            raise SequenceFinished()
+        async with SequenceTaskGroup() as sequence_task_group:
+            watch_interruption = sequence_task_group.create_background_task(
+                self.watch_for_interruption()
+            )
+            context = await self.run_step(
+                self._experiment_config.header, context, sequence_task_group
+            )
+            await self.run_step(
+                self._sequence_config.program, context, sequence_task_group
+            )
+            await sequence_task_group.wait_shots_completed()
+            watch_interruption.cancel()
 
     async def watch_for_interruption(self):
         """Raise SequenceInterrupted if the sequence must be interrupted."""
@@ -513,14 +519,15 @@ class SequenceRunnerThread(Thread):
         shot: ShotConfiguration,
         context: StepContext,
     ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-        initial_time = datetime.datetime.now()
-        shot_parameters = await asyncio.to_thread(
-            compute_shot_parameters, self._experiment_config, shot, context.variables
-        )
-        computation_time = datetime.datetime.now()
+        with DurationTimer() as timer:
+            shot_parameters = await asyncio.to_thread(
+                compute_shot_parameters,
+                self._experiment_config,
+                shot,
+                context.variables,
+            )
         logger.info(
-            "Shot parameters computation duration:"
-            f" {(computation_time - initial_time).total_seconds() * 1e3:.1f} ms"
+            "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
         )
         return shot_parameters
 
@@ -536,9 +543,8 @@ class SequenceRunnerThread(Thread):
         async with self._hardware_lock:
             for attempt in range(number_of_attempts):
                 try:
-                    start_time = datetime.datetime.now()
-                    data = await self.do_shot(change_parameters, shot_parameters)
-                    end_time = datetime.datetime.now()
+                    with DurationTimer() as timer:
+                        data = await self.do_shot(change_parameters, shot_parameters)
                 except CameraTimeoutError:
                     logger.warning(
                         "A camera timeout error occurred, attempting to redo the failed shot"
@@ -546,7 +552,7 @@ class SequenceRunnerThread(Thread):
                 else:
                     task_group.create_database_task(
                         self.save_shot_with_lock(
-                            shot_name, start_time, end_time, variables, data
+                            shot_name, timer.start_time, timer.end_time, variables, data
                         )
                     )
                     return
@@ -560,22 +566,16 @@ class SequenceRunnerThread(Thread):
         device_parameters: dict[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[str, Any]:
 
-        start_time = datetime.datetime.now()
-        await self.update_device_parameters(change_parameters)
-        await self.update_device_parameters(device_parameters)
-        stop_time = datetime.datetime.now()
+        with DurationTimer() as timer:
+            await self.update_device_parameters(change_parameters)
+            await self.update_device_parameters(device_parameters)
         logger.info(
-            "Device parameters update duration:"
-            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
+            "Device parameters update duration:" f" {timer.duration_in_ms:.1f} ms"
         )
 
-        start_time = datetime.datetime.now()
-        await self.run_shot()
-        stop_time = datetime.datetime.now()
-        logger.info(
-            "Shot execution duration:"
-            f" {(stop_time - start_time).total_seconds() * 1e3:.1f} ms"
-        )
+        with DurationTimer() as timer:
+            await self.run_shot()
+        logger.info("Shot execution duration:" f" {timer.duration_in_ms:.1f} ms")
         data = self.extract_data()
         return data
 
@@ -738,7 +738,7 @@ def strip_unit_from_variable_ranges(
     return raw_variable_ranges
 
 
-class DeviceContextManager(typing.ContextManager[RuntimeDevice]):
+class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
     def __init__(self, device: RuntimeDevice):
         self._device = device
 
@@ -774,3 +774,42 @@ class SequenceInterrupted(Exception):
 
 class SequenceFinished(Exception):
     pass
+
+
+class DurationTimer(contextlib.AbstractContextManager):
+    def __init__(self):
+        self._start_time = None
+        self._end_time = None
+
+    def __enter__(self) -> Self:
+        self._start_time = datetime.datetime.now()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._end_time = datetime.datetime.now()
+
+    @property
+    def duration(self) -> datetime.timedelta:
+        return self.end_time - self.start_time
+
+    @property
+    def duration_in_s(self) -> float:
+        return self.duration.total_seconds()
+
+    @property
+    def duration_in_ms(self) -> float:
+        return self.duration_in_s * 1000
+
+    @property
+    def start_time(self) -> datetime.datetime:
+        if self._start_time is None:
+            raise RuntimeError("Timer has not been started yet.")
+        else:
+            return self._start_time
+
+    @property
+    def end_time(self) -> datetime.datetime:
+        if self._end_time is None:
+            raise RuntimeError("Timer has not been stopped yet.")
+        else:
+            return self._end_time
