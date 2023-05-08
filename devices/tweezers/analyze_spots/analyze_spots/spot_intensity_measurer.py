@@ -4,7 +4,7 @@ from typing import Callable, Sequence
 
 import numpy as np
 
-from roi import RegionOfInterest, ArbitraryShapedRegionOfInterest
+from roi import BaseROI, ArbitraryROI
 from .locate_spots import locate_spots
 from .masks import circular_mask
 
@@ -16,7 +16,7 @@ class SpotAnalyzer:
 
     def __init__(self):
         self._centroids: list[tuple[float, float]] = []
-        self._rois: list[RegionOfInterest] = []
+        self._rois: list[BaseROI] = []
 
     @property
     def centroids(self) -> list[tuple[float, float]]:
@@ -46,7 +46,7 @@ class SpotAnalyzer:
             np.logical_not(circular_mask(reference_image, trap_center, radius))
             for trap_center in self._centroids
         ]
-        self._rois = [ArbitraryShapedRegionOfInterest.from_mask(mask) for mask in masks]
+        self._rois = [ArbitraryROI.from_mask(mask) for mask in masks]
 
         mask_union = np.logical_or.reduce(masks)
         return np.ma.masked_array(reference_image, np.logical_not(mask_union))
@@ -85,7 +85,7 @@ class SpotAnalyzer:
         return len(self._centroids)
 
     @property
-    def rois(self) -> list[RegionOfInterest]:
+    def rois(self) -> list[BaseROI]:
         return copy.deepcopy(self._rois)
 
 

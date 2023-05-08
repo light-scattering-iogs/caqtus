@@ -5,7 +5,7 @@ from typing import Self, Optional, Any
 import numpy as np
 import yaml
 
-from roi import ArbitraryShapedRegionOfInterest
+from roi import ArbitraryROI
 from settings_model import YAMLSerializable
 
 
@@ -77,7 +77,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         if weighted_map.ndim != 2:
             raise ValueError(f"weighted_map must be 2D, not {weighted_map.ndim}D")
 
-        self._roi = ArbitraryShapedRegionOfInterest.from_mask(
+        self._roi = ArbitraryROI.from_mask(
             np.logical_not(weighted_map.mask)
         )
         self._weights: list[float] = weighted_map[
@@ -104,7 +104,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         """Construct an object from a yaml node"""
 
         kwargs = loader.construct_mapping(node, deep=True)
-        roi: ArbitraryShapedRegionOfInterest = kwargs["roi"]
+        roi: ArbitraryROI = kwargs["roi"]
         weights = kwargs["weights"]
         offset = kwargs["offset"]
 
