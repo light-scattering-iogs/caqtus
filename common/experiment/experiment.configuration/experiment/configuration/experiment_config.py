@@ -12,6 +12,7 @@ from device_config.channel_config import (
     ChannelConfiguration,
     DigitalChannelConfiguration,
     ChannelSpecialPurpose,
+    ChannelName,
 )
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import (
@@ -85,7 +86,7 @@ class ExperimentConfig(VersionedSettingsModel):
     def validate_device_configurations(
         cls, device_configurations: list[DeviceConfiguration]
     ):
-        channel_names = set()
+        channel_names: set[ChannelName] = set()
         for device_configuration in device_configurations:
             name = device_configuration.device_name
             if isinstance(device_configuration, ChannelConfiguration):
@@ -198,7 +199,7 @@ class ExperimentConfig(VersionedSettingsModel):
             if isinstance(config, config_type)
         }
 
-    def get_device_config(self, device_name: str) -> DeviceConfigType:
+    def get_device_config(self, device_name: str) -> DeviceConfiguration:
         """Return the configuration of a given device.
 
         Args:
