@@ -106,6 +106,9 @@ class PixelflyBoard(RuntimeDevice):
     bit_pix: Set the bit width of the transferred pixels.
     """
 
+    def update_parameters(self) -> None:
+        pass
+
     def initialize(self):
         super().initialize()
         self._lib = load_pixelfly_library()
