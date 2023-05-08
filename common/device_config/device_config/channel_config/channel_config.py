@@ -10,6 +10,8 @@ from settings_model import SettingsModel
 from units import Quantity
 from ..units_mapping import AnalogUnitsMapping
 
+ChannelName = str
+
 
 class ChannelSpecialPurpose(SettingsModel):
     purpose: str
@@ -22,24 +24,29 @@ class ChannelSpecialPurpose(SettingsModel):
         return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
 
     @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.ScalarNode):
-        return cls(purpose=loader.construct_scalar(node))
+    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
+        if not isinstance(node, yaml.ScalarNode):
+            raise ValueError(
+                f"Cannot construct {cls.__name__} from {node}. "
+                f"Expected a scalar node"
+            )
+        purpose = loader.construct_scalar(node)
+        if not isinstance(purpose, str):
+            raise ValueError(
+                f"Cannot construct {cls.__name__} from {node}. " f"Expected a string"
+            )
+        return cls(purpose=purpose)
 
     @classmethod
     def unused(cls):
         return cls(purpose="Unused")
-
-    @property
-    @classmethod
-    def UNUSED(cls):
-        return "Unused"
 
 
 class ChannelConfiguration(SettingsModel, ABC):
     # noinspection PyPropertyDefinition
     number_channels: ClassVar[int]
 
-    channel_descriptions: list[str | ChannelSpecialPurpose] = Field(
+    channel_descriptions: list[ChannelName | ChannelSpecialPurpose] = Field(
         default_factory=list
     )
     channel_colors: list[Optional[Color]] = Field(default_factory=list)
@@ -67,11 +74,11 @@ class ChannelConfiguration(SettingsModel, ABC):
         else:
             return colors
 
-    def get_named_channels(self) -> set[str]:
+    def get_named_channels(self) -> set[ChannelName]:
         """Return the names of channels that don't have a special purpose"""
         return {desc for desc in self.channel_descriptions if isinstance(desc, str)}
 
-    def get_channel_index(self, description: str | ChannelSpecialPurpose):
+    def get_channel_index(self, description: ChannelName | ChannelSpecialPurpose):
         if description not in self.channel_descriptions:
             raise ValueError(
                 f"Channel '{description}' doesn't exists in the experiment configuration"

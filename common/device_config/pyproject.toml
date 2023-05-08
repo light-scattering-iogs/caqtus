@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "device_config"}]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
 settings-model = {path = "../settings_model", develop = true}
 
 

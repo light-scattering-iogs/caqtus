@@ -3,4 +3,5 @@ from .channel_config import (
     ChannelConfiguration,
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
+    ChannelName
 )
