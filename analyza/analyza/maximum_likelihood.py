@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.optimize import minimize
-from scipy.stats import norm
 
-Parameters = tuple[float]
+from .fit.fit import get_parameters
+
+Parameters = dict[str, float]
 Values = np.ndarray
 
 
@@ -11,13 +12,20 @@ def log_likelihood(values, model, parameters) -> float:
 
 
 def maximize_likelihood(
-    values: Values, model, initial_parameters: Parameters, method: str = "Nelder-Mead", bounds=None
+    values: Values,
+    model,
+    initial_parameters: Parameters,
+    method: str,
+    constraints=None,
 ) -> Parameters:
-    return minimize(
+    optimal_parameters = minimize(
         lambda parameters: -log_likelihood(values, model, parameters),
         x0=np.array(initial_parameters),
         method=method,
-        bounds=bounds,
+        constraints=constraints,
     ).x
-
-
+    parameter_names = get_parameters(model)
+    return {
+        parameter: value
+        for parameter, value in zip(parameter_names, optimal_parameters)
+    }
