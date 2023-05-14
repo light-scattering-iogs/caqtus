@@ -42,7 +42,7 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
         new_config = self.create_default_device_config(
             device_type, device_name, device_server
         )
-        self._experiment_config.add_device_config(new_config)
+        self._experiment_config.add_device_config(device_name, new_config)
         # noinspection PyUnresolvedReferences
         self.device_added.emit(copy.deepcopy(new_config))
 

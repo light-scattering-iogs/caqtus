@@ -24,6 +24,7 @@ from sequence.configuration import (
 )
 from settings_model import VersionedSettingsModel, Version
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
+from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
 
@@ -63,11 +64,8 @@ class ExperimentConfig(VersionedSettingsModel):
         default_factory=SequenceSteps,
     )
 
-    # It would be better to use a dict[str, DeviceConfiguration] instead of a list to
-    # enforce name uniqueness, but this would invalidate all previous configuration
-    # files.
-    device_configurations: list[DeviceConfiguration] = Field(
-        default_factory=list,
+    device_configurations: dict[DeviceName, DeviceConfiguration] = Field(
+        default_factory=dict
     )
 
     optimization_configurations: dict[str, OptimizerConfiguration] = Field(
@@ -84,18 +82,17 @@ class ExperimentConfig(VersionedSettingsModel):
 
     @validator("device_configurations")
     def validate_device_configurations(
-        cls, device_configurations: list[DeviceConfiguration]
+        cls, device_configurations: dict[DeviceName, DeviceConfiguration]
     ):
         channel_names: set[ChannelName] = set()
-        for device_configuration in device_configurations:
-            name = device_configuration.device_name
+        for device_name, device_configuration in device_configurations.items():
             if isinstance(device_configuration, ChannelConfiguration):
                 device_channel_names = device_configuration.get_named_channels()
                 if channel_names.isdisjoint(device_channel_names):
                     channel_names |= device_channel_names
                 else:
                     raise ValueError(
-                        f"RuntimeDevice {name} has channel names that are already used"
+                        f"RuntimeDevice '{device_name}' has channel names that are already used"
                         f" by an other device: {channel_names & device_channel_names}"
                     )
         return device_configurations
@@ -108,7 +105,7 @@ class ExperimentConfig(VersionedSettingsModel):
         now.
         """
 
-        for device_config in self.device_configurations:
+        for device_config in self.device_configurations.values():
             if isinstance(device_config, SpincoreSequencerConfiguration):
                 return device_config
         raise ValueError("Could not find a configuration for spincore sequencer")
@@ -120,7 +117,7 @@ class ExperimentConfig(VersionedSettingsModel):
         It assumes that there is exactly one NI6738 sequencer in the experiment for now.
         """
 
-        for device_config in self.device_configurations:
+        for device_config in self.device_configurations.values():
             if isinstance(device_config, NI6738SequencerConfiguration):
                 return device_config
         raise ValueError("Could not find a configuration for NI6738 card")
@@ -128,7 +125,7 @@ class ExperimentConfig(VersionedSettingsModel):
     def get_color(self, channel: str | ChannelSpecialPurpose) -> Optional[Color]:
         color = None
         channel_exists = False
-        for device_config in self.device_configurations:
+        for device_config in self.device_configurations.values():
             if isinstance(device_config, ChannelConfiguration):
                 try:
                     index = device_config.get_channel_index(channel)
@@ -145,7 +142,7 @@ class ExperimentConfig(VersionedSettingsModel):
     def get_input_units(self, channel: str) -> Optional[str]:
         units = None
         channel_exists = False
-        for device_config in self.device_configurations:
+        for device_config in self.device_configurations.values():
             if isinstance(device_config, AnalogChannelConfiguration):
                 try:
                     index = device_config.get_channel_index(channel)
@@ -167,7 +164,7 @@ class ExperimentConfig(VersionedSettingsModel):
 
     def get_available_lane_names(self, lane_type: Type[Lane]) -> set[str]:
         lanes = set()
-        for device_config in self.device_configurations:
+        for device_config in self.device_configurations.values():
             if lane_type == DigitalLane and isinstance(
                 device_config, DigitalChannelConfiguration
             ):
@@ -182,24 +179,21 @@ class ExperimentConfig(VersionedSettingsModel):
                 lanes.add(device_config.device_name)
         return lanes
 
-    def get_device_names(self):
-        return (config.device_name for config in self.device_configurations)
+    def get_device_names(self) -> Iterable[DeviceName]:
+        return iter(self.device_configurations.keys())
 
     def get_device_configs(
         self, config_type: Type[DeviceConfigType]
     ) -> dict[DeviceName, DeviceConfigType]:
-        """Return a dictionary of all device configurations matching a given type.
-
-        The keys of the dictionary are the device names.
-        """
+        """Return a dictionary of all device configurations matching a given type."""
 
         return {
-            config.device_name: config
-            for config in self.device_configurations
+            device_name: config
+            for device_name, config in self.device_configurations.items()
             if isinstance(config, config_type)
         }
 
-    def get_device_config(self, device_name: str) -> DeviceConfiguration:
+    def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
         """Return the configuration of a given device.
 
         Args:
@@ -212,12 +206,15 @@ class ExperimentConfig(VersionedSettingsModel):
             name.
         """
 
-        for config in self.device_configurations:
-            if config.device_name == device_name:
-                return config.copy(deep=True)
-        raise DeviceConfigNotFoundError(f"Could not find a device named {device_name}")
+        try:
+            config = self.device_configurations[device_name]
+        except KeyError:
+            raise DeviceConfigNotFoundError(
+                f"Could not find a device named {device_name}"
+            )
+        return config.copy(deep=True)
 
-    def set_device_config(self, device_name: str, config: DeviceConfiguration):
+    def set_device_config(self, device_name: DeviceName, config: DeviceConfiguration):
         """Change a device configuration in the experiment configuration.
 
         Args:
@@ -225,30 +222,35 @@ class ExperimentConfig(VersionedSettingsModel):
             config: The new configuration for the device. A copy of this object is made
                 and stored in the experiment configuration.
         Raises:
+            TypeError: If config is not an instance of <DeviceConfiguration>.
             DeviceConfigNotFoundError: If there is no device configuration with this
                 name.
         """
 
-        names = [config.device_name for config in self.device_configurations]
-        try:
-            index = names.index(device_name)
-        except ValueError:
-            raise DeviceConfigNotFoundError(
-                f"Could not find a device named {device_name}"
-            )
-        self.device_configurations[index] = config.copy(deep=True)
-
-    def add_device_config(self, config: DeviceConfiguration):
-        """Add a device configuration to the experiment configuration."""
-
         if not isinstance(config, DeviceConfiguration):
             raise TypeError(
-                f"Trying to create a configuration that is not an instance of"
-                f" <DeviceConfiguration>"
+                f"config must be an instance of <DeviceConfiguration>, got {type(config)}"
             )
-        if config.device_name in self.get_device_names():
-            raise ValueError(f"Device name {config.device_name} is already being used")
-        self.device_configurations.append(config)
+
+        if device_name not in self.device_configurations:
+            raise DeviceConfigNotFoundError(
+                f"Could not find a device named '{device_name}'"
+            )
+
+        self.device_configurations[device_name] = config.copy(deep=True)
+
+    @validate_arguments
+    def add_device_config(self, name: DeviceName, config: DeviceConfiguration):
+        """Add a new device configuration to the experiment configuration.
+
+        Raises:
+            ValueError: If a device configuration with the same name already exists.
+        """
+
+        if name in self.device_configurations:
+            raise ValueError(f"Device name '{name}' is already being used")
+
+        self.device_configurations[name] = config.copy(deep=True)
 
     def get_optimizer_config(self, optimizer_name: str) -> OptimizerConfiguration:
         try:
@@ -258,8 +260,8 @@ class ExperimentConfig(VersionedSettingsModel):
                 f"Could not find an optimizer configuration named {optimizer_name}"
             )
 
-    def get_device_runtime_type(self, device_name) -> str:
-        """Return the runtime type of a device."""
+    def get_device_runtime_type(self, device_name: DeviceName) -> str:
+        """Return the runtime type of device."""
 
         device_config = self.get_device_config(device_name)
         device_type = device_config.get_device_type()
