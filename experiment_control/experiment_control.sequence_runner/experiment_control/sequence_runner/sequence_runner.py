@@ -130,9 +130,13 @@ class SequenceRunnerThread(Thread):
 
             for device_name, device in devices.items():
                 # We initialize the devices through the stack to unsure that they are closed if an error occurs.
-                self._devices[device_name] = await asyncio.to_thread(
-                    self._shutdown_stack.enter_context, DeviceContextManager(device)
+                self._devices[device_name] = self._shutdown_stack.enter_context(
+                    DeviceContextManager(device)
                 )
+
+            async with asyncio.TaskGroup() as task_group:
+                for device in self._devices.values():
+                    task_group.create_task(asyncio.to_thread(initialize_device, device))
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
@@ -741,17 +745,7 @@ class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
         self._device = device
 
     def __enter__(self) -> RuntimeDevice:
-        self.initialize()
         return self._device
-
-    def initialize(self):
-        try:
-            self._device.initialize()
-            logger.debug(f"Device '{self._device.get_name()}' started.")
-        except Exception as error:
-            raise RuntimeError(
-                f"Could not start device '{self._device.get_name()}'"
-            ) from error
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
@@ -764,6 +758,14 @@ class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
             raise RuntimeError(
                 f"An error occurred while closing '{self._device.get_name()}'"
             ) from error
+
+
+def initialize_device(device: RuntimeDevice):
+    try:
+        device.initialize()
+        logger.debug(f"Device '{device.get_name()}' started.")
+    except Exception as error:
+        raise RuntimeError(f"Could not start device '{device.get_name()}'") from error
 
 
 class SequenceInterrupted(Exception):
