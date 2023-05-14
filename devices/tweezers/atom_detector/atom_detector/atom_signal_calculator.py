@@ -1,6 +1,6 @@
 import uuid
 from numbers import Real
-from typing import Self, Optional, Any
+from typing import Self, Optional, Any, Iterable
 
 import numpy as np
 import yaml
@@ -47,6 +47,11 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         """Compute the signal for each atom in the image"""
 
         return float(np.sum(image * self._weighed_image)) - self.offset
+
+    def compute_signals(self, images: Iterable[np.array]) -> list[float]:
+        """Compute the signal for each atom in each image in the iterable"""
+
+        return [self.compute_signal(image) for image in images]
 
     @property
     def offset(self) -> float:
