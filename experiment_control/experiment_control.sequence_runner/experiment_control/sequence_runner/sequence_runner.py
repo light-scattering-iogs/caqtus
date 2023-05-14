@@ -360,7 +360,7 @@ class SequenceRunnerThread(Thread):
         for value in np.linspace(start.magnitude, stop.magnitude, num):
             context = context.update_variable(linspace_loop.name, value * unit)
             for step in linspace_loop.children:
-                await self.run_step(step, context, task_group)
+                context = await self.run_step(step, context, task_group)
         return context
 
     @run_step.register
@@ -443,18 +443,18 @@ class SequenceRunnerThread(Thread):
         return context
 
     @run_step.register
-    def _(
+    async def _(
         self,
         optimization_loop: OptimizationLoop,
         context: SequenceContext,
         task_group: SequenceTaskGroup,
     ):
-        raise NotImplementedError()
+        raise NotImplementedError
         # optimizer_config = self._experiment_config.get_optimizer_config(
-        #     optimization_loop.optimizer_name
+        #      optimization_loop.optimizer_name
         # )
         # optimizer = Optimizer(optimization_loop.variables, context.variables | units)
-        # shot_saver.wait()
+        # await task_group.wait_shots_completed()
         # with CostEvaluatorProcess(self._sequence, optimizer_config) as evaluator:
         #     while not evaluator.is_ready():
         #         if self.is_waiting_to_interrupt():
