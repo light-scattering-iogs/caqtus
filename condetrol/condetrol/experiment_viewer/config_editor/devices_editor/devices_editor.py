@@ -4,7 +4,7 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from device.configuration import DeviceConfiguration
+from device.configuration import DeviceConfiguration, DeviceName
 from experiment.configuration import (
     ExperimentConfig,
     ElliptecELL14RotationStageConfiguration,
@@ -48,7 +48,7 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
 
     @staticmethod
     def create_default_device_config(
-            device_type: str, device_name: str, remote_server: str
+            device_type: str, device_name: DeviceName, remote_server: str
     ) -> DeviceConfiguration:
         if device_type == "ElliptecELL14RotationStage":
             config = ElliptecELL14RotationStageConfiguration.get_default_config(

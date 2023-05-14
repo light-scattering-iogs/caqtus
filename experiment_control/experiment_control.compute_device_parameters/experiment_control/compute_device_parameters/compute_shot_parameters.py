@@ -92,20 +92,20 @@ def compute_shot_parameters(
         camera_name: instructions["triggers"]
         for camera_name, instructions in camera_instructions.items()
     }
+    spincore_name, spincore_config = get_spincore(experiment_config)
     spincore_instructions = generate_digital_instructions(
         shot_config,
         steps,
         camera_triggers,
-        experiment_config.spincore_config,
+        spincore_config,
         get_analog_timestep(experiment_config),
     )
-    result[experiment_config.spincore_config.device_name] = {
-        "instructions": spincore_instructions
-    }
+    result[spincore_name] = {"instructions": spincore_instructions}
 
+    ni6738_name, ni6738_config = get_ni6738(experiment_config)
     analog_values = evaluate_analog_values(shot_config, steps, variables)
-    analog_voltages = generate_analog_voltages(experiment_config, analog_values)
-    result[experiment_config.ni6738_config.device_name] = {"values": analog_voltages}
+    analog_voltages = generate_analog_voltages(ni6738_config, analog_values)
+    result[ni6738_name] = {"values": analog_voltages}
 
     if extra:
         result["extra"] = {
@@ -114,6 +114,35 @@ def compute_shot_parameters(
             "camera_instructions": camera_instructions,
         }
     return result
+
+
+def get_spincore(
+    experiment_config: ExperimentConfig,
+) -> tuple[DeviceName, SpincoreSequencerConfiguration]:
+    spincore_configurations = experiment_config.get_device_configs(
+        SpincoreSequencerConfiguration
+    )
+    if len(spincore_configurations) != 1:
+        raise ValueError(
+            f"Expected exactly one spincore sequencer configuration, found {len(spincore_configurations)}"
+        )
+    name = next(iter(spincore_configurations))
+    return name, spincore_configurations[name]
+
+
+def get_ni6738(
+    experiment_config: ExperimentConfig,
+) -> tuple[DeviceName, NI6738SequencerConfiguration]:
+    ni6738_configurations = experiment_config.get_device_configs(
+        NI6738SequencerConfiguration
+    )
+    if len(ni6738_configurations) != 1:
+        raise ValueError(
+            f"Expected exactly one NI6738 sequencer configuration, found {len(ni6738_configurations)}"
+        )
+
+    name = next(iter(ni6738_configurations))
+    return name, ni6738_configurations[name]
 
 
 def evaluate_step_durations(
@@ -453,7 +482,7 @@ def evaluate_expression(
 
 
 def generate_analog_voltages(
-    experiment_config: ExperimentConfig, analog_values: dict[str, Quantity]
+    ni6738_config: NI6738SequencerConfiguration, analog_values: dict[str, Quantity]
 ):
     """Converts the analog values in lane units to voltages"""
 
@@ -461,17 +490,11 @@ def generate_analog_voltages(
     for array in analog_values.values():
         data_length = len(array)
         break
-    data = np.zeros(
-        (NI6738SequencerConfiguration.number_channels, data_length), dtype=np.float64
-    )
+    data = np.zeros((ni6738_config.number_channels, data_length), dtype=np.float64)
 
     for name, values in analog_values.items():
-        voltages = (
-            experiment_config.ni6738_config.convert_to_output_units(name, values)
-            .to("V")
-            .magnitude
-        )
-        channel_number = experiment_config.ni6738_config.get_channel_index(name)
+        voltages = ni6738_config.convert_to_output_units(name, values).to("V").magnitude
+        channel_number = ni6738_config.get_channel_index(name)
         data[channel_number] = voltages
     return data
 

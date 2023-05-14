@@ -40,7 +40,7 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
         dependent_variables = self.position.upstream_variables.difference(units.keys())
         if dependent_variables:
             logger.warning(
-                f"{self.device_name} position depends on variables"
+                f"Position '{self.position}' depends on variables"
                 f" {dependent_variables} and will be undefined until these variables"
                 " are set"
             )

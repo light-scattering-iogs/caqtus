@@ -14,7 +14,6 @@ from device.configuration.channel_config import (
     ChannelSpecialPurpose,
     ChannelName,
 )
-from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from sequence.configuration import (
     SequenceSteps,
     Lane,
@@ -23,7 +22,6 @@ from sequence.configuration import (
     CameraLane,
 )
 from settings_model import VersionedSettingsModel, Version
-from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
@@ -97,31 +95,6 @@ class ExperimentConfig(VersionedSettingsModel):
                     )
         return device_configurations
 
-    @property
-    def spincore_config(self) -> SpincoreSequencerConfiguration:
-        """Return the configuration of the spincore sequencer.
-
-        It assumes that there is exactly one spincore sequencer in the experiment for
-        now.
-        """
-
-        for device_config in self.device_configurations.values():
-            if isinstance(device_config, SpincoreSequencerConfiguration):
-                return device_config
-        raise ValueError("Could not find a configuration for spincore sequencer")
-
-    @property
-    def ni6738_config(self) -> NI6738SequencerConfiguration:
-        """Return the configuration of the NI6738 sequencer.
-
-        It assumes that there is exactly one NI6738 sequencer in the experiment for now.
-        """
-
-        for device_config in self.device_configurations.values():
-            if isinstance(device_config, NI6738SequencerConfiguration):
-                return device_config
-        raise ValueError("Could not find a configuration for NI6738 card")
-
     def get_color(self, channel: str | ChannelSpecialPurpose) -> Optional[Color]:
         color = None
         channel_exists = False
@@ -164,7 +137,8 @@ class ExperimentConfig(VersionedSettingsModel):
 
     def get_available_lane_names(self, lane_type: Type[Lane]) -> set[str]:
         lanes = set()
-        for device_config in self.device_configurations.values():
+
+        for device_name, device_config in self.device_configurations.items():
             if lane_type == DigitalLane and isinstance(
                 device_config, DigitalChannelConfiguration
             ):
@@ -176,7 +150,7 @@ class ExperimentConfig(VersionedSettingsModel):
             elif lane_type == CameraLane and isinstance(
                 device_config, CameraConfiguration
             ):
-                lanes.add(device_config.device_name)
+                lanes.add(device_name)
         return lanes
 
     def get_device_names(self) -> Iterable[DeviceName]:
@@ -194,7 +168,7 @@ class ExperimentConfig(VersionedSettingsModel):
         }
 
     def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
-        """Return the configuration of a given device.
+        """Return a copy of the configuration of a given device.
 
         Args:
             device_name: The name of the device to get the configuration for.

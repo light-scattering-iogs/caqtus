@@ -81,11 +81,6 @@ class DeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
     def update_from_external_source(self, new_config: DeviceConfiguration):
         """Update the device config into the stored experiment config."""
 
-        if new_config.device_name != self.device_name:
-            raise ValueError(
-                f"Cannot change device name from {self.device_name} to"
-                f" {new_config.device_name}"
-            )
         old_config = self._experiment_config.get_device_config(self.device_name)
         if not isinstance(new_config, type(old_config)):
             raise TypeError(f"Expected {type(old_config)} got {type(new_config)}")
