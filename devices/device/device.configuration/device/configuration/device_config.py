@@ -15,11 +15,9 @@ class DeviceConfiguration(SettingsModel, ABC):
     information to connect to the device, such as the IP address, port, etc.
 
     Attributes:
-        device_name: A unique identifier name given to the device.
         remote_server: The name of the server that will actually instantiate the device.
     """
 
-    device_name: str
     remote_server: str
 
     @abstractmethod
@@ -40,7 +38,7 @@ class DeviceConfiguration(SettingsModel, ABC):
 
     @abstractmethod
     def get_device_init_args(self) -> dict[DeviceParameter, Any]:
-        return {"name": self.device_name}
+        return {}
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)

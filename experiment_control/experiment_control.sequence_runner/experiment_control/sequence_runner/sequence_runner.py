@@ -73,7 +73,7 @@ class SequenceRunnerThread(Thread):
         self._save_session = session_maker()
         self._sequence = Sequence(sequence_path)
         self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
-        self._devices: dict[str, RuntimeDevice] = {}
+        self._devices: dict[DeviceName, RuntimeDevice] = {}
 
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
         self._must_interrupt = must_interrupt
@@ -196,7 +196,10 @@ class SequenceRunnerThread(Thread):
                 )
 
             try:
-                devices[device_name] = remote_class(**parameters["init_kwargs"])
+                init_kwargs = parameters["init_kwargs"]
+                if "name" not in init_kwargs:
+                    init_kwargs["name"] = device_name
+                devices[device_name] = remote_class(**init_kwargs)
             except RemoteError as error:
                 raise RuntimeError(
                     f"Remote servers {parameters['server']} could not instantiate"

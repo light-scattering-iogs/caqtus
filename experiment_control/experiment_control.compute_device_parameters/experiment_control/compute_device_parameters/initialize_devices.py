@@ -1,6 +1,6 @@
 from typing import Any, TypedDict
 
-from device.configuration import DeviceName
+from device.configuration import DeviceName, DeviceParameter
 from experiment.configuration import (
     ExperimentConfig,
     SpincoreSequencerConfiguration,
@@ -14,7 +14,7 @@ from sequence.configuration import SequenceConfig, CameraLane
 class InitializationParameters(TypedDict):
     type: str
     server: str
-    init_kwargs: dict[str, Any]
+    init_kwargs: dict[DeviceParameter, Any]
 
 
 def get_devices_initialization_parameters(
@@ -36,7 +36,7 @@ def get_devices_initialization_parameters(
 
 def get_spincore_initialization_parameters(
     experiment_config: ExperimentConfig, sequence_config: SequenceConfig
-) -> dict[str, InitializationParameters]:
+) -> dict[DeviceName, InitializationParameters]:
     """Compute the initialization parameters for all spincore sequencer devices."""
 
     result = {}
@@ -53,7 +53,7 @@ def get_spincore_initialization_parameters(
 
 def get_ni6738_initialization_parameters(
     experiment_config: ExperimentConfig, sequence_config: SequenceConfig
-) -> dict[str, InitializationParameters]:
+) -> dict[DeviceName, InitializationParameters]:
     """Compute the initialization parameters for all ni6738 cards."""
 
     result = {}
@@ -70,7 +70,7 @@ def get_ni6738_initialization_parameters(
 
 def get_cameras_initialization_parameters(
     experiment_config: ExperimentConfig, sequence_config: SequenceConfig
-) -> dict[str, InitializationParameters]:
+) -> dict[DeviceName, InitializationParameters]:
     result = {}
 
     camera_configs = experiment_config.get_device_configs(CameraConfiguration)
@@ -98,7 +98,7 @@ def get_cameras_initialization_parameters(
 
 def get_elliptec_initialization_parameters(
     experiment_config: ExperimentConfig, sequence_config: SequenceConfig
-) -> dict[str, InitializationParameters]:
+) -> dict[DeviceName, InitializationParameters]:
 
     result = {}
     for name, config in experiment_config.get_device_configs(
