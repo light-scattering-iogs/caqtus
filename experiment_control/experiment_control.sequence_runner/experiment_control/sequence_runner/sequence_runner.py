@@ -284,8 +284,7 @@ class SequenceRunnerThread(Thread):
         """
 
         value = Quantity(declaration.expression.evaluate(context.variables | units))
-        new_context = context.update_variable(declaration.name, value)
-        return new_context
+        return context.update_variable(declaration.name, value)
 
     @run_step.register
     async def _(
