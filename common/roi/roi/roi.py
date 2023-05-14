@@ -22,3 +22,15 @@ class BaseROI(SettingsModel, ABC):
         True values indicate that the pixel is part of the region of interest."""
 
         raise NotImplementedError()
+
+    @property
+    def original_width(self) -> int:
+        """Return the width of the original image."""
+
+        return self.original_image_size[0]
+
+    @property
+    def original_height(self) -> int:
+        """Return the height of the original image."""
+
+        return self.original_image_size[1]
