@@ -53,7 +53,7 @@ class OrcaQuestConfigEditor(DeviceConfigEditor, Ui_OrcaQuestConfigEditor):
         config.camera_number = self._camera_number_spinbox.value()
         config.roi.x = self._left_spinbox.value()
         config.roi.width = self._right_spinbox.value() - self._left_spinbox.value() + 1
-        config.roi.y = self._top_spinbox.value()
+        config.roi.y = self._bottom_spinbox.value()
         config.roi.height = self._top_spinbox.value() - self._bottom_spinbox.value() + 1
         experiment_config.set_device_config(self.device_name, config)
         return experiment_config
