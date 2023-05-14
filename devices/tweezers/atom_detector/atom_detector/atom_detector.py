@@ -28,7 +28,12 @@ class AtomDetector(YAMLSerializable):
     def is_atom_present(self, image: np.ndarray) -> bool:
         """Determine whether the associated atom is present in the image"""
 
-        return self._atom_signal_calculator.compute_signal(image) > self._threshold
+        return self.compute_signal(image) > self._threshold
+
+    def compute_signal(self, image: np.ndarray) -> float:
+        """Compute the signal for the associated atom in the image."""
+
+        return self._atom_signal_calculator.compute_signal(image)
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: Self):
