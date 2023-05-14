@@ -91,9 +91,9 @@ class LossyBimodalDistribution(rv_continuous):
             threshold, p0, p1, μ0, μ1, σ0, σ1, s
         ) + self.loss_probability(
             p0, p1, μ0, μ1, σ0, σ1, s
-        ) * PlateauDistribution().cdf(
+        ) * (1-PlateauDistribution().cdf(
             threshold, a=μ0, b=μ1, σ=s
-        )
+        ))
 
     def probability_perfect_imaging_no_loss(self, threshold, p0, p1, μ0, μ1, σ0, σ1, s):
         return self.probability_true_positive_no_loss(
@@ -127,11 +127,11 @@ _non_lossy_lower_bound = np.array([0, 0, 0.99, 0, 0, 0, 0])
 
 _upper_bound = np.array([1, 1, 1, +np.inf, +np.inf, +np.inf, +np.inf])
 lossy_bimodal_constraint = LinearConstraint(
-    _constraint_matrix, _lossy_lower_bound, _upper_bound, keep_feasible=True
+    _constraint_matrix, _lossy_lower_bound, _upper_bound
 )
 
 non_lossy_bimodal_constraint = LinearConstraint(
-    _constraint_matrix, _non_lossy_lower_bound, _upper_bound, keep_feasible=True
+    _constraint_matrix, _non_lossy_lower_bound, _upper_bound
 )
 
 
