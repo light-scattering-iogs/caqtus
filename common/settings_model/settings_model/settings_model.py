@@ -53,7 +53,6 @@ class SettingsModel(YAMLSerializable, BaseModel, ABC):
         keep_untouched = (
             cached_property,
         )
-        extra = "allow"
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: Self):
