@@ -10,8 +10,8 @@ packages = [{include = "atom_detector"}]
 python = "^3.11"
 
 atom-detector-configuration = {path = "../atom_detector.configuration", develop = true}
+device-runtime = {path = "../../device/device.runtime", develop = true}
 single-atom-detector = {path = "../single_atom_detector", develop = true}
-
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"

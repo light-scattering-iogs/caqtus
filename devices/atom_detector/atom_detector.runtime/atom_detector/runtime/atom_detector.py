@@ -42,3 +42,18 @@ class AtomDetector(RuntimeDevice, Generic[AtomLabel]):
             atom_label: single_atom_detector.is_atom_present(image)
             for atom_label, single_atom_detector in self.single_atom_detectors.items()
         }
+
+    def compute_signals(self, image: np.ndarray) -> dict[AtomLabel, float]:
+        """Return the signal for each atom label.
+
+        Args:
+            image: The image to analyze.
+
+        Returns:
+            A dictionary of signals for each atom label.
+        """
+
+        return {
+            atom_label: single_atom_detector.compute_signal(image)
+            for atom_label, single_atom_detector in self.single_atom_detectors.items()
+        }
