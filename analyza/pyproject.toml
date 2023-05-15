@@ -20,15 +20,17 @@ jupyterlab = "^3.6.2"
 ipympl = "^0.9.3"
 jupyterlab-code-formatter = "^1.5.3"
 diptest = "^0.5.2"
+msal = "^1.22.0"
+lxml = "^4.9.2"
+numba = "^0.57.0"
 
+atom-detector-configuration = {path = "../devices/atom_detector/atom_detector.configuration", develop = true}
+atom-detector-runtime = {path = "../devices/atom_detector/atom_detector.runtime", develop = true}
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
 experiment-session = {path = "../common/experiment/experiment.session", develop = true}
 visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop = true}
 analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
 parse-optimization = {path = "../common/parse_optimization", develop = true}
-msal = "^1.22.0"
-lxml = "^4.9.2"
-numba = "^0.57.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
