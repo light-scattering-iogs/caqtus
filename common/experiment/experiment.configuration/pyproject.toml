@@ -21,6 +21,7 @@ elliptec-ell14-configuration = {path = "../../../devices/elliptec_ell14/elliptec
 imaging-source-configuration = {path = "../../../devices/cameras/imaging_source/imaging_source.configuration", develop = true}
 orca-quest-configuration = {path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true}
 validate-arguments = {path = "../../validate_arguments", develop = true}
+atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
 
 [build-system]
 requires = ["poetry-core"]
