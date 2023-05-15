@@ -4,7 +4,7 @@ from enum import IntFlag, IntEnum
 
 import numpy
 
-from device import RuntimeDevice
+from device.runtime import RuntimeDevice
 from .pixelfly_error import ErrCodes
 
 

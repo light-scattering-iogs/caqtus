@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 numpy = "^1.23"
-device = {path = "../../device", develop = true}
+device-runtime = {path = "../../device/device.runtime", develop = true}
 
 
 [build-system]
