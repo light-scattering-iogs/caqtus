@@ -109,6 +109,18 @@ class YAMLSerializable(abc.ABC):
         return value.startswith("!")
 
 
+def tuple_representer(dumper: yaml.Dumper, value):
+    return dumper.represent_sequence(r"!tuple", value)
+
+
+def tuple_constructor(loader: yaml.Loader, node: yaml.SequenceNode):
+    return tuple(loader.construct_sequence(node))
+
+
+YAMLSerializable.get_dumper().add_representer(tuple, tuple_representer)
+YAMLSerializable.get_loader().add_constructor(f"!tuple", tuple_constructor)
+
+
 def path_representer(dumper: yaml.Dumper, path: Path):
     return dumper.represent_scalar("!Path", str(path))
 
