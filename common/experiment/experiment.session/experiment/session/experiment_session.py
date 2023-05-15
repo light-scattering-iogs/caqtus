@@ -50,6 +50,18 @@ class _ExperimentSession(ABC):
         name: Optional[str] = None,
         comment: Optional[str] = None,
     ) -> str:
+        """Add a new experiment config to the session.
+
+        Args:
+            experiment_config: the experiment config to add to the session.
+            name: an optional name to identify the experiment config. If no name is provided an automatic value will be
+                generated and returned.
+            comment: optional description of the experiment config to add.
+
+        Returns:
+            The value of name if provided, otherwise it will be a generated name.
+        """
+
         if name is None:
             name = self._get_new_experiment_config_name()
         yaml_ = experiment_config.to_yaml()
@@ -133,6 +145,8 @@ class _ExperimentSession(ABC):
         return results
 
     def set_current_experiment_config(self, name: str):
+        if not isinstance(name, str):
+            raise TypeError(f"Expected <str> for name, got {type(name)}")
         CurrentExperimentConfigModel.set_current_experiment_config(
             name=name, session=self.get_sql_session()
         )

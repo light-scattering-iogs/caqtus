@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from atom_detector.configuration import AtomDetectorConfiguration
 from device.configuration import DeviceParameter
 from device.configuration.channel_config import ChannelSpecialPurpose
 from elliptec_ell14.configuration import ElliptecELL14RotationStageConfiguration
@@ -21,6 +22,7 @@ device_configs = [
     OrcaQuestCameraConfiguration,
     ImagingSourceCameraDMK33GR0134Configuration,
     ElliptecELL14RotationStageConfiguration,
+    AtomDetectorConfiguration,
 ]
 
 __all__ = [
