@@ -1,6 +1,5 @@
-import uuid
 from numbers import Real
-from typing import Self, Optional, Any, Iterable
+from typing import Self, Iterable
 
 import numpy as np
 import yaml
@@ -23,24 +22,16 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         self,
         weighted_map: np.ma.MaskedArray,
         offset: Real = 0.0,
-        label: Optional[Any] = None,
     ):
         """Create a new weighted atom signal calculator
 
         Args:
             weighted_map: A masked array with the same shape as the original image. When computing the signal, only the
                 values that are not masked are used.
-            label: An optional label that can be used to identify the atom associated with this object. If None, it will
-                generate a unique label.
-
         """
-
-        if label is None:
-            label = uuid.uuid4()
 
         self.weighted_map = weighted_map
 
-        self._label = label
         self.offset = offset
 
     def compute_signal(self, image: np.ndarray) -> float:
@@ -82,9 +73,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         if weighted_map.ndim != 2:
             raise ValueError(f"weighted_map must be 2D, not {weighted_map.ndim}D")
 
-        self._roi = ArbitraryROI.from_mask(
-            np.logical_not(weighted_map.mask)
-        )
+        self._roi = ArbitraryROI.from_mask(np.logical_not(weighted_map.mask))
         self._weights: list[float] = weighted_map[
             *np.array(self._roi.indices).T
         ].tolist()
@@ -99,7 +88,6 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
             {
                 "roi": atomic_signal_calculator._roi,
                 "weights": atomic_signal_calculator._weights,
-                "label": str(atomic_signal_calculator._label),
                 "offset": atomic_signal_calculator.offset,
             },
         )
@@ -118,7 +106,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         mask[indices[:, 0], indices[:, 1]] = False
         weighted_image = np.ma.MaskedArray(np.zeros(roi.original_image_size), mask=mask)
         weighted_image[indices[:, 0], indices[:, 1]] = weights
-        return cls(weighted_image, offset, uuid.UUID(kwargs["label"]))
+        return cls(weighted_image, offset)
 
     def __eq__(self, other):
         if not isinstance(other, WeightedAtomSignalCalculator):
@@ -126,6 +114,5 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         return (
             self._roi == other._roi
             and self._weights == other._weights
-            and self._label == other._label
             and self._offset == other._offset
         )
