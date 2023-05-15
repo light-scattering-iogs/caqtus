@@ -1,10 +1,10 @@
 import numpy as np
 from pydantic import validator, Field
 
-from .roi import BaseROI
+from .roi import ROI
 
 
-class RectangularROI(BaseROI):
+class RectangularROI(ROI):
     """Rectangular region of interest inside an image.
 
     Attributes:

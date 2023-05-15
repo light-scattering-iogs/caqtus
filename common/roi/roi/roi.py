@@ -5,7 +5,7 @@ import numpy as np
 from settings_model import SettingsModel
 
 
-class BaseROI(SettingsModel, ABC):
+class ROI(SettingsModel, ABC):
     """Base class for regions of interest inside an image.
 
     Attributes:

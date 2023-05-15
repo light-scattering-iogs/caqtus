@@ -3,10 +3,10 @@ from typing import Self
 import numpy as np
 from pydantic import validator
 
-from .roi import BaseROI
+from .roi import ROI
 
 
-class ArbitraryROI(BaseROI):
+class ArbitraryROI(ROI):
     """Arbitrary region of interest inside an image.
 
     This ROI is defined by specifying the indices of the pixels in the original image that are part of the region of

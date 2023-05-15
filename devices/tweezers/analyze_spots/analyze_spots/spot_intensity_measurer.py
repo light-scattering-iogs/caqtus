@@ -4,7 +4,7 @@ from typing import Callable, Sequence
 
 import numpy as np
 
-from roi import BaseROI, ArbitraryROI
+from roi import ROI, ArbitraryROI
 from .locate_spots import locate_spots
 from .masks import circular_mask
 
@@ -16,7 +16,7 @@ class SpotAnalyzer:
 
     def __init__(self):
         self._centroids: list[tuple[float, float]] = []
-        self._rois: list[BaseROI] = []
+        self._rois: list[ROI] = []
 
     @property
     def centroids(self) -> list[tuple[float, float]]:
@@ -85,7 +85,7 @@ class SpotAnalyzer:
         return len(self._centroids)
 
     @property
-    def rois(self) -> list[BaseROI]:
+    def rois(self) -> list[ROI]:
         return copy.deepcopy(self._rois)
 
 
