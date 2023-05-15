@@ -51,3 +51,11 @@ class SingleAtomDetector(YAMLSerializable):
 
         kwargs = loader.construct_mapping(node, deep=True)
         return cls(**kwargs)
+
+    def __eq__(self, other):
+        if not isinstance(other, SingleAtomDetector):
+            return False
+        return (
+            self._atom_signal_calculator == other._atom_signal_calculator
+            and self._threshold == other._threshold
+        )
