@@ -76,7 +76,7 @@ class SpotAnalyzer:
 
         intensities = []
         for roi, method in zip(self._rois, method):
-            masked_image = np.ma.masked_array(image, np.logical_not(roi.mask))
+            masked_image = np.ma.masked_array(image, np.logical_not(roi.get_mask()))
             intensities.append(method(masked_image))
         return intensities
 

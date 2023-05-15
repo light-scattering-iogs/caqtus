@@ -14,9 +14,8 @@ class ROI(SettingsModel, ABC):
 
     original_image_size: tuple[int, int]
 
-    @property
     @abstractmethod
-    def mask(self) -> np.ndarray:
+    def get_mask(self) -> np.ndarray:
         """A boolean array with the same shape as the original image.
 
         True values indicate that the pixel is part of the region of interest."""

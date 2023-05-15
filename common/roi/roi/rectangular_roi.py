@@ -19,8 +19,7 @@ class RectangularROI(ROI):
     y: int = Field(..., ge=0)
     height: int = Field(..., ge=0)
 
-    @property
-    def mask(self) -> np.ndarray:
+    def get_mask(self) -> np.ndarray:
         """A boolean array with the same shape as the original image.
 
         True values indicate that the pixel is part of the region of interest."""
