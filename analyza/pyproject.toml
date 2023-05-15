@@ -26,7 +26,6 @@ experiment-session = {path = "../common/experiment/experiment.session", develop 
 visual-sequence-watcher = {path = "../visual/visual.sequence_watcher", develop = true}
 analyze-spots = {path = "../devices/tweezers/analyze_spots", develop = true}
 parse-optimization = {path = "../common/parse_optimization", develop = true}
-atom-detector = {path = "../devices/tweezers/atom_detector", develop = true}
 msal = "^1.22.0"
 lxml = "^4.9.2"
 numba = "^0.57.0"

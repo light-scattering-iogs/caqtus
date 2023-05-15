@@ -37,7 +37,7 @@ class DeviceConfiguration(SettingsModel, ABC):
         ...
 
     @abstractmethod
-    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
+    def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
         return {}
 
 
