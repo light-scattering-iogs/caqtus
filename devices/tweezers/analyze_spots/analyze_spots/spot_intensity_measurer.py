@@ -141,8 +141,7 @@ class GridSpotAnalyzer(SpotAnalyzer):
         self._centroids = [self._centroids[index] for index, _ in ordered_indices]
         self._rois = [self._rois[index] for index, _ in ordered_indices]
         self._coordinates = [
-            (index // self._number_rows, index % self._number_rows)
-            for index, _ in ordered_indices
+            (self.x(index), self.y(index)) for index, _ in ordered_indices
         ]
         return result
 
@@ -156,3 +155,15 @@ class GridSpotAnalyzer(SpotAnalyzer):
         for index, (column, row) in enumerate(self._coordinates):
             matrix_intensities[column, row] = intensities[index]
         return matrix_intensities
+
+    def row(self, index: int):
+        return index % self._number_rows
+
+    def column(self, index: int):
+        return index // self._number_rows
+
+    def x(self, index: int) -> int:
+        return self.column(index)
+
+    def y(self, index: int) -> int:
+        return self.row(index)
