@@ -1,6 +1,6 @@
 import copy
 import datetime
-from typing import Any, Generic, NamedTuple
+from typing import Any, Generic, TypedDict
 
 from device.configuration import DeviceConfiguration, DeviceParameter
 from single_atom_detector import SingleAtomDetector
@@ -10,7 +10,7 @@ from .atom_label import AtomLabel
 ConfigurationName = str
 
 
-class DetectorConfigurationInfo(NamedTuple):
+class DetectorConfigurationInfo(TypedDict):
     configuration: dict[AtomLabel, SingleAtomDetector]
     modification_date: datetime.datetime
 
@@ -36,7 +36,7 @@ class AtomDetectorConfiguration(DeviceConfiguration, Generic[AtomLabel]):
         """Return a copy of the configuration associated with a given name."""
 
         return copy.deepcopy(
-            self._get_configuration_info(configuration_name).configuration
+            self._get_configuration_info(configuration_name)["configuration"]
         )
 
     def _get_configuration_info(
