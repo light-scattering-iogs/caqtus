@@ -23,7 +23,7 @@ class SpotAnalyzer:
         return copy.deepcopy(self._centroids)
 
     def register_regions_of_interest(
-        self, reference_image: np.ndarray, relative_threshold: float, radius: float
+        self, reference_image: np.ndarray, *, relative_threshold: float, radius: float
     ) -> np.ndarray:
         """Register the regions of interest in the image for each spot.
 
@@ -107,10 +107,10 @@ class GridSpotAnalyzer(SpotAnalyzer):
         return self._number_columns
 
     def register_regions_of_interest(
-        self, reference_image: np.ndarray, relative_threshold: float, radius: float
+        self, reference_image: np.ndarray, *, relative_threshold: float, radius: float
     ) -> np.ndarray:
         result = super().register_regions_of_interest(
-            reference_image, relative_threshold, radius
+            reference_image, relative_threshold=relative_threshold, radius=radius
         )
 
         if len(self._centroids) != self._number_rows * self._number_columns:
@@ -140,9 +140,7 @@ class GridSpotAnalyzer(SpotAnalyzer):
 
         self._centroids = [self._centroids[index] for index, _ in ordered_indices]
         self._rois = [self._rois[index] for index, _ in ordered_indices]
-        self._coordinates = [
-            (self.x(index), self.y(index)) for index, _ in ordered_indices
-        ]
+        self._coordinates = [self.coordinates(index) for index, _ in ordered_indices]
         return result
 
     def compute_intensity_matrix(
@@ -167,3 +165,6 @@ class GridSpotAnalyzer(SpotAnalyzer):
 
     def y(self, index: int) -> int:
         return self.row(index)
+
+    def coordinates(self, index: int) -> tuple[int, int]:
+        return self.x(index), self.y(index)
