@@ -22,7 +22,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
     def __init__(
         self,
         weighted_map: np.ma.MaskedArray,
-        offset: Real = 0,
+        offset: Real = 0.0,
         label: Optional[Any] = None,
     ):
         """Create a new weighted atom signal calculator
