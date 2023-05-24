@@ -13,6 +13,8 @@ from .instructions import Instruction, Continue, Loop, Stop
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
+ns = 1e-9
+
 
 class SpincoreStatus(IntFlag):
     Stopped = 2**0
@@ -81,22 +83,36 @@ class SpincorePulseBlaster(RuntimeDevice):
 
     @_program_instruction.register
     def _(self, continue_: Continue):
-        if continue_.duration * self.core_clock > 2**32:
-            raise ValueError(
-                f"The duration of the continue instruction is too long. "
-                f"Maximum duration is {2**32/self.core_clock} s"
-            )
-
         if continue_.duration < self.time_step:
             raise ValueError(
                 f"The duration of the continue instruction is too short. "
                 f"Minimum duration is {self.time_step} s"
             )
 
+        # break the duration into multiple long waits and one short wait
+        max_duration = 2**32 / self.core_clock
+        number_of_repetitions, short_duration = divmod(continue_.duration, max_duration)
+
         flags = self._state_to_flags(continue_.values)
+        if number_of_repetitions >= 1:
+            # Delay multiplier must be greater than 2, so we divide by 2 the length of the wait and multiply the number
+            # of repetitions by 2
+            if (
+                spinapi.pb_inst_pbonly(
+                    flags,
+                    spinapi.Inst.LONG_DELAY,
+                    2 * number_of_repetitions,
+                    max_duration / 2 / ns,
+                )
+                < 0
+            ):
+                raise RuntimeError(
+                    "An error occurred when programming the sequence. "
+                    f"{spinapi.pb_get_error()}"
+                )
         if (
             spinapi.pb_inst_pbonly(
-                flags, spinapi.Inst.CONTINUE, 0, continue_.duration * 1e9
+                flags, spinapi.Inst.CONTINUE, 0, continue_.duration / ns
             )
             < 0
         ):
@@ -112,7 +128,7 @@ class SpincorePulseBlaster(RuntimeDevice):
                 self._state_to_flags(loop.start_values),
                 spinapi.Inst.LOOP,
                 loop.repetitions,
-                loop.start_duration * 1e9,
+                loop.start_duration / ns,
             )
         ) < 0:
             raise RuntimeError(
@@ -125,7 +141,7 @@ class SpincorePulseBlaster(RuntimeDevice):
                 self._state_to_flags(loop.end_values),
                 spinapi.Inst.END_LOOP,
                 loop_beginning,
-                loop.end_duration * 1e9,
+                loop.end_duration / ns,
             )
             < 0
         ):
@@ -139,7 +155,7 @@ class SpincorePulseBlaster(RuntimeDevice):
         flags = self._state_to_flags(stop.values)
         if (
             spinapi.pb_inst_pbonly(
-                flags, spinapi.Inst.STOP, 0, 10 / self.core_clock * 1e9
+                flags, spinapi.Inst.STOP, 0, 10 / self.core_clock / ns
             )
             < 0
         ):
