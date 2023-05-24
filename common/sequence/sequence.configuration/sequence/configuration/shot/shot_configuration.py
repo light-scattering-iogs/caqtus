@@ -84,7 +84,7 @@ class LaneGroup(YAMLSerializable, NodeMixin):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> "LaneGroup":
         data = loader.construct_mapping(node, deep=True)
         name = str(data.pop("name"))
-        children = data.pop("children")
+        children = list(data.pop("children"))
         for index, child in enumerate(children):
             if isinstance(child, str):
                 children[index] = LaneReference(child)
