@@ -7,13 +7,14 @@ readme = "README.md"
 packages = [{include = "ni6738_analog_card"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 
 nidaqmx = "^0.6.5"
 numpy = "^1.24.1"
 pydantic = "^1.10.4"
 
 device-runtime = {path = "../../device/device.runtime", develop = true}
+log-exception = {path = "../../../common/log_exception", develop = true}
 
 
 

@@ -192,6 +192,7 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
         return True
 
     def set_steps(self, steps: list[Step]):
+        steps = list(steps)
         if not isinstance(steps, list):
             raise TypeError(f"Expected a list of {Step.__name__} instances, got {type(steps)}")
         if not all(isinstance(step, Step) for step in steps):
