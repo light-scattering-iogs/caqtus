@@ -7,17 +7,18 @@ from typing import Optional, Any, Self
 import numpy
 import token_utils
 import yaml
-from scipy.signal import sawtooth, square
+from scipy.signal import sawtooth
 
 from settings_model import YAMLSerializable
 from variable.name import VariableName, DottedVariableName
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
-    return (
-        square(2 * numpy.pi * t / period, duty_cycle) * (high - low) / 2
-        + (high + low) / 2
-    )
+    x = t / period
+    x = x - numpy.floor(x)
+    is_high = x < duty_cycle
+    result = numpy.where(is_high, high, low)
+    return result
 
 
 BUILTINS = {
@@ -110,7 +111,7 @@ class Expression(YAMLSerializable):
         # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.
         useful_variables = set(variables) & self.upstream_variables
-        return self._evaluate({expr: variables[expr] for expr in useful_variables})
+        return self._evaluate({str(expr): variables[expr] for expr in useful_variables})
 
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         can_use_cached_value = self._cache_evaluation and (
