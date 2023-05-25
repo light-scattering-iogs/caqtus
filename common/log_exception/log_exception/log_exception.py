@@ -8,11 +8,13 @@ _T = TypeVar("_T")
 
 def log_exception(
     logger: logging.Logger,
+    exec_info: bool = True,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]:
     """Decorator to log exceptions raised by a function.
 
     Args:
         logger: The logger to use to record the exception.
+        exec_info: If True, the exception information will be added to the log record.
     """
 
     def decorator(func: Callable[_P, _T]) -> Callable[_P, _T]:
@@ -23,7 +25,7 @@ def log_exception(
             except Exception:
                 logger.exception(
                     f"An error occurred when executing {func.__name__}.",
-                    exc_info=True,
+                    exc_info=exec_info,
                 )
                 raise
 
