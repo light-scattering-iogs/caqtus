@@ -7,11 +7,12 @@ readme = "README.md"
 packages = [{include = "spincore_sequencer"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 
 pydantic = "^1.10.4"
 
 device-runtime = {path = "../../device/device.runtime", develop = true}
+log-exception = {path = "../../../common/log_exception", develop = true}
 
 
 [build-system]

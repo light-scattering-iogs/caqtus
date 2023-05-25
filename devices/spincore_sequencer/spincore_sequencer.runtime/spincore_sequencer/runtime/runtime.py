@@ -7,6 +7,7 @@ from typing import ClassVar
 from pydantic import Field
 
 from device.runtime import RuntimeDevice
+from log_exception import log_exception
 from . import spinapi
 from .instructions import Instruction, Continue, Loop, Stop
 
@@ -36,6 +37,7 @@ class SpincorePulseBlaster(RuntimeDevice):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("run",)
 
+    @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
 
@@ -60,6 +62,7 @@ class SpincorePulseBlaster(RuntimeDevice):
 
         spinapi.pb_core_clock(self.core_clock / 1e6)
 
+    @log_exception(logger)
     def update_parameters(self, /, **kwargs) -> None:
         super().update_parameters(**kwargs)
 
@@ -92,8 +95,10 @@ class SpincorePulseBlaster(RuntimeDevice):
         # break the duration into multiple long waits and one short wait
         max_duration = 2**32 / self.core_clock
         number_of_repetitions, short_duration = divmod(continue_.duration, max_duration)
+        number_of_repetitions = round(number_of_repetitions)
 
         flags = self._state_to_flags(continue_.values)
+        logger.debug(f"{number_of_repetitions=}")
         if number_of_repetitions >= 1:
             # Delay multiplier must be greater than 2, so we divide by 2 the length of the wait and multiply the number
             # of repetitions by 2
@@ -170,6 +175,7 @@ class SpincorePulseBlaster(RuntimeDevice):
             flags |= int(state) << channel
         return flags
 
+    @log_exception(logger)
     def run(self):
         if spinapi.pb_reset() != 0:
             raise RuntimeError(f"Can't reset the board. {spinapi.pb_get_error()}")

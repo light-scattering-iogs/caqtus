@@ -9,6 +9,7 @@ import numpy
 from pydantic import Extra, Field, validator
 
 from device.runtime import RuntimeDevice
+from log_exception import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -38,6 +39,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
             raise ValueError(f"Analog voltages can't be nan")
         return analog_voltages
 
+    @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
         system = nidaqmx.system.System.local()
@@ -55,6 +57,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
                 units=nidaqmx.constants.VoltageUnits.VOLTS,
             )
 
+    @log_exception(logger)
     def update_parameters(self, /, **kwargs) -> None:
         super().update_parameters(**kwargs)
         if not self._task.is_task_done():
@@ -75,7 +78,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
             self._task.write(
                 values,
                 auto_start=False,
-                timeout=nidaqmx.constants.WAIT_INFINITELY,
+                timeout=0,
             )
             != self.values.shape[1]
         ):
@@ -86,11 +89,13 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.timing.samp_clk_dig_fltr_min_pulse_width = self.time_step / 8
         self._task.timing.samp_clk_dig_fltr_enable = True
 
+    @log_exception(logger)
     def run(self):
         """Starts the voltage generation task and return as soon as possible."""
 
         self._task.start()
 
+    @log_exception(logger)
     def stop(self):
-        self._task.wait_until_done(timeout=0)
+        self._task.wait_until_done(timeout=nidaqmx.constants.WAIT_INFINITELY)
         self._task.stop()
