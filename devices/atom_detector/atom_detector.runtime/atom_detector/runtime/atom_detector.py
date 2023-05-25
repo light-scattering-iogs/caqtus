@@ -1,9 +1,9 @@
 from typing import Generic
 
 import numpy as np
+from device.runtime import RuntimeDevice, Field
 
 from atom_detector.configuration import AtomLabel
-from device.runtime import RuntimeDevice, Field
 from single_atom_detector import SingleAtomDetector
 
 
@@ -57,3 +57,8 @@ class AtomDetector(RuntimeDevice, Generic[AtomLabel]):
             atom_label: single_atom_detector.compute_signal(image)
             for atom_label, single_atom_detector in self.single_atom_detectors.items()
         }
+
+    def get_traps_labels(self) -> set[AtomLabel]:
+        """Return the labels of all the traps."""
+
+        return set(self.single_atom_detectors.keys())
