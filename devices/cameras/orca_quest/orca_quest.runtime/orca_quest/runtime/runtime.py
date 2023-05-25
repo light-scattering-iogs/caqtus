@@ -9,6 +9,7 @@ import numpy as np
 from pydantic import Field
 
 from camera.runtime import Camera, CameraTimeoutError
+from log_exception import log_exception
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP
 
@@ -43,6 +44,7 @@ class OrcaQuestCamera(Camera):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("list_properties",)
 
+    @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
         self._thread_pool_executor = ThreadPoolExecutor(max_workers=1)
@@ -113,6 +115,7 @@ class OrcaQuestCamera(Camera):
             property_id = self._camera.prop_getnextid(property_id)
         return result
 
+    @log_exception(logger)
     def _start_acquisition(self, number_pictures: int):
         exposures = copy(self.exposures)
         new_exposure = exposures[0]
@@ -128,6 +131,7 @@ class OrcaQuestCamera(Camera):
                 f"Can't start acquisition on {self.name}: {str(self._camera.lasterr())}"
             )
 
+        @log_exception(logger)
         def acquire_pictures():
             try:
                 for picture_number, exposure in enumerate(exposures):
@@ -176,10 +180,12 @@ class OrcaQuestCamera(Camera):
                     f" {str(error)}"
                 )
 
+    @log_exception(logger)
     def _stop_acquisition(self):
         if self._future is not None:
             self._future.result()
 
+    @log_exception(logger)
     def _is_acquisition_in_progress(self) -> bool:
         if self._future is None:
             return False
