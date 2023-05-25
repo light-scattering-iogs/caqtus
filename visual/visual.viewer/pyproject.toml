@@ -8,18 +8,19 @@ packages = [{include = "visual"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
-visual-sequence-watcher = {path = "../visual.sequence_watcher", develop = true}
-qdarkstyle = "^3.1"
-experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
-sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
-analyza = {path = "../../analyza", develop = true}
+
 pandas = "^1.5.3"
 numpy = "^1.24.2"
 pyqt6 = "^6.4.2"
 matplotlib = "^3.7.1"
 seaborn = "^0.12.2"
-atom-detector = {path = "../../devices/tweezers/atom_detector", develop = true}
+qdarkstyle = "^3.1"
 
+analyza = {path = "../../analyza", develop = true}
+atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runtime", develop = true}
+experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+visual-sequence-watcher = {path = "../visual.sequence_watcher", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
