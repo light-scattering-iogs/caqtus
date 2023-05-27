@@ -11,7 +11,12 @@ python = "^3.11"
 
 device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
 atom-detector-configuration = {path = "../atom_detector.configuration", develop = true}
+pyqt6 = "^6.5.0"
+device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
 
+
+[tool.poetry.group.test.dependencies]
+settings-model = {path = "../../../common/settings_model", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

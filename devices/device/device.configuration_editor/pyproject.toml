@@ -13,6 +13,7 @@ pyqt6 = "^6.5.0"
 
 device-config = {path = "../device.configuration", develop = true}
 device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
+qabc = {path = "../../../common/widgets/qabc", develop = true}
 
 
 [build-system]

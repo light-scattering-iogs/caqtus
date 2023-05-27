@@ -30,7 +30,7 @@ class ConfigEditor(QWidget, QABC, Generic[_T]):
         **kwargs
     ):
         """Initialize the widget.
-        
+
         Args:
             device_config: The device config to edit. The widget will take ownership of the object and assumes that it
                 is the only one that can modify it.
