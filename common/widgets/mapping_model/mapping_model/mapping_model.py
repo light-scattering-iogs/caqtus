@@ -1,4 +1,3 @@
-import copy
 from typing import Mapping, TypeVar, Generic
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
@@ -18,22 +17,28 @@ class MappingModel(QAbstractTableModel, Generic[_K, _V]):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._mapping: Mapping[_K, _V] = {}
+        self._keys: list[_K] = []
+        self._values: list[_V] = []
 
     def set_mapping(self, mapping: Mapping[_K, _V]) -> None:
         """Set the mapping to be displayed by the model."""
 
         self.beginResetModel()
-        self._mapping = mapping
+        self._keys = list(mapping.keys())
+        self._values = list(mapping.values())
         self.endResetModel()
 
-    def get_mapping(self) -> Mapping[_K, _V]:
-        """Return a copy of the mapping displayed by the model."""
+    def get_mapping(self) -> dict[_K, _V]:
+        """Return a copy of the mapping displayed by the model.
 
-        return copy.deepcopy(self._mapping)
+        Note that this method returns a dictionary, which is not necessarily the same type as the mapping passed to
+        set_mapping.
+        """
+
+        return {key: value for key, value in zip(self._keys, self._values)}
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self._mapping)
+        return len(self._keys)
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 2
@@ -45,9 +50,9 @@ class MappingModel(QAbstractTableModel, Generic[_K, _V]):
             return None
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
-                return list(self._mapping.keys())[index.row()]
+                return self._keys[index.row()]
             elif index.column() == 1:
-                return list(self._mapping.values())[index.row()]
+                return self._values[index.row()]
         return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
