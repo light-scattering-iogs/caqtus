@@ -1,16 +1,16 @@
 import copy
 import datetime
-from typing import Any, Generic, TypedDict
+from typing import Any, Generic, TypedDict, NewType
 
 from device.configuration import DeviceConfiguration, DeviceParameter
 from single_atom_detector import SingleAtomDetector
 from validate_arguments import validate_arguments
 from .atom_label import AtomLabel
 
-ConfigurationName = str
+ConfigurationName = NewType("ConfigurationName", str)
 
 
-class DetectorConfigurationInfo(TypedDict):
+class DetectorConfigurationInfo(TypedDict, Generic[AtomLabel]):
     configuration: dict[AtomLabel, SingleAtomDetector]
     modification_date: datetime.datetime
 
@@ -39,6 +39,9 @@ class AtomDetectorConfiguration(DeviceConfiguration, Generic[AtomLabel]):
             self._get_configuration_info(configuration_name)["configuration"]
         )
 
+    def get_modification_date(self, configuration_name: ConfigurationName) -> datetime.datetime:
+        return self._get_configuration_info(configuration_name)["modification_date"]
+
     def _get_configuration_info(
         self, configuration_name: ConfigurationName
     ) -> DetectorConfigurationInfo:
@@ -60,3 +63,8 @@ class AtomDetectorConfiguration(DeviceConfiguration, Generic[AtomLabel]):
         self.detector_configurations[configuration_name] = DetectorConfigurationInfo(
             configuration=configuration, modification_date=datetime.datetime.now()
         )
+
+    def remove_configuration(self, configuration_name: ConfigurationName):
+        """Remove a configuration from the configuration dictionary."""
+
+        del self.detector_configurations[configuration_name]
