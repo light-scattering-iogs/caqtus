@@ -7,13 +7,14 @@ from collections.abc import Mapping
 from functools import singledispatchmethod
 from multiprocessing.managers import RemoteError
 from threading import Thread, Event
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from camera.runtime import CameraTimeoutError
 from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
+from duration_timer import DurationTimer
 from experiment.configuration import (
     DeviceServerConfiguration,
     CameraConfiguration,
@@ -536,6 +537,8 @@ class SequenceRunnerThread(Thread):
         )
         return shot_parameters
 
+    asyncio.BaseEventLoop.run_in_executor()
+
     async def do_shot_with_retry(
         self,
         shot_name: str,
@@ -782,42 +785,3 @@ class SequenceInterruptedException(BaseException):
 
 class SequenceFinishedException(BaseException):
     pass
-
-
-class DurationTimer(contextlib.AbstractContextManager):
-    def __init__(self):
-        self._start_time = None
-        self._end_time = None
-
-    def __enter__(self) -> Self:
-        self._start_time = datetime.datetime.now()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._end_time = datetime.datetime.now()
-
-    @property
-    def duration(self) -> datetime.timedelta:
-        return self.end_time - self.start_time
-
-    @property
-    def duration_in_s(self) -> float:
-        return self.duration.total_seconds()
-
-    @property
-    def duration_in_ms(self) -> float:
-        return self.duration_in_s * 1000
-
-    @property
-    def start_time(self) -> datetime.datetime:
-        if self._start_time is None:
-            raise RuntimeError("Timer has not been started yet.")
-        else:
-            return self._start_time
-
-    @property
-    def end_time(self) -> datetime.datetime:
-        if self._end_time is None:
-            raise RuntimeError("Timer has not been stopped yet.")
-        else:
-            return self._end_time

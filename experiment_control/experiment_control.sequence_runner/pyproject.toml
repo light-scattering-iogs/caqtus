@@ -24,6 +24,7 @@ variable-name = {path = "../../common/variable/variable.name", develop = true}
 variable-namespace = {path = "../../common/variable/variable.namespace", develop = true}
 experiment-control-compute-device-parameters = {path = "../experiment_control.compute_device_parameters", develop = true}
 pyqt6 = "^6.5.0"
+duration-timer = {path = "../../common/duration_timer", develop = true}
 
 
 [build-system]
