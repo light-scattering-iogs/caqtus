@@ -774,11 +774,13 @@ def initialize_device(device: RuntimeDevice):
         raise RuntimeError(f"Could not start device '{device.get_name()}'") from error
 
 
-class SequenceInterrupted(Exception):
+# these exceptions are used to interrupt the sequence and inherit from BaseException to prevent them from being caught
+# by 'except Exception' which would prevent the sequence from being interrupted.
+class SequenceInterrupted(BaseException):
     pass
 
 
-class SequenceFinished(Exception):
+class SequenceFinished(BaseException):
     pass
 
 
