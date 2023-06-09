@@ -99,7 +99,7 @@ class SequenceRunnerThread(Thread):
     def run(self):
         try:
             self._run()
-        except* SequenceInterrupted:
+        except* SequenceInterruptedException:
             self.finish(State.INTERRUPTED)
             logger.info("Sequence interrupted")
         except* Exception:
@@ -236,7 +236,7 @@ class SequenceRunnerThread(Thread):
         while True:
             await asyncio.sleep(WATCH_FOR_INTERRUPTION_INTERVAL)
             if self._must_interrupt.is_set():
-                raise SequenceInterrupted()
+                raise SequenceInterruptedException()
 
     @singledispatchmethod
     async def run_step(
@@ -776,11 +776,11 @@ def initialize_device(device: RuntimeDevice):
 
 # these exceptions are used to interrupt the sequence and inherit from BaseException to prevent them from being caught
 # by 'except Exception' which would prevent the sequence from being interrupted.
-class SequenceInterrupted(BaseException):
+class SequenceInterruptedException(BaseException):
     pass
 
 
-class SequenceFinished(BaseException):
+class SequenceFinishedException(BaseException):
     pass
 
 
