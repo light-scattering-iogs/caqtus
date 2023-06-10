@@ -5,7 +5,6 @@ import logging
 import pprint
 from collections.abc import Mapping
 from functools import singledispatchmethod
-from multiprocessing.managers import RemoteError
 from threading import Thread, Event
 from typing import TYPE_CHECKING, Any
 
@@ -45,7 +44,11 @@ from units.analog_value import add_unit, AnalogValue
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
-from .device_servers import create_device_servers, connect_to_device_servers
+from .device_servers import (
+    create_device_servers,
+    connect_to_device_servers,
+    create_devices,
+)
 from .sequence_context import SequenceContext, SequenceTaskGroup
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
@@ -124,11 +127,16 @@ class SequenceRunnerThread(Thread):
         self._remote_device_servers = create_device_servers(
             self._experiment_config.device_servers
         )
-        connect_to_device_servers(
-            self._remote_device_servers, self._experiment_config.mock_experiment
-        )
+        connect_to_device_servers(self._remote_device_servers)
 
-        devices = self.create_devices()
+        initialization_parameters = get_devices_initialization_parameters(
+            self._experiment_config, self._sequence_config
+        )
+        devices = create_devices(
+            initialization_parameters,
+            self._remote_device_servers,
+            self._experiment_config.mock_experiment,
+        )
 
         for device_name, device in devices.items():
             # We initialize the devices through the stack to unsure that they are closed if an error occurs.
@@ -142,49 +150,6 @@ class SequenceRunnerThread(Thread):
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
-
-    def create_devices(self) -> dict[DeviceName, RuntimeDevice]:
-        """Instantiate the devices on their respective remote server.
-
-        This function computes the parameters necessary to instantiate the device objects and then creates them on
-        the remote servers. The device objects are then returned as a dictionary matching the device names to a proxy to
-        the associated device.
-
-        This function only creates the device objects but does not start them. No communication with the actual devices
-        is performed at this stage.
-        """
-
-        if self._experiment_config.mock_experiment:
-            return {}
-
-        initialization_parameters = get_devices_initialization_parameters(
-            self._experiment_config, self._sequence_config
-        )
-
-        devices: dict[DeviceName, RuntimeDevice] = {}
-
-        for device_name, parameters in initialization_parameters.items():
-            server = self._remote_device_servers[parameters["server"]]
-            try:
-                remote_class = getattr(server, parameters["type"])
-            except AttributeError:
-                raise ValueError(
-                    f"The device '{device_name}' is of type '{parameters['type']}' but"
-                    " this type is not registered for the remote device client."
-                )
-
-            try:
-                init_kwargs = parameters["init_kwargs"]
-                if "name" not in init_kwargs:
-                    init_kwargs["name"] = device_name
-                devices[device_name] = remote_class(**init_kwargs)
-            except RemoteError as error:
-                raise RuntimeError(
-                    f"Remote servers {parameters['server']} could not instantiate"
-                    f" device '{device_name}'"
-                ) from error
-
-        return devices
 
     def finish(self, state: State):
         with self._session as session:
