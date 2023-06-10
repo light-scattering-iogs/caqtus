@@ -12,8 +12,9 @@ class ExperimentProcessManager(BaseManager):
     pass
 
 
-ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
-ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
+if __name__ == "__main__":
+    ExperimentProcessManager.register("ExperimentManager", ExperimentManager)
+    ExperimentProcessManager.register("get_logs_queue", get_logs_queue)
 
-m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
-m.get_server().serve_forever()
+    m = ExperimentProcessManager(address=("localhost", 60000), authkey=b"Deardear")
+    m.get_server().serve_forever()
