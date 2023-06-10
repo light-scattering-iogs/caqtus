@@ -537,8 +537,6 @@ class SequenceRunnerThread(Thread):
         )
         return shot_parameters
 
-    asyncio.BaseEventLoop.run_in_executor()
-
     async def do_shot_with_retry(
         self,
         shot_name: str,
