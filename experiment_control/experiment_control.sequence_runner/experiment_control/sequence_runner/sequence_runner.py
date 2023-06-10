@@ -45,6 +45,7 @@ from units import Quantity, units, get_unit, magnitude_in_unit, DimensionalityEr
 from units.analog_value import add_unit, AnalogValue
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
+from .device_context_manager import DeviceContextManager
 from .sequence_context import SequenceContext, SequenceTaskGroup
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
@@ -745,26 +746,6 @@ def strip_unit_from_variable_ranges(
         )
         raw_variable_ranges[variable_name] = evaluated_range
     return raw_variable_ranges
-
-
-class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
-    def __init__(self, device: RuntimeDevice):
-        self._device = device
-
-    def __enter__(self) -> RuntimeDevice:
-        return self._device
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.close()
-
-    def close(self):
-        try:
-            self._device.close()
-            logger.debug(f"Device '{self._device.get_name()}' shut down.")
-        except Exception as error:
-            raise RuntimeError(
-                f"An error occurred while closing '{self._device.get_name()}'"
-            ) from error
 
 
 def initialize_device(device: RuntimeDevice):
