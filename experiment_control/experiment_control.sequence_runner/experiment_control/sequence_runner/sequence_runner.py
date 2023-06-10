@@ -47,7 +47,6 @@ from .device_servers import (
     connect_to_device_servers,
     create_devices,
 )
-from .sequence_context import SequenceContext
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
@@ -451,7 +450,7 @@ class SequenceRunnerThread(Thread):
     async def _(
         self,
         optimization_loop: OptimizationLoop,
-        context: SequenceContext,
+        context: StepContext,
     ):
         raise NotImplementedError
 

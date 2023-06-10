@@ -1,18 +1,8 @@
-import asyncio
-import contextlib
-from collections.abc import Coroutine
 from copy import deepcopy
 from typing import Generic, TypeVar, Self, Optional
 
-from units import AnalogValue
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
-
-
-class SequenceContext:
-    def __init__(self, variables: VariableNamespace[AnalogValue]):
-        self.variables: VariableNamespace[AnalogValue] = variables
-
 
 T = TypeVar("T")
 
@@ -63,51 +53,3 @@ class StepContext(Generic[T]):
     @property
     def updated_variables(self) -> set[DottedVariableName]:
         return set(self._variables_that_changed.keys())
-
-
-class SequenceTaskGroup:
-    """
-
-    Each computation task must be associated with one and only one hardware task.
-    """
-
-    def __init__(self) -> None:
-        self._task_group: asyncio.TaskGroup = asyncio.TaskGroup()
-        self._exit_stack = contextlib.AsyncExitStack()
-        self._shot_tasks: set[asyncio.Task] = set()
-
-        # Used to limit the number of computation tasks in advance with respect to the number of hardware tasks.
-        # If we let computations run freely ahead, they will quickly fill up the memory with all the devices parameters.
-        self._computation_heads_up = asyncio.Semaphore(25)
-
-    def create_hardware_task(self, coro: Coroutine) -> asyncio.Task:
-        async def wrapped():
-            await coro
-            self._computation_heads_up.release()
-
-        task = self._task_group.create_task(wrapped())
-        self._shot_tasks.add(task)
-        return task
-
-    def create_background_task(self, coro: Coroutine) -> asyncio.Task:
-        return self._task_group.create_task(coro)
-
-    async def wait_shots_completed(self):
-        await asyncio.gather(*self._shot_tasks)
-        self._shot_tasks.clear()
-
-    async def create_computation_task(self, coro: Coroutine) -> asyncio.Task:
-        await self._computation_heads_up.acquire()
-        return self._task_group.create_task(coro)
-
-    def create_database_task(self, coro: Coroutine) -> asyncio.Task:
-        task = self._task_group.create_task(coro)
-        self._shot_tasks.add(task)
-        return task
-
-    async def __aenter__(self):
-        await self._exit_stack.enter_async_context(self._task_group)
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
