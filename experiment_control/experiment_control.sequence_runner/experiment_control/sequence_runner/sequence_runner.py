@@ -123,19 +123,7 @@ class SequenceRunnerThread(Thread):
         await self.run_sequence()
 
     async def prepare(self):
-        remote_device_servers = create_device_servers(
-            self._experiment_config.device_servers
-        )
-        connect_to_device_servers(remote_device_servers)
-
-        initialization_parameters = get_devices_initialization_parameters(
-            self._experiment_config, self._sequence_config
-        )
-        devices = create_devices(
-            initialization_parameters,
-            remote_device_servers,
-            self._experiment_config.mock_experiment,
-        )
+        devices = self._create_uninitialized_devices()
 
         for device_name, device in devices.items():
             # We initialize the devices through the stack to unsure that they are closed if an error occurs.
@@ -149,6 +137,29 @@ class SequenceRunnerThread(Thread):
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
+
+    def _create_uninitialized_devices(self) -> dict[DeviceName, RuntimeDevice]:
+        """Create the devices on their respective servers.
+
+        The devices are created with the initial parameters specified in the experiment and sequence configs, but the
+        connection to the devices is not established. The device objects are proxies to the actual devices that are
+        running in other processes, possibly on other computers.
+        """
+
+        remote_device_servers = create_device_servers(
+            self._experiment_config.device_servers
+        )
+        connect_to_device_servers(remote_device_servers)
+
+        initialization_parameters = get_devices_initialization_parameters(
+            self._experiment_config, self._sequence_config
+        )
+        devices = create_devices(
+            initialization_parameters,
+            remote_device_servers,
+            self._experiment_config.mock_experiment,
+        )
+        return devices
 
     def finish(self, state: State):
         with self._session as session:
