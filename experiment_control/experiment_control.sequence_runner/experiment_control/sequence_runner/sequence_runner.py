@@ -77,7 +77,6 @@ class SequenceRunnerThread(Thread):
         self._session = session_maker()
         self._save_session = session_maker()
         self._sequence = Sequence(sequence_path)
-        self._remote_device_servers: dict[str, RemoteDeviceClientManager] = {}
         self._devices: dict[DeviceName, RuntimeDevice] = {}
 
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
@@ -124,17 +123,17 @@ class SequenceRunnerThread(Thread):
         await self.run_sequence()
 
     async def prepare(self):
-        self._remote_device_servers = create_device_servers(
+        remote_device_servers = create_device_servers(
             self._experiment_config.device_servers
         )
-        connect_to_device_servers(self._remote_device_servers)
+        connect_to_device_servers(remote_device_servers)
 
         initialization_parameters = get_devices_initialization_parameters(
             self._experiment_config, self._sequence_config
         )
         devices = create_devices(
             initialization_parameters,
-            self._remote_device_servers,
+            remote_device_servers,
             self._experiment_config.mock_experiment,
         )
 
