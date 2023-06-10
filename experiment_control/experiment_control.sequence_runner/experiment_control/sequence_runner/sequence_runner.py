@@ -16,7 +16,6 @@ from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
 from duration_timer import DurationTimer
 from experiment.configuration import (
-    DeviceServerConfiguration,
     CameraConfiguration,
     NI6738SequencerConfiguration,
     SpincoreSequencerConfiguration,
@@ -46,6 +45,7 @@ from units.analog_value import add_unit, AnalogValue
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
+from .device_servers import create_device_servers, connect_to_device_servers
 from .sequence_context import SequenceContext, SequenceTaskGroup
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
@@ -74,7 +74,7 @@ class SequenceRunnerThread(Thread):
         self._session = session_maker()
         self._save_session = session_maker()
         self._sequence = Sequence(sequence_path)
-        self._remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
+        self._remote_device_servers: dict[str, RemoteDeviceClientManager] = {}
         self._devices: dict[DeviceName, RuntimeDevice] = {}
 
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
@@ -121,10 +121,12 @@ class SequenceRunnerThread(Thread):
         await self.run_sequence()
 
     async def prepare(self):
-        self._remote_device_managers = create_remote_device_managers(
+        self._remote_device_servers = create_device_servers(
             self._experiment_config.device_servers
         )
-        self.connect_to_device_servers()
+        connect_to_device_servers(
+            self._remote_device_servers, self._experiment_config.mock_experiment
+        )
 
         devices = self.create_devices()
 
@@ -140,30 +142,6 @@ class SequenceRunnerThread(Thread):
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
-
-    def connect_to_device_servers(self):
-        """Start the connection to the device servers."""
-
-        if self._experiment_config.mock_experiment:
-            return
-
-        for server_name, server in self._remote_device_managers.items():
-            logger.info(f"Connecting to device server {server_name}...")
-            try:
-                server.connect()
-            except ConnectionRefusedError as error:
-                raise ConnectionRefusedError(
-                    f"The remote server '{server_name}' rejected the connection. It is"
-                    " possible that the server is not running or that the port is not"
-                    " open."
-                ) from error
-            except TimeoutError as error:
-                raise TimeoutError(
-                    f"The remote server '{server_name}' did not respond to the"
-                    " connection request. It is possible that the server is not"
-                    " running or that the port is not open."
-                ) from error
-            logger.info(f"Connection established to {server_name}")
 
     def create_devices(self) -> dict[DeviceName, RuntimeDevice]:
         """Instantiate the devices on their respective remote server.
@@ -186,7 +164,7 @@ class SequenceRunnerThread(Thread):
         devices: dict[DeviceName, RuntimeDevice] = {}
 
         for device_name, parameters in initialization_parameters.items():
-            server = self._remote_device_managers[parameters["server"]]
+            server = self._remote_device_servers[parameters["server"]]
             try:
                 remote_class = getattr(server, parameters["type"])
             except AttributeError:
@@ -670,19 +648,6 @@ class SequenceRunnerThread(Thread):
                 CameraConfiguration,
             )
         }
-
-
-def create_remote_device_managers(
-    device_server_configs: dict[str, DeviceServerConfiguration]
-) -> dict[str, RemoteDeviceClientManager]:
-    remote_device_managers: dict[str, RemoteDeviceClientManager] = {}
-    for server_name, server_config in device_server_configs.items():
-        address = (server_config.address, server_config.port)
-        authkey = bytes(server_config.authkey.get_secret_value(), encoding="utf-8")
-        remote_device_managers[server_name] = RemoteDeviceClientManager(
-            address=address, authkey=authkey
-        )
-    return remote_device_managers
 
 
 def update_device(device: RuntimeDevice, parameters: dict[DeviceParameter, Any]):
