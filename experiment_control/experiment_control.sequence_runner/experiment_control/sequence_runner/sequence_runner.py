@@ -117,28 +117,26 @@ class SequenceRunnerThread(Thread):
             asyncio.run(self.async_run())
 
     async def async_run(self):
-        async with asyncio.TaskGroup() as task_group:
-            task_group.create_task(self.prepare())
-            task_group.create_task(self.run_sequence())
+        await self.prepare()
+        await self.run_sequence()
 
     async def prepare(self):
-        async with self._hardware_lock:
-            self._remote_device_managers = create_remote_device_managers(
-                self._experiment_config.device_servers
+        self._remote_device_managers = create_remote_device_managers(
+            self._experiment_config.device_servers
+        )
+        self.connect_to_device_servers()
+
+        devices = self.create_devices()
+
+        for device_name, device in devices.items():
+            # We initialize the devices through the stack to unsure that they are closed if an error occurs.
+            self._devices[device_name] = self._shutdown_stack.enter_context(
+                DeviceContextManager(device)
             )
-            self.connect_to_device_servers()
 
-            devices = self.create_devices()
-
-            for device_name, device in devices.items():
-                # We initialize the devices through the stack to unsure that they are closed if an error occurs.
-                self._devices[device_name] = self._shutdown_stack.enter_context(
-                    DeviceContextManager(device)
-                )
-
-            async with asyncio.TaskGroup() as task_group:
-                for device in self._devices.values():
-                    task_group.create_task(asyncio.to_thread(initialize_device, device))
+        async with asyncio.TaskGroup() as task_group:
+            for device in self._devices.values():
+                task_group.create_task(asyncio.to_thread(initialize_device, device))
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
