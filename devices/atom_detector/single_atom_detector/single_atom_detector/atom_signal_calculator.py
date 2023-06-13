@@ -99,7 +99,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         kwargs = loader.construct_mapping(node, deep=True)
         roi: ArbitraryROI = kwargs["roi"]
         weights = kwargs["weights"]
-        offset = kwargs["offset"]
+        offset = kwargs.get("offset", 0.0)
 
         indices = np.array(roi.indices)
         mask = np.full(roi.original_image_size, True)
