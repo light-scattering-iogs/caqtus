@@ -1,22 +1,23 @@
 import warnings
-from inspect import signature
 from typing import Optional
 
 import numpy
 import pandas
 from scipy.optimize import curve_fit
 
+from inspect_function import get_parameters
+
 
 def fit_to_data(
-    data: pandas.DataFrame,
-    f,
-    x: str,
-    y: str,
-    p0=None,
-    se: Optional[str] = None,
-    include_errors: bool = False,
-    raise_error: bool = True,
-    **kwargs,
+        data: pandas.DataFrame,
+        f,
+        x: str,
+        y: str,
+        p0=None,
+        se: Optional[str] = None,
+        include_errors: bool = False,
+        raise_error: bool = True,
+        **kwargs,
 ) -> dict[str, float]:
     """Fit a function to data.
 
@@ -81,16 +82,3 @@ def fit_to_data(
     if include_errors:
         return {**estimated_parameters, **estimated_errors}
     return estimated_parameters
-
-
-def get_parameters(f) -> list[str]:
-    """Get the parameters of a function.
-
-    Args:
-        f: The function to get the parameters of.
-
-    Returns:
-        A list of the names of the parameters of the function `f`.
-    """
-
-    return list(signature(f).parameters)[1:]
