@@ -24,6 +24,8 @@ analyza-loading-dataframe-builder = {path = "../analyza.loading/analyza.loading.
 analyza-fit = {path = "../analyza.fit", develop = true}
 atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runtime", develop = true}
 analyze-spots = {path = "../../devices/tweezers/analyze_spots", develop = true}
+analyza-maximum-likelihood = {path = "../analyza.maximum_likelihood", develop = true}
+analyza-functions = {path = "../analyza.functions", develop = true}
 
 
 

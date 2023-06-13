@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from .fit.fit import get_parameters
+from inspect_function import get_parameters
 
 Parameters = dict[str, float]
 Values = np.ndarray
@@ -12,11 +12,11 @@ def log_likelihood(values, model, parameters) -> float:
 
 
 def maximize_likelihood(
-    values: Values,
-    model,
-    initial_parameters: Parameters,
-    method: str,
-    constraints=None,
+        values: Values,
+        model,
+        initial_parameters: Parameters,
+        method: str,
+        constraints=None,
 ) -> Parameters:
     optimal_parameters = minimize(
         lambda parameters: -log_likelihood(values, model, parameters),

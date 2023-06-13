@@ -1,15 +1,15 @@
 [tool.poetry]
-name = "analyza-fit"
+name = "analyza-maximum-likelihood"
 version = "0.1.0"
 description = ""
-authors = ["Damien <damien.bloch@institutoptique.fr>"]
+authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
 packages = [{include = "analyza"}]
 
 [tool.poetry.dependencies]
 python = "^3.8, <3.12"
+
 numpy = "^1.24.3"
-pandas = "^2.0.2"
 scipy = "^1.10.1"
 inspect-function = {path = "../../common/inspect_function", develop = true}
 
