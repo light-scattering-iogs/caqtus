@@ -23,6 +23,7 @@ analyza-loading-importers = {path = "../analyza.loading/analyza.loading.importer
 analyza-loading-dataframe-builder = {path = "../analyza.loading/analyza.loading.dataframe_builder", develop = true}
 analyza-fit = {path = "../analyza.fit", develop = true}
 atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runtime", develop = true}
+analyze-spots = {path = "../../devices/tweezers/analyze_spots", develop = true}
 
 
 
