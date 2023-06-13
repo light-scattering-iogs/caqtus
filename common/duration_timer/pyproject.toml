@@ -1,9 +1,10 @@
 [tool.poetry]
-name = "qabc"
+name = "duration-timer"
 version = "0.1.0"
 description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 readme = "README.md"
+packages = [{include = "duration_timer"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"

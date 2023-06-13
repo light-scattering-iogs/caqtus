@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "analyza-daily"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "analyza"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+jupyter = "^1.0.0"
+jupyterlab = "^4.0.2"
+matplotlib = "^3.7.1"
+numpy = "^1.24.3"
+pandas = "^2.0.2"
+seaborn = "^0.12.2"
+scipy = "^1.10.1"
+
+sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+units = {path = "../../common/units", develop = true}
+analyza-loading-importers = {path = "../analyza.loading/analyza.loading.importers", develop = true}
+analyza-loading-dataframe-builder = {path = "../analyza.loading/analyza.loading.dataframe_builder", develop = true}
+analyza-fit = {path = "../analyza.fit", develop = true}
+atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runtime", develop = true}
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
