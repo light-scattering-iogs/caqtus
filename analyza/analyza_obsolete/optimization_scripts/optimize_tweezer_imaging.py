@@ -3,7 +3,7 @@ import sys
 
 import numpy as np
 
-from analyza.import_data import (
+from analyza_obsolete.import_data import (
     build_dataframe_from_sequence,
     build_dataframe_from_shots,
     import_all,

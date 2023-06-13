@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "analyza-loading-importers"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "analyza"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+numpy = "^1.24.3"
+
+experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

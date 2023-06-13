@@ -3,8 +3,10 @@ from .import_sequence import (
     build_dataframe_from_sequence,
     build_dataframe_from_sequences,
 )
+
+from analyza_obsolete.data_import import import_all
+
 from .importers import (
-    import_all,
     import_parameters,
     import_measures,
     import_scores,

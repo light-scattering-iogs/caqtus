@@ -16,6 +16,7 @@ def fit_to_data(
     se: Optional[str] = None,
     include_errors: bool = False,
     raise_error: bool = True,
+    **kwargs,
 ) -> dict[str, float]:
     """Fit a function to data.
 
@@ -54,8 +55,9 @@ def fit_to_data(
     try:
         # noinspection PyTupleAssignmentBalance
         popt, pcov = curve_fit(
-            f, xdata, ydata, p0, sigma, absolute_sigma=True, check_finite=True
+            f, xdata, ydata, p0, sigma, absolute_sigma=True, check_finite=True, **kwargs,
         )
+
     except Exception as e:
         if raise_error:
             raise

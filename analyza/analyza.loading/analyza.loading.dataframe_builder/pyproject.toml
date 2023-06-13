@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "analyza-loading-dataframe-builder"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "analyza"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+pandas = "^2.0.2"
+tqdm = "^4.65.0"
+experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
