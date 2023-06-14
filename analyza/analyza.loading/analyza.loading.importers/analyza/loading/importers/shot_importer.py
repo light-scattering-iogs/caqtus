@@ -3,7 +3,7 @@ from typing import Protocol, TypeVar
 from experiment.session import ExperimentSession
 from sequence.runtime import Shot
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 
 
 class ShotImporter(Protocol[T]):
