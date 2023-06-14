@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "viewer-sequence-watcher"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "viewer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+concurrent-updater = {path = "../../common/concurrent_updater", develop = true}
+experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
