@@ -18,9 +18,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class ShotImporter(Protocol[T]):
-    def __call__(self, shot: Shot, session: ExperimentSession) -> T:
-        ...
+
 
 
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
