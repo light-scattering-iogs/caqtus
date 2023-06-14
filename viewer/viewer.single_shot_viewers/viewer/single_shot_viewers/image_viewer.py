@@ -9,9 +9,10 @@ from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from image_types import Image
 from sequence.runtime import Shot
+from .single_shot_viewer import SingleShotViewer
 
 
-class ImageViewer(QWidget):
+class ImageViewer(SingleShotViewer):
     def __init__(
         self,
         *,

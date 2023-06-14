@@ -18,6 +18,7 @@ analyza-loading-importers = {path = "../../analyza/analyza.loading/analyza.loadi
 experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
 image-types = {path = "../../common/types/image_types", develop = true}
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+qabc = {path = "../../common/widgets/qabc", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
