@@ -11,13 +11,13 @@ from .functions import (
     drop_heavy,
 )
 from .importers import (
-    ShotImporter,
     import_all,
     import_parameters,
     import_scores,
     import_measures,
     import_time,
 )
+from .shot_importer import ShotImporter
 
 __all__ = [
     "ShotImporter",
