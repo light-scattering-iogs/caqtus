@@ -1,3 +1,3 @@
-from typing import TypeAlias
+from typing import NewType
 
-DeviceName: TypeAlias = str
+DeviceName = NewType("DeviceName", str)
