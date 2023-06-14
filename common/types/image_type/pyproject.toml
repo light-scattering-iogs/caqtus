@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "image-type"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "image_type"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+numpy = "^1.24.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
