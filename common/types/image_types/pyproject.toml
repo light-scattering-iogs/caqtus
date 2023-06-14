@@ -1,14 +1,13 @@
 [tool.poetry]
-name = "image-type"
+name = "image-types"
 version = "0.1.0"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
-packages = [{include = "image_type"}]
+packages = [{include = "image_types"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-
 numpy = "^1.24.3"
 
 
