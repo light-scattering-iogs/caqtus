@@ -11,6 +11,7 @@ from .functions import (
     drop_heavy,
 )
 from .importers import (
+    ShotImporter,
     import_all,
     import_parameters,
     import_scores,
@@ -19,6 +20,7 @@ from .importers import (
 )
 
 __all__ = [
+    "ShotImporter",
     "import_all",
     "import_parameters",
     "import_scores",
