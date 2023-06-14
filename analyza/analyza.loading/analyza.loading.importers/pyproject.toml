@@ -13,6 +13,8 @@ numpy = "^1.24.3"
 
 experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
 sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
+device-config = {path = "../../../devices/device/device.configuration", develop = true}
+image-types = {path = "../../../common/types/image_types", develop = true}
 
 
 [build-system]

@@ -16,11 +16,13 @@ from .importers import (
     import_scores,
     import_measures,
     import_time,
+    ImageImporter,
 )
 from .shot_importer import ShotImporter
 
 __all__ = [
     "ShotImporter",
+    "ImageImporter",
     "import_all",
     "import_parameters",
     "import_scores",

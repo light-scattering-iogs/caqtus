@@ -3,12 +3,15 @@ from typing import (
     Any,
     TypeVar,
     ParamSpec,
-    TypedDict, Protocol,
+    TypedDict,
 )
 
+from device.configuration import DeviceName
 from experiment.session import ExperimentSession
+from image_types import Image
 from sequence.runtime import Shot
 from .chainable_function import ChainableFunction
+from .shot_importer import ShotImporter
 
 P = ParamSpec("P")
 S = TypeVar("S")
@@ -18,7 +21,15 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
+class ImageImporter(ShotImporter[Image]):
+    def __init__(self, camera_name: DeviceName, image_name: str):
+        self.camera_name = camera_name
+        self.image_name = image_name
 
+    def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
+        return _import_measures(shot, session)[
+            f"{self.camera_name}.{self.image_name}"
+        ]
 
 
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
