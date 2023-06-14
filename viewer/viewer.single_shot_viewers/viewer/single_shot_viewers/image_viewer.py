@@ -1,3 +1,4 @@
+import threading
 from typing import Optional
 
 import numpy as np
@@ -32,6 +33,8 @@ class ImageViewer(SingleShotViewer):
         self._session = session
         self._image = None
 
+        self._lock = threading.Lock()
+
         self._cmap = cmap
         self._vmin: Optional[float] = vmin
         self._vmax: Optional[float] = vmax
@@ -61,7 +64,7 @@ class ImageViewer(SingleShotViewer):
         self._colorbar = self._figure.colorbar(self._image, ax=self._axes)
 
     def set_shot(self, shot: Shot) -> None:
-        with self._session.activate():
+        with self._lock, self._session.activate():
             image = self._importer(shot, self._session)
         self._set_image(np.transpose(image))
         self._canvas.draw()
