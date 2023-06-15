@@ -47,7 +47,7 @@ class ImageViewer(SingleShotViewer):
         self._canvas = FigureCanvasQTAgg(self._figure)
         self._colorbar = None
 
-        self._setup_image(np.zeros((10, 10)))
+        self._setup_image(np.full((10, 10), np.nan))
 
         self.setLayout(QVBoxLayout())
         navigation_toolbar = NavigationToolbar2QT(self._canvas, self)
@@ -65,9 +65,13 @@ class ImageViewer(SingleShotViewer):
 
     def set_shot(self, shot: Shot) -> None:
         with self._lock, self._session.activate():
-            image = self._importer(shot, self._session)
-        self._set_image(np.transpose(image))
-        self._canvas.draw()
+            try:
+                image = self._importer(shot, self._session)
+            except Exception as e:
+                self._set_exception(e)
+            else:
+                self._set_image(np.transpose(image))
+                self._canvas.draw()
 
     def _set_image(self, image: Image) -> None:
         if image.shape != self._image.get_array().shape:
@@ -82,3 +86,15 @@ class ImageViewer(SingleShotViewer):
         else:
             vmax = self._vmax
         self._image.set_clim(vmin=vmin, vmax=vmax)
+
+    def _set_exception(self, error: Exception):
+        self._axes.clear()
+        self._axes.text(
+            0.5,
+            0.5,
+            f"{error!r}",
+            horizontalalignment="center",
+            verticalalignment="center",
+            color="red",
+        )
+        self._canvas.draw()
