@@ -28,8 +28,7 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self._shot_selector = ShotSelector()
 
         for name, viewer in viewers.items():
-            subwindow = self._mdi_area.addSubWindow(viewer)
-            subwindow.setWindowTitle(name)
+            self.add_viewer(name, viewer)
 
         # noinspection PyUnresolvedReferences
         self._shot_selector.shot_changed.connect(self._update_viewers)
@@ -42,10 +41,22 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self._shot_selector.add_shots(shots)
         self._update_viewers(self._shot_selector.get_selected_shot())
 
+    def add_viewer(self, name: str, viewer: SingleShotViewer) -> None:
+        subwindow = self._mdi_area.addSubWindow(viewer)
+        subwindow.setWindowTitle(name)
+
+    def reset(self) -> None:
+        self._shot_selector.reset()
+
     def _update_viewers(self, shot) -> None:
-        for subwindow in self._mdi_area.subWindowList():
-            viewer: SingleShotViewer = subwindow.widget()
+        for viewer in self._get_viewers().values():
             viewer.set_shot(shot)
+
+    def _get_viewers(self) -> dict[str, SingleShotViewer]:
+        return {
+            subwindow.windowTitle(): subwindow.widget()
+            for subwindow in self._mdi_area.subWindowList()
+        }
 
 
 class ShotSelector(QWidget):
@@ -63,7 +74,7 @@ class ShotSelector(QWidget):
         self.layout().addWidget(self._shot_spinbox)
 
         self._current_shot = -1
-        self.update_label()
+        self.update_spinbox()
 
         self._left_button = QPushButton("<")
         self._left_button.setAutoRepeat(True)
@@ -90,7 +101,7 @@ class ShotSelector(QWidget):
     def add_shots(self, shots: Iterable[Shot]) -> None:
         with self._lock:
             self._shots.extend(shots)
-            self.update_label()
+            self.update_spinbox()
 
     def get_selected_shot(self) -> Shot:
         return self._shots[self._current_shot]
@@ -100,7 +111,7 @@ class ShotSelector(QWidget):
             self._current_shot = len(self._shots) - 1
 
         self._current_shot = max(0, self._current_shot - 1)
-        self.update_label()
+        self.update_spinbox()
         # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
@@ -109,20 +120,20 @@ class ShotSelector(QWidget):
             self._current_shot = len(self._shots) - 1
 
         self._current_shot = min(len(self._shots) - 1, self._current_shot + 1)
-        self.update_label()
+        self.update_spinbox()
         # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_last_button_clicked(self) -> None:
         self._current_shot = -1
-        self.update_label()
+        self.update_spinbox()
         # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_pause_button_clicked(self) -> None:
         if self._current_shot == -1:
             self._current_shot = len(self._shots) - 1
-        self.update_label()
+        self.update_spinbox()
         # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
@@ -131,7 +142,7 @@ class ShotSelector(QWidget):
         # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
-    def update_label(self) -> None:
+    def update_spinbox(self) -> None:
         if self._current_shot == -1:
             current_shot = len(self._shots) - 1
         else:
@@ -141,3 +152,8 @@ class ShotSelector(QWidget):
             self._shot_spinbox.setValue(current_shot + 1)
             self._shot_spinbox.setSuffix(f"/{len(self._shots)}")
             self._shot_spinbox.setPrefix("Shot: ")
+
+    def reset(self) -> None:
+        self._current_shot = -1
+        self._shots = []
+        self.update_spinbox()
