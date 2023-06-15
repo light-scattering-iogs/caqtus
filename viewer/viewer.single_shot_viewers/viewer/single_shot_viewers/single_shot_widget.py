@@ -32,6 +32,7 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
             subwindow = self._mdi_area.addSubWindow(viewer)
             subwindow.setWindowTitle(name)
 
+        # noinspection PyUnresolvedReferences
         self._shot_selector.shot_changed.connect(self._update_viewers)
         self._action_cascade.triggered.connect(self._mdi_area.cascadeSubWindows)
         self._action_tile.triggered.connect(self._mdi_area.tileSubWindows)
@@ -83,6 +84,7 @@ class ShotSelector(QWidget):
         self._last_button = QPushButton(">>")
         self._last_button.clicked.connect(self.on_last_button_clicked)
         self.layout().addWidget(self._last_button)
+        # noinspection PyUnresolvedReferences
         self.layout().addStretch()
 
     def add_shots(self, shots: Iterable[Shot]) -> None:
@@ -99,6 +101,7 @@ class ShotSelector(QWidget):
 
         self._current_shot = max(0, self._current_shot - 1)
         self.update_label()
+        # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_right_button_clicked(self) -> None:
@@ -107,21 +110,25 @@ class ShotSelector(QWidget):
 
         self._current_shot = min(len(self._shots) - 1, self._current_shot + 1)
         self.update_label()
+        # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_last_button_clicked(self) -> None:
         self._current_shot = -1
         self.update_label()
+        # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_pause_button_clicked(self) -> None:
         if self._current_shot == -1:
             self._current_shot = len(self._shots) - 1
         self.update_label()
+        # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def on_shot_spinbox_value_changed(self, value: int) -> None:
         self._current_shot = value - 1
+        # noinspection PyUnresolvedReferences
         self.shot_changed.emit(self.get_selected_shot())
 
     def update_label(self) -> None:
