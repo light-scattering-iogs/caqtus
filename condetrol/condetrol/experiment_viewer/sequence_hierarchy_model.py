@@ -11,14 +11,15 @@ from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence, State, SequenceStats
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+_logger = logging.getLogger(__name__)
+_logger.setLevel(logging.DEBUG)
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
     """Tree model used to display the sequences contained in a session.
 
-    This model keep an in memory representation of the sequences hierarchy and update it in a background thread.
+    This model keep an in memory representation of the sequences hierarchy and update it in a background thread. It
+    does not provide any method to create, edit or delete sequences (see EditableSequenceHierarchyModel for that).
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
@@ -47,15 +48,17 @@ class SequenceHierarchyModel(QAbstractItemModel):
         with self._stats_update_session as session:
             _update_stats(self._root, session)
 
-    def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
+    def index(
+        self, row: int, column: int, parent: QModelIndex = QModelIndex()
+    ) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         elif not parent.isValid():
             return self.createIndex(row, column, self._root.children[row])
         else:
-            parent: SequenceHierarchyItem = parent.internalPointer()
-            if row < len(parent.children):
-                return self.createIndex(row, column, parent.children[row])
+            parent_item: SequenceHierarchyItem = parent.internalPointer()
+            if row < len(parent_item.children):
+                return self.createIndex(row, column, parent_item.children[row])
             else:
                 return QModelIndex()
 
@@ -71,16 +74,16 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 child_item.parent.row, child.column(), child_item.parent
             )
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if not parent.isValid():
             return len(self._root.children)
         else:
             return len(parent.internalPointer().children)
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 4
 
-    def data(self, index: QModelIndex, role: int = ...):
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return
         item: SequenceHierarchyItem = index.internalPointer()
@@ -131,7 +134,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
                         total_duration = _format_seconds(total_duration.total_seconds())
                         return total_duration
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ) -> Optional[str]:
         if (
             role == Qt.ItemDataRole.DisplayRole
             and orientation == Qt.Orientation.Horizontal
@@ -144,6 +152,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 return "Shots"
             elif section == 3:
                 return "Duration"
+        return None
 
     @staticmethod
     def get_sequence_name(item: "SequenceHierarchyItem"):
@@ -157,7 +166,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         else:
             return None
 
-    def hasChildren(self, parent: QModelIndex = ...) -> bool:
+    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
         if not parent.isValid():
             return True
         else:
@@ -191,11 +200,23 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
     def is_sequence(self, index: QModelIndex) -> bool:
         item: "SequenceHierarchyItem" = index.internalPointer()
-        with self._session as session:
-            # noinspection PyProtectedMember
-            return item.sequence_path._query_model(
-                session.get_sql_session()
-            ).is_sequence()
+        with self._session.activate() as session:
+            return item.sequence_path.is_sequence(session)
+
+    @staticmethod
+    def get_path(index: QModelIndex) -> Optional[SequencePath]:
+        if not index.isValid():
+            return None
+        else:
+            item: "SequenceHierarchyItem" = index.internalPointer()
+            return item.sequence_path
+
+
+class EditableSequenceHierarchyModel(SequenceHierarchyModel):
+    """Tree model used to display and edit the sequences contained in a session.
+
+    This model keep an in memory representation of the sequences hierarchy and update it in a background thread.
+    """
 
     def create_new_folder(self, parent: QModelIndex, name: str):
         if parent.isValid():
@@ -212,12 +233,12 @@ class SequenceHierarchyModel(QAbstractItemModel):
         with self._session.activate() as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
-                logger.info(f'Created new folder "{str(new_path)}"')
+                _logger.info(f'Created new folder "{str(new_path)}"')
                 self.beginInsertRows(parent, new_row, new_row)
                 parent_item.children = children
                 self.endInsertRows()
             elif number_created_paths == 0:
-                logger.warning(
+                _logger.warning(
                     f'Path "{str(new_path)}" already exists and was not created'
                 )
             elif number_created_paths > 1:
@@ -256,13 +277,14 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 self.endInsertRows()
                 return new_path
             elif number_created_paths == 0:
-                logger.warning(
+                _logger.warning(
                     f'Path "{str(new_path)}" already exists and was not created'
                 )
             elif number_created_paths > 1:
                 raise RuntimeError(
                     "Created more than one path and couldn't update the views"
                 )
+        return None
 
     def duplicate_sequence(self, source_index: QModelIndex, target_name: str) -> bool:
         """
@@ -309,14 +331,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 self.beginRemoveRows(parent_index, row, row)
                 parent_item.children = new_children
                 self.endRemoveRows()
-
-    @staticmethod
-    def get_path(index: QModelIndex) -> Optional[SequencePath]:
-        if not index.isValid():
-            return None
-        else:
-            item: "SequenceHierarchyItem" = index.internalPointer()
-            return item.sequence_path
 
     def revert_to_draft(self, index: QModelIndex):
         if not index.isValid():
@@ -427,25 +441,6 @@ def _format_seconds(seconds: float) -> str:
                 result.append(f"{days}d")
 
     return ":".join(reversed(result))
-
-
-def query_sequence_stats(
-    sequences: list[Sequence], session: ExperimentSession
-) -> list[SequenceStats]:
-    """Query the stats for a list of sequences.
-
-    Args:
-        sequences: List of sequences to query.
-        session: Experiment session.
-
-    Returns:
-        List of sequence stats.
-    """
-
-    stats = []
-    for sequence in sequences:
-        stats.append(sequence.get_stats(session))
-    return stats
 
 
 def _update_stats(item: SequenceHierarchyItem, session: ExperimentSession):

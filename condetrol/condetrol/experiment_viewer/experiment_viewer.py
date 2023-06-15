@@ -37,9 +37,9 @@ from sequence.runtime import Sequence, State
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_hierarchy_model import (
-    SequenceHierarchyModel,
     SequenceStats,
     SequenceHierarchyItem,
+    EditableSequenceHierarchyModel,
 )
 from .sequence_widget import SequenceWidget
 
@@ -145,7 +145,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         self.action_edit_config.triggered.connect(self.edit_config)
 
-        self.model = SequenceHierarchyModel(
+        self.model = EditableSequenceHierarchyModel(
             session_maker=self._experiment_session_maker, parent=self.sequences_view
         )
         self.sequences_view.setModel(self.model)
