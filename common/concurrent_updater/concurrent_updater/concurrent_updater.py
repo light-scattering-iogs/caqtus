@@ -34,9 +34,6 @@ class ConcurrentUpdater:
         self._must_stop = threading.Event()
         self.__lock = threading.Lock()
 
-    def __del__(self):
-        self.stop()
-
     def start(self):
         """Starts the to execute the target function periodically"""
 
@@ -64,3 +61,11 @@ class ConcurrentUpdater:
             self._must_stop.set()
             if self.__thread.is_alive():
                 self.__thread.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+        return False
