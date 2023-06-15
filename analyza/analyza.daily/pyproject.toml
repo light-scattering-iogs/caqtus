@@ -29,8 +29,12 @@ atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runti
 analyze-spots = {path = "../../devices/tweezers/analyze_spots", develop = true}
 analyza-maximum-likelihood = {path = "../analyza.maximum_likelihood", develop = true}
 analyza-functions = {path = "../analyza.functions", develop = true}
+ipympl = "^0.9.3"
 
 
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
 
 [build-system]
 requires = ["poetry-core"]

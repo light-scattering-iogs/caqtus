@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "viewer-launcher"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "viewer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+viewer-sequence-watcher = {path = "../viewer.sequence_watcher", develop = true}
+viewer-single-shot-viewers = {path = "../viewer.single_shot_viewers", develop = true}
+qdarkstyle = "^3.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+mypy = "^1.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
