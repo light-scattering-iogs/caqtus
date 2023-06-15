@@ -8,19 +8,11 @@ from multiprocessing.managers import BaseManager
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
 from PyQt6.QtGui import (
-    QColor,
-    QPalette,
     QAction,
     QCloseEvent,
-    QPainter,
 )
 from PyQt6.QtWidgets import (
     QMainWindow,
-    QStyleOptionViewItem,
-    QStyleOptionProgressBar,
-    QApplication,
-    QStyle,
-    QStyledItemDelegate,
     QMenu,
     QInputDialog,
     QLineEdit,
@@ -32,13 +24,9 @@ from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
+from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
-from .sequence_hierarchy_model import (
-    SequenceStats,
-    SequenceHierarchyItem,
-    EditableSequenceHierarchyModel,
-)
 from .sequence_widget import SequenceWidget
 
 logger = logging.getLogger(__name__)
@@ -140,7 +128,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.sequences_view.setModel(self.model)
 
         # special delegate that show progress bar
-        delegate = SequenceDelegate(self.sequences_view)
+        delegate = SequenceHierarchyDelegate(self.sequences_view)
         self.sequences_view.setItemDelegateForColumn(1, delegate)
 
         # context menu that let manage a sequence/folder
@@ -271,20 +259,20 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         Returns:
             True if the sequence was successfully duplicated, False otherwise
         """
-
-        if not index.isValid():
-            return False
-        item: SequenceHierarchyItem = index.internalPointer()
-        if not item.is_sequence:
+        path = self.model.get_path(index)
+        if path is None:
             return False
 
-        source_path = item.sequence_path
+        with self._experiment_session_maker() as session:
+            if not path.is_sequence(session):
+                return False
+
         text, ok = QInputDialog().getText(
             self,
-            f"Duplicate sequence {source_path}...",
+            f"Duplicate sequence {path}...",
             "Destination:",
             QLineEdit.EchoMode.Normal,
-            source_path.name,
+            path.name,
         )
         if ok and text:
             duplicated = self.model.duplicate_sequence(index, text)
@@ -303,8 +291,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def create_new_folder(self, index: QModelIndex):
         if index.isValid():
-            item: SequenceHierarchyItem = index.internalPointer()
-            path = str(item.sequence_path)
+            path = str(self.model.get_path(index))
         else:
             path = "root"
         text, ok = QInputDialog().getText(
@@ -320,8 +307,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def create_new_sequence(self, index: QModelIndex):
         if index.isValid():
-            item: SequenceHierarchyItem = index.internalPointer()
-            path = str(item.sequence_path)
+            path = str(self.model.get_path(index))
         else:
             path = "root"
         text, ok = QInputDialog().getText(
@@ -337,8 +323,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def delete(self, index: QModelIndex):
         if index.isValid():
-            item: "SequenceHierarchyItem" = index.internalPointer()
-            path = str(item.sequence_path)
+            path = str(self.model.get_path(index))
             message = (
                 f'You are about to delete the path "{path}".\n'
                 "All data inside will be irremediably lost."
@@ -396,8 +381,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         """Remove all data files from a sequence"""
 
         if index.isValid():
-            item: "SequenceHierarchyItem" = index.internalPointer()
-            path = str(item.sequence_path)
+            path = str(self.model.get_path(index))
             message = (
                 f'You are about to revert the sequence "{path}" to draft.\n'
                 "All associated data will be irremediably lost."
@@ -422,62 +406,3 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if result == QMessageBox.StandardButton.Cancel:
             return False
         return True
-
-
-class SequenceDelegate(QStyledItemDelegate):
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> None:
-        model = index.model()
-        sequence_stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
-        if sequence_stats:
-            opt = QStyleOptionProgressBar()
-            opt.rect = option.rect
-            opt.minimum = 0
-            opt.maximum = 100
-            opt.textVisible = True
-            state = sequence_stats["state"]
-            if state == State.DRAFT:
-                opt.progress = 0
-                opt.text = "draft"
-            elif state == State.PREPARING:
-                opt.progress = 0
-                opt.text = "preparing"
-            else:
-                total = sequence_stats["total_number_shots"]
-                if total:
-                    opt.progress = sequence_stats["number_completed_shots"]
-                    opt.maximum = total
-                else:
-                    if state == State.RUNNING:  # filled bar with sliding reflects
-                        opt.progress = 0
-                        opt.maximum = 0
-                    else:  # filled bar
-                        opt.progress = 1
-                        opt.maximum = 1
-
-                if state == State.RUNNING:
-                    opt.text = "running"
-                elif state == State.INTERRUPTED:
-                    opt.text = "interrupted"
-                    opt.palette.setColor(
-                        QPalette.ColorRole.Highlight, QColor(166, 138, 13)
-                    )
-                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(92, 79, 23))
-                elif state == State.FINISHED:
-                    opt.text = f"finished"
-                    opt.palette.setColor(
-                        QPalette.ColorRole.Highlight, QColor(98, 151, 85)
-                    )
-                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
-                elif state == State.CRASHED:
-                    opt.text = "crashed"
-                    opt.palette.setColor(QPalette.ColorRole.Text, QColor(119, 46, 44))
-                    opt.palette.setColor(
-                        QPalette.ColorRole.Highlight, QColor(240, 82, 79)
-                    )
-            QApplication.style().drawControl(
-                QStyle.ControlElement.CE_ProgressBar, opt, painter
-            )
-        else:
-            super().paint(painter, option, index)
