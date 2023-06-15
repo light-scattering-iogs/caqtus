@@ -1,35 +1,42 @@
+import threading
 from typing import Optional, Iterable, Mapping
 
-from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, QSignalBlocker
 from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QMainWindow,
-    QDockWidget,
+    QSpinBox,
 )
 
 from sequence.runtime import Shot
 from .single_shot_viewer import SingleShotViewer
+from .single_shot_widget_ui import Ui_SingleShotWidget
 
 
-class SingleShotWidget(QMainWindow):
+class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     def __init__(
         self, viewers: Mapping[str, SingleShotViewer], parent: Optional[QWidget] = None
     ):
         super().__init__(parent=parent)
+        self._setup_ui(viewers)
+
+    def _setup_ui(self, viewers: Mapping[str, SingleShotViewer]) -> None:
+        self.setupUi(self)
+        self.setWindowTitle("Single Shot Viewer")
         self._shot_selector = ShotSelector()
-        dock_widget = QDockWidget("")
-        dock_widget.setWidget(self._shot_selector)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock_widget)
         self._viewers = viewers
 
-        self._shot_selector.shot_changed.connect(self._update_viewers)
         for name, viewer in viewers.items():
-            dock_widget = QDockWidget(name)
-            dock_widget.setWidget(viewer)
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock_widget)
+            subwindow = self._mdi_area.addSubWindow(viewer)
+            subwindow.setWindowTitle(name)
+
+        self._shot_selector.shot_changed.connect(self._update_viewers)
+        self._action_cascade.triggered.connect(self._mdi_area.cascadeSubWindows)
+        self._action_tile.triggered.connect(self._mdi_area.tileSubWindows)
+        self._shot_selector_dock.setWidget(self._shot_selector)
+        self._shot_selector_dock.setTitleBarWidget(QWidget())
 
     def add_shots(self, shots: Iterable[Shot]) -> None:
         self._shot_selector.add_shots(shots)
@@ -45,11 +52,14 @@ class ShotSelector(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
+        self._lock = threading.Lock()
         self.setLayout(QHBoxLayout())
 
         self._shots: list[Shot] = []
-        self._label = QLabel()
-        self.layout().addWidget(self._label)
+        self._shot_spinbox = QSpinBox()
+        self._shot_spinbox.setMinimum(0)
+        self._shot_spinbox.valueChanged.connect(self.on_shot_spinbox_value_changed)
+        self.layout().addWidget(self._shot_spinbox)
 
         self._current_shot = -1
         self.update_label()
@@ -73,10 +83,12 @@ class ShotSelector(QWidget):
         self._last_button = QPushButton(">>")
         self._last_button.clicked.connect(self.on_last_button_clicked)
         self.layout().addWidget(self._last_button)
+        self.layout().addStretch()
 
     def add_shots(self, shots: Iterable[Shot]) -> None:
-        self._shots.extend(shots)
-        self.update_label()
+        with self._lock:
+            self._shots.extend(shots)
+            self.update_label()
 
     def get_selected_shot(self) -> Shot:
         return self._shots[self._current_shot]
@@ -108,9 +120,17 @@ class ShotSelector(QWidget):
         self.update_label()
         self.shot_changed.emit(self.get_selected_shot())
 
+    def on_shot_spinbox_value_changed(self, value: int) -> None:
+        self._current_shot = value - 1
+        self.shot_changed.emit(self.get_selected_shot())
+
     def update_label(self) -> None:
         if self._current_shot == -1:
             current_shot = len(self._shots) - 1
         else:
             current_shot = self._current_shot
-        self._label.setText(f"Shot {current_shot + 1}/{len(self._shots)}")
+        with QSignalBlocker(self._shot_spinbox):
+            self._shot_spinbox.setMaximum(len(self._shots))
+            self._shot_spinbox.setValue(current_shot + 1)
+            self._shot_spinbox.setSuffix(f"/{len(self._shots)}")
+            self._shot_spinbox.setPrefix("Shot: ")

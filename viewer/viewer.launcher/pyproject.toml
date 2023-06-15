@@ -11,6 +11,7 @@ python = "^3.11, <3.12"
 
 viewer-sequence-watcher = {path = "../viewer.sequence_watcher", develop = true}
 viewer-single-shot-viewers = {path = "../viewer.single_shot_viewers", develop = true}
+qdarkstyle = "^3.1"
 
 
 [tool.poetry.group.dev.dependencies]

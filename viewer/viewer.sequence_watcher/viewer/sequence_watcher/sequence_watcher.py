@@ -60,7 +60,7 @@ class SequenceWatcher(ConcurrentUpdater):
             stats = self._sequence.get_stats(session)
         if stats["start_date"] != self._sequence_start_time:
             if self._sequence_start_time is not None:
-                raise SequenceChangedError("Sequence has been reset")
+                raise SequenceResetError("Sequence has been reset")
             else:
                 self._sequence_start_time = stats["start_date"]
         if len(self._processed_shots) < stats["number_completed_shots"]:
@@ -74,7 +74,7 @@ class SequenceWatcher(ConcurrentUpdater):
                     break
 
 
-class SequenceChangedError(RuntimeError):
+class SequenceResetError(RuntimeError):
     pass
 
 
