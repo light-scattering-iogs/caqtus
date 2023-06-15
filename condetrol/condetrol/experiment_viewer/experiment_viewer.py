@@ -1,11 +1,9 @@
 import logging
-import shutil
 import time
 from copy import deepcopy
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
-from pathlib import Path
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
@@ -106,15 +104,6 @@ class TextBrowserEditLogger(logging.Handler, QtCore.QObject):
     def emit(self, record):
         msg = self.format(record)
         self.append_text.emit(msg)
-
-
-def save_experiment_config(experiment_config: ExperimentConfig, path: Path):
-    if path.exists():
-        shutil.copyfile(path, f"{path}.old")
-
-    yaml = experiment_config.to_yaml()
-    with open(path, "w") as f:
-        f.write(yaml)
 
 
 class ExperimentViewer(QMainWindow, Ui_MainWindow):
