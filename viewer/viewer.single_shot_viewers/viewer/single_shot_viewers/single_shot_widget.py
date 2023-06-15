@@ -1,32 +1,42 @@
-from typing import Optional, Collection, Iterable
+from typing import Optional, Iterable, Mapping
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QMainWindow,
+    QDockWidget,
+)
 
 from sequence.runtime import Shot
 from .single_shot_viewer import SingleShotViewer
 
 
-class SingleShotWidget(QWidget):
+class SingleShotWidget(QMainWindow):
     def __init__(
-        self, viewers: Collection[SingleShotViewer], parent: Optional[QWidget] = None
+        self, viewers: Mapping[str, SingleShotViewer], parent: Optional[QWidget] = None
     ):
         super().__init__(parent=parent)
-        self.setLayout(QVBoxLayout())
         self._shot_selector = ShotSelector()
-        self.layout().addWidget(self._shot_selector)
+        dock_widget = QDockWidget("")
+        dock_widget.setWidget(self._shot_selector)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock_widget)
         self._viewers = viewers
 
         self._shot_selector.shot_changed.connect(self._update_viewers)
-        for viewer in viewers:
-            self.layout().addWidget(viewer)
+        for name, viewer in viewers.items():
+            dock_widget = QDockWidget(name)
+            dock_widget.setWidget(viewer)
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock_widget)
 
     def add_shots(self, shots: Iterable[Shot]) -> None:
         self._shot_selector.add_shots(shots)
         self._update_viewers(self._shot_selector.get_selected_shot())
 
     def _update_viewers(self, shot) -> None:
-        for viewer in self._viewers:
+        for viewer in self._viewers.values():
             viewer.set_shot(shot)
 
 
