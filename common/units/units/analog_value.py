@@ -1,12 +1,12 @@
 from numbers import Real
-from typing import Any, Optional
+from typing import Any, Optional, TypeGuard
 
 from .units import Quantity, Unit
 
 AnalogValue = Real | Quantity
 
 
-def is_analog_value(value: Any) -> bool:
+def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
     """Returns True if the value is an analog value, False otherwise."""
 
     return isinstance(value, (Real, Quantity))
