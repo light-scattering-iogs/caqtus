@@ -21,6 +21,7 @@ sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = t
 qabc = {path = "../../common/widgets/qabc", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
 sequence-hierarchy = {path = "../../common/widgets/sequence_hierarchy", develop = true}
+viewer-sequence-watcher = {path = "../viewer.sequence_watcher", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

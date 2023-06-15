@@ -1,18 +1,20 @@
 import threading
 from typing import Optional, Iterable, Mapping
 
-from PyQt6.QtCore import pyqtSignal, QSignalBlocker, QTimer, Qt
+from PyQt6.QtCore import pyqtSignal, QSignalBlocker, QTimer, Qt, QModelIndex
 from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QPushButton,
     QMainWindow,
     QSpinBox,
+    QSizePolicy,
 )
 
 from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Shot
+from sequence.runtime import Shot, Sequence
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
+from viewer.sequence_watcher import SequenceWatcher
 from .single_shot_viewer import SingleShotViewer
 from .single_shot_widget_ui import Ui_SingleShotWidget
 
@@ -26,6 +28,9 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     ):
         super().__init__(parent=parent)
         self._model = SequenceHierarchyModel(experiment_session_maker)
+
+        self._sequence_watcher: Optional[SequenceWatcher] = None
+
         self._setup_ui(viewers)
         self._experiment_session_maker = experiment_session_maker
 
@@ -36,7 +41,10 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self._sequence_hierarchy_view.setItemDelegateForColumn(
             1, SequenceHierarchyDelegate()
         )
-        self._sequence_hierarchy_dock.setTitleBarWidget(QWidget())
+        self._sequence_hierarchy_view.doubleClicked.connect(
+            self.on_sequence_double_clicked
+        )
+        self._sequence_hierarchy_dock.setWindowTitle("Sequences")
 
         # refresh the view to update the info in real time
         self.view_update_timer = QTimer(self)
@@ -45,6 +53,9 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self.view_update_timer.start(500)
 
         self._shot_selector = ShotSelector()
+        self._shot_selector.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
 
         for name, viewer in viewers.items():
             self.add_viewer(name, viewer)
@@ -55,6 +66,23 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self._action_tile.triggered.connect(self._mdi_area.tileSubWindows)
         self._shot_selector_dock.setWidget(self._shot_selector)
         self._shot_selector_dock.setTitleBarWidget(QWidget())
+
+    def on_sequence_double_clicked(self, index: QModelIndex) -> None:
+        path = self._model.get_path(index)
+        if path is None:
+            return
+        with self._experiment_session_maker() as session:
+            if not path.is_sequence(session):
+                return
+
+        sequence = Sequence(path)
+        if self._sequence_watcher is not None:
+            self._sequence_watcher.stop()
+        self.reset()
+        self._sequence_watcher = SequenceWatcher(
+            sequence, target=self.add_shots, watch_interval=0.1, chunk_size=97
+        )
+        self._sequence_watcher.start()
 
     def add_shots(self, shots: Iterable[Shot]) -> None:
         self._shot_selector.add_shots(shots)

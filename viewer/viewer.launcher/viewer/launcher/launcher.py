@@ -29,10 +29,5 @@ if __name__ == "__main__":
     )
     widget.show()
 
-    watcher = SequenceWatcher(
-        Sequence("2023.06_June.15.fidelity_1"),
-        target=widget.add_shots,
-        watch_interval=0.1,
-    )
-    with watcher:
-        app.exec()
+
+    app.exec()
