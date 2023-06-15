@@ -25,11 +25,6 @@ logger.setLevel("DEBUG")
 
 
 if __name__ == "__main__":
-    os.environ["QT_QUICK_CONTROLS_CONF"] = (
-        "C:\\Users\\Damien"
-        " Bloch\\Desktop\\caqtus_repo\\condetrol\\qtquickcontrols2.conf"
-    )
-
     sys.excepthook = except_hook
 
     app = QApplication(sys.argv)
