@@ -1,7 +1,7 @@
 import threading
 from typing import Optional, Iterable, Mapping
 
-from PyQt6.QtCore import pyqtSignal, QSignalBlocker
+from PyQt6.QtCore import pyqtSignal, QSignalBlocker, QTimer, Qt
 from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -10,21 +10,40 @@ from PyQt6.QtWidgets import (
     QSpinBox,
 )
 
+from experiment.session import ExperimentSessionMaker
 from sequence.runtime import Shot
+from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
 from .single_shot_viewer import SingleShotViewer
 from .single_shot_widget_ui import Ui_SingleShotWidget
 
 
 class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     def __init__(
-        self, viewers: Mapping[str, SingleShotViewer], parent: Optional[QWidget] = None
+        self,
+        viewers: Mapping[str, SingleShotViewer],
+        experiment_session_maker: ExperimentSessionMaker,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent=parent)
+        self._model = SequenceHierarchyModel(experiment_session_maker)
         self._setup_ui(viewers)
+        self._experiment_session_maker = experiment_session_maker
 
     def _setup_ui(self, viewers: Mapping[str, SingleShotViewer]) -> None:
         self.setupUi(self)
         self.setWindowTitle("Single Shot Viewer")
+        self._sequence_hierarchy_view.setModel(self._model)
+        self._sequence_hierarchy_view.setItemDelegateForColumn(
+            1, SequenceHierarchyDelegate()
+        )
+        self._sequence_hierarchy_dock.setTitleBarWidget(QWidget())
+
+        # refresh the view to update the info in real time
+        self.view_update_timer = QTimer(self)
+        self.view_update_timer.timeout.connect(self._sequence_hierarchy_view.update)
+        self.view_update_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self.view_update_timer.start(500)
+
         self._shot_selector = ShotSelector()
 
         for name, viewer in viewers.items():

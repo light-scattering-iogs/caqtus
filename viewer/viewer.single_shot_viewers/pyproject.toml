@@ -20,6 +20,7 @@ image-types = {path = "../../common/types/image_types", develop = true}
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
 qabc = {path = "../../common/widgets/qabc", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
+sequence-hierarchy = {path = "../../common/widgets/sequence_hierarchy", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

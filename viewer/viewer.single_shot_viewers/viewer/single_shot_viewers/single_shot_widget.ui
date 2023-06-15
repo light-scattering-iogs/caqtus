@@ -31,7 +31,7 @@
    </property>
    <widget class="QMenu" name="menuWindow">
     <property name="title">
-     <string>Window</string>
+     <string>Windows</string>
     </property>
     <addaction name="_action_cascade"/>
     <addaction name="_action_tile"/>
@@ -46,6 +46,21 @@
     <number>4</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents"/>
+  </widget>
+  <widget class="QDockWidget" name="_sequence_hierarchy_dock">
+   <property name="features">
+    <set>QDockWidget::NoDockWidgetFeatures</set>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QTreeView" name="_sequence_hierarchy_view"/>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <action name="_action_cascade">
    <property name="text">
