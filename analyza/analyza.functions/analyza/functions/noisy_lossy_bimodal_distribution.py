@@ -4,44 +4,84 @@ from scipy.special import gammainc
 from scipy.stats import norm, poisson, rv_continuous
 
 
+# noinspection NonAsciiCharacters
 class NoisyLossyBimodalDistribution:
     def __init__(self, max_photon_number: int):
         self._n = np.arange(0, max_photon_number)
         self._noisy_poisson = NoisyPoisson(max_photon_number)
         self._noisy_poisson_loss = NoisyPoissonLoss(max_photon_number)
 
-    def pdf(self, x: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
-        return (p0 * self.zero_atom_pdf(x, n0, p0, n1, p1, σ)
-                + (1 - p0 - p1) * self.loss_pdf(x, n0, p0, n1, p1, σ)
-                + p1 * self.one_atom_pdf(x, n0, p0, n1, p1, σ))
+    def pdf(self, x: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        p1 = 1 - p0
+        return (
+            self.zero_atom_weight(n0, p0, n1, p_loss, σ)
+            * self.zero_atom_pdf(x, n0, p0, n1, p1, σ)
+            + self.loss_weight(n0, p0, n1, p_loss, σ)
+            * self.loss_pdf(x, n0, p0, n1, p1, σ)
+            + self.one_atom_weight(n0, p0, n1, p_loss, σ)
+            * self.one_atom_pdf(x, n0, p0, n1, p1, σ)
+        )
 
-    def zero_atom_pdf(self, x: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
+    def zero_atom_pdf(
+        self, x: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
         return self._noisy_poisson._pdf(x, n0, σ)
 
-    def one_atom_pdf(self, x: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
+    @staticmethod
+    def zero_atom_weight(n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        return p0
+
+    @staticmethod
+    def loss_weight(n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        p1 = 1 - p0
+        return p1 * p_loss
+
+    @staticmethod
+    def one_atom_weight(n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        p1 = 1 - p0
+        return p1 * (1 - p_loss)
+
+    def one_atom_pdf(
+        self, x: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
         return self._noisy_poisson._pdf(x, n0 + n1, σ)
 
-    def loss_pdf(self, x: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
+    def loss_pdf(
+        self, x: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
         return self._noisy_poisson_loss._pdf(x, n0, n1, σ)
 
-    def fidelity(self, threshold: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
-        return (self.proba_no_detection_zero_atom(threshold, n0, p0, n1, p1, σ)
-                + self.proba_detection_one_atom(threshold, n0, p0, n1, p1, σ)
-                + self.proba_detection_loss(threshold, n0, p0, n1, p1, σ))
+    def fidelity(
+        self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
+        return (
+            self.proba_no_detection_zero_atom(threshold, n0, p0, n1, p_loss, σ)
+            + self.proba_detection_one_atom(threshold, n0, p0, n1, p_loss, σ)
+            + self.proba_detection_loss(threshold, n0, p0, n1, p_loss, σ)
+        )
 
-    def proba_no_detection_zero_atom(self, threshold: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
+    def proba_no_detection_zero_atom(
+        self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
         return p0 * self._noisy_poisson.cdf(threshold, n0, σ)
 
-    def proba_detection_one_atom(self, threshold: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
-        return p1 * (1 - self._noisy_poisson.cdf(threshold, n0 + n1, σ))
+    def proba_detection_one_atom(
+        self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
+        p1 = 1 - p0
+        return p1 * (1 - p_loss) * (1 - self._noisy_poisson.cdf(threshold, n0 + n1, σ))
 
-    def proba_detection_loss(self, threshold: ArrayLike, n0: int, p0: float, n1: int, p1: int, σ: float):
-        return (1 - p0 - p1) * (1 - self._noisy_poisson_loss.cdf(threshold, n0, n1, σ))
+    def proba_detection_loss(
+        self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
+        p1 = 1 - p0
+        return p1 * p_loss * (1 - self._noisy_poisson_loss.cdf(threshold, n0, n1, σ))
 
     def _convolve_with_gaussian(self, x: ArrayLike, P, σ: float):
         return sum(p_n * norm.pdf(x, loc=n, scale=σ) for p_n, n in zip(P, self._n))
 
 
+# noinspection NonAsciiCharacters
 class NoisyPoisson(rv_continuous):
     def __init__(self, n_max: int):
         self._n = np.arange(0, n_max)
@@ -59,6 +99,7 @@ class NoisyPoisson(rv_continuous):
         return sum(p_n * norm.cdf(x, loc=n, scale=σ) for p_n, n in zip(P, self._n))
 
 
+# noinspection NonAsciiCharacters
 class NoisyPoissonLoss(rv_continuous):
     def __init__(self, n_max: int):
         self._n = np.arange(0, n_max)
