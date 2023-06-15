@@ -26,7 +26,6 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self.setupUi(self)
         self.setWindowTitle("Single Shot Viewer")
         self._shot_selector = ShotSelector()
-        self._viewers = viewers
 
         for name, viewer in viewers.items():
             subwindow = self._mdi_area.addSubWindow(viewer)
@@ -44,7 +43,8 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self._update_viewers(self._shot_selector.get_selected_shot())
 
     def _update_viewers(self, shot) -> None:
-        for viewer in self._viewers.values():
+        for subwindow in self._mdi_area.subWindowList():
+            viewer: SingleShotViewer = subwindow.widget()
             viewer.set_shot(shot)
 
 
