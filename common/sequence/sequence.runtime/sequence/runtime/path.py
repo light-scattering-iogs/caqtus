@@ -1,7 +1,8 @@
+import datetime
 import re
 from typing import Self
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from sqlalchemy_utils import Ltree
 
@@ -130,17 +131,35 @@ class SequencePath:
         return self._path == ""
 
     def has_children(self, experiment_session: ExperimentSession) -> int:
-        return bool(self.child_count(experiment_session))
+        return bool(self.get_child_count(experiment_session))
 
-    def child_count(self, experiment_session: ExperimentSession) -> int:
+    def get_child_count(self, experiment_session: ExperimentSession) -> int:
         return len(self.get_children(experiment_session))
 
-    def get_children(self, experiment_session: ExperimentSession):
+    def get_children(
+        self, experiment_session: ExperimentSession
+    ) -> set["SequencePath"]:
         session = experiment_session.get_sql_session()
-        path = self._query_model(session)
-        if path.sequence:
-            raise RuntimeError("Cannot check children of a sequence")
-        return [SequencePath(str(child.path)) for child in path.children]
+
+        if self.is_root():
+            query_children = (
+                session.query(SequencePathModel)
+                .filter(func.nlevel(SequencePathModel.path) == 1)
+                .order_by(SequencePathModel.creation_date)
+            )
+            children = session.scalars(query_children)
+        else:
+            path = self._query_model(session)
+            if path.sequence:
+                raise RuntimeError("Cannot check children of a sequence")
+            # noinspection PyUnresolvedReferences
+            children = path.children
+        return set(SequencePath(str(child.path)) for child in children)
+
+    def get_creation_date(
+        self, experiment_session: ExperimentSession
+    ) -> datetime.datetime:
+        return self._query_model(experiment_session.get_sql_session()).creation_date
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
         ancestors = self._path.split(_PATH_SEPARATOR)
@@ -209,7 +228,9 @@ class SequencePath:
             raise PathNotFoundError(f"Could not find path '{self._path}' in database")
 
     @classmethod
-    def query_path_models(cls, paths: list[Self], session: ExperimentSession) -> list[SequencePathModel]:
+    def query_path_models(
+        cls, paths: list[Self], session: ExperimentSession
+    ) -> list[SequencePathModel]:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path.in_([Ltree(path._path) for path in paths])
         )

@@ -5,22 +5,20 @@ from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
-from sqlalchemy import func
 
 from concurrent_updater import ConcurrentUpdater
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence, State, SequenceStats
-from sql_model import SequencePathModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 class SequenceHierarchyModel(QAbstractItemModel):
-    """Tree model for sequence hierarchy.
+    """Tree model used to display the sequences contained in a session.
 
-    This model stores an in-memory representation of the database sequence structure.
+    This model keep an in memory representation of the sequences hierarchy and update it in a background thread.
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
@@ -32,7 +30,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         with self._session as session:
             self._root = SequenceHierarchyItem(
                 SequencePath.root(),
-                children=_build_children(SequencePath.root(), session),
+                children=_build_children_items(SequencePath.root(), session),
                 row=0,
                 is_sequence=False,
             )
@@ -182,7 +180,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return
 
         with self._session as session:
-            children = _build_children(
+            children = _build_children_items(
                 parent_item.sequence_path,
                 session,
             )
@@ -379,36 +377,29 @@ class SequenceHierarchyItem(NodeMixin):
             return sequences
 
 
-def _build_children(
+def _build_children_items(
     parent: SequencePath, experiment_session: ExperimentSession
 ) -> list[SequenceHierarchyItem]:
+    """Build children items for a parent path.
 
-    session = experiment_session.get_sql_session()
+    Args:
+        parent: Parent path to get the children of.
+        experiment_session: Activated experiment session in which to query.
+    """
 
-    children_items = []
-
-    if parent.is_root():
-        query_children = (
-            session.query(SequencePathModel)
-            .filter(func.nlevel(SequencePathModel.path) == 1)
-            .order_by(SequencePathModel.creation_date)
+    children = parent.get_children(experiment_session)
+    sorted_children = sorted(
+        children, key=lambda x: x.get_creation_date(experiment_session)
+    )
+    children_items = [
+        SequenceHierarchyItem(
+            child,
+            row=row,
+            is_sequence=child.is_sequence(experiment_session),
         )
-        children = session.scalars(query_children)
-    else:
-        # noinspection PyProtectedMember
-        path = parent._query_model(session)
-        children = path.children
-        children.sort(key=lambda x: x.creation_date)
+        for row, child in enumerate(sorted_children)
+    ]
 
-    for child in children:
-        child: SequencePathModel
-        children_items.append(
-            SequenceHierarchyItem(
-                SequencePath(str(child.path)),
-                row=len(children_items),
-                is_sequence=child.is_sequence(),
-            )
-        )
     return children_items
 
 
