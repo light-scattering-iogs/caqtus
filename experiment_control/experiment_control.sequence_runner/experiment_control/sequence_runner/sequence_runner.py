@@ -128,7 +128,7 @@ class SequenceRunnerThread(Thread):
         # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
         # computed, and consumed when the shots are executed.
         self._shot_parameter_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
-            maxsize=10
+            maxsize=4
         )
         self._shot_storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
             maxsize=10
