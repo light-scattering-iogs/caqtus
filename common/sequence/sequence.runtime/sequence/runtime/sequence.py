@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, TypedDict, Self
+from typing import Optional, Any, TypedDict, Self, Iterable
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -69,7 +69,13 @@ class Sequence:
         return sequence_sql.creation_date
 
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
-        """Return the configuration of the sequence."""
+        """Return the configuration of the sequence.
+
+        Args:
+            experiment_session: The active experiment session from which to get the configuration.
+        Raises:
+            SequenceNotFoundError: If the sequence does not exist in the session.
+        """
 
         yaml = self._query_model(
             experiment_session.get_sql_session()
@@ -193,7 +199,7 @@ class Sequence:
         sequence_config: SequenceConfig,
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
-    ) -> "Sequence":
+    ) -> Self:
         if not isinstance(sequence_config, SequenceConfig):
             raise TypeError(
                 f"Type of sequence_config {type(sequence_config)} is not SequenceConfig"
@@ -247,7 +253,7 @@ class Sequence:
 
     @classmethod
     def query_sequence_stats(
-        cls, sequences: list[Self], experiment_session: ExperimentSession
+        cls, sequences: Iterable[Self], experiment_session: ExperimentSession
     ) -> dict[SequencePath, "SequenceStats"]:
         session = experiment_session.get_sql_session()
         paths = SequencePath.query_path_models(
