@@ -18,6 +18,13 @@ class SequenceNotEditableError(Exception):
 
 
 class Sequence:
+    """Contains the runtime information and data of a sequence.
+
+    Only methods that take an ExperimentSession argument actually connect to the permanent storage of the experiment.
+    Such methods can raise SequenceNotFoundError if the sequence does not exist in the session. They are also expected
+    to be comparatively slow since they require a file system access, possibly over the network.
+    """
+
     def __init__(self, path: SequencePath | str):
         if isinstance(path, SequencePath):
             self._path = path
@@ -36,14 +43,34 @@ class Sequence:
         return self._path
 
     def exists(self, experiment_session: ExperimentSession) -> bool:
-        return self._query_model(experiment_session.get_sql_session()) is not None
+        """Check if the sequence exists.
+
+        Args:
+            experiment_session: The active experiment session in which to check for the sequence.
+        """
+
+        try:
+            self._query_model(experiment_session.get_sql_session())
+            return True
+        except SequenceNotFoundError:
+            return False
 
     def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
+        """Get the creation date of the sequence.
+
+        Args:
+            experiment_session: The active experiment session from which to get the creation date.
+        Raises:
+            SequenceNotFoundError: If the sequence does not exist in the session.
+        """
+
         sequence_sql = self._query_model(experiment_session.get_sql_session())
         # noinspection PyTypeChecker
         return sequence_sql.creation_date
 
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
+        """Return the configuration of the sequence."""
+
         yaml = self._query_model(
             experiment_session.get_sql_session()
         ).config.sequence_config_yaml
@@ -188,7 +215,7 @@ class Sequence:
         sequence = cls(path)
         return sequence
 
-    def _query_model(self, session: Optional[Session]) -> SequenceModel:
+    def _query_model(self, session: Session) -> SequenceModel:
         try:
             # noinspection PyProtectedMember
             path = self._path._query_model(session)
