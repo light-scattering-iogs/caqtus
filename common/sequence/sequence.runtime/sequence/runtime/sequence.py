@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, TypedDict, Self, Iterable, Mapping
+from typing import Optional, TypedDict, Self, Iterable, Mapping
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,9 +8,11 @@ from data_types import Data, is_data
 from device.name import DeviceName, is_device_name
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
+from parameter_types import Parameter, is_parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sql_model import SequenceModel, ShotModel, State, DataType
 from sql_model.sequence_state import InvalidSequenceStateError
+from variable.name import DottedVariableName
 from .path import SequencePath, PathNotFoundError
 from .shot import Shot
 
@@ -177,21 +179,10 @@ class Sequence:
         name: str,
         start_time: datetime,
         end_time: datetime,
-        parameters: dict[str, Any],
+        parameters: Mapping[DottedVariableName, Parameter],
         measures: Mapping[DeviceName, Data],
         experiment_session: ExperimentSession,
     ) -> Shot:
-        measures = dict(measures)
-        for device_name, data in measures.items():
-            if not is_device_name(device_name):
-                raise TypeError(
-                    f"Expected instance of <DeviceName> for device name, got {type(device_name)}"
-                )
-            if not is_data(data):
-                raise TypeError(
-                    f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
-                )
-
         if self.get_state(experiment_session) != State.RUNNING:
             raise InvalidSequenceStateError(
                 f"Can't create a shot unless the sequence is running"
@@ -199,8 +190,8 @@ class Sequence:
         session = experiment_session.get_sql_session()
         sequence = self._query_model(session)
         shot = ShotModel.create_shot(sequence, name, start_time, end_time, session)
-        shot.add_data(parameters, DataType.PARAMETER, session)
-        shot.add_data(measures, DataType.MEASURE, session)
+        shot.add_data(transform_parameters(parameters), DataType.PARAMETER, session)
+        shot.add_data(transform_measures(measures), DataType.MEASURE, session)
         sequence.increment_number_completed_shots()
         session.flush()
         return Shot(self, shot.name, shot.index)
@@ -319,3 +310,35 @@ class SequenceStats(TypedDict):
 
 class SequenceNotFoundError(Exception):
     pass
+
+
+def transform_parameters(
+    parameters: Mapping[DottedVariableName, Parameter]
+) -> dict[str, Parameter]:
+    result = {}
+    for dotted_name, parameter in parameters.items():
+        if not isinstance(dotted_name, DottedVariableName):
+            raise TypeError(
+                f"Expected instance of <DottedVariableName> for parameter name, got {type(dotted_name)}"
+            )
+        if not is_parameter(parameter):
+            raise TypeError(
+                f"Expected instance of <Parameter> for parameter '{dotted_name}', got {type(parameter)}"
+            )
+        result[str(dotted_name)] = parameter
+    return result
+
+
+def transform_measures(measures: Mapping[DeviceName, Data]) -> dict[DeviceName, Data]:
+    result = {}
+    for device_name, data in measures.items():
+        if not is_device_name(device_name):
+            raise TypeError(
+                f"Expected instance of <DeviceName> for device name, got {type(device_name)}"
+            )
+        if not is_data(data):
+            raise TypeError(
+                f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
+            )
+        result[DeviceName(device_name)] = data
+    return result

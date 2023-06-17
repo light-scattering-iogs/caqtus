@@ -18,6 +18,8 @@ experiment-session = {path = "../../experiment/experiment.session", develop = tr
 sql-model = {path = "../../sql_model", develop = true}
 device-name = {path = "../../../devices/device/device.name", develop = true}
 data-types = {path = "../../types/data_types", develop = true}
+variable-name = {path = "../../variable/variable.name", develop = true}
+parameter-types = {path = "../../types/parameter_types", develop = true}
 
 
 [tool.poetry.group.test.dependencies]

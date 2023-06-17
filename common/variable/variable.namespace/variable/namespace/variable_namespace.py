@@ -3,7 +3,7 @@ from typing import Optional, Self, Generic, TypeVar
 
 from benedict import benedict  # type: ignore
 
-from variable.name import DottedVariableName, VariableName
+from variable.name import DottedVariableName
 
 T = TypeVar("T")
 
@@ -19,8 +19,11 @@ class VariableNamespace(Generic[T]):
         for key, value in values.items():
             self._dict[str(key)] = value
 
-    def to_dict(self) -> dict[VariableName, T]:
-        return {VariableName(name): value for name, value in self._dict.items()}
+    def to_flat_dict(self) -> dict[DottedVariableName, T]:
+        return {
+            DottedVariableName(name.replace("$", ".")): value
+            for name, value in self._dict.flatten(separator="$").items()
+        }
 
     def __getitem__(self, item: DottedVariableName) -> T:
         return self._dict[str(item)]
@@ -41,4 +44,3 @@ class VariableNamespace(Generic[T]):
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._dict})"
-

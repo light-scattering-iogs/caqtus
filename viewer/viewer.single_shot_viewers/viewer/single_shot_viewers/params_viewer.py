@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QWidget, QTableView, QVBoxLayout
 
 from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSession, get_standard_experiment_session
-from parameter_types import ParameterType
+from parameter_types import Parameter
 from sequence.runtime import Shot
 from .single_shot_viewer import SingleShotViewer
 
@@ -18,7 +18,7 @@ class ParamsViewer(SingleShotViewer):
     def __init__(
         self,
         *,
-        importer: ShotImporter[Mapping[ParameterName, ParameterType]],
+        importer: ShotImporter[Mapping[ParameterName, Parameter]],
         session: Optional[ExperimentSession] = None,
         parent: Optional[QWidget] = None,
     ):
@@ -51,7 +51,7 @@ class ParamsModel(QAbstractTableModel):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
 
-        self._params: dict[ParameterName, ParameterType] = {}
+        self._params: dict[ParameterName, Parameter] = {}
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._params)
@@ -67,7 +67,7 @@ class ParamsModel(QAbstractTableModel):
                 return str(list(self._params.values())[index.row()])
         return None
 
-    def set_params(self, params: Mapping[ParameterName, ParameterType]) -> None:
+    def set_params(self, params: Mapping[ParameterName, Parameter]) -> None:
         keys_values = zip(params.keys(), params.values())
         params = dict(sorted(keys_values, key=lambda x: x[0]))
         self.beginResetModel()

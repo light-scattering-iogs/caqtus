@@ -590,8 +590,8 @@ class SequenceRunnerThread(Thread):
     ) -> Shot:
         with self._save_session as session:
             params = {
-                str(name): value
-                for name, value in shot_data.variables.to_dict().items()
+                name: value
+                for name, value in shot_data.variables.to_flat_dict().items()
             }
             return self._sequence.create_shot(
                 name=shot_data.shot_name,
