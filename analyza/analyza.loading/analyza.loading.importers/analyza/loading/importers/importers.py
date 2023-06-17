@@ -9,6 +9,7 @@ from typing import (
 from data_types import Data
 from device.configuration import DeviceName
 from experiment.session import ExperimentSession
+from image_type import is_image
 from image_types import Image
 from parameter_types import Parameter
 from sequence.runtime import Shot
@@ -29,7 +30,12 @@ class ImageImporter(ShotImporter[Image]):
         self.image_name = image_name
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
-        return _import_measures(shot, session)[f"{self.camera_name}.{self.image_name}"]
+        value = _import_measures(shot, session)[f"{self.camera_name}.{self.image_name}"]
+        if not is_image(value):
+            raise TypeError(
+                f"Expected image for {self.camera_name}.{self.image_name}, got {type(value)}"
+            )
+        return value
 
 
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Parameter]:
