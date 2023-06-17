@@ -130,6 +130,8 @@ class SequenceRunnerThread(Thread):
         self._shot_parameter_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
             maxsize=4
         )
+
+        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
         self._shot_storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
             maxsize=10
         )
