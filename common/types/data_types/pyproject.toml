@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "data-types"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "data_types"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+numpy = "^1.25.0"
+
+image-types = {path = "../image_types", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
