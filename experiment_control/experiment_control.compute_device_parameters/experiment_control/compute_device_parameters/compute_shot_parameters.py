@@ -27,7 +27,7 @@ from spincore_sequencer.runtime import (
     Loop,
     Stop,
 )
-from units import ureg, Quantity, units, dimensionless
+from units import ureg, Quantity, units, dimensionless, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 
@@ -159,13 +159,13 @@ def evaluate_step_durations(
         try:
             duration = expression.evaluate(context | units)
         except Exception as error:
-            raise ValueError(
+            raise ShotEvaluationError(
                 f"Error evaluating duration '{expression.body}' of step '{name}'"
             ) from error
         try:
             seconds = duration.to("s").magnitude
         except Exception as error:
-            raise ValueError(
+            raise ShotEvaluationError(
                 f"Duration '{expression.body}' of step '{name}' is not a duration (got {duration})"
             ) from error
         durations.append(float(seconds))
@@ -179,7 +179,7 @@ def verify_step_durations(
     min_timestep = get_minimum_allowed_timestep(experiment_config)
     for step in steps:
         if step.duration < min_timestep:
-            raise TimingError(
+            raise ShotEvaluationError(
                 f"Duration of step '{step.name}' ({(step.duration * ureg.s).to('ns')})"
                 " is too short"
             )
@@ -194,10 +194,6 @@ def get_minimum_allowed_timestep(
             SpincoreSequencerConfiguration
         ).values()
     )
-
-
-class TimingError(ValueError):
-    pass
 
 
 def compute_camera_instructions(
@@ -319,9 +315,13 @@ def get_analog_timestep(experiment_config: ExperimentConfig) -> float:
         experiment_config.get_device_configs(NI6738SequencerConfiguration).values()
     )
     if len(ni6738_configs) == 0:
-        raise ValueError("No NI6738 sequencer configuration found")
+        raise ShotEvaluationError("Cannot determine analog timestep") from ValueError(
+            "No NI6738 sequencer configuration found"
+        )
     if len(ni6738_configs) > 1:
-        raise ValueError("Multiple NI6738 sequencer configurations found")
+        raise ShotEvaluationError("Cannot determine analog timestep") from ValueError(
+            "Multiple NI6738 sequencer configurations found"
+        )
     return ni6738_configs[0].time_step
 
 
@@ -330,9 +330,13 @@ def get_digital_time_step(experiment_config: ExperimentConfig) -> float:
         experiment_config.get_device_configs(SpincoreSequencerConfiguration).values()
     )
     if len(spincore_configs) == 0:
-        raise ValueError("No Spincore sequencer configuration found")
+        raise ShotEvaluationError("Cannot determine digital timestep") from ValueError(
+            "No Spincore sequencer configuration found"
+        )
     if len(spincore_configs) > 1:
-        raise ValueError("Multiple Spincore sequencer configurations found")
+        raise ShotEvaluationError("Cannot determine digital timestep") from ValueError(
+            "Multiple Spincore sequencer configurations found"
+        )
     return spincore_configs[0].time_step
 
 
@@ -424,10 +428,16 @@ def evaluate_lane_expressions(
                     cell_value, step.analog_times, context, lane
                 )
             except Exception as error:
-                raise RuntimeError(
+                raise ShotEvaluationError(
                     f"Cannot evaluate expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}'"
                 ) from error
-            result.append(values.to(lane.units))
+            try:
+                values_in_lane_units = values.to(lane.units)
+            except DimensionalityError as error:
+                raise ShotEvaluationError(
+                    f"Cannot convert expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}' to {lane.units}"
+                ) from error
+            result.append(values_in_lane_units)
         elif isinstance(cell_value, LinearRamp):
             initial_index = lane.start_index(step_index) - 1
             initial_expression = lane.get_effective_value(initial_index)
@@ -506,3 +516,7 @@ def get_camera_channels(
         name: spincore_config.get_channel_index(ChannelSpecialPurpose(purpose=name))
         for name in camera_names
     }
+
+
+class ShotEvaluationError(Exception):
+    pass
