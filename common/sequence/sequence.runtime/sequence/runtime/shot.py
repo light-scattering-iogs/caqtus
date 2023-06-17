@@ -4,6 +4,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from data_types import Data
+from device.name import DeviceName
 from experiment.session import ExperimentSession
 from sql_model import ShotModel, DataType
 
@@ -29,7 +31,7 @@ class Shot:
             f" index={self._index})"
         )
 
-    def get_measures(self, experiment_session: ExperimentSession):
+    def get_measures(self, experiment_session: ExperimentSession) -> dict[DeviceName, Data]:
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.MEASURE, session)

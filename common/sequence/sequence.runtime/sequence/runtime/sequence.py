@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any, TypedDict, Self, Iterable
+from typing import Optional, Any, TypedDict, Self, Iterable, Mapping
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -178,9 +178,10 @@ class Sequence:
         start_time: datetime,
         end_time: datetime,
         parameters: dict[str, Any],
-        measures: dict[DeviceName, Data],
+        measures: Mapping[DeviceName, Data],
         experiment_session: ExperimentSession,
     ) -> Shot:
+        measures = dict(measures)
         for device_name, data in measures.items():
             if not is_device_name(device_name):
                 raise TypeError(
