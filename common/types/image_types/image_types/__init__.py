@@ -1,3 +1,3 @@
-from .image_type import Image
+from .image_type import Image, is_image
 
-__all__ = ["Image"]
+__all__ = ["Image", "is_image"]
