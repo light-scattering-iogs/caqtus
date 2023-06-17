@@ -9,8 +9,7 @@ from typing import (
 from data_types import Data
 from device.configuration import DeviceName
 from experiment.session import ExperimentSession
-from image_type import is_image
-from image_types import Image
+from image_types import Image, is_image
 from parameter_types import Parameter
 from sequence.runtime import Shot
 from .chainable_function import ChainableFunction
