@@ -29,7 +29,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self._stats_update_session = session_maker()
 
         with self._session as session:
-            self._root = SequenceHierarchyItem(
+            self._root = _SequenceHierarchyItem(
                 SequencePath.root(),
                 children=_build_children_items(SequencePath.root(), session),
                 row=0,
@@ -56,7 +56,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         elif not parent.isValid():
             return self.createIndex(row, column, self._root.children[row])
         else:
-            parent_item: SequenceHierarchyItem = parent.internalPointer()
+            parent_item: _SequenceHierarchyItem = parent.internalPointer()
             if row < len(parent_item.children):
                 return self.createIndex(row, column, parent_item.children[row])
             else:
@@ -66,7 +66,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if not child.isValid():
             return QModelIndex()
 
-        child_item: SequenceHierarchyItem = child.internalPointer()
+        child_item: _SequenceHierarchyItem = child.internalPointer()
         if child_item.is_root:
             return QModelIndex()
         else:
@@ -86,7 +86,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return
-        item: SequenceHierarchyItem = index.internalPointer()
+        item: _SequenceHierarchyItem = index.internalPointer()
         stats = item.sequence_stats
 
         if role == Qt.ItemDataRole.DisplayRole:
@@ -155,11 +155,11 @@ class SequenceHierarchyModel(QAbstractItemModel):
         return None
 
     @staticmethod
-    def get_sequence_name(item: "SequenceHierarchyItem"):
+    def get_sequence_name(item: "_SequenceHierarchyItem"):
         return item.sequence_path.name
 
     def get_sequence_stats(self, index: QModelIndex) -> Optional["SequenceStats"]:
-        item: "SequenceHierarchyItem" = index.internalPointer()
+        item: "_SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
             with self._session as experiment_session:
                 return Sequence(item.sequence_path).get_stats(experiment_session)
@@ -176,14 +176,14 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if not parent.isValid():
             return False
         else:
-            parent_item: SequenceHierarchyItem = parent.internalPointer()
+            parent_item: _SequenceHierarchyItem = parent.internalPointer()
             return parent_item.is_folder() and len(parent_item.children) == 0
 
     def fetchMore(self, parent: QModelIndex) -> None:
         if not parent.isValid():
             return
 
-        parent_item: SequenceHierarchyItem = parent.internalPointer()
+        parent_item: _SequenceHierarchyItem = parent.internalPointer()
 
         if parent_item.is_sequence:
             return
@@ -199,7 +199,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self.endInsertRows()
 
     def is_sequence(self, index: QModelIndex) -> bool:
-        item: "SequenceHierarchyItem" = index.internalPointer()
+        item: "_SequenceHierarchyItem" = index.internalPointer()
         with self._session.activate() as session:
             return item.sequence_path.is_sequence(session)
 
@@ -208,7 +208,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
         if not index.isValid():
             return None
         else:
-            item: "SequenceHierarchyItem" = index.internalPointer()
+            item: "_SequenceHierarchyItem" = index.internalPointer()
             return item.sequence_path
 
 
@@ -220,7 +220,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
 
     def create_new_folder(self, parent: QModelIndex, name: str):
         if parent.isValid():
-            parent_item: "SequenceHierarchyItem" = parent.internalPointer()
+            parent_item: "_SequenceHierarchyItem" = parent.internalPointer()
         else:
             parent_item = self._root
         new_path = parent_item.sequence_path / name
@@ -228,7 +228,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
         children = list(parent_item.children)
         new_row = len(children)
         children.append(
-            SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
+            _SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
         with self._session.activate() as session:
             number_created_paths = len(new_path.create(session))
@@ -252,7 +252,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
         """Attempt to create a new sequence with the given name under the given parent."""
 
         if parent_index.isValid():
-            parent_item: "SequenceHierarchyItem" = parent_index.internalPointer()
+            parent_item: "_SequenceHierarchyItem" = parent_index.internalPointer()
         else:
             parent_item = self._root
         new_path = parent_item.sequence_path / name
@@ -266,7 +266,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
-                new_child = SequenceHierarchyItem(
+                new_child = _SequenceHierarchyItem(
                     path=new_path,
                     is_sequence=True,
                     row=new_row,
@@ -313,7 +313,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             return
         parent_index = index.parent()
         if parent_index.isValid():
-            parent_item: "SequenceHierarchyItem" = parent_index.internalPointer()
+            parent_item: "_SequenceHierarchyItem" = parent_index.internalPointer()
         else:
             parent_item = self._root.children[index.row()]
         if parent_item.is_folder():  # should always be?
@@ -321,7 +321,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             new_children = list(parent_item.children)
             new_children.pop(row)
             with self._session as session:
-                item: "SequenceHierarchyItem" = index.internalPointer()
+                item: "_SequenceHierarchyItem" = index.internalPointer()
                 if (
                     item.is_folder()
                 ):  # don't want to risk deleting a folder containing many sequences
@@ -335,7 +335,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
     def revert_to_draft(self, index: QModelIndex):
         if not index.isValid():
             return
-        item: "SequenceHierarchyItem" = index.internalPointer()
+        item: "_SequenceHierarchyItem" = index.internalPointer()
         if item.is_sequence:
             sequence = Sequence(item.sequence_path)
             with self._session as session:
@@ -343,7 +343,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             self.dataChanged.emit(index, index)
 
 
-class SequenceHierarchyItem(NodeMixin):
+class _SequenceHierarchyItem(NodeMixin):
     """Item in the sequence hierarchy model.
 
     This class represents a single item in the sequence hierarchy model.
@@ -393,7 +393,7 @@ class SequenceHierarchyItem(NodeMixin):
 
 def _build_children_items(
     parent: SequencePath, experiment_session: ExperimentSession
-) -> list[SequenceHierarchyItem]:
+) -> list[_SequenceHierarchyItem]:
     """Build children items for a parent path.
 
     Args:
@@ -406,7 +406,7 @@ def _build_children_items(
         children, key=lambda x: x.get_creation_date(experiment_session)
     )
     children_items = [
-        SequenceHierarchyItem(
+        _SequenceHierarchyItem(
             child,
             row=row,
             is_sequence=child.is_sequence(experiment_session),
@@ -443,14 +443,14 @@ def _format_seconds(seconds: float) -> str:
     return ":".join(reversed(result))
 
 
-def _update_stats(item: SequenceHierarchyItem, session: ExperimentSession):
+def _update_stats(item: _SequenceHierarchyItem, session: ExperimentSession):
     """Update the stats for a sequence hierarchy item."""
 
     stats = Sequence.query_sequence_stats(item.list_sequences(), session)
     _apply_stats(item, stats)
 
 
-def _apply_stats(item: SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]):
+def _apply_stats(item: _SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]):
     """Apply stats to a sequence hierarchy item."""
 
     if item.is_sequence:
