@@ -4,10 +4,12 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from data_types import Data
+from data_types import Data, DataLabel
 from device.name import DeviceName
 from experiment.session import ExperimentSession
+from parameter_types import Parameter
 from sql_model import ShotModel, DataType
+from variable.name import DottedVariableName
 
 if typing.TYPE_CHECKING:
     from .sequence import Sequence
@@ -31,22 +33,31 @@ class Shot:
             f" index={self._index})"
         )
 
-    def get_measures(self, experiment_session: ExperimentSession) -> dict[DeviceName, Data]:
+    def get_measures(
+        self, experiment_session: ExperimentSession
+    ) -> dict[DeviceName, dict[DataLabel, Data]]:
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.MEASURE, session)
 
-    def get_parameters(self, experiment_session: ExperimentSession):
+    def get_parameters(
+        self, experiment_session: ExperimentSession
+    ) -> dict[DottedVariableName, Parameter]:
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
-        return shot_sql.get_data(DataType.PARAMETER, session)
+        result = shot_sql.get_data(DataType.PARAMETER, session)
+        return {
+            DottedVariableName(name): parameter for name, parameter in result.items()
+        }
 
     def get_scores(self, experiment_session: ExperimentSession):
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         return shot_sql.get_data(DataType.SCORE, session)
 
-    def add_scores(self, score: dict[str, float], experiment_session: ExperimentSession):
+    def add_scores(
+        self, score: dict[str, float], experiment_session: ExperimentSession
+    ):
         session = experiment_session.get_sql_session()
         shot_sql = self._query_model(session)
         shot_sql.add_data(score, DataType.SCORE, session)

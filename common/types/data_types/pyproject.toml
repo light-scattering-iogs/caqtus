@@ -11,7 +11,6 @@ python = "^3.10"
 
 numpy = "^1.25.0"
 
-image-types = {path = "../image_types", develop = true}
 
 
 [build-system]

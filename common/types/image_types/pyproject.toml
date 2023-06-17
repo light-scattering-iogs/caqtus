@@ -9,6 +9,7 @@ packages = [{include = "image_types"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.24.3"
+data-types = {path = "../data_types", develop = true}
 
 
 [build-system]

@@ -4,7 +4,7 @@ from typing import Optional, TypedDict, Self, Iterable, Mapping
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from data_types import Data, is_data
+from data_types import Data, DataLabel, is_data_label, is_data
 from device.name import DeviceName, is_device_name
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
@@ -180,7 +180,7 @@ class Sequence:
         start_time: datetime,
         end_time: datetime,
         parameters: Mapping[DottedVariableName, Parameter],
-        measures: Mapping[DeviceName, Data],
+        measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
         experiment_session: ExperimentSession,
     ) -> Shot:
         if self.get_state(experiment_session) != State.RUNNING:
@@ -329,16 +329,25 @@ def transform_parameters(
     return result
 
 
-def transform_measures(measures: Mapping[DeviceName, Data]) -> dict[DeviceName, Data]:
+def transform_measures(
+    measures: Mapping[DeviceName, Mapping[DataLabel, Data]]
+) -> dict[DeviceName, dict[DataLabel, Data]]:
     result = {}
-    for device_name, data in measures.items():
+    for device_name, data_group in measures.items():
         if not is_device_name(device_name):
             raise TypeError(
                 f"Expected instance of <DeviceName> for device name, got {type(device_name)}"
             )
-        if not is_data(data):
-            raise TypeError(
-                f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
-            )
-        result[DeviceName(device_name)] = data
+        new_group = {}
+        for label, data in data_group.items():
+            if not is_data_label(label):
+                raise TypeError(
+                    f"Expected instance of <DataLabel> for data label, got {type(label)}"
+                )
+            if not is_data(data):
+                raise TypeError(
+                    f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
+                )
+            new_group[DataLabel(label)] = data
+        result[DeviceName(device_name)] = new_group
     return result

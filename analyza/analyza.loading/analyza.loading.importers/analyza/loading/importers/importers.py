@@ -6,9 +6,11 @@ from typing import (
     TypedDict,
 )
 
+from data_types import Data
 from device.configuration import DeviceName
 from experiment.session import ExperimentSession
 from image_types import Image
+from parameter_types import Parameter
 from sequence.runtime import Shot
 from .chainable_function import ChainableFunction
 from .shot_importer import ShotImporter
@@ -27,13 +29,13 @@ class ImageImporter(ShotImporter[Image]):
         self.image_name = image_name
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
-        return _import_measures(shot, session)[
-            f"{self.camera_name}.{self.image_name}"
-        ]
+        return _import_measures(shot, session)[f"{self.camera_name}.{self.image_name}"]
 
 
-def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
-    return shot.get_parameters(session)
+def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Parameter]:
+    return {
+        str(name): parameter for name, parameter in shot.get_parameters(session).items()
+    }
 
 
 def _import_scores(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
@@ -41,11 +43,11 @@ def _import_scores(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
     return {f"{key}.score": value for key, value in scores.items()}
 
 
-def _import_measures(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
+def _import_measures(shot: Shot, session: ExperimentSession) -> dict[str, Data]:
     result = {}
     data = shot.get_measures(session)
-    for device, device_date in data.items():
-        for key, value in device_date.items():
+    for device, device_data in data.items():
+        for key, value in device_data.items():
             result[f"{device}.{key}"] = value
     return result
 

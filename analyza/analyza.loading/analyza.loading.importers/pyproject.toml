@@ -15,6 +15,10 @@ experiment-session = {path = "../../../common/experiment/experiment.session", de
 sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
 device-config = {path = "../../../devices/device/device.configuration", develop = true}
 image-types = {path = "../../../common/types/image_types", develop = true}
+variable-name = {path = "../../../common/variable/variable.name", develop = true}
+data-types = {path = "../../../common/types/data_types", develop = true}
+parameter-types = {path = "../../../common/types/parameter_types", develop = true}
+device-name = {path = "../../../devices/device/device.name", develop = true}
 
 
 [build-system]

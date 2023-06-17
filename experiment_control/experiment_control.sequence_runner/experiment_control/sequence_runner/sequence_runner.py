@@ -19,6 +19,7 @@ from typing import (
 import numpy as np
 
 from camera.runtime import CameraTimeoutError
+from data_types import Data, DataLabel
 from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
 from duration_timer import DurationTimer
@@ -105,7 +106,7 @@ class ShotMetadata(NamedTuple):
     start_time: datetime.datetime
     end_time: datetime.datetime
     variables: VariableNamespace
-    data: dict[DeviceName, Any]
+    data: dict[DeviceName, dict[DataLabel, Data]]
 
 
 class SequenceRunnerThread(Thread):
@@ -569,7 +570,7 @@ class SequenceRunnerThread(Thread):
             for spincore_sequencer in self.get_spincore_sequencers().values():
                 run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
 
-    def extract_data(self) -> dict[DeviceName, Any]:
+    def extract_data(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         if self._experiment_config.mock_experiment:
             return {}
 
