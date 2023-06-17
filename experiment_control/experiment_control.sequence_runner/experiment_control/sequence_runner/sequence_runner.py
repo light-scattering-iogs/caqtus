@@ -4,9 +4,17 @@ import datetime
 import logging
 import pprint
 from collections.abc import Mapping
+from concurrent.futures import ProcessPoolExecutor, Executor
 from functools import singledispatchmethod
 from threading import Thread, Event
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    NamedTuple,
+    Callable,
+    TypeVar,
+    Awaitable,
+)
 
 import numpy as np
 
@@ -18,6 +26,7 @@ from experiment.configuration import (
     CameraConfiguration,
     NI6738SequencerConfiguration,
     SpincoreSequencerConfiguration,
+    ExperimentConfig,
 )
 from experiment.session import ExperimentSessionMaker
 from experiment_control.compute_device_parameters import (
@@ -35,6 +44,7 @@ from sequence.configuration import (
     OptimizationLoop,
     UserInputLoop,
     VariableRange,
+    ShotConfiguration,
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
 from units import Quantity, units, get_unit, magnitude_in_unit, DimensionalityError
@@ -128,10 +138,15 @@ class SequenceRunnerThread(Thread):
         # For now, it is only used to close the devices properly.
         self._shutdown_stack = contextlib.ExitStack()
 
+        # This executor is used to run the computations that are done in the background. Using a ProcessPoolExecutor
+        # allows to run them in parallel unlike a ThreadPoolExecutor that runs them concurrently.
+        self._computation_executor = ProcessPoolExecutor()
+
         with self._session.activate() as session:
             self._experiment_config = session.get_experiment_config(
                 experiment_config_name
             )
+            self._experiment_config_yaml = self._experiment_config.to_yaml()
             self._sequence_config = self._sequence.get_config(session)
             self._sequence.set_experiment_config(experiment_config_name, session)
             self._sequence.set_state(State.PREPARING, session)
@@ -151,7 +166,7 @@ class SequenceRunnerThread(Thread):
             logger.info("Sequence finished")
 
     def _run(self):
-        with self._shutdown_stack:
+        with self._shutdown_stack, self._computation_executor:
             asyncio.run(self.async_run())
 
     async def async_run(self):
@@ -372,35 +387,45 @@ class SequenceRunnerThread(Thread):
     async def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
+        shot_parameters = await self.compute_shot_parameters(
+            shot, context, self._computation_executor
+        )
+        await self._shot_parameter_queue.put(shot_parameters)
+        return context.reset_history()
+
+    async def compute_shot_parameters(
+        self, shot: ExecuteShot, context: StepContext, executor: Executor
+    ) -> ShotParameters:
         with DurationTimer() as timer:
-            compute_change_params_task = asyncio.to_thread(
-                compute_parameters_on_variables_update,
+            # For some reasons, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
+            # the yaml representation of the configuration instead.
+            compute_change_params_task = async_run_in_executor(
+                executor,
+                _wrap_compute_parameters_on_variables_update,
                 context.updated_variables,
                 context.variables,
-                self._experiment_config,
+                self._experiment_config_yaml,
             )
 
-            compute_static_params_task = asyncio.to_thread(
-                compute_shot_parameters,
-                self._experiment_config,
+            compute_static_params_task = async_run_in_executor(
+                executor,
+                _wrap_compute_shot_parameters,
+                self._experiment_config_yaml,
                 self._sequence_config.shot_configurations[shot.name],
                 context.variables,
             )
-
             change_params = await compute_change_params_task
             shot_params = await compute_static_params_task
 
         logger.info(
             "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
         )
-        shot_parameters = ShotParameters(
+        return ShotParameters(
             shot_name=shot.name,
             step_context=context,
             change_parameters=change_params,
             static_parameters=shot_params,
         )
-        await self._shot_parameter_queue.put(shot_parameters)
-        return context.reset_history()
 
     @run_step.register
     async def _(self, loop: UserInputLoop, context: StepContext) -> StepContext:
@@ -544,9 +569,7 @@ class SequenceRunnerThread(Thread):
 
     def extract_data(self) -> dict[DeviceName, Any]:
         if self._experiment_config.mock_experiment:
-            return {
-                "image": np.random.uniform(0, 2**15, (100, 100)).astype(np.uint16)
-            }
+            return {}
 
         data = {}
         for camera_name, camera in self.get_cameras().items():
@@ -597,7 +620,7 @@ class SequenceRunnerThread(Thread):
             )
         }
 
-    def get_cameras(self) -> dict[str, "Camera"]:
+    def get_cameras(self) -> dict[DeviceName, "Camera"]:
         return {
             device_name: device  # type: ignore
             for device_name, device in self._devices.items()
@@ -629,6 +652,26 @@ def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, An
             f"Failed to update device {device.get_name()} with parameters:\n"
             f"{pprint.pformat(parameters)}"
         ) from error
+
+
+def _wrap_compute_parameters_on_variables_update(
+    updated_variables: set[DottedVariableName],
+    variables: VariableNamespace,
+    experiment_config_yaml: str,
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+    experiment_config = ExperimentConfig.from_yaml(experiment_config_yaml)
+    return compute_parameters_on_variables_update(
+        updated_variables, variables, experiment_config
+    )
+
+
+def _wrap_compute_shot_parameters(
+    experiment_config_yaml: str,
+    shot_config: ShotConfiguration,
+    variables: VariableNamespace,
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+    experiment_config = ExperimentConfig.from_yaml(experiment_config_yaml)
+    return compute_shot_parameters(experiment_config, shot_config, variables)
 
 
 def evaluate_variable_ranges(
@@ -679,6 +722,17 @@ def strip_unit_from_variable_ranges(
         )
         raw_variable_ranges[variable_name] = evaluated_range
     return raw_variable_ranges
+
+
+_T = TypeVar("_T")
+
+
+def async_run_in_executor(
+    executor: Executor, func: Callable[..., _T], *args
+) -> Awaitable[_T]:
+    """Schedula a function to run in an executor and return an awaitable for its result."""
+
+    return asyncio.get_running_loop().run_in_executor(executor, func, *args)
 
 
 # This exception is used to interrupt the sequence and inherit from BaseException to prevent it from being caught
