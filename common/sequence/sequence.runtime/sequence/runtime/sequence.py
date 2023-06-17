@@ -4,6 +4,8 @@ from typing import Optional, Any, TypedDict, Self, Iterable
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from data_types import Data, is_data
+from device.name import DeviceName, is_device_name
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
@@ -176,9 +178,19 @@ class Sequence:
         start_time: datetime,
         end_time: datetime,
         parameters: dict[str, Any],
-        measures: dict[str, Any],
+        measures: dict[DeviceName, Data],
         experiment_session: ExperimentSession,
     ) -> Shot:
+        for device_name, data in measures.items():
+            if not is_device_name(device_name):
+                raise TypeError(
+                    f"Expected instance of <DeviceName> for device name, got {type(device_name)}"
+                )
+            if not is_data(data):
+                raise TypeError(
+                    f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
+                )
+
         if self.get_state(experiment_session) != State.RUNNING:
             raise InvalidSequenceStateError(
                 f"Can't create a shot unless the sequence is running"

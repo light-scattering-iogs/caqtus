@@ -1,7 +1,6 @@
 from numbers import Real
 from typing import TypeGuard, Any
 
-from image_type import Image
 from .data_type import Data, Array
 
 
@@ -19,7 +18,7 @@ def is_data(data: Any) -> TypeGuard[Data]:
     - tuple[Data]
     """
 
-    if isinstance(data, bool | str | Real | Array | Image):
+    if isinstance(data, bool | str | Real | Array):
         return True
     elif isinstance(data, (list, tuple)):
         return all(is_data(x) for x in data)
