@@ -1,6 +1,5 @@
 from collections.abc import Iterable
-from functools import singledispatchmethod
-from numbers import Real, Integral
+from numbers import Real
 
 import numpy as np
 
@@ -8,7 +7,6 @@ from .channel_config import ChannelConfig
 from .time_sequence_instructions import (
     Instruction,
     Pattern,
-    InstructionNotSupportedError,
 )
 
 
@@ -44,22 +42,6 @@ class TimeSequence:
 
         return len(self._channel_configs)
 
-    def append_new_pattern(self, durations: Iterable[Integral]) -> Pattern:
-        """Create a new pattern with the given durations.
-
-        The pattern created contains default values for all channels. It is automatically added at the end of the
-        sequence. The pattern is returned so that it can be modified.
-        """
-
-        durations = np.array(durations, dtype=np.uint)
-        channel_values = [
-            np.full(len(durations), config.default_value, config.dtype)
-            for config in self._channel_configs
-        ]
-        pattern = Pattern(durations, channel_values)
-        self._append_instruction(pattern)
-        return pattern
-
     def total_duration(self) -> int:
         """The total number of ticks in the time sequence."""
 
@@ -72,9 +54,7 @@ class TimeSequence:
         their unrolled content. Note that this may result in a very large number of steps.
         """
 
-        if not all(isinstance(step, Pattern) for step in self._steps):
-            raise InstructionNotSupportedError("Cannot unroll non-pattern instructions")
-        return Pattern.concatenate(*self._steps)  # type: ignore
+        return Pattern.concatenate(*(step.unroll() for step in self._steps))
 
     def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
         """Apply a function to the values of a channel in the time sequence."""
@@ -87,14 +67,7 @@ class TimeSequence:
         for step in self._steps:
             step.apply(channel_index, fun, *args, **kwargs)
 
-    @singledispatchmethod
-    def _append_instruction(self, instruction: Instruction):
+    def append(self, instruction: Instruction):
         """Append an instruction to the time sequence."""
 
-        raise InstructionNotSupportedError(
-            f"Instruction of type {type(instruction)} not supported"
-        )
-
-    @_append_instruction.register
-    def _(self, instruction: Pattern):
         self._steps.append(instruction)

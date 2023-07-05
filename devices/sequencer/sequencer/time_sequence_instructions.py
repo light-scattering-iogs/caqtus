@@ -5,6 +5,8 @@ from typing import Self, Iterable
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .channel_config import ChannelConfig
+
 
 class Instruction(ABC):
     """Base class for instructions in a time sequence."""
@@ -24,6 +26,15 @@ class Instruction(ABC):
 
         raise NotImplementedError
 
+    @abstractmethod
+    def unroll(self) -> "Pattern":
+        """Flatten the instruction into a dense pattern.
+
+        Beware that this may result in a very large number of steps in some cases.
+        """
+
+        raise NotImplementedError
+
 
 class Pattern(Instruction):
     """Dense 2D table of values for a set of channels over time."""
@@ -32,8 +43,22 @@ class Pattern(Instruction):
         self._durations = np.array(durations, dtype=np.uint)
         self._channel_values = tuple(values for values in channel_values)
 
+    @classmethod
+    def create_default_pattern(
+        cls, durations: ArrayLike, channel_configs: Iterable[ChannelConfig]
+    ):
+        """Create a new pattern with default values for all channels."""
+
+        durations = np.array(durations, dtype=np.uint)
+
+        channel_values = [
+            np.full(len(durations), config.default_value, config.dtype)
+            for config in channel_configs
+        ]
+        return cls(durations, channel_values)
+
     @property
-    def durations(self) -> np.ndarray[np.uint]:
+    def durations(self) -> np.ndarray:
         return self._durations
 
     def set_values(self, channel_index: int, values: ArrayLike):
@@ -72,6 +97,9 @@ class Pattern(Instruction):
                 f" {self._channel_values[channel_index].shape}"
             )
         self._channel_values[channel_index][:] = result
+
+    def unroll(self) -> "Pattern":
+        return Pattern(self._durations, self._channel_values)
 
     # noinspection PyProtectedMember
     @classmethod
@@ -116,6 +144,18 @@ class Repeat(Instruction):
     def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
         for instruction in self._instruction:
             instruction.apply(channel_index, fun, *args, **kwargs)
+
+    def unroll(self) -> Pattern:
+        """Flatten the instruction into a dense pattern.
+
+        If the repeat instruction has a large number of repetitions, this may result in a very large number of steps.
+        """
+
+        patterns = [i.unroll() for i in self._instruction] * self._number_repeats
+        return Pattern.concatenate(*patterns)
+
+    def append(self, instruction: Instruction):
+        self._instruction.append(instruction)
 
 
 class InstructionNotSupportedError(NotImplementedError):

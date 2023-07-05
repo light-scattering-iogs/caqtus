@@ -2,6 +2,7 @@ import numpy as np
 
 from sequencer.channel_config import ChannelConfig
 from sequencer.time_sequence import TimeSequence
+from sequencer.time_sequence_instructions import Pattern
 
 
 def test_time_sequence():
@@ -15,15 +16,17 @@ def test_time_sequence():
 
     sequence = TimeSequence(time_step=1e-9, channel_configs=channel_configs)
 
-    pattern = sequence.append_new_pattern([1, 2, 3])
+    pattern = Pattern.create_default_pattern([1, 2, 3], channel_configs)
     pattern.set_values(0, [True, False, True])
     pattern.set_values(1, [1, 2, 3])
     pattern.set_values(2, [0.7, 2.5, -3])
+    sequence.append(pattern)
 
-    pattern_2 = sequence.append_new_pattern([4, 5, 6])
+    pattern_2 = Pattern.create_default_pattern([4, 5, 6], channel_configs)
     pattern_2.set_values(0, [False, True, False])
     pattern_2.set_values(1, [4, 5, 6])
     pattern_2.set_values(2, [-0.7, 2.5, -3])
+    sequence.append(pattern_2)
 
     assert sequence.total_duration() == 21
     for a, b in zip(

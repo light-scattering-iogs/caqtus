@@ -6,7 +6,9 @@ from .time_sequence import TimeSequence
 
 def plot_channel(time_sequence: TimeSequence, channel_index: int, ax: Axes, **kwargs):
     pattern = time_sequence.unroll()
-    times = np.cumsum(pattern.durations) * time_sequence.time_step
-    channel_values = pattern.channel_values[channel_index]
+
+    times = [0.] + list(np.cumsum(pattern.durations) * time_sequence.time_step)
+    channel_values = list(pattern.channel_values[channel_index]) + [time_sequence.channel_configs[channel_index].final_value]
+    print(channel_values)
 
     ax.plot(times, channel_values, drawstyle="steps-post", **kwargs)
