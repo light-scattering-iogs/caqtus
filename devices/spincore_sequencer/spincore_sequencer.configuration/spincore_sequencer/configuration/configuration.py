@@ -24,8 +24,8 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
 
     board_number: int
     time_step: float = Field(
-        default=50e-9,
-        ge=50e-9,
+        default=10e-9,
+        ge=10e-9,
         units="s",
     )
 

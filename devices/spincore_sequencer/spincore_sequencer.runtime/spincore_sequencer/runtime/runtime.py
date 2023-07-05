@@ -29,7 +29,7 @@ class SpincorePulseBlaster(RuntimeDevice):
     spincore_lib_debug: bool = False
     core_clock: float = Field(default=100e6, units="Hz")
     instructions: list[Instruction] = []
-    time_step: float = Field(ge=50e-9, units="s")
+    time_step: float = Field(ge=10e-9, units="s")
 
     channel_number: ClassVar[int] = 24
 
@@ -112,8 +112,8 @@ class SpincorePulseBlaster(RuntimeDevice):
                 < 0
             ):
                 raise RuntimeError(
-                    "An error occurred when programming the sequence. "
-                    f"{spinapi.pb_get_error()}"
+                    f"An error occurred when programming a long delay of duration {max_duration / 2} s with "
+                    f"{2*number_of_repetitions} repetitions. "
                 )
         if (
             spinapi.pb_inst_pbonly(
@@ -122,8 +122,7 @@ class SpincorePulseBlaster(RuntimeDevice):
             < 0
         ):
             raise RuntimeError(
-                "An error occurred when programming the sequence. "
-                f"{spinapi.pb_get_error()}"
+                f"An error occurred when programming a continue instruction with duration {continue_.duration} s."
             )
 
     @_program_instruction.register

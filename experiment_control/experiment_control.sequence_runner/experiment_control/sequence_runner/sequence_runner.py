@@ -652,8 +652,7 @@ def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, An
             device.update_parameters(**parameters)
     except Exception as error:
         raise RuntimeError(
-            f"Failed to update device {device.get_name()} with parameters:\n"
-            f"{pprint.pformat(parameters)}"
+            f"Failed to update device {device.get_name()}"
         ) from error
 
 
