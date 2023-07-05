@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Self
+from numbers import Integral
+from typing import Optional, Self, Iterable
 
 import numpy as np
 from numpy.typing import ArrayLike, DTypeLike
@@ -104,6 +105,23 @@ class Pattern(Instruction):
             )
             result.append_channel(concatenated_values, dtype=channel_dtype)
         return result
+
+
+class Repeat(Instruction):
+    """Repeat other instructions a number of times."""
+
+    def __init__(self, instructions: Iterable[Instruction], number_repetitions: Integral):
+        self._instruction = list(instructions)
+        if number_repetitions < 0:
+            raise ValueError(f"Number of repetitions must be positive")
+        self._number_repeats = int(number_repetitions)
+
+    def total_duration(self) -> int:
+        return sum(i.total_duration() for i in self._instruction) * self._number_repeats
+
+    def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
+        for instruction in self._instruction:
+            instruction.apply(channel_index, fun, *args, **kwargs)
 
 
 class InstructionNotSupportedError(NotImplementedError):
