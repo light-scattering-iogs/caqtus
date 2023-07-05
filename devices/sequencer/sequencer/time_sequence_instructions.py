@@ -32,6 +32,10 @@ class Pattern(Instruction):
         self._durations = np.array(durations, dtype=np.uint)
         self._channel_values = tuple(values for values in channel_values)
 
+    @property
+    def durations(self) -> np.ndarray[np.uint]:
+        return self._durations
+
     def set_values(self, channel_index: int, values: ArrayLike):
         """Set the values of a channel in the pattern."""
 
