@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from numbers import Integral
-from typing import Optional, Self, Iterable
+from typing import Self, Iterable
 
 import numpy as np
-from numpy.typing import ArrayLike, DTypeLike
+from numpy.typing import ArrayLike
 
 
 class Instruction(ABC):
@@ -28,30 +28,21 @@ class Instruction(ABC):
 class Pattern(Instruction):
     """Dense 2D table of values for a set of channels over time."""
 
-    def __init__(self, durations: ArrayLike):
+    def __init__(self, durations: ArrayLike, channel_values: Iterable[np.ndarray]):
         self._durations = np.array(durations, dtype=np.uint)
-        self._channel_dtypes = tuple[np.dtype, ...]()
-        self._channel_values = tuple[np.ndarray, ...]()
+        self._channel_values = tuple(values for values in channel_values)
 
-    def append_channel(
-        self,
-        values: ArrayLike,
-        dtype: Optional[DTypeLike] = None,
-    ):
-        """Append a new channel to the pattern."""
+    def set_values(self, channel_index: int, values: ArrayLike):
+        """Set the values of a channel in the pattern."""
 
-        array = np.array(values, dtype=dtype)
+        array = np.array(values, dtype=self._channel_values[channel_index].dtype)
         if array.ndim != 1:
             raise ValueError(f"Channel values must be 1D")
         if len(array) != len(self._durations):
             raise ValueError(
                 f"Expected {len(self._durations)} values, but got {len(array)}"
             )
-        self._channel_values = self._channel_values + (array,)
-
-    @property
-    def channel_dtypes(self) -> tuple[np.dtype, ...]:
-        return tuple(values.dtype for values in self._channel_values)
+        self._channel_values[channel_index][:] = array
 
     @property
     def number_channels(self) -> int:
@@ -76,9 +67,7 @@ class Pattern(Instruction):
                 f"Function result has shape {result.shape}, but expected"
                 f" {self._channel_values[channel_index].shape}"
             )
-        channel_values = list(self._channel_values)
-        channel_values[channel_index] = result
-        self._channel_values = tuple(channel_values)
+        self._channel_values[channel_index][:] = result
 
     # noinspection PyProtectedMember
     @classmethod
@@ -90,27 +79,28 @@ class Pattern(Instruction):
         """
 
         durations = np.concatenate([s._durations for s in steps])
-        result = cls(durations)
 
         if not steps:
-            return result
+            raise ValueError(f"Must provide at least one step to concatenate")
 
-        for channel_index, channel_dtype in enumerate(steps[0].channel_dtypes):
-            if any(s.channel_dtypes[channel_index] != channel_dtype for s in steps):
-                raise ValueError(
-                    f"Incompatible dtypes when concatenating channel {channel_index}"
-                )
+        concatenated_channel_values = []
+
+        for channel_index in range(steps[0].number_channels):
             concatenated_values = np.concatenate(
-                [s._channel_values[channel_index] for s in steps]
+                [s.channel_values[channel_index] for s in steps]
             )
-            result.append_channel(concatenated_values, dtype=channel_dtype)
+            concatenated_channel_values.append(concatenated_values)
+
+        result = cls(durations, concatenated_channel_values)
         return result
 
 
 class Repeat(Instruction):
     """Repeat other instructions a number of times."""
 
-    def __init__(self, instructions: Iterable[Instruction], number_repetitions: Integral):
+    def __init__(
+        self, instructions: Iterable[Instruction], number_repetitions: Integral
+    ):
         self._instruction = list(instructions)
         if number_repetitions < 0:
             raise ValueError(f"Number of repetitions must be positive")

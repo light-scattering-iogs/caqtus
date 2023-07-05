@@ -1,10 +1,15 @@
+from collections.abc import Iterable
 from functools import singledispatchmethod
-from numbers import Real
-from typing import Optional
+from numbers import Real, Integral
 
 import numpy as np
 
-from .time_sequence_instructions import Instruction, Pattern, InstructionNotSupportedError
+from .channel_config import ChannelConfig
+from .time_sequence_instructions import (
+    Instruction,
+    Pattern,
+    InstructionNotSupportedError,
+)
 
 
 class TimeSequence:
@@ -12,16 +17,14 @@ class TimeSequence:
 
     This class represents a 2D table of values for a set of channels over time. The table is indexed by time and channel
     index. The time axis is discrete and has a fixed time step. Each channel has a fixed numpy dtype.
-
-    Attributes:
     """
 
-    def __init__(self, time_step: Real):
+    def __init__(self, time_step: Real, channel_configs: Iterable[ChannelConfig]):
         """Create a new empty time sequence."""
 
         self._time_step = float(time_step)
         self._steps: list[Instruction] = []
-        self._channel_dtypes: Optional[tuple[np.dtype, ...]] = None
+        self._channel_configs = tuple(channel_configs)
 
     @property
     def time_step(self) -> float:
@@ -30,14 +33,32 @@ class TimeSequence:
         return self._time_step
 
     @property
-    def channel_dtypes(self) -> Optional[tuple[np.dtype, ...]]:
-        """The dtypes of the channels in the time sequence.
+    def channel_configs(self) -> tuple[ChannelConfig, ...]:
+        """The configuration of the channels in the time sequence."""
 
-        This is None if the time sequence is empty, which is different from an empty tuple if the time sequence has
-        no channels.
+        return self._channel_configs
+
+    @property
+    def number_channels(self) -> int:
+        """The number of channels in the time sequence."""
+
+        return len(self._channel_configs)
+
+    def append_new_pattern(self, durations: Iterable[Integral]) -> Pattern:
+        """Create a new pattern with the given durations.
+
+        The pattern created contains default values for all channels. It is automatically added at the end of the
+        sequence. The pattern is returned so that it can be modified.
         """
 
-        return self._channel_dtypes
+        durations = np.array(durations, dtype=np.uint)
+        channel_values = [
+            np.full(len(durations), config.default_value, config.dtype)
+            for config in self._channel_configs
+        ]
+        pattern = Pattern(durations, channel_values)
+        self._append_instruction(pattern)
+        return pattern
 
     def total_duration(self) -> int:
         """The total number of ticks in the time sequence."""
@@ -45,7 +66,7 @@ class TimeSequence:
         return sum(step.total_duration() for step in self._steps)
 
     def unroll(self) -> Pattern:
-        """Unroll the time sequence into a single step.
+        """Unroll the time sequence into a single pattern.
 
         This function evaluates all instructions and concatenates them into explicit steps. It will replace loops by
         their unrolled content. Note that this may result in a very large number of steps.
@@ -58,36 +79,22 @@ class TimeSequence:
     def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
         """Apply a function to the values of a channel in the time sequence."""
 
-        if self._channel_dtypes is None:
-            raise ValueError("Cannot apply function to empty time sequence")
-        if channel_index >= len(self._channel_dtypes):
+        if channel_index >= self.number_channels:
             raise ValueError(
                 f"Channel index {channel_index} out of range for time sequence with "
-                f"{len(self._channel_dtypes)} channels"
+                f"{self.number_channels} channels"
             )
         for step in self._steps:
             step.apply(channel_index, fun, *args, **kwargs)
 
     @singledispatchmethod
-    def append_instruction(self, instruction: Instruction):
+    def _append_instruction(self, instruction: Instruction):
         """Append an instruction to the time sequence."""
 
         raise InstructionNotSupportedError(
             f"Instruction of type {type(instruction)} not supported"
         )
 
-    @append_instruction.register
+    @_append_instruction.register
     def _(self, instruction: Pattern):
-        if self._channel_dtypes is None:
-            self._channel_dtypes = instruction.channel_dtypes
-        elif self._channel_dtypes != instruction.channel_dtypes:
-            raise ValueError(
-                f"Can only append steps with channel dtypes {self._channel_dtypes}, but"
-                f" got {instruction.channel_dtypes}"
-            )
-
-        if self._steps and isinstance(last_step := self._steps[-1], Pattern):
-            # noinspection PyTypeChecker
-            self._steps[-1] = Pattern.concatenate(last_step, instruction)
-        else:
-            self._steps.append(instruction)
+        self._steps.append(instruction)

@@ -1,23 +1,29 @@
 import numpy as np
 
+from sequencer.channel_config import ChannelConfig
 from sequencer.time_sequence import TimeSequence
-from sequencer.time_sequence_instructions import Pattern
 
 
 def test_time_sequence():
-    sequence = TimeSequence(time_step=1e-9)
+    channel_configs = [
+        ChannelConfig[bool](
+            default_value=False, initial_value=False, final_value=False
+        ),
+        ChannelConfig[int](default_value=0, initial_value=0, final_value=0),
+        ChannelConfig[float](default_value=0.0, initial_value=0.0, final_value=0.0),
+    ]
 
-    steps_1 = Pattern(durations=[1, 2, 3])
-    steps_1.append_channel([True, False, True])
-    steps_1.append_channel([1, 2, 3])
-    steps_1.append_channel([0.7, 2.5, -3])
-    sequence.append_instruction(steps_1)
+    sequence = TimeSequence(time_step=1e-9, channel_configs=channel_configs)
 
-    steps_2 = Pattern(durations=[4, 5, 6])
-    steps_2.append_channel([False, True, False])
-    steps_2.append_channel([4, 5, 6])
-    steps_2.append_channel([-0.7, 2.5, -3])
-    sequence.append_instruction(steps_2)
+    pattern = sequence.append_new_pattern([1, 2, 3])
+    pattern.set_values(0, [True, False, True])
+    pattern.set_values(1, [1, 2, 3])
+    pattern.set_values(2, [0.7, 2.5, -3])
+
+    pattern_2 = sequence.append_new_pattern([4, 5, 6])
+    pattern_2.set_values(0, [False, True, False])
+    pattern_2.set_values(1, [4, 5, 6])
+    pattern_2.set_values(2, [-0.7, 2.5, -3])
 
     assert sequence.total_duration() == 21
     for a, b in zip(
