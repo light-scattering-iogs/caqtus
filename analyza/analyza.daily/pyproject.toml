@@ -19,6 +19,7 @@ scipy = "^1.10.1"
 msal = "^1.22.0"
 lxml = "^4.9.2"
 ipympl = "^0.9.3"
+qutip = "^4.7.2"
 
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
 units = {path = "../../common/units", develop = true}
@@ -29,7 +30,6 @@ atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runti
 analyze-spots = {path = "../../devices/tweezers/analyze_spots", develop = true}
 analyza-maximum-likelihood = {path = "../analyza.maximum_likelihood", develop = true}
 analyza-functions = {path = "../analyza.functions", develop = true}
-ipympl = "^0.9.3"
 
 
 
