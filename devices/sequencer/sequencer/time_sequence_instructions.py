@@ -14,6 +14,15 @@ class Instruction(ABC):
 
         raise NotImplementedError
 
+    @abstractmethod
+    def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
+        """Apply a function to the values of a channel in the instruction.
+
+        The result will be stored in place.
+        """
+
+        raise NotImplementedError
+
 
 class Pattern(Instruction):
     """Dense 2D table of values for a set of channels over time."""
@@ -44,7 +53,7 @@ class Pattern(Instruction):
         return tuple(values.dtype for values in self._channel_values)
 
     @property
-    def channel_number(self) -> int:
+    def number_channels(self) -> int:
         return len(self._channel_values)
 
     @property
@@ -53,6 +62,22 @@ class Pattern(Instruction):
 
     def total_duration(self) -> int:
         return self._durations.sum()
+
+    def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
+        if channel_index >= self.number_channels:
+            raise ValueError(f"Invalid channel index {channel_index}")
+
+        result = fun(self._channel_values[channel_index], *args, **kwargs)
+        result = np.array(result, dtype=self._channel_values[channel_index].dtype)
+
+        if result.shape != self._channel_values[channel_index].shape:
+            raise ValueError(
+                f"Function result has shape {result.shape}, but expected"
+                f" {self._channel_values[channel_index].shape}"
+            )
+        channel_values = list(self._channel_values)
+        channel_values[channel_index] = result
+        self._channel_values = tuple(channel_values)
 
     # noinspection PyProtectedMember
     @classmethod

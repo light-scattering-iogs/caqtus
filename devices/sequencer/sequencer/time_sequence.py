@@ -55,6 +55,19 @@ class TimeSequence:
             raise InstructionNotSupportedError("Cannot unroll non-pattern instructions")
         return Pattern.concatenate(*self._steps)  # type: ignore
 
+    def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
+        """Apply a function to the values of a channel in the time sequence."""
+
+        if self._channel_dtypes is None:
+            raise ValueError("Cannot apply function to empty time sequence")
+        if channel_index >= len(self._channel_dtypes):
+            raise ValueError(
+                f"Channel index {channel_index} out of range for time sequence with "
+                f"{len(self._channel_dtypes)} channels"
+            )
+        for step in self._steps:
+            step.apply(channel_index, fun, *args, **kwargs)
+
     @singledispatchmethod
     def append_instruction(self, instruction: Instruction):
         """Append an instruction to the time sequence."""

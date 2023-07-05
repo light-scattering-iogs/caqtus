@@ -29,3 +29,9 @@ def test_time_sequence():
         ),
     ):
         assert np.array_equal(a, b)
+
+    sequence.apply(0, np.logical_not)
+    assert np.array_equal(
+        sequence.unroll().channel_values[0],
+        np.array([False, True, False, True, False, True]),
+    )
