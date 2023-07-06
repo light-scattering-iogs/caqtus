@@ -11,6 +11,7 @@ from typing import (
 
 import numpy
 
+from parameter_types import Parameter
 from .chainable_function import ChainableFunction
 
 P = ParamSpec("P")
@@ -67,7 +68,7 @@ def subtract(operand1: str, operand2: str, result: str) -> ChainableFunction:
     return ChainableFunction(_subtract)
 
 
-def _break_namespaces(values: dict[str, Any]) -> dict[str, Any]:
+def _break_namespaces(values: dict[Any, Parameter]) -> dict[str, Parameter]:
     result = {}
     for key, value in values.items():
         if isinstance(value, SimpleNamespace):

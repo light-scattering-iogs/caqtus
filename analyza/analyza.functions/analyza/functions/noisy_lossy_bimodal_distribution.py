@@ -22,6 +22,32 @@ class NoisyLossyBimodalDistribution:
             * self.one_atom_pdf(x, n0, p0, n1, p1, σ)
         )
 
+    def mean(self, n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        return n0 + n1 * (1 - p0) * (1 - p_loss / 2)
+
+    def var(self, n0: int, p0: float, n1: int, p_loss: float, σ: float):
+        return (
+            σ**2
+            + n0
+            + n1
+            * (1 - p0)
+            * (
+                n1 * (p0 * (1 - p_loss / 2) ** 2 + p_loss / 3 * (1 - 3 / 4 * p_loss))
+                + (1 - p_loss / 2)
+            )
+        )
+
+    def sample(self, n0: int, p0: float, n1: int, p_loss: float, σ: float, shape):
+        rng = np.random.default_rng()
+        p1 = 1 - p0
+        atom_present = rng.binomial(1, p1, size=shape)
+        lifetime = np.minimum(1, rng.uniform(0, 1 / p_loss, size=shape))
+        average_number_photons = n0 + n1 * atom_present * lifetime
+        number_photons = rng.poisson(average_number_photons, size=shape)
+
+        camera_count = number_photons + rng.normal(scale=σ, size=shape)
+        return camera_count
+
     def zero_atom_pdf(
         self, x: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
     ):
