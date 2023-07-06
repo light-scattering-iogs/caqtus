@@ -61,6 +61,25 @@ class Pattern(Instruction):
     def durations(self) -> np.ndarray:
         return self._durations
 
+    @property
+    def number_channels(self) -> int:
+        return len(self._channel_values)
+
+    @property
+    def channel_values(self) -> tuple[np.ndarray, ...]:
+        return self._channel_values
+
+    def total_duration(self) -> int:
+        return self._durations.sum()
+
+    def __len__(self) -> int:
+        """The number of steps in the pattern.
+
+        This is different from the total duration, which is the sum of the durations of all steps.
+        """
+
+        return len(self._durations)
+
     def set_values(self, channel_index: int, values: ArrayLike):
         """Set the values of a channel in the pattern."""
 
@@ -72,17 +91,6 @@ class Pattern(Instruction):
                 f"Expected {len(self._durations)} values, but got {len(array)}"
             )
         self._channel_values[channel_index][:] = array
-
-    @property
-    def number_channels(self) -> int:
-        return len(self._channel_values)
-
-    @property
-    def channel_values(self) -> tuple[np.ndarray, ...]:
-        return self._channel_values
-
-    def total_duration(self) -> int:
-        return self._durations.sum()
 
     def apply(self, channel_index: int, fun: np.ufunc, *args, **kwargs):
         if channel_index >= self.number_channels:
