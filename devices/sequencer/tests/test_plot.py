@@ -13,7 +13,7 @@ def main():
         ),
     ]
 
-    sequence = TimeSequence(time_step=1, channel_configs=channel_configs)
+    sequence = TimeSequence(channel_configs=channel_configs)
 
     pattern = Pattern.create_default_pattern([10, 10, 20], channel_configs)
     pattern.set_values(0, [False, True, False])

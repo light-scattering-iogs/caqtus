@@ -17,10 +17,9 @@ class TimeSequence:
     index. The time axis is discrete and has a fixed time step. Each channel has a fixed numpy dtype.
     """
 
-    def __init__(self, time_step: Real, channel_configs: Iterable[ChannelConfig]):
+    def __init__(self, channel_configs: Iterable[ChannelConfig]):
         """Create a new empty time sequence."""
 
-        self._time_step = float(time_step)
         self._steps: list[Instruction] = []
         self._channel_configs = tuple(channel_configs)
 
