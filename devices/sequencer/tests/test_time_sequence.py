@@ -14,7 +14,7 @@ def test_time_sequence():
         ChannelConfig[float](default_value=0.0, initial_value=0.0, final_value=0.0),
     ]
 
-    sequence = TimeSequence(time_step=1e-9, channel_configs=channel_configs)
+    sequence = TimeSequence(channel_configs=channel_configs)
 
     pattern = Pattern.create_default_pattern([1, 2, 3], channel_configs)
     pattern.set_values(0, [True, False, True])

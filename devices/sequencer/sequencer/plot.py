@@ -9,6 +9,5 @@ def plot_channel(time_sequence: TimeSequence, channel_index: int, ax: Axes, **kw
 
     times = [0.] + list(np.cumsum(pattern.durations) * time_sequence.time_step)
     channel_values = list(pattern.channel_values[channel_index]) + [time_sequence.channel_configs[channel_index].final_value]
-    print(channel_values)
 
     ax.plot(times, channel_values, drawstyle="steps-post", **kwargs)
