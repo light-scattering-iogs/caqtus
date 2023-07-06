@@ -1,7 +1,9 @@
 import logging
 from collections import namedtuple
+from collections.abc import Mapping
 from copy import copy
-from typing import Any, TypedDict, Iterable, Optional
+from dataclasses import dataclass
+from typing import Any, Iterable, Optional
 
 import numpy as np
 
@@ -67,7 +69,7 @@ def compute_shot_parameters(
     variables: VariableNamespace,
     extra: bool = False,
 ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-    """Compute the parameters to be applied to the devices before a shot
+    """Compute the parameters to be applied to the devices before a shot.
 
     If extra is True, then the result will contain extra information that is necessary to analyze the shot afterwards.
     """
@@ -89,7 +91,7 @@ def compute_shot_parameters(
     )
 
     camera_triggers = {
-        camera_name: instructions["triggers"]
+        camera_name: instructions.triggers
         for camera_name, instructions in camera_instructions.items()
     }
     spincore_name, spincore_config = get_spincore(experiment_config)
@@ -124,7 +126,8 @@ def get_spincore(
     )
     if len(spincore_configurations) != 1:
         raise ValueError(
-            f"Expected exactly one spincore sequencer configuration, found {len(spincore_configurations)}"
+            "Expected exactly one spincore sequencer configuration, found"
+            f" {len(spincore_configurations)}"
         )
     name = next(iter(spincore_configurations))
     return name, spincore_configurations[name]
@@ -138,7 +141,8 @@ def get_ni6738(
     )
     if len(ni6738_configurations) != 1:
         raise ValueError(
-            f"Expected exactly one NI6738 sequencer configuration, found {len(ni6738_configurations)}"
+            "Expected exactly one NI6738 sequencer configuration, found"
+            f" {len(ni6738_configurations)}"
         )
 
     name = next(iter(ni6738_configurations))
@@ -148,7 +152,7 @@ def get_ni6738(
 def evaluate_step_durations(
     shot: ShotConfiguration, context: VariableNamespace
 ) -> list[float]:
-    """Compute the duration of each step in the shot
+    """Compute the duration of each step.
 
     This function evaluates all the step duration expressions by replacing the variables with their numerical values
     provided in 'context'. It returns a list of all step durations in seconds.
@@ -166,7 +170,8 @@ def evaluate_step_durations(
             seconds = duration.to("s").magnitude
         except Exception as error:
             raise ShotEvaluationError(
-                f"Duration '{expression.body}' of step '{name}' is not a duration (got {duration})"
+                f"Duration '{expression.body}' of step '{name}' is not a duration (got"
+                f" {duration})"
             ) from error
         durations.append(float(seconds))
     return durations
@@ -198,7 +203,7 @@ def get_minimum_allowed_timestep(
 
 def compute_camera_instructions(
     steps: RuntimeSteps, shot: ShotConfiguration
-) -> dict[str, "CameraInstructions"]:
+) -> dict[DeviceName, "CameraInstructions"]:
     """Compute the parameters to be applied to each camera
 
     Returns:
@@ -206,12 +211,13 @@ def compute_camera_instructions(
     """
 
     result = {}
-    camera_lanes = shot.get_lanes(CameraLane)
     shot_duration = sum(step.duration for step in steps)
-    for camera_name, camera_lane in camera_lanes.items():
+
+    camera_lanes = shot.get_lanes(CameraLane)
+    for lane_name, lane in camera_lanes.items():
         triggers = [False] * len(steps)
         exposures = []
-        for _, start, stop in camera_lane.get_picture_spans():
+        for _, start, stop in lane.get_picture_spans():
             triggers[start:stop] = [True] * (stop - start)
             exposures.append(sum(steps.durations[start:stop]))
         instructions = CameraInstructions(
@@ -220,14 +226,15 @@ def compute_camera_instructions(
             triggers=triggers,
             exposures=exposures,
         )
-        result[camera_name] = instructions
+        result[DeviceName(lane_name)] = instructions
     return result
 
 
-class CameraInstructions(TypedDict):
+@dataclass(frozen=True)
+class CameraInstructions:
     """Instruction to take pictures for a camera
 
-    Attributes:
+    fields:
         timeout: Maximum time to wait for the camera to take the picture
         exposures: Duration of each exposure in seconds. The length of this list should be the same as the number of
         pictures.
@@ -241,9 +248,9 @@ class CameraInstructions(TypedDict):
 
 
 def get_camera_parameters(
-    camera_instructions: dict[str, CameraInstructions]
-) -> dict[str, dict[str, Any]]:
-    """Extract the parameters to be applied to each camera from the instructions
+    camera_instructions: Mapping[DeviceName, CameraInstructions]
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+    """Extract the parameters to be applied to each camera from the instructions.
 
     This function only keeps the parameters to be applied to a camera. It removes the triggers because they will be used
     to program a digital sequencer and not the cameras themselves.
@@ -256,7 +263,7 @@ def get_camera_parameters(
 
     for camera, instructions in camera_instructions.items():
         result[camera] = dict(
-            timeout=instructions["timeout"], exposures=instructions["exposures"]
+            timeout=instructions.timeout, exposures=instructions.exposures
         )
 
     return result
@@ -429,13 +436,15 @@ def evaluate_lane_expressions(
                 )
             except Exception as error:
                 raise ShotEvaluationError(
-                    f"Cannot evaluate expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}'"
+                    f"Cannot evaluate expression '{cell_value.body}' for step"
+                    f" '{step.name}' in lane '{lane.name}'"
                 ) from error
             try:
                 values_in_lane_units = values.to(lane.units)
             except DimensionalityError as error:
                 raise ShotEvaluationError(
-                    f"Cannot convert expression '{cell_value.body}' for step '{step.name}' in lane '{lane.name}' to {lane.units}"
+                    f"Cannot convert expression '{cell_value.body}' for step"
+                    f" '{step.name}' in lane '{lane.name}' to {lane.units}"
                 ) from error
             result.append(values_in_lane_units)
         elif isinstance(cell_value, LinearRamp):
