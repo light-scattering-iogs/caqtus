@@ -35,7 +35,7 @@ def get_devices_initialization_parameters(
 
 
 def get_spincore_initialization_parameters(
-    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+    experiment_config: ExperimentConfig, _: SequenceConfig
 ) -> dict[DeviceName, InitializationParameters]:
     """Compute the initialization parameters for all spincore sequencer devices."""
 
@@ -52,7 +52,7 @@ def get_spincore_initialization_parameters(
 
 
 def get_ni6738_initialization_parameters(
-    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+    experiment_config: ExperimentConfig, _: SequenceConfig
 ) -> dict[DeviceName, InitializationParameters]:
     """Compute the initialization parameters for all ni6738 cards."""
 
@@ -76,10 +76,11 @@ def get_cameras_initialization_parameters(
     camera_configs = experiment_config.get_device_configs(CameraConfiguration)
     camera_lanes = sequence_config.shot_configurations["shot"].get_lanes(CameraLane)
 
-    for camera_name, camera_lane in camera_lanes.items():
+    for lane_name, camera_lane in camera_lanes.items():
+        camera_name = DeviceName(lane_name)
         if camera_name not in camera_configs:
             raise DeviceConfigurationNotFound(
-                f"Could not find a camera configuration for the lane {camera_name}"
+                f"Could not find a camera configuration for the lane {lane_name}"
             )
         camera_config = camera_configs[camera_name]
         init_kwargs = camera_config.get_device_init_args()
@@ -97,7 +98,7 @@ def get_cameras_initialization_parameters(
 
 
 def get_elliptec_initialization_parameters(
-    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+    experiment_config: ExperimentConfig, _: SequenceConfig
 ) -> dict[DeviceName, InitializationParameters]:
 
     result = {}
