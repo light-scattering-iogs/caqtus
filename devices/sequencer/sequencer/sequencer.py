@@ -1,90 +1,51 @@
-from abc import ABC
-from typing import Self, Iterable
+from typing import Self, Iterable, Mapping, NewType, TypeVar
 
-import numpy as np
-
-from . import channel
+from .channel import ChannelPattern
 from .splittable import Splittable
 
-
-class Instruction(Splittable, ABC):
-    pass
+ChannelLabel = NewType("ChannelLabel", int)
 
 
-class Pattern(Instruction):
-    def __init__(self, channel_patterns: Iterable[channel.Pattern]) -> None:
-        self.channel_patterns = list(channel_patterns)
+class SequencerPattern(Splittable["SequencerPattern"]):
+    def __init__(self, channel_patterns: Mapping[ChannelLabel, ChannelPattern]) -> None:
+        self.channel_patterns = dict(channel_patterns)
 
     @property
-    def channel_patterns(self) -> list[channel.Pattern]:
+    def channel_patterns(self) -> dict[ChannelLabel, ChannelPattern]:
         return self._channel_patterns
 
     @channel_patterns.setter
-    def channel_patterns(self, channel_patterns: list[channel.Pattern]) -> None:
+    def channel_patterns(
+        self, channel_patterns: Mapping[ChannelLabel, ChannelPattern]
+    ) -> None:
         if len(channel_patterns) == 0:
             raise ValueError("Instruction must have at least one channel pattern.")
-        duration = len(channel_patterns[0])
+        duration = len(first(channel_patterns.values()))
         if not all(
-            len(channel_pattern) == duration for channel_pattern in channel_patterns
+            len(channel_pattern) == duration
+            for channel_pattern in channel_patterns.values()
         ):
             raise ValueError("All channel patterns must have the same duration.")
-        self._channel_patterns = channel_patterns
+        self._channel_patterns = dict(channel_patterns)
         self._check_length_valid()
 
     def __len__(self) -> int:
-        return len(self.channel_patterns[0])
+        return len(first(self.channel_patterns.values()))
 
     def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
 
-        splits = [
-            channel_pattern.split(split_index)
-            for channel_pattern in self.channel_patterns
-        ]
-        first_part = type(self)(split[0] for split in splits)
-        second_part = type(self)(split[1] for split in splits)
+        splits = {
+            name: channel_pattern.split(split_index)
+            for name, channel_pattern in self.channel_patterns.items()
+        }
+        first_part = type(self)({name: split[0] for name, split in splits.items()})
+        second_part = type(self)({name: split[1] for name, split in splits.items()})
         return first_part, second_part
 
 
-class ConsecutiveInstructions(Instruction):
-    def __init__(self, instructions: Iterable[Instruction]) -> None:
-        self.instructions = list(instructions)
+_T = TypeVar("_T")
 
-    @property
-    def instructions(self) -> list[Instruction]:
-        return self._instructions
 
-    @instructions.setter
-    def instructions(self, instructions: list[Instruction]):
-        self._instructions = list(instructions)
-        self._instruction_starts = np.cumsum(
-            [0] + [len(instruction) for instruction in instructions]
-        )
-        self._check_length_valid()
-
-    def __len__(self) -> int:
-        return sum(len(instruction) for instruction in self.instructions)
-
-    def split(self, split_index: int) -> tuple[Self, Self]:
-        self._check_split_valid(split_index)
-
-        instruction_index = self._find_instruction_index(split_index)
-        instruction_to_split = self.instructions[instruction_index]
-
-        if split_index == self._instruction_starts[instruction_index]:
-            a = []
-            b = [instruction_to_split]
-        elif split_index == self._instruction_starts[instruction_index] + len(
-                instruction_to_split
-        ):
-            a = [instruction_to_split]
-            b = []
-        else:
-            x, y = instruction_to_split.split(
-                split_index - self._instruction_starts[instruction_index]
-            )
-            a, b = [x], [y]
-        cls = type(self)
-        first_part = cls(self.instructions[:instruction_index] + a)
-        second_part = cls(b + self.instructions[instruction_index + 1 :])
-        return first_part, second_part
+def first(iterable: Iterable[_T]) -> _T:
+    return next(iter(iterable))
