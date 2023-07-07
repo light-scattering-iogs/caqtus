@@ -8,7 +8,7 @@ from .splittable import Splittable
 ChannelType = TypeVar("ChannelType", bound=DTypeLike)
 
 
-class ChannelPattern(Splittable["Pattern[ChannelType]"], Generic[ChannelType]):
+class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelType]):
     """A sequence of values to be output on a channel."""
 
     def __init__(self, values: Iterable[ChannelType]) -> None:
