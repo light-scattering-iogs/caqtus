@@ -2,7 +2,7 @@ import pytest
 
 from sequencer.channel import ChannelPattern
 
-from sequencer.instruction import (Instruction, ConsecutiveInstructions, Repeat)
+from sequencer.instruction import (Instruction, Concatenate, Repeat)
 
 
 def assert_split_valid(instruction: Instruction):
@@ -23,11 +23,11 @@ def test_consecutive_split():
     pattern_2 = ChannelPattern[int]([5])
     pattern_3 = ChannelPattern[int]([9, 10, 11, 12])
 
-    sequence = ConsecutiveInstructions([pattern_1, pattern_2, pattern_3])
+    sequence = Concatenate([pattern_1, pattern_2, pattern_3])
     assert_split_valid(sequence)
 
     repeat = Repeat(sequence, 3)
-    sequence = ConsecutiveInstructions([repeat, repeat, repeat])
+    sequence = Concatenate([repeat, repeat, repeat])
     assert_split_valid(sequence)
 
 
@@ -47,6 +47,6 @@ def test_repeat_split():
     repeat = Repeat(pattern, 3)
     assert_split_valid(repeat)
 
-    sequence = ConsecutiveInstructions([pattern, pattern, pattern])
+    sequence = Concatenate([pattern, pattern, pattern])
     repeat = Repeat(sequence, 3)
     assert_split_valid(repeat)

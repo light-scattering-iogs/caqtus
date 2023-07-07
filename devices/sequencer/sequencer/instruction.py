@@ -14,7 +14,7 @@ class Instruction(Splittable[SplitResult], Generic[PatternType, SplitResult], AB
     pass
 
 
-class ConsecutiveInstructions(
+class Concatenate(
     Instruction[PatternType, Instruction[PatternType, SplitResult]]
 ):
     """A sequence of instructions to be executed consecutively.
@@ -159,8 +159,8 @@ class Repeat(Instruction[PatternType, Instruction[PatternType, SplitResult]]):
             s2, s3 = self.instruction.split(split_index % instruction_length)
             first.append(s2)
             second.append(s3)
-            first_part = ConsecutiveInstructions[PatternType, SplitResult](first)
-            second_part = ConsecutiveInstructions[PatternType, SplitResult](second)
+            first_part = Concatenate[PatternType, SplitResult](first)
+            second_part = Concatenate[PatternType, SplitResult](second)
         return first_part, second_part
 
     def __repr__(self) -> str:
