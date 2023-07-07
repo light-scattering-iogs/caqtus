@@ -3,9 +3,12 @@ from typing import TypeVar, Generic, Any, Self, Iterable
 import numpy as np
 from numpy.typing import DTypeLike
 
+from .instruction import Instruction
 from .splittable import Splittable
 
 ChannelType = TypeVar("ChannelType", bound=DTypeLike)
+
+ChannelInstruction = Instruction[ChannelType, "ChannelInstruction[ChannelType]"]
 
 
 class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelType]):
