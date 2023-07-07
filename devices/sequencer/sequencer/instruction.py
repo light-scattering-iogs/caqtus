@@ -24,17 +24,18 @@ class ConsecutiveInstructions(
     """
 
     def __init__(
-        self, instructions: Iterable[Instruction[PatternType, SplitResult]]
+        self,
+        instructions: Iterable[Instruction[PatternType, SplitResult] | PatternType],
     ) -> None:
         self.instructions = list(instructions)
 
     @property
-    def instructions(self) -> list[Instruction[PatternType, SplitResult]]:
+    def instructions(self) -> list[Instruction[PatternType, SplitResult] | PatternType]:
         return self._instructions
 
     @instructions.setter
     def instructions(
-        self, instructions: list[Instruction[PatternType, SplitResult]]
+        self, instructions: list[Instruction[PatternType, SplitResult] | PatternType]
     ) -> None:
         self._instructions = list(instructions)
         self._instruction_starts = np.cumsum(
