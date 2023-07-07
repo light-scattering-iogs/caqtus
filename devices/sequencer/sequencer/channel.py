@@ -15,11 +15,7 @@ class ChannelInstruction(
     Generic[ChannelType],
     ABC,
 ):
-    """Base class to describe the output sequence of a channel.
-
-    An instruction is generic on the type of data a channel contains, and the type of instruction it returns when split.
-    All classes inheriting from this class must be effectively immutable. More precisely, its length must not change.
-    """
+    """Base class to describe the output sequence of a channel."""
 
     @abstractmethod
     def flatten(self) -> "ChannelPattern[ChannelType]":
