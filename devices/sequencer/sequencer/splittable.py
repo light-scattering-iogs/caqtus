@@ -7,9 +7,9 @@ SplitResult = TypeVar("SplitResult", bound="Splittable", covariant=True)
 class Splittable(Sized, Protocol[SplitResult]):
     def _check_length_valid(self) -> None:
         if len(self) < 0:
-            raise ValueError(f"Invalid instruction length {len(self)}.")
+            raise ValueError(f"Sequence can't have negative length.")
         elif len(self) == 0:
-            raise ValueError("Instruction must have at least one clock cycle.")
+            raise ValueError("Empty sequence is not splittable.")
 
     @abstractmethod
     def split(self, split_index: int) -> tuple[SplitResult, SplitResult]:

@@ -1,8 +1,8 @@
+import numpy as np
 import pytest
 
+from sequencer.channel import ChannelInstruction, Concatenate, Repeat
 from sequencer.channel import ChannelPattern
-
-from sequencer.channel import (ChannelInstruction, Concatenate, Repeat)
 
 
 def assert_split_valid(instruction: ChannelInstruction):
@@ -14,8 +14,9 @@ def assert_split_valid(instruction: ChannelInstruction):
 
     for split_index in range(1, len(instruction)):
         a, b = instruction.split(split_index)
-        assert len(a) == split_index, f"len({a=}) != {split_index=}"
-        assert len(b) == len(instruction) - split_index
+
+        assert np.array_equal(a.flatten().values, instruction.flatten().values[:split_index])
+        assert np.array_equal(b.flatten().values, instruction.flatten().values[split_index:])
 
 
 def test_consecutive_split():

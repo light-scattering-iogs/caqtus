@@ -1,4 +1,5 @@
-from abc import ABC
+from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TypeVar, Generic, Any, Self, Iterable
 
 import numpy as np
@@ -8,7 +9,26 @@ from .splittable import Splittable
 ChannelType = TypeVar("ChannelType", bound=np.dtype)
 
 
-class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelType]):
+class ChannelInstruction(
+    Sequence[ChannelType],
+    Splittable["ChannelInstruction[ChannelType]"],
+    Generic[ChannelType],
+    ABC,
+):
+    """Base class to describe the output sequence of a channel.
+
+    An instruction is generic on the type of data a channel contains, and the type of instruction it returns when split.
+    All classes inheriting from this class must be effectively immutable. More precisely, its length must not change.
+    """
+
+    @abstractmethod
+    def flatten(self) -> "ChannelPattern[ChannelType]":
+        """Flatten the instruction into a single pattern."""
+
+        raise NotImplementedError
+
+
+class ChannelPattern(ChannelInstruction[ChannelType]):
     """A sequence of values to be output on a channel."""
 
     def __init__(self, values: Iterable[ChannelType]) -> None:
@@ -22,10 +42,16 @@ class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelT
     def __len__(self) -> int:
         return len(self.values)
 
+    def __getitem__(self, index):
+        return self.values[index]
+
     def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
         cls = type(self)
         return cls(self.values[:split_index]), cls(self.values[split_index:])
+
+    def flatten(self) -> Self:
+        return self
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.values!r})"
@@ -33,23 +59,13 @@ class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelT
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({self.values!s})"
 
-
-SubInstruction = TypeVar("SubInstruction", bound="ChannelInstruction", covariant=True)
-
-
-class ChannelInstruction(
-    Splittable[SubInstruction], Generic[ChannelType, SubInstruction], ABC
-):
-    """Base class to describe the output sequence of a channel.
-
-    An instruction is generic on the type of data a channel contains, and the type of instruction it returns when split.
-    All classes inheriting from this class must be effectively immutable. More precisely, its length must not change.
-    """
-
-    pass
+    def __eq__(self, other):
+        if not isinstance(other, ChannelPattern):
+            return NotImplemented
+        return np.array_equal(self.values, other.values)
 
 
-class Concatenate(ChannelInstruction[ChannelType, SubInstruction]):
+class Concatenate(ChannelInstruction[ChannelType]):
     """A sequence of instructions to be executed consecutively.
 
     Attributes:
@@ -58,7 +74,7 @@ class Concatenate(ChannelInstruction[ChannelType, SubInstruction]):
 
     def __init__(
         self,
-        instructions: Iterable[SubInstruction | ChannelPattern[ChannelType]],
+        instructions: Iterable[ChannelInstruction[ChannelType]],
     ) -> None:
         self._instructions = tuple(instructions)
         self._instruction_starts = np.cumsum(
@@ -67,11 +83,17 @@ class Concatenate(ChannelInstruction[ChannelType, SubInstruction]):
         self._check_length_valid()
 
     @property
-    def instructions(self) -> tuple[SubInstruction | ChannelPattern[ChannelType], ...]:
+    def instructions(self) -> tuple[ChannelInstruction[ChannelType], ...]:
         return self._instructions
 
     def __len__(self) -> int:
         return sum(len(instruction) for instruction in self.instructions)
+
+    def __getitem__(self, index):
+        instruction_index = self._find_instruction_index(index)
+        return self.instructions[instruction_index][
+            index - self._instruction_starts[instruction_index]
+        ]
 
     def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
@@ -107,6 +129,13 @@ class Concatenate(ChannelInstruction[ChannelType, SubInstruction]):
 
         return int(np.searchsorted(self._instruction_starts, time, side="right") - 1)
 
+    def flatten(self) -> ChannelPattern[ChannelType]:
+        return ChannelPattern(
+            np.concatenate(
+                [instruction.flatten().values for instruction in self.instructions]
+            )
+        )
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.instructions!r})"
 
@@ -114,7 +143,7 @@ class Concatenate(ChannelInstruction[ChannelType, SubInstruction]):
         return f"{self.__class__.__name__}({self.instructions!s})"
 
 
-class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
+class Repeat(ChannelInstruction[ChannelType]):
     """Repeat a single instruction a given number of times.
 
     Attributes:
@@ -122,9 +151,14 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
         number_repetitions: The number of times to repeat the instruction.
     """
 
+    def flatten(self) -> "ChannelPattern[ChannelType]":
+        return ChannelPattern(
+            np.tile(self.instruction.flatten().values, self.number_repetitions)
+        )
+
     def __init__(
         self,
-        instruction: SubInstruction | ChannelPattern[ChannelType],
+        instruction: ChannelInstruction[ChannelType],
         number_repetitions: int,
     ) -> None:
         self._instruction = instruction
@@ -132,7 +166,7 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
         self._check_length_valid()
 
     @property
-    def instruction(self) -> SubInstruction | ChannelPattern[ChannelType]:
+    def instruction(self) -> ChannelInstruction[ChannelType]:
         return self._instruction
 
     @property
@@ -142,12 +176,12 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
     def __len__(self) -> int:
         return len(self.instruction) * self.number_repetitions
 
+    def __getitem__(self, index):
+        return self.instruction[index % len(self.instruction)]
+
     def split(
         self, split_index: int
-    ) -> tuple[
-        ChannelInstruction[ChannelType, SubInstruction],
-        ChannelInstruction[ChannelType, SubInstruction],
-    ]:
+    ) -> tuple[ChannelInstruction[ChannelType], ChannelInstruction[ChannelType],]:
         self._check_split_valid(split_index)
         instruction_length = len(self.instruction)
         cls = type(self)
@@ -159,8 +193,8 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
             )
             return first_part, second_part
         else:
-            first = tuple[SubInstruction, ...]()
-            second = tuple[SubInstruction, ...]()
+            first = tuple[ChannelInstruction[ChannelType], ...]()
+            second = tuple[ChannelInstruction[ChannelType], ...]()
             if split_index // instruction_length > 0:
                 first = first + (
                     cls(self.instruction, split_index // instruction_length),
@@ -175,8 +209,8 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
             s2, s3 = self.instruction.split(split_index % instruction_length)
             first = first + (s2,)
             second = (s3,) + second
-            first_part = Concatenate[ChannelType, SubInstruction](first)
-            second_part = Concatenate[ChannelType, SubInstruction](second)
+            first_part = Concatenate[ChannelType](first)
+            second_part = Concatenate[ChannelType](second)
         return first_part, second_part
 
     def __repr__(self) -> str:
