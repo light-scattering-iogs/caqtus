@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Sequence
 from typing import TypeVar, Generic, Any
+from .splittable import Splittable
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -8,46 +9,12 @@ from numpy.typing import DTypeLike
 ChannelType = TypeVar("ChannelType", bound=DTypeLike, covariant=True)
 
 
-class ChannelInstruction(ABC, Generic[ChannelType]):
-    @abstractmethod
-    def __len__(self) -> int:
-        """Duration of the instruction in number of clock cycles.
-
-        The duration must be strictly greater than 0.
-        """
-
-        raise NotImplementedError
-
+class ChannelInstruction(Splittable, Generic[ChannelType], ABC):
     def _check_length_valid(self) -> None:
         if len(self) < 0:
             raise ValueError(f"Invalid instruction length {len(self)}.")
         elif len(self) == 0:
             raise ValueError("Instruction must have at least one clock cycle.")
-
-    @abstractmethod
-    def split(
-        self, split_index: int
-    ) -> tuple["ChannelInstruction[ChannelType]", "ChannelInstruction[ChannelType]"]:
-        """Split the instruction into two parts at the given index.
-
-        Args:
-            split_index: The index at which to split the instruction. Must be 0 < split_index < len(self).
-
-        Returns:
-            A tuple containing the two parts of the instruction. The first part contains the values with indices
-            0 <= i < split_index, the second part contains the values with indices split_index <= i < len(self).
-        """
-
-        raise NotImplementedError
-
-    def _check_split_valid(self, split_index: int) -> None:
-        """Check whether the given split index is valid."""
-
-        if not (0 < split_index < len(self)):
-            raise ValueError(
-                f"Invalid split index {split_index} for instruction of length"
-                f" {len(self)}."
-            )
 
 
 class Pattern(ChannelInstruction[ChannelType]):
