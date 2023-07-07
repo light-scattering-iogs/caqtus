@@ -1,10 +1,16 @@
 from abc import abstractmethod
-from typing import Protocol, Sized, Self
+from typing import Protocol, Sized
 
 
 class Splittable(Sized, Protocol):
+    def _check_length_valid(self) -> None:
+        if len(self) < 0:
+            raise ValueError(f"Invalid instruction length {len(self)}.")
+        elif len(self) == 0:
+            raise ValueError("Instruction must have at least one clock cycle.")
+
     @abstractmethod
-    def split(self, split_index: int) -> tuple[Self, Self]:
+    def split(self, split_index: int) -> tuple["Splittable", "Splittable"]:
         """Split the instruction into two parts at the given index.
 
         Args:
