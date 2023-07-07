@@ -157,21 +157,24 @@ class Repeat(ChannelInstruction[ChannelType, SubInstruction]):
                 self.instruction,
                 self.number_repetitions - split_index // instruction_length,
             )
+            return first_part, second_part
         else:
-            first: list[SubInstruction] = []
-            second: list[SubInstruction] = []
+            first = tuple[SubInstruction, ...]()
+            second = tuple[SubInstruction, ...]()
             if split_index // instruction_length > 0:
-                first.append(cls(self.instruction, split_index // instruction_length))
+                first = first + (
+                    cls(self.instruction, split_index // instruction_length),
+                )
             if split_index // instruction_length + 1 < self.number_repetitions:
-                second.append(
+                second = (
                     cls(
                         self.instruction,
                         self.number_repetitions - split_index // instruction_length - 1,
-                    )
-                )
+                    ),
+                ) + second
             s2, s3 = self.instruction.split(split_index % instruction_length)
-            first.append(s2)
-            second.append(s3)
+            first = first + (s2,)
+            second = (s3,) + second
             first_part = Concatenate[ChannelType, SubInstruction](first)
             second_part = Concatenate[ChannelType, SubInstruction](second)
         return first_part, second_part
