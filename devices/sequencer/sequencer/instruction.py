@@ -131,8 +131,6 @@ class Repeat(Instruction[PatternType, Instruction[PatternType, SplitResult]]):
     ]:
         self._check_split_valid(split_index)
         instruction_length = len(self.instruction)
-        first_part: Instruction[PatternType, SplitResult]
-        second_part: Instruction[PatternType, SplitResult]
         if split_index % instruction_length == 0:
             first_part = Repeat[PatternType, SplitResult](
                 self.instruction, split_index // instruction_length
