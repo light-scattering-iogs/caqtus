@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
 from typing import TypeVar, Generic, Any, Self, Iterable
 
 import numpy as np
@@ -10,7 +9,6 @@ ChannelType = TypeVar("ChannelType", bound=np.dtype)
 
 
 class ChannelInstruction(
-    Sequence[ChannelType],
     Splittable["ChannelInstruction[ChannelType]"],
     Generic[ChannelType],
     ABC,
@@ -37,9 +35,6 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
 
     def __len__(self) -> int:
         return len(self.values)
-
-    def __getitem__(self, index):
-        return self.values[index]
 
     def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
@@ -84,12 +79,6 @@ class Concatenate(ChannelInstruction[ChannelType]):
 
     def __len__(self) -> int:
         return sum(len(instruction) for instruction in self.instructions)
-
-    def __getitem__(self, index):
-        instruction_index = self._find_instruction_index(index)
-        return self.instructions[instruction_index][
-            index - self._instruction_starts[instruction_index]
-        ]
 
     def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
@@ -171,9 +160,6 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     def __len__(self) -> int:
         return len(self.instruction) * self.number_repetitions
-
-    def __getitem__(self, index):
-        return self.instruction[index % len(self.instruction)]
 
     def split(
         self, split_index: int
