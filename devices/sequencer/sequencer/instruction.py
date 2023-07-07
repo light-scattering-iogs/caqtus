@@ -11,6 +11,12 @@ SplitResult = TypeVar("SplitResult", bound="Instruction", covariant=True)
 
 
 class Instruction(Splittable[SplitResult], Generic[PatternType, SplitResult], ABC):
+    """Base class to describe high-level instructions.
+
+    An instruction is generic on the type of pattern it contains, and the type of instruction it returns when split. All
+    classes inheriting from this class must be effectively immutable. More precisely, its length must not change.
+    """
+
     pass
 
 
@@ -27,21 +33,15 @@ class Concatenate(
         self,
         instructions: Iterable[Instruction[PatternType, SplitResult] | PatternType],
     ) -> None:
-        self.instructions = list(instructions)
-
-    @property
-    def instructions(self) -> list[Instruction[PatternType, SplitResult] | PatternType]:
-        return self._instructions
-
-    @instructions.setter
-    def instructions(
-        self, instructions: list[Instruction[PatternType, SplitResult] | PatternType]
-    ) -> None:
-        self._instructions = list(instructions)
+        self._instructions = tuple(instructions)
         self._instruction_starts = np.cumsum(
             [0] + [len(instruction) for instruction in instructions]
         )
         self._check_length_valid()
+
+    @property
+    def instructions(self) -> tuple[Instruction[PatternType, SplitResult] | PatternType, ...]:
+        return self._instructions
 
     def __len__(self) -> int:
         return sum(len(instruction) for instruction in self.instructions)
@@ -66,8 +66,8 @@ class Concatenate(
             )
             a, b = [x], [y]
         cls = type(self)
-        first_part = cls(self.instructions[:instruction_index] + a)
-        second_part = cls(b + self.instructions[instruction_index + 1 :])
+        first_part = cls(list(self.instructions[:instruction_index]) + a)
+        second_part = cls(b + list(self.instructions[instruction_index + 1 :]))
         return first_part, second_part
 
     def _find_instruction_index(self, time: int) -> int:
@@ -108,19 +108,9 @@ class Repeat(Instruction[PatternType, Instruction[PatternType, SplitResult]]):
     def instruction(self) -> Instruction[PatternType, SplitResult]:
         return self._instruction
 
-    @instruction.setter
-    def instruction(self, instruction: Instruction[PatternType, SplitResult]) -> None:
-        self._instruction = instruction
-        self._check_length_valid()
-
     @property
     def number_repetitions(self) -> int:
         return self._number_repetitions
-
-    @number_repetitions.setter
-    def number_repetitions(self, number_repetitions: int) -> None:
-        self._number_repetitions = number_repetitions
-        self._check_length_valid()
 
     def __len__(self) -> int:
         return len(self.instruction) * self.number_repetitions
