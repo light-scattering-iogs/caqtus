@@ -1,12 +1,11 @@
 from typing import TypeVar, Generic, Any, Self, Iterable
 
 import numpy as np
-from numpy.typing import DTypeLike
 
 from .instruction import Instruction
 from .splittable import Splittable
 
-ChannelType = TypeVar("ChannelType", bound=DTypeLike)
+ChannelType = TypeVar("ChannelType", bound=np.dtype)
 
 ChannelInstruction = Instruction[ChannelType, "ChannelInstruction[ChannelType]"]
 
@@ -15,16 +14,12 @@ class ChannelPattern(Splittable["ChannelPattern[ChannelType]"], Generic[ChannelT
     """A sequence of values to be output on a channel."""
 
     def __init__(self, values: Iterable[ChannelType]) -> None:
-        self.values = np.array(values)
+        self._values: np.ndarray[Any, ChannelType] = np.array(values)  # type: ignore
+        self._check_length_valid()
 
     @property
     def values(self) -> np.ndarray[Any, ChannelType]:
         return self._values
-
-    @values.setter
-    def values(self, values: np.ndarray[Any, ChannelType]) -> None:
-        self._values = values
-        self._check_length_valid()
 
     def __len__(self) -> int:
         return len(self.values)
