@@ -1,14 +1,14 @@
 import pytest
 
-from sequencer.channel_instruction import (
+from sequencer.channel import (
     Pattern,
     ConsecutiveInstructions,
-    ChannelInstruction,
+    Instruction,
     Repeat,
 )
 
 
-def assert_split_valid(instruction: ChannelInstruction):
+def assert_split_valid(instruction: Instruction):
     with pytest.raises(ValueError):
         instruction.split(0)
 

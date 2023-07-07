@@ -1,26 +1,25 @@
 from abc import ABC
-from collections.abc import Sequence
-from typing import TypeVar, Generic, Any
-from .splittable import Splittable
+from typing import TypeVar, Generic, Any, Self, Iterable
 
 import numpy as np
 from numpy.typing import DTypeLike
 
+from .splittable import Splittable
+
 ChannelType = TypeVar("ChannelType", bound=DTypeLike, covariant=True)
 
 
-class ChannelInstruction(Splittable, Generic[ChannelType], ABC):
-    def _check_length_valid(self) -> None:
-        if len(self) < 0:
-            raise ValueError(f"Invalid instruction length {len(self)}.")
-        elif len(self) == 0:
-            raise ValueError("Instruction must have at least one clock cycle.")
+class Instruction(Splittable, Generic[ChannelType], ABC):
+    def split(
+        self, split_index: int
+    ) -> tuple["Instruction[ChannelType]", "Instruction[ChannelType]"]:
+        raise NotImplementedError
 
 
-class Pattern(ChannelInstruction[ChannelType]):
+class Pattern(Instruction[ChannelType]):
     """A sequence of values to be output on a channel."""
 
-    def __init__(self, values: Sequence[ChannelType]) -> None:
+    def __init__(self, values: Iterable[ChannelType]) -> None:
         self.values = np.array(values)
 
     @property
@@ -35,11 +34,10 @@ class Pattern(ChannelInstruction[ChannelType]):
     def __len__(self) -> int:
         return len(self.values)
 
-    def split(
-        self, split_index: int
-    ) -> tuple["ChannelInstruction[ChannelType]", "ChannelInstruction[ChannelType]"]:
+    def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
-        return Pattern(self.values[:split_index]), Pattern(self.values[split_index:])
+        cls = type(self)
+        return cls(self.values[:split_index]), cls(self.values[split_index:])
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.values!r})"
@@ -48,22 +46,22 @@ class Pattern(ChannelInstruction[ChannelType]):
         return f"{self.__class__.__name__}({self.values!s})"
 
 
-class ConsecutiveInstructions(ChannelInstruction[ChannelType]):
+class ConsecutiveInstructions(Instruction[ChannelType]):
     """A sequence of instructions to be executed consecutively.
 
     Attributes:
         instructions: The instructions to be executed
     """
 
-    def __init__(self, instructions: Sequence[ChannelInstruction[ChannelType]]) -> None:
+    def __init__(self, instructions: Iterable[Instruction[ChannelType]]) -> None:
         self.instructions = list(instructions)
 
     @property
-    def instructions(self) -> list[ChannelInstruction[ChannelType]]:
+    def instructions(self) -> list[Instruction[ChannelType]]:
         return self._instructions
 
     @instructions.setter
-    def instructions(self, instructions: list[ChannelInstruction[ChannelType]]):
+    def instructions(self, instructions: list[Instruction[ChannelType]]):
         self._instructions = list(instructions)
         self._instruction_starts = np.cumsum(
             [0] + [len(instruction) for instruction in instructions]
@@ -73,9 +71,7 @@ class ConsecutiveInstructions(ChannelInstruction[ChannelType]):
     def __len__(self) -> int:
         return sum(len(instruction) for instruction in self.instructions)
 
-    def split(
-        self, split_index: int
-    ) -> tuple["ChannelInstruction[ChannelType]", "ChannelInstruction[ChannelType]"]:
+    def split(self, split_index: int) -> tuple[Self, Self]:
         self._check_split_valid(split_index)
 
         instruction_index = self._find_instruction_index(split_index)
@@ -94,11 +90,9 @@ class ConsecutiveInstructions(ChannelInstruction[ChannelType]):
                 split_index - self._instruction_starts[instruction_index]
             )
             a, b = [x], [y]
-
-        first_part = ConsecutiveInstructions(self.instructions[:instruction_index] + a)
-        second_part = ConsecutiveInstructions(
-            b + self.instructions[instruction_index + 1 :]
-        )
+        cls = type(self)
+        first_part = cls(self.instructions[:instruction_index] + a)
+        second_part = cls(b + self.instructions[instruction_index + 1 :])
         return first_part, second_part
 
     def _find_instruction_index(self, time: int) -> int:
@@ -118,7 +112,7 @@ class ConsecutiveInstructions(ChannelInstruction[ChannelType]):
         return f"{self.__class__.__name__}({self.instructions!s})"
 
 
-class Repeat(ChannelInstruction[ChannelType]):
+class Repeat(Instruction[ChannelType]):
     """Repeat a single instruction a given number of times.
 
     Attributes:
@@ -127,18 +121,18 @@ class Repeat(ChannelInstruction[ChannelType]):
     """
 
     def __init__(
-        self, instruction: ChannelInstruction[ChannelType], number_repetitions: int
+        self, instruction: Instruction[ChannelType], number_repetitions: int
     ) -> None:
         self._instruction = instruction
         self._number_repetitions = number_repetitions
         self._check_length_valid()
 
     @property
-    def instruction(self) -> ChannelInstruction[ChannelType]:
+    def instruction(self) -> Instruction[ChannelType]:
         return self._instruction
 
     @instruction.setter
-    def instruction(self, instruction: ChannelInstruction[ChannelType]) -> None:
+    def instruction(self, instruction: Instruction[ChannelType]) -> None:
         self._instruction = instruction
         self._check_length_valid()
 
@@ -156,11 +150,13 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     def split(
         self, split_index: int
-    ) -> tuple["ChannelInstruction[ChannelType]", "ChannelInstruction[ChannelType]"]:
+    ) -> tuple[
+        Instruction[ChannelType], Instruction[ChannelType]
+    ]:
         self._check_split_valid(split_index)
         instruction_length = len(self.instruction)
-        first_part: ChannelInstruction[ChannelType]
-        second_part: ChannelInstruction[ChannelType]
+        first_part: Instruction[ChannelType]
+        second_part: Instruction[ChannelType]
         if split_index % instruction_length == 0:
             first_part = Repeat(self.instruction, split_index // instruction_length)
             second_part = Repeat(
@@ -168,8 +164,8 @@ class Repeat(ChannelInstruction[ChannelType]):
                 self.number_repetitions - split_index // instruction_length,
             )
         else:
-            first = []
-            second = []
+            first: list[Instruction[ChannelType]] = []
+            second: list[Instruction[ChannelType]] = []
             if split_index // instruction_length > 0:
                 first.append(
                     Repeat(self.instruction, split_index // instruction_length)
