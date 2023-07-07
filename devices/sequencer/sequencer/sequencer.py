@@ -1,6 +1,8 @@
 from abc import ABC
 from typing import Self, Iterable
 
+import numpy as np
+
 from . import channel
 from .splittable import Splittable
 
@@ -41,4 +43,48 @@ class Pattern(Instruction):
         ]
         first_part = type(self)(split[0] for split in splits)
         second_part = type(self)(split[1] for split in splits)
+        return first_part, second_part
+
+
+class ConsecutiveInstructions(Instruction):
+    def __init__(self, instructions: Iterable[Instruction]) -> None:
+        self.instructions = list(instructions)
+
+    @property
+    def instructions(self) -> list[Instruction]:
+        return self._instructions
+
+    @instructions.setter
+    def instructions(self, instructions: list[Instruction]):
+        self._instructions = list(instructions)
+        self._instruction_starts = np.cumsum(
+            [0] + [len(instruction) for instruction in instructions]
+        )
+        self._check_length_valid()
+
+    def __len__(self) -> int:
+        return sum(len(instruction) for instruction in self.instructions)
+
+    def split(self, split_index: int) -> tuple[Self, Self]:
+        self._check_split_valid(split_index)
+
+        instruction_index = self._find_instruction_index(split_index)
+        instruction_to_split = self.instructions[instruction_index]
+
+        if split_index == self._instruction_starts[instruction_index]:
+            a = []
+            b = [instruction_to_split]
+        elif split_index == self._instruction_starts[instruction_index] + len(
+                instruction_to_split
+        ):
+            a = [instruction_to_split]
+            b = []
+        else:
+            x, y = instruction_to_split.split(
+                split_index - self._instruction_starts[instruction_index]
+            )
+            a, b = [x], [y]
+        cls = type(self)
+        first_part = cls(self.instructions[:instruction_index] + a)
+        second_part = cls(b + self.instructions[instruction_index + 1 :])
         return first_part, second_part
