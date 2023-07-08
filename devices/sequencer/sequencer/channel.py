@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 from typing import TypeVar, Generic, Any, Self, Iterable
 
 import numpy as np
@@ -21,38 +22,124 @@ class ChannelInstruction(
 
         raise NotImplementedError
 
+    @abstractmethod
+    def __eq__(self, other) -> bool:
+        """Equality comparison.
+
+        Two instructions are equal if they are recursively equal. Two instructions that only satisfy
+        a.flatten() == b.flatten() are not equal.
+        """
+
+        raise NotImplementedError
+
+    def __add__(self, other) -> "ChannelInstruction[ChannelType]":
+        if isinstance(other, ChannelInstruction):
+            return self.join([self, other], dtype=self.dtype)
+        else:
+            raise TypeError(f"Can't concatenate {type(self)} and {type(other)}.")
+
+    def __mul__(self, other: int) -> "ChannelInstruction[ChannelType]":
+        multiplier = int(other)
+        if multiplier < 0:
+            raise ValueError("Multiplier must be positive integer.")
+        elif multiplier == 0:
+            return self.empty_like(self)
+        elif multiplier == 1:
+            return self
+        else:
+            return Repeat(self, multiplier)
+
+    def __rmul__(self, other) -> "ChannelInstruction[ChannelType]":
+        return self.__mul__(other)
+
+    @classmethod
+    def join(
+        cls, instructions: Iterable[Self], dtype
+    ) -> "ChannelInstruction[ChannelType]":
+        """Concatenate multiple instructions into a single instruction.
+
+        This method removes empty instructions from the list and flattens nested concatenations.
+        """
+
+        instructions = [
+            instruction for instruction in instructions if not instruction.is_empty()
+        ]
+        flattened_instructions: list[ChannelInstruction[ChannelType]] = []
+        for instruction in instructions:
+            if isinstance(instruction, Concatenate):
+                flattened_instructions.extend(instruction.instructions)
+            else:
+                flattened_instructions.append(instruction)
+
+        if len(flattened_instructions) == 0:
+            return cls.empty(dtype=dtype)
+        elif len(flattened_instructions) == 1:
+            return flattened_instructions[0]
+        else:
+            return Concatenate(flattened_instructions)
+
+    def is_empty(self) -> bool:
+        return len(self) == 0
+
+    @property
+    @abstractmethod
+    def dtype(self) -> ChannelType:
+        """Return the dtype of the channel."""
+
+        raise NotImplementedError
+
+    @classmethod
+    def empty(cls, dtype) -> "ChannelInstruction[ChannelType]":
+        """Return an empty instruction."""
+
+        return ChannelPattern([], dtype=dtype)
+
+    @classmethod
+    def empty_like(cls, instruction: Self) -> "ChannelInstruction[ChannelType]":
+        """Return an empty instruction with the same dtype as the given instruction."""
+
+        return cls.empty(instruction.dtype)
+
 
 class ChannelPattern(ChannelInstruction[ChannelType]):
     """A sequence of values to be output on a channel."""
 
-    def __init__(self, values: Iterable[ChannelType]) -> None:
-        self._values: np.ndarray[Any, ChannelType] = np.array(values)  # type: ignore
-        self._check_length_valid()
+    def __init__(self, values: Iterable[ChannelType], dtype=None) -> None:
+        self._values: np.ndarray[Any, ChannelType] = np.array(values, dtype=dtype)  # type: ignore
 
     @property
     def values(self) -> np.ndarray[Any, ChannelType]:
-        return self._values
+        return np.copy(self._values)
+
+    @cached_property
+    def dtype(self) -> ChannelType:
+        return self._values.dtype
 
     def __len__(self) -> int:
         return len(self.values)
 
-    def split(self, split_index: int) -> tuple[Self, Self]:
+    def split(self, split_index: int):
         self._check_split_valid(split_index)
-        cls = type(self)
-        return cls(self.values[:split_index]), cls(self.values[split_index:])
+
+        if split_index == 0:
+            return self.empty_like(self), self
+        elif split_index == len(self):
+            return self, self.empty_like(self)
+        else:
+            cls = type(self)
+            return cls(self.values[:split_index], dtype=self.dtype), cls(
+                self.values[split_index:], dtype=self.dtype
+            )
 
     def flatten(self) -> Self:
         return self
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.values!r})"
-
-    def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.values!s})"
+        return f"{self.__class__.__name__}({tuple(self.values)!r})"
 
     def __eq__(self, other):
         if not isinstance(other, ChannelPattern):
-            return NotImplemented
+            return False
         return np.array_equal(self.values, other.values)
 
 
@@ -67,42 +154,43 @@ class Concatenate(ChannelInstruction[ChannelType]):
         self,
         instructions: Iterable[ChannelInstruction[ChannelType]],
     ) -> None:
-        self._instructions = tuple(instructions)
+        self._instructions = tuple(
+            instruction for instruction in instructions if not instruction.is_empty()
+        )
         self._instruction_starts = np.cumsum(
             [0] + [len(instruction) for instruction in instructions]
         )
-        self._check_length_valid()
+        if len(self._instructions) <= 1:
+            raise ValueError("Concatenation must have at least two instructions.")
 
     @property
     def instructions(self) -> tuple[ChannelInstruction[ChannelType], ...]:
         return self._instructions
 
     def __len__(self) -> int:
+        return self._len
+
+    @cached_property
+    def _len(self) -> int:
         return sum(len(instruction) for instruction in self.instructions)
 
-    def split(self, split_index: int) -> tuple[Self, Self]:
+    def split(self, split_index: int):
         self._check_split_valid(split_index)
 
         instruction_index = self._find_instruction_index(split_index)
         instruction_to_split = self.instructions[instruction_index]
 
-        if split_index == self._instruction_starts[instruction_index]:
-            a = []
-            b = [instruction_to_split]
-        elif split_index == self._instruction_starts[instruction_index] + len(
-            instruction_to_split
-        ):
-            a = [instruction_to_split]
-            b = []
-        else:
-            x, y = instruction_to_split.split(
-                split_index - self._instruction_starts[instruction_index]
-            )
-            a, b = [x], [y]
-        cls = type(self)
-        first_part = cls(list(self.instructions[:instruction_index]) + a)
-        second_part = cls(b + list(self.instructions[instruction_index + 1 :]))
-        return first_part, second_part
+        before_part, after_part = instruction_to_split.split(
+            split_index - self._instruction_starts[instruction_index]
+        )
+
+        before_instruction = ChannelInstruction.join(
+            self.instructions[:instruction_index] + (before_part,), dtype=self.dtype
+        )
+        after_instruction = ChannelInstruction.join(
+            (after_part,) + self.instructions[instruction_index + 1 :], dtype=self.dtype
+        )
+        return before_instruction, after_instruction
 
     def _find_instruction_index(self, time: int) -> int:
         """Find the index of the instruction active at the given time index."""
@@ -118,14 +206,27 @@ class Concatenate(ChannelInstruction[ChannelType]):
         return ChannelPattern(
             np.concatenate(
                 [instruction.flatten().values for instruction in self.instructions]
-            )
+            ),
+            dtype=self.dtype,
         )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.instructions!r})"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}({self.instructions!s})"
+        body = "\n".join(
+            f"  {i}: {instruction!s}" for i, instruction in enumerate(self.instructions)
+        )
+        return f"{self.__class__.__name__}(\n{body}\n)"
+
+    def __eq__(self, other):
+        if not isinstance(other, Concatenate):
+            return False
+        return self.instructions == other.instructions
+
+    @cached_property
+    def dtype(self) -> ChannelType:
+        return self.instructions[0].dtype
 
 
 class Repeat(ChannelInstruction[ChannelType]):
@@ -133,13 +234,8 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     Attributes:
         instruction: The instruction to be repeated.
-        number_repetitions: The number of times to repeat the instruction.
+        number_repetitions: The number of times to repeat the instruction. Must be greater or equal to 2.
     """
-
-    def flatten(self) -> "ChannelPattern[ChannelType]":
-        return ChannelPattern(
-            np.tile(self.instruction.flatten().values, self.number_repetitions)
-        )
 
     def __init__(
         self,
@@ -148,7 +244,8 @@ class Repeat(ChannelInstruction[ChannelType]):
     ) -> None:
         self._instruction = instruction
         self._number_repetitions = number_repetitions
-        self._check_length_valid()
+        if number_repetitions < 2:
+            raise ValueError("Number of repetitions must be greater or equal to 2.")
 
     @property
     def instruction(self) -> ChannelInstruction[ChannelType]:
@@ -159,41 +256,39 @@ class Repeat(ChannelInstruction[ChannelType]):
         return self._number_repetitions
 
     def __len__(self) -> int:
+        return self._len
+
+    @cached_property
+    def _len(self) -> int:
         return len(self.instruction) * self.number_repetitions
 
-    def split(
-        self, split_index: int
-    ) -> tuple[ChannelInstruction[ChannelType], ChannelInstruction[ChannelType],]:
+    def flatten(self) -> "ChannelPattern[ChannelType]":
+        return ChannelPattern(
+            np.tile(self.instruction.flatten().values, self.number_repetitions),
+            dtype=self.dtype,
+        )
+
+    def split(self, split_index: int):
         self._check_split_valid(split_index)
         instruction_length = len(self.instruction)
-        cls = type(self)
-        if split_index % instruction_length == 0:
-            first_part = cls(self.instruction, split_index // instruction_length)
-            second_part = cls(
-                self.instruction,
-                self.number_repetitions - split_index // instruction_length,
-            )
-            return first_part, second_part
-        else:
-            first = tuple[ChannelInstruction[ChannelType], ...]()
-            second = tuple[ChannelInstruction[ChannelType], ...]()
-            if split_index // instruction_length > 0:
-                first = first + (
-                    cls(self.instruction, split_index // instruction_length),
-                )
-            if split_index // instruction_length + 1 < self.number_repetitions:
-                second = (
-                    cls(
-                        self.instruction,
-                        self.number_repetitions - split_index // instruction_length - 1,
-                    ),
-                ) + second
-            s2, s3 = self.instruction.split(split_index % instruction_length)
-            first = first + (s2,)
-            second = (s3,) + second
-            first_part = Concatenate[ChannelType](first)
-            second_part = Concatenate[ChannelType](second)
-        return first_part, second_part
+
+        before_part, after_part = self.instruction.split(
+            split_index % instruction_length
+        )
+
+        before_repetitions = split_index // instruction_length
+        before_block = self.instruction * before_repetitions
+        before_instruction = ChannelInstruction.join(
+            (before_block, before_part), dtype=self.dtype
+        )
+
+        after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
+        after_block = self.instruction * after_repetitions
+        after_instruction = ChannelInstruction.join(
+            (after_part, after_block), dtype=self.dtype
+        )
+
+        return before_instruction, after_instruction
 
     def __repr__(self) -> str:
         return (
@@ -206,3 +301,22 @@ class Repeat(ChannelInstruction[ChannelType]):
             f"{self.__class__.__name__}({self.instruction!s},"
             f" {self.number_repetitions!s})"
         )
+
+    def __eq__(self, other):
+        if not isinstance(other, Repeat):
+            return False
+        return (
+            self.instruction == other.instruction
+            and self.number_repetitions == other.number_repetitions
+        )
+
+    def __mul__(self, other):
+        multiplier = int(other) * self.number_repetitions
+        if multiplier == 0:
+            return self.empty_like(self)
+        else:
+            return Repeat(self.instruction, multiplier)
+
+    @cached_property
+    def dtype(self) -> ChannelType:
+        return self.instruction.dtype
