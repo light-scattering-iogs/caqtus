@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "sequencer-configuration"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "sequencer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+device-config = {path = "../../device/device.configuration", develop = true}
+settings-model = {path = "../../../common/settings_model", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
