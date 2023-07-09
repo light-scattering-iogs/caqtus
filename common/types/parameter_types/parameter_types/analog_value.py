@@ -1,6 +1,8 @@
 from numbers import Real
 from typing import Any, Optional, TypeGuard
 
+import numpy as np
+
 from units import Quantity, Unit, DimensionalityError
 
 AnalogValue = Real | Quantity
@@ -28,13 +30,13 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     return None
 
 
-def get_magnitude(value: Quantity) -> Real:
+def get_magnitude(value: Quantity) -> Real | np.ndarray:
     """Returns the magnitude of the value."""
 
     return value.magnitude
 
 
-def convert_to_unit(value: Quantity, unit: Unit) -> Quantity:
+def convert_to_unit(value: Quantity, unit: Unit | str) -> Quantity:
     """Convert a value to the given unit."""
 
     try:
@@ -45,20 +47,20 @@ def convert_to_unit(value: Quantity, unit: Unit) -> Quantity:
         ) from error
 
 
-def magnitude_in_unit(value: Quantity, unit: Optional[Unit]) -> Real:
+def magnitude_in_unit(value: Quantity, unit: Optional[Unit | str]) -> Real:
     """Return the magnitude of a value in the given unit."""
 
     if not is_analog_value(value):
         raise ValueError(f"{value} is not an analog value")
 
-    if unit is None:
+    if not unit:
         if not is_quantity(value):
             return value
         raise ValueError(f"Trying to get magnitude of real value ({value})")
     else:
         if is_quantity(value):
             return value.to(unit).magnitude
-        raise ValueError(f"Value {value} has no unit but unit {unit} was given")
+        raise ValueError(f"Value {value} has no unit but unit {unit!r} was given")
 
 
 def add_unit(magnitude: Real, unit: Optional[Unit]) -> AnalogValue:

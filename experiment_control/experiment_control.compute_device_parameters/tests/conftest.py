@@ -31,6 +31,9 @@ def variables(sequence_config: SequenceConfig) -> VariableNamespace[Parameter]:
             DottedVariableName("wait_time"): 1 * units[VariableName("us")],
             DottedVariableName("red_light_duration"): 0.5 * units[VariableName("us")],
             DottedVariableName("kill_duration"): 0.15 * units[VariableName("us")],
+            DottedVariableName("tweezer_power"): 1.,
+            DottedVariableName("imaging.tweezer_power"): 0.3,
+            DottedVariableName("kill.tweezer_power"): 0.05,
         }
     )
     return variables
