@@ -1,85 +1,61 @@
 import logging
-from collections import namedtuple
 from collections.abc import Mapping
-from copy import copy
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
 import numpy as np
+from device.configuration.channel_config import (
+    ChannelSpecialPurpose,
+)
 
 from device.configuration import DeviceName
-from device.configuration.channel_config import ChannelSpecialPurpose
 from experiment.configuration import (
     ExperimentConfig,
     DeviceParameter,
-    NI6738SequencerConfiguration,
     SpincoreSequencerConfiguration,
 )
-from expression import Expression
 from sequence.configuration import (
     ShotConfiguration,
     CameraLane,
-    Ramp,
-    AnalogLane,
-    LinearRamp,
 )
-from spincore_sequencer.runtime import (
-    Instruction,
-    Continue,
-    Loop,
-    Stop,
-)
-from units import ureg, Quantity, units, dimensionless, DimensionalityError
-from variable.name import DottedVariableName
+from sequencer.channel import ChannelInstruction
+from sequencer.configuration import SequencerConfiguration
+from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
+from .compile_lane import compile_lane
+from .compile_steps import compile_step_durations
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-StepProperties = namedtuple("StepProperties", ["name", "duration", "analog_times"])
 
-
-class RuntimeSteps:
-    def __init__(self, names: list[str]):
-        self.names = names
-        self.durations: Optional[list[float]] = None
-        self.analog_times: Optional[list[np.ndarray]] = None
-
-    def __len__(self) -> int:
-        return len(self.names)
-
-    def __iter__(self) -> Iterable[StepProperties]:
-        if self.durations is None:
-            durations = [None] * len(self)
-        else:
-            durations = self.durations
-        if self.analog_times is None:
-            analog_times = [None] * len(self)
-        else:
-            analog_times = self.analog_times
-        return iter(
-            StepProperties(name, duration, analog_times)
-            for name, duration, analog_times in zip(self.names, durations, analog_times)
-        )
+@dataclass
+class StepProperties:
+    name: str
+    duration: float
+    analog_times: Optional[np.ndarray] = None
 
 
 def compute_shot_parameters(
     experiment_config: ExperimentConfig,
     shot_config: ShotConfiguration,
     variables: VariableNamespace,
-    extra: bool = False,
 ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-    """Compute the parameters to be applied to the devices before a shot.
-
-    If extra is True, then the result will contain extra information that is necessary to analyze the shot afterwards.
-    """
+    """Compute the parameters to be applied to the devices before a shot."""
 
     result: dict[DeviceName, dict[DeviceParameter, Any]] = {}
 
-    steps = RuntimeSteps(names=shot_config.step_names)
+    sequencer_configs = experiment_config.get_device_configs(SequencerConfiguration)
+    sequencer_instructions = {
+        sequencer_name: instructions
+        for sequencer_name, config in sequencer_configs.items()
+        if (
+            instructions := compile_sequencer_instructions(
+                config, shot_config, variables
+            )
+        )
+    }
 
-    steps.durations = evaluate_step_durations(shot_config, variables)
-    verify_step_durations(experiment_config, steps)
     camera_instructions = compute_camera_instructions(steps, shot_config)
     result |= get_camera_parameters(camera_instructions)
 
@@ -118,91 +94,31 @@ def compute_shot_parameters(
     return result
 
 
-def get_spincore(
-    experiment_config: ExperimentConfig,
-) -> tuple[DeviceName, SpincoreSequencerConfiguration]:
-    spincore_configurations = experiment_config.get_device_configs(
-        SpincoreSequencerConfiguration
+def compile_sequencer_instructions(
+    sequencer_config: SequencerConfiguration,
+    shot_config: ShotConfiguration,
+    variables: VariableNamespace,
+) -> dict[ChannelLabel, ChannelInstruction[bool]]:
+    step_durations = compile_step_durations(
+        shot_config.step_names, shot_config.step_durations, variables
     )
-    if len(spincore_configurations) != 1:
-        raise ValueError(
-            "Expected exactly one spincore sequencer configuration, found"
-            f" {len(spincore_configurations)}"
-        )
-    name = next(iter(spincore_configurations))
-    return name, spincore_configurations[name]
+    instructions: dict[ChannelLabel, ChannelInstruction[bool]] = {}
 
-
-def get_ni6738(
-    experiment_config: ExperimentConfig,
-) -> tuple[DeviceName, NI6738SequencerConfiguration]:
-    ni6738_configurations = experiment_config.get_device_configs(
-        NI6738SequencerConfiguration
-    )
-    if len(ni6738_configurations) != 1:
-        raise ValueError(
-            "Expected exactly one NI6738 sequencer configuration, found"
-            f" {len(ni6738_configurations)}"
-        )
-
-    name = next(iter(ni6738_configurations))
-    return name, ni6738_configurations[name]
-
-
-def evaluate_step_durations(
-    shot: ShotConfiguration, context: VariableNamespace
-) -> list[float]:
-    """Compute the duration of each step.
-
-    This function evaluates all the step duration expressions by replacing the variables with their numerical values
-    provided in 'context'. It returns a list of all step durations in seconds.
-    """
-
-    durations = []
-    for name, expression in zip(shot.step_names, shot.step_durations):
-        try:
-            duration = expression.evaluate(context | units)
-        except Exception as error:
-            raise ShotEvaluationError(
-                f"Error evaluating duration '{expression.body}' of step '{name}'"
-            ) from error
-        try:
-            seconds = duration.to("s").magnitude
-        except Exception as error:
-            raise ShotEvaluationError(
-                f"Duration '{expression.body}' of step '{name}' is not a duration (got"
-                f" {duration})"
-            ) from error
-        durations.append(float(seconds))
-    return durations
-
-
-def verify_step_durations(
-    experiment_config: ExperimentConfig,
-    steps: RuntimeSteps,
-) -> None:
-    min_timestep = get_minimum_allowed_timestep(experiment_config)
-    for step in steps:
-        if step.duration < min_timestep:
-            raise ShotEvaluationError(
-                f"Duration of step '{step.name}' ({(step.duration * ureg.s).to('ns')})"
-                " is too short"
-            )
-
-
-def get_minimum_allowed_timestep(
-    experiment_config: ExperimentConfig,
-) -> float:
-    return max(
-        config.time_step
-        for config in experiment_config.get_device_configs(
-            SpincoreSequencerConfiguration
-        ).values()
-    )
+    for channel_number, channel in enumerate(sequencer_config.channels):
+        if not channel.has_special_purpose():
+            if lane := shot_config.find_lane(channel.description):
+                logical_instruction = compile_lane(
+                    lane, step_durations, sequencer_config.time_step, variables
+                )
+                raw_instruction = logical_instruction.apply(
+                    channel.output_mapping.convert
+                )
+                instructions[ChannelLabel(channel_number)] = raw_instruction
+    return instructions
 
 
 def compute_camera_instructions(
-    steps: RuntimeSteps, shot: ShotConfiguration
+    steps: tuple[StepProperties, ...], shot: ShotConfiguration
 ) -> dict[DeviceName, "CameraInstructions"]:
     """Compute the parameters to be applied to each camera
 
@@ -219,10 +135,11 @@ def compute_camera_instructions(
         exposures = []
         for _, start, stop in lane.get_picture_spans():
             triggers[start:stop] = [True] * (stop - start)
-            exposures.append(sum(steps.durations[start:stop]))
+            picture_duration = sum(step.duration for step in steps[start:stop])
+            exposures.append(picture_duration)
         instructions = CameraInstructions(
             timeout=shot_duration
-            + 1,  # add a second to be safe and not timeout too early if the shot starts late
+            + 1,  # add a second to be safe and not timeout too early if the shot takes time to start
             triggers=triggers,
             exposures=exposures,
         )
@@ -269,255 +186,6 @@ def get_camera_parameters(
     return result
 
 
-def evaluate_analog_local_times(
-    shot: ShotConfiguration,
-    steps: RuntimeSteps,
-    analog_time_step: float,
-    digital_time_step: float,
-) -> list[np.ndarray]:
-    """Compute new time points within each step to evaluate analog ramps"""
-
-    analog_times = []
-    last_analog_time = -np.inf
-    for step_index, step in enumerate(steps):
-        is_step_of_constants = all(
-            _is_constant(lane.get_effective_value(step_index))
-            for lane in shot.analog_lanes
-        )
-        start = max(last_analog_time + analog_time_step, digital_time_step)
-        stop = step.duration - analog_time_step
-        if is_step_of_constants:
-            if stop > start + analog_time_step:
-                step_analog_times = np.array([start])
-            else:
-                step_analog_times = np.array([])
-        else:
-            step_analog_times = np.arange(
-                start,
-                stop,
-                analog_time_step,
-            )
-        if len(step_analog_times) > 0:
-            last_analog_time = step_analog_times[-1]
-        last_analog_time -= step.duration
-        analog_times.append(step_analog_times)
-    return analog_times
-
-
-def _is_constant(value: Expression | Ramp) -> bool:
-    if isinstance(value, Ramp):
-        return False
-    elif isinstance(value, Expression):
-        return _is_constant_expression(value)
-    else:
-        raise TypeError(f"Unexpected type {type(value)}")
-
-
-def _is_constant_expression(expression: Expression) -> bool:
-    return "t" not in expression.upstream_variables
-
-
-def get_analog_timestep(experiment_config: ExperimentConfig) -> float:
-    ni6738_configs = list(
-        experiment_config.get_device_configs(NI6738SequencerConfiguration).values()
-    )
-    if len(ni6738_configs) == 0:
-        raise ShotEvaluationError("Cannot determine analog timestep") from ValueError(
-            "No NI6738 sequencer configuration found"
-        )
-    if len(ni6738_configs) > 1:
-        raise ShotEvaluationError("Cannot determine analog timestep") from ValueError(
-            "Multiple NI6738 sequencer configurations found"
-        )
-    return ni6738_configs[0].time_step
-
-
-def get_digital_time_step(experiment_config: ExperimentConfig) -> float:
-    spincore_configs = list(
-        experiment_config.get_device_configs(SpincoreSequencerConfiguration).values()
-    )
-    if len(spincore_configs) == 0:
-        raise ShotEvaluationError("Cannot determine digital timestep") from ValueError(
-            "No Spincore sequencer configuration found"
-        )
-    if len(spincore_configs) > 1:
-        raise ShotEvaluationError("Cannot determine digital timestep") from ValueError(
-            "Multiple Spincore sequencer configurations found"
-        )
-    return spincore_configs[0].time_step
-
-
-def generate_digital_instructions(
-    shot: ShotConfiguration,
-    steps: RuntimeSteps,
-    camera_triggers: dict[str, list[bool]],
-    spincore_config: SpincoreSequencerConfiguration,
-    analog_time_step: float,
-) -> list[Instruction]:
-    instructions: list[Instruction] = []
-    # noinspection PyTypeChecker
-    analog_clock_channel = spincore_config.get_channel_index(
-        ChannelSpecialPurpose(purpose="NI6738 analog sequencer")
-    )
-    camera_channels = get_camera_channels(spincore_config, camera_triggers.keys())
-    values = [False] * spincore_config.number_channels
-    for step_index, step in enumerate(steps):
-        values = [False] * spincore_config.number_channels
-        for camera, triggers in camera_triggers.items():
-            values[camera_channels[camera]] = triggers[step_index]
-        for lane in shot.digital_lanes:
-            channel = spincore_config.get_channel_index(lane.name)
-            values[channel] = lane.get_effective_value(step_index)
-        if len(step.analog_times) > 0:
-            duration = step.analog_times[0]
-        else:
-            duration = step.duration
-        instructions.append(Continue(values=values, duration=duration))
-        if len(step.analog_times) > 0:
-            (low_values := copy(values))[analog_clock_channel] = False
-            (high_values := copy(low_values))[analog_clock_channel] = True
-            instructions.append(
-                Loop(
-                    repetitions=len(step.analog_times),
-                    start_values=high_values,
-                    start_duration=analog_time_step / 2,
-                    end_values=low_values,
-                    end_duration=analog_time_step / 2,
-                )
-            )
-            instructions.append(
-                Continue(
-                    values=low_values,
-                    duration=step.duration - (step.analog_times[-1] + analog_time_step),
-                )
-            )
-    instructions.append(Stop(values=values))
-    return instructions
-
-
-def evaluate_analog_values(
-    shot: ShotConfiguration,
-    steps: RuntimeSteps,
-    context: VariableNamespace,
-) -> dict[str, Quantity]:
-    """Computes the analog values of each lane, in lane units"""
-
-    result = {}
-    for lane in shot.analog_lanes:
-        lane_values = evaluate_lane_values(steps, lane, context)
-        result[lane.name] = np.concatenate(lane_values)
-    return result
-
-
-def evaluate_lane_values(
-    steps: RuntimeSteps,
-    lane: AnalogLane,
-    context: VariableNamespace,
-) -> list[np.ndarray]:
-    # Assume that analog_times have unwrapped times
-    values = evaluate_lane_expressions(steps, lane, context)
-
-    return values
-
-
-def evaluate_lane_expressions(
-    steps: RuntimeSteps,
-    lane: AnalogLane,
-    context: VariableNamespace,
-) -> list[np.ndarray]:
-    result = []
-
-    for step_index, step in enumerate(steps):
-        cell_value = lane.get_effective_value(step_index)
-        if isinstance(cell_value, Expression):
-            try:
-                values = evaluate_expression(
-                    cell_value, step.analog_times, context, lane
-                )
-            except Exception as error:
-                raise ShotEvaluationError(
-                    f"Cannot evaluate expression '{cell_value.body}' for step"
-                    f" '{step.name}' in lane '{lane.name}'"
-                ) from error
-            try:
-                values_in_lane_units = values.to(lane.units)
-            except DimensionalityError as error:
-                raise ShotEvaluationError(
-                    f"Cannot convert expression '{cell_value.body}' for step"
-                    f" '{step.name}' in lane '{lane.name}' to {lane.units}"
-                ) from error
-            result.append(values_in_lane_units)
-        elif isinstance(cell_value, LinearRamp):
-            initial_index = lane.start_index(step_index) - 1
-            initial_expression = lane.get_effective_value(initial_index)
-
-            initial_value = evaluate_expression(
-                initial_expression,
-                np.array([steps.durations[initial_index]]),
-                context,
-                lane,
-            )
-
-            final_index = lane.end_index(step_index)
-            final_expression = lane.get_effective_value(final_index)
-            final_value = evaluate_expression(
-                final_expression, np.array([0.0]), context, lane
-            )
-            values = initial_value * (
-                1 - step.analog_times / step.duration
-            ) + final_value * (step.analog_times / step.duration)
-            result.append(values.to(lane.units))
-        else:
-            raise TypeError(f"Unexpected type {type(cell_value)}")
-    return result
-
-
-def evaluate_expression(
-    expression: Expression,
-    times: np.ndarray,
-    context: VariableNamespace,
-    lane: AnalogLane,
-) -> Quantity:
-    variables = context | units
-
-    if _is_constant(expression):
-        value = expression.evaluate(variables)
-        if isinstance(value, Quantity):
-            values = np.full_like(times, value.magnitude) * value.units
-        else:
-            values = Quantity(np.full_like(times, value), units="")
-
-    else:
-        values = expression.evaluate(
-            variables | {DottedVariableName("t"): times * ureg.s}
-        )
-
-    if not isinstance(values, Quantity):
-        values = Quantity(values, units="")
-
-    if values.is_compatible_with(dimensionless) and lane.has_dimension():
-        values = Quantity(values.to(dimensionless).magnitude, units=lane.units)
-    return values.to_base_units()
-
-
-def generate_analog_voltages(
-    ni6738_config: NI6738SequencerConfiguration, analog_values: dict[str, Quantity]
-):
-    """Converts the analog values in lane units to voltages"""
-
-    data_length = 0
-    for array in analog_values.values():
-        data_length = len(array)
-        break
-    data = np.zeros((ni6738_config.number_channels, data_length), dtype=np.float64)
-
-    for name, values in analog_values.items():
-        voltages = ni6738_config.convert_to_output_units(name, values).to("V").magnitude
-        channel_number = ni6738_config.get_channel_index(name)
-        data[channel_number] = voltages
-    return data
-
-
 def get_camera_channels(
     spincore_config: SpincoreSequencerConfiguration, camera_names: Iterable[str]
 ) -> dict[str, int]:
@@ -525,7 +193,3 @@ def get_camera_channels(
         name: spincore_config.get_channel_index(ChannelSpecialPurpose(purpose=name))
         for name in camera_names
     }
-
-
-class ShotEvaluationError(Exception):
-    pass
