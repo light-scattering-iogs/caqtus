@@ -495,16 +495,9 @@ class Repeat(SequencerInstruction):
     ) -> "SequencerInstruction":
         instruction = self
         result = []
-        logger.debug(f"{channel_instruction=}")
-        logger.debug(f"{instruction=}\n")
         for part in channel_instruction.instructions:
-            logger.debug(f"{part=}")
-            logger.debug(f"{instruction=}")
             left, instruction = instruction.split(len(part))
-            logger.debug(f"{left=}")
-            logger.debug(f"{instruction=}\n")
             result.append(left.add_channel_instruction(channel, part))
-        logger.debug(f"{result=}")
         return self.join(result, channel_types=self.channel_types)
 
     @_add_channel_instruction.register
