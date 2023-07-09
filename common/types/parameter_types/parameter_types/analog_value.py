@@ -1,7 +1,7 @@
 from numbers import Real
 from typing import Any, Optional, TypeGuard
 
-from units import Quantity, Unit
+from units import Quantity, Unit, DimensionalityError
 
 AnalogValue = Real | Quantity
 
@@ -10,6 +10,12 @@ def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
     """Returns True if the value is an analog value, False otherwise."""
 
     return isinstance(value, (Real, Quantity))
+
+
+def is_quantity(value: Any) -> TypeGuard[Quantity]:
+    """Returns True if the value is a quantity, False otherwise."""
+
+    return isinstance(value, Quantity)
 
 
 def get_unit(value: AnalogValue) -> Optional[Unit]:
@@ -22,18 +28,35 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     return None
 
 
-def magnitude_in_unit(value: AnalogValue, unit: Optional[Unit]) -> Real:
+def get_magnitude(value: Quantity) -> Real:
+    """Returns the magnitude of the value."""
+
+    return value.magnitude
+
+
+def convert_to_unit(value: Quantity, unit: Unit) -> Quantity:
+    """Convert a value to the given unit."""
+
+    try:
+        return value.to(unit)
+    except DimensionalityError as error:
+        raise ValueError(
+            f"Cannot convert {value} to unit {unit} because of dimensionality"
+        ) from error
+
+
+def magnitude_in_unit(value: Quantity, unit: Optional[Unit]) -> Real:
     """Return the magnitude of a value in the given unit."""
 
     if not is_analog_value(value):
         raise ValueError(f"{value} is not an analog value")
 
     if unit is None:
-        if isinstance(value, Quantity):
-            raise ValueError(f"Value {value} has a unit but no unit was given")
-        return value
+        if not is_quantity(value):
+            return value
+        raise ValueError(f"Trying to get magnitude of real value ({value})")
     else:
-        if isinstance(value, Quantity):
+        if is_quantity(value):
             return value.to(unit).magnitude
         raise ValueError(f"Value {value} has no unit but unit {unit} was given")
 
