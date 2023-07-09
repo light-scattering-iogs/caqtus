@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "sequencer-instructions"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "sequencer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sequencer-channel = {path = "../sequencer.channel", develop = true}
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+black = "^23.3.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,24 +1,37 @@
 from abc import ABC, abstractmethod
+from collections.abc import Mapping, Iterable
 from functools import cached_property
-from typing import TypeVar, Generic, Any, Self, Iterable, Type
+from typing import NewType, TypeVar, Any, Self
 
 import numpy as np
-from numpy.typing import DTypeLike
 
-from .splittable import Splittable
+from sequencer.channel import Splittable, ChannelPattern
+from sequencer.channel.channel_instructions import ChannelType
 
-ChannelType = TypeVar("ChannelType", bound=Type[DTypeLike], covariant=True)
+ChannelLabel = NewType("ChannelLabel", int)
 
 
-class ChannelInstruction(
-    Splittable["ChannelInstruction[ChannelType]"],
-    Generic[ChannelType],
+class SequencerInstruction(
+    Splittable["SequencerInstruction"],
     ABC,
 ):
-    """Base class to describe the output sequence of a channel."""
+    """Base class to describe the output sequence of multiple channels."""
+
+    @property
+    @abstractmethod
+    def channel_types(self) -> dict[ChannelLabel, ChannelType]:
+        """Return the types of the channels."""
+
+        raise NotImplementedError
+
+    @property
+    def number_channels(self) -> int:
+        """Return the number of channels."""
+
+        return len(self.channel_types)
 
     @abstractmethod
-    def flatten(self) -> "ChannelPattern[ChannelType]":
+    def flatten(self) -> "SequencerPattern":
         """Flatten the instruction into a single pattern."""
 
         raise NotImplementedError
@@ -33,13 +46,13 @@ class ChannelInstruction(
 
         raise NotImplementedError
 
-    def __add__(self, other) -> "ChannelInstruction[ChannelType]":
-        if isinstance(other, ChannelInstruction):
-            return self.join([self, other], dtype=self.dtype)
+    def __add__(self, other) -> "SequencerInstruction":
+        if isinstance(other, SequencerInstruction):
+            return self.join([self, other], self.channel_types)
         else:
             raise TypeError(f"Can't concatenate {type(self)} and {type(other)}.")
 
-    def __mul__(self, other: int) -> "ChannelInstruction[ChannelType]":
+    def __mul__(self, other: int) -> "SequencerInstruction":
         multiplier = int(other)
         if multiplier < 0:
             raise ValueError("Multiplier must be positive integer.")
@@ -50,13 +63,15 @@ class ChannelInstruction(
         else:
             return Repeat(self, multiplier)
 
-    def __rmul__(self, other) -> "ChannelInstruction[ChannelType]":
+    def __rmul__(self, other) -> "SequencerInstruction":
         return self.__mul__(other)
 
     @classmethod
     def join(
-        cls, instructions: Iterable[Self], dtype
-    ) -> "ChannelInstruction[ChannelType]":
+        cls,
+        instructions: Iterable[Self],
+        channel_types: Mapping[ChannelLabel, ChannelType],
+    ) -> "SequencerInstruction":
         """Concatenate multiple instructions into a single instruction.
 
         This method removes empty instructions from the list and flattens nested concatenations.
@@ -65,7 +80,7 @@ class ChannelInstruction(
         instructions = [
             instruction for instruction in instructions if not instruction.is_empty()
         ]
-        flattened_instructions: list[ChannelInstruction[ChannelType]] = []
+        flattened_instructions: list[SequencerInstruction] = []
         for instruction in instructions:
             if isinstance(instruction, Concatenate):
                 flattened_instructions.extend(instruction.instructions)
@@ -73,7 +88,7 @@ class ChannelInstruction(
                 flattened_instructions.append(instruction)
 
         if len(flattened_instructions) == 0:
-            return cls.empty(dtype=dtype)
+            return cls.empty(channel_types)
         elif len(flattened_instructions) == 1:
             return flattened_instructions[0]
         else:
@@ -82,42 +97,47 @@ class ChannelInstruction(
     def is_empty(self) -> bool:
         return len(self) == 0
 
-    @property
-    @abstractmethod
-    def dtype(self) -> ChannelType:
-        """Return the dtype of the channel."""
-
-        raise NotImplementedError
-
     @classmethod
-    def empty(cls, dtype) -> "ChannelInstruction[ChannelType]":
+    def empty(
+        cls, channel_types: Mapping[ChannelLabel, ChannelType]
+    ) -> "SequencerInstruction":
         """Return an empty instruction."""
 
-        return ChannelPattern([], dtype=dtype)
+        return SequencerPattern(
+            {
+                channel: ChannelPattern[Any].empty(dtype)
+                for channel, dtype in channel_types.items()
+            }
+        )
 
     @classmethod
-    def empty_like(cls, instruction: Self) -> "ChannelInstruction[ChannelType]":
-        """Return an empty instruction with the same dtype as the given instruction."""
+    def empty_like(cls, other: "SequencerInstruction") -> "SequencerInstruction":
+        """Return an empty instruction with the same channel types as another instruction."""
 
-        return cls.empty(instruction.dtype)
+        return cls.empty(other.channel_types)
 
 
-class ChannelPattern(ChannelInstruction[ChannelType]):
-    """A sequence of values to be output on a channel."""
+class SequencerPattern(SequencerInstruction):
+    """A sequence of output values for several channels."""
 
-    def __init__(self, values: Iterable[ChannelType], dtype=None) -> None:
-        self._values: np.ndarray[Any, ChannelType] = np.array(values, dtype=dtype)  # type: ignore
+    def __init__(self, channel_values: Mapping[ChannelLabel, ChannelPattern]) -> None:
+        if len(channel_values) == 0:
+            raise ValueError("Pattern must contain at least one channel.")
+        length = len(first(channel_values.values()))
+        if not all(len(channel) == length for channel in channel_values.values()):
+            raise ValueError("Channel patterns must have the same duration.")
+        self._channel_values = dict(channel_values)
 
     @property
-    def values(self) -> np.ndarray[Any, ChannelType]:
-        return np.copy(self._values)
+    def channel_types(self) -> dict[ChannelLabel, ChannelType]:
+        return {label: pattern.dtype for label, pattern in self._channel_values.items()}
 
-    @cached_property
-    def dtype(self) -> ChannelType:
-        return self._values.dtype
+    @property
+    def values(self) -> dict[ChannelLabel, ChannelPattern]:
+        return dict(self._channel_values)
 
     def __len__(self) -> int:
-        return len(self.values)
+        return len(first(self._channel_values.values()))
 
     def split(self, split_index: int):
         self._check_split_valid(split_index)
@@ -128,9 +148,13 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
             return self, self.empty_like(self)
         else:
             cls = type(self)
-            return cls(self.values[:split_index], dtype=self.dtype), cls(
-                self.values[split_index:], dtype=self.dtype
-            )
+            splits = {
+                label: pattern.split(split_index)
+                for label, pattern in self.values.items()
+            }
+            left = {label: pattern[0] for label, pattern in splits.items()}
+            right = {label: pattern[1] for label, pattern in splits.items()}
+            return cls(left), cls(right)
 
     def flatten(self) -> Self:
         return self
@@ -141,10 +165,13 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
     def __eq__(self, other):
         if not isinstance(other, ChannelPattern):
             return False
-        return np.array_equal(self.values, other.values)
+        return self.values == other.values
+
+    def __getitem__(self, key):
+        return self.values[key]
 
 
-class Concatenate(ChannelInstruction[ChannelType]):
+class Concatenate(SequencerInstruction):
     """A sequence of instructions to be executed consecutively.
 
     Attributes:
@@ -153,7 +180,7 @@ class Concatenate(ChannelInstruction[ChannelType]):
 
     def __init__(
         self,
-        instructions: Iterable[ChannelInstruction[ChannelType]],
+        instructions: Iterable[SequencerInstruction],
     ) -> None:
         self._instructions = tuple(
             instruction for instruction in instructions if not instruction.is_empty()
@@ -165,7 +192,7 @@ class Concatenate(ChannelInstruction[ChannelType]):
             raise ValueError("Concatenation must have at least two instructions.")
 
     @property
-    def instructions(self) -> tuple[ChannelInstruction[ChannelType], ...]:
+    def instructions(self) -> tuple[SequencerInstruction, ...]:
         return self._instructions
 
     def __len__(self) -> int:
@@ -185,11 +212,13 @@ class Concatenate(ChannelInstruction[ChannelType]):
             split_index - self._instruction_starts[instruction_index]
         )
 
-        before_instruction = ChannelInstruction.join(
-            self.instructions[:instruction_index] + (before_part,), dtype=self.dtype
+        before_instruction = SequencerInstruction.join(
+            self.instructions[:instruction_index] + (before_part,),
+            channel_types=self.channel_types,
         )
-        after_instruction = ChannelInstruction.join(
-            (after_part,) + self.instructions[instruction_index + 1 :], dtype=self.dtype
+        after_instruction = SequencerInstruction.join(
+            (after_part,) + self.instructions[instruction_index + 1 :],
+            channel_types=self.channel_types,
         )
         return before_instruction, after_instruction
 
@@ -203,13 +232,19 @@ class Concatenate(ChannelInstruction[ChannelType]):
 
         return int(np.searchsorted(self._instruction_starts, time, side="right") - 1)
 
-    def flatten(self) -> ChannelPattern[ChannelType]:
-        return ChannelPattern(
-            np.concatenate(
-                [instruction.flatten().values for instruction in self.instructions]
-            ),
-            dtype=self.dtype,
-        )
+    def flatten(self) -> SequencerPattern:
+        """Return a flattened version of this instruction."""
+
+        flattened = [instruction.flatten() for instruction in self.instructions]
+        result = {}
+        for label, dtype in self.channel_types.items():
+            result[label] = ChannelPattern(
+                np.concatenate(
+                    [pattern[label].flatten().values for pattern in flattened]
+                ),
+                dtype=dtype,
+            )
+        return SequencerPattern(result)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.instructions!r})"
@@ -226,11 +261,11 @@ class Concatenate(ChannelInstruction[ChannelType]):
         return self.instructions == other.instructions
 
     @cached_property
-    def dtype(self) -> ChannelType:
-        return self.instructions[0].dtype
+    def channel_types(self) -> dict[ChannelLabel, ChannelType]:
+        return self.instructions[0].channel_types
 
 
-class Repeat(ChannelInstruction[ChannelType]):
+class Repeat(SequencerInstruction):
     """Repeat a single instruction a given number of times.
 
     Attributes:
@@ -240,7 +275,7 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     def __init__(
         self,
-        instruction: ChannelInstruction[ChannelType],
+        instruction: SequencerInstruction,
         number_repetitions: int,
     ) -> None:
         self._instruction = instruction
@@ -249,7 +284,7 @@ class Repeat(ChannelInstruction[ChannelType]):
             raise ValueError("Number of repetitions must be greater or equal to 2.")
 
     @property
-    def instruction(self) -> ChannelInstruction[ChannelType]:
+    def instruction(self) -> SequencerInstruction:
         return self._instruction
 
     @property
@@ -263,11 +298,15 @@ class Repeat(ChannelInstruction[ChannelType]):
     def _len(self) -> int:
         return len(self.instruction) * self.number_repetitions
 
-    def flatten(self) -> "ChannelPattern[ChannelType]":
-        return ChannelPattern(
-            np.tile(self.instruction.flatten().values, self.number_repetitions),
-            dtype=self.dtype,
-        )
+    def flatten(self) -> SequencerPattern:
+        flattened = self.instruction.flatten()
+        result = {}
+        for label, dtype in self.channel_types.items():
+            result[label] = ChannelPattern(
+                np.tile(flattened[label].values, self.number_repetitions),
+                dtype=dtype,
+            )
+        return SequencerPattern(result)
 
     def split(self, split_index: int):
         self._check_split_valid(split_index)
@@ -279,14 +318,14 @@ class Repeat(ChannelInstruction[ChannelType]):
 
         before_repetitions = split_index // instruction_length
         before_block = self.instruction * before_repetitions
-        before_instruction = ChannelInstruction.join(
-            (before_block, before_part), dtype=self.dtype
+        before_instruction = SequencerInstruction.join(
+            (before_block, before_part), channel_types=self.channel_types
         )
 
         after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
         after_block = self.instruction * after_repetitions
-        after_instruction = ChannelInstruction.join(
-            (after_part, after_block), dtype=self.dtype
+        after_instruction = SequencerInstruction.join(
+            (after_part, after_block), channel_types=self.channel_types
         )
 
         return before_instruction, after_instruction
@@ -319,5 +358,12 @@ class Repeat(ChannelInstruction[ChannelType]):
             return Repeat(self.instruction, multiplier)
 
     @cached_property
-    def dtype(self) -> ChannelType:
-        return self.instruction.dtype
+    def channel_types(self) -> dict[ChannelLabel, ChannelType]:
+        return self.instruction.channel_types
+
+
+_T = TypeVar("_T")
+
+
+def first(iterable: Iterable[_T]) -> _T:
+    return next(iter(iterable))
