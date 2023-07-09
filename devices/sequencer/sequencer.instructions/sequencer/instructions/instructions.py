@@ -237,7 +237,7 @@ class SequencerPattern(SequencerInstruction):
         return f"{self.__class__.__name__}({self.values!r})"
 
     def __eq__(self, other):
-        if not isinstance(other, ChannelPattern):
+        if not isinstance(other, SequencerPattern):
             return False
         return self.values == other.values
 
@@ -353,15 +353,15 @@ class Concatenate(SequencerInstruction):
         return self.instructions[0].channel_types
 
     def add_channel_instruction(
-        self, channel: ChannelLabel, instruction_to_add: ChannelInstruction
+        self, channel: ChannelLabel, channel_instruction: ChannelInstruction
     ) -> "SequencerInstruction":
-        self._check_can_add_channel(channel, instruction_to_add)
+        self._check_can_add_channel(channel, channel_instruction)
 
         result = []
         for instruction in self.instructions:
-            left, right = instruction_to_add.split(len(instruction))
+            left, right = channel_instruction.split(len(instruction))
             result.append(instruction.add_channel_instruction(channel, left))
-            instruction_to_add = right
+            channel_instruction = right
         return self.join(result, channel_types=self.channel_types)
 
 
@@ -425,7 +425,12 @@ class Repeat(SequencerInstruction):
             (before_block, before_part), channel_types=self.channel_types
         )
 
-        after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
+        if split_index % instruction_length == 0:
+            after_repetitions = self.number_repetitions - before_repetitions
+            after_part = after_part * 0
+        else:
+            after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
+
         after_block = self.instruction * after_repetitions
         after_instruction = SequencerInstruction.join(
             (after_part, after_block), channel_types=self.channel_types
@@ -486,17 +491,20 @@ class Repeat(SequencerInstruction):
 
     @_add_channel_instruction.register
     def _(
-        self, instruction_to_add: ChannelConcatenate, channel: ChannelLabel
+        self, channel_instruction: ChannelConcatenate, channel: ChannelLabel
     ) -> "SequencerInstruction":
         instruction = self
         result = []
-        logger.debug(f"{len(instruction_to_add.instructions)=}")
-        logger.debug(f"{[len(part) for part in instruction_to_add.instructions]=}")
-        for part in instruction_to_add.instructions:
-            logger.debug(f"{len(instruction)=}")
-            logger.debug(f"{len(part)=}")
+        logger.debug(f"{channel_instruction=}")
+        logger.debug(f"{instruction=}\n")
+        for part in channel_instruction.instructions:
+            logger.debug(f"{part=}")
+            logger.debug(f"{instruction=}")
             left, instruction = instruction.split(len(part))
+            logger.debug(f"{left=}")
+            logger.debug(f"{instruction=}\n")
             result.append(left.add_channel_instruction(channel, part))
+        logger.debug(f"{result=}")
         return self.join(result, channel_types=self.channel_types)
 
     @_add_channel_instruction.register

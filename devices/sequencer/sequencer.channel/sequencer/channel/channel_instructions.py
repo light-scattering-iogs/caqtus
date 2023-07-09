@@ -283,7 +283,12 @@ class Repeat(ChannelInstruction[ChannelType]):
             (before_block, before_part), dtype=self.dtype
         )
 
-        after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
+        if split_index % instruction_length == 0:
+            after_repetitions = self.number_repetitions - before_repetitions
+            after_part = after_part * 0
+        else:
+            after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
+
         after_block = self.instruction * after_repetitions
         after_instruction = ChannelInstruction.join(
             (after_part, after_block), dtype=self.dtype
