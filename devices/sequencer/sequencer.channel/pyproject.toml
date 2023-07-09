@@ -13,10 +13,12 @@ numpy = "^1.25.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.4.1"
+black = "^23.3.0"
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.0"
+hypothesis = "^6.80.1"
 
 [build-system]
 requires = ["poetry-core"]
