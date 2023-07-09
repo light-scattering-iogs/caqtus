@@ -20,6 +20,7 @@ units = {path = "../../common/units", develop = true}
 variable-name = {path = "../../common/variable/variable.name", develop = true}
 variable-namespace = {path = "../../common/variable/variable.namespace", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
+sequencer-channel = {path = "../../devices/sequencer/sequencer.channel", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
