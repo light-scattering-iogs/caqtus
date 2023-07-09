@@ -15,6 +15,10 @@ sequencer-channel = {path = "../sequencer.channel", develop = true}
 mypy = "^1.4.1"
 black = "^23.3.0"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
