@@ -1,4 +1,4 @@
-from collections.abc import Sequence, Mapping
+from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
 from itertools import accumulate
 from numbers import Real
@@ -21,16 +21,20 @@ def compile_digital_lane(
     lane: DigitalLane,
     time_step: float,
 ) -> ChannelInstruction[bool]:
-    step_starts = [0.0] + list((accumulate(step_durations)))
+    step_bounds = get_step_bounds(step_durations)
     instructions = []
     for cell_value, start, stop in lane.get_value_spans():
-        length = number_ticks(step_starts[start], step_starts[stop], time_step)
+        length = number_ticks(step_bounds[start], step_bounds[stop], time_step)
         instructions.append(ChannelPattern([cell_value]) * length)
     return ChannelInstruction.join(instructions, dtype=bool)
 
 
 def number_ticks(start_time: Real, stop_time: Real, time_step: Real) -> int:
     return int(stop_time / time_step) - int(start_time / time_step)
+
+
+def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
+    return [0.0] + list((accumulate(step_durations)))
 
 
 def compile_analog_lane(
@@ -54,10 +58,10 @@ class CompileAnalogLane:
     time_step: float
 
     def compile(self) -> ChannelInstruction[float]:
-        step_starts = [0.0] + list((accumulate(self.step_durations)))
+        step_bounds = get_step_bounds(self.step_durations)
         instructions = []
         for cell, start, stop in self.lane.get_value_spans():
-            length = number_ticks(step_starts[start], step_starts[stop], self.time_step)
+            length = number_ticks(step_bounds[start], step_bounds[stop], self.time_step)
             if isinstance(cell, Expression):
                 instructions.append(self._compile_expression_cell(cell, length))
             elif isinstance(cell, Ramp):

@@ -30,6 +30,7 @@ black = "^23.3.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.0"
+matplotlib = "^3.7.2"
 
 [build-system]
 requires = ["poetry-core"]
