@@ -8,12 +8,26 @@ import numpy as np
 from expression import Expression
 from parameter_types import is_analog_value, Parameter
 from parameter_types.analog_value import magnitude_in_unit
-from sequence.configuration import DigitalLane, StepName, AnalogLane, Ramp
+from sequence.configuration import DigitalLane, AnalogLane, Ramp, Lane
 from sequencer.channel import ChannelInstruction, ChannelPattern
 from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .evaluation_error import ShotEvaluationError
+
+
+def compile_lane(
+    lane: Lane,
+    step_durations: Sequence[float],
+    time_step: float,
+    variables: VariableNamespace,
+) -> ChannelInstruction:
+    if isinstance(lane, DigitalLane):
+        return compile_digital_lane(step_durations, lane, time_step)
+    elif isinstance(lane, AnalogLane):
+        return compile_analog_lane(step_durations, lane, variables, time_step)
+    else:
+        raise NotImplementedError(f"Unknown lane type {type(lane)}")
 
 
 def compile_digital_lane(
@@ -38,20 +52,16 @@ def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
 
 
 def compile_analog_lane(
-    step_names: Sequence[StepName],
     step_durations: Sequence[float],
     lane: AnalogLane,
     variables: VariableNamespace,
     time_step: float,
 ) -> ChannelInstruction[float]:
-    return CompileAnalogLane(
-        step_names, step_durations, lane, variables, time_step
-    ).compile()
+    return CompileAnalogLane(step_durations, lane, variables, time_step).compile()
 
 
 @dataclass(slots=True)
 class CompileAnalogLane:
-    step_names: Sequence[StepName]
     step_durations: Sequence[float]
     lane: AnalogLane
     variables: VariableNamespace

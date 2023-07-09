@@ -4,7 +4,7 @@ import pytest
 
 from parameter_types import Parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration
-from units import units
+from units import units, ureg
 from variable.name import DottedVariableName, VariableName
 from variable.namespace import VariableNamespace
 
@@ -34,6 +34,8 @@ def variables(sequence_config: SequenceConfig) -> VariableNamespace[Parameter]:
             DottedVariableName("tweezer_power"): 1.,
             DottedVariableName("imaging.tweezer_power"): 0.3,
             DottedVariableName("kill.tweezer_power"): 0.05,
+            DottedVariableName("mot_loading.current"): 1.5 * ureg.A,
+            DottedVariableName("red_mot.current"): 0.5 * ureg.A,
         }
     )
     return variables
