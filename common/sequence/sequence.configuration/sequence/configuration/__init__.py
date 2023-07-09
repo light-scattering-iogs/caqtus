@@ -12,8 +12,9 @@ from .shot import (
     TakePicture,
     LaneGroup,
     LaneReference,
+    ShotConfiguration,
+    StepName,
 )
-from .shot import ShotConfiguration
 from .steps import (
     Step,
     SequenceSteps,
@@ -48,4 +49,5 @@ __all__ = [
     "TakePicture",
     "LaneGroup",
     "LaneReference",
+    "StepName",
 ]

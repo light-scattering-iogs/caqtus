@@ -4,7 +4,7 @@ A shot configuration is made of a unique list of steps and a set of lanes. The s
 duration. Each lane correspond to a time series of actions to do on the experiment."""
 
 import logging
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, NewType
 
 import yaml
 from anytree import NodeMixin
@@ -139,8 +139,11 @@ class LaneGroupRoot(LaneGroup):
         self.children = new_children
 
 
+StepName = NewType("StepName", str)
+
+
 class ShotConfiguration(SettingsModel):
-    step_names: list[str] = ["..."]
+    step_names: list[StepName] = ["..."]
     step_durations: list[Expression] = [Expression("...")]
     lanes: list[Lane] = []
     lane_groups: LaneGroupRoot = None
