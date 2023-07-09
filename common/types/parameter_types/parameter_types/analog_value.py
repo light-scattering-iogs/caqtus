@@ -1,7 +1,7 @@
 from numbers import Real
 from typing import Any, Optional, TypeGuard
 
-from .units import Quantity, Unit
+from units import Quantity, Unit
 
 AnalogValue = Real | Quantity
 
