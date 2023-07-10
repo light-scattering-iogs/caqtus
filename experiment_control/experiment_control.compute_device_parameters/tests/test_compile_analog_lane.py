@@ -2,6 +2,7 @@ from experiment_control.compute_device_parameters import (
     compile_step_durations,
     compile_analog_lane,
 )
+from experiment_control.compute_device_parameters.compile_lane import number_ticks
 from sequence.configuration import ShotConfiguration, AnalogLane
 from variable.namespace import VariableNamespace
 
@@ -22,4 +23,4 @@ def test_compile_analog_lane(
     instruction = compile_analog_lane(
         durations, lane, variables, time_step
     )
-    assert len(instruction) == int(sum(durations) / time_step)
+    assert len(instruction) == number_ticks(0.0, sum(durations), time_step)
