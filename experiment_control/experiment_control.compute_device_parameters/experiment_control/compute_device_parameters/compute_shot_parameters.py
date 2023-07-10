@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
 import numpy as np
-from device.configuration.channel_config import (
-    ChannelSpecialPurpose,
-)
 
 from device.configuration import DeviceName
 from experiment.configuration import (
@@ -22,7 +19,7 @@ from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration
 from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
-from .compile_lane import compile_lane
+from .compile_lane import compile_lane, empty_channel_instruction
 from .compile_steps import compile_step_durations
 
 logger = logging.getLogger(__name__)
@@ -105,15 +102,18 @@ def compile_sequencer_instructions(
     instructions: dict[ChannelLabel, ChannelInstruction[bool]] = {}
 
     for channel_number, channel in enumerate(sequencer_config.channels):
-        if not channel.has_special_purpose():
+        if channel.has_special_purpose():
+            raise NotImplementedError
+        else:
             if lane := shot_config.find_lane(channel.description):
-                logical_instruction = compile_lane(
+                instruction = compile_lane(
                     lane, step_durations, sequencer_config.time_step, variables
                 )
-                raw_instruction = logical_instruction.apply(
-                    channel.output_mapping.convert
+            else:
+                instruction = empty_channel_instruction(
+                    channel.default_value, step_durations, sequencer_config.time_step
                 )
-                instructions[ChannelLabel(channel_number)] = raw_instruction
+        instructions[ChannelLabel(channel_number)] = instruction
     return instructions
 
 

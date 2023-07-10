@@ -10,10 +10,19 @@ from parameter_types import is_analog_value, Parameter
 from parameter_types.analog_value import magnitude_in_unit
 from sequence.configuration import DigitalLane, AnalogLane, Ramp, Lane
 from sequencer.channel import ChannelInstruction, ChannelPattern
+from sequencer.channel.channel_instructions import ChannelType
 from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .evaluation_error import ShotEvaluationError
+
+
+def empty_channel_instruction(
+    default_value: ChannelType, step_durations: Sequence[float], time_step: float
+) -> ChannelInstruction[ChannelType]:
+    duration = sum(step_durations)
+    length = int(duration / time_step)
+    return ChannelPattern([default_value]) * length
 
 
 def compile_lane(
