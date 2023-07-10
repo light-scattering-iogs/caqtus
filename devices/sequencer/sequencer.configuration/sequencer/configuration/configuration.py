@@ -53,7 +53,7 @@ LogicalType = TypeVar("LogicalType")
 OutputType = TypeVar("OutputType")
 
 
-class ChannelConfiguration(SettingsModel, ABC, Generic[LogicalType, OutputType]):
+class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     """Contains information to configure the output of a channel.
 
     This is used to translate from logical values to output values. The logical values are the values that are asked
@@ -83,12 +83,12 @@ class ChannelConfiguration(SettingsModel, ABC, Generic[LogicalType, OutputType])
         return isinstance(self.description, ChannelSpecialPurpose)
 
 
-class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
+class DigitalChannelConfiguration(SettingsModel, ChannelConfiguration[bool, bool]):
     output_mapping: DigitalMapping
     default_value = False
 
 
-class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
+class AnalogChannelConfiguration(SettingsModel, ChannelConfiguration[float, float]):
     output_mapping: AnalogMapping
     default_value = 0.0
 

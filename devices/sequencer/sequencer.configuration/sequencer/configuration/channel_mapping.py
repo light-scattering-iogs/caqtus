@@ -11,13 +11,13 @@ InputType = TypeVar("InputType")
 OutputType = TypeVar("OutputType")
 
 
-class OutputMapping(SettingsModel, Generic[InputType, OutputType]):
+class OutputMapping(Generic[InputType, OutputType]):
     @abstractmethod
     def convert(self, input_: InputType) -> OutputType:
         ...
 
 
-class DigitalMapping(OutputMapping[bool, bool]):
+class DigitalMapping(SettingsModel, OutputMapping[bool, bool]):
     invert: bool = False
 
     def convert(self, input_):
@@ -27,7 +27,7 @@ class DigitalMapping(OutputMapping[bool, bool]):
             return input_
 
 
-class AnalogMapping(OutputMapping[float, float]):
+class AnalogMapping(SettingsModel, OutputMapping[float, float]):
     """Abstract class for a mapping between some input quantity to an output quantity
 
     Warnings:
