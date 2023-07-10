@@ -20,6 +20,6 @@ def test_compile_analog_lane(
     lane = shot_config.find_lane("Tweezers power (AOM)")
     assert isinstance(lane, AnalogLane)
     instruction = compile_analog_lane(
-        shot_config.step_names, durations, lane, variables, time_step
+        durations, lane, variables, time_step
     )
     assert len(instruction) == int(sum(durations) / time_step)
