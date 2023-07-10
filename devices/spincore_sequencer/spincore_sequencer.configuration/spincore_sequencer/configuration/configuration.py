@@ -9,7 +9,7 @@ from device.configuration.channel_config import DigitalChannelConfiguration
 class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
     """Holds the static configuration of a spincore sequencer device.
 
-    Attributes:
+    Fields:
         board_number: The number of the board to use. With only one board connected,
             this number is usually 0.
         time_step: The quantization time step used. All times during a run are multiples
