@@ -207,3 +207,7 @@ class ShotConfiguration(SettingsModel):
 
     def get_lanes(self, lane_type: Type[TLane]) -> dict[str, TLane]:
         return {lane.name: lane for lane in self.lanes if isinstance(lane, lane_type)}
+
+    @property
+    def number_steps(self) -> int:
+        return len(self.step_names)

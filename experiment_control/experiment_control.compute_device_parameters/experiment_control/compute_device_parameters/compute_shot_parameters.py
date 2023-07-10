@@ -10,10 +10,14 @@ from experiment.configuration import (
     ExperimentConfig,
     DeviceParameter,
 )
+from expression import Expression
 from sequence.configuration import (
     ShotConfiguration,
     CameraLane,
     TakePicture,
+    Lane,
+    AnalogLane,
+    Ramp,
 )
 from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration
@@ -213,8 +217,9 @@ def compile_clock_requirements(
     sequencer = DeviceName("NI6738 card")
     sequencer_config = sequencer_configs[sequencer]
     clock_instructions = []
-    for step_index, duration in enumerate(step_durations):
-        if is_step_of_constant(step_index, sequencer):
+    are_steps_constant = get_constant_steps(shot_config, sequencer_config)
+    for step_index, step_constant in enumerate(are_steps_constant):
+        if step_constant:
             clock_type = ClockStepInstruction.TriggerStart
         else:
             clock_type = ClockStepInstruction.Clock
@@ -227,3 +232,34 @@ def compile_clock_requirements(
             )
         )
     return {sequencer: clock_instructions}
+
+
+def get_constant_steps(
+    shot_config: ShotConfiguration,
+    sequencer_config: SequencerConfiguration,
+) -> list[bool]:
+    lanes = {
+        channel.description: lane
+        for channel in sequencer_config.get_lane_channels()
+        if (lane := shot_config.find_lane(channel.description))
+    }
+
+    result = []
+    for step in range(shot_config.number_steps):
+        result.append(all(is_constant(lane, step) for lane in lanes.values()))
+    return result
+
+
+def is_constant(lane: Lane, step: int) -> bool:
+    if isinstance(lane, AnalogLane):
+        value = lane.get_effective_value(step)
+        if isinstance(value, Ramp):
+            return False
+        elif isinstance(value, Expression):
+            return is_expression_constant(value)
+    else:
+        raise NotImplementedError("Not expecting a non analog lane here.")
+
+
+def is_expression_constant(expression: Expression) -> bool:
+    return "t" not in expression.upstream_variables
