@@ -1,3 +1,3 @@
-from .configuration import SequencerConfiguration
+from .configuration import SequencerConfiguration, ChannelSpecialPurpose
 
-__all__ = ["SequencerConfiguration"]
+__all__ = ["SequencerConfiguration", "ChannelSpecialPurpose"]

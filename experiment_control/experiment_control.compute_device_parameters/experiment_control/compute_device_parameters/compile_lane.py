@@ -14,6 +14,7 @@ from sequencer.channel.channel_instructions import ChannelType
 from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
+from .camera_instruction import CameraInstruction
 from .evaluation_error import ShotEvaluationError
 
 
@@ -163,3 +164,14 @@ def _is_constant(expression: Expression) -> bool:
 
 def _compute_time_array(length: int, time_step: float) -> Quantity:
     return (np.arange(length) * time_step) * ureg.s
+
+
+def compile_camera_instruction(
+    camera_instruction: CameraInstruction,
+    time_step: float,
+) -> ChannelInstruction[bool]:
+    instructions = []
+    for value, start, stop in camera_instruction.triggers:
+        length = number_ticks(start, stop, time_step)
+        instructions.append(ChannelPattern([value]) * length)
+    return ChannelInstruction.join(instructions, dtype=bool)
