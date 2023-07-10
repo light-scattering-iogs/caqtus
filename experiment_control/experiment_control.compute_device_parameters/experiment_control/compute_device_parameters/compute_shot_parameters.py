@@ -19,7 +19,7 @@ from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration
 from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
-from .compile_lane import compile_lane, empty_channel_instruction
+from .compile_lane import compile_lane, empty_channel_instruction, get_step_bounds
 from .compile_steps import compile_step_durations
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,10 @@ def compute_shot_parameters(
 
     result: dict[DeviceName, dict[DeviceParameter, Any]] = {}
 
+    camera_instructions = compute_camera_instructions(shot_config, variables)
+
+    result |= get_camera_parameters(camera_instructions)
+
     sequencer_configs = experiment_config.get_device_configs(SequencerConfiguration)
     sequencer_instructions = {
         sequencer_name: instructions
@@ -52,9 +56,6 @@ def compute_shot_parameters(
             )
         )
     }
-
-    camera_instructions = compute_camera_instructions(steps, shot_config)
-    result |= get_camera_parameters(camera_instructions)
 
     steps.analog_times = evaluate_analog_local_times(
         shot_config,
@@ -118,30 +119,32 @@ def compile_sequencer_instructions(
 
 
 def compute_camera_instructions(
-    steps: tuple[StepProperties, ...], shot: ShotConfiguration
+    shot_config: ShotConfiguration, variables: VariableNamespace
 ) -> dict[DeviceName, "CameraInstructions"]:
-    """Compute the parameters to be applied to each camera
+    """Compute the parameters to be applied to each camera.
 
     Returns:
         A dictionary mapping camera names to their parameters
     """
 
-    result = {}
-    shot_duration = sum(step.duration for step in steps)
+    step_durations = compile_step_durations(
+        shot_config.step_names, shot_config.step_durations, variables
+    )
 
-    camera_lanes = shot.get_lanes(CameraLane)
+    step_bounds = get_step_bounds(step_durations)
+
+    result = {}
+    shot_duration = sum(step_durations)
+
+    camera_lanes = shot_config.get_lanes(CameraLane)
     for lane_name, lane in camera_lanes.items():
-        triggers = [False] * len(steps)
-        exposures = []
+        picture_bounds = []
         for _, start, stop in lane.get_picture_spans():
-            triggers[start:stop] = [True] * (stop - start)
-            picture_duration = sum(step.duration for step in steps[start:stop])
-            exposures.append(picture_duration)
+            picture_bounds.append((step_bounds[start], step_bounds[stop]))
         instructions = CameraInstructions(
             timeout=shot_duration
             + 1,  # add a second to be safe and not timeout too early if the shot takes time to start
-            triggers=triggers,
-            exposures=exposures,
+            picture_bounds=picture_bounds,
         )
         result[DeviceName(lane_name)] = instructions
     return result
@@ -153,15 +156,14 @@ class CameraInstructions:
 
     fields:
         timeout: Maximum time to wait for the camera to take the picture
-        exposures: Duration of each exposure in seconds. The length of this list should be the same as the number of
-        pictures.
-        triggers: Whether to camera trigger should be up or down at each step. The length of this list should be the
-        same as the number of steps.
+        picture_bounds: Indicate the times (in seconds) at which the camera should take a picture. The length of this list
+        should be the same as the number of pictures. Each element is a tuple of the form (start, stop) where start is
+        the time at which the camera should start the exposure and stop is the time at which the camera should stop the
+        exposure.
     """
 
     timeout: float
-    exposures: list[float]
-    triggers: list[bool]
+    picture_bounds: list[tuple[float, float]]
 
 
 def get_camera_parameters(
@@ -178,10 +180,9 @@ def get_camera_parameters(
 
     result = {}
 
-    for camera, instructions in camera_instructions.items():
-        result[camera] = dict(
-            timeout=instructions.timeout, exposures=instructions.exposures
-        )
+    for camera, instruction in camera_instructions.items():
+        exposures = [stop - start for start, stop in instruction.picture_bounds]
+        result[camera] = dict(timeout=instruction.timeout, exposures=exposures)
 
     return result
 
