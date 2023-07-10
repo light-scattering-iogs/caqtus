@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -20,6 +20,7 @@ from sequencer.configuration import SequencerConfiguration
 from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
+from .clock_instruction import ClockInstruction, ClockStepInstruction
 from .compile_lane import (
     compile_lane,
     empty_channel_instruction,
@@ -53,9 +54,16 @@ def compute_shot_parameters(
     result |= get_camera_parameters(camera_instructions)
 
     sequencer_configs = experiment_config.get_device_configs(SequencerConfiguration)
+    clock_requirements = compile_clock_requirements(
+        sequencer_configs, shot_config, variables
+    )
     sequencer_instructions = {
         sequencer_name: compile_sequencer_instructions(
-            sequencer_config, shot_config, variables, camera_instructions
+            sequencer_config,
+            shot_config,
+            variables,
+            camera_instructions,
+            clock_requirements,
         )
         for sequencer_name, sequencer_config in sequencer_configs.items()
     }
@@ -100,6 +108,7 @@ def compile_sequencer_instructions(
     shot_config: ShotConfiguration,
     variables: VariableNamespace,
     camera_instructions: Mapping[DeviceName, CameraInstruction],
+    clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
 ) -> dict[ChannelLabel, ChannelInstruction[bool]]:
     step_durations = compile_step_durations(
         shot_config.step_names, shot_config.step_durations, variables
@@ -113,9 +122,12 @@ def compile_sequencer_instructions(
                 instruction = compile_camera_instruction(
                     camera_instructions[target], sequencer_config.time_step
                 )
+            elif target in clock_requirements:
+                instruction = compile_clock_instruction(
+                    clock_requirements[target], sequencer_config.time_step
+                )
             else:
                 raise NotImplementedError
-
         else:
             if lane := shot_config.find_lane(channel.description):
                 instruction = compile_lane(
@@ -184,3 +196,34 @@ def get_camera_parameters(
         result[camera] = dict(timeout=instruction.timeout, exposures=exposures)
 
     return result
+
+
+def compile_clock_requirements(
+    sequencer_configs: Mapping[DeviceName, SequencerConfiguration],
+    shot_config: ShotConfiguration,
+    variables: VariableNamespace,
+) -> dict[DeviceName, list[ClockInstruction]]:
+    # TODO: make this more general to more devices.
+
+    step_durations = compile_step_durations(
+        shot_config.step_names, shot_config.step_durations, variables
+    )
+    step_bounds = get_step_bounds(step_durations)
+
+    sequencer = DeviceName("NI6738 card")
+    sequencer_config = sequencer_configs[sequencer]
+    clock_instructions = []
+    for step_index, duration in enumerate(step_durations):
+        if is_step_of_constant(step_index, sequencer):
+            clock_type = ClockStepInstruction.TriggerStart
+        else:
+            clock_type = ClockStepInstruction.Clock
+        clock_instructions.append(
+            ClockInstruction(
+                start=step_bounds[step_index],
+                stop=step_bounds[step_index + 1],
+                time_step=sequencer_config.time_step,
+                order=clock_type,
+            )
+        )
+    return {sequencer: clock_instructions}

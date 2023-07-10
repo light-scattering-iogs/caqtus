@@ -15,6 +15,7 @@ from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
+from .clock_instruction import ClockInstruction
 from .evaluation_error import ShotEvaluationError
 
 
@@ -175,3 +176,9 @@ def compile_camera_instruction(
         length = number_ticks(start, stop, time_step)
         instructions.append(ChannelPattern([value]) * length)
     return ChannelInstruction.join(instructions, dtype=bool)
+
+
+def compile_clock_instruction(
+    clock_timestep: float, step_durations: Sequence[float], time_step: float
+) -> list[ClockInstruction]:
+    pass
