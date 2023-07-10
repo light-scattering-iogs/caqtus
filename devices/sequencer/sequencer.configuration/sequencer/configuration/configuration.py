@@ -46,22 +46,29 @@ class ChannelSpecialPurpose(SettingsModel):
         return cls(purpose="Unused")
 
 
-class ChannelConfiguration(SettingsModel, ABC, Generic[MappingType]):
+LogicalType = TypeVar("LogicalType")
+OutputType = TypeVar("OutputType")
+
+
+class ChannelConfiguration(SettingsModel, ABC, Generic[LogicalType, OutputType]):
     description: ChannelName | ChannelSpecialPurpose
     color: Optional[Color] = None
-    output_mapping: Optional[MappingType] = None
+    output_mapping: Optional[OutputMapping[LogicalType, OutputType]] = None
     delay: float = 0.0
+    default_value: LogicalType
 
     def has_special_purpose(self) -> bool:
         return isinstance(self.description, ChannelSpecialPurpose)
 
 
-class DigitalChannelConfiguration(ChannelConfiguration[DigitalMapping]):
-    pass
+class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
+    output_mapping: Optional[DigitalMapping] = None
+    default_value = False
 
 
-class AnalogChannelConfiguration(ChannelConfiguration[AnalogMapping]):
-    pass
+class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
+    output_mapping: Optional[AnalogMapping] = None
+    default_value = 0.0
 
 
 class SequencerConfiguration(DeviceConfiguration, ABC):

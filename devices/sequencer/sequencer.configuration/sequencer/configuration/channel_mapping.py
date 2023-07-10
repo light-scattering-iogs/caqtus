@@ -7,13 +7,13 @@ from pydantic import validator
 from settings_model import SettingsModel
 from units import Quantity, UndefinedUnitError
 
-Input = TypeVar("Input")
-Output = TypeVar("Output")
+InputType = TypeVar("InputType")
+OutputType = TypeVar("OutputType")
 
 
-class OutputMapping(SettingsModel, Generic[Input, Output]):
+class OutputMapping(SettingsModel, Generic[InputType, OutputType]):
     @abstractmethod
-    def convert(self, input_: Input) -> Output:
+    def convert(self, input_: InputType) -> OutputType:
         ...
 
 
