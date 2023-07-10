@@ -3,6 +3,7 @@ from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
 from itertools import accumulate
 from numbers import Real
+from typing import SupportsFloat
 
 import numpy as np
 
@@ -55,8 +56,24 @@ def compile_digital_lane(
     return ChannelInstruction.join(instructions, dtype=bool)
 
 
-def number_ticks(start_time: Real, stop_time: Real, time_step: Real) -> int:
-    return int(stop_time / time_step) - int(start_time / time_step)
+def number_ticks(
+    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: SupportsFloat
+) -> int:
+    """Returns the number of ticks between start_time and stop_time."""
+
+    return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
+
+
+def start_tick(start_time: SupportsFloat, time_step: SupportsFloat) -> int:
+    """Returns the included first tick index of the step starting at start_time."""
+
+    return math.floor(float(start_time) / float(time_step))
+
+
+def stop_tick(stop_time: SupportsFloat, time_step: SupportsFloat) -> int:
+    """Returns the excluded last tick index of the step ending at stop_time."""
+
+    return math.floor((float(stop_time)) / float(time_step))
 
 
 def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
@@ -183,18 +200,61 @@ def compile_clock_instruction(
     clock_requirements: Sequence[ClockInstruction], time_step: float
 ) -> ChannelInstruction[bool]:
     instructions = []
-    for clock_instruction in clock_requirements:
-        length = number_ticks(
-            clock_instruction.start, clock_instruction.stop, time_step
-        )
-        if clock_instruction.order == ClockStepInstruction.TriggerStart:
-            instructions.append(ChannelPattern([True]) * length)
-        elif clock_instruction.order == ClockStepInstruction.Clock:
-            clock_length = number_ticks(clock_instruction.start, clock_instruction.stop, clock_instruction.time_step)
-            if not clock_length == length:
-                raise ValueError(
-                    "Clock time step must be an integer multiple of the channel"
-                    f" time step ({time_step})"
-                )
 
+    # must ensure here that the clock line only goes up at a multiple of the clock time step.
+    # The clock time step must be a multiple of the channel time step.
+    # Since the clock must go up and down in a single clock step, it must be at least twice the channel time step.
+    for clock_instruction in clock_requirements:
+        multiplier, high, low = high_low_clicks(clock_instruction.time_step, time_step)
+        start = start_tick(clock_instruction.start, time_step)
+        stop = stop_tick(clock_instruction.stop, time_step)
+        length = number_ticks(start, stop, time_step)
+
+        # All 3 values below are given in time_step units:
+        clock_start = (
+            start_tick(clock_instruction.start, clock_instruction.time_step)
+            * multiplier
+        )
+        clock_stop = (
+            stop_tick(clock_instruction.stop, clock_instruction.time_step) * multiplier
+        )
+        clock_length = (
+            number_ticks(clock_start, clock_stop, clock_instruction.time_step)
+            * multiplier
+        )
+
+        before = ChannelPattern([False]) * (clock_start - start)
+        after = ChannelPattern([False]) * (stop - clock_stop)
+        if clock_instruction.order == ClockStepInstruction.TriggerStart:
+            middle = ChannelPattern([True]) * high + ChannelPattern([False]) * (
+                clock_length - high
+            )
+        elif clock_instruction.order == ClockStepInstruction.Clock:
+            middle = (ChannelPattern([True]) * high + ChannelPattern([False]) * low) * (
+                clock_length // multiplier
+            )
+        else:
+            raise NotImplementedError(
+                f"Order {clock_instruction.order} not implemented"
+            )
+        instructions.append(before + middle + after)
     return ChannelInstruction.join(instructions, dtype=bool)
+
+
+def high_low_clicks(
+    clock_time_step: float, sequencer_time_step: float
+) -> tuple[int, int, int]:
+    """Return the number of steps the sequencer must be high then low to produce a clock pulse."""
+    if not clock_time_step >= 2 * sequencer_time_step:
+        raise ValueError(
+            "Clock time step must be at least twice the sequencer time step"
+        )
+    div, mod = divmod(clock_time_step, sequencer_time_step)
+    if not mod == 0:
+        raise ValueError(
+            "Clock time step must be an integer multiple of the sequencer time step"
+        )
+    if div % 2 == 0:
+        return div, div // 2, div // 2
+    else:
+        return div, div // 2 + 1, div // 2
