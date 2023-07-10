@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def test_digital_merging(shot_config: ShotConfiguration, variables: VariableNamespace) -> None:
+def test_digital_merging(
+    shot_config: ShotConfiguration, variables: VariableNamespace
+) -> None:
     time_step = 50e-9
 
     durations = compile_step_durations(
@@ -52,7 +54,10 @@ def test_digital_merging(shot_config: ShotConfiguration, variables: VariableName
     for label, channel_sequence in channel_sequences.items():
         assert channel_sequence.flatten() == sequence[label].flatten()
 
-def test_analog_merging(shot_config: ShotConfiguration, variables: VariableNamespace) -> None:
+
+def test_analog_merging(
+    shot_config: ShotConfiguration, variables: VariableNamespace
+) -> None:
     time_step = 2.5e-6
 
     durations = compile_step_durations(
