@@ -24,6 +24,9 @@ class ChannelSpecialPurpose(SettingsModel):
     def __hash__(self):
         return hash(self.purpose)
 
+    def __str__(self):
+        return self.purpose
+
     @classmethod
     def representer(cls, dumper: yaml.Dumper, channel_purpose: "ChannelSpecialPurpose"):
         return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
@@ -51,23 +54,42 @@ OutputType = TypeVar("OutputType")
 
 
 class ChannelConfiguration(SettingsModel, ABC, Generic[LogicalType, OutputType]):
+    """Contains information to configure the output of a channel.
+
+    This is used to translate from logical values to output values. The logical values are the values that are asked
+    for in the sequence. The output values are the values that are actually output on the channel.
+
+    Fields:
+        description: The name of the lane that should be output on this channel or a special purpose if the channel is
+            used for something else, like triggering a camera or another sequencer.
+        output_mapping: A mapping from the logical values of the channel to the output valued. This is used to translate
+            human-readable values to the actual values that are output on the channel.
+        default_value: The default value of the channel. This is the value that is output when the channel is not used.
+        before_value: The value to use for the channel before the first step of the sequence.
+        after_value: The value to use for the channel after the last step of the sequence.
+        color: The color to use for the channel in the GUI.
+        delay: The delay to apply to the channel. This is used to compensate for the delay between the logical time and
+            the actual effect of the channel. A positive delay means that the output is retarder, i.e. its output will
+            change after the logical time.
+    """
+
     description: ChannelName | ChannelSpecialPurpose
-    color: Optional[Color] = None
-    output_mapping: Optional[OutputMapping[LogicalType, OutputType]] = None
-    delay: float = 0.0
+    output_mapping: OutputMapping[LogicalType, OutputType]
     default_value: LogicalType
+    color: Optional[Color] = None
+    delay: float = 0.0
 
     def has_special_purpose(self) -> bool:
         return isinstance(self.description, ChannelSpecialPurpose)
 
 
 class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
-    output_mapping: Optional[DigitalMapping] = None
+    output_mapping: DigitalMapping
     default_value = False
 
 
 class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
-    output_mapping: Optional[AnalogMapping] = None
+    output_mapping: AnalogMapping
     default_value = 0.0
 
 
@@ -75,11 +97,11 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
     time_step: float
 
     number_channels: ClassVar[int]
-    channels: list[ChannelConfiguration]
+    channels: tuple[ChannelConfiguration]
 
     @classmethod
     @abstractmethod
-    def channel_types(cls) -> list[Type[ChannelConfiguration]]:
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
         ...
 
     @validator("channels")
@@ -89,9 +111,24 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
                 f"The length of channels ({len(channels)}) doesn't match the number of"
                 f" channels {cls.number_channels}"
             )
-        for channel, channel_type in zip(channels, cls.channel_types()):
+        for channel, channel_type in zip(channels, cls.channel_types(), strict=True):
             if not isinstance(channel, channel_type):
                 raise TypeError(
                     f"Channel {channel} is not of the expected type {channel_type}"
                 )
         return channels
+
+    def get_lane_channels(self) -> list[ChannelConfiguration]:
+        """Get the channels associated to a lane, i.e. those without special purpose"""
+        return [
+            channel for channel in self.channels if not channel.has_special_purpose()
+        ]
+
+    def __getitem__(self, item):
+        return self.channels[item]
+
+    def get_channel_index(self, name: ChannelName) -> int:
+        for i, channel in enumerate(self.channels):
+            if channel.description == name:
+                return i
+        raise KeyError(f"Channel {name} not found")

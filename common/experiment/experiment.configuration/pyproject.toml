@@ -22,6 +22,7 @@ imaging-source-configuration = {path = "../../../devices/cameras/imaging_source/
 orca-quest-configuration = {path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true}
 validate-arguments = {path = "../../validate_arguments", develop = true}
 atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
+sequencer-configuration = {path = "../../../devices/sequencer/sequencer.configuration", develop = true}
 
 [build-system]
 requires = ["poetry-core"]
