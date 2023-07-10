@@ -56,7 +56,7 @@ def compile_digital_lane(
 
 
 def number_ticks(start_time: Real, stop_time: Real, time_step: Real) -> int:
-    return math.floor(stop_time / time_step) - math.ceil(start_time / time_step)
+    return int(stop_time / time_step) - int(start_time / time_step)
 
 
 def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
