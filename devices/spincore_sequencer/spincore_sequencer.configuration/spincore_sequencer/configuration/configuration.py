@@ -1,12 +1,16 @@
-from typing import Any
+from typing import Any, ClassVar, Type
 
 from pydantic import Field
 
-from device.configuration import DeviceConfiguration, DeviceParameter
-from device.configuration.channel_config import DigitalChannelConfiguration
+from device.configuration import DeviceParameter
+from sequencer.configuration import (
+    SequencerConfiguration,
+    ChannelConfiguration,
+    DigitalChannelConfiguration,
+)
 
 
-class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
+class SpincoreSequencerConfiguration(SequencerConfiguration):
     """Holds the static configuration of a spincore sequencer device.
 
     Fields:
@@ -16,17 +20,16 @@ class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfigur
             of this value.
     """
 
-    # noinspection PyPropertyDefinition
     @classmethod
-    @property
-    def number_channels(cls) -> int:
-        return 24
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
+        return (DigitalChannelConfiguration,) * cls.number_channels
+
+    number_channels: ClassVar[int] = 24
 
     board_number: int
     time_step: float = Field(
-        default=10e-9,
-        ge=10e-9,
-        units="s",
+        default=50e-9,
+        ge=50e-9,
     )
 
     def get_device_type(self) -> str:

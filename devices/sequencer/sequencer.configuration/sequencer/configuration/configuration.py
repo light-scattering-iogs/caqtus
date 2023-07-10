@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Optional, ClassVar, NewType, Generic, TypeVar, Type, TypeGuard, Any
+from typing import Optional, NewType, Generic, TypeVar, Type, TypeGuard, Any, ClassVar
 
-from pydantic import validator
+from pydantic import validator, Field
 from pydantic.color import Color
 
 from device.configuration import DeviceConfiguration
@@ -94,9 +94,18 @@ class AnalogChannelConfiguration(SettingsModel, ChannelConfiguration[float, floa
 
 
 class SequencerConfiguration(DeviceConfiguration, ABC):
-    time_step: float
+    """Holds the static configuration of a sequencer device.
+
+    Fields:
+        number_channels: The number of channels of the device.
+        time_step: The quantization time step used, in seconds. The device can only update its output at multiples of
+            this time step.
+        channels: The configuration of the channels of the device. The length of this list must match the number of
+            channels of the device.
+    """
 
     number_channels: ClassVar[int]
+    time_step: float = Field(ge=0.0)
     channels: tuple[ChannelConfiguration]
 
     @classmethod
