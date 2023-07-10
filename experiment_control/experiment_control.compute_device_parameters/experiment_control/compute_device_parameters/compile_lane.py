@@ -1,3 +1,4 @@
+import math
 from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
 from itertools import accumulate
@@ -15,7 +16,7 @@ from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
-from .clock_instruction import ClockInstruction
+from .clock_instruction import ClockInstruction, ClockStepInstruction
 from .evaluation_error import ShotEvaluationError
 
 
@@ -55,7 +56,7 @@ def compile_digital_lane(
 
 
 def number_ticks(start_time: Real, stop_time: Real, time_step: Real) -> int:
-    return int(stop_time / time_step) - int(start_time / time_step)
+    return math.floor(stop_time / time_step) - math.ceil(start_time / time_step)
 
 
 def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
@@ -179,6 +180,21 @@ def compile_camera_instruction(
 
 
 def compile_clock_instruction(
-    clock_timestep: float, step_durations: Sequence[float], time_step: float
-) -> list[ClockInstruction]:
-    pass
+    clock_requirements: Sequence[ClockInstruction], time_step: float
+) -> ChannelInstruction[bool]:
+    instructions = []
+    for clock_instruction in clock_requirements:
+        length = number_ticks(
+            clock_instruction.start, clock_instruction.stop, time_step
+        )
+        if clock_instruction.order == ClockStepInstruction.TriggerStart:
+            instructions.append(ChannelPattern([True]) * length)
+        elif clock_instruction.order == ClockStepInstruction.Clock:
+            clock_length = number_ticks(clock_instruction.start, clock_instruction.stop, clock_instruction.time_step)
+            if not clock_length == length:
+                raise ValueError(
+                    "Clock time step must be an integer multiple of the channel"
+                    f" time step ({time_step})"
+                )
+
+    return ChannelInstruction.join(instructions, dtype=bool)
