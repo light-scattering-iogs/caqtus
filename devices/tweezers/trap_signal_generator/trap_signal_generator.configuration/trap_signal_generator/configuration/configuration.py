@@ -41,3 +41,11 @@ class StaticTrapConfiguration2D(SettingsModel):
                 "The number of samples of the two configurations must be equal."
             )
         return config_y
+
+    @property
+    def sampling_rate(self):
+        return self.config_x.sampling_rate
+
+    @property
+    def number_samples(self):
+        return self.config_x.number_samples
