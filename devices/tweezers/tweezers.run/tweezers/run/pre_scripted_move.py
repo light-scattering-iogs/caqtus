@@ -137,13 +137,13 @@ def generate_step_configs() -> dict[StepName, StepConfiguration]:
             segment=SegmentName("initial"),
             next_step=StepName("move"),
             repetition=1,
-            change_condition=StepChangeCondition.ON_TRIGGER,
+            change_condition=StepChangeCondition.ON_TRIGGER
         ),
         StepName("move"): StepConfiguration(
             segment=SegmentName("move"),
             next_step=StepName("final"),
             repetition=1,
-            change_condition=StepChangeCondition.ON_TRIGGER,
+            change_condition=StepChangeCondition.ALWAYS,
         ),
         StepName("final"): StepConfiguration(
             segment=SegmentName("final"),

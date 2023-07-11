@@ -18,7 +18,7 @@ from .segment import SegmentData, NumberChannels, SegmentName
 from .step import StepConfiguration, StepName
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP0,
@@ -225,8 +225,22 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
     def _setup_trigger(self):
         spcm.spcm_dwSetParam_i64(
-            self._board_handle, spcm.SPC_TRIG_ORMASK, spcm.SPC_TMASK_SOFTWARE
+            self._board_handle,
+            spcm.SPC_TRIG_ORMASK,
+            spcm.SPC_TMASK_EXT0,
         )
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_TRIG_EXT0_MODE, spcm.SPC_TM_POS
+        )
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_TRIG_TERM, 1
+        )  # 50 Ohm termination
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_TRIG_EXT0_ACDC, 1
+        )  # DC coupling
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_TRIG_EXT0_LEVEL0, 1000
+        )  # 1 V
         self.check_error()
 
     def _enable_output(self):
@@ -356,6 +370,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             self._board_handle,
             spcm.SPC_M2CMD,
             spcm.M2CMD_CARD_START | spcm.M2CMD_CARD_ENABLETRIGGER,
+        )
+        spcm.spcm_dwSetParam_i64(
+            self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_FORCETRIGGER
         )
         self.check_error()
 
