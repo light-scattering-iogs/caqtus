@@ -4,14 +4,14 @@ import logging
 import math
 from collections.abc import Mapping
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, NewType
 
 import numpy as np
 from pydantic import Field, validator
-from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 
 from device.runtime import RuntimeDevice
 from settings_model import SettingsModel
+from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
@@ -27,32 +27,33 @@ AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP3,
 )
 
-SegmentName = str
+SegmentName = NewType("SegmentName", str)
 SegmentData = np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16]
-StepName = str
+StepName = NewType("StepName", str)
 
 
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
     """Class to control the Spectrum M4i.66xx.x8 AWG
 
     Only sequence mode is implemented.
+
+    Fields:
+        board_id: An identifier to find the board. ex: /dev/spcm0
+        sampling_rate: The sampling rate of the AWG in Hz
+        channel_settings: The configuration of the output channels
+        segment_names: The names of the segments to split the AWG memory into
     """
 
     NUMBER_CHANNELS: ClassVar[int] = 2
 
     board_id: str = Field(
-        description="An identifier to find the board. ex: /dev/spcm0",
         allow_mutation=False,
     )
-    sampling_rate: int = Field(allow_mutation=False, units="Hz")
-    channel_settings: tuple["ChannelSettings", ...] = Field(
-        description="The configuration of the output channels", allow_mutation=False
-    )
+    sampling_rate: int = Field(allow_mutation=False)
+    channel_settings: tuple["ChannelSettings", ...] = Field(allow_mutation=False)
     segment_names: frozenset[SegmentName] = Field(
-        description="The names of the segments to split the AWG memory into",
         allow_mutation=False,
     )
-
     first_step: StepName = Field(allow_mutation=False)
 
     _board_handle: spcm.drv_handle
@@ -273,7 +274,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         segment_index = self._get_segment_index(segment_name)
         self._write_segment_data(segment_index, data)
 
-    def _get_segment_index(self, segment_name: str) -> int:
+    def _get_segment_index(self, segment_name: SegmentName) -> int:
         try:
             return self._segment_indices[segment_name]
         except KeyError:
@@ -355,7 +356,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         )
         self.check_error()
 
-    def get_current_step(self) -> SegmentName:
+    def get_current_step(self) -> StepName:
         step_index = ctypes.c_int64(-1)
         spcm.spcm_dwGetParam_i64(
             self._board_handle, spcm.SPC_SEQMODE_STATUS, ctypes.byref(step_index)
@@ -400,8 +401,8 @@ class StepChangeCondition(Enum):
 
 
 class StepConfiguration(SettingsModel):
-    segment: str
-    next_step: str
+    segment: SegmentName
+    next_step: StepName
     repetition: int
     change_condition: StepChangeCondition = StepChangeCondition.ALWAYS
 
