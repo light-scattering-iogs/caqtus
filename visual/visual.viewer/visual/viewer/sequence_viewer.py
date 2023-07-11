@@ -3,7 +3,7 @@ from typing import Callable, Any, Optional
 import pandas
 from PyQt6.QtCore import pyqtSignal, QObject
 
-from analyza import (
+from visual.sequence_watcher import (
     DataframeSequenceWatcher,
 )
 from experiment.session import ExperimentSessionMaker, ExperimentSession
