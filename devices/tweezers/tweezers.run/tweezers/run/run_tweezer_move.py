@@ -27,8 +27,8 @@ def main():
     steps, segments = generate_move(move_config)
 
     amplitude_one_tone = 0.165
-    scale_x = math.sqrt(move_config.number_tone_x) ** 0.5 * amplitude_one_tone
-    scale_y = math.sqrt(move_config.number_tone_y) ** 0.5 * amplitude_one_tone
+    scale_x = math.sqrt(move_config.number_tone_x) * amplitude_one_tone
+    scale_y = math.sqrt(move_config.number_tone_y) * amplitude_one_tone
     awg = SpectrumAWGM4i66xxX8(
         name="AWG",
         board_id="/dev/spcm0",
