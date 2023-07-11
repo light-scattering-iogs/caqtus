@@ -8,9 +8,13 @@ from spectum_awg_m4i66xx_x8.runtime import (
     SegmentName,
     SegmentData,
     StepChangeCondition,
+    NumberSamples,
 )
-from trap_signal_generator.configuration import StaticTrapConfiguration2D
-from trap_signal_generator.runtime import StaticTrapGenerator
+from trap_signal_generator.configuration import (
+    StaticTrapConfiguration2D,
+    StaticTrapConfiguration,
+)
+from trap_signal_generator.runtime import StaticTrapGenerator, MovingTrapGenerator
 
 
 class MoveConfiguration(SettingsModel):
@@ -67,7 +71,44 @@ def generate_move_data(
     final_config: StaticTrapConfiguration2D,
     move_duration: float,
 ) -> SegmentData:
-    raise NotImplementedError
+    number_samples = int(move_duration * initial_config.sampling_rate)
+    move_x = generate_1d_move_data(
+        initial_config.config_x,
+        final_config.config_x,
+        NumberSamples(number_samples),
+        initial_config.sampling_rate,
+    )
+    move_y = generate_1d_move_data(
+        initial_config.config_y,
+        final_config.config_y,
+        NumberSamples(number_samples),
+        initial_config.sampling_rate,
+    )
+    return np.array((move_x, move_y), dtype=np.int16)
+
+
+def generate_1d_move_data(
+    initial_config: StaticTrapConfiguration,
+    final_config: StaticTrapConfiguration,
+    number_samples: NumberSamples,
+    sampling_rate: float,
+) -> np.ndarray[NumberSamples, np.int16]:
+    moving_generator = MovingTrapGenerator(
+        starting_frequencies=initial_config.frequencies,
+        target_frequencies=final_config.frequencies,
+        starting_phases=2
+        * np.pi
+        * np.array(initial_config.frequencies)
+        * initial_config.number_samples
+        / initial_config.sampling_rate
+        + np.array(initial_config.phases),
+        target_phases=final_config.phases,
+        amplitudes=initial_config.amplitudes,
+        sampling_rate=sampling_rate,
+        number_samples=number_samples,
+        trajectory_function="sin",
+    )
+    return moving_generator.compute_signal().astype(np.int16)
 
 
 def generate_step_configs() -> dict[StepName, StepConfiguration]:

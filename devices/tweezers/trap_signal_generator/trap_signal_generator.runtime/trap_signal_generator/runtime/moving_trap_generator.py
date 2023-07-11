@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from functools import cached_property
-from typing import Literal, Callable
+from typing import Literal, Callable, Any
 
 import numpy as np
 from pydantic import BaseModel, validator
@@ -84,7 +84,7 @@ class MovingTrapGenerator(BaseModel):
     def interpolating_function_integral(self):
         return quad(self.interpolating_function, 0, 1)[0]
 
-    def compute_signal(self):
+    def compute_signal(self) -> np.ndarray[Any, np.float64]:
         return np.sum(
             np.array(self.amplitudes)[..., np.newaxis] * np.sin(self.compute_phases()),
             axis=0,
