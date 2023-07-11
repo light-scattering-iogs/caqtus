@@ -34,11 +34,32 @@ class MoveConfiguration(SettingsModel):
 
     @validator("final_config")
     def validate_final_config(cls, v, values):
-        if v.sampling_rate != values["initial_config"].sampling_rate:
+        initial_config: StaticTrapConfiguration2D = values["initial_config"]
+        if v.sampling_rate != initial_config.sampling_rate:
             raise ValueError(
                 "The sampling rate of the final configuration must match the sampling rate of the initial configuration."
             )
+        if v.number_tones_x != initial_config.number_tones_x:
+            raise ValueError(
+                "The number of tones in the final configuration must match the number of tones in the initial configuration."
+            )
+        if v.number_tones_y != initial_config.number_tones_y:
+            raise ValueError(
+                "The number of tones in the final configuration must match the number of tones in the initial configuration."
+            )
         return v
+
+    @property
+    def number_tone_x(self) -> int:
+        return self.initial_config.number_tones_x
+
+    @property
+    def number_tone_y(self) -> int:
+        return self.initial_config.number_tones_y
+
+    @property
+    def sampling_rate(self) -> float:
+        return self.initial_config.sampling_rate
 
 
 def generate_move(

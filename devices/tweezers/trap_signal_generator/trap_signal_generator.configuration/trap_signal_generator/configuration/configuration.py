@@ -49,3 +49,11 @@ class StaticTrapConfiguration2D(SettingsModel):
     @property
     def number_samples(self):
         return self.config_x.number_samples
+
+    @property
+    def number_tones_x(self) -> int:
+        return self.config_x.number_tones
+
+    @property
+    def number_tones_y(self) -> int:
+        return self.config_y.number_tones
