@@ -3,19 +3,20 @@ import ctypes
 import logging
 import math
 from collections.abc import Mapping
-from enum import Enum
 from typing import ClassVar, NewType
 
 import numpy as np
 from pydantic import Field, validator
 
 from device.runtime import RuntimeDevice
-from settings_model import SettingsModel
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
 from .pyspcm.spcm_tools import pvAllocMemPageAligned
+from .segment_name import SegmentName
+from .step_configuration import StepConfiguration
+from .step_name import StepName
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,9 +28,11 @@ AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP3,
 )
 
-SegmentName = NewType("SegmentName", str)
-SegmentData = np.ndarray[("NUMBER_CHANNELS", "number_samples"), np.int16]
-StepName = NewType("StepName", str)
+NumberChannels = NewType("NumberChannels", int)
+NumberSamples = NewType("NumberSamples", int)
+
+
+SegmentData = np.ndarray[tuple[NumberChannels, NumberSamples], np.int16]
 
 
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
@@ -50,7 +53,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         allow_mutation=False,
     )
     sampling_rate: int = Field(allow_mutation=False)
-    channel_settings: tuple["ChannelSettings", ...] = Field(allow_mutation=False)
+    channel_settings: tuple[ChannelSettings, ...] = Field(allow_mutation=False)
     segment_names: frozenset[SegmentName] = Field(
         allow_mutation=False,
     )
@@ -58,7 +61,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
     _board_handle: spcm.drv_handle
     _segment_indices: dict[SegmentName, int]
-    _steps: dict[StepName, "StepConfiguration"]
+    _steps: dict[StepName, StepConfiguration]
     _step_indices: dict[StepName, int]
     _step_names: dict[int, StepName]
     _bytes_per_sample: int
@@ -68,9 +71,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         name: str,
         board_id: str,
         sampling_rate: int,
-        channel_settings: tuple["ChannelSettings", ...],
+        channel_settings: tuple[ChannelSettings, ...],
         segment_names: set[SegmentName],
-        steps: dict[StepName, "StepConfiguration"],
+        steps: Mapping[StepName, StepConfiguration],
         first_step: StepName,
     ):
         super().__init__(
@@ -82,7 +85,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             steps=steps,
             first_step=first_step,
         )
-        self._steps = copy.deepcopy(steps)
+        self._steps = copy.deepcopy(dict(steps))
         self._segment_indices = {
             name: index for index, name in enumerate(self.segment_names)
         }
@@ -187,7 +190,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         self._set_first_step(self.first_step)
 
-    def _setup_step(self, step_name: StepName, config: "StepConfiguration"):
+    def _setup_step(self, step_name: StepName, config: StepConfiguration):
         step_index = self._step_indices[step_name]
         segment_index = self._segment_indices[config.segment]
         next_step_index = self._step_indices[config.next_step]
@@ -392,19 +395,3 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     @property
     def number_channels_enabled(self):
         return sum(channel.enabled for channel in self.channel_settings)
-
-
-class StepChangeCondition(Enum):
-    ALWAYS = 0x0
-    ON_TRIGGER = 0x40000000
-    END = 0x80000000
-
-
-class StepConfiguration(SettingsModel):
-    segment: SegmentName
-    next_step: StepName
-    repetition: int
-    change_condition: StepChangeCondition = StepChangeCondition.ALWAYS
-
-
-SpectrumAWGM4i66xxX8.update_forward_refs()
