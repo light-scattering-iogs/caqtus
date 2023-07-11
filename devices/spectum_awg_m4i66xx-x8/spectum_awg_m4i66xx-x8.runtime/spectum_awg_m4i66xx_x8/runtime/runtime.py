@@ -101,6 +101,11 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         return channel_settings
 
     def initialize(self) -> None:
+        """Initialize the AWG.
+
+        This function must be called before any other function.
+        """
+
         super().initialize()
         self._board_handle = spcm.spcm_hOpen(self.board_id)
         if not self._board_handle:
@@ -171,6 +176,8 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
 
     def _setup_card_mode(self):
+        """Set up the AWG to be in sequence mode with the correct number of segments."""
+
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_CARDMODE, spcm.SPC_REP_STD_SEQUENCE
         )
