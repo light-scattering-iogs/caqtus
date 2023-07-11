@@ -3,7 +3,7 @@ import ctypes
 import logging
 import math
 from collections.abc import Mapping
-from typing import ClassVar, NewType
+from typing import ClassVar
 
 import numpy as np
 from pydantic import Field, validator
@@ -14,9 +14,8 @@ from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN
 from .pyspcm.spcm_tools import pvAllocMemPageAligned
-from .segment_name import SegmentName
-from .step_configuration import StepConfiguration
-from .step_name import StepName
+from .segment import SegmentData, NumberChannels, SegmentName
+from .step import StepConfiguration, StepName
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,12 +26,6 @@ AMPLITUDE_REGISTERS = (
     spcm.SPC_AMP2,
     spcm.SPC_AMP3,
 )
-
-NumberChannels = NewType("NumberChannels", int)
-NumberSamples = NewType("NumberSamples", int)
-
-
-SegmentData = np.ndarray[tuple[NumberChannels, NumberSamples], np.int16]
 
 
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
@@ -47,7 +40,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         segment_names: The names of the segments to split the AWG memory into
     """
 
-    NUMBER_CHANNELS: ClassVar[int] = 2
+    NUMBER_CHANNELS: ClassVar[NumberChannels] = NumberChannels(2)
 
     board_id: str = Field(
         allow_mutation=False,

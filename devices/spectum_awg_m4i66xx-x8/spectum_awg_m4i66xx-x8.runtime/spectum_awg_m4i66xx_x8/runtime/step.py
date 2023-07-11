@@ -1,8 +1,10 @@
 from enum import Enum
+from typing import NewType
 
 from settings_model import SettingsModel
-from .segment_name import SegmentName
-from .step_name import StepName
+from .segment import SegmentName
+
+StepName = NewType("StepName", str)
 
 
 class StepChangeCondition(Enum):
