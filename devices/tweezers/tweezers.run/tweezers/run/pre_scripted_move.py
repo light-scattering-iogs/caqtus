@@ -30,7 +30,7 @@ class MoveConfiguration(SettingsModel):
 
     initial_config: StaticTrapConfiguration2D
     final_config: StaticTrapConfiguration2D
-    move_duration: float
+    move_number_samples: int
 
     @validator("final_config")
     def validate_final_config(cls, v, values):
@@ -70,7 +70,7 @@ def generate_move(
         SegmentName("move"): generate_move_data(
             move_config.initial_config,
             move_config.final_config,
-            move_config.move_duration,
+            move_config.move_number_samples,
         ),
         SegmentName("final"): generate_static_traps_data(move_config.final_config),
     }
@@ -90,9 +90,8 @@ def generate_static_traps_data(trap_config: StaticTrapConfiguration2D) -> Segmen
 def generate_move_data(
     initial_config: StaticTrapConfiguration2D,
     final_config: StaticTrapConfiguration2D,
-    move_duration: float,
+    number_samples: int,
 ) -> SegmentData:
-    number_samples = int(move_duration * initial_config.sampling_rate)
     move_x = generate_1d_move_data(
         initial_config.config_x,
         final_config.config_x,

@@ -1,8 +1,8 @@
 import argparse
 from pathlib import Path
 
-from trap_signal_generator.configuration import StaticTrapConfiguration2D
 from pre_scripted_move import MoveConfiguration
+from trap_signal_generator.configuration import StaticTrapConfiguration2D
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         "-f", "--final_traps", help="Path to final trap configuration.", type=Path
     )
     parser.add_argument(
-        "-d", "--move_duration", help="Duration of the move in seconds.", type=float
+        "-s", "--number_samples", help="Number of samples for the move.", type=int
     )
     parser.add_argument("-o", "--output", help="Output file name.", type=Path)
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     move_config = MoveConfiguration(
         initial_config=initial_config,
         final_config=final_config,
-        move_duration=args.move_duration,
+        move_number_samples=args.number_samples,
     )
 
     with open(args.output, "w") as f:
