@@ -23,9 +23,7 @@ class MoveConfiguration(SettingsModel):
     Fields:
         initial_config: The initial configuration of the trap.
         final_config: The final configuration of the trap.
-        move_duration: The time to move from the initial to the final configuration, in seconds.
-        scale_x: The scale factor for the x-axis, in Volt.
-        scale_y: The scale factor for the y-axis, in Volt.
+        move_number_samples: The number of samples for the move.
     """
 
     initial_config: StaticTrapConfiguration2D
@@ -67,12 +65,17 @@ def generate_move(
 ) -> tuple[dict[StepName, StepConfiguration], dict[SegmentName, SegmentData]]:
     segments = {
         SegmentName("initial"): generate_static_traps_data(move_config.initial_config),
-        SegmentName("move"): generate_move_data(
+        SegmentName("move forward"): generate_move_data(
             move_config.initial_config,
             move_config.final_config,
             move_config.move_number_samples,
         ),
         SegmentName("final"): generate_static_traps_data(move_config.final_config),
+        SegmentName("move backward"): generate_move_data(
+            move_config.final_config,
+            move_config.initial_config,
+            move_config.move_number_samples,
+        ),
     }
     steps = generate_step_configs()
     return steps, segments
@@ -135,21 +138,27 @@ def generate_step_configs() -> dict[StepName, StepConfiguration]:
     steps = {
         StepName("initial"): StepConfiguration(
             segment=SegmentName("initial"),
-            next_step=StepName("move"),
+            next_step=StepName("move forward"),
             repetition=1,
             change_condition=StepChangeCondition.ON_TRIGGER
         ),
-        StepName("move"): StepConfiguration(
-            segment=SegmentName("move"),
+        StepName("move forward"): StepConfiguration(
+            segment=SegmentName("move forward"),
             next_step=StepName("final"),
             repetition=1,
             change_condition=StepChangeCondition.ALWAYS,
         ),
         StepName("final"): StepConfiguration(
             segment=SegmentName("final"),
-            next_step=StepName("initial"),
+            next_step=StepName("move backward"),
             repetition=1,
             change_condition=StepChangeCondition.ON_TRIGGER,
+        ),
+        StepName("move backward"): StepConfiguration(
+            segment=SegmentName("move backward"),
+            next_step=StepName("initial"),
+            repetition=1,
+            change_condition=StepChangeCondition.ALWAYS,
         ),
     }
 

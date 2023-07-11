@@ -15,8 +15,8 @@ logger.setLevel(logging.DEBUG)
 
 
 def main():
-    frequencies_x = np.linspace(81e6, 83e6, 5)
-    frequencies_y = np.linspace(75e6, 79e6, 5)
+    frequencies_x = np.linspace(76e6, 77.6e6, 5)
+    frequencies_y = np.linspace(72e6, 73.6e6, 5)
 
     parser = argparse.ArgumentParser(
         description="Generate a configuration for a 2D static tweezer pattern."
