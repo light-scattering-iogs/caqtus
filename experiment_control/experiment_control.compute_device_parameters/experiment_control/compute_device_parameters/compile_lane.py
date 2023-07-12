@@ -1,3 +1,4 @@
+import logging
 import math
 from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
@@ -19,6 +20,9 @@ from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
 from .evaluation_error import ShotEvaluationError
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def empty_channel_instruction(
@@ -219,7 +223,7 @@ def compile_clock_instruction(
             stop_tick(clock_instruction.stop, clock_instruction.time_step) * multiplier
         )
         clock_length = (
-            number_ticks(clock_start, clock_stop, clock_instruction.time_step)
+            number_ticks(clock_instruction.start, clock_instruction.stop, clock_instruction.time_step)
             * multiplier
         )
 
