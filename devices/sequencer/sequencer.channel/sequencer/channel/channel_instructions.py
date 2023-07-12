@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import TypeVar, Generic, Any, Self, Iterable, Type
+from typing import TypeVar, Generic, Any, Self, Iterable, Type, Callable
 
 import numpy as np
 from numpy.typing import DTypeLike
@@ -101,6 +101,14 @@ class ChannelInstruction(
 
         return cls.empty(instruction.dtype)
 
+    @abstractmethod
+    def apply(
+        self, fun: Callable[[ChannelType], ChannelType]
+    ) -> "ChannelInstruction[ChannelType]":
+        """Apply a function to each element of the instruction."""
+
+        raise NotImplementedError
+
 
 class ChannelPattern(ChannelInstruction[ChannelType]):
     """A sequence of values to be output on a channel."""
@@ -142,6 +150,9 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
         if not isinstance(other, ChannelPattern):
             return False
         return np.array_equal(self.values, other.values)
+
+    def apply(self, fun: Callable[[ChannelType], ChannelType]):
+        return type(self)(fun(self.values))
 
 
 class Concatenate(ChannelInstruction[ChannelType]):
@@ -229,6 +240,9 @@ class Concatenate(ChannelInstruction[ChannelType]):
     def dtype(self) -> ChannelType:
         return self.instructions[0].dtype
 
+    def apply(self, fun: Callable[[ChannelType], ChannelType]):
+        return type(self)([instruction.apply(fun) for instruction in self.instructions])
+
 
 class Repeat(ChannelInstruction[ChannelType]):
     """Repeat a single instruction a given number of times.
@@ -246,7 +260,10 @@ class Repeat(ChannelInstruction[ChannelType]):
         self._instruction = instruction
         self._number_repetitions = number_repetitions
         if number_repetitions < 2:
-            raise ValueError(f"Number of repetitions {number_repetitions} must be greater or equal to 2.")
+            raise ValueError(
+                f"Number of repetitions {number_repetitions} must be greater or equal"
+                " to 2."
+            )
 
     @property
     def instruction(self) -> ChannelInstruction[ChannelType]:
@@ -326,3 +343,6 @@ class Repeat(ChannelInstruction[ChannelType]):
     @cached_property
     def dtype(self) -> ChannelType:
         return self.instruction.dtype
+
+    def apply(self, fun: Callable[[ChannelType], ChannelType]):
+        return type(self)(self.instruction.apply(fun), self.number_repetitions)
