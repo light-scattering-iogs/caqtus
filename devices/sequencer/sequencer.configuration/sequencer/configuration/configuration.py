@@ -48,6 +48,9 @@ class ChannelSpecialPurpose(SettingsModel):
     def unused(cls):
         return cls(purpose="Unused")
 
+    def is_unused(self) -> bool:
+        return self.purpose == "Unused"
+
 
 LogicalType = TypeVar("LogicalType")
 OutputType = TypeVar("OutputType")
@@ -75,13 +78,16 @@ class ChannelConfiguration(SettingsModel, ABC):
     """
 
     description: ChannelName | ChannelSpecialPurpose
-    output_mapping: OutputMapping#[LogicalType, OutputType]
-    default_value: Any#LogicalType
+    output_mapping: OutputMapping  # [LogicalType, OutputType]
+    default_value: Any  # LogicalType
     color: Optional[Color] = None
     delay: float = 0.0
 
     def has_special_purpose(self) -> bool:
         return isinstance(self.description, ChannelSpecialPurpose)
+
+    def is_unused(self) -> bool:
+        return self.has_special_purpose() and self.description.is_unused()
 
 
 # ChannelConfiguration[bool, bool]

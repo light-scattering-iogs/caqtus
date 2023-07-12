@@ -129,8 +129,14 @@ def compile_channel_instruction(
             instruction = compile_clock_instruction(
                 clock_requirements[target], time_step
             )
+        elif channel.is_unused():
+            instruction = empty_channel_instruction(
+                channel.default_value, step_durations, time_step
+            )
         else:
-            raise NotImplementedError
+            instruction = empty_channel_instruction(
+                channel.default_value, step_durations, time_step
+            )
     else:
         if lane := shot_config.find_lane(channel.description):
             instruction = compile_lane(lane, step_durations, time_step, variables)
@@ -138,6 +144,7 @@ def compile_channel_instruction(
             instruction = empty_channel_instruction(
                 channel.default_value, step_durations, time_step
             )
+
     instruction = instruction.apply(channel.output_mapping.convert)
     return instruction
 
