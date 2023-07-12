@@ -106,7 +106,7 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
 
     number_channels: ClassVar[int]
     time_step: float = Field(ge=0.0)
-    channels: tuple[ChannelConfiguration]
+    channels: tuple[ChannelConfiguration, ...]
 
     @classmethod
     @abstractmethod

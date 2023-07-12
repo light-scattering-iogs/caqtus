@@ -72,105 +72,151 @@ device_configurations:
       height: 128
     camera_number: 0
   Spincore PulseBlaster sequencer: !SpincoreSequencerConfiguration
-    channel_descriptions:
-    - !ChannelSpecialPurpose 'NI6738 analog sequencer'
-    - !ChannelSpecialPurpose 'Unused'
-    - 2D MOT (AOM)
-    - !ChannelSpecialPurpose 'MOT camera'
-    - 421 cell (AOM)
-    - test trigger
-    - MOT coils
-    - 626 light (AOM)
-    - Push beam (shutter)
-    - 421 cell vertical (shutter)
-    - 421 cell horizontal (shutter)
-    - 421 cell vertical (AOM)
-    - !ChannelSpecialPurpose 'Orca Quest'
-    - 626 horizontal shutter
-    - 532 tweezers (AOM)
-    - 626 imaging (AOM)
-    - 421 cell vertical (EOM)
-    - Trap trigger
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    channel_colors:
-    - null
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 70
-      - 130
-      - 180
-      - 0.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 255
-      - 255
-      - 255
-      - 1.0
-    - - 218
-      - 165
-      - 32
-      - 1.0
-    - - 255
-      - 69
-      - 0
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - !tuple
-      - 85
-      - 85
-      - 255
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - !tuple
-      - 85
-      - 85
-      - 255
-      - 1.0
-    - seashell
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - limegreen
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - !tuple
-      - 85
-      - 85
-      - 255
-      - 1.0
-    - !tuple
-      - 50
-      - 205
-      - 50
-      - 1.0
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
+    channels:
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'NI6738 card'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 2D MOT (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'MOT camera'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [70, 130, 180, 0.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 421 cell (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: test trigger
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [255, 255, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: MOT coils
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [218, 165, 32, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 626 light (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [255, 69, 0, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: Push beam (shutter)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 421 cell vertical (shutter)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 421 cell horizontal (shutter)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 421 cell vertical (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Orca Quest'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: seashell
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 626 horizontal shutter
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [255, 85, 0, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 532 tweezers (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: limegreen
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 626 imaging (AOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [255, 85, 0, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: 421 cell vertical (EOM)
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [85, 85, 255, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: Trap trigger
+        output_mapping: !DigitalMapping
+          invert: false
+        color: [50, 205, 50, 1.0]
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
+      - !DigitalChannelConfiguration
+        description: !ChannelSpecialPurpose 'Unused'
+        output_mapping: !DigitalMapping
+          invert: false
+        color: null
+        delay: 0.0
     remote_server: James
     board_number: 0
     time_step: 5.0000000000000004e-08
