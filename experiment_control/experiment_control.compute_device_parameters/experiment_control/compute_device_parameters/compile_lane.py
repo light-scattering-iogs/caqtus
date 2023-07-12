@@ -228,45 +228,28 @@ def compile_clock_instruction(
 ) -> ChannelInstruction[bool]:
     instructions = []
 
-    # must ensure here that the clock line only goes up at a multiple of the clock time step.
-    # The clock time step must be a multiple of the channel time step.
-    # Since the clock must go up and down in a single clock step, it must be at least twice the channel time step.
     for clock_instruction in clock_requirements:
         multiplier, high, low = high_low_clicks(clock_instruction.time_step, time_step)
-        start = start_tick(clock_instruction.start, time_step)
-        stop = stop_tick(clock_instruction.stop, time_step)
+        clock_single_pulse = (
+            ChannelPattern([True]) * high + ChannelPattern([False]) * low
+        )
 
-        # All 3 values below are given in time_step units:
-        clock_start = (
-            start_tick(clock_instruction.start, clock_instruction.time_step)
-            * multiplier
-        )
-        clock_stop = (
-            stop_tick(clock_instruction.stop, clock_instruction.time_step) * multiplier
-        )
         clock_rep = number_ticks(
-            clock_instruction.start,
-            clock_instruction.stop,
-            clock_instruction.time_step,
+            clock_instruction.start, clock_instruction.stop, clock_instruction.time_step
         )
-
-        before = ChannelPattern([False]) * (clock_start - start)
-        after = ChannelPattern([False]) * (clock_stop - stop)
-
-        clock_pattern = ChannelPattern([True]) * high + ChannelPattern([False]) * low
-
         if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
-            middle = clock_pattern + ChannelPattern([False]) * (
+            pattern = clock_single_pulse + ChannelPattern([False]) * (
                 multiplier * max(clock_rep - 1, 0)
             )
         elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
-            middle = clock_pattern * clock_rep
+            pattern = clock_single_pulse * clock_rep
         else:
             raise NotImplementedError(
                 f"Order {clock_instruction.order} not implemented"
             )
-        instructions.append(before + middle + after)
-    return ChannelInstruction.join(instructions, dtype=bool)
+        instructions.append(pattern)
+    length = number_ticks(0.0, clock_requirements[-1].stop, time_step)
+    return ChannelInstruction.join(instructions, dtype=bool).split(length)[0]
 
 
 def high_low_clicks(
