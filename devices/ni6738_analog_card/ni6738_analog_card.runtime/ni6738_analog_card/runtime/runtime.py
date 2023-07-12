@@ -10,7 +10,7 @@ from pydantic import Extra, Field, validator
 
 from device.runtime import RuntimeDevice
 from log_exception import log_exception
-from sequencer.time_sequence import TimeSequence
+from sequencer.instructions import SequencerInstruction
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -65,10 +65,9 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
             )
 
     @log_exception(logger)
-    def update_parameters(self, /, sequence: TimeSequence, **kwargs) -> None:
+    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
         """Write a sequence of voltages to the analog card."""
 
-        super().update_parameters(**kwargs)
         self._stop_task()
 
         pattern = sequence.unroll()

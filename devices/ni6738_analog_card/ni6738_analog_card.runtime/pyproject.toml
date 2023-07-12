@@ -15,7 +15,7 @@ pydantic = "^1.10.4"
 
 device-runtime = {path = "../../device/device.runtime", develop = true}
 log-exception = {path = "../../../common/log_exception", develop = true}
-sequencer = {path = "../../sequencer", develop = true}
+sequencer-instructions = {path = "../../sequencer/sequencer.instructions", develop = true}
 
 
 

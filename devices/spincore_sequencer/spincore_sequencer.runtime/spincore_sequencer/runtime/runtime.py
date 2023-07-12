@@ -8,6 +8,7 @@ from pydantic import Field
 
 from device.runtime import RuntimeDevice
 from log_exception import log_exception
+from sequencer.instructions import SequencerInstruction
 from . import spinapi
 from .instructions import Instruction, Continue, Loop, Stop
 
@@ -63,9 +64,7 @@ class SpincorePulseBlaster(RuntimeDevice):
         spinapi.pb_core_clock(self.core_clock / 1e6)
 
     @log_exception(logger)
-    def update_parameters(self, /, **kwargs) -> None:
-        super().update_parameters(**kwargs)
-
+    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(
                 f"Can't start programming sequence.{spinapi.pb_get_error()}"
