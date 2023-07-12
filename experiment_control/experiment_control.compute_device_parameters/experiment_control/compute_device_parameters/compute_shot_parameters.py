@@ -20,7 +20,7 @@ from sequence.configuration import (
     Ramp,
 )
 from sequencer.channel import ChannelInstruction
-from sequencer.configuration import SequencerConfiguration
+from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
 from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
@@ -121,29 +121,48 @@ def compile_sequencer_instructions(
     instructions: dict[ChannelLabel, ChannelInstruction[bool]] = {}
 
     for channel_number, channel in enumerate(sequencer_config.channels):
-        if channel.has_special_purpose():
-            target = str(channel.description)
-            if target in camera_instructions:
-                instruction = compile_camera_instruction(
-                    camera_instructions[target], sequencer_config.time_step
-                )
-            elif target in clock_requirements:
-                instruction = compile_clock_instruction(
-                    clock_requirements[target], sequencer_config.time_step
-                )
-            else:
-                raise NotImplementedError
-        else:
-            if lane := shot_config.find_lane(channel.description):
-                instruction = compile_lane(
-                    lane, step_durations, sequencer_config.time_step, variables
-                )
-            else:
-                instruction = empty_channel_instruction(
-                    channel.default_value, step_durations, sequencer_config.time_step
-                )
-        instructions[ChannelLabel(channel_number)] = instruction
+        instructions[ChannelLabel(channel_number)] = compile_channel_instruction(
+            channel,
+            step_durations,
+            variables,
+            shot_config,
+            camera_instructions,
+            clock_requirements,
+            sequencer_config.time_step,
+        )
     return instructions
+
+
+def compile_channel_instruction(
+    channel: ChannelConfiguration,
+    step_durations: Sequence[float],
+    variables: VariableNamespace,
+    shot_config: ShotConfiguration,
+    camera_instructions: Mapping[DeviceName, CameraInstruction],
+    clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
+    time_step: float,
+) -> ChannelInstruction:
+    if channel.has_special_purpose():
+        target = str(channel.description)
+        if target in camera_instructions:
+            instruction = compile_camera_instruction(
+                camera_instructions[target], time_step
+            )
+        elif target in clock_requirements:
+            instruction = compile_clock_instruction(
+                clock_requirements[target], time_step
+            )
+        else:
+            raise NotImplementedError
+    else:
+        if lane := shot_config.find_lane(channel.description):
+            instruction = compile_lane(lane, step_durations, time_step, variables)
+        else:
+            instruction = empty_channel_instruction(
+                channel.default_value, step_durations, time_step
+            )
+    instruction = instruction.apply(channel.output_mapping.convert)
+    return instruction
 
 
 def compute_camera_instructions(
