@@ -74,9 +74,11 @@ def compute_shot_parameters(
     }
 
     sequencer_parameters = {
-        sequencer_name: convert_to_sequence(
-            instructions, sequencer_configs[sequencer_name]
-        )
+        sequencer_name: {
+            DeviceParameter("sequence"): convert_to_sequence(
+                instructions, sequencer_configs[sequencer_name]
+            )
+        }
         for sequencer_name, instructions in sequencer_instructions.items()
     }
 
