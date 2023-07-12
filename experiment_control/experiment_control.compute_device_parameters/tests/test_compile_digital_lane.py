@@ -1,3 +1,5 @@
+import logging
+
 from experiment_control.compute_device_parameters import (
     compile_step_durations,
     compile_digital_lane,
@@ -6,6 +8,9 @@ from experiment_control.compute_device_parameters.compile_lane import number_tic
 from sequence.configuration import ShotConfiguration, DigitalLane
 from sequencer.channel import Concatenate, Repeat, ChannelPattern
 from variable.namespace import VariableNamespace
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def test_digital_lane_compilation(
@@ -27,7 +32,7 @@ def test_digital_lane_compilation(
         (
             Repeat(ChannelPattern((True,)), 200000),
             Repeat(ChannelPattern((False,)), 1600000),
-            Repeat(ChannelPattern((True,)), 4620000),
+            Repeat(ChannelPattern((True,)), 4620001),
             Repeat(ChannelPattern((True,)), 160000),
             Repeat(ChannelPattern((True,)), 3),
             Repeat(ChannelPattern((True,)), 20),

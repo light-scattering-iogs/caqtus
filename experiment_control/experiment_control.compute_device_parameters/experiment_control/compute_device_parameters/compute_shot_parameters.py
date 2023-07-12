@@ -24,12 +24,13 @@ from sequencer.configuration import SequencerConfiguration
 from sequencer.instructions import ChannelLabel
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
-from .clock_instruction import ClockInstruction, ClockStepInstruction
+from .clock_instruction import ClockInstruction
 from .compile_lane import (
     compile_lane,
     empty_channel_instruction,
     get_step_bounds,
     compile_camera_instruction,
+    compile_clock_instruction,
 )
 from .compile_steps import compile_step_durations
 
@@ -220,9 +221,9 @@ def compile_clock_requirements(
     are_steps_constant = get_constant_steps(shot_config, sequencer_config)
     for step_index, step_constant in enumerate(are_steps_constant):
         if step_constant:
-            clock_type = ClockStepInstruction.TriggerStart
+            clock_type = ClockInstruction.StepInstruction.TriggerStart
         else:
-            clock_type = ClockStepInstruction.Clock
+            clock_type = ClockInstruction.StepInstruction.Clock
         clock_instructions.append(
             ClockInstruction(
                 start=step_bounds[step_index],

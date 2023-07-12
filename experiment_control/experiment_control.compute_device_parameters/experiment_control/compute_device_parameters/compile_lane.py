@@ -17,7 +17,7 @@ from units import Quantity, ureg, units
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
-from .clock_instruction import ClockInstruction, ClockStepInstruction
+from .clock_instruction import ClockInstruction
 from .evaluation_error import ShotEvaluationError
 
 
@@ -67,13 +67,13 @@ def number_ticks(
 def start_tick(start_time: SupportsFloat, time_step: SupportsFloat) -> int:
     """Returns the included first tick index of the step starting at start_time."""
 
-    return math.floor(float(start_time) / float(time_step))
+    return math.ceil(float(start_time) / float(time_step))
 
 
 def stop_tick(stop_time: SupportsFloat, time_step: SupportsFloat) -> int:
     """Returns the excluded last tick index of the step ending at stop_time."""
 
-    return math.floor((float(stop_time)) / float(time_step))
+    return math.ceil((float(stop_time)) / float(time_step))
 
 
 def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
@@ -225,11 +225,11 @@ def compile_clock_instruction(
 
         before = ChannelPattern([False]) * (clock_start - start)
         after = ChannelPattern([False]) * (stop - clock_stop)
-        if clock_instruction.order == ClockStepInstruction.TriggerStart:
+        if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
             middle = ChannelPattern([True]) * high + ChannelPattern([False]) * (
                 clock_length - high
             )
-        elif clock_instruction.order == ClockStepInstruction.Clock:
+        elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
             middle = (ChannelPattern([True]) * high + ChannelPattern([False]) * low) * (
                 clock_length // multiplier
             )
@@ -250,7 +250,7 @@ def high_low_clicks(
             "Clock time step must be at least twice the sequencer time step"
         )
     div, mod = divmod(clock_time_step, sequencer_time_step)
-    if not mod == 0:
+    if not abs(mod) < 1e-12 * clock_time_step:
         raise ValueError(
             "Clock time step must be an integer multiple of the sequencer time step"
         )
