@@ -137,7 +137,7 @@ class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
         input_values = numpy.array(self.input_values)
         output_values = numpy.array(self.output_values)
         interp = numpy.interp(
-            x=input_.to(self.get_input_units()).magnitude,
+            x=input_,
             xp=input_values,
             fp=output_values,
         )

@@ -3,7 +3,7 @@ from typing import Any, Optional, TypeGuard
 
 import numpy as np
 
-from units import Quantity, Unit, DimensionalityError
+from units import Quantity, Unit, DimensionalityError, dimensionless
 
 AnalogValue = Real | Quantity
 
@@ -53,10 +53,12 @@ def magnitude_in_unit(value: Quantity, unit: Optional[Unit | str]) -> Real:
     if not is_analog_value(value):
         raise ValueError(f"{value} is not an analog value")
 
-    if not unit:
+    if not unit or Unit(unit).is_compatible_with(dimensionless):
         if not is_quantity(value):
             return value
-        raise ValueError(f"Trying to get magnitude of real value ({value})")
+        elif value.units.is_compatible_with(dimensionless):
+            return value.to_base_units().magnitude
+        raise ValueError(f"Trying to get magnitude of value {value} in unit {unit!r}")
     else:
         if is_quantity(value):
             return value.to(unit).magnitude
