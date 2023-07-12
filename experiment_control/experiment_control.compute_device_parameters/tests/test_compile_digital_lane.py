@@ -4,7 +4,7 @@ from experiment_control.compute_device_parameters import (
     compile_step_durations,
     compile_digital_lane,
 )
-from experiment_control.compute_device_parameters.compile_lane import number_ticks
+from experiment_control.compute_device_parameters.compile_lane import number_ticks, get_step_bounds
 from sequence.configuration import ShotConfiguration, DigitalLane
 from sequencer.channel import Concatenate, Repeat, ChannelPattern
 from variable.namespace import VariableNamespace
@@ -21,8 +21,9 @@ def test_digital_lane_compilation(
         step_names=shot_config.step_names,
         variables=variables,
     )
+    logger.debug(f"{get_step_bounds(durations)=}")
 
-    time_step = 50e-9
+    time_step = 50
 
     lane = shot_config.find_lane("421 cell (AOM)")
     assert isinstance(lane, DigitalLane)
@@ -34,7 +35,7 @@ def test_digital_lane_compilation(
             Repeat(ChannelPattern((False,)), 1600000),
             Repeat(ChannelPattern((True,)), 4620001),
             Repeat(ChannelPattern((True,)), 160000),
-            Repeat(ChannelPattern((True,)), 3),
+            Repeat(ChannelPattern((True,)), 2),
             Repeat(ChannelPattern((True,)), 20),
             Repeat(ChannelPattern((True,)), 10),
             Repeat(ChannelPattern((True,)), 3),
@@ -44,4 +45,5 @@ def test_digital_lane_compilation(
             Repeat(ChannelPattern((True,)), 200000),
         )
     )
+    logger.debug(f"{instruction=}")
     assert instruction == result

@@ -17,7 +17,7 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
 
     number_channels: ClassVar[int] = 32
     device_id: str
-    time_step: float = Field(ge=2.5e-6)
+    time_step: int = Field(ge=2500, default=2500)
     channels: tuple[AnalogChannelConfiguration, ...]
 
     @validator("channels")

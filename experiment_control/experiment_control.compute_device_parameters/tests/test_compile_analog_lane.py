@@ -16,7 +16,7 @@ def test_compile_analog_lane(
         variables=variables,
     )
 
-    time_step = 2.5e-6
+    time_step = 2500
 
     lane = shot_config.find_lane("Tweezers power (AOM)")
     assert isinstance(lane, AnalogLane)

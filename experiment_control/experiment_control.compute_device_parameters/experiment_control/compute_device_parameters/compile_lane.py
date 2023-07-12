@@ -4,7 +4,6 @@ from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
 from itertools import accumulate
 from numbers import Real
-from typing import SupportsFloat, SupportsRound
 
 import numpy as np
 
@@ -24,19 +23,21 @@ from .evaluation_error import ShotEvaluationError
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+ns = 1e-9
+
 
 def empty_channel_instruction(
-    default_value: ChannelType, step_durations: Sequence[float], time_step: float
+    default_value: ChannelType, step_durations: Sequence[float], time_step: int
 ) -> ChannelInstruction[ChannelType]:
     duration = sum(step_durations)
-    length = int(duration / time_step)
+    length = number_ticks(0.0, duration, time_step)
     return ChannelPattern([default_value]) * length
 
 
 def compile_lane(
     lane: Lane,
     step_durations: Sequence[float],
-    time_step: float,
+    time_step: int,
     variables: VariableNamespace,
 ) -> ChannelInstruction:
     if isinstance(lane, DigitalLane):
@@ -50,7 +51,7 @@ def compile_lane(
 def compile_digital_lane(
     step_durations: Sequence[float],
     lane: DigitalLane,
-    time_step: float,
+    time_step: int,
 ) -> ChannelInstruction[bool]:
     step_bounds = get_step_bounds(step_durations)
     instructions = []
@@ -60,27 +61,37 @@ def compile_digital_lane(
     return ChannelInstruction.join(instructions, dtype=bool)
 
 
-def number_ticks(
-    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: SupportsFloat
-) -> int:
-    """Returns the number of ticks between start_time and stop_time."""
+def number_ticks(start_time: float, stop_time: float, time_step: int) -> int:
+    """Returns the number of ticks between start_time and stop_time.
+
+    Args:
+        start_time: The start time in seconds.
+        stop_time: The stop time in seconds.
+        time_step: The time step in nanoseconds.
+    """
 
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
 
 
-def start_tick(start_time: SupportsRound, time_step: SupportsRound) -> int:
+def start_tick(start_time: float, time_step: int) -> int:
     """Returns the included first tick index of the step starting at start_time."""
 
-    return math.ceil(round(start_time, 9) / round(time_step, 9))
+    return math.ceil(start_time / ns / time_step)
 
 
-def stop_tick(stop_time: SupportsRound, time_step: SupportsRound) -> int:
+def stop_tick(stop_time: float, time_step: int) -> int:
     """Returns the excluded last tick index of the step ending at stop_time."""
 
-    return math.ceil(round(stop_time, 12) / round(time_step, 12))
+    return math.ceil(stop_time / ns / time_step)
 
 
-def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
+def get_step_bounds(step_durations: Iterable[float]) -> list[float]:
+    """Returns the step bounds for the given step durations.
+
+    For an iterable of step durations [d_0, d_1, ..., d_n], the step bounds are
+    [0, d_0, d_0 + d_1, ..., d_0 + ... + d_n].
+    """
+
     return [0.0] + list((accumulate(step_durations)))
 
 
@@ -88,7 +99,7 @@ def compile_analog_lane(
     step_durations: Sequence[float],
     lane: AnalogLane,
     variables: VariableNamespace,
-    time_step: float,
+    time_step: int,
 ) -> ChannelInstruction[float]:
     return CompileAnalogLane(step_durations, lane, variables, time_step).compile()
 
@@ -98,23 +109,27 @@ class CompileAnalogLane:
     step_durations: Sequence[float]
     lane: AnalogLane
     variables: VariableNamespace
-    time_step: float
+    time_step: int
 
     def compile(self) -> ChannelInstruction[float]:
         step_bounds = get_step_bounds(self.step_durations)
         instructions = []
         for cell, start, stop in self.lane.get_value_spans():
-            length = number_ticks(step_bounds[start], step_bounds[stop], self.time_step)
             if isinstance(cell, Expression):
-                instructions.append(self._compile_expression_cell(cell, length))
+                instructions.append(
+                    self._compile_expression_cell(
+                        cell, step_bounds[start], step_bounds[stop]
+                    )
+                )
             elif isinstance(cell, Ramp):
-                instructions.append(self._compile_ramp_cell(start - 1, stop, length))
+                instructions.append(self._compile_ramp_cell(start))
         return ChannelInstruction.join(instructions, dtype=float)
 
     def _compile_expression_cell(
-        self, expression: Expression, length: int
+        self, expression: Expression, start: float, stop: float
     ) -> ChannelInstruction[float]:
         variables = self.variables | units
+        length = number_ticks(start, stop, self.time_step)
         if _is_constant(expression):
             result = (
                 ChannelPattern(
@@ -124,7 +139,10 @@ class CompileAnalogLane:
             )
         else:
             variables = variables | {
-                DottedVariableName("t"): _compute_time_array(length, self.time_step)
+                DottedVariableName("t"): (
+                    _compute_time_array(start, stop, self.time_step) - start
+                )
+                * ureg.s
             }
             result = ChannelPattern(self._evaluate_expression(expression, variables))
         if not len(result) == length:
@@ -134,15 +152,14 @@ class CompileAnalogLane:
             )
         return result
 
-    def _compile_ramp_cell(
-        self, previous_index: int, next_index: int, length: int
-    ) -> ChannelInstruction[float]:
-        previous_step_duration = sum(
-            self.step_durations[
-                self.lane.start_index(previous_index) : self.lane.end_index(
-                    previous_index
-                )
-            ]
+    def _compile_ramp_cell(self, start_index: int) -> ChannelInstruction[float]:
+        stop_index = self.lane.end_index(start_index)
+        step_bounds = get_step_bounds(self.step_durations)
+        t0 = step_bounds[start_index]
+        t1 = step_bounds[stop_index]
+        previous_step_duration = (
+            step_bounds[self.lane.end_index(start_index - 1)]
+            - step_bounds[self.lane.start_index(start_index - 1)]
         )
         variables = (
             self.variables
@@ -150,15 +167,16 @@ class CompileAnalogLane:
             | {DottedVariableName("t"): previous_step_duration * ureg.s}
         )
         previous_value = self._evaluate_expression(
-            self.lane.get_effective_value(previous_index), variables
+            self.lane.get_effective_value(start_index - 1), variables
         )
 
         variables = self.variables | units | {DottedVariableName("t"): 0.0 * ureg.s}
         next_value = self._evaluate_expression(
-            self.lane.get_effective_value(next_index), variables
+            self.lane.get_effective_value(stop_index), variables
         )
+        t = _compute_time_array(t0, t1, self.time_step)
         return ChannelPattern(
-            np.linspace(previous_value, next_value, length), dtype=float
+            (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
         )
 
     def _evaluate_expression(
@@ -185,13 +203,18 @@ def _is_constant(expression: Expression) -> bool:
     return "t" not in expression.upstream_variables
 
 
-def _compute_time_array(length: int, time_step: float) -> Quantity:
-    return (np.arange(length) * time_step) * ureg.s
+def _compute_time_array(start: float, stop: float, time_step: int) -> np.ndarray:
+    times = (
+        np.arange(start_tick(start, time_step), stop_tick(stop, time_step))
+        * time_step
+        * ns
+    )
+    return times
 
 
 def compile_camera_instruction(
     camera_instruction: CameraInstruction,
-    time_step: float,
+    time_step: int,
 ) -> ChannelInstruction[bool]:
     instructions = []
     for value, start, stop in camera_instruction.triggers:
@@ -201,7 +224,7 @@ def compile_camera_instruction(
 
 
 def compile_clock_instruction(
-    clock_requirements: Sequence[ClockInstruction], time_step: float
+    clock_requirements: Sequence[ClockInstruction], time_step: int
 ) -> ChannelInstruction[bool]:
     instructions = []
 
@@ -255,7 +278,7 @@ def compile_clock_instruction(
 
 
 def high_low_clicks(
-    clock_time_step: float, sequencer_time_step: float
+    clock_time_step: int, sequencer_time_step: int
 ) -> tuple[int, int, int]:
     """Return the number of steps the sequencer must be high then low to produce a clock pulse."""
     if not clock_time_step >= 2 * sequencer_time_step:
@@ -263,7 +286,7 @@ def high_low_clicks(
             "Clock time step must be at least twice the sequencer time step"
         )
     div, mod = divmod(clock_time_step, sequencer_time_step)
-    if not abs(mod) < 1e-12 * clock_time_step:
+    if not mod == 0:
         logger.debug(f"{clock_time_step=}, {sequencer_time_step=}, {div=}, {mod=}")
         raise ValueError(
             "Clock time step must be an integer multiple of the sequencer time step"

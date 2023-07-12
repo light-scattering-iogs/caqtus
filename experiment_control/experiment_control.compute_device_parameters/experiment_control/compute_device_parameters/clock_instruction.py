@@ -8,7 +8,7 @@ class ClockInstruction:
 
     start: float
     stop: float
-    time_step: float
+    time_step: int
     order: "StepInstruction"
 
     class StepInstruction(Enum):

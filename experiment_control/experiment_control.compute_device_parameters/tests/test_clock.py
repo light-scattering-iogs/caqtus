@@ -13,8 +13,8 @@ logger.setLevel(logging.DEBUG)
 
 
 def test_clock_compilation():
-    clock_time_step = 2.5e-6
-    source_time_step = 50e-9
+    clock_time_step = 2500
+    source_time_step = 50
     clock_requirement = [
         ClockInstruction(
             start=0.0,

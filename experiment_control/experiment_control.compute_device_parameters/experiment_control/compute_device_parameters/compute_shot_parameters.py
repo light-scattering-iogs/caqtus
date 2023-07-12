@@ -117,7 +117,7 @@ def compile_channel_instruction(
     shot_config: ShotConfiguration,
     camera_instructions: Mapping[DeviceName, CameraInstruction],
     clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
-    time_step: float,
+    time_step: int,
 ) -> ChannelInstruction:
     if channel.has_special_purpose():
         target = str(channel.description)

@@ -219,7 +219,7 @@ device_configurations:
         delay: 0.0
     remote_server: James
     board_number: 0
-    time_step: 50.0e-9
+    time_step: 50
   NI6738 card: !NI6738SequencerConfiguration
     channels:
     - !AnalogChannelConfiguration
@@ -771,7 +771,7 @@ device_configurations:
       delay: 0.0
     remote_server: James
     device_id: Dev1
-    time_step: 2.5e-6
+    time_step: 2500
   MOT camera: !ImagingSourceCameraDMK33GR0134Configuration
     remote_server: James
     roi: !RectangularROI

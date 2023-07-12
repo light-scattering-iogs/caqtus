@@ -101,14 +101,14 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
 
     Fields:
         number_channels: The number of channels of the device.
-        time_step: The quantization time step used, in seconds. The device can only update its output at multiples of
-            this time step.
+        time_step: The quantization time step used, in nanoseconds. The device can only update its output at multiples
+            of this time step.
         channels: The configuration of the channels of the device. The length of this list must match the number of
             channels of the device.
     """
 
     number_channels: ClassVar[int]
-    time_step: float = Field(ge=0.0)
+    time_step: int = Field(ge=1)
     channels: tuple[ChannelConfiguration, ...]
 
     @classmethod

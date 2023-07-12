@@ -1,6 +1,9 @@
 from typing import Iterable
 
-from experiment_control.compute_device_parameters.evaluation_error import ShotEvaluationError, DimensionalityError
+from experiment_control.compute_device_parameters.evaluation_error import (
+    ShotEvaluationError,
+    DimensionalityError,
+)
 from expression import Expression
 from parameter_types import is_quantity, convert_to_unit, get_magnitude
 from sequence.configuration import StepName

@@ -27,9 +27,9 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
     number_channels: ClassVar[int] = 24
 
     board_number: int
-    time_step: float = Field(
-        default=50e-9,
-        ge=50e-9,
+    time_step: int = Field(
+        default=50,
+        ge=50,
     )
     channels: tuple[DigitalChannelConfiguration, ...]
 

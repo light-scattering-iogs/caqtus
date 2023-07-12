@@ -15,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 def test_digital_merging(
     shot_config: ShotConfiguration, variables: VariableNamespace
 ) -> None:
-    time_step = 50e-9
+    time_step = 50
 
     durations = compile_step_durations(
         step_durations=shot_config.step_durations,
@@ -58,7 +58,7 @@ def test_digital_merging(
 def test_analog_merging(
     shot_config: ShotConfiguration, variables: VariableNamespace
 ) -> None:
-    time_step = 2.5e-6
+    time_step = 2500
 
     durations = compile_step_durations(
         step_durations=shot_config.step_durations,
