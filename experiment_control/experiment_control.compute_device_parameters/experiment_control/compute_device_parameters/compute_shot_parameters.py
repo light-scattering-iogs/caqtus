@@ -21,7 +21,7 @@ from sequence.configuration import (
 )
 from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
-from sequencer.instructions import ChannelLabel
+from sequencer.instructions import ChannelLabel, SequencerInstruction
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
@@ -73,39 +73,16 @@ def compute_shot_parameters(
         for sequencer_name, sequencer_config in sequencer_configs.items()
     }
 
-    # steps.analog_times = evaluate_analog_local_times(
-    #     shot_config,
-    #     steps,
-    #     get_analog_timestep(experiment_config),
-    #     get_digital_time_step(experiment_config),
-    # )
-    #
-    # camera_triggers = {
-    #     camera_name: instructions.triggers
-    #     for camera_name, instructions in camera_instructions.items()
-    # }
-    # spincore_name, spincore_config = get_spincore(experiment_config)
-    # spincore_instructions = generate_digital_instructions(
-    #     shot_config,
-    #     steps,
-    #     camera_triggers,
-    #     spincore_config,
-    #     get_analog_timestep(experiment_config),
-    # )
-    # result[spincore_name] = {"instructions": spincore_instructions}
-    #
-    # ni6738_name, ni6738_config = get_ni6738(experiment_config)
-    # analog_values = evaluate_analog_values(shot_config, steps, variables)
-    # analog_voltages = generate_analog_voltages(ni6738_config, analog_values)
-    # result[ni6738_name] = {"values": analog_voltages}
-    #
-    # if extra:
-    #     result["extra"] = {
-    #         "steps": steps,
-    #         "analog_values": analog_values,
-    #         "camera_instructions": camera_instructions,
-    #     }
-    # return result
+    sequencer_parameters = {
+        sequencer_name: convert_to_sequence(
+            instructions, sequencer_configs[sequencer_name]
+        )
+        for sequencer_name, instructions in sequencer_instructions.items()
+    }
+
+    result |= sequencer_parameters
+
+    return result
 
 
 def compile_sequencer_instructions(
@@ -163,6 +140,22 @@ def compile_channel_instruction(
             )
     instruction = instruction.apply(channel.output_mapping.convert)
     return instruction
+
+
+def convert_to_sequence(
+    channel_instructions: dict[ChannelLabel, ChannelInstruction],
+    sequencer_config: SequencerConfiguration,
+) -> SequencerInstruction:
+    channel_label = ChannelLabel(0)
+    sequence = SequencerInstruction.from_channel_instruction(
+        channel_label, channel_instructions[channel_label]
+    )
+    for channel_index in range(1, sequencer_config.number_channels):
+        channel_label = ChannelLabel(channel_index)
+        sequence = sequence.add_channel_instruction(
+            channel_label, channel_instructions[channel_label]
+        )
+    return sequence
 
 
 def compute_camera_instructions(
