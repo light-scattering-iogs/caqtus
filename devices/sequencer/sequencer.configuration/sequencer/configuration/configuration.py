@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, NewType, Generic, TypeVar, Type, TypeGuard, Any, ClassVar
+from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar
 
 from pydantic import validator, Field
 from pydantic.color import Color
@@ -53,7 +53,8 @@ LogicalType = TypeVar("LogicalType")
 OutputType = TypeVar("OutputType")
 
 
-class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
+# Generic[LogicalType, OutputType]
+class ChannelConfiguration(SettingsModel, ABC):
     """Contains information to configure the output of a channel.
 
     This is used to translate from logical values to output values. The logical values are the values that are asked
@@ -74,8 +75,8 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     """
 
     description: ChannelName | ChannelSpecialPurpose
-    output_mapping: OutputMapping[LogicalType, OutputType]
-    default_value: LogicalType
+    output_mapping: OutputMapping#[LogicalType, OutputType]
+    default_value: Any#LogicalType
     color: Optional[Color] = None
     delay: float = 0.0
 
@@ -83,14 +84,16 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
         return isinstance(self.description, ChannelSpecialPurpose)
 
 
-class DigitalChannelConfiguration(SettingsModel, ChannelConfiguration[bool, bool]):
+# ChannelConfiguration[bool, bool]
+class DigitalChannelConfiguration(ChannelConfiguration):
     output_mapping: DigitalMapping
-    default_value = False
+    default_value: bool = False
 
 
-class AnalogChannelConfiguration(SettingsModel, ChannelConfiguration[float, float]):
+# ChannelConfiguration[float, float]
+class AnalogChannelConfiguration(ChannelConfiguration):
     output_mapping: AnalogMapping
-    default_value = 0.0
+    default_value: float = 0.0
 
 
 class SequencerConfiguration(DeviceConfiguration, ABC):

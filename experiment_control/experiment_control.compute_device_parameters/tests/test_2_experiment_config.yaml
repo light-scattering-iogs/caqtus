@@ -221,351 +221,554 @@ device_configurations:
     board_number: 0
     time_step: 5.0000000000000004e-08
   NI6738 card: !NI6738SequencerConfiguration
-    channel_descriptions:
-    - Tweezers power (AOM)
-    - MOT coils current
-    - 626 frequency (AOM)
-    - 421 cell frequency offset (AOM)
-    - Z offset
-    - 626 power (AOM)
-    - X offset
-    - Y offset
-    - 421 cell power (AOM)
-    - 421 frequency offset (laser)
-    - Push power
-    - 626 imaging frequency
-    - 626 imaging power
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    - !ChannelSpecialPurpose 'Unused'
-    channel_colors:
-    - - 85
-      - 255
-      - 0
-      - 1.0
-    - - 218
-      - 165
-      - 32
-      - 1.0
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - null
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - null
-    - null
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 85
-      - 85
-      - 255
-      - 1.0
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - - 255
-      - 85
-      - 0
-      - 1.0
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    channel_mappings:
-    - !CalibratedUnitsMapping
-      input_units: ''
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - 0.0
-        - -6.0
-      - !tuple
-        - 0.079
-        - -5.0
-      - !tuple
-        - 0.281
-        - -4.0
-      - !tuple
-        - 0.544
-        - -3.0
-      - !tuple
-        - 0.788
-        - -2.0
-      - !tuple
-        - 0.949
-        - -1.0
-      - !tuple
-        - 1.0
-        - 0.0
-    - !CalibratedUnitsMapping
-      input_units: A
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - 0.0
-        - 0.0
-      - !tuple
-        - 10.0
-        - 1.67
-    - !CalibratedUnitsMapping
-      input_units: MHz
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -20.0
-        - -6.0
-      - !tuple
-        - 20.0
-        - 6.0
-    - !CalibratedUnitsMapping
-      input_units: MHz
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -40.0
-        - -1.0
-      - !tuple
-        - 40.0
-        - 1.0
-    - !CalibratedUnitsMapping
-      input_units: A
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -3.0
-        - -10.0
-      - !tuple
-        - 3.0
-        - 10.0
-    - !CalibratedUnitsMapping
-      input_units: dB
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -68.91
-        - 0.0
-      - !tuple
-        - -67.94
-        - 1.0
-      - !tuple
-        - -54.93
-        - 1.5
-      - !tuple
-        - -48.07
-        - 1.6
-      - !tuple
-        - -43.4
-        - 1.7
-      - !tuple
-        - -33.92
-        - 2.0
-      - !tuple
-        - -25.58
-        - 2.5
-      - !tuple
-        - -20.78
-        - 3.0
-      - !tuple
-        - -14.72
-        - 4.0
-      - !tuple
-        - -10.95
-        - 5.0
-      - !tuple
-        - -8.03
-        - 6.0
-      - !tuple
-        - -5.63
-        - 7.0
-      - !tuple
-        - -3.56
-        - 8.0
-      - !tuple
-        - -1.68
-        - 9.0
-      - !tuple
-        - 0.0
-        - 10.0
-    - !CalibratedUnitsMapping
-      input_units: A
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - 0.0
-        - 0.0
-      - !tuple
-        - 6.0
-        - 3.0
-    - !CalibratedUnitsMapping
-      input_units: A
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - 0.0
-        - 0.0
-      - !tuple
-        - 10.0
-        - 5.0
-    - !CalibratedUnitsMapping
-      input_units: dB
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -33.63
-        - -0.35
-      - !tuple
-        - -33.63
-        - -0.3
-      - !tuple
-        - -33.63
-        - -0.275
-      - !tuple
-        - -30.62
-        - -0.25
-      - !tuple
-        - -23.46
-        - -0.225
-      - !tuple
-        - -17.66
-        - -0.2
-      - !tuple
-        - -13.33
-        - -0.175
-      - !tuple
-        - -9.96
-        - -0.15
-      - !tuple
-        - -5.18
-        - -0.1
-      - !tuple
-        - -2.0
-        - -0.05
-      - !tuple
-        - 0.0
-        - 0.0
-    - !CalibratedUnitsMapping
-      input_units: MHz
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -200.0
-        - 6.0
-      - !tuple
-        - 200.0
-        - -6.0
-    - !CalibratedUnitsMapping
-      input_units: mW
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - 0.0
-        - 0.05
-      - !tuple
-        - 0.7
-        - 1.3
-    - !CalibratedUnitsMapping
-      input_units: MHz
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -20.0
-        - -6.0
-      - !tuple
-        - 20.0
-        - 6.0
-    - !CalibratedUnitsMapping
-      input_units: dB
-      output_units: V
-      measured_data_points:
-      - !tuple
-        - -49.0
-        - 0.5
-      - !tuple
-        - -36.0
-        - 0.55
-      - !tuple
-        - -24.0
-        - 0.6
-      - !tuple
-        - -13.0
-        - 0.65
-      - !tuple
-        - -6.6
-        - 0.7
-      - !tuple
-        - -2.0
-        - 0.8
-      - !tuple
-        - -1.0
-        - 0.9
-      - !tuple
-        - 0.0
-        - 1.0
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
-    - null
+    channels:
+    - !AnalogChannelConfiguration
+      description: Tweezers power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: ''
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - 0.0
+            - -6.0
+          - !tuple
+            - 0.079
+            - -5.0
+          - !tuple
+            - 0.281
+            - -4.0
+          - !tuple
+            - 0.544
+            - -3.0
+          - !tuple
+            - 0.788
+            - -2.0
+          - !tuple
+            - 0.949
+            - -1.0
+          - !tuple
+            - 1.0
+            - 0.0
+      color: [85, 255, 0, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+        description: MOT coils current
+        output_mapping: !CalibratedAnalogMapping
+          input_units: A
+          output_units: V
+          measured_data_points:
+            - !tuple
+              - 0.0
+              - 0.0
+            - !tuple
+              - 10.0
+              - 1.67
+        color: [218, 165, 32, 1.0]
+        delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 frequency (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -20.0
+            - -6.0
+          - !tuple
+            - 20.0
+            - 6.0
+      color: [255, 85, 0, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 cell frequency offset (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -40.0
+            - -1.0
+          - !tuple
+            - 40.0
+            - 1.0
+      color: [85, 85, 255, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Z offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -3.0
+            - -10.0
+          - !tuple
+            - 3.0
+            - 10.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -68.91
+            - 0.0
+          - !tuple
+            - -67.94
+            - 1.0
+          - !tuple
+            - -54.93
+            - 1.5
+          - !tuple
+            - -48.07
+            - 1.6
+          - !tuple
+            - -43.4
+            - 1.7
+          - !tuple
+            - -33.92
+            - 2.0
+          - !tuple
+            - -25.58
+            - 2.5
+          - !tuple
+            - -20.78
+            - 3.0
+          - !tuple
+            - -14.72
+            - 4.0
+          - !tuple
+            - -10.95
+            - 5.0
+          - !tuple
+            - -8.03
+            - 6.0
+          - !tuple
+            - -5.63
+            - 7.0
+          - !tuple
+            - -3.56
+            - 8.0
+          - !tuple
+            - -1.68
+            - 9.0
+          - !tuple
+            - 0.0
+            - 10.0
+      color: [255, 85, 0, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: X offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - 0.0
+            - 0.0
+          - !tuple
+            - 6.0
+            - 3.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Y offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - 0.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 5.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 cell power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -33.63
+            - -0.35
+          - !tuple
+            - -33.63
+            - -0.3
+          - !tuple
+            - -33.63
+            - -0.275
+          - !tuple
+            - -30.62
+            - -0.25
+          - !tuple
+            - -23.46
+            - -0.225
+          - !tuple
+            - -17.66
+            - -0.2
+          - !tuple
+            - -13.33
+            - -0.175
+          - !tuple
+            - -9.96
+            - -0.15
+          - !tuple
+            - -5.18
+            - -0.1
+          - !tuple
+            - -2.0
+            - -0.05
+          - !tuple
+            - 0.0
+            - 0.0
+      color: [85, 85, 255, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 frequency offset (laser)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -200.0
+            - 6.0
+          - !tuple
+            - 200.0
+            - -6.0
+      color: [85, 85, 255, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Push power
+      output_mapping: !CalibratedAnalogMapping
+        input_units: mW
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - 0.0
+            - 0.05
+          - !tuple
+            - 0.7
+            - 1.3
+      color: [85, 85, 255, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 imaging frequency
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -20.0
+            - -6.0
+          - !tuple
+            - 20.0
+            - 6.0
+      color: [255, 85, 0, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 imaging power
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -49.0
+            - 0.5
+          - !tuple
+            - -36.0
+            - 0.55
+          - !tuple
+            - -24.0
+            - 0.6
+          - !tuple
+            - -13.0
+            - 0.65
+          - !tuple
+            - -6.6
+            - 0.7
+          - !tuple
+            - -2.0
+            - 0.8
+          - !tuple
+            - -1.0
+            - 0.9
+          - !tuple
+            - 0.0
+            - 1.0
+      color: [255, 85, 0, 1.0]
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+          - !tuple
+            - -10.0
+            - 0.0
+          - !tuple
+            - 10.0
+            - 0.0
+      color: null
+      delay: 0.0
     remote_server: James
     device_id: Dev1
     time_step: 2.9999999999999997e-05

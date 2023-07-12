@@ -31,6 +31,7 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
         default=50e-9,
         ge=50e-9,
     )
+    channels: tuple[DigitalChannelConfiguration, ...]
 
     def get_device_type(self) -> str:
         return "SpincorePulseBlaster"

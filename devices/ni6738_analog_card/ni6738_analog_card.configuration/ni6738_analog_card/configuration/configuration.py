@@ -18,10 +18,11 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
     number_channels: ClassVar[int] = 32
     device_id: str
     time_step: float = Field(ge=2.5e-6)
-    channels: tuple[AnalogChannelConfiguration]
+    channels: tuple[AnalogChannelConfiguration, ...]
 
     @validator("channels")
     def validate_channels(cls, channels: list[AnalogChannelConfiguration]):
+        channels = super().validate_channels(channels)
         for channel in channels:
             mapping = channel.output_mapping
             if (output_units := mapping.get_output_units()) != "V":

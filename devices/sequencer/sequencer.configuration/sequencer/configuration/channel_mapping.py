@@ -27,7 +27,7 @@ class DigitalMapping(SettingsModel, OutputMapping[bool, bool]):
             return input_
 
 
-class AnalogMapping(SettingsModel, OutputMapping[float, float]):
+class AnalogMapping(OutputMapping[float, float]):
     """Abstract class for a mapping between some input quantity to an output quantity
 
     Warnings:
@@ -65,7 +65,7 @@ class AnalogMapping(SettingsModel, OutputMapping[float, float]):
         return f"{input_units}/{output_units}"
 
 
-class CalibratedUnitsMapping(AnalogMapping):
+class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
     """Convert between input and output quantities by interpolating a set of measured points
 
     This mapping is for example useful when one needs to convert an experimentally measurable quantity (e.g. the
