@@ -26,6 +26,7 @@ variable-range-widget = {path = "../common/widgets/variable_range_widget", devel
 experiment-control-manager = {path = "../experiment_control/experiment_control.manager", develop = true}
 device-config = {path = "../devices/device/device.configuration", develop = true}
 sequence-hierarchy = {path = "../common/widgets/sequence_hierarchy", develop = true}
+sequencer-configuration = {path = "../devices/sequencer/sequencer.configuration", develop = true}
 
 
 [tool.poetry.dev-dependencies]

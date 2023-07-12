@@ -4,7 +4,6 @@ from typing import Optional
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget
 
-from device.configuration.channel_config import AnalogChannelConfiguration
 from experiment.configuration import ExperimentConfig
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from .ni6738_editor_ui import Ui_NI6738Editor
@@ -17,6 +16,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 us = 1e-6
+
+AnalogChannelConfiguration = "AnalogChannelConfiguration"
 
 
 class NI6738ConfigEditor(DeviceConfigEditor, Ui_NI6738Editor):
