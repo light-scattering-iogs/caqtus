@@ -57,7 +57,7 @@ def magnitude_in_unit(value: Quantity, unit: Optional[Unit | str]) -> Real:
         if not is_quantity(value):
             return value
         elif value.units.is_compatible_with(dimensionless):
-            return value.to_base_units().magnitude
+            return value.to(unit).magnitude
         raise ValueError(f"Trying to get magnitude of value {value} in unit {unit!r}")
     else:
         if is_quantity(value):
