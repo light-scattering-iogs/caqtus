@@ -10,7 +10,10 @@ class Splittable(Sized, Protocol[SplitResult]):
         """Split the instruction into two parts at the given index.
 
         Args:
-            split_index: The index at which to split the instruction. Must be 0 <= split_index <= len(self).
+            split_index: The index at which to split the instruction. Must be 0 <= split_index <= len(self). The first
+                part will contain the elements up to but not including split_index, the second part will contain the
+                elements from split_index onwards. The length of the first part will be split_index, the length of the
+                second part will be len(self) - split_index.
         """
 
         raise NotImplementedError

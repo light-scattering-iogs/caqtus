@@ -293,6 +293,11 @@ class Concatenate(SequencerInstruction):
     def split(self, split_index: int):
         self._check_split_valid(split_index)
 
+        if split_index == 0:
+            return self.empty_like(self), self
+        elif split_index == len(self):
+            return self, self.empty_like(self)
+
         instruction_index = self._find_instruction_index(split_index)
         instruction_to_split = self.instructions[instruction_index]
 
