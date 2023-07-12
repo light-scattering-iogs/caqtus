@@ -246,7 +246,7 @@ class Repeat(ChannelInstruction[ChannelType]):
         self._instruction = instruction
         self._number_repetitions = number_repetitions
         if number_repetitions < 2:
-            raise ValueError("Number of repetitions must be greater or equal to 2.")
+            raise ValueError(f"Number of repetitions {number_repetitions} must be greater or equal to 2.")
 
     @property
     def instruction(self) -> ChannelInstruction[ChannelType]:

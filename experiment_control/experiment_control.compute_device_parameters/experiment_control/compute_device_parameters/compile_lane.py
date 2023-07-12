@@ -244,31 +244,23 @@ def compile_clock_instruction(
         clock_stop = (
             stop_tick(clock_instruction.stop, clock_instruction.time_step) * multiplier
         )
-        clock_length = (
-            number_ticks(
-                clock_instruction.start,
-                clock_instruction.stop,
-                clock_instruction.time_step,
-            )
-            * multiplier
+        clock_rep = number_ticks(
+            clock_instruction.start,
+            clock_instruction.stop,
+            clock_instruction.time_step,
         )
 
-        try:
-            before = ChannelPattern([False]) * (clock_start - start)
-        except ValueError:
-            logger.debug(f"{clock_instruction.start=}")
-            logger.debug(f"{clock_start=} {start=}")
-            logger.debug(f"{time_step=}")
-            raise
-        after = ChannelPattern([False]) * (stop - clock_stop)
+        before = ChannelPattern([False]) * (clock_start - start)
+        after = ChannelPattern([False]) * (clock_stop - stop)
+
+        clock_pattern = ChannelPattern([True]) * high + ChannelPattern([False]) * low
+
         if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
-            middle = ChannelPattern([True]) * high + ChannelPattern([False]) * (
-                clock_length - high
+            middle = clock_pattern + ChannelPattern([False]) * (
+                multiplier * max(clock_rep - 1, 0)
             )
         elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
-            middle = (ChannelPattern([True]) * high + ChannelPattern([False]) * low) * (
-                clock_length // multiplier
-            )
+            middle = clock_pattern * clock_rep
         else:
             raise NotImplementedError(
                 f"Order {clock_instruction.order} not implemented"
