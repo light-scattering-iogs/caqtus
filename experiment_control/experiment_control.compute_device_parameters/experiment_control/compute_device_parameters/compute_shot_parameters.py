@@ -218,7 +218,9 @@ def get_camera_parameters(
     result = {}
 
     for camera, instruction in camera_instructions.items():
-        exposures = [stop - start for _, start, stop in instruction.triggers]
+        exposures = [
+            stop - start for expose, start, stop in instruction.triggers if expose
+        ]
         result[camera] = dict(timeout=instruction.timeout, exposures=exposures)
 
     return result
