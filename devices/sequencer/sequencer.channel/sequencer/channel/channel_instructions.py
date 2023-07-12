@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import TypeVar, Generic, Any, Self, Iterable, Type, Callable
+from typing import TypeVar, Generic, Any, Self, Iterable, Callable
 
 import numpy as np
-from numpy.typing import DTypeLike
 
 from .splittable import Splittable
 
-ChannelType = TypeVar("ChannelType", bound=Type[DTypeLike], covariant=True)
+ChannelType = TypeVar("ChannelType", covariant=True)
 
 
 class ChannelInstruction(
