@@ -4,7 +4,7 @@ from collections.abc import Sequence, Mapping, Iterable
 from dataclasses import dataclass
 from itertools import accumulate
 from numbers import Real
-from typing import SupportsFloat
+from typing import SupportsFloat, SupportsRound
 
 import numpy as np
 
@@ -68,16 +68,16 @@ def number_ticks(
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
 
 
-def start_tick(start_time: SupportsFloat, time_step: SupportsFloat) -> int:
+def start_tick(start_time: SupportsRound, time_step: SupportsRound) -> int:
     """Returns the included first tick index of the step starting at start_time."""
 
-    return math.ceil(float(start_time) / float(time_step))
+    return math.ceil(round(start_time, 9) / round(time_step, 9))
 
 
-def stop_tick(stop_time: SupportsFloat, time_step: SupportsFloat) -> int:
+def stop_tick(stop_time: SupportsRound, time_step: SupportsRound) -> int:
     """Returns the excluded last tick index of the step ending at stop_time."""
 
-    return math.ceil((float(stop_time)) / float(time_step))
+    return math.ceil(round(stop_time, 12) / round(time_step, 12))
 
 
 def get_step_bounds(step_durations: Iterable[float]) -> Sequence[float]:
@@ -212,7 +212,6 @@ def compile_clock_instruction(
         multiplier, high, low = high_low_clicks(clock_instruction.time_step, time_step)
         start = start_tick(clock_instruction.start, time_step)
         stop = stop_tick(clock_instruction.stop, time_step)
-        length = number_ticks(start, stop, time_step)
 
         # All 3 values below are given in time_step units:
         clock_start = (
@@ -223,11 +222,21 @@ def compile_clock_instruction(
             stop_tick(clock_instruction.stop, clock_instruction.time_step) * multiplier
         )
         clock_length = (
-            number_ticks(clock_instruction.start, clock_instruction.stop, clock_instruction.time_step)
+            number_ticks(
+                clock_instruction.start,
+                clock_instruction.stop,
+                clock_instruction.time_step,
+            )
             * multiplier
         )
 
-        before = ChannelPattern([False]) * (clock_start - start)
+        try:
+            before = ChannelPattern([False]) * (clock_start - start)
+        except ValueError:
+            logger.debug(f"{clock_instruction.start=}")
+            logger.debug(f"{clock_start=} {start=}")
+            logger.debug(f"{time_step=}")
+            raise
         after = ChannelPattern([False]) * (stop - clock_stop)
         if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
             middle = ChannelPattern([True]) * high + ChannelPattern([False]) * (
@@ -255,6 +264,7 @@ def high_low_clicks(
         )
     div, mod = divmod(clock_time_step, sequencer_time_step)
     if not abs(mod) < 1e-12 * clock_time_step:
+        logger.debug(f"{clock_time_step=}, {sequencer_time_step=}, {div=}, {mod=}")
         raise ValueError(
             "Clock time step must be an integer multiple of the sequencer time step"
         )
