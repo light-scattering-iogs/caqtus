@@ -1,19 +1,29 @@
 import logging
 from contextlib import closing
+from functools import singledispatchmethod
 from typing import ClassVar
 
 import nidaqmx
 import nidaqmx.constants
 import nidaqmx.system
 import numpy
+import numpy as np
 from pydantic import Extra, Field, validator
 
 from device.runtime import RuntimeDevice
 from log_exception import log_exception
-from sequencer.instructions import SequencerInstruction
+from sequencer.instructions import (
+    SequencerInstruction,
+    SequencerPattern,
+    ChannelLabel,
+    Concatenate,
+    Repeat,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+ns = 1e-9
 
 
 class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
@@ -22,7 +32,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     Fields:
         device_id: The ID of the device to use. It is the name of the device as it appears in the NI MAX software, e.g.
         Dev1.
-        time_step: The smallest allowed time step, in seconds.
+        time_step: The smallest allowed time step, in nanoseconds.
         external_clock: Whether to use an external clock to trigger the analog card. If False, the internal clock of the
         card is used. Otherwise, the clock is taken from the PFI0 line of the device on the rising edge. Only True is
         implemented at the moment.
@@ -31,7 +41,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     channel_number: ClassVar[int] = 32
 
     device_id: str
-    time_step: float = Field(ge=2.5e-6)
+    time_step: int = Field(ge=2500)
     external_clock: bool = True
 
     _task: nidaqmx.Task
@@ -70,26 +80,26 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
         self._stop_task()
 
-        pattern = sequence.unroll()
-        number_samples = len(pattern)
+        values = np.concatenate(
+            self._values_from_instruction(sequence), axis=1, dtype=np.float64
+        )
+
+        if not values.shape[0] == self.channel_number:
+            raise ValueError(
+                f"Expected {self.channel_number} channels, got {values.shape[0]}"
+            )
+        number_samples = values.shape[1]
         self._configure_timing(number_samples)
-
-        values = numpy.empty((self.channel_number, number_samples), dtype=numpy.float64)
-
-        for ch in range(self.channel_number):
-            if numpy.any(numpy.isnan(pattern.channel_values[ch])):
-                raise ValueError(f"Channel {ch} contains nan")
-            values[ch, :] = pattern.channel_values[ch]
 
         self._write_values(values)
 
     def _write_values(self, values: numpy.ndarray) -> None:
-        if self._task.write(
+        if (written := self._task.write(
             values,
             auto_start=False,
             timeout=0,
-        ) != len(values):
-            raise RuntimeError("Could not write all values to the analog card")
+        )) != values.shape[1]:
+            raise RuntimeError(f"Could not write all values to the analog card, wrote {written}/{values.shape[1]}")
 
     def _stop_task(self) -> None:
         if not self._task.is_task_done():
@@ -98,7 +108,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
     def _configure_timing(self, number_of_samples: int) -> None:
         self._task.timing.cfg_samp_clk_timing(
-            rate=1 / self.time_step,
+            rate=1 / (self.time_step * ns),
             source=f"/{self.device_id}/PFI0",
             active_edge=nidaqmx.constants.Edge.RISING,
             sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
@@ -107,7 +117,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
         # only take into account a trigger pulse if it is long enough to avoid
         # triggering on glitches
-        self._task.timing.samp_clk_dig_fltr_min_pulse_width = self.time_step / 8
+        self._task.timing.samp_clk_dig_fltr_min_pulse_width = self.time_step * ns / 8
         self._task.timing.samp_clk_dig_fltr_enable = True
 
     @log_exception(logger)
@@ -120,3 +130,34 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     def stop(self):
         self._task.wait_until_done(timeout=nidaqmx.constants.WAIT_INFINITELY)
         self._task.stop()
+
+    @singledispatchmethod
+    def _values_from_instruction(
+        self, instruction: SequencerInstruction
+    ) -> list[np.ndarray]:
+        raise NotImplementedError(f"Instruction {instruction} is not supported")
+
+    @_values_from_instruction.register
+    def _(self, pattern: SequencerPattern) -> list[np.ndarray]:
+        values = pattern.values
+        result = np.array(
+            [values[ChannelLabel(ch)].values for ch in range(self.channel_number)]
+        )
+        if np.any(np.isnan(result)):
+            raise ValueError(f"Pattern {pattern} contains nan")
+        return [result]
+
+    @_values_from_instruction.register
+    def _(self, concatenate: Concatenate) -> list[np.ndarray]:
+        result = []
+        for instruction in concatenate.instructions:
+            result.extend(self._values_from_instruction(instruction))
+        return result
+
+    @_values_from_instruction.register
+    def _(self, repeat: Repeat) -> list[np.ndarray]:
+        if len(repeat.instruction) != 1:
+            raise NotImplementedError(
+                "Only one instruction is supported in a repeat block"
+            )
+        return self._values_from_instruction(repeat.instruction.flatten())
