@@ -40,6 +40,9 @@ class Sequencer(RuntimeDevice, ABC):
                 f" {sequence.number_channels}."
             )
 
+    def _set_sequence_programmed(self) -> None:
+        """To call after successful update_parameters."""
+
         self._sequence_started = False
         self._sequence_programmed = True
 
