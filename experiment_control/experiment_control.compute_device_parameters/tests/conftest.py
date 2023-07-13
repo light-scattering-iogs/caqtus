@@ -20,7 +20,9 @@ def sequence_config() -> SequenceConfig:
 
 @pytest.fixture
 def sequence_config_2() -> SequenceConfig:
-    path = Path(__file__).parent / "test_2_config.yaml"
+    # path = Path(__file__).parent / "test_2_config.yaml"
+
+    path = Path(__file__).parent / "test_short_pulse.yaml"
     with open(path, "r") as file:
         config = SequenceConfig.from_yaml(file.read())
     return config
