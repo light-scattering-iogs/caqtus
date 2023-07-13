@@ -95,7 +95,7 @@ class SwabianPulseStreamer(Sequencer):
     @_construct_pulse_streamer_sequence.register
     def _(self, repeat: Repeat) -> PulseStreamerSequence:
         if len(repeat.instruction) == 1:
-            channel_values = repeat.instruction.flatten().first_values()
+            channel_values = repeat.instruction.flatten().get_first_values()
             seq = self._pulse_streamer.createSequence()
             for channel in range(self.channel_number):
                 seq.setDigital(
