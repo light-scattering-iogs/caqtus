@@ -149,14 +149,15 @@ class ExperimentConfig(VersionedSettingsModel):
         for device_name, device_config in self.device_configurations.items():
             if isinstance(device_config, SequencerConfiguration):
                 for channel in device_config.channels:
-                    if lane_type == DigitalLane and isinstance(
-                        channel, DigitalChannelConfiguration
-                    ):
-                        lanes |= channel.description
-                    elif lane_type == AnalogLane and isinstance(
-                        channel, AnalogChannelConfiguration
-                    ):
-                        lanes |= channel.description
+                    if not channel.has_special_purpose():
+                        if lane_type == DigitalLane and isinstance(
+                            channel, DigitalChannelConfiguration
+                        ):
+                            lanes.add(str(channel.description))
+                        elif lane_type == AnalogLane and isinstance(
+                            channel, AnalogChannelConfiguration
+                        ):
+                            lanes.add(str(channel.description))
             elif lane_type == CameraLane and isinstance(
                 device_config, CameraConfiguration
             ):

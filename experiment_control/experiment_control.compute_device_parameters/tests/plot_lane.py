@@ -29,7 +29,7 @@ def test_compile_analog_lane(
         experiment_config_2, sequence_config_2.shot_configurations["shot"], variables_2
     )
 
-    cam_trig = parameters["NI6738 card"]["sequence"][0]
+    cam_trig = parameters["NI6738 card"]["sequence"][5]
     #
     # lane = shot_config.find_lane("Tweezers power (AOM)")
     # assert isinstance(lane, AnalogLane)
