@@ -9,7 +9,7 @@ from pydantic import Field, validator
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
-from image_type import ImageLabel, Image
+from image_types import ImageLabel, Image
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

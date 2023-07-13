@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Iterable
 
 import numpy
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
@@ -58,7 +58,7 @@ class CurveViewerWidget(QWidget):
         sequence_watcher: SignalingSequenceWatcher,
         importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
         x: str,
-        y: str,
+        y: Iterable[str],
         session_maker: Optional[ExperimentSessionMaker] = None,
         parent: Optional[QWidget] = None,
     ):
@@ -84,12 +84,9 @@ class CurveViewerWidget(QWidget):
         with self._session.activate():
             for shot in new_shots:
                 data = self._importer(shot, self._session)
-                y_values = data[self._y]
+                y_values = [data[y_key] for y_key in self._y]
                 y += y_values
                 x += [shot.index] * len(y_values)
-            # new_data = [self._importer(shot, self._session) for shot in new_shots]
-        # x = [data[self._x] for data in new_data]
-        # y = [data[self._y] for data in new_data]
         self._curve_viewer_canvas.add_points(x, y)
         self._curve_viewer_canvas.set_title(f"Shot {new_shots[-1].index}")
         self._curve_viewer_canvas.rescale()

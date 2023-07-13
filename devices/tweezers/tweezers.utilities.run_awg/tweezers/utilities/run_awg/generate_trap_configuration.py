@@ -11,18 +11,24 @@ number_samples = 19539 * 32
 sampling_rate = 625_000_000
 segment_frequency = sampling_rate / number_samples
 
+# frequencies_x = np.array([82e6])
+# frequencies_x = np.linspace(77e6, 86e6, 5)
 
-frequencies_x = np.linspace(77e6, 83e6, 3)
+frequencies_x = np.linspace(80e6, 84e6, 5)
+
 spacing_x = frequencies_x[1] - frequencies_x[0]
 spacing_x = np.round(spacing_x / segment_frequency) * segment_frequency
 frequencies_x = frequencies_x[0] + np.arange(len(frequencies_x)) * spacing_x
-# frequencies_x = np.array([80e6])
 
-frequencies_y = np.linspace(71e6, 77e6, 3)
+# frequencies_y = np.array([76e6])
+# frequencies_y = np.linspace(72e6, 81e6, 5)
+
+frequencies_y = np.linspace(75e6, 79e6, 5)
+
 spacing_y = frequencies_y[1] - frequencies_y[0]
 spacing_y = np.round(spacing_y / segment_frequency) * segment_frequency
 frequencies_y = frequencies_y[0] + np.arange(len(frequencies_y)) * spacing_y
-# frequencies_y = np.array([75e6])
+
 frequencies_x = np.round(frequencies_x / segment_frequency) * segment_frequency
 frequencies_y = np.round(frequencies_y / segment_frequency) * segment_frequency
 

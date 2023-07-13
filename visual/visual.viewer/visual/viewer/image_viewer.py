@@ -27,7 +27,7 @@ class ImageViewerCanvas(FigureCanvasQTAgg):
 
     def set_image(self, image):
         self.image.set_data(image.T)
-        self.image.set_clim(vmin=0, vmax=image.max())
+        self.image.set_clim(vmin=image.min(), vmax=image.T.max())
 
     def set_title(self, title):
         self.axes.set_title(title)

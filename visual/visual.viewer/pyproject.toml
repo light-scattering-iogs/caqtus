@@ -16,7 +16,6 @@ matplotlib = "^3.7.1"
 seaborn = "^0.12.2"
 qdarkstyle = "^3.1"
 
-analyza = {path = "../../analyza", develop = true}
 atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runtime", develop = true}
 experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}

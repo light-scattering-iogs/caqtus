@@ -29,7 +29,7 @@ def acquire_picture(pixelfly):
 
 
 def initialize_awg(sampling_rate: float, number_tones_x: int, number_tones_y: int):
-    amplitude_one_tone = 0.16
+    amplitude_one_tone = 0.165
     scale_x = number_tones_x**0.5 * amplitude_one_tone
     scale_y = number_tones_y**0.5 * amplitude_one_tone
 
