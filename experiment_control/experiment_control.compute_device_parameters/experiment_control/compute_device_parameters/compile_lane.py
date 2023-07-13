@@ -217,7 +217,7 @@ def compile_camera_instruction(
     time_step: int,
 ) -> ChannelInstruction[bool]:
     instructions = []
-    for value, start, stop in camera_instruction.triggers:
+    for value, start, stop, _ in camera_instruction.triggers:
         length = number_ticks(start, stop, time_step)
         instructions.append(ChannelPattern([value]) * length)
     return ChannelInstruction.join(instructions, dtype=bool)

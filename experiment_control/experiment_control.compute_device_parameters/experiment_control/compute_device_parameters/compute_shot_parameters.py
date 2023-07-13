@@ -193,7 +193,8 @@ def compute_camera_instructions(
                 state = True
             else:
                 state = False
-            triggers.append((state, step_bounds[start], step_bounds[stop]))
+            duration = sum(step_durations[start:stop])
+            triggers.append((state, step_bounds[start], step_bounds[stop], duration))
         instructions = CameraInstruction(
             timeout=shot_duration
             + 1,  # add a second to be safe and not timeout too early if the shot takes time to start
@@ -219,7 +220,7 @@ def get_camera_parameters(
 
     for camera, instruction in camera_instructions.items():
         exposures = [
-            stop - start for expose, start, stop in instruction.triggers if expose
+            duration for expose, start, stop, duration in instruction.triggers if expose
         ]
         result[camera] = dict(timeout=instruction.timeout, exposures=exposures)
 

@@ -7,8 +7,8 @@ class CameraInstruction:
 
     fields:
         timeout: Maximum time to wait for the camera to take the picture.
-        triggers: list of (trigger_value, start_time, stop_time) that specify when the camera trigger should be active.
+        triggers: list of (trigger_value, start_time, stop_time, durations) that specify when the camera trigger should be active.
     """
 
     timeout: float
-    triggers: list[tuple[bool, float, float]]
+    triggers: list[tuple[bool, float, float, float]]
