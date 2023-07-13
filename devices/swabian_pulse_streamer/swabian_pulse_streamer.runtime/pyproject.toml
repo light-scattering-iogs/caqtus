@@ -10,6 +10,7 @@ packages = [{include = "swabian_pulse_streamer"}]
 python = "^3.11"
 pulsestreamer = "^1.7.0"
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
+pydantic = "^1.0"
 
 
 [tool.poetry.group.dev.dependencies]

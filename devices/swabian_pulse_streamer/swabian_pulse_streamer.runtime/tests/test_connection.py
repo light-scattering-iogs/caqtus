@@ -1,3 +1,6 @@
+import pytest
+
+from sequencer.runtime import SequenceNotConfiguredError
 from swabian_pulse_streamer.runtime.swabian_pulse_streamer import SwabianPulseStreamer
 
 
@@ -7,4 +10,6 @@ def test_connection():
     )
 
     with pulse_streamer:
-        pass
+        with pytest.raises(SequenceNotConfiguredError):
+            pulse_streamer.start_sequence()
+
