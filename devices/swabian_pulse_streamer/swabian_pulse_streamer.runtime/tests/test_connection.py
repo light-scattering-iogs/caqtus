@@ -8,13 +8,18 @@ def test_connection():
         name="pulse streamer", ip_address="192.168.137.187", time_step=1
     )
 
-    channel_pattern = ChannelPattern([i % 2 for i in range(30)])
+    channel_0_pattern = ChannelPattern([(i // 7) % 2 for i in range(30)])
     sequence = SequencerPattern.from_channel_instruction(
-        ChannelLabel(0), channel_pattern
+        ChannelLabel(0), channel_0_pattern
     )
 
-    for channel in range(1, pulse_streamer.channel_number):
-        channel_pattern = ChannelPattern([(i // channel) % 2 for i in range(30)])
+    channel_1_pattern = ChannelPattern([i % 2 for i in range(20)]) + ChannelPattern(
+        [0 for i in range(10)]
+    )
+    sequence = sequence.add_channel_instruction(ChannelLabel(1), channel_1_pattern)
+
+    channel_pattern = ChannelPattern([0 for i in range(30)])
+    for channel in range(2, pulse_streamer.channel_number):
         sequence = sequence.add_channel_instruction(
             ChannelLabel(channel), channel_pattern
         )

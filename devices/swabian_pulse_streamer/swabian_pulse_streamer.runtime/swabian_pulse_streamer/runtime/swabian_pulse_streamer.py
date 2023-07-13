@@ -9,7 +9,7 @@ from pulsestreamer import (
 )
 from pydantic import validator, Field
 
-from sequencer.instructions import SequencerInstruction, SequencerPattern, ChannelLabel
+from sequencer.instructions import SequencerInstruction, SequencerPattern, ChannelLabel, Concatenate
 from sequencer.runtime import (
     Sequencer,
     SequenceNotConfiguredError,
@@ -70,7 +70,7 @@ class SwabianPulseStreamer(Sequencer):
         )
 
     @_construct_pulse_streamer_sequence.register
-    def _program_instruction_pulse(
+    def _(
         self, pattern: SequencerPattern
     ) -> PulseStreamerSequence:
         sequence = self._pulse_streamer.createSequence()
@@ -79,3 +79,11 @@ class SwabianPulseStreamer(Sequencer):
             channel_values = values[ChannelLabel(channel)].values
             sequence.setDigital(channel, [(1, v) for v in channel_values])
         return sequence
+
+    @_construct_pulse_streamer_sequence.register
+    def _(self, concatenate: Concatenate) -> PulseStreamerSequence:
+        instructions = concatenate.instructions
+        seq = self._construct_pulse_streamer_sequence(instructions[0])
+        for instruction in instructions[1:]:
+            seq += self._construct_pulse_streamer_sequence(instruction)
+        return seq
