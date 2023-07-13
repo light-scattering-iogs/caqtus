@@ -76,7 +76,7 @@ class RuntimeDevice(BaseModel, ABC):
         return self._close_stack.enter_context(cm)
 
     @abstractmethod
-    def update_parameters(self, /, **kwargs) -> None:
+    def update_parameters(self, *_, **kwargs) -> None:
         """Apply new values for some parameters of the device.
 
         This method is meant to be reimplemented for each specific device. It can be called as many times as needed. The
