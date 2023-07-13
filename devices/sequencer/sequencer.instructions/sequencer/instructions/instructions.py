@@ -253,6 +253,17 @@ class SequencerPattern(SequencerInstruction):
         result[channel] = flattened
         return type(self)(result)
 
+    def first_values(self) -> dict[ChannelLabel, ChannelType]:
+        """Return the first value of each channel."""
+
+        if self.is_empty():
+            raise ValueError("Cannot get first value of empty pattern.")
+
+        # noinspection PyProtectedMember
+        return {
+            label: pattern._values[0] for label, pattern in self._channel_values.items()
+        }
+
 
 class Concatenate(SequencerInstruction):
     """A sequence of instructions to be executed consecutively.
