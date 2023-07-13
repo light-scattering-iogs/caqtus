@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 
 import matplotlib.pyplot as plt
@@ -11,6 +12,9 @@ from experiment_control.compute_device_parameters import (
 from sequence.configuration import SequenceConfig
 from sequencer.channel import ChannelInstruction, ChannelPattern, Repeat, Concatenate
 from variable.namespace import VariableNamespace
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 def test_compile_analog_lane(
@@ -29,14 +33,17 @@ def test_compile_analog_lane(
         experiment_config_2, sequence_config_2.shot_configurations["shot"], variables_2
     )
 
-    cam_trig = parameters["NI6738 card"]["sequence"][5]
+    instruction = parameters["Spincore PulseBlaster sequencer"]["sequence"][0]
     #
     # lane = shot_config.find_lane("Tweezers power (AOM)")
     # assert isinstance(lane, AnalogLane)
     # instruction = compile_analog_lane(
     #     shot_config.step_names, durations, lane, variables, time_step
     # )
-    plot_instruction(cam_trig, durations, 2.5e-6)
+
+    logger.debug(f"{instruction=}")
+    plot_instruction(instruction, durations, 50e-9)
+    assert False
 
 
 def plot_instruction(

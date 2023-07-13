@@ -254,6 +254,8 @@ def compile_clock_instruction(
             )
         elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
             pattern = clock_single_pulse * clock_rep
+        elif clock_instruction.order == ClockInstruction.StepInstruction.NoClock:
+            pattern = ChannelPattern([False]) * clock_rep * multiplier
         else:
             raise NotImplementedError(
                 f"Order {clock_instruction.order} not implemented"

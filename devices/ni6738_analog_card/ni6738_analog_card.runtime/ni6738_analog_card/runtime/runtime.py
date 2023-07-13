@@ -48,7 +48,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + ("run",)
+        return super().exposed_remote_methods() + ("run", "stop")
 
     @validator("external_clock")
     def _validate_external_clock(cls, external_clock: bool) -> bool:
@@ -75,7 +75,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
             )
 
     @log_exception(logger)
-    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, *, sequence: SequencerInstruction, **kwargs) -> None:
         """Write a sequence of voltages to the analog card."""
 
         self._stop_task()
@@ -83,6 +83,7 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
         )
+        logger.debug(f"Writing {values.shape[1]} samples to the analog card")
 
         if not values.shape[0] == self.channel_number:
             raise ValueError(
@@ -158,6 +159,6 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
     def _(self, repeat: Repeat) -> list[np.ndarray]:
         if len(repeat.instruction) != 1:
             raise NotImplementedError(
-                "Only one instruction is supported in a repeat block"
+                "Only one instruction is supported in a repeat block at the moment"
             )
         return self._values_from_instruction(repeat.instruction.flatten())

@@ -568,6 +568,9 @@ class SequenceRunnerThread(Thread):
             for spincore_sequencer in self.get_spincore_sequencers().values():
                 run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
 
+        for ni6738_card in self.get_ni6738_cards().values():
+            ni6738_card.stop()
+
     def extract_data(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         if self._experiment_config.mock_experiment:
             return {}

@@ -14,3 +14,4 @@ class ClockInstruction:
     class StepInstruction(Enum):
         TriggerStart = auto()
         Clock = auto()
+        NoClock = auto()

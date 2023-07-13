@@ -1,3 +1,5 @@
+import numpy as np
+
 from experiment.configuration import ExperimentConfig
 from experiment_control.compute_device_parameters import compute_shot_parameters
 from sequence.configuration import SequenceConfig
@@ -19,4 +21,11 @@ def test_compile(
 
     cam_trig = parameters["Spincore PulseBlaster sequencer"]["sequence"][12]
     logger.debug(f"{cam_trig=!r}")
+
+
+    analog_clock = parameters["Spincore PulseBlaster sequencer"]["sequence"][0]
+    clock_values = analog_clock.flatten().values.astype(int)
+
+    number_rise = np.sum(np.maximum(clock_values[:-1] - clock_values[1:], 0))
+    logger.debug(f"{number_rise=}")
     assert False

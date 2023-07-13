@@ -242,21 +242,42 @@ def compile_clock_requirements(
     sequencer = DeviceName("NI6738 card")
     sequencer_config = sequencer_configs[sequencer]
     clock_instructions = []
-    are_steps_constant = get_constant_steps(shot_config, sequencer_config)
-    for step_index, step_constant in enumerate(are_steps_constant):
-        if step_constant:
-            clock_type = ClockInstruction.StepInstruction.TriggerStart
-        else:
-            clock_type = ClockInstruction.StepInstruction.Clock
+    for step_index, clock_instruction in enumerate(
+        compute_clock_step_requirements(sequencer_config, shot_config)
+    ):
         clock_instructions.append(
             ClockInstruction(
                 start=step_bounds[step_index],
                 stop=step_bounds[step_index + 1],
                 time_step=sequencer_config.time_step,
-                order=clock_type,
+                order=clock_instruction,
             )
         )
     return {sequencer: clock_instructions}
+
+
+def compute_clock_step_requirements(
+    sequencer_config: SequencerConfiguration, shot_config: ShotConfiguration
+) -> Sequence[ClockInstruction]:
+    lanes = {
+        channel.description: lane
+        for channel in sequencer_config.get_lane_channels()
+        if (lane := shot_config.find_lane(channel.description))
+    }
+
+    result = []
+    for step in range(shot_config.number_steps):
+        instruction = ClockInstruction.StepInstruction.NoClock
+        for lane in lanes.values():
+            if is_constant(lane, step):
+                if lane.start_index(step) == step:
+                    instruction = ClockInstruction.StepInstruction.TriggerStart
+            else:
+                result.append(ClockInstruction.StepInstruction.Clock)
+                break
+        else:
+            result.append(instruction)
+    return result
 
 
 def get_constant_steps(

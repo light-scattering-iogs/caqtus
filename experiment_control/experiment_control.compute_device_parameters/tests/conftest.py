@@ -22,7 +22,7 @@ def sequence_config() -> SequenceConfig:
 def sequence_config_2() -> SequenceConfig:
     # path = Path(__file__).parent / "test_2_config.yaml"
 
-    path = Path(__file__).parent / "test_short_pulse.yaml"
+    path = Path(__file__).parent / "test1.yaml"
     with open(path, "r") as file:
         config = SequenceConfig.from_yaml(file.read())
     return config
@@ -39,6 +39,9 @@ def experiment_config_2() -> ExperimentConfig:
 @pytest.fixture
 def variables_2():
     _variables = {
+        "red_frequency": Quantity(-9.18, "megahertz"),
+        "z_current": Quantity(-3, "ampere"),
+        "red_power": Quantity(-30, "decibel"),
         "ramp_time": Quantity(80, "millisecond"),
         "mot_loading": {
             "red": {
