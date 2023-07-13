@@ -174,10 +174,21 @@ class CompileAnalogLane:
         next_value = self._evaluate_expression(
             self.lane.get_effective_value(stop_index), variables
         )
+
+        if self.lane.units == "dB":
+            previous_value = 10 ** (previous_value / 10)
+            next_value = 10 ** (next_value / 10)
+
         t = _compute_time_array(t0, t1, self.time_step)
-        return ChannelPattern(
-            (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
-        )
+        result = (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
+
+        if self.lane.units == "dB":
+            if np.any(np.isnan(result)):
+                raise ShotEvaluationError(
+                    f"Ramp cell from {previous_value} to {next_value} contains NaNs"
+                )
+            result = 10 * np.log10(result)
+        return ChannelPattern(result)
 
     def _evaluate_expression(
         self, expression: Expression, variables: Mapping[DottedVariableName, Parameter]
