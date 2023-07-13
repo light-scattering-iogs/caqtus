@@ -2,7 +2,6 @@ import asyncio
 import contextlib
 import datetime
 import logging
-import pprint
 from collections.abc import Mapping
 from concurrent.futures import ProcessPoolExecutor, Executor
 from functools import singledispatchmethod
@@ -35,6 +34,7 @@ from experiment_control.compute_device_parameters import (
     get_devices_initialization_parameters,
     compute_parameters_on_variables_update,
 )
+from parameter_types import AnalogValue, add_unit, get_unit, magnitude_in_unit
 from sequence.configuration import (
     Step,
     SequenceSteps,
@@ -48,8 +48,7 @@ from sequence.configuration import (
     ShotConfiguration,
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
-from units import Quantity, units, get_unit, magnitude_in_unit, DimensionalityError
-from units.analog_value import add_unit, AnalogValue
+from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
@@ -518,7 +517,6 @@ class SequenceRunnerThread(Thread):
         change_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
         device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[DeviceName, Any]:
-
         with DurationTimer() as timer:
             await self.update_device_parameters(change_parameters)
             await self.update_device_parameters(device_parameters)
@@ -569,6 +567,9 @@ class SequenceRunnerThread(Thread):
                 run_group.create_task(asyncio.to_thread(camera.acquire_all_pictures))
             for spincore_sequencer in self.get_spincore_sequencers().values():
                 run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
+
+        for ni6738_card in self.get_ni6738_cards().values():
+            ni6738_card.stop()
 
     def extract_data(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         if self._experiment_config.mock_experiment:
@@ -651,10 +652,7 @@ def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, An
         if parameters:
             device.update_parameters(**parameters)
     except Exception as error:
-        raise RuntimeError(
-            f"Failed to update device {device.get_name()} with parameters:\n"
-            f"{pprint.pformat(parameters)}"
-        ) from error
+        raise RuntimeError(f"Failed to update device {device.get_name()}") from error
 
 
 def _wrap_compute_parameters_on_variables_update(

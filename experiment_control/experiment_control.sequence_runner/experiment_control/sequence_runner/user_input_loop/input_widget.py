@@ -11,7 +11,9 @@ from PyQt6.QtWidgets import (
     QDial,
 )
 
-from units import Unit, unit_registry, AnalogValue
+from parameter_types import AnalogValue
+from units import Unit, unit_registry
+
 from variable.name import DottedVariableName
 
 

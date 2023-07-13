@@ -50,6 +50,6 @@ UNITS = (
 )
 
 
-units: dict[VariableName, Quantity] = {
+units: dict[VariableName, Unit] = {
     VariableName(unit): getattr(ureg, unit) for unit in UNITS
 }

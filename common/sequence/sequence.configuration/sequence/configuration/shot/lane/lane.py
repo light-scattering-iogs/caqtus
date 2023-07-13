@@ -177,7 +177,6 @@ class Lane(Generic[T], SettingsModel):
         return self.span(index)[1]
 
 
-
 class DigitalLane(Lane[bool]):
     pass
 
@@ -232,7 +231,8 @@ class CameraLane(Lane[Optional[CameraAction]]):
             if span > 0 and isinstance(action, TakePicture):
                 if action.picture_name in picture_names:
                     raise ValueError(
-                        f"Picture name '{action.picture_name} is used twice in lane '{name}'"
+                        f"Picture name '{action.picture_name} is used twice in lane"
+                        f" '{name}'"
                     )
                 else:
                     picture_names.add(action.picture_name)

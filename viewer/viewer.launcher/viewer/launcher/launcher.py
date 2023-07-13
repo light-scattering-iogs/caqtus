@@ -8,6 +8,10 @@ from device.configuration import DeviceName
 from experiment.session import get_standard_experiment_session_maker
 from viewer.single_shot_viewers import SingleShotWidget, ImageViewer, ParamsViewer
 
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -19,7 +23,7 @@ if __name__ == "__main__":
                 importer=ImageImporter(DeviceName("Orca Quest"), "picture 1")
             ),
             "Image 2": ImageViewer(
-                importer=ImageImporter(DeviceName("Orca Quest"), "picture 3")
+                importer=ImageImporter(DeviceName("Orca Quest"), "picture 2")
             ),
             "Params": ParamsViewer(importer=import_parameters | break_namespaces),
         },

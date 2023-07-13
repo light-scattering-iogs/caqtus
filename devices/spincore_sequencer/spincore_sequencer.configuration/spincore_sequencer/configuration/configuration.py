@@ -1,33 +1,37 @@
-from typing import Any
+from typing import Any, ClassVar, Type
 
 from pydantic import Field
 
-from device.configuration import DeviceConfiguration, DeviceParameter
-from device.configuration.channel_config import DigitalChannelConfiguration
+from device.configuration import DeviceParameter
+from sequencer.configuration import (
+    SequencerConfiguration,
+    ChannelConfiguration,
+    DigitalChannelConfiguration,
+)
 
 
-class SpincoreSequencerConfiguration(DeviceConfiguration, DigitalChannelConfiguration):
+class SpincoreSequencerConfiguration(SequencerConfiguration):
     """Holds the static configuration of a spincore sequencer device.
 
-    Attributes:
+    Fields:
         board_number: The number of the board to use. With only one board connected,
             this number is usually 0.
         time_step: The quantization time step used. All times during a run are multiples
             of this value.
     """
 
-    # noinspection PyPropertyDefinition
     @classmethod
-    @property
-    def number_channels(cls) -> int:
-        return 24
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
+        return (DigitalChannelConfiguration,) * cls.number_channels
+
+    number_channels: ClassVar[int] = 24
 
     board_number: int
-    time_step: float = Field(
-        default=50e-9,
-        ge=50e-9,
-        units="s",
+    time_step: int = Field(
+        default=50,
+        ge=50,
     )
+    channels: tuple[DigitalChannelConfiguration, ...]
 
     def get_device_type(self) -> str:
         return "SpincorePulseBlaster"

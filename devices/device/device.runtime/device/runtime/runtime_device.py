@@ -15,7 +15,7 @@ class RuntimeDevice(BaseModel, ABC):
     All devices used in the experiment must inherit from this class.
     Objects of this class can be used as context managers to automatically start and shutdown the device.
 
-    Attributes:
+    Fields:
         name: A unique name given to the device. It is used to identify the device in the experiment configuration.
 
     Methods:
@@ -76,7 +76,7 @@ class RuntimeDevice(BaseModel, ABC):
         return self._close_stack.enter_context(cm)
 
     @abstractmethod
-    def update_parameters(self, **kwargs) -> None:
+    def update_parameters(self, *_, **kwargs) -> None:
         """Apply new values for some parameters of the device.
 
         This method is meant to be reimplemented for each specific device. It can be called as many times as needed. The

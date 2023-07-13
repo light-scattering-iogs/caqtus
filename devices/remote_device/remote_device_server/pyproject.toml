@@ -19,6 +19,9 @@ elliptec-ell14-runtime = {path = "../../elliptec_ell14/elliptec_ell14.runtime", 
 device-runtime = {path = "../../device/device.runtime", develop = true}
 
 
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

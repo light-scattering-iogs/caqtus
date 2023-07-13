@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (
     QInputDialog, QLineEdit,
 )
 
-from device.configuration.units_mapping import CalibratedUnitsMapping
+
+CalibratedUnitsMapping = "CalibratedUnitsMapping"
 
 
 class CalibratedMappingEditor(QDialog):
@@ -174,7 +175,7 @@ class CalibratedMappingEditor(QDialog):
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
 
-    mapping_changed = pyqtSignal(CalibratedUnitsMapping)
+    # mapping_changed = pyqtSignal(CalibratedUnitsMapping)
 
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):
         self._mapping: CalibratedUnitsMapping = CalibratedUnitsMapping()

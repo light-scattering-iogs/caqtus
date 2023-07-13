@@ -1,17 +1,33 @@
-import logging
-from abc import abstractmethod, ABC
+from abc import abstractmethod
+from typing import Generic, TypeVar
 
 import numpy
-from pydantic import Field, validator
+from pydantic import validator
 
 from settings_model import SettingsModel
 from units import Quantity, UndefinedUnitError
 
-logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
+InputType = TypeVar("InputType")
+OutputType = TypeVar("OutputType")
 
 
-class AnalogUnitsMapping(SettingsModel, ABC):
+class OutputMapping(Generic[InputType, OutputType]):
+    @abstractmethod
+    def convert(self, input_: InputType) -> OutputType:
+        ...
+
+
+class DigitalMapping(SettingsModel, OutputMapping[bool, bool]):
+    invert: bool = False
+
+    def convert(self, input_):
+        if self.invert:
+            return ~input_
+        else:
+            return input_
+
+
+class AnalogMapping(OutputMapping[float, float]):
     """Abstract class for a mapping between some input quantity to an output quantity
 
     Warnings:
@@ -21,7 +37,7 @@ class AnalogUnitsMapping(SettingsModel, ABC):
     """
 
     @abstractmethod
-    def convert(self, input_: Quantity) -> Quantity:
+    def convert(self, input_):
         ...
 
     @abstractmethod
@@ -49,24 +65,23 @@ class AnalogUnitsMapping(SettingsModel, ABC):
         return f"{input_units}/{output_units}"
 
 
-class CalibratedUnitsMapping(AnalogUnitsMapping):
+class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
     """Convert between input and output quantities by interpolating a set of measured points
 
     This mapping is for example useful when one needs to convert an experimentally measurable quantity (e.g. the
     transmission of an AOM) as a function of a control parameter (e.g. a modulation voltage). Note that in this case the
     measured quantity is the input and the control quantity is the output. This is because we will need to convert from
     the measured quantity to the control quantity which is what is actually outputted by a device.
+
+    Fields:
+        input_units: The units of the input quantity
+        output_units: The units of the output quantity
+        measured_data_points: tuple of (input, output) tuples. The points will be rearranged to have the inputs sorted.
     """
 
     input_units: str = ""
     output_units: str = ""
-    measured_data_points: tuple[tuple[float, float], ...] = Field(
-        default_factory=tuple,
-        description=(
-            "Measured data points as a tuple of (input, output) tuples. The points will"
-            " be rearranged to have the inputs sorted."
-        ),
-    )
+    measured_data_points: tuple[tuple[float, float], ...]
 
     @validator("input_units")
     def validate_input_units(cls, input_units):
@@ -111,25 +126,25 @@ class CalibratedUnitsMapping(AnalogUnitsMapping):
         return self.output_units
 
     @property
-    def input_values(self) -> tuple[float]:
+    def input_values(self) -> tuple[float, ...]:
         return tuple(x[0] for x in self.measured_data_points)
 
     @property
-    def output_values(self) -> tuple[float]:
+    def output_values(self) -> tuple[float, ...]:
         return tuple(x[1] for x in self.measured_data_points)
 
-    def convert(self, input_: Quantity) -> Quantity:
+    def convert(self, input_):
         input_values = numpy.array(self.input_values)
         output_values = numpy.array(self.output_values)
         interp = numpy.interp(
-            x=input_.to(self.get_input_units()).magnitude,
+            x=input_,
             xp=input_values,
             fp=output_values,
         )
         min_ = numpy.min(output_values)
         max_ = numpy.max(output_values)
         clipped = numpy.clip(interp, min_, max_)
-        return Quantity(clipped, units=self.get_output_units())
+        return clipped
 
     def __getitem__(self, index: int) -> tuple[float, float]:
         return self.measured_data_points[index]

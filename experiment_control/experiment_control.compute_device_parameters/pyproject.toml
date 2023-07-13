@@ -8,8 +8,10 @@ packages = [{include = "experiment_control"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
-device-config = {path = "../../devices/device/device.configuration", develop = true}
+
 numpy = "^1.24.3"
+
+device-config = {path = "../../devices/device/device.configuration", develop = true}
 experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
 expression = {path = "../../common/expression", develop = true}
 sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
@@ -17,7 +19,19 @@ spincore-sequencer-runtime = {path = "../../devices/spincore_sequencer/spincore_
 units = {path = "../../common/units", develop = true}
 variable-name = {path = "../../common/variable/variable.name", develop = true}
 variable-namespace = {path = "../../common/variable/variable.namespace", develop = true}
+parameter-types = {path = "../../common/types/parameter_types", develop = true}
+sequencer-channel = {path = "../../devices/sequencer/sequencer.channel", develop = true}
+sequencer-instructions = {path = "../../devices/sequencer/sequencer.instructions", develop = true}
 
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+black = "^23.3.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+matplotlib = "^3.7.2"
 
 [build-system]
 requires = ["poetry-core"]

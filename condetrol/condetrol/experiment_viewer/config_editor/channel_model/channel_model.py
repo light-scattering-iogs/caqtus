@@ -3,8 +3,9 @@ from typing import Optional
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 
-from device.configuration.channel_config import ChannelConfiguration, ChannelSpecialPurpose
 from settings_model import YAMLSerializable
+
+ChannelConfiguration = "ChannelConfiguration"
 
 
 class ChannelsModel(QAbstractTableModel):

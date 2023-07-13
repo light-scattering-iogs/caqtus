@@ -40,7 +40,7 @@ class VariableNamespace(Generic[T]):
                 new[key] = value
             return new
         else:
-            raise NotImplementedError
+            return NotImplemented
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._dict})"

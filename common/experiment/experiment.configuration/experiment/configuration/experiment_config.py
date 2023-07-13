@@ -4,16 +4,10 @@ from typing import Optional, Type
 
 from pydantic import Field, validator
 from pydantic.color import Color
+from validate_arguments import validate_arguments
 
 from camera.configuration import CameraConfiguration
 from device.configuration import DeviceName, DeviceConfiguration, DeviceConfigType
-from device.configuration.channel_config import (
-    AnalogChannelConfiguration,
-    ChannelConfiguration,
-    DigitalChannelConfiguration,
-    ChannelSpecialPurpose,
-    ChannelName,
-)
 from sequence.configuration import (
     SequenceSteps,
     Lane,
@@ -21,8 +15,15 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
 )
+from sequencer.configuration import (
+    ChannelName,
+    SequencerConfiguration,
+    ChannelSpecialPurpose,
+    AnalogMapping,
+    DigitalChannelConfiguration,
+    AnalogChannelConfiguration,
+)
 from settings_model import VersionedSettingsModel, Version
-from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
 
@@ -37,7 +38,7 @@ class ExperimentConfig(VersionedSettingsModel):
     contains information about the machine that should change rarely (not at each
     sequence).
 
-    Attributes:
+    Fields:
         device_servers: The configurations of the servers that will actually instantiate
             devices.
         header: Steps that are always executed before a sequence. At the moment, it is
@@ -84,46 +85,53 @@ class ExperimentConfig(VersionedSettingsModel):
     ):
         channel_names: set[ChannelName] = set()
         for device_name, device_configuration in device_configurations.items():
-            if isinstance(device_configuration, ChannelConfiguration):
-                device_channel_names = device_configuration.get_named_channels()
+            if isinstance(device_configuration, SequencerConfiguration):
+                device_channels = device_configuration.get_lane_channels()
+                device_channel_names = {
+                    str(channel.description) for channel in device_channels
+                }
                 if channel_names.isdisjoint(device_channel_names):
                     channel_names |= device_channel_names
                 else:
                     raise ValueError(
-                        f"RuntimeDevice '{device_name}' has channel names that are already used"
-                        f" by an other device: {channel_names & device_channel_names}"
+                        f"RuntimeDevice '{device_name}' has channel names that are"
+                        " already used by an other device:"
+                        f" {channel_names & device_channel_names}"
                     )
         return device_configurations
 
-    def get_color(self, channel: str | ChannelSpecialPurpose) -> Optional[Color]:
+    def get_color(
+        self, channel: ChannelName | ChannelSpecialPurpose
+    ) -> Optional[Color]:
         color = None
         channel_exists = False
         for device_config in self.device_configurations.values():
-            if isinstance(device_config, ChannelConfiguration):
+            if isinstance(device_config, SequencerConfiguration):
                 try:
                     index = device_config.get_channel_index(channel)
                     channel_exists = True
-                    color = device_config.channel_colors[index]
+                    color = device_config.channels[index].color
                     break
-                except ValueError:
+                except KeyError:
                     pass
         if channel_exists:
             return color
         else:
             raise ValueError(f"Channel {channel} doesn't exists in the configuration")
 
-    def get_input_units(self, channel: str) -> Optional[str]:
+    def get_input_units(self, channel: ChannelName) -> Optional[str]:
         units = None
         channel_exists = False
         for device_config in self.device_configurations.values():
-            if isinstance(device_config, AnalogChannelConfiguration):
+            if isinstance(device_config, SequencerConfiguration):
                 try:
                     index = device_config.get_channel_index(channel)
                     channel_exists = True
-                except ValueError:
+                except KeyError:
                     pass
                 else:
-                    if (mapping := device_config.channel_mappings[index]) is not None:
+                    mapping = device_config.channels[index].output_mapping
+                    if isinstance(mapping, AnalogMapping):
                         units = mapping.get_input_units()
                         break
                     else:
@@ -139,14 +147,17 @@ class ExperimentConfig(VersionedSettingsModel):
         lanes = set()
 
         for device_name, device_config in self.device_configurations.items():
-            if lane_type == DigitalLane and isinstance(
-                device_config, DigitalChannelConfiguration
-            ):
-                lanes |= device_config.get_named_channels()
-            elif lane_type == AnalogLane and isinstance(
-                device_config, AnalogChannelConfiguration
-            ):
-                lanes |= device_config.get_named_channels()
+            if isinstance(device_config, SequencerConfiguration):
+                for channel in device_config.channels:
+                    if not channel.has_special_purpose():
+                        if lane_type == DigitalLane and isinstance(
+                            channel, DigitalChannelConfiguration
+                        ):
+                            lanes.add(str(channel.description))
+                        elif lane_type == AnalogLane and isinstance(
+                            channel, AnalogChannelConfiguration
+                        ):
+                            lanes.add(str(channel.description))
             elif lane_type == CameraLane and isinstance(
                 device_config, CameraConfiguration
             ):
@@ -203,7 +214,8 @@ class ExperimentConfig(VersionedSettingsModel):
 
         if not isinstance(config, DeviceConfiguration):
             raise TypeError(
-                f"config must be an instance of <DeviceConfiguration>, got {type(config)}"
+                "config must be an instance of <DeviceConfiguration>, got"
+                f" {type(config)}"
             )
 
         if device_name not in self.device_configurations:
