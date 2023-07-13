@@ -100,7 +100,7 @@ class SwabianPulseStreamer(Sequencer):
             for channel in range(self.channel_number):
                 seq.setDigital(
                     channel,
-                    [repeat.number_repetitions, channel_values[ChannelLabel(channel)]],
+                    [(repeat.number_repetitions, channel_values[ChannelLabel(channel)])],
                 )
             return seq
         else:
