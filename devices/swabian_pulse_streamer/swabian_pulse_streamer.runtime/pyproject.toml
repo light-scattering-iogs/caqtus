@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "swabian-pulse-streamer-runtime"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "swabian_pulse_streamer"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pulsestreamer = "^1.7.0"
+sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
