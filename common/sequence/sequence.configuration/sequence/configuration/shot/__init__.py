@@ -8,6 +8,7 @@ from .lane import (
     TakePicture,
     Ramp,
     LinearRamp,
+    Blink,
 )
 from .shot_configuration import (
     ShotConfiguration,
@@ -32,4 +33,5 @@ __all__ = [
     "LaneReference",
     "LaneGroupRoot",
     "StepName",
+    "Blink",
 ]

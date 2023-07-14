@@ -14,6 +14,7 @@ from .shot import (
     LaneReference,
     ShotConfiguration,
     StepName,
+    Blink,
 )
 from .steps import (
     Step,
@@ -50,4 +51,5 @@ __all__ = [
     "LaneGroup",
     "LaneReference",
     "StepName",
+    "Blink",
 ]

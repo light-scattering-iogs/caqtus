@@ -10,10 +10,10 @@ import numpy as np
 from expression import Expression
 from parameter_types import is_analog_value, Parameter
 from parameter_types.analog_value import magnitude_in_unit
-from sequence.configuration import DigitalLane, AnalogLane, Ramp, Lane
+from sequence.configuration import DigitalLane, AnalogLane, Ramp, Lane, Blink
 from sequencer.channel import ChannelInstruction, ChannelPattern
 from sequencer.channel.channel_instructions import ChannelType
-from units import Quantity, ureg, units
+from units import Quantity, ureg, units, dimensionless
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
@@ -41,7 +41,7 @@ def compile_lane(
     variables: VariableNamespace,
 ) -> ChannelInstruction:
     if isinstance(lane, DigitalLane):
-        return compile_digital_lane(step_durations, lane, time_step)
+        return compile_digital_lane(step_durations, lane, variables, time_step)
     elif isinstance(lane, AnalogLane):
         return compile_analog_lane(step_durations, lane, variables, time_step)
     else:
@@ -51,13 +51,41 @@ def compile_lane(
 def compile_digital_lane(
     step_durations: Sequence[float],
     lane: DigitalLane,
+    variables: VariableNamespace,
     time_step: int,
 ) -> ChannelInstruction[bool]:
     step_bounds = get_step_bounds(step_durations)
     instructions = []
     for cell_value, start, stop in lane.get_value_spans():
         length = number_ticks(step_bounds[start], step_bounds[stop], time_step)
-        instructions.append(ChannelPattern([cell_value]) * length)
+        if isinstance(cell_value, bool):
+            instructions.append(ChannelPattern([cell_value]) * length)
+        elif isinstance(cell_value, Blink):
+            period = cell_value.period.evaluate(variables | units).to("ns").magnitude
+            duty_cycle = (
+                Quantity(cell_value.duty_cycle.evaluate(variables | units))
+                .to(dimensionless)
+                .magnitude
+            )
+            if not 0 <= duty_cycle <= 1:
+                raise ShotEvaluationError(
+                    f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and 1, not {duty_cycle}"
+                )
+            div, _ = divmod(period, time_step)
+            high = math.ceil(div * duty_cycle)
+            low = div - high
+            multiplier, remainder = divmod(length, div)
+            pattern = (
+                ChannelPattern([True]) * high + ChannelPattern([False]) * low
+            ) * multiplier + ChannelPattern([False]) * remainder
+            if not len(pattern) == length:
+                raise RuntimeError(
+                    f"Pattern length {len(pattern)} does not match expected length {length}"
+                )
+            print(f"{pattern=}")
+            instructions.append(pattern)
+        else:
+            raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
     return ChannelInstruction.join(instructions, dtype=bool)
 
 

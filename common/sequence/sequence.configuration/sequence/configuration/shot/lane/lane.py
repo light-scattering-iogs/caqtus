@@ -137,7 +137,7 @@ class Lane(Generic[T], SettingsModel):
     def __getitem__(self, item) -> T:
         return self.get_effective_value(item)
 
-    def get_effective_value(self, index):
+    def get_effective_value(self, index) -> T:
         if self.spans[index] != 0:
             return self.values[index]
         else:
@@ -166,18 +166,26 @@ class Lane(Generic[T], SettingsModel):
         stop = start + self.spans[start]
         return start, stop
 
-    def start_index(self, index):
+    def start_index(self, index) -> int:
         """Return the index of the first cell in the span at the given index"""
 
         return self.span(index)[0]
 
-    def end_index(self, index):
+    def end_index(self, index) -> int:
         """Return the index of the first cell after the span at the given index"""
 
         return self.span(index)[1]
 
 
-class DigitalLane(Lane[bool]):
+class Blink(SettingsModel):
+    """Indicates that the value of a digital lane should turn on and off periodically."""
+
+    period: Expression
+    phase: Expression
+    duty_cycle: Expression
+
+
+class DigitalLane(Lane[bool | Blink]):
     pass
 
 
