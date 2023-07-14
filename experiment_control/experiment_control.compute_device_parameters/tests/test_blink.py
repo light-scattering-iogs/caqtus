@@ -1,5 +1,10 @@
+import logging
+
 from sequencer.channel import ChannelPattern, Concatenate, Repeat
 from sequencer.instructions import SequencerInstruction, ChannelLabel
+
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG")
 
 
 def test_blink():

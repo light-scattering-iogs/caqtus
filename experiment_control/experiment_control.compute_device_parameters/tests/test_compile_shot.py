@@ -28,4 +28,3 @@ def test_compile(
 
     number_rise = np.sum(np.maximum(clock_values[:-1] - clock_values[1:], 0))
     logger.debug(f"{number_rise=}")
-    assert False
