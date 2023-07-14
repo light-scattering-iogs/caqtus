@@ -161,9 +161,17 @@ def convert_to_sequence(
     )
     for channel_index in range(1, sequencer_config.number_channels):
         channel_label = ChannelLabel(channel_index)
-        sequence = sequence.add_channel_instruction(
-            channel_label, channel_instructions[channel_label]
-        )
+        try:
+            sequence = sequence.add_channel_instruction(
+                channel_label, channel_instructions[channel_label]
+            )
+        except Exception:
+            with open("output.py", "w") as f:
+                f.write(f"{channel_label=}\n{sequence=}\n{channel_instructions[channel_label]=}")
+
+            raise
+
+
     return sequence
 
 
