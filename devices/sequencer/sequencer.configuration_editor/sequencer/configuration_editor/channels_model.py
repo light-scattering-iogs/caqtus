@@ -1,3 +1,6 @@
+from collections.abc import Sequence
+from typing import Any
+
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex
 from PyQt6.QtCore import Qt
 
@@ -7,9 +10,9 @@ from sequencer.configuration import ChannelConfiguration
 class SequencerChannelsModel(QAbstractTableModel):
     """A model to display and edit the channels of a sequencer device."""
 
-    def __init__(self, channels: tuple[ChannelConfiguration, ...], *args, **kwargs):
+    def __init__(self, channels: Sequence[ChannelConfiguration], *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.channels = channels
+        self.channels = tuple(channels)
 
     @property
     def channels(self) -> tuple[ChannelConfiguration, ...]:
@@ -41,6 +44,28 @@ class SequencerChannelsModel(QAbstractTableModel):
                 return self._channels[index.row()].delay
         return super().data(index, role)
 
+    def setData(
+        self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
+    ) -> bool:
+        channel = index.row()
+        if role == Qt.ItemDataRole.EditRole:
+            if index.column() == 0:
+                self._channels[channel].description = value
+                return True
+            elif index.column() == 1:
+                self._channels[channel].color = value
+                return True
+            elif index.column() == 2:
+                self._channels[channel].default_value = value
+                return True
+            elif index.column() == 3:
+                self._channels[channel].output_mapping = value
+                return True
+            elif index.column() == 4:
+                self._channels[channel].delay = value
+                return True
+        return super().setData(index, value, role)
+
     def headerData(
         self,
         section: int,
@@ -60,3 +85,10 @@ class SequencerChannelsModel(QAbstractTableModel):
                 elif section == 4:
                     return "Delay"
         return super().headerData(section, orientation, role)
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        return (
+            Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+        )

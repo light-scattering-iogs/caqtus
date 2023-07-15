@@ -11,11 +11,15 @@ from PyQt6.QtWidgets import (
 from pydantic.color import Color
 
 
-class ColorCellDelegate(QStyledItemDelegate):
+class ColorDelegate(QStyledItemDelegate):
+    """A delegate to display and edit colors of a cell.
+
+    This delegate assumes that the model data at the index is Optional[Color].
+    """
+
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ):
-        # noinspection PyTypeChecker
         model = index.model()
         color = model.data(index, Qt.ItemDataRole.DisplayRole)
         super().paint(painter, option, index)
@@ -31,14 +35,16 @@ class ColorCellDelegate(QStyledItemDelegate):
                 painter.fillRect(option.rect, brush)
 
     def createEditor(
-        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QtCore.QModelIndex
     ) -> QWidget:
         widget = QColorDialog(parent)
         widget.setOption(QColorDialog.ColorDialogOption.NoButtons, True)
         widget.setOption(QColorDialog.ColorDialogOption.ShowAlphaChannel, True)
         return widget
 
-    def setEditorData(self, editor: QColorDialog, index: QtCore.QModelIndex) -> None:
+    def setEditorData(self, editor: QWidget, index: QtCore.QModelIndex) -> None:
+        if not isinstance(editor, QColorDialog):
+            raise TypeError("Expected QColorDialog")
         color = index.model().data(index, Qt.ItemDataRole.DisplayRole)
         if color is not None:
             color = color.as_rgb_tuple(alpha=True)
@@ -47,10 +53,12 @@ class ColorCellDelegate(QStyledItemDelegate):
 
     def setModelData(
         self,
-        editor: QColorDialog,
+        editor: QWidget,
         model: QtCore.QAbstractItemModel,
         index: QtCore.QModelIndex,
     ) -> None:
-        color = editor.currentColor().getRgb()
-        color = Color(color[0:3] + (color[3] / 255,))
+        if not isinstance(editor, QColorDialog):
+            raise TypeError("Expected QColorDialog")
+        color_tuple = editor.currentColor().getRgb()
+        color = Color(color_tuple[0:3] + (color_tuple[3] / 255,))
         model.setData(index, color, Qt.ItemDataRole.EditRole)
