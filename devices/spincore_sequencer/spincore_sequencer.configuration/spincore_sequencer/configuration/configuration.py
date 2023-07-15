@@ -30,6 +30,7 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
     time_step: int = Field(
         default=50,
         ge=50,
+        multiple_of=10,
     )
     channels: tuple[DigitalChannelConfiguration, ...]
 
