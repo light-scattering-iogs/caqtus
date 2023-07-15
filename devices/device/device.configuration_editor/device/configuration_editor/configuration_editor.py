@@ -32,13 +32,12 @@ class ConfigEditor(QWidget, QABC, Generic[_T]):
         """Initialize the widget.
 
         Args:
-            device_config: The device config to edit. The widget will take ownership of the object and assumes that it
-                is the only one that can modify it.
+            device_config: The device config to edit. The widget will make a copy of the object.
             available_remote_servers: The remote servers available to choose from for device_config.remote_server.
         """
 
         super().__init__(*args, **kwargs)
-        self._device_config = device_config
+        self._device_config = copy.deepcopy(device_config)
         self._available_remote_servers = available_remote_servers
 
     @abstractmethod
