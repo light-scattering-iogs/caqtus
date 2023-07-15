@@ -6,7 +6,7 @@ import copy
 from abc import abstractmethod
 from typing import Generic, TypeVar, Collection
 
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
 from device.configuration import DeviceConfiguration
 from device_server.name import DeviceServerName
@@ -15,7 +15,7 @@ from qabc import QABC
 _T = TypeVar("_T", bound=DeviceConfiguration)
 
 
-class ConfigEditor(QWidget, QABC, Generic[_T]):
+class DeviceConfigEditor(QWidget, Generic[_T], QABC):
     """An abstract interface defining how a widget should edit a device configuration.
 
     Implementations should specify the type of the device configuration they edit by setting the generic type
@@ -27,7 +27,7 @@ class ConfigEditor(QWidget, QABC, Generic[_T]):
         device_config: _T,
         available_remote_servers: Collection[DeviceServerName],
         *args,
-        **kwargs
+        **kwargs,
     ):
         """Initialize the widget.
 
@@ -50,3 +50,40 @@ class ConfigEditor(QWidget, QABC, Generic[_T]):
         """
 
         return copy.deepcopy(self._device_config)
+
+    @abstractmethod
+    def update_ui(self, device_config: _T):
+        """Update the UI to match the device config.
+
+        This method is meant to be subclassed by the concrete implementation of the widget. The default implementation
+        does nothing.
+        """
+
+        self._device_config = copy.deepcopy(device_config)
+
+
+class NotImplementedDeviceDeviceConfigEditor(DeviceConfigEditor[_T]):
+    def __init__(
+        self,
+        device_config: _T,
+        available_remote_servers: Collection[DeviceServerName],
+        *args,
+        **kwargs,
+    ):
+
+        super().__init__(device_config, available_remote_servers, *args, **kwargs)
+
+        device_type = device_config.get_device_type()
+        layout = QHBoxLayout()
+        layout.addWidget(
+            QLabel(
+                f"There is no widget implemented for a device of type <{device_type}>"
+            )
+        )
+        self.setLayout(layout)
+
+    def get_device_config(self) -> _T:
+        return super().get_device_config()
+
+    def update_ui(self, device_config: _T):
+        super().update_ui(device_config)

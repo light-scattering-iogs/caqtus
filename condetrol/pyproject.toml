@@ -27,6 +27,8 @@ experiment-control-manager = {path = "../experiment_control/experiment_control.m
 device-config = {path = "../devices/device/device.configuration", develop = true}
 sequence-hierarchy = {path = "../common/widgets/sequence_hierarchy", develop = true}
 sequencer-configuration = {path = "../devices/sequencer/sequencer.configuration", develop = true}
+device-name = {path = "../devices/device/device.name", develop = true}
+device-configuration-editor = {path = "../devices/device/device.configuration_editor", develop = true}
 
 
 [tool.poetry.dev-dependencies]

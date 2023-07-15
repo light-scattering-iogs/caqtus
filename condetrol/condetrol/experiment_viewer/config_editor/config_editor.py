@@ -13,18 +13,10 @@ from PyQt6.QtWidgets import (
 
 from experiment.configuration import ExperimentConfig
 from .config_editor_ui import Ui_ConfigEditor
-from .config_settings_editor import (
-    ConfigSettingsEditor,
-    DeviceConfigEditor,
-    NotImplementedDeviceConfigEditor,
-)
+from .config_settings_editor import ConfigSettingsEditor, WrapDeviceConfigEditor
 from .devices_editor import DevicesEditor
-from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
-from .ni6738_config_editor import NI6738ConfigEditor
 from .optimizer_config_editor import OptimizerConfigEditor
-from .orca_quest_config_editor import OrcaQuestConfigEditor
 from .sequence_header_editor import SequenceHeaderEditor
-from .spincore_config_editor import SpincoreConfigEditor
 from .system_settings_editor import SystemSettingsEditor
 
 logger = logging.getLogger(__name__)
@@ -123,34 +115,12 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
             editor.device_added.connect(self.on_device_added)
             return editor
         elif tree_label.startswith("Devices\\"):
-            return self.create_widget_for_device(tree_label[8:])
+            return WrapDeviceConfigEditor(config, tree_label)
         raise RuntimeError(f"Tree label {tree_label} has no associated widget")
 
     def on_device_added(self):
         self.change_displayed_widget(self._devices_item, None)
         self.update_device_tree()
-
-    def create_widget_for_device(self, device_name: str) -> DeviceConfigEditor:
-        """Create a widget to edit the config of a device.
-
-        This function asks the experiment config what is the device type associated
-        with the device name and create the appropriate widget to edit this kind of
-        device. If there is no widget registered for this device type,
-        a NotImplementedDeviceConfigEditor is returned that only displays the device
-        type.
-        """
-
-        type_to_widget = {
-            "SpincorePulseBlaster": SpincoreConfigEditor,
-            "NI6738AnalogCard": NI6738ConfigEditor,
-            "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
-            "OrcaQuestCamera": OrcaQuestConfigEditor,
-        }
-
-        device_type = self._config.get_device_runtime_type(device_name)
-
-        widget_type = type_to_widget.get(device_type, NotImplementedDeviceConfigEditor)
-        return widget_type(self._config.copy(deep=True), f"Devices\\{device_name}")
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
         if widget := self.get_current_widget():

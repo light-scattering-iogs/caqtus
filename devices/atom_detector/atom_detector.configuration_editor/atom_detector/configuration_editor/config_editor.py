@@ -3,13 +3,13 @@ from typing import Collection
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
 from atom_detector.configuration import AtomDetectorConfiguration, ConfigurationName
-from device.configuration_editor import ConfigEditor
+from device.configuration_editor import DeviceConfigEditor
 from device_server.name import DeviceServerName
 from .configuration_editor_ui import Ui_AtomDetectorConfigEditor
 
 
-class AtomDetectorConfigEditor(
-    Ui_AtomDetectorConfigEditor, ConfigEditor[AtomDetectorConfiguration]
+class AtomDetectorDeviceConfigEditor(
+    Ui_AtomDetectorConfigEditor, DeviceConfigEditor[AtomDetectorConfiguration]
 ):
     def __init__(
         self,

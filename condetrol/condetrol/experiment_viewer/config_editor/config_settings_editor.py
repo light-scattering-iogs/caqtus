@@ -1,11 +1,20 @@
+import copy
 from abc import abstractmethod
-from typing import Optional
+from typing import Optional, Type
 
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QHBoxLayout
 
 from device.configuration import DeviceConfiguration
+from device.configuration_editor import (
+    DeviceConfigEditor,
+    NotImplementedDeviceDeviceConfigEditor,
+)
+from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
 from qabc import QABC
+from spincore_sequencer.configuration_editor import (
+    SpincorePulseBlasterDeviceConfigEditor,
+)
 from yaml_clipboard_mixin import YAMLClipboardMixin
 
 
@@ -34,15 +43,13 @@ class ConfigSettingsEditor(QWidget, QABC):
         """Initialize the widget.
 
         Args:
-            experiment_config: The experiment config to edit. The widget will take
-                ownership of the object and assumes that it is the only one that can
-                modify it.
+            experiment_config: The experiment config to edit.
             tree_label: The label to show in the tree widget.
             parent: The parent widget.
         """
 
         super().__init__(parent)
-        self._experiment_config = experiment_config
+        self._experiment_config = copy.deepcopy(experiment_config)
         self._tree_label = tree_label
 
     @abstractmethod
@@ -64,8 +71,7 @@ class ConfigSettingsEditor(QWidget, QABC):
         return self._experiment_config.copy(deep=True)
 
 
-# noinspection PyAbstractClass
-class DeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
+class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
     def __init__(
         self,
         experiment_config: ExperimentConfig,
@@ -73,55 +79,51 @@ class DeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(experiment_config, tree_label, parent)
-        self.device_name = self.strip_device_prefix(tree_label)
-
-    def convert_to_external_use(self):
-        return self._experiment_config.get_device_config(self.device_name)
-
-    def update_from_external_source(self, new_config: DeviceConfiguration):
-        """Update the device config into the stored experiment config."""
-
-        old_config = self._experiment_config.get_device_config(self.device_name)
-        if not isinstance(new_config, type(old_config)):
-            raise TypeError(f"Expected {type(old_config)} got {type(new_config)}")
-        self._experiment_config.set_device_config(self.device_name, new_config)
-
-    @staticmethod
-    def strip_device_prefix(tree_label: str) -> str:
-        """
-
-        example: strip_device_prefix("Devices\\dev A") == "dev A"
-        """
-
-        prefix = tree_label[0:8]
-        if prefix != "Devices\\":
-            raise ValueError(
-                f"Invalid prefix for device tree label: {tree_label} should start with"
-                " 'Devices\\'"
-            )
-        return tree_label[8:]
-
-
-class NotImplementedDeviceConfigEditor(DeviceConfigEditor):
-    """A widget that shows a message that the device type is not implemented."""
-
-    def __init__(
-        self,
-        experiment_config: ExperimentConfig,
-        tree_label: str,
-        parent: Optional[QWidget] = None,
-    ):
-        super().__init__(experiment_config, tree_label, parent)
-
-        device_config = self._experiment_config.get_device_config(self.device_name)
-        device_type = device_config.get_device_type()
-        layout = QHBoxLayout()
-        layout.addWidget(
-            QLabel(
-                f"There is no widget implemented for a device of type <{device_type}>"
-            )
+        self._device_name = DeviceName(self._tree_label[8:])
+        self._device_type = self._experiment_config.get_device_runtime_type(
+            self._device_name
         )
-        self.setLayout(layout)
+        self._device_config_editor = self.create_widget_for_device(self._device_name)
+        self.setLayout(QHBoxLayout())
+        self.layout().addWidget(self._device_config_editor)
+
+    def create_widget_for_device(self, device_name: DeviceName) -> DeviceConfigEditor:
+        """Create a widget to edit the config of a device.
+
+        This function asks the experiment config what is the device type associated
+        with the device name and create the appropriate widget to edit this kind of
+        device. If there is no widget registered for this device type,
+        a NotImplementedDeviceConfigEditor is returned that only displays the device
+        type.
+        """
+
+        type_to_widget: dict[str, Type[DeviceConfigEditor]] = {
+            # "SpincorePulseBlaster": SpincorePulseBlasterDeviceConfigEditor,
+            # "NI6738AnalogCard": NI6738ConfigEditor,
+            # "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
+            # "OrcaQuestCamera": OrcaQuestConfigEditor,
+        }
+
+        widget_type = type_to_widget.get(
+            self._device_type, NotImplementedDeviceDeviceConfigEditor
+        )
+        return widget_type(
+            self._experiment_config.get_device_config(device_name),
+            set(self._experiment_config.device_servers.keys()),
+        )
 
     def get_experiment_config(self) -> ExperimentConfig:
-        return super().get_experiment_config()
+        experiment_config = super().get_experiment_config()
+        experiment_config.set_device_config(
+            self._device_name, self._device_config_editor.get_device_config()
+        )
+        return experiment_config
+
+    def convert_to_external_use(self) -> DeviceConfiguration:
+        return self._device_config_editor.get_device_config()
+
+    def update_from_external_source(self, external_source: DeviceConfiguration):
+        if not isinstance(external_source, DeviceConfiguration):
+            raise TypeError(
+                f"Expected a DeviceConfiguration, got {type(external_source)}")
+        self._device_config_editor.update_ui(external_source)

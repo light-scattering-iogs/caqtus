@@ -1,3 +1,3 @@
-from .configuration_editor import ConfigEditor
+from .configuration_editor import DeviceConfigEditor, NotImplementedDeviceDeviceConfigEditor
 
-__all__ = ["ConfigEditor"]
+__all__ = ["DeviceConfigEditor", "NotImplementedDeviceDeviceConfigEditor"]

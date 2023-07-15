@@ -14,17 +14,20 @@ class SequencerChannelView(QTableView):
         super().__init__(*args, **kwargs)
 
         self.channel_model = SequencerChannelsModel(channels)
-        self.setItemDelegateForColumn(0, ChannelDescriptionDelegate(self))
-        self.setItemDelegateForColumn(1, ColorDelegate(self))
+        self._channel_delegate = ChannelDescriptionDelegate(self)
+        self._color_delegate = ColorDelegate(self)
+        self._mapping_delegate = MappingDelegate(self)
+        self.setItemDelegateForColumn(0, self._channel_delegate)
+        self.setItemDelegateForColumn(1, self._color_delegate)
 
-        self.setItemDelegateForColumn(3, MappingDelegate(self))
+        self.setItemDelegateForColumn(3, self._mapping_delegate)
 
     @property
     def channel_model(self) -> SequencerChannelsModel:
-        return self._model
+        return self._channel_model
 
     @channel_model.setter
     def channel_model(self, model: SequencerChannelsModel):
-        self._model = model
-        self.setModel(self._model)
+        self._channel_model = model
+        self.setModel(self._channel_model)
         self.resizeColumnsToContents()

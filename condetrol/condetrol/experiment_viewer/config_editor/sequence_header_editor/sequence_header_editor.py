@@ -26,10 +26,10 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(experiment_config, tree_label, parent)
+        ConfigSettingsEditor.__init__(self, experiment_config, tree_label, parent)
 
-        self.model = SequenceHeaderModel(self._experiment_config)
-        self.setModel(self.model)
+        self.header_model = SequenceHeaderModel(self._experiment_config)
+        self.setModel(self.header_model)
         delegate = StepDelegate()
         self.setItemDelegate(delegate)
         self.setHeaderHidden(True)
@@ -37,7 +37,7 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
         self.setContentsMargins(0, 0, 0, 0)
 
         # noinspection PyUnresolvedReferences
-        self.model.modelReset.connect(lambda: self.expandAll())
+        self.header_model.modelReset.connect(lambda: self.expandAll())
         self.expandAll()
         self.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
 
@@ -50,7 +50,7 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.setDragDropOverwriteMode(False)
         # noinspection PyUnresolvedReferences
-        self.model.rowsInserted.connect(lambda _: self.expandAll())
+        self.header_model.rowsInserted.connect(lambda _: self.expandAll())
 
         self.setItemsExpandable(False)
 
@@ -66,7 +66,7 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
         return self.get_experiment_config().header.children
 
     def update_from_external_source(self, steps: list[Step]):
-        self.model.set_steps(steps)
+        self.header_model.set_steps(steps)
 
     def show_context_menu(self, position):
         index = self.indexAt(position)

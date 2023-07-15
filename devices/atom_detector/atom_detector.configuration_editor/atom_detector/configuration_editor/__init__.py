@@ -1,3 +1,3 @@
-from .config_editor import AtomDetectorConfigEditor
+from .config_editor import AtomDetectorDeviceConfigEditor
 
-__all__ = ["AtomDetectorConfigEditor"]
+__all__ = ["AtomDetectorDeviceConfigEditor"]

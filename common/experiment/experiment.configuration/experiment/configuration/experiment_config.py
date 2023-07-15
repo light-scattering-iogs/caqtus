@@ -4,6 +4,8 @@ from typing import Optional, Type
 
 from pydantic import Field, validator
 from pydantic.color import Color
+
+from device_server.name import DeviceServerName
 from validate_arguments import validate_arguments
 
 from camera.configuration import CameraConfiguration
@@ -55,7 +57,7 @@ class ExperimentConfig(VersionedSettingsModel):
 
     __version__ = "1.0.0"
 
-    device_servers: dict[str, DeviceServerConfiguration] = Field(
+    device_servers: dict[DeviceServerName, DeviceServerConfiguration] = Field(
         default_factory=dict,
     )
 
