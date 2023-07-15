@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QTableView
 from sequencer.configuration import ChannelConfiguration
 from .channels_model import SequencerChannelsModel
 from .color_delegate import ColorDelegate
+from .description_delegate import ChannelDescriptionDelegate
 
 
 class SequencerChannelView(QTableView):
@@ -12,7 +13,9 @@ class SequencerChannelView(QTableView):
         super().__init__(*args, **kwargs)
 
         self.channel_model = SequencerChannelsModel(channels)
+        self.setItemDelegateForColumn(0, ChannelDescriptionDelegate(self))
         self.setItemDelegateForColumn(1, ColorDelegate(self))
+
 
     @property
     def channel_model(self) -> SequencerChannelsModel:
