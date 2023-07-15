@@ -6,6 +6,7 @@ from sequencer.configuration import ChannelConfiguration
 from .channels_model import SequencerChannelsModel
 from .color_delegate import ColorDelegate
 from .description_delegate import ChannelDescriptionDelegate
+from .mapping_delegate import MappingDelegate
 
 
 class SequencerChannelView(QTableView):
@@ -16,6 +17,7 @@ class SequencerChannelView(QTableView):
         self.setItemDelegateForColumn(0, ChannelDescriptionDelegate(self))
         self.setItemDelegateForColumn(1, ColorDelegate(self))
 
+        self.setItemDelegateForColumn(3, MappingDelegate(self))
 
     @property
     def channel_model(self) -> SequencerChannelsModel:
