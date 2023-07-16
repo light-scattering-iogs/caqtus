@@ -34,7 +34,7 @@
    </property>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
-     <string>Edit</string>
+     <string>Config</string>
     </property>
     <addaction name="action_edit_config"/>
    </widget>
@@ -97,7 +97,7 @@
      <normaloff>:/icons/gear--pencil</normaloff>:/icons/gear--pencil</iconset>
    </property>
    <property name="text">
-    <string>Config...</string>
+    <string>Edit current...</string>
    </property>
   </action>
   <action name="action_start">
