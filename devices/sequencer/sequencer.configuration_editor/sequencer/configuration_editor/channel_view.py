@@ -22,6 +22,8 @@ class SequencerChannelView(QTableView):
 
         self.setItemDelegateForColumn(3, self._mapping_delegate)
 
+        self.verticalHeader().setMinimumSectionSize(-1)
+
     @property
     def channel_model(self) -> SequencerChannelsModel:
         return self._channel_model
@@ -30,4 +32,4 @@ class SequencerChannelView(QTableView):
     def channel_model(self, model: SequencerChannelsModel):
         self._channel_model = model
         self.setModel(self._channel_model)
-        self.resizeColumnsToContents()
+

@@ -78,9 +78,9 @@ class SequencerChannelsModel(QAbstractTableModel):
                 elif section == 1:
                     return "Color"
                 elif section == 2:
-                    return "Default value"
+                    return "Default"
                 elif section == 3:
-                    return "Output transformation"
+                    return "Output"
                 elif section == 4:
                     return "Delay"
         return super().headerData(section, orientation, role)
