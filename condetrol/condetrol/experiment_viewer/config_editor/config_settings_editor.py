@@ -10,6 +10,7 @@ from device.configuration_editor import (
     NotImplementedDeviceDeviceConfigEditor,
 )
 from device.name import DeviceName
+from elliptec_ell14.configuration_editor import ElliptecELL14RotationStageConfigEditor
 from experiment.configuration import ExperimentConfig
 from orca_quest.configuration_editor import OrcaQuestConfigEditor
 from qabc import QABC
@@ -101,7 +102,7 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
         type_to_widget: dict[str, Type[DeviceConfigEditor]] = {
             "SpincorePulseBlaster": SpincorePulseBlasterDeviceConfigEditor,
             # "NI6738AnalogCard": NI6738ConfigEditor,
-            # "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
+            "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
             "OrcaQuestCamera": OrcaQuestConfigEditor,
         }
 
@@ -126,5 +127,6 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
     def update_from_external_source(self, external_source: DeviceConfiguration):
         if not isinstance(external_source, DeviceConfiguration):
             raise TypeError(
-                f"Expected a DeviceConfiguration, got {type(external_source)}")
+                f"Expected a DeviceConfiguration, got {type(external_source)}"
+            )
         self._device_config_editor.update_ui(external_source)
