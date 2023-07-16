@@ -14,8 +14,9 @@ from PyQt6.QtWidgets import (
 from sequencer.configuration.channel_mapping import (
     OutputMapping,
     DigitalMapping,
-    AnalogMapping,
+    CalibratedAnalogMapping,
 )
+from .mapping_editor import CalibratedMappingEditor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -31,8 +32,12 @@ class MappingDelegate(QStyledItemDelegate):
                 option.text = "inverted"
             else:
                 option.text = "normal"
-        elif isinstance(mapping, AnalogMapping):
+        elif isinstance(mapping, CalibratedAnalogMapping):
             option.text = mapping.format_units()
+        else:
+            raise NotImplementedError(
+                f"Don't know how to paint mapping type {type(mapping)}"
+            )
         QApplication.style().drawControl(
             QStyle.ControlElement.CE_ItemViewItem, option, painter
         )
@@ -45,8 +50,16 @@ class MappingDelegate(QStyledItemDelegate):
             combobox = QComboBox(parent)
             combobox.addItems(["normal", "inverted"])
             return combobox
+        elif isinstance(mapping, CalibratedAnalogMapping):
+            input_label = index.model().data(
+                index.model().index(index.row(), 0), Qt.ItemDataRole.DisplayRole
+            )
+            editor = CalibratedMappingEditor(input_label, "Output voltages", parent)
+            return editor
         else:
-            raise NotImplementedError
+            raise NotImplementedError(
+                f"Don't know how to create editor for {type(mapping)}"
+            )
 
     def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
         mapping = index.model().data(index, Qt.ItemDataRole.DisplayRole)
@@ -56,6 +69,9 @@ class MappingDelegate(QStyledItemDelegate):
                 combobox.setCurrentText("inverted")
             else:
                 combobox.setCurrentText("normal")
+        elif isinstance(mapping, CalibratedAnalogMapping):
+            mapping_editor: CalibratedMappingEditor = editor  # type: ignore
+            mapping_editor.set_unit_mapping(mapping)
         else:
             raise NotImplementedError
 
@@ -75,5 +91,10 @@ class MappingDelegate(QStyledItemDelegate):
             else:
                 raise ValueError(f"Unknown mapping value: {combobox.currentText()}")
             index.model().setData(index, mapping, Qt.ItemDataRole.EditRole)
+        elif isinstance(mapping, CalibratedAnalogMapping):
+            mapping_editor: CalibratedMappingEditor = editor  # type: ignore
+            index.model().setData(
+                index, mapping_editor.get_mapping(), Qt.ItemDataRole.EditRole
+            )
         else:
             raise NotImplementedError

@@ -1,12 +1,16 @@
+from .channel_mapping import (
+    OutputMapping,
+    DigitalMapping,
+    AnalogMapping,
+    CalibratedAnalogMapping,
+)
 from .configuration import (
     SequencerConfiguration,
     ChannelSpecialPurpose,
     ChannelName,
     ChannelConfiguration,
     AnalogChannelConfiguration,
-    AnalogMapping,
     DigitalChannelConfiguration,
-    DigitalMapping,
 )
 
 __all__ = [
@@ -18,4 +22,6 @@ __all__ = [
     "AnalogMapping",
     "DigitalChannelConfiguration",
     "DigitalMapping",
+    "OutputMapping",
+    "CalibratedAnalogMapping",
 ]

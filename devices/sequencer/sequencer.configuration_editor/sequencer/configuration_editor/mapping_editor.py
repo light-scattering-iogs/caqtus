@@ -20,11 +20,11 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QSplitter,
     QHeaderView,
-    QInputDialog, QLineEdit,
+    QInputDialog,
+    QLineEdit,
 )
 
-
-CalibratedUnitsMapping = "CalibratedUnitsMapping"
+from sequencer.configuration import CalibratedAnalogMapping
 
 
 class CalibratedMappingEditor(QDialog):
@@ -44,9 +44,9 @@ class CalibratedMappingEditor(QDialog):
         self.setWindowTitle("Edit unit mapping...")
         self.resize(400, 300)
 
-        self.layout = QHBoxLayout()
+        self._layout = QHBoxLayout()
         self.splitter = QSplitter(orientation=Qt.Orientation.Horizontal)
-        self.layout.addWidget(self.splitter)
+        self._layout.addWidget(self.splitter)
 
         self.values_view = QTableView()
         self.values_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -101,7 +101,7 @@ class CalibratedMappingEditor(QDialog):
             ui_settings.value(f"{__name__}/splitter_state", self.splitter.saveState())
         )
 
-        self.setLayout(self.layout)
+        self.setLayout(self._layout)
 
     def show_header_context_menu(self, position):
         index = self.values_view.horizontalHeader().logicalIndexAt(position)
@@ -131,12 +131,15 @@ class CalibratedMappingEditor(QDialog):
         ui_settings = QSettings("Caqtus", "ExperimentControl")
         ui_settings.setValue(f"{__name__}/splitter_state", self.splitter.saveState())
 
-    def set_unit_mapping(self, mapping: CalibratedUnitsMapping):
+    def set_unit_mapping(self, mapping: CalibratedAnalogMapping):
         self.model.set_mapping(mapping)
         self.values_view.resizeColumnsToContents()
         self.set_chart_mapping(mapping)
 
-    def set_chart_mapping(self, mapping: CalibratedUnitsMapping):
+    def get_mapping(self) -> CalibratedAnalogMapping:
+        return self.model.mapping
+
+    def set_chart_mapping(self, mapping: CalibratedAnalogMapping):
         self.series.clear()
         for x, y in zip(mapping.output_values, mapping.input_values):
             self.series.append(x, y)
@@ -175,37 +178,39 @@ class CalibratedMappingEditor(QDialog):
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
 
-    # mapping_changed = pyqtSignal(CalibratedUnitsMapping)
+    mapping_changed = pyqtSignal(CalibratedAnalogMapping)
 
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):
-        self._mapping: CalibratedUnitsMapping = CalibratedUnitsMapping()
+        self._mapping: CalibratedAnalogMapping = CalibratedAnalogMapping()
         self._input_label = input_label
         self._output_label = output_label
         super().__init__(*args, **kwargs)
 
-    def set_mapping(self, mapping: CalibratedUnitsMapping):
+    def set_mapping(self, mapping: CalibratedAnalogMapping):
         self.beginResetModel()
         self._mapping = mapping
         self.endResetModel()
 
     @property
-    def mapping(self) -> CalibratedUnitsMapping:
+    def mapping(self) -> CalibratedAnalogMapping:
         return self._mapping
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._mapping.input_values)
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 2
 
-    def data(self, index: QModelIndex, role: int = ...):
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
                 return self._mapping.output_values[index.row()]
             elif index.column() == 1:
                 return self._mapping.input_values[index.row()]
 
-    def setData(self, index: QModelIndex, value: float, role: int = ...) -> bool:
+    def setData(
+        self, index: QModelIndex, value: float, role: int = Qt.ItemDataRole.EditRole
+    ) -> bool:
         change = False
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
@@ -230,7 +235,12 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsEditable
         )
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -240,7 +250,7 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
             elif orientation == Qt.Orientation.Vertical:
                 return section
 
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         if not (0 <= row < len(self._mapping.input_values)):
             return False
         self.beginRemoveRows(parent, row, row)
@@ -249,12 +259,14 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
         self.mapping_changed.emit(self._mapping)
         return True
 
-    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+    def removeRows(
+        self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    ) -> bool:
         for _ in range(count):
             self.removeRow(row, parent)
         return True
 
-    def insertRow(self, row: int, parent: QModelIndex = ...) -> bool:
+    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         if row == -1:
             row = len(self._mapping.input_values)
         if not (0 <= row <= len(self._mapping.input_values)):
@@ -265,7 +277,9 @@ class CalibratedUnitMappingModel(QAbstractTableModel):
         self.mapping_changed.emit(self._mapping)
         return True
 
-    def insertRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
+    def insertRows(
+        self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    ) -> bool:
         for _ in range(count):
             self.insertRow(row, parent)
         return True
