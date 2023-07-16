@@ -30,6 +30,7 @@ sequencer-configuration = {path = "../devices/sequencer/sequencer.configuration"
 device-name = {path = "../devices/device/device.name", develop = true}
 device-configuration-editor = {path = "../devices/device/device.configuration_editor", develop = true}
 orca-quest-configuration-editor = {path = "../devices/cameras/orca_quest/orca_quest.configuration_editor", develop = true}
+ni6738-analog-card-configuration-editor = {path = "../devices/ni6738_analog_card/ni6738_analog_card.configuration_editor", develop = true}
 
 
 [tool.poetry.dev-dependencies]
