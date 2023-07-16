@@ -122,7 +122,7 @@ def compile_channel_instruction(
     time_step: int,
 ) -> ChannelInstruction:
     if channel.has_special_purpose():
-        target = str(channel.description)
+        target = DeviceName(str(channel.description))
         if target in camera_instructions:
             instruction = compile_camera_instruction(
                 camera_instructions[target], time_step
