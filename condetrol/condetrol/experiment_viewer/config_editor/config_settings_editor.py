@@ -11,6 +11,7 @@ from device.configuration_editor import (
 )
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
+from orca_quest.configuration_editor import OrcaQuestConfigEditor
 from qabc import QABC
 from spincore_sequencer.configuration_editor import (
     SpincorePulseBlasterDeviceConfigEditor,
@@ -101,7 +102,7 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
             "SpincorePulseBlaster": SpincorePulseBlasterDeviceConfigEditor,
             # "NI6738AnalogCard": NI6738ConfigEditor,
             # "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
-            # "OrcaQuestCamera": OrcaQuestConfigEditor,
+            "OrcaQuestCamera": OrcaQuestConfigEditor,
         }
 
         widget_type = type_to_widget.get(
