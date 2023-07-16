@@ -42,7 +42,6 @@ class SequencerChannelsModel(QAbstractTableModel):
                 return self._channels[index.row()].output_mapping
             elif index.column() == 4:
                 return self._channels[index.row()].delay
-        return super().data(index, role)
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole

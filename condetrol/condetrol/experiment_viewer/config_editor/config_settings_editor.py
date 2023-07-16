@@ -98,7 +98,7 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
         """
 
         type_to_widget: dict[str, Type[DeviceConfigEditor]] = {
-            # "SpincorePulseBlaster": SpincorePulseBlasterDeviceConfigEditor,
+            "SpincorePulseBlaster": SpincorePulseBlasterDeviceConfigEditor,
             # "NI6738AnalogCard": NI6738ConfigEditor,
             # "ElliptecELL14RotationStage": ElliptecELL14RotationStageConfigEditor,
             # "OrcaQuestCamera": OrcaQuestConfigEditor,
