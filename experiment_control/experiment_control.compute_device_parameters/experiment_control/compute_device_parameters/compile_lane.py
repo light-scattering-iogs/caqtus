@@ -72,12 +72,19 @@ def compile_digital_lane(
                     f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and 1, not {duty_cycle}"
                 )
             div, _ = divmod(period, time_step)
-            high = math.ceil(div * duty_cycle)
-            low = div - high
+            first_duration = math.ceil(div * duty_cycle)
+            second_duration = div - first_duration
             multiplier, remainder = divmod(length, div)
+            if bool(cell_value.phase.evaluate(variables | units)):
+                first_value = True
+                second_value = False
+            else:
+                first_value = False
+                second_value = True
+                first_duration, second_duration = second_duration, first_duration
             pattern = (
-                ChannelPattern([True]) * high + ChannelPattern([False]) * low
-            ) * multiplier + ChannelPattern([False]) * remainder
+                ChannelPattern([first_value]) * first_duration + ChannelPattern([second_value]) * second_duration
+            ) * multiplier + ChannelPattern([second_value]) * remainder
             if not len(pattern) == length:
                 raise RuntimeError(
                     f"Pattern length {len(pattern)} does not match expected length {length}"
