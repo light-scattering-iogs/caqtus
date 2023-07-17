@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu
 from experiment.configuration import ExperimentConfig
 from expression import Expression
 from sequence.configuration import Step, VariableDeclaration, ExecuteShot
+from variable.name import DottedVariableName
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from ..config_settings_editor import ConfigSettingsEditor
 from ...steps_editor import StepDelegate, StepsModel
@@ -80,10 +81,9 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
 
         create_variable_action = QAction("constant")
         add_menu.addAction(create_variable_action)
-        # noinspection PyUnresolvedReferences
         create_variable_action.triggered.connect(
-            lambda: self.model.insert_step(
-                VariableDeclaration(name="", expression=Expression(body="...")), index
+            lambda: self.header_model.insert_step(
+                VariableDeclaration(name=DottedVariableName("new_variable"), expression=Expression(body="...")), index
             )
         )
         menu.exec(self.mapToGlobal(position))
