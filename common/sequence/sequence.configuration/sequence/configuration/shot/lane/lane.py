@@ -185,7 +185,7 @@ class Blink(SettingsModel):
     duty_cycle: Expression
 
     def __str__(self):
-        return f"Blink(T={self.period}, φ={self.phase}, D={self.duty_cycle})"
+        return f"Blink(T={self.period}, D={self.duty_cycle}, φ={self.phase})"
 
 
 class DigitalLane(Lane[bool | Blink]):
