@@ -12,11 +12,17 @@ from PyQt6.QtWidgets import (
     QMenu,
     QTreeView,
     QHeaderView,
-    QPushButton, QAbstractItemView,
+    QPushButton,
+    QAbstractItemView,
+    QDialog,
+    QFormLayout,
+    QLineEdit,
 )
 
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
+from expression import Expression
+from sequence.configuration import Blink
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .swim_lane_model import SwimLaneModel
@@ -42,23 +48,59 @@ class CheckedButton(QPushButton):
             self.setText("Disabled")
 
 
+class BlinkEditor(QDialog):
+    """Widget that allow to edit the blink state of a digital cell."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        layout = QFormLayout()
+
+        self.period_widget = QLineEdit()
+        self.duty_cycle_widget = QLineEdit()
+        self.phase_widget = QLineEdit()
+        layout.addRow("Period (s)", self.period_widget)
+        layout.addRow("Duty cycle", self.duty_cycle_widget)
+        layout.addRow("Phase", self.phase_widget)
+        self.setLayout(layout)
+
+        self.setWindowTitle("Configure blink...")
+
+    def set_value(self, blink: Blink):
+        self.period_widget.setText(str(blink.period))
+        self.duty_cycle_widget.setText(str(blink.duty_cycle))
+        self.phase_widget.setText(str(blink.phase))
+
+    def get_value(self) -> Blink:
+        return Blink(
+            period=Expression(self.period_widget.text()),
+            duty_cycle=Expression(self.duty_cycle_widget.text()),
+            phase=Expression(self.phase_widget.text()),
+        )
+
+
 class SwimlaneCellDelegate(QStyledItemDelegate):
     """Delegate that allows to edit boolean cells with a push button"""
+
     def createEditor(
         self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
     ) -> QWidget:
         value = index.model().data(index, Qt.ItemDataRole.EditRole)
         if isinstance(value, bool):
-            editor = CheckedButton(parent)
-            return editor
+            return CheckedButton(parent)
+        elif isinstance(value, Blink):
+            return BlinkEditor(parent)
         else:
             return super().createEditor(parent, option, index)
 
     def setEditorData(self, editor: QWidget, index: QtCore.QModelIndex) -> None:
         value = index.model().data(index, Qt.ItemDataRole.EditRole)
         if isinstance(value, bool):
-            editor: QPushButton
-            editor.setChecked(value)
+            push_button: QPushButton = editor  # type: ignore
+            push_button.setChecked(value)
+        elif isinstance(value, Blink):
+            blink_editor: BlinkEditor = editor  # type: ignore
+            blink_editor.set_value(value)
         else:
             super().setEditorData(editor, index)
 
@@ -70,8 +112,11 @@ class SwimlaneCellDelegate(QStyledItemDelegate):
     ) -> None:
         value = index.model().data(index, Qt.ItemDataRole.EditRole)
         if isinstance(value, bool):
-            editor: QPushButton
-            model.setData(index, editor.isChecked(), Qt.ItemDataRole.EditRole)
+            push_button: QPushButton = editor  # type: ignore
+            model.setData(index, push_button.isChecked(), Qt.ItemDataRole.EditRole)
+        elif isinstance(value, Blink):
+            blink_editor: BlinkEditor = editor  # type: ignore
+            model.setData(index, blink_editor.get_value(), Qt.ItemDataRole.EditRole)
         else:
             super().setModelData(editor, model, index)
 
@@ -132,7 +177,9 @@ class ShotWidget(QWidget, YAMLClipboardMixin):
         self.experiment_config = experiment_config
 
         self.swim_lane_widget = SwimLaneView(session_maker, parent=self)
-        self.swim_lane_widget.setEditTriggers(QAbstractItemView.EditTrigger.AllEditTriggers)
+        self.swim_lane_widget.setEditTriggers(
+            QAbstractItemView.EditTrigger.AllEditTriggers
+        )
 
         self.model = SwimLaneModel(
             self._sequence,

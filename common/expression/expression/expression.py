@@ -103,8 +103,11 @@ class Expression(YAMLSerializable):
         if hasattr(self, "upstream_variables"):
             del self.upstream_variables
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Expression({self.body})"
+
+    def __str__(self) -> str:
+        return self.body
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables"""
