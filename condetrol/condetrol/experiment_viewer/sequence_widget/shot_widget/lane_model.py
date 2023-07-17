@@ -1,4 +1,5 @@
 from functools import singledispatch
+from typing import Optional
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
 from PyQt6.QtGui import QColor, QIcon, QBrush
@@ -12,6 +13,7 @@ from sequence.configuration import (
     AnalogLane,
     CameraLane,
     TakePicture,
+    Blink,
 )
 from sequencer.configuration import ChannelSpecialPurpose
 from settings_model import YAMLSerializable
@@ -147,25 +149,33 @@ class DigitalLaneModel(LaneModel):
         self, lane: DigitalLane, experiment_config: ExperimentConfig, *args, **kwargs
     ):
         super().__init__(lane, experiment_config, *args, **kwargs)
+        self._lane_brush = _get_color(self.lane, self.experiment_config)
 
-    def data(self, index: QModelIndex, role: int = ...):
-        if role == Qt.ItemDataRole.EditRole:
-            return self.lane[index.row()]
-        if role == Qt.ItemDataRole.BackgroundRole:
-            if not self.lane[index.row()]:
-                return None
-            try:
-                color = self.experiment_config.get_color(self.lane.name)
-            except ValueError:
-                brush = QBrush(QColor.fromRgb(0, 0, 0))
-            else:
-                if color is not None:
-                    brush = QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        cell_value = self.lane[index.row()]
+        if role == Qt.ItemDataRole.DisplayRole:
+            if isinstance(cell_value, Blink):
+                return str(cell_value)
+        elif role == Qt.ItemDataRole.EditRole:
+            return cell_value
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            if isinstance(cell_value, bool):
+                if cell_value:
+                    return self._lane_brush
                 else:
                     return None
-            return brush
+            elif isinstance(cell_value, Blink):
+                return self._lane_brush
+            else:
+                raise NotImplementedError(
+                    f"BackgroundRole not implemented for {type(cell_value)}"
+                )
+        elif role == Qt.ItemDataRole.ForegroundRole:
+            return QBrush(QColor.fromRgb(0, 0, 0))
 
-    def setData(self, index: QModelIndex, value: bool, role: int = ...) -> bool:
+    def setData(
+        self, index: QModelIndex, value: bool, role: int = Qt.ItemDataRole.EditRole
+    ) -> bool:
         if role == Qt.ItemDataRole.EditRole:
             self.lane[index.row()] = value
             return True
@@ -180,6 +190,17 @@ class DigitalLaneModel(LaneModel):
         self.endInsertRows()
         return True
 
+
+def _get_color(lane: Lane, experiment_config: ExperimentConfig) -> Optional[QBrush]:
+    try:
+        color = experiment_config.get_color(lane.name)
+    except ValueError:
+        return QBrush(QColor.fromRgb(0, 0, 0))
+    else:
+        if color is not None:
+            return QBrush(QColor.fromRgb(*color.as_rgb_tuple(alpha=False)))
+        else:
+            return None
 
 class AnalogLaneModel(LaneModel):
     def __init__(
