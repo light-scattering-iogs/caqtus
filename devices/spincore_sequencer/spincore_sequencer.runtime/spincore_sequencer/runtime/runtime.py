@@ -42,7 +42,7 @@ class SpincorePulseBlaster(RuntimeDevice):
     clock_cycle: ClassVar[int] = 10
 
     board_number: int = 0
-    spincore_lib_debug: bool = False
+    spincore_lib_debug: bool = True
     time_step: int = Field(ge=5 * clock_cycle)
 
     @classmethod
@@ -76,6 +76,8 @@ class SpincorePulseBlaster(RuntimeDevice):
 
     @log_exception(logger)
     def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
+        sequence_duration = len(sequence) * self.time_step * 1e-9
+        logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
             raise RuntimeError(
                 f"Can't start programming sequence.{spinapi.pb_get_error()}"
@@ -138,7 +140,6 @@ class SpincorePulseBlaster(RuntimeDevice):
                     f" {self.max_duration / 2} s with"
                     f" {2*number_of_repetitions} repetitions. "
                 )
-        logger.debug(f"{remainder=}")
         duration = remainder * self.time_step * ns
         if spinapi.pb_inst_pbonly(flags, spinapi.Inst.CONTINUE, 0, duration) < 0:
             raise RuntimeError(
@@ -180,6 +181,10 @@ class SpincorePulseBlaster(RuntimeDevice):
             ]
         )
         logger.debug(f"for {rep=}")
+        if rep > 2 ** 20 - 1:
+            raise ValueError(
+                f"Can't program a for loop with more than {2**20 - 1} repetitions."
+            )
         if (
             loop_beginning := spinapi.pb_inst_pbonly(
                 for_flag, spinapi.Inst.LOOP, rep, self.time_step * ns
@@ -191,7 +196,6 @@ class SpincorePulseBlaster(RuntimeDevice):
             )
         if middle is not None and len(middle) > 0:
             self._program_instruction(middle)
-            logger.debug(f"{len(middle)=}")
 
         if (
             spinapi.pb_inst_pbonly(
