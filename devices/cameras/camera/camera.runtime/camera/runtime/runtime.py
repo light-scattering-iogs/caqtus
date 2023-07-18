@@ -5,11 +5,12 @@ from collections import Counter
 from typing import ClassVar, Optional
 
 import numpy
+from image_types import ImageLabel, Image
 from pydantic import Field, validator
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
-from image_types import ImageLabel, Image
+from log_exception import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -87,6 +88,7 @@ class Camera(RuntimeDevice, ABC):
     def initialize(self):
         super().initialize()
 
+    @log_exception(logger)
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
         """Update the exposures time of the camera"""
 
