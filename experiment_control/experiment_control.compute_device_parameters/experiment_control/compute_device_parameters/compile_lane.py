@@ -71,20 +71,29 @@ def compile_digital_lane(
                 raise ShotEvaluationError(
                     f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and 1, not {duty_cycle}"
                 )
-            div, _ = divmod(period, time_step)
-            first_duration = math.ceil(div * duty_cycle)
-            second_duration = div - first_duration
-            multiplier, remainder = divmod(length, div)
-            if bool(cell_value.phase.evaluate(variables | units)):
-                first_value = True
-                second_value = False
-            else:
-                first_value = False
-                second_value = True
-                first_duration, second_duration = second_duration, first_duration
+            num_ticks_per_period, _ = divmod(period, time_step)
+            num_ticks_high = math.ceil(num_ticks_per_period * duty_cycle)
+            num_ticks_low = num_ticks_per_period - num_ticks_high
+            num_clock_pulses, remainder = divmod(length, num_ticks_per_period)
+            phase = (
+                Quantity(cell_value.phase.evaluate(variables | units))
+                .to(dimensionless)
+                .magnitude
+            )
+            if not 0 <= phase <= 2 * math.pi:
+                raise ShotEvaluationError(
+                    f"Phase '{cell_value.phase.body}' must be between 0 and 2*pi, not {phase}"
+                )
+            split_position = round(phase / (2 * math.pi) * num_ticks_per_period)
+            clock_pattern = (
+                ChannelPattern([True]) * num_ticks_high
+                + ChannelPattern([False]) * num_ticks_low
+            )
+            a, b = clock_pattern.split(split_position)
+            clock_pattern = b + a
             pattern = (
-                ChannelPattern([first_value]) * first_duration + ChannelPattern([second_value]) * second_duration
-            ) * multiplier + ChannelPattern([second_value]) * remainder
+                clock_pattern * num_clock_pulses + ChannelPattern([False]) * remainder
+            )
             if not len(pattern) == length:
                 raise RuntimeError(
                     f"Pattern length {len(pattern)} does not match expected length {length}"
