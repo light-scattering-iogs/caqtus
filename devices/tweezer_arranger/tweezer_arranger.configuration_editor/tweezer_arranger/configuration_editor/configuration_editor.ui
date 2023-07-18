@@ -15,19 +15,9 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2">
    <item>
-    <layout class="QHBoxLayout" name="_layout" stretch="0,1">
+    <layout class="QHBoxLayout" name="_layout" stretch="0">
      <item>
       <widget class="QListView" name="list_view"/>
-     </item>
-     <item>
-      <widget class="QFrame" name="frame">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-      </widget>
      </item>
     </layout>
    </item>

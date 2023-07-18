@@ -20,12 +20,6 @@ class Ui_TweezerArrangerConfigEditor(object):
         self.list_view = QtWidgets.QListView(parent=TweezerArrangerConfigEditor)
         self.list_view.setObjectName("list_view")
         self._layout.addWidget(self.list_view)
-        self.frame = QtWidgets.QFrame(parent=TweezerArrangerConfigEditor)
-        self.frame.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        self.frame.setFrameShadow(QtWidgets.QFrame.Shadow.Raised)
-        self.frame.setObjectName("frame")
-        self._layout.addWidget(self.frame)
-        self._layout.setStretch(1, 1)
         self.horizontalLayout_2.addLayout(self._layout)
 
         self.retranslateUi(TweezerArrangerConfigEditor)
