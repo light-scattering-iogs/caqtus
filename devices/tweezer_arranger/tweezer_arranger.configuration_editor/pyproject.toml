@@ -11,6 +11,8 @@ python = "^3.11"
 pyqt6 = "^6.5.1"
 device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
 tweezer-arranger-configuration = {path = "../tweezer_arranger.configuration", develop = true}
+matplotlib = "^3.7.2"
+mplcursors = "^0.5.2"
 
 
 [tool.poetry.group.dev.dependencies]

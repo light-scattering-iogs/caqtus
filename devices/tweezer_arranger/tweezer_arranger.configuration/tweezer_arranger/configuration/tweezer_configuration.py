@@ -30,7 +30,8 @@ class TweezerConfiguration(ABC):
     def position_units(self) -> str:
         """The units of the tweezer positions.
 
-        This is mostly for documentation and plotting purposes. Typical values can be "μm".
+        This is mostly for documentation and plotting purposes, it can be different that what is used to store the
+        parameters. Typical values can be "μm".
         """
         raise NotImplementedError
 
@@ -131,7 +132,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
         positions: dict[TweezerLabel, tuple[float, float]] = {}
         for i, f_x in enumerate(self.frequencies_x):
             for j, f_y in enumerate(self.frequencies_y):
-                positions[(i, j)] = (f_x, f_y)
+                positions[(i, j)] = (f_x * 1e-6, f_y * 1e-6)
         return positions
 
     def tweezer_labels(self) -> set[TweezerLabel]:

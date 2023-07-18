@@ -1,11 +1,25 @@
-from typing import Collection
+import logging
+from typing import Collection, Optional
 
+import mplcursors
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
+from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from matplotlib.backends.backend_qt import NavigationToolbar2QT
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 
 from device.configuration_editor import DeviceConfigEditor
 from device_server.name import DeviceServerName
-from tweezer_arranger.configuration import TweezerArrangerConfiguration, TweezerConfigurationName
+from tweezer_arranger.configuration import (
+    TweezerArrangerConfiguration,
+    TweezerConfigurationName,
+    TweezerConfiguration,
+    TweezerConfiguration2D,
+)
 from .configuration_editor_ui import Ui_TweezerArrangerConfigEditor
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class TweezerArrangerConfigEditor(
@@ -26,6 +40,16 @@ class TweezerArrangerConfigEditor(
         super().__init__(device_config, available_remote_servers, *args, **kwargs)
         self.setupUi(self)
         self.update_ui(device_config)
+        self._view_widget = TweezerConfigurationWidget()
+        self.list_view.clicked.connect(self.on_configuration_clicked)
+        self.layout().addWidget(self._view_widget)
+
+    def on_configuration_clicked(self, index: QModelIndex):
+        if not index.isValid():
+            return
+        name = self.list_view.model().data(index, Qt.ItemDataRole.DisplayRole)
+        tweezer_config = self._device_config[name]
+        self._view_widget.update_ui(tweezer_config)
 
     def get_device_config(self) -> TweezerArrangerConfiguration:
         return self.list_view.model().config
@@ -92,3 +116,40 @@ class ArrangerModel(QAbstractListModel):
             | Qt.ItemFlag.ItemIsSelectable
             | Qt.ItemFlag.ItemIsEditable
         )
+
+
+class TweezerConfigurationWidget(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self._setup_ui()
+        self._cursors: list[mplcursors.Cursor] = []
+
+    def _setup_ui(self) -> None:
+        self._figure = Figure()
+        self._axes = self._figure.add_subplot()
+        self._canvas = FigureCanvasQTAgg(self._figure)
+
+        self.setLayout(QVBoxLayout())
+        navigation_toolbar = NavigationToolbar2QT(self._canvas, self)
+        self.layout().addWidget(navigation_toolbar)
+        self.layout().addWidget(self._canvas)
+
+    def update_ui(self, tweezer_config: TweezerConfiguration) -> None:
+        self._axes.clear()
+        units = tweezer_config.position_units
+        self._axes.set_xlabel(f"x [{units}]")
+        self._axes.set_ylabel(f"y [{units}]")
+        if not isinstance(tweezer_config, TweezerConfiguration2D):
+            raise NotImplementedError(
+                f"Only 2D configurations are supported, got {type(tweezer_config)}"
+            )
+        self._cursors = []
+        for label, position in tweezer_config.tweezer_positions().items():
+
+            cursor = mplcursors.Cursor(
+                [self._axes.scatter(position[0], position[1], color="black", label=label)],
+                hover=mplcursors.HoverMode.Transient,
+                highlight=True
+            )
+            self._cursors.append(cursor)
+        self._canvas.draw()
