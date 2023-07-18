@@ -12,6 +12,7 @@ settings-model = {path = "../../../common/settings_model", develop = true}
 pydantic = "^1.0"
 device-config = {path = "../../device/device.configuration", develop = true}
 device-name = {path = "../../device/device.name", develop = true}
+configuration-holder = {path = "../../../common/configuration_holder", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

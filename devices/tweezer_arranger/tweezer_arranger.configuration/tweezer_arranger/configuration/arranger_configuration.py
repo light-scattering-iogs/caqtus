@@ -1,10 +1,9 @@
-import datetime
 from abc import ABC
 from typing import NewType, Generic, TypeVar, Any
 
+from configuration_holder import ConfigurationHolder
 from device.configuration import DeviceConfiguration, DeviceParameter
 from device.name import DeviceName
-from settings_model import SettingsModel
 from .tweezer_configuration import TweezerConfiguration, AODTweezerConfiguration
 
 TweezerConfigurationName = NewType("TweezerConfigurationName", str)
@@ -14,25 +13,18 @@ TweezerConfigurationType = TypeVar(
 )
 
 
-class TweezerConfigurationInfo(SettingsModel, Generic[TweezerConfigurationType]):
-    configuration: TweezerConfigurationType
-    modification_date: datetime.datetime
-
-
 class TweezerArrangerConfiguration(
-    DeviceConfiguration, Generic[TweezerConfigurationType], ABC
+    DeviceConfiguration,
+    ConfigurationHolder[TweezerConfigurationName, TweezerConfigurationType],
+    Generic[TweezerConfigurationType],
+    ABC,
 ):
-    tweezer_configurations: dict[
-        TweezerConfigurationName, TweezerConfigurationInfo[TweezerConfigurationType]
-    ]
+    pass
 
 
 class AODTweezerArrangerConfiguration(
     TweezerArrangerConfiguration[AODTweezerConfiguration]
 ):
-    tweezer_configurations: dict[
-        TweezerConfigurationName, TweezerConfigurationInfo[AODTweezerConfiguration]
-    ]
     awg_to_use: DeviceName
 
     def get_device_type(self) -> str:
