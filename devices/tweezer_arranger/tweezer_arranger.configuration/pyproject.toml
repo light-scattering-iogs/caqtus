@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "tweezer-arranger-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "tweezer_arranger"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+settings-model = {path = "../../../common/settings_model", develop = true}
+pydantic = "^1.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
