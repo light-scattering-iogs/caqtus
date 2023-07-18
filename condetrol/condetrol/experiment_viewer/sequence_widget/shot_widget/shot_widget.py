@@ -59,7 +59,7 @@ class BlinkEditor(QDialog):
         self.period_widget = QLineEdit()
         self.duty_cycle_widget = QLineEdit()
         self.phase_widget = QLineEdit()
-        layout.addRow("Period (s)", self.period_widget)
+        layout.addRow("Period", self.period_widget)
         layout.addRow("Duty cycle", self.duty_cycle_widget)
         layout.addRow("Phase", self.phase_widget)
         self.setLayout(layout)
