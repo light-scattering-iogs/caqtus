@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Protocol, Hashable
 
-from pydantic import validator
+from pydantic import validator, Field
 
 from settings_model import SettingsModel
 
@@ -48,12 +48,28 @@ class TweezerConfiguration2D(TweezerConfiguration):
 
 
 class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
+    """Contains the information to generate a grid of trap with an AOD/AWG.
+
+    Fields:
+        frequencies_x: The frequencies of each tone in Hz.
+        phases_x: The phases of each tone in radian.
+        amplitude_x: The amplitudes of each tone. They have no dimension.
+        frequencies_y: The frequencies of each tone in Hz.
+        phases_y: The phases of each tone in radian.
+        amplitude_y: The amplitudes of each tone. They have no dimension.
+        sampling_rate: The sampling rate of the AWG to generate the signal, in Hz.
+        number_samples: The number of samples in the waveform to loop over.
+    """
+
     frequencies_x: tuple[float, ...]
     phases_x: tuple[float, ...]
     amplitude_x: tuple[float, ...]
     frequencies_y: tuple[float, ...]
     phases_y: tuple[float, ...]
     amplitude_y: tuple[float, ...]
+
+    sampling_rate: float = Field(ge=0.0)
+    number_samples: int = Field(ge=1)
 
     @validator("frequencies_x")
     def validate_frequencies_x(cls, frequencies_x):
