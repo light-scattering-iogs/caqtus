@@ -24,13 +24,7 @@ class ConfigurationHolder(SettingsModel, Generic[_K, _T], MutableMapping[_K, _T]
 
     configurations: dict[_K, ConfigurationInfo[_T]]
 
-    def _get_configuration_info(self, configuration_name: _K) -> ConfigurationInfo[_T]:
-        try:
-            return self.configurations[configuration_name]
-        except KeyError:
-            raise KeyError(
-                f"There is no configuration matching the name '{configuration_name}'"
-            )
+
 
     def __getitem__(self, configuration_name: _K) -> _T:
         """Return a copy of the configuration associated with a given name."""
@@ -64,3 +58,11 @@ class ConfigurationHolder(SettingsModel, Generic[_K, _T], MutableMapping[_K, _T]
 
     def get_modification_date(self, configuration_name: _K) -> datetime:
         return self._get_configuration_info(configuration_name).modification_date
+
+    def _get_configuration_info(self, configuration_name: _K) -> ConfigurationInfo[_T]:
+        try:
+            return self.configurations[configuration_name]
+        except KeyError:
+            raise KeyError(
+                f"There is no configuration matching the name '{configuration_name}'"
+            )

@@ -101,6 +101,8 @@ class ArrangerModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             new_name = TweezerConfigurationName(value)
             old_name = self._config_names[index.row()]
+            if new_name == old_name:
+                return True
             config = self._config[old_name]
             del self._config[old_name]
             self._config[new_name] = config
@@ -134,8 +136,10 @@ class TweezerConfigurationWidget(QWidget):
         navigation_toolbar = NavigationToolbar2QT(self._canvas, self)
         self.layout().addWidget(navigation_toolbar)
         self.layout().addWidget(self._canvas)
+        self.setHidden(True)
 
     def update_ui(self, tweezer_config: TweezerConfiguration) -> None:
+        self.setHidden(False)
         self._axes.clear()
         units = tweezer_config.position_units
         self._axes.set_xlabel(f"x [{units}]")
@@ -144,6 +148,8 @@ class TweezerConfigurationWidget(QWidget):
             raise NotImplementedError(
                 f"Only 2D configurations are supported, got {type(tweezer_config)}"
             )
+        for cursor in self._cursors:
+            cursor.remove()
         self._cursors = []
         for label, position in tweezer_config.tweezer_positions().items():
 
