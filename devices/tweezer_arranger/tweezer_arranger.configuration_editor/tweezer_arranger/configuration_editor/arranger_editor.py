@@ -44,18 +44,16 @@ class ArrangerModel(QAbstractListModel):
         return self._config
 
     @config.setter
-    def config(self, config: TweezerArrangerConfiguration) -> None:
+    def config(self, device_config: TweezerArrangerConfiguration) -> None:
         self.beginResetModel()
-        self._config = config
-        self._config_names = list(config.tweezer_configurations.keys())
+        self._config = device_config
+        self._config_names = list(device_config.configurations)
         self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._config_names)
 
-    def data(
-        self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
-    ) -> TweezerConfigurationName | str | None:
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         name = self._config_names[index.row()]
@@ -63,8 +61,11 @@ class ArrangerModel(QAbstractListModel):
             return name
         elif role == Qt.ItemDataRole.ToolTipRole:
             modification_date = self._config.get_modification_date(name)
-            trap_config = self._config.get_configuration(name)
-            return f"Number traps: {len(trap_config)}\nModification date: {modification_date:%Y-%m-%d %H:%M:%S}"
+            tweezer_config = self._config[name]
+            return (
+                f"Number tweezers: {tweezer_config.number_tweezers}\n"
+                f"Modification date: {modification_date:%Y-%m-%d %H:%M:%S}"
+            )
 
         return None
 
@@ -74,13 +75,12 @@ class ArrangerModel(QAbstractListModel):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            value = ConfigurationName(value)
+            new_name = TweezerConfigurationName(value)
             old_name = self._config_names[index.row()]
-            config = self._config.get_configuration(old_name)
-            self._config.remove_configuration(old_name)
-            self._config.set_configuration(value, config)
-            self._config_names[index.row()] = value
-
+            config = self._config[old_name]
+            del self._config[old_name]
+            self._config[new_name] = config
+            self._config_names[index.row()] = new_name
             return True
         return False
 

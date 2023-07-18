@@ -8,6 +8,7 @@ from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from orca_quest.configuration import OrcaQuestCameraConfiguration
 from sequencer.configuration import ChannelSpecialPurpose
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
@@ -23,6 +24,7 @@ device_configs = [
     ImagingSourceCameraDMK33GR0134Configuration,
     ElliptecELL14RotationStageConfiguration,
     AtomDetectorConfiguration,
+    TweezerArrangerConfiguration,
 ]
 
 __all__ = [

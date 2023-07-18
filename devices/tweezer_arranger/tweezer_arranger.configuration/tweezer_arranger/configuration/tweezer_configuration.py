@@ -63,10 +63,10 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
 
     frequencies_x: tuple[float, ...]
     phases_x: tuple[float, ...]
-    amplitude_x: tuple[float, ...]
+    amplitudes_x: tuple[float, ...]
     frequencies_y: tuple[float, ...]
     phases_y: tuple[float, ...]
-    amplitude_y: tuple[float, ...]
+    amplitudes_y: tuple[float, ...]
 
     sampling_rate: float = Field(ge=0.0)
     number_samples: int = Field(ge=1)
@@ -99,7 +99,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             )
         return phases_y
 
-    @validator("amplitude_x")
+    @validator("amplitudes_x")
     def validate_amplitude_x(cls, amplitude_x, values):
         if not len(amplitude_x) == len(values["frequencies_x"]):
             raise ValueError(
@@ -107,7 +107,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             )
         return amplitude_x
 
-    @validator("amplitude_y")
+    @validator("amplitudes_y")
     def validate_amplitude_y(cls, amplitude_y, values):
         if not len(amplitude_y) == len(values["frequencies_y"]):
             raise ValueError(
