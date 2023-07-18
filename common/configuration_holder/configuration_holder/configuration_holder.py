@@ -8,7 +8,7 @@ _T = TypeVar("_T")
 _K = TypeVar("_K")
 
 
-class ConfigurationInfo(SettingsModel, Generic[_T]):
+class ConfigurationInfo(Generic[_T], SettingsModel):
     configuration: _T
     creation_date: datetime
     modification_date: datetime

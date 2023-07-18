@@ -16,8 +16,8 @@ TweezerConfigurationType = TypeVar(
 class TweezerArrangerConfiguration(
     DeviceConfiguration,
     ConfigurationHolder[TweezerConfigurationName, TweezerConfigurationType],
-    Generic[TweezerConfigurationType],
     ABC,
+    Generic[TweezerConfigurationType],
 ):
     pass
 
