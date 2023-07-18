@@ -18,7 +18,8 @@ class ConfigurationHolder(SettingsModel, Generic[_K, _T], MutableMapping[_K, _T]
     """Holds several configuration with their creation and modification dates.
 
     This class behaves like a mutable mapping from configuration names to configurations that also records the creation
-    and modification dates of each configuration.
+    and modification dates of each configuration. This is typically used to store the information for a device that can
+    be used in many user defined configurations.
     """
 
     configurations: dict[_K, ConfigurationInfo[_T]]
