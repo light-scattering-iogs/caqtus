@@ -7,12 +7,12 @@ from PyQt6.QtWidgets import QWidget
 from experiment.configuration import ExperimentConfig
 from lane.configuration import Lane
 
-EditorType = TypeVar("EditorType", bound=QWidget)
+LaneType = TypeVar("LaneType", bound=Lane)
 
 
-class LaneModel(QAbstractListModel, Generic[EditorType]):
+class LaneModel(QAbstractListModel, Generic[LaneType]):
     def __init__(
-        self, lane: Lane, experiment_config: ExperimentConfig, *args, **kwargs
+        self, lane: LaneType, experiment_config: ExperimentConfig, *args, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.lane = lane
@@ -23,7 +23,7 @@ class LaneModel(QAbstractListModel, Generic[EditorType]):
         return self._lane
 
     @lane.setter
-    def lane(self, lane: Lane):
+    def lane(self, lane: LaneType):
         self.beginResetModel()
         self._lane = lane
         self.endResetModel()
@@ -38,11 +38,14 @@ class LaneModel(QAbstractListModel, Generic[EditorType]):
         self._experiment_config = experiment_config
         self.endResetModel()
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.lane)
 
     def headerData(
-        self, section: int, orientation: Qt.Orientation, role: int = ...
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
     ) -> str:
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
@@ -53,9 +56,7 @@ class LaneModel(QAbstractListModel, Generic[EditorType]):
     def span(self, index: QModelIndex) -> QSize:
         return QSize(self.lane.spans[index.row()], 1)
 
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        if parent == ...:
-            parent = QModelIndex()
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         self.beginRemoveRows(parent, row, row)
         self.lane.remove(row)
         self.endRemoveRows()
@@ -83,15 +84,15 @@ class LaneModel(QAbstractListModel, Generic[EditorType]):
 
     def create_editor(
         self, parent: QWidget, index: QModelIndex
-    ) -> EditorType | NotImplementedType:
+    ) -> QWidget | NotImplementedType:
         return NotImplemented
 
     def set_editor_data(
-        self, editor: EditorType, index: QModelIndex
+        self, editor: QWidget, index: QModelIndex
     ) -> None | NotImplementedType:
         return NotImplemented
 
     def set_data_from_editor(
-        self, editor: EditorType, index: QModelIndex
+        self, editor: QWidget, index: QModelIndex
     ) -> None | NotImplementedType:
         return NotImplemented

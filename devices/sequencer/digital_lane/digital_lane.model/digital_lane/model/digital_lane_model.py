@@ -11,7 +11,7 @@ from lane.configuration import Lane
 from lane.model import LaneModel
 
 
-class DigitalLaneModel(LaneModel):
+class DigitalLaneModel(LaneModel[DigitalLane]):
     def __init__(
         self, lane: DigitalLane, experiment_config: ExperimentConfig, *args, **kwargs
     ):

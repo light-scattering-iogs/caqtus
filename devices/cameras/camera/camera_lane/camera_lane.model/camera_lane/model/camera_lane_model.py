@@ -7,7 +7,7 @@ from lane.model import LaneModel
 from sequencer.configuration import ChannelSpecialPurpose
 
 
-class CameraLaneModel(LaneModel):
+class CameraLaneModel(LaneModel[CameraLane]):
     def __init__(
         self, lane: CameraLane, experiment_config: ExperimentConfig, *args, **kwargs
     ):

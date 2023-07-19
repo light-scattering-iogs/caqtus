@@ -8,7 +8,7 @@ from lane.model import LaneModel
 from settings_model import YAMLSerializable
 
 
-class AnalogLaneModel(LaneModel):
+class AnalogLaneModel(LaneModel[AnalogLane]):
     def __init__(
         self, lane: AnalogLane, experiment_config: ExperimentConfig, *args, **kwargs
     ):
