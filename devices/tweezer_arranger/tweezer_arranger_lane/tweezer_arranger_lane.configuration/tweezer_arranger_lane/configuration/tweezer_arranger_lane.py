@@ -13,5 +13,9 @@ class HoldTweezers(TweezerAction):
     configuration: TweezerConfigurationName
 
 
+class MoveTweezers(TweezerAction):
+    pass
+
+
 class TweezerArrangerLane(Lane[TweezerAction]):
     pass
