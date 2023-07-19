@@ -1,4 +1,4 @@
-from .lane import (
+from lane import (
     Lane,
     TLane,
     DigitalLane,

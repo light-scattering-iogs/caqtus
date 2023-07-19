@@ -11,8 +11,8 @@ from anytree import NodeMixin
 from pydantic import validator
 
 from expression import Expression
+from lane import TLane, Lane, AnalogLane, DigitalLane
 from settings_model import SettingsModel, YAMLSerializable
-from .lane import TLane, Lane, AnalogLane, DigitalLane
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
