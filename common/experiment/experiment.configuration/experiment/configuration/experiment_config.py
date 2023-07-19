@@ -22,6 +22,8 @@ from sequencer.configuration import (
     AnalogChannelConfiguration,
 )
 from settings_model import VersionedSettingsModel, Version
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
@@ -159,6 +161,10 @@ class ExperimentConfig(VersionedSettingsModel):
                             lanes.add(str(channel.description))
             elif lane_type == CameraLane and isinstance(
                 device_config, CameraConfiguration
+            ):
+                lanes.add(device_name)
+            elif lane_type == TweezerArrangerLane and isinstance(
+                device_config, TweezerArrangerConfiguration
             ):
                 lanes.add(device_name)
         return lanes

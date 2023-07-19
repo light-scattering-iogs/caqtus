@@ -9,6 +9,9 @@ from digital_lane.model import DigitalLaneModel
 from experiment.configuration import ExperimentConfig
 from expression import Expression
 from lane.configuration import Lane
+from tweezer_arranger.configuration import TweezerConfigurationName
+from tweezer_arranger_lane.configuration import TweezerArrangerLane, HoldTweezers
+from tweezer_arranger_lane.model.tweezer_arranger_lane_model import TweezerArrangerLaneModel
 
 
 @singledispatch
@@ -20,6 +23,8 @@ def get_lane_model(lane: Lane, experiment_config: ExperimentConfig):
             return AnalogLaneModel(lane, experiment_config)
         case CameraLane():
             return CameraLaneModel(lane, experiment_config)
+        case TweezerArrangerLane():
+            return TweezerArrangerLaneModel(lane, experiment_config)
         case _:
             raise NotImplementedError(
                 f"get_lane_model not implemented for {type(lane)} and {type(experiment_config)}"
@@ -51,5 +56,12 @@ def create_new_lane(
             values=(None,) * number_steps,
             spans=(1,) * number_steps,
         )
+    elif lane_type == TweezerArrangerLane:
+        return TweezerArrangerLane(
+            name=name,
+            values=(HoldTweezers(configuration=TweezerConfigurationName("...")),) * number_steps,
+            spans=(number_steps,) + (0,) * (number_steps - 1),
+        )
+
     else:
         raise NotImplementedError(f"create_new_lane not implemented for {lane_type}")

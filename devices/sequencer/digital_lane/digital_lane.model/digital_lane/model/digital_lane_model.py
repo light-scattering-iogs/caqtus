@@ -73,12 +73,12 @@ class DigitalLaneModel(LaneModel[DigitalLane]):
         else:
             return NotImplemented
 
-    def set_data_from_editor(self, editor: QWidget, index: QModelIndex):
+    def get_editor_data(self, editor: QWidget, index: QModelIndex):
         cell_value = self.lane[index.row()]
         if isinstance(cell_value, Blink):
-            self.lane[index.row()] = editor.get_value()
+            return editor.get_value()
         elif isinstance(cell_value, bool):
-            self.lane[index.row()] = editor.isChecked()
+            return editor.isChecked()
         else:
             return NotImplemented
 

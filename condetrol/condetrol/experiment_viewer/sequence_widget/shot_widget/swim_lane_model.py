@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 from types import NotImplementedType
-from typing import Type, Iterable, Optional
+from typing import Type, Iterable, Optional, Any
 
 from PyQt6.QtCore import (
     QModelIndex,
@@ -21,6 +21,7 @@ from experiment.session import ExperimentSessionMaker, ExperimentSession
 from lane.configuration import Lane
 from sequence.configuration import ShotConfiguration, LaneReference
 from sequence.runtime import Sequence, State
+from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from .lane_groups_model import LaneGroupModel
 from .lanes_model import LanesModel
 from .step_durations_model import StepDurationsModel
@@ -231,7 +232,7 @@ class SwimLaneModel(QAbstractItemModel):
             flags &= ~Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         edit = False
         with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
@@ -245,7 +246,7 @@ class SwimLaneModel(QAbstractItemModel):
                     self.dataChanged.emit(index, index, [role])
         return edit
 
-    def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
+    def insertColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
         with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
@@ -298,11 +299,13 @@ class SwimLaneModel(QAbstractItemModel):
             insert_digital = insert_menu.addMenu("digital")
             insert_analog = insert_menu.addMenu("analog")
             insert_camera = insert_menu.addMenu("camera")
+            insert_arranger = insert_menu.addMenu("arranger")
 
             if index.row() < 2:
                 self.add_lane_create_action(insert_digital, DigitalLane, QModelIndex())
                 self.add_lane_create_action(insert_analog, AnalogLane, QModelIndex())
                 self.add_lane_create_action(insert_camera, CameraLane, QModelIndex())
+                self.add_lane_create_action(insert_arranger, TweezerArrangerLane, QModelIndex())
 
                 return insert_menu
 
@@ -446,12 +449,12 @@ class SwimLaneModel(QAbstractItemModel):
             return self._lanes_model.set_editor_data(editor, mapped_index)
         return NotImplemented
 
-    def set_data_from_editor(
+    def get_editor_data(
         self, editor: QWidget, index: QModelIndex
-    ) -> None | NotImplementedType:
+    ) -> Any | NotImplementedType:
         if not index.isValid():
             return NotImplemented
         mapped_index = self.map_to_child_index(index)
         if mapped_index.model() is self._lanes_model:
-            return self._lanes_model.set_data_from_editor(editor, mapped_index)
+            return self._lanes_model.get_editor_data(editor, mapped_index)
         return NotImplemented

@@ -1,5 +1,5 @@
 from types import NotImplementedType
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Any
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
 from PyQt6.QtWidgets import QWidget
@@ -92,7 +92,7 @@ class LaneModel(QAbstractListModel, Generic[LaneType]):
     ) -> None | NotImplementedType:
         return NotImplemented
 
-    def set_data_from_editor(
+    def get_editor_data(
         self, editor: QWidget, index: QModelIndex
-    ) -> None | NotImplementedType:
+    ) -> Any | NotImplementedType:
         return NotImplemented

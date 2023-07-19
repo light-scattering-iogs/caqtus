@@ -1,4 +1,5 @@
 from types import NotImplementedType
+from typing import Any
 
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget, QComboBox
@@ -10,8 +11,18 @@ from tweezer_arranger_lane.configuration import TweezerArrangerLane, HoldTweezer
 
 class TweezerArrangerLaneModel(LaneModel[TweezerArrangerLane]):
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole:
+            return str(self.lane[index.row()])
+        elif role == Qt.ItemDataRole.EditRole:
             return self.lane[index.row()]
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignCenter
+
+    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
+        if role == Qt.ItemDataRole.EditRole:
+            self.lane[index.row()] = value
+            return True
+        return False
 
     def create_editor(
         self, parent: QWidget, index: QModelIndex
@@ -43,14 +54,14 @@ class TweezerArrangerLaneModel(LaneModel[TweezerArrangerLane]):
             return None
         return NotImplemented
 
-    def set_data_from_editor(
+    def get_editor_data(
         self, editor: QWidget, index: QModelIndex
-    ) -> None | NotImplementedType:
+    ) -> Any | NotImplementedType:
         if not index.isValid():
             return NotImplemented
         cell_value = self.data(index, Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, HoldTweezers):
             combo_box: QComboBox = editor  # type: ignore
             cell_value.configuration = combo_box.currentText()
-            return None
+            return cell_value
         return NotImplemented

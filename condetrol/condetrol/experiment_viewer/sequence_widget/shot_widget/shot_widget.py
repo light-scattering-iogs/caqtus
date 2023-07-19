@@ -12,17 +12,11 @@ from PyQt6.QtWidgets import (
     QMenu,
     QTreeView,
     QHeaderView,
-    QPushButton,
     QAbstractItemView,
-    QDialog,
-    QFormLayout,
-    QLineEdit,
 )
 
-from digital_lane.configuration import Blink
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
-from expression import Expression
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .swim_lane_model import SwimLaneModel
@@ -31,14 +25,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-
-
-
 class SwimlaneCellDelegate(QStyledItemDelegate):
-    """Delegate that allows to edit boolean cells with a push button"""
+    """Delegate that allows to edit the cells of a lane.
+
+    This delegate asks the underlying model to handle the editor.
+    """
 
     def createEditor(
-        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QtCore.QModelIndex
     ) -> QWidget:
         model: SwimLaneModel = index.model()  # type: ignore
         editor = model.create_editor(parent, index)
@@ -55,7 +49,6 @@ class SwimlaneCellDelegate(QStyledItemDelegate):
         else:
             return super().setEditorData(editor, index)
 
-
     def setModelData(
         self,
         editor: QWidget,
@@ -63,12 +56,11 @@ class SwimlaneCellDelegate(QStyledItemDelegate):
         index: QtCore.QModelIndex,
     ) -> None:
         delegating_model: SwimLaneModel = index.model()  # type: ignore
-        set_data = delegating_model.set_data_from_editor(editor, index)
+        set_data = delegating_model.get_editor_data(editor, index)
         if set_data != NotImplemented:
-            return
+            model.setData(index, set_data, role=Qt.ItemDataRole.EditRole)
         else:
             return super().setModelData(editor, model, index)
-
 
 
 class SpanColumnsDelegate(SwimlaneCellDelegate):

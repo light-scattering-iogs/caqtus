@@ -1,7 +1,7 @@
 import logging
 from itertools import groupby
 from types import NotImplementedType
-from typing import Type, Iterable
+from typing import Type, Iterable, Any
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -188,11 +188,11 @@ class LanesModel(QAbstractTableModel):
             editor, self.get_lane_model_index(index)
         )
 
-    def set_data_from_editor(
+    def get_editor_data(
         self, editor: QWidget, index: QModelIndex
-    ) -> None | NotImplementedType:
+    ) -> Any | NotImplementedType:
         if not index.isValid():
             return NotImplemented
-        return self._lane_models[index.row()].set_data_from_editor(
+        return self._lane_models[index.row()].get_editor_data(
             editor, self.get_lane_model_index(index)
         )
