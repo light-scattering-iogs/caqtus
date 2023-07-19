@@ -1,6 +1,7 @@
 import logging
 from itertools import groupby
-from typing import Type, Iterable
+from types import NotImplementedType
+from typing import Type, Iterable, Any
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -8,12 +9,12 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
 )
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
-from sequence.configuration import (
-    Lane,
-)
-from .lane_model import get_lane_model, LaneModel, create_new_lane
+from lane.configuration import Lane
+from lane.model import LaneModel
+from .lane_model import get_lane_model, create_new_lane
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -50,24 +51,29 @@ class LanesModel(QAbstractTableModel):
         self._experiment_config = experiment_config
         self.endResetModel()
 
-    def rowCount(self, parent: QModelIndex = ...) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._lanes)
 
-    def columnCount(self, parent: QModelIndex = ...) -> int:
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if not self._lane_models:
             return 0
         length = self._lane_models[0].rowCount()
         assert all(lane_model.rowCount() == length for lane_model in self._lane_models)
         return length
 
-    def data(self, index: QModelIndex, role: int = ...):
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         return self._lane_models[index.row()].data(
             self.get_lane_model_index(index), role
         )
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return f"Step {section}"
@@ -91,36 +97,30 @@ class LanesModel(QAbstractTableModel):
         # noinspection PyTypeChecker
         return self._lane_models[index.row()].index(index.column())
 
-    def insertColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        if parent == ...:
-            parent = QModelIndex()
+    def insertColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
         self.beginInsertColumns(parent, column, column)
         for lane_model in self._lane_models:
             lane_model.insertRow(column)
         self.endInsertColumns()
         return True
 
-    def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
-        if parent == ...:
-            parent = QModelIndex()
+    def removeColumn(self, column: int, parent: QModelIndex = QModelIndex()) -> bool:
         self.beginRemoveColumns(parent, column, column)
         for lane_model in self._lane_models:
             lane_model.removeRow(column)
         self.endRemoveColumns()
         return True
 
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-        if parent == ...:
-            parent = QModelIndex()
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         self.beginRemoveRows(parent, row, row)
         self._lanes.pop(row)
         self._lane_models.pop(row)
         self.endRemoveRows()
         return True
 
-    def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-        if parent == ...:
-            parent = QModelIndex()
+    def removeRows(
+        self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    ) -> bool:
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
             self._lanes.pop(row)
@@ -168,4 +168,31 @@ class LanesModel(QAbstractTableModel):
     def map_name_to_row(self, name: str) -> int:
         return next(
             index for index, lane in enumerate(self._lanes) if lane.name == name
+        )
+
+    def create_editor(
+        self, parent: QWidget, index: QModelIndex
+    ) -> QWidget | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].create_editor(
+            parent, self.get_lane_model_index(index)
+        )
+
+    def set_editor_data(
+        self, editor: QWidget, index: QModelIndex
+    ) -> None | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].set_editor_data(
+            editor, self.get_lane_model_index(index)
+        )
+
+    def get_editor_data(
+        self, editor: QWidget, index: QModelIndex
+    ) -> Any | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].get_editor_data(
+            editor, self.get_lane_model_index(index)
         )

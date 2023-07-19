@@ -1,14 +1,10 @@
 import logging
-from abc import ABC
 from copy import copy
-from typing import TypeVar, Generic, Optional
+from typing import TypeVar, Generic
 
-import yaml
 from pydantic import validator
 
-from expression import Expression
 from settings_model import SettingsModel
-from units import dimensionless, Quantity
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -175,88 +171,3 @@ class Lane(Generic[T], SettingsModel):
         """Return the index of the first cell after the span at the given index"""
 
         return self.span(index)[1]
-
-
-class Blink(SettingsModel):
-    """Indicates that the value of a digital lane should turn on and off periodically."""
-
-    period: Expression
-    phase: Expression
-    duty_cycle: Expression
-
-    def __str__(self):
-        return f"Blink(T={self.period}, D={self.duty_cycle}, φ={self.phase})"
-
-
-class DigitalLane(Lane[bool | Blink]):
-    pass
-
-
-class Ramp(SettingsModel, ABC):
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        """Build a ramp object from a YAML node"""
-        return cls()
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, ramp: "Ramp"):
-        """Represent a ramp object with a yaml string with no value"""
-
-        return dumper.represent_scalar(f"!{cls.__name__}", "")
-
-
-class LinearRamp(Ramp):
-    pass
-
-
-class AnalogLane(Lane[Expression | Ramp]):
-    units: str
-
-    def has_dimension(self) -> bool:
-        return not Quantity(1, units=self.units).is_compatible_with(dimensionless)
-
-
-class CameraAction(SettingsModel, ABC):
-    pass
-
-
-class TakePicture(CameraAction):
-    picture_name: str
-
-
-class CameraLane(Lane[Optional[CameraAction]]):
-    """Lane to describe a camera
-
-    The name of this lane must match one of the camera present in the experiment configuration.
-    """
-
-    @validator("values")
-    def validate_values(cls, actions, values):
-        """Check that there are not two separate pictures with the same name"""
-
-        actions = super().validate_values(actions, values)
-        spans = values["spans"]
-        name = values["name"]
-        picture_names = set()
-        for action, span in zip(actions, spans):
-            if span > 0 and isinstance(action, TakePicture):
-                if action.picture_name in picture_names:
-                    raise ValueError(
-                        f"Picture name '{action.picture_name} is used twice in lane"
-                        f" '{name}'"
-                    )
-                else:
-                    picture_names.add(action.picture_name)
-        return actions
-
-    def get_picture_spans(self) -> list[tuple[str, int, int]]:
-        """Return a list of the pictures and the step index at which they start (included) and stop (excluded)"""
-
-        result = []
-        for action, start, stop in self.get_value_spans():
-            if isinstance(action, TakePicture):
-                result.append((action.picture_name, start, stop))
-        return result
-
-    def get_picture_names(self) -> list[str]:
-        return [name for name, _, _ in self.get_picture_spans()]

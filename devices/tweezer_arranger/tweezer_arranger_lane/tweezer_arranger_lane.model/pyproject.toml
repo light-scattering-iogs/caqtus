@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "tweezer-arranger-lane-model"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "tweezer_arranger_lane"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+lane-model = {path = "../../../../common/lane/lane.model", develop = true}
+pyqt6 = "^6.5.1"
+tweezer-arranger-lane-configuration = {path = "../tweezer_arranger_lane.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

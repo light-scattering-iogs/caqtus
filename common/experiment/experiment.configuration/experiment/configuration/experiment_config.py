@@ -5,18 +5,14 @@ from typing import Optional, Type
 from pydantic import Field, validator
 from pydantic.color import Color
 
-from device_server.name import DeviceServerName
-from validate_arguments import validate_arguments
-
+from analog_lane.configuration import AnalogLane
 from camera.configuration import CameraConfiguration
+from camera_lane.configuration import CameraLane
 from device.configuration import DeviceName, DeviceConfiguration, DeviceConfigType
-from sequence.configuration import (
-    SequenceSteps,
-    Lane,
-    DigitalLane,
-    AnalogLane,
-    CameraLane,
-)
+from device_server.name import DeviceServerName
+from digital_lane.configuration import DigitalLane
+from lane.configuration import Lane
+from sequence.configuration import SequenceSteps
 from sequencer.configuration import (
     ChannelName,
     SequencerConfiguration,
@@ -26,6 +22,9 @@ from sequencer.configuration import (
     AnalogChannelConfiguration,
 )
 from settings_model import VersionedSettingsModel, Version
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from tweezer_arranger_lane.configuration import TweezerArrangerLane
+from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
 
@@ -162,6 +161,10 @@ class ExperimentConfig(VersionedSettingsModel):
                             lanes.add(str(channel.description))
             elif lane_type == CameraLane and isinstance(
                 device_config, CameraConfiguration
+            ):
+                lanes.add(device_name)
+            elif lane_type == TweezerArrangerLane and isinstance(
+                device_config, TweezerArrangerConfiguration
             ):
                 lanes.add(device_name)
         return lanes

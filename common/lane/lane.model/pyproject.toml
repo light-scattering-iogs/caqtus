@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "lane-model"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "lane"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+pyqt6 = "^6.5.1"
+experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

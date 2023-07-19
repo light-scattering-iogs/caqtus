@@ -12,17 +12,11 @@ from PyQt6.QtWidgets import (
     QMenu,
     QTreeView,
     QHeaderView,
-    QPushButton,
     QAbstractItemView,
-    QDialog,
-    QFormLayout,
-    QLineEdit,
 )
 
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
-from expression import Expression
-from sequence.configuration import Blink
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .swim_lane_model import SwimLaneModel
@@ -31,78 +25,29 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class CheckedButton(QPushButton):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setCheckable(True)
-        self.toggled.connect(self.on_toggled)
-
-    def setChecked(self, a0: bool) -> None:
-        super().setChecked(a0)
-        self.on_toggled(a0)
-
-    def on_toggled(self, checked: bool):
-        if checked:
-            self.setText("Enabled")
-        else:
-            self.setText("Disabled")
-
-
-class BlinkEditor(QDialog):
-    """Widget that allow to edit the blink state of a digital cell."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        layout = QFormLayout()
-
-        self.period_widget = QLineEdit()
-        self.duty_cycle_widget = QLineEdit()
-        self.phase_widget = QLineEdit()
-        layout.addRow("Period", self.period_widget)
-        layout.addRow("Duty cycle", self.duty_cycle_widget)
-        layout.addRow("Phase", self.phase_widget)
-        self.setLayout(layout)
-
-        self.setWindowTitle("Configure blink...")
-
-    def set_value(self, blink: Blink):
-        self.period_widget.setText(str(blink.period))
-        self.duty_cycle_widget.setText(str(blink.duty_cycle))
-        self.phase_widget.setText(str(blink.phase))
-
-    def get_value(self) -> Blink:
-        return Blink(
-            period=Expression(self.period_widget.text()),
-            duty_cycle=Expression(self.duty_cycle_widget.text()),
-            phase=Expression(self.phase_widget.text()),
-        )
-
-
 class SwimlaneCellDelegate(QStyledItemDelegate):
-    """Delegate that allows to edit boolean cells with a push button"""
+    """Delegate that allows to edit the cells of a lane.
+
+    This delegate asks the underlying model to handle the editor.
+    """
 
     def createEditor(
-        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QtCore.QModelIndex
     ) -> QWidget:
-        value = index.model().data(index, Qt.ItemDataRole.EditRole)
-        if isinstance(value, bool):
-            return CheckedButton(parent)
-        elif isinstance(value, Blink):
-            return BlinkEditor(parent)
+        model: SwimLaneModel = index.model()  # type: ignore
+        editor = model.create_editor(parent, index)
+        if editor != NotImplemented:
+            return editor
         else:
             return super().createEditor(parent, option, index)
 
     def setEditorData(self, editor: QWidget, index: QtCore.QModelIndex) -> None:
-        value = index.model().data(index, Qt.ItemDataRole.EditRole)
-        if isinstance(value, bool):
-            push_button: QPushButton = editor  # type: ignore
-            push_button.setChecked(value)
-        elif isinstance(value, Blink):
-            blink_editor: BlinkEditor = editor  # type: ignore
-            blink_editor.set_value(value)
+        model: SwimLaneModel = index.model()  # type: ignore
+        delegated_editor = model.set_editor_data(editor, index)
+        if delegated_editor != NotImplemented:
+            return
         else:
-            super().setEditorData(editor, index)
+            return super().setEditorData(editor, index)
 
     def setModelData(
         self,
@@ -110,15 +55,12 @@ class SwimlaneCellDelegate(QStyledItemDelegate):
         model: QtCore.QAbstractItemModel,
         index: QtCore.QModelIndex,
     ) -> None:
-        value = index.model().data(index, Qt.ItemDataRole.EditRole)
-        if isinstance(value, bool):
-            push_button: QPushButton = editor  # type: ignore
-            model.setData(index, push_button.isChecked(), Qt.ItemDataRole.EditRole)
-        elif isinstance(value, Blink):
-            blink_editor: BlinkEditor = editor  # type: ignore
-            model.setData(index, blink_editor.get_value(), Qt.ItemDataRole.EditRole)
+        delegating_model: SwimLaneModel = index.model()  # type: ignore
+        set_data = delegating_model.get_editor_data(editor, index)
+        if set_data != NotImplemented:
+            model.setData(index, set_data, role=Qt.ItemDataRole.EditRole)
         else:
-            super().setModelData(editor, model, index)
+            return super().setModelData(editor, model, index)
 
 
 class SpanColumnsDelegate(SwimlaneCellDelegate):

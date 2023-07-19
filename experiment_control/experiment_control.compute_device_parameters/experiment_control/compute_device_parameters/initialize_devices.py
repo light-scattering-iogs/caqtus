@@ -8,7 +8,8 @@ from experiment.configuration import (
     CameraConfiguration,
     ElliptecELL14RotationStageConfiguration,
 )
-from sequence.configuration import SequenceConfig, CameraLane
+from sequence.configuration import SequenceConfig
+from camera_lane.configuration import CameraLane
 
 
 class InitializationParameters(TypedDict):
