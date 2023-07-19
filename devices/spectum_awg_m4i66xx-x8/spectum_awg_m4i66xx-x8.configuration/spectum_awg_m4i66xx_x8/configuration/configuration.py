@@ -4,6 +4,7 @@ from pydantic import Field
 
 from device.configuration import DeviceConfiguration, DeviceParameter
 from settings_model import SettingsModel
+from .channel_configuration import ChannelConfiguration
 
 
 class SpectrumAWGM4i66xxX8Configuration(DeviceConfiguration):
@@ -13,7 +14,7 @@ class SpectrumAWGM4i66xxX8Configuration(DeviceConfiguration):
         description="An identifier to find the board. ex: /dev/spcm0",
     )
     sampling_rate: int = Field(units="Hz")
-    channel_settings: tuple["ChannelSettings", ...] = Field(
+    channel_settings: tuple[ChannelConfiguration, ...] = Field(
         description="The configuration of the output channels", allow_mutation=False
     )
 
