@@ -19,10 +19,10 @@ from PyQt6.QtWidgets import (
     QLineEdit,
 )
 
+from digital_lane.configuration import Blink
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from expression import Expression
-from sequence.configuration import Blink
 from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .swim_lane_model import SwimLaneModel

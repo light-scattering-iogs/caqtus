@@ -7,10 +7,12 @@ from numbers import Real
 
 import numpy as np
 
+from analog_lane.configuration import AnalogLane, Ramp
+from digital_lane.configuration import DigitalLane, Blink
 from expression import Expression
+from lane.configuration import Lane
 from parameter_types import is_analog_value, Parameter
 from parameter_types.analog_value import magnitude_in_unit
-from sequence.configuration import DigitalLane, AnalogLane, Ramp, Lane, Blink
 from sequencer.channel import ChannelInstruction, ChannelPattern
 from sequencer.channel.channel_instructions import ChannelType
 from units import Quantity, ureg, units, dimensionless

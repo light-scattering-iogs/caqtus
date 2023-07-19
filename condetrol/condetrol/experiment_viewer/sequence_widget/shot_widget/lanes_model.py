@@ -10,9 +10,7 @@ from PyQt6.QtCore import (
 )
 
 from experiment.configuration import ExperimentConfig
-from sequence.configuration import (
-    Lane,
-)
+from lane.configuration import Lane
 from .lane_model import get_lane_model, LaneModel, create_new_lane
 
 logger = logging.getLogger(__name__)

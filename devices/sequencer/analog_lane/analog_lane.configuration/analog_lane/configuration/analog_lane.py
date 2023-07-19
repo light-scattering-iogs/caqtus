@@ -6,7 +6,7 @@ import yaml
 from expression import Expression
 from settings_model import SettingsModel
 from units import dimensionless, Quantity
-from .lane import Lane
+from lane.configuration import Lane
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

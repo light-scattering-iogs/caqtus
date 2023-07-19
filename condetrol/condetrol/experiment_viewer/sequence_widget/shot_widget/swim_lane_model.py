@@ -11,17 +11,14 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 
+from analog_lane.configuration import AnalogLane
+from camera_lane.configuration import CameraLane
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
+from digital_lane.configuration import DigitalLane
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker, ExperimentSession
-from sequence.configuration import (
-    Lane,
-    ShotConfiguration,
-    LaneReference,
-    DigitalLane,
-    AnalogLane,
-    CameraLane,
-)
+from lane.configuration import Lane
+from sequence.configuration import ShotConfiguration, LaneReference
 from sequence.runtime import Sequence, State
 from .lane_groups_model import LaneGroupModel
 from .lanes_model import LanesModel

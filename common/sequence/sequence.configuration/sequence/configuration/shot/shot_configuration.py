@@ -10,8 +10,10 @@ import yaml
 from anytree import NodeMixin
 from pydantic import validator
 
+from analog_lane.configuration import AnalogLane
+from digital_lane.configuration import DigitalLane
 from expression import Expression
-from lane import TLane, Lane, AnalogLane, DigitalLane
+from lane.configuration import TLane, Lane
 from settings_model import SettingsModel, YAMLSerializable
 
 logger = logging.getLogger(__name__)

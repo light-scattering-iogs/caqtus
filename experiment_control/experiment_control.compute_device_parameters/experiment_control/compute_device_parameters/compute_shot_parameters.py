@@ -5,20 +5,16 @@ from typing import Any, Optional
 
 import numpy as np
 
+from analog_lane.configuration import AnalogLane, Ramp
+from camera_lane.configuration import CameraLane, TakePicture
 from device.configuration import DeviceName
 from experiment.configuration import (
     ExperimentConfig,
     DeviceParameter,
 )
 from expression import Expression
-from sequence.configuration import (
-    ShotConfiguration,
-    CameraLane,
-    TakePicture,
-    Lane,
-    AnalogLane,
-    Ramp,
-)
+from lane.configuration import Lane
+from sequence.configuration import ShotConfiguration
 from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
 from sequencer.instructions import ChannelLabel, SequencerInstruction

@@ -22,6 +22,10 @@ variable-namespace = {path = "../../common/variable/variable.namespace", develop
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
 sequencer-channel = {path = "../../devices/sequencer/sequencer.channel", develop = true}
 sequencer-instructions = {path = "../../devices/sequencer/sequencer.instructions", develop = true}
+digital-lane-configuration = {path = "../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true}
+analog-lane-configuration = {path = "../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true}
+lane-configuration = {path = "../../common/lane/lane.configuration", develop = true}
+camera-lane-configuration = {path = "../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

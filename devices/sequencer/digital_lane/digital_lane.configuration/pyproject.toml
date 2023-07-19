@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "digital-lane-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "digital_lane"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+
+expression = {path = "../../../../common/expression", develop = true}
+settings-model = {path = "../../../../common/settings_model", develop = true}
+lane-configuration = {path = "../../../../common/lane/lane.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

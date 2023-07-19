@@ -1,17 +1,16 @@
 [tool.poetry]
-name = "lane"
+name = "camera-lane-configuration"
 version = "0.1.0"
 description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 readme = "README.md"
+packages = [{include = "camera_lane"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
-pyyaml = "^6.0.1"
+settings-model = {path = "../../../../../common/settings_model", develop = true}
 pydantic = "^1.0"
-settings-model = {path = "../settings_model", develop = true}
-expression = {path = "../expression", develop = true}
-units = {path = "../units", develop = true}
+lane-configuration = {path = "../../../../../common/lane/lane.configuration", develop = true}
 
 
 [build-system]
