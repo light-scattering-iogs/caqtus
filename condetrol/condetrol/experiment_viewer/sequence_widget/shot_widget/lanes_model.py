@@ -1,5 +1,6 @@
 import logging
 from itertools import groupby
+from types import NotImplementedType
 from typing import Type, Iterable
 
 from PyQt6.QtCore import (
@@ -8,6 +9,7 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
 )
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
 from lane.configuration import Lane
@@ -66,7 +68,12 @@ class LanesModel(QAbstractTableModel):
             self.get_lane_model_index(index), role
         )
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return f"Step {section}"
@@ -111,7 +118,9 @@ class LanesModel(QAbstractTableModel):
         self.endRemoveRows()
         return True
 
-    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
+    def removeRows(
+        self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    ) -> bool:
         self.beginRemoveRows(parent, row, row + count - 1)
         for _ in range(count):
             self._lanes.pop(row)
@@ -159,4 +168,31 @@ class LanesModel(QAbstractTableModel):
     def map_name_to_row(self, name: str) -> int:
         return next(
             index for index, lane in enumerate(self._lanes) if lane.name == name
+        )
+
+    def create_editor(
+        self, parent: QWidget, index: QModelIndex
+    ) -> QWidget | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].create_editor(
+            parent, self.get_lane_model_index(index)
+        )
+
+    def set_editor_data(
+        self, editor: QWidget, index: QModelIndex
+    ) -> None | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].set_editor_data(
+            editor, self.get_lane_model_index(index)
+        )
+
+    def set_data_from_editor(
+        self, editor: QWidget, index: QModelIndex
+    ) -> None | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        return self._lane_models[index.row()].set_data_from_editor(
+            editor, self.get_lane_model_index(index)
         )

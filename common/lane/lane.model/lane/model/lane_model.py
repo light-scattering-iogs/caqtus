@@ -1,10 +1,16 @@
+from types import NotImplementedType
+from typing import TypeVar, Generic
+
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
+from PyQt6.QtWidgets import QWidget
 
 from experiment.configuration import ExperimentConfig
 from lane.configuration import Lane
 
+EditorType = TypeVar("EditorType", bound=QWidget)
 
-class LaneModel(QAbstractListModel):
+
+class LaneModel(QAbstractListModel, Generic[EditorType]):
     def __init__(
         self, lane: Lane, experiment_config: ExperimentConfig, *args, **kwargs
     ):
@@ -74,3 +80,18 @@ class LaneModel(QAbstractListModel):
         self.beginResetModel()
         self.lane.break_(start, stop)
         self.endResetModel()
+
+    def create_editor(
+        self, parent: QWidget, index: QModelIndex
+    ) -> EditorType | NotImplementedType:
+        return NotImplemented
+
+    def set_editor_data(
+        self, editor: EditorType, index: QModelIndex
+    ) -> None | NotImplementedType:
+        return NotImplemented
+
+    def set_data_from_editor(
+        self, editor: EditorType, index: QModelIndex
+    ) -> None | NotImplementedType:
+        return NotImplemented

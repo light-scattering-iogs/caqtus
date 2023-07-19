@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from types import NotImplementedType
 from typing import Type, Iterable, Optional
 
 from PyQt6.QtCore import (
@@ -9,7 +10,7 @@ from PyQt6.QtCore import (
     QAbstractItemModel,
 )
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QMenu, QWidget
 
 from analog_lane.configuration import AnalogLane
 from camera_lane.configuration import CameraLane
@@ -424,3 +425,33 @@ class SwimLaneModel(QAbstractItemModel):
             result = self._lanes_model.break_up(mapped_indexes)
             self.save_config(self.shot_config, session)
             return result
+
+    def create_editor(
+        self, parent: QWidget, index: QModelIndex
+    ) -> QWidget | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lanes_model:
+            return self._lanes_model.create_editor(parent, mapped_index)
+        return NotImplemented
+
+    def set_editor_data(
+        self, editor: QWidget, index: QModelIndex
+    ) -> None | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lanes_model:
+            return self._lanes_model.set_editor_data(editor, mapped_index)
+        return NotImplemented
+
+    def set_data_from_editor(
+        self, editor: QWidget, index: QModelIndex
+    ) -> None | NotImplementedType:
+        if not index.isValid():
+            return NotImplemented
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lanes_model:
+            return self._lanes_model.set_data_from_editor(editor, mapped_index)
+        return NotImplemented
