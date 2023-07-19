@@ -373,7 +373,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.ui_settings.setValue(f"{__name__}/state", state)
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
-        self.logs_listener.stop()
+        # The following line waits to have all logs before closing, but for some reason, it blocks forever.
+        # It is commented for now, but can cause some logs to be lost.
+        # self.logs_listener.stop()
         self.model.on_destroy()
         super().closeEvent(event)
 

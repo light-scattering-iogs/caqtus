@@ -24,6 +24,7 @@ validate-arguments = {path = "../../validate_arguments", develop = true}
 atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
 sequencer-configuration = {path = "../../../devices/sequencer/sequencer.configuration", develop = true}
 device-server-name = {path = "../../../devices/remote_device/device_server/device_server.name", develop = true}
+tweezer-arranger-configuration = {path = "../../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

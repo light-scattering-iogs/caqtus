@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "tweezer-arranger-configuration-editor"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "tweezer_arranger"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyqt6 = "^6.5.1"
+device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
+tweezer-arranger-configuration = {path = "../tweezer_arranger.configuration", develop = true}
+matplotlib = "^3.7.2"
+mplcursors = "^0.5.2"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+black = "^23.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
