@@ -215,7 +215,7 @@ class SwimLaneModel(QAbstractItemModel):
                     )
         return QModelIndex()
 
-    def data(self, index: QModelIndex, role: int = ...):
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         mapped_index = self.map_to_child_index(index)
