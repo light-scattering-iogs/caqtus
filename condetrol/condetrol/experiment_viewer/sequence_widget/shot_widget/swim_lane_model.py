@@ -79,7 +79,20 @@ class SwimLaneModel(QAbstractItemModel):
     def sequence(self):
         return self._sequence
 
-    def save_config(
+    def save(self) -> bool:
+        """Save the shot config edited by the model to persistent storage.
+
+        Returns:
+            True if the sequence is editable and the shot config was saved. False otherwise.
+        """
+        with self._session.activate():
+            if self.get_sequence_state(self._session).is_editable():
+                self._save_config(self.shot_config, self._session)
+                return True
+            else:
+                return False
+
+    def _save_config(
         self,
         shot_config: ShotConfiguration,
         session: ExperimentSession,
@@ -100,7 +113,7 @@ class SwimLaneModel(QAbstractItemModel):
         self._lanes_model = LanesModel(self.shot_config.lanes, self._experiment_config)
 
         with self._session as session:
-            self.save_config(shot_config, session)
+            self._save_config(shot_config, session)
         self.endResetModel()
 
     def get_sequence_state(self, session) -> State:
@@ -232,7 +245,9 @@ class SwimLaneModel(QAbstractItemModel):
             flags &= ~Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
+    def setData(
+        self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole
+    ) -> bool:
         edit = False
         with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
@@ -242,7 +257,7 @@ class SwimLaneModel(QAbstractItemModel):
                 else:
                     edit = super().setData(index, value, role)
                 if edit:
-                    self.save_config(self.shot_config, session)
+                    self._save_config(self.shot_config, session)
                     self.dataChanged.emit(index, index, [role])
         return edit
 
@@ -260,7 +275,7 @@ class SwimLaneModel(QAbstractItemModel):
             self._lanes_model.insertColumn(column)
             self.endInsertColumns()
             logger.debug(self.shot_config.step_names)
-            self.save_config(self.shot_config, session)
+            self._save_config(self.shot_config, session)
             return True
 
     def removeColumn(self, column: int, parent: QModelIndex = ...) -> bool:
@@ -276,7 +291,7 @@ class SwimLaneModel(QAbstractItemModel):
             self._step_durations_model.removeRow(column)
             self._lanes_model.removeColumn(column)
             self.endRemoveColumns()
-            self.save_config(self.shot_config, session)
+            self._save_config(self.shot_config, session)
             return True
 
     def get_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
@@ -309,7 +324,9 @@ class SwimLaneModel(QAbstractItemModel):
                 self.add_lane_create_action(insert_digital, DigitalLane, QModelIndex())
                 self.add_lane_create_action(insert_analog, AnalogLane, QModelIndex())
                 self.add_lane_create_action(insert_camera, CameraLane, QModelIndex())
-                self.add_lane_create_action(insert_arranger, TweezerArrangerLane, QModelIndex())
+                self.add_lane_create_action(
+                    insert_arranger, TweezerArrangerLane, QModelIndex()
+                )
 
                 return insert_menu
 
@@ -344,7 +361,7 @@ class SwimLaneModel(QAbstractItemModel):
                 )
                 self._lane_groups_model.insert_lane(QModelIndex(), 0, name)
                 self.endInsertRows()
-                self.save_config(self.shot_config, session)
+                self._save_config(self.shot_config, session)
             else:
                 raise NotImplementedError()
 
@@ -357,7 +374,7 @@ class SwimLaneModel(QAbstractItemModel):
             )
             return remove
 
-    def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
         with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return False
@@ -374,7 +391,7 @@ class SwimLaneModel(QAbstractItemModel):
             self._lane_groups_model.removeRow(mapped_child.row(), mapped_child.parent())
             self._lanes_model.removeRow(self._lanes_model.map_name_to_row(lane_name))
             self.endRemoveRows()
-            self.save_config(self.shot_config, session)
+            self._save_config(self.shot_config, session)
             return True
 
     def span(self, index: QModelIndex) -> QSize:
@@ -413,7 +430,7 @@ class SwimLaneModel(QAbstractItemModel):
                 else:
                     return False
             result = self._lanes_model.merge(mapped_indexes)
-            self.save_config(self.shot_config, session)
+            self._save_config(self.shot_config, session)
             return result
 
     def break_up(self, indexes: Iterable[QModelIndex]) -> bool:
@@ -430,7 +447,7 @@ class SwimLaneModel(QAbstractItemModel):
                 else:
                     return False
             result = self._lanes_model.break_up(mapped_indexes)
-            self.save_config(self.shot_config, session)
+            self._save_config(self.shot_config, session)
             return result
 
     def create_editor(

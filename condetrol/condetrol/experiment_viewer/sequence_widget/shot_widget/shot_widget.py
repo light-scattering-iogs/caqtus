@@ -308,4 +308,5 @@ class SwimLaneView(QTreeView):
         # noinspection PyUnresolvedReferences
         break_up_action.triggered.connect(lambda: model.break_up(selected_indices))
 
-        menu.exec(self.mapToGlobal(position))
+        if menu.exec(self.mapToGlobal(position)):
+            model.save()

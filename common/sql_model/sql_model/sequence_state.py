@@ -13,6 +13,11 @@ class State(Enum):
     def is_transition_allowed(cls, old_state: "State", new_state: "State") -> bool:
         return new_state in _ALLOWED_TRANSITIONS[old_state]
 
+    def is_editable(self) -> bool:
+        """Indicate if a sequence in this state can be edited."""
+
+        return self in {State.DRAFT}
+
 
 _ALLOWED_TRANSITIONS = {
     State.DRAFT: {State.PREPARING},
