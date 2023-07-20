@@ -280,7 +280,7 @@ class SwimLaneModel(QAbstractItemModel):
             return True
 
     def get_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
-        result = []
+        result: list[QAction | QMenu] = []
         with self._session as session:
             if self.get_sequence_state(session) != State.DRAFT:
                 return result
@@ -288,6 +288,10 @@ class SwimLaneModel(QAbstractItemModel):
             result.append(insert)
         if (remove := self.get_remove_lane_or_group_action(index)) is not None:
             result.append(remove)
+
+        mapped_index = self.map_to_child_index(index)
+        if mapped_index.model() is self._lanes_model:
+            result.extend(self._lanes_model.get_cell_context_actions(mapped_index))
         return result
 
     def get_insert_lane_action(self, index: QModelIndex) -> Optional[QMenu]:
