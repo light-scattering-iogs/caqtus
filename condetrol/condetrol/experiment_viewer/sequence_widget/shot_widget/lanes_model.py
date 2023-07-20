@@ -9,7 +9,8 @@ from PyQt6.QtCore import (
     Qt,
     QSize,
 )
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QWidget, QMenu
 
 from experiment.configuration import ExperimentConfig
 from lane.configuration import Lane
@@ -82,7 +83,7 @@ class LanesModel(QAbstractTableModel):
                 0, Qt.Orientation.Horizontal, role
             )
 
-    def setData(self, index: QModelIndex, value, role: int = ...) -> bool:
+    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         return self._lane_models[index.row()].setData(
             self.get_lane_model_index(index), value, role
         )
@@ -195,4 +196,11 @@ class LanesModel(QAbstractTableModel):
             return NotImplemented
         return self._lane_models[index.row()].get_editor_data(
             editor, self.get_lane_model_index(index)
+        )
+
+    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
+        if not index.isValid():
+            return []
+        return self._lane_models[index.row()].get_cell_context_actions(
+            self.get_lane_model_index(index)
         )

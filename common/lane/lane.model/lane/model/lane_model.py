@@ -1,8 +1,9 @@
 from types import NotImplementedType
-from typing import TypeVar, Generic, Any
+from typing import TypeVar, Generic, Any, Optional
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt, QSize
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QWidget, QMenu
 
 from experiment.configuration import ExperimentConfig
 from lane.configuration import Lane
@@ -46,7 +47,7 @@ class LaneModel(QAbstractListModel, Generic[LaneType]):
         section: int,
         orientation: Qt.Orientation,
         role: int = Qt.ItemDataRole.DisplayRole,
-    ) -> str:
+    ) -> Optional[str]:
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 return self.lane.name
@@ -96,3 +97,6 @@ class LaneModel(QAbstractListModel, Generic[LaneType]):
         self, editor: QWidget, index: QModelIndex
     ) -> Any | NotImplementedType:
         return NotImplemented
+
+    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
+        return []

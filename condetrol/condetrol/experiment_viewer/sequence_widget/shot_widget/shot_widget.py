@@ -285,16 +285,15 @@ class SwimLaneView(QTreeView):
         index = self.indexAt(position)
         # noinspection PyTypeChecker
         model: SwimLaneModel = self.model()
-        actions = model.get_context_actions(index)
-        if actions:
-            for action in actions:
+        cell_actions = model.get_context_actions(index)
+        if cell_actions:
+            for action in cell_actions:
                 if isinstance(action, QMenu):
                     menu.addMenu(action)
                 elif isinstance(action, QAction):
                     menu.addAction(action)
 
         selected_indices = self.selectionModel().selectedIndexes()
-        logger.debug(len(selected_indices))
         if len(selected_indices) == 1:
             selected_indices = [
                 index,
@@ -309,4 +308,5 @@ class SwimLaneView(QTreeView):
         # noinspection PyUnresolvedReferences
         break_up_action.triggered.connect(lambda: model.break_up(selected_indices))
 
-        menu.exec(self.mapToGlobal(position))
+        if menu.exec(self.mapToGlobal(position)):
+            model.save()
