@@ -1,5 +1,4 @@
 import logging
-import time
 from collections.abc import Sequence
 from enum import IntFlag
 from functools import singledispatchmethod
@@ -7,7 +6,6 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from device.runtime import RuntimeDevice
 from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
@@ -16,6 +14,7 @@ from sequencer.instructions import (
     Repeat,
     Concatenate,
 )
+from sequencer.runtime import Sequencer
 from . import spinapi
 from .spinapi import ns
 
@@ -30,7 +29,7 @@ class SpincoreStatus(IntFlag):
     Waiting = 2**3
 
 
-class SpincorePulseBlaster(RuntimeDevice):
+class SpincorePulseBlaster(Sequencer):
     """
 
     Fields:
@@ -181,7 +180,7 @@ class SpincorePulseBlaster(RuntimeDevice):
             ]
         )
         logger.debug(f"for {rep=}")
-        if rep > 2 ** 20 - 1:
+        if rep > 2**20 - 1:
             raise ValueError(
                 f"Can't program a for loop with more than {2**20 - 1} repetitions."
             )
@@ -239,12 +238,16 @@ class SpincorePulseBlaster(RuntimeDevice):
         return flags
 
     @log_exception(logger)
-    def run(self):
+    def start_sequence(self) -> None:
+        super().start_sequence()
         if spinapi.pb_reset() != 0:
             raise RuntimeError(f"Can't reset the board. {spinapi.pb_get_error()}")
 
         if spinapi.pb_start() != 0:
             raise RuntimeError(f"Can't start the sequence. {spinapi.pb_get_error()}")
 
-        while spinapi.pb_read_status() & SpincoreStatus.Running:
-            time.sleep(0.01)
+    @log_exception(logger)
+    def has_sequence_finished(self) -> bool:
+        super().has_sequence_finished()
+        is_running = spinapi.pb_read_status() & SpincoreStatus.Running
+        return not is_running
