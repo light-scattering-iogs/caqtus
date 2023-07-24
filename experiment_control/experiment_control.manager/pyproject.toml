@@ -13,6 +13,10 @@ experiment-session = {path = "../../common/experiment/experiment.session", devel
 experiment-control-sequence-runner = {path = "../experiment_control.sequence_runner", develop = true}
 
 
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -106,6 +106,7 @@ class NI6738AnalogCard(Sequencer, extra=Extra.allow):
         self._configure_timing(number_samples)
 
         self._write_values(values)
+        self._set_sequence_programmed()
 
     def _write_values(self, values: numpy.ndarray) -> None:
         if (

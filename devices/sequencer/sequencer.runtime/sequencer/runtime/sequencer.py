@@ -80,6 +80,24 @@ class Sequencer(RuntimeDevice, ABC):
         while not self.has_sequence_finished():
             pass
 
+    def get_trigger_priority(self) -> int:
+        """Get the priority of the trigger.
+
+        Returns:
+            The priority of the trigger.
+        """
+
+        return self.trigger.priority
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "start_sequence",
+            "has_sequence_finished",
+            "wait_sequence_finished",
+            "get_trigger_priority",
+        )
+
 
 class SequenceNotStartedError(RuntimeError):
     """Raised when the sequencer is asked to do something that requires it to have been started, but it has not been

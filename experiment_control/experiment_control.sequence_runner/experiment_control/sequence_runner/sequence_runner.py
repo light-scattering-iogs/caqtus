@@ -24,8 +24,6 @@ from device.runtime import RuntimeDevice
 from duration_timer import DurationTimer
 from experiment.configuration import (
     CameraConfiguration,
-    NI6738SequencerConfiguration,
-    SpincoreSequencerConfiguration,
     ExperimentConfig,
 )
 from experiment.session import ExperimentSessionMaker
@@ -48,6 +46,8 @@ from sequence.configuration import (
     ShotConfiguration,
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
+from sequencer.configuration import SequencerConfiguration
+from sequencer.runtime import Sequencer
 from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
@@ -62,9 +62,7 @@ from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
 
 if TYPE_CHECKING:
-    from ni6738_analog_card.runtime import NI6738AnalogCard
     from camera.runtime import Camera
-    from spincore_sequencer.runtime import SpincorePulseBlaster
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -558,18 +556,16 @@ class SequenceRunnerThread(Thread):
             await asyncio.sleep(0.5)
             return
 
-        # These devices wait for a trigger provided by the spincore sequencer, so we ensure that they are waiting first.
-        for ni6738_card in self.get_ni6738_cards().values():
-            ni6738_card.run()
+        sequencers = self.get_sequencers_in_use()
+
+        for sequencer in sequencers.values():
+            sequencer.start_sequence()
 
         async with asyncio.TaskGroup() as run_group:
             for camera in self.get_cameras().values():
                 run_group.create_task(asyncio.to_thread(camera.acquire_all_pictures))
-            for spincore_sequencer in self.get_spincore_sequencers().values():
-                run_group.create_task(asyncio.to_thread(spincore_sequencer.run))
-
-        for ni6738_card in self.get_ni6738_cards().values():
-            ni6738_card.stop()
+            for sequencer in sequencers.values():
+                run_group.create_task(wait_on_sequencer(sequencer))
 
     def extract_data(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         if self._experiment_config.mock_experiment:
@@ -604,25 +600,26 @@ class SequenceRunnerThread(Thread):
                 experiment_session=session,
             )
 
-    def get_ni6738_cards(self) -> dict[str, "NI6738AnalogCard"]:
-        return {
-            device_name: device  # type: ignore
-            for device_name, device in self._devices.items()
-            if isinstance(
-                self._experiment_config.get_device_config(device_name),
-                NI6738SequencerConfiguration,
-            )
-        }
+    def get_sequencers_in_use(self) -> dict[DeviceName, Sequencer]:
+        """Return the sequencer devices used in the experiment.
 
-    def get_spincore_sequencers(self) -> dict[str, "SpincorePulseBlaster"]:
-        return {
-            device_name: device  # type: ignore
+        The sequencers are sorted by trigger priority, with the highest priority first.
+        """
+
+        # Here we can't test the type of the runtime device itself because it is actually a proxy and not an instance of
+        # the actual device class, that's why we need to test the type of the configuration instead.
+        sequencers: dict[DeviceName, Sequencer] = {
+            device_name: device
             for device_name, device in self._devices.items()
             if isinstance(
                 self._experiment_config.get_device_config(device_name),
-                SpincoreSequencerConfiguration,
+                SequencerConfiguration,
             )
         }
+        sorted_by_trigger_priority = sorted(
+            sequencers.items(), key=lambda x: x[1].get_trigger_priority(), reverse=True
+        )
+        return dict(sorted_by_trigger_priority)
 
     def get_cameras(self) -> dict[DeviceName, "Camera"]:
         return {
@@ -725,6 +722,16 @@ def strip_unit_from_variable_ranges(
     return raw_variable_ranges
 
 
+def _get_sequencers(
+    devices: Mapping[DeviceName, RuntimeDevice]
+) -> dict[DeviceName, Sequencer]:
+    return {
+        device_name: device
+        for device_name, device in devices.items()
+        if isinstance(device, Sequencer)
+    }
+
+
 _T = TypeVar("_T")
 
 
@@ -734,6 +741,12 @@ def async_run_in_executor(
     """Schedula a function to run in an executor and return an awaitable for its result."""
 
     return asyncio.get_running_loop().run_in_executor(executor, func, *args)
+
+
+async def wait_on_sequencer(sequencer: Sequencer):
+    """Wait for a sequencer to finish."""
+    while not sequencer.has_sequence_finished():
+        await asyncio.sleep(10e-3)
 
 
 # This exception is used to interrupt the sequence and inherit from BaseException to prevent it from being caught

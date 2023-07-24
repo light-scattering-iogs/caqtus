@@ -99,6 +99,7 @@ class SpincorePulseBlaster(Sequencer):
                 "An error occurred when finishing programming the sequence."
                 f"{spinapi.pb_get_error()}"
             )
+        self._set_sequence_programmed()
 
     @singledispatchmethod
     def _program_instruction(self, instruction: SequencerInstruction) -> int:
