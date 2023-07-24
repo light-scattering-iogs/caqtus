@@ -13,8 +13,6 @@ pydantic = "^1.0"
 
 device-runtime = { path = "../../device/device.runtime", develop = true }
 tweezer-arranger-configuration = { path = "../tweezer_arranger.configuration", develop = true }
-spectum-awg-m4i66xx-x8-runtime = { path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true }
-spectum-awg-m4i66xx-x8-configuration = { path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.configuration", develop = true }
 
 
 [build-system]

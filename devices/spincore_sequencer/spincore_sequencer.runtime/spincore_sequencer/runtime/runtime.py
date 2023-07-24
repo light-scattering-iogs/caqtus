@@ -42,7 +42,7 @@ class SpincorePulseBlaster(RuntimeDevice):
     clock_cycle: ClassVar[int] = 10
 
     board_number: int = 0
-    spincore_lib_debug: bool = True
+    spincore_lib_debug: bool = False
     time_step: int = Field(ge=5 * clock_cycle)
 
     @classmethod

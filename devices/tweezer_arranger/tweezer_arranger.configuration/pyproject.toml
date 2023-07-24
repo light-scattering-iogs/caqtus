@@ -8,10 +8,11 @@ packages = [{include = "tweezer_arranger"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-settings-model = {path = "../../../common/settings_model", develop = true}
+
 pydantic = "^1.0"
+
+settings-model = {path = "../../../common/settings_model", develop = true}
 device-config = {path = "../../device/device.configuration", develop = true}
-device-name = {path = "../../device/device.name", develop = true}
 configuration-holder = {path = "../../../common/configuration_holder", develop = true}
 
 

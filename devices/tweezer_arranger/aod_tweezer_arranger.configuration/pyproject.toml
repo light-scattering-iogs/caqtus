@@ -8,8 +8,11 @@ packages = [{ include = "aod_tweezer_arranger" }]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
+
 settings-model = { path = "../../../common/settings_model", develop = true }
 tweezer-arranger-configuration = { path = "../tweezer_arranger.configuration", develop = true }
+device-name = {path = "../../device/device.name", develop = true}
+device-config = {path = "../../device/device.configuration", develop = true}
 
 
 [build-system]
