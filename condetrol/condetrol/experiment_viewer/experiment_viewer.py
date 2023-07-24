@@ -1,6 +1,5 @@
 import logging
 import time
-from copy import deepcopy
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
@@ -106,11 +105,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
         self._experiment_session_maker = session_maker
+
         with self._experiment_session_maker() as session:
-            current_experiment_config = session.get_current_experiment_config()
-            if current_experiment_config is None:
-                raise ValueError("No experiment config was defined")
-            self._experiment_config = current_experiment_config
+            self._experiment_config = session.get_current_experiment_config()
+            self._experiment_config_name = session.get_current_experiment_config_name()
 
         self.setupUi(self)
 
@@ -172,12 +170,30 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
                 Sequence(path),
-                deepcopy(self._experiment_config),
+                self.get_current_experiment_config(),
                 self._experiment_session_maker,
             )
             self.dock_widget.addDockWidget(
                 Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
             )
+
+    def get_current_experiment_config(self) -> ExperimentConfig:
+        with self._experiment_session_maker() as session:
+            if (
+                self._experiment_config_name
+                == session.get_current_experiment_config_name()
+            ):
+                return self._experiment_config
+            else:
+                experiment_config = session.get_current_experiment_config()
+                if experiment_config is None:
+                    raise ValueError("No experiment config was defined")
+
+                self._experiment_config_name = (
+                    session.get_current_experiment_config_name()
+                )
+                self._experiment_config = experiment_config
+            return self._experiment_config
 
     def show_context_menu(self, position):
         index = self.sequences_view.indexAt(position)
@@ -335,16 +351,17 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
 
-        editor = ConfigEditor(self._experiment_config)
+        current_config = self.get_current_experiment_config()
+
+        editor = ConfigEditor(current_config)
         editor.exec()
         new_experiment_config = editor.get_config()
-        if self._experiment_config != new_experiment_config:
+        if current_config != new_experiment_config:
             with self._experiment_session_maker() as session:
                 new_name = session.add_experiment_config(new_experiment_config)
                 session.set_current_experiment_config(new_name)
-            self._experiment_config = new_experiment_config
             logger.info(f"Experiment config updated to {new_name}")
-        self.update_experiment_config(self._experiment_config)
+        self.update_experiment_config(new_experiment_config)
 
     def update_experiment_config(self, new_config: ExperimentConfig):
         for sequence_widget in self.findChildren(SequenceWidget):
