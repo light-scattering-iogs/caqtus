@@ -16,16 +16,20 @@ device-config = {path = "../../../devices/device/device.configuration", develop 
 ni6738-analog-card-configuration = {path = "../../../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
 sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
 settings_model = { path = "../../settings_model/", develop = true }
-spincore-sequencer-configuration = {path = "../../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true}
-elliptec-ell14-configuration = {path = "../../../devices/elliptec_ell14/elliptec_ell14.configuration", develop = true}
-imaging-source-configuration = {path = "../../../devices/cameras/imaging_source/imaging_source.configuration", develop = true}
-orca-quest-configuration = {path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true}
-validate-arguments = {path = "../../validate_arguments", develop = true}
-atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
-sequencer-configuration = {path = "../../../devices/sequencer/sequencer.configuration", develop = true}
-device-server-name = {path = "../../../devices/remote_device/device_server/device_server.name", develop = true}
-tweezer-arranger-configuration = {path = "../../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
-lane-configuration = {path = "../../lane/lane.configuration", develop = true}
+spincore-sequencer-configuration = { path = "../../../devices/spincore_sequencer/spincore_sequencer.configuration", develop = true }
+elliptec-ell14-configuration = { path = "../../../devices/elliptec_ell14/elliptec_ell14.configuration", develop = true }
+imaging-source-configuration = { path = "../../../devices/cameras/imaging_source/imaging_source.configuration", develop = true }
+orca-quest-configuration = { path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true }
+validate-arguments = { path = "../../validate_arguments", develop = true }
+atom-detector-configuration = { path = "../../../devices/atom_detector/atom_detector.configuration", develop = true }
+sequencer-configuration = { path = "../../../devices/sequencer/sequencer.configuration", develop = true }
+device-server-name = { path = "../../../devices/remote_device/device_server/device_server.name", develop = true }
+tweezer-arranger-configuration = { path = "../../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true }
+lane-configuration = { path = "../../lane/lane.configuration", develop = true }
+camera-lane-configuration = { path = "../../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true }
+analog-lane-configuration = { path = "../../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true }
+digital-lane-configuration = { path = "../../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true }
+tweezer-arranger-lane-configuration = { path = "../../../devices/tweezer_arranger/tweezer_arranger_lane/tweezer_arranger_lane.configuration", develop = true }
 
 [build-system]
 requires = ["poetry-core"]
