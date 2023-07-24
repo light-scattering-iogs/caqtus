@@ -5,11 +5,8 @@ from itertools import product, chain
 from typing import Iterable
 
 import numpy as np
-
-# from numba import njit, float64, prange
 from pydantic import validator, Field, BaseModel
 from scipy.optimize import basinhopping
-from trap_signal_generator.configuration import StaticTrapConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -48,14 +45,6 @@ class StaticTrapGenerator(BaseModel):
                 "Number of phases must be the same than the number of frequencies"
             )
         return tuple(phases)
-
-    def compute_signal(self) -> np.ndarray["number_samples", np.float32]:
-        return compute_signal(
-            times=np.array(self.times, dtype=np.float64),
-            amplitudes=np.array(self.amplitudes, dtype=np.float64),
-            frequencies=np.array(self.frequencies, dtype=np.float64),
-            phases=np.array(self.phases, dtype=np.float64),
-        )
 
     @property
     def times(self):
@@ -112,57 +101,9 @@ class StaticTrapGenerator(BaseModel):
         beats = beats[beats > self.segment_frequency / 2]
         return np.min(beats)
 
-    # noinspection PyTypeChecker
-    def get_configuration(self) -> StaticTrapConfiguration:
-        return StaticTrapConfiguration(
-            frequencies=np.array(self.frequencies).tolist(),
-            amplitudes=np.array(self.amplitudes).tolist(),
-            phases=np.array(self.phases).tolist(),
-            sampling_rate=self.sampling_rate,
-            number_samples=self.number_samples,
-        )
-
-    @classmethod
-    def from_configuration(cls, config: StaticTrapConfiguration):
-        return cls(
-            frequencies=config.frequencies,
-            amplitudes=config.amplitudes,
-            phases=config.phases,
-            sampling_rate=config.sampling_rate,
-            number_samples=config.number_samples,
-        )
-
     @property
     def number_tones(self):
         return len(self.frequencies)
-
-
-def compute_signal(times, amplitudes, frequencies, phases):
-    return sum(
-        amplitude * np.sin(2 * np.pi * times * frequency + phase)
-        for amplitude, frequency, phase in zip(
-            amplitudes, frequencies, phases, strict=True
-        )
-    )
-
-
-# @njit(parallel=True)
-# def compute_signal_numba(
-#     times: float64[:],
-#     amplitudes: float64[:],
-#     frequencies: float64[:],
-#     phases: float64[:],
-# ) -> float64[:]:
-#     result = np.zeros_like(times)
-#     t = times
-#     number_tones = len(amplitudes)
-#     for tone in prange(number_tones):
-#         amplitude = amplitudes[tone]
-#         frequency = frequencies[tone]
-#         phase = phases[tone]
-#
-#         result += amplitude * np.sin(2 * np.pi * t * frequency + phase)
-#     return result
 
 
 def compute_optimized_phases(

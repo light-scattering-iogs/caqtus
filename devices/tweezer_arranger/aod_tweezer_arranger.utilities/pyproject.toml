@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "aod-tweezer-arranger-utilities"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{ include = "aod_tweezer_arranger" }]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.12"
+numpy = "^1.25.1"
+aod-tweezer-arranger-configuration = { path = "../aod_tweezer_arranger.configuration", develop = true }
+scipy = "^1.11.1"
+pydantic = "^1.0"
+experiment-session = { path = "../../../common/experiment/experiment.session", develop = true }
+device-name = { path = "../../device/device.name", develop = true }
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+mypy = "^1.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

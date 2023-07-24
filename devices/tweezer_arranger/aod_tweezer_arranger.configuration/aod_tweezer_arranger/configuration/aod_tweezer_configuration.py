@@ -37,13 +37,13 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
     def validate_frequencies_x(cls, frequencies_x):
         if not all(f >= 0 for f in frequencies_x):
             raise ValueError("Frequencies must be positive.")
-        return frequencies_x
+        return tuple(float(f) for f in frequencies_x)
 
     @validator("frequencies_y")
     def validate_frequencies_y(cls, frequencies_y):
         if not all(f >= 0 for f in frequencies_y):
             raise ValueError("Frequencies must be positive.")
-        return frequencies_y
+        return tuple(float(f) for f in frequencies_y)
 
     @validator("phases_x")
     def validate_phases_x(cls, phases_x, values):
@@ -51,7 +51,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             raise ValueError(
                 "The number of phases must be equal to the number of frequencies."
             )
-        return phases_x
+        return tuple(float(p) for p in phases_x)
 
     @validator("phases_y")
     def validate_phases_y(cls, phases_y, values):
@@ -59,7 +59,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             raise ValueError(
                 "The number of phases must be equal to the number of frequencies."
             )
-        return phases_y
+        return tuple(float(p) for p in phases_y)
 
     @validator("amplitudes_x")
     def validate_amplitude_x(cls, amplitude_x, values):
@@ -67,7 +67,7 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             raise ValueError(
                 "The number of amplitudes must be equal to the number of frequencies."
             )
-        return amplitude_x
+        return tuple(float(a) for a in amplitude_x)
 
     @validator("amplitudes_y")
     def validate_amplitude_y(cls, amplitude_y, values):
@@ -75,7 +75,31 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
             raise ValueError(
                 "The number of amplitudes must be equal to the number of frequencies."
             )
-        return amplitude_y
+        return tuple(float(a) for a in amplitude_y)
+
+    @validator("scale_x")
+    def validate_scale_x(cls, scale_x):
+        if not scale_x >= 0:
+            raise ValueError("The scale must be positive.")
+        return float(scale_x)
+
+    @validator("scale_y")
+    def validate_scale_y(cls, scale_y):
+        if not scale_y >= 0:
+            raise ValueError("The scale must be positive.")
+        return float(scale_y)
+
+    @validator("sampling_rate")
+    def validate_sampling_rate(cls, sampling_rate):
+        if not sampling_rate >= 0:
+            raise ValueError("The sampling rate must be positive.")
+        return float(sampling_rate)
+
+    @validator("number_samples")
+    def validate_number_samples(cls, number_samples):
+        if not number_samples >= 1:
+            raise ValueError("The number of samples must be greater than 1.")
+        return int(number_samples)
 
     @property
     def number_tweezers(self) -> int:
