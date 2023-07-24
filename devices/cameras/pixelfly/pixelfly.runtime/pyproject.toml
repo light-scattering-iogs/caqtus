@@ -1,14 +1,15 @@
 [tool.poetry]
-name = "pixelfly"
+name = "pixelfly-runtime"
 version = "0.1.0"
 description = ""
 authors = ["Damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
+packages = [{ include = "pixelfly" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numpy = "^1.23"
-device-runtime = {path = "../../device/device.runtime", develop = true}
+numpy = "^1.25.1"
+device-runtime = { path = "../../../device/device.runtime", develop = true }
 
 
 [build-system]

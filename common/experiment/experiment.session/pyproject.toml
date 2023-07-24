@@ -7,13 +7,14 @@ readme = "README.md"
 packages = [{include = "experiment"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.11, <3.12"
 
 asyncpg = "^0.27.0"
 platformdirs = "^3.2.0"
 sqlalchemy = {extras = ["asyncio"], version = "^2.0.4"}
 
-sql_model = {path = "../../sql_model", develop = true}
+sql_model = { path = "../../sql_model", develop = true }
+experiment-configuration = { path = "../experiment.configuration", develop = true }
 
 
 [build-system]

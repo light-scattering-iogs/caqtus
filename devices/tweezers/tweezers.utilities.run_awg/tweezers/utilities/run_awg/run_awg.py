@@ -1,4 +1,5 @@
 import logging
+import time
 
 import numpy as np
 
@@ -30,29 +31,23 @@ static_trap_generator_x = StaticTrapGenerator.from_configuration(config_x)
 static_trap_generator_y = StaticTrapGenerator.from_configuration(config_y)
 
 with SpectrumAWGM4i66xxX8(
-    name="AWG",
-    board_id="/dev/spcm0",
-    channel_settings=(
-        ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-4),
-        ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-4),
-    ),
-    segment_names=frozenset(["segment_0", "segment_1"]),
-    steps={
-        "step_0": StepConfiguration(
-            segment="segment_0",
-            next_step="step_0",
-            repetition=1,
-            change_condition=StepChangeCondition.ALWAYS,
+        name="AWG",
+        board_id="/dev/spcm0",
+        channel_settings=(
+                ChannelSettings(name="X", enabled=True, amplitude=scale_x, maximum_power=-4),
+                ChannelSettings(name="Y", enabled=True, amplitude=scale_y, maximum_power=-4),
         ),
-        "step_1": StepConfiguration(
-            segment="segment_1",
-            next_step="step_0",
-            repetition=100,
-            change_condition=StepChangeCondition.ALWAYS,
-        ),
-    },
-    first_step="step_0",
-    sampling_rate=static_trap_generator_x.sampling_rate,
+        segment_names=frozenset(["segment_0"]),
+        steps={
+            "step_0": StepConfiguration(
+                segment="segment_0",
+                next_step="step_0",
+                repetition=1,
+                change_condition=StepChangeCondition.ALWAYS,
+            ),
+        },
+        first_step="step_0",
+        sampling_rate=static_trap_generator_x.sampling_rate,
 ) as awg:
     data_0 = np.int16(
         (
@@ -60,17 +55,10 @@ with SpectrumAWGM4i66xxX8(
             static_trap_generator_y.compute_signal(),
         )
     )
-    static_trap_generator_y.frequencies = (
-        np.array(static_trap_generator_y.frequencies) + 4e6
-    )
-    data_1 = np.int16(
-        (
-            static_trap_generator_x.compute_signal(),
-            static_trap_generator_y.compute_signal(),
-        )
-    )
-
-    awg.update_parameters(segment_data={"segment_0": data_0, "segment_1": data_1})
+    t0 = time.perf_counter()
+    awg.update_parameters(segment_data={"segment_0": data_0})
+    t1 = time.perf_counter()
+    print(f"Time to update parameters: {(t1 - t0) * 1e3} ms")
     awg.run()
     input()
     awg.stop()
