@@ -1,6 +1,5 @@
 import logging
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from aod_tweezer_arranger.configuration import (
@@ -100,7 +99,6 @@ def write_config_to_awg(
         dtype=np.int16,
     )
     awg.update_parameters(segment_data={SegmentName("segment_0"): data})
-    plt.plot(data[0])
 
 
 if __name__ == "__main__":
