@@ -9,7 +9,7 @@ import pycuda.autoinit
 import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
-from static_traps_cuda import get_static_traps_cuda_program
+from .static_traps_cuda import get_static_traps_cuda_program
 
 NumberTones = NewType("NumberTones", int)
 NumberSamples = NewType("NumberSamples", int)
