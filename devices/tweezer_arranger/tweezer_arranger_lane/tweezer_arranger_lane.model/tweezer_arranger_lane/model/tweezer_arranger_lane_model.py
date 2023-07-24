@@ -2,7 +2,7 @@ from types import NotImplementedType
 from typing import Any
 
 from PyQt6.QtCore import QModelIndex, Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QWidget, QComboBox, QMenu
 
 from lane.model import LaneModel
@@ -24,6 +24,13 @@ class TweezerArrangerLaneModel(LaneModel[TweezerArrangerLane]):
             return self.lane[index.row()]
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignCenter
+        elif role == Qt.ItemDataRole.DecorationRole:
+            if isinstance(self.lane[index.row()], HoldTweezers):
+                return QIcon("icons:static_tweezers.png")
+            elif isinstance(self.lane[index.row()], MoveTweezers):
+                return QIcon("icons:moving_tweezers.png")
+            elif isinstance(self.lane[index.row()], RearrangeTweezers):
+                return QIcon("icons:rearrange_tweezers.png")
 
     def setData(
         self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole
