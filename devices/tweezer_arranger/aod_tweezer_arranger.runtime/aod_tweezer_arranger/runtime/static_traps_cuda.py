@@ -14,16 +14,15 @@ def get_static_traps_cuda_program(max_number_tones: int) -> str:
     extern "C" __global__
     void compute_static_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step)
     {{
-     float pi = 3.141592653589793;
+     float tau = 6.283185307179586;  //tau = 2*pi
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float result = 0.0;
-     float t = tid * time_step;
+     float x = time_step * tau * tid;
      if (tid < number_samples){{
        for(unsigned int i=0; i < number_tones; i++){{
-            // We use __sinf here for speed compared to sinf, it is less accurate but that should not matter much.
-            result +=  amplitudes[i] * __sinf(2 * pi * t * frequencies[i] + phases[i]);
+            result +=  amplitudes[i] * __sinf(x * frequencies[i] + phases[i]);
        }}
-       output[tid] = short(result * (1 << 15)); 
+       output[tid] = short(result * 32767.999); 
      }}
     }}
     """
