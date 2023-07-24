@@ -18,7 +18,7 @@ logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_ONE_TONE = 0.165  # V
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "5x5 tweezers test"
+TWEEZER_CONFIG_NAME = "5x5 tweezers"
 
 
 def main():
