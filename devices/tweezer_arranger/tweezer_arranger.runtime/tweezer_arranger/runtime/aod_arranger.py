@@ -21,8 +21,6 @@ from .tweezer_arranger import TweezerArranger, ArrangerInstruction
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
-
-
     awg_configuration: SpectrumAWGM4i66xxX8Configuration
 
     _awg: SpectrumAWGM4i66xxX8
