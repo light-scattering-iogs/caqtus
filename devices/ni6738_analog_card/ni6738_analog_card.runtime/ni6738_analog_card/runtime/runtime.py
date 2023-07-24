@@ -18,7 +18,7 @@ from sequencer.instructions import (
     Concatenate,
     Repeat,
 )
-from sequencer.runtime import Sequencer
+from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -55,6 +55,18 @@ class NI6738AnalogCard(Sequencer, extra=Extra.allow):
         if not external_clock:
             raise NotImplementedError("Internal clock is not implemented")
         return external_clock
+
+    @validator("trigger")
+    def _validate_trigger(cls, trigger: Trigger) -> Trigger:
+        if not isinstance(trigger, ExternalClockOnChange):
+            raise NotImplementedError(
+                f"Trigger type {type(trigger)} is not implemented"
+            )
+        if trigger.edge != TriggerEdge.RISING:
+            raise NotImplementedError(
+                f"Trigger edge {trigger.edge} is not implemented"
+            )
+        return trigger
 
     @log_exception(logger)
     def initialize(self) -> None:

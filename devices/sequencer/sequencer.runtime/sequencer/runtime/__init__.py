@@ -5,6 +5,7 @@ from .trigger import (
     ExternalTriggerStart,
     ExternalClock,
     ExternalClockOnChange,
+    TriggerEdge,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "ExternalTriggerStart",
     "ExternalClock",
     "ExternalClockOnChange",
+    "TriggerEdge",
 ]
