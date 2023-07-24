@@ -16,13 +16,13 @@ logger.setLevel("DEBUG")
 
 
 def homogenize(
-        initial_tweezer_configuration: AODTweezerConfiguration,
-        exposure: int = 30,
-        roi_radius: float = 20,
-        beta=0.3,
-        number_iterations=25,
-        relative_threshold=0.2,
-        weight_matrix: Optional[np.ndarray] = None,
+    initial_tweezer_configuration: AODTweezerConfiguration,
+    exposure: int = 30,
+    roi_radius: float = 20,
+    beta=0.3,
+    number_iterations=25,
+    relative_threshold=0.2,
+    weight_matrix: Optional[np.ndarray] = None,
 ):
     """Attempts to homogenize the trap by adjusting the AWG power in each tone.
 
@@ -135,11 +135,11 @@ def compute_new_amplitudes(
 
     # This is a renormalization step to keep the total RF power constant
     new_row_amplitudes *= (
-                                  np.sum(amplitude_rows ** 2) / np.sum(new_row_amplitudes ** 2)
-                          ) ** 0.5
+        np.sum(amplitude_rows**2) / np.sum(new_row_amplitudes**2)
+    ) ** 0.5
     new_column_amplitudes *= (
-                                     np.sum(amplitude_columns ** 2) / np.sum(new_column_amplitudes ** 2)
-                             ) ** 0.5
+        np.sum(amplitude_columns**2) / np.sum(new_column_amplitudes**2)
+    ) ** 0.5
 
     return new_row_amplitudes, new_column_amplitudes
 
