@@ -43,6 +43,7 @@ class NI6738AnalogCard(Sequencer, extra=Extra.allow):
     device_id: str
     time_step: int = Field(ge=2500)
     external_clock: bool = True
+    trigger: Trigger = Field(default_factory=ExternalClockOnChange)
 
     _task: nidaqmx.Task
 

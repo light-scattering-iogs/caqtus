@@ -43,6 +43,7 @@ class SpincorePulseBlaster(Sequencer):
     board_number: int = 0
     spincore_lib_debug: bool = False
     time_step: int = Field(ge=5 * clock_cycle)
+    trigger: Trigger = Field(default_factory=SoftwareTrigger)
 
     @validator("trigger")
     def _validate_trigger(cls, trigger: Trigger) -> Trigger:
