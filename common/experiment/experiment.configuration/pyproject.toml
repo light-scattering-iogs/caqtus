@@ -26,6 +26,7 @@ sequencer-configuration = {path = "../../../devices/sequencer/sequencer.configur
 device-server-name = {path = "../../../devices/remote_device/device_server/device_server.name", develop = true}
 tweezer-arranger-configuration = {path = "../../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
 lane-configuration = {path = "../../lane/lane.configuration", develop = true}
+aod-tweezer-arranger-configuration = {path = "../../../devices/tweezer_arranger/aod_tweezer_arranger.configuration", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from atom_detector.configuration import AtomDetectorConfiguration
 from device.configuration import DeviceParameter
 from elliptec_ell14.configuration import ElliptecELL14RotationStageConfiguration
@@ -25,6 +26,7 @@ device_configs = [
     ElliptecELL14RotationStageConfiguration,
     AtomDetectorConfiguration,
     TweezerArrangerConfiguration,
+    AODTweezerArrangerConfiguration,
 ]
 
 __all__ = [
