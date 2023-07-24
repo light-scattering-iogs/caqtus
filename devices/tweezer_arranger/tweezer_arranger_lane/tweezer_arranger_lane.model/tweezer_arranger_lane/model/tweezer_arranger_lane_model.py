@@ -43,6 +43,12 @@ class TweezerArrangerLaneModel(LaneModel[TweezerArrangerLane]):
         else:
             return default_flags
 
+    def insertRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        self.beginInsertRows(parent, row, row)
+        self.lane.insert(row, HoldTweezers.default())
+        self.endInsertRows()
+        return True
+
     def create_editor(
         self, parent: QWidget, index: QModelIndex
     ) -> QWidget | NotImplementedType:
