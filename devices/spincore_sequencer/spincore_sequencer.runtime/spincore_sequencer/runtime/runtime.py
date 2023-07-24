@@ -4,7 +4,7 @@ from enum import IntFlag
 from functools import singledispatchmethod
 from typing import ClassVar
 
-from pydantic import Field
+from pydantic import Field, validator
 
 from log_exception import log_exception
 from sequencer.instructions import (
@@ -14,7 +14,7 @@ from sequencer.instructions import (
     Repeat,
     Concatenate,
 )
-from sequencer.runtime import Sequencer
+from sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from . import spinapi
 from .spinapi import ns
 
@@ -43,6 +43,14 @@ class SpincorePulseBlaster(Sequencer):
     board_number: int = 0
     spincore_lib_debug: bool = False
     time_step: int = Field(ge=5 * clock_cycle)
+
+    @validator("trigger")
+    def _validate_trigger(cls, trigger: Trigger) -> Trigger:
+        if not isinstance(trigger, SoftwareTrigger):
+            raise NotImplementedError(
+                f"Trigger type {type(trigger)} is not implemented for the Spincore PulseBlaster"
+            )
+        return trigger
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
