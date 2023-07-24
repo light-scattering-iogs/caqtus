@@ -1,14 +1,12 @@
 from .arranger_configuration import (
     TweezerArrangerConfiguration,
-    AODTweezerArrangerConfiguration,
     TweezerConfigurationName,
-    AODTweezerConfiguration,
 )
 from .tweezer_configuration import (
     TweezerConfiguration,
     TweezerConfiguration1D,
     TweezerConfiguration2D,
-    AODTweezerConfiguration,
+    TweezerLabel,
 )
 
 __all__ = [
@@ -16,5 +14,7 @@ __all__ = [
     "AODTweezerArrangerConfiguration",
     "TweezerConfigurationName",
     "TweezerConfiguration",
-    "AODTweezerConfiguration",
+    "TweezerConfiguration1D",
+    "TweezerConfiguration2D",
+    "TweezerLabel",
 ]

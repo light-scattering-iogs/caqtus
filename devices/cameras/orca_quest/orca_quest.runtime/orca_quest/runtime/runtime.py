@@ -171,7 +171,7 @@ class OrcaQuestCamera(Camera):
                         )
                     raise CameraTimeoutError(
                         f"{self.name} timed out after {timeout*1e3:.0f} ms before"
-                        " receiving a trigger"
+                        f" receiving a trigger, only received {picture_number} out of {len(self.exposures)} pictures"
                     )
                 continue
             else:

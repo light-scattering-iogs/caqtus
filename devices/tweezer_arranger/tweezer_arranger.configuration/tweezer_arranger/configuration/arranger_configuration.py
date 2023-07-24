@@ -1,10 +1,10 @@
 from abc import ABC
-from typing import NewType, Generic, TypeVar, Any
+from typing import NewType, Generic, TypeVar
 
 from configuration_holder import ConfigurationHolder
-from device.configuration import DeviceConfiguration, DeviceParameter
-from device.name import DeviceName
-from .tweezer_configuration import TweezerConfiguration, AODTweezerConfiguration
+from device.configuration import DeviceConfiguration
+
+from .tweezer_configuration import TweezerConfiguration
 
 TweezerConfigurationName = NewType("TweezerConfigurationName", str)
 
@@ -20,15 +20,3 @@ class TweezerArrangerConfiguration(
     Generic[TweezerConfigurationType],
 ):
     pass
-
-
-class AODTweezerArrangerConfiguration(
-    TweezerArrangerConfiguration[AODTweezerConfiguration]
-):
-    awg_to_use: DeviceName
-
-    def get_device_type(self) -> str:
-        return "AODTweezerArranger"
-
-    def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
-        raise NotImplementedError
