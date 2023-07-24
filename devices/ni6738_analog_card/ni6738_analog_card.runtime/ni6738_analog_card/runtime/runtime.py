@@ -10,7 +10,6 @@ import numpy
 import numpy as np
 from pydantic import Extra, Field, validator
 
-from device.runtime import RuntimeDevice
 from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
@@ -19,6 +18,7 @@ from sequencer.instructions import (
     Concatenate,
     Repeat,
 )
+from sequencer.runtime import Sequencer
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -26,7 +26,7 @@ logger.setLevel("DEBUG")
 ns = 1e-9
 
 
-class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
+class NI6738AnalogCard(Sequencer, extra=Extra.allow):
     """Device class to program the NI6738 analog card.
 
     Fields:
@@ -95,12 +95,16 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._write_values(values)
 
     def _write_values(self, values: numpy.ndarray) -> None:
-        if (written := self._task.write(
-            values,
-            auto_start=False,
-            timeout=0,
-        )) != values.shape[1]:
-            raise RuntimeError(f"Could not write all values to the analog card, wrote {written}/{values.shape[1]}")
+        if (
+            written := self._task.write(
+                values,
+                auto_start=False,
+                timeout=0,
+            )
+        ) != values.shape[1]:
+            raise RuntimeError(
+                f"Could not write all values to the analog card, wrote {written}/{values.shape[1]}"
+            )
 
     def _stop_task(self) -> None:
         if not self._task.is_task_done():
@@ -122,15 +126,14 @@ class NI6738AnalogCard(RuntimeDevice, extra=Extra.allow):
         self._task.timing.samp_clk_dig_fltr_enable = True
 
     @log_exception(logger)
-    def run(self):
-        """Starts the voltage generation task and return as soon as possible."""
-
+    def start_sequence(self) -> None:
+        super().start_sequence()
         self._task.start()
 
     @log_exception(logger)
-    def stop(self):
-        self._task.wait_until_done(timeout=nidaqmx.constants.WAIT_INFINITELY)
-        self._task.stop()
+    def has_sequence_finished(self) -> bool:
+        super().has_sequence_finished()
+        return self._task.is_task_done()
 
     @singledispatchmethod
     def _values_from_instruction(
