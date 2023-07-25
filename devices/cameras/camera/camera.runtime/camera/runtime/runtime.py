@@ -5,11 +5,11 @@ from collections import Counter
 from typing import ClassVar, Optional
 
 import numpy
+from image_types import ImageLabel, Image
 from pydantic import Field, validator
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
-from image_types import ImageLabel, Image
 from log_exception import log_exception
 
 logger = logging.getLogger(__name__)
@@ -199,6 +199,9 @@ class Camera(RuntimeDevice, ABC):
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + (
+            "start_acquisition",
+            "is_acquisition_in_progress",
+            "stop_acquisition",
             "acquire_picture",
             "acquire_all_pictures",
             "read_picture",
