@@ -2,7 +2,7 @@ from typing import Collection
 
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 
-from atom_detector.configuration import AtomDetectorConfiguration, ConfigurationName
+from atom_detector.configuration import AtomDetectorConfiguration, ImagingConfigurationName
 from device.configuration_editor import DeviceConfigEditor
 from device_server.name import DeviceServerName
 from .configuration_editor_ui import Ui_AtomDetectorConfigEditor
@@ -50,7 +50,7 @@ class ConfigurationModel(QAbstractListModel):
 
     def data(
         self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole
-    ) -> ConfigurationName | str | None:
+    ) -> ImagingConfigurationName | str | None:
         if not index.isValid():
             return None
         name = self._config_names[index.row()]
@@ -69,7 +69,7 @@ class ConfigurationModel(QAbstractListModel):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            value = ConfigurationName(value)
+            value = ImagingConfigurationName(value)
             old_name = self._config_names[index.row()]
             config = self._config[old_name]
             del self._config[old_name]

@@ -6,7 +6,7 @@ from device.configuration import DeviceConfiguration, DeviceParameter
 from single_atom_detector import SingleAtomDetector
 from .atom_label import AtomLabel
 
-ConfigurationName = NewType("ConfigurationName", str)
+ImagingConfigurationName = NewType("ImagingConfigurationName", str)
 
 DetectorConfiguration = dict[AtomLabel, SingleAtomDetector]
 
@@ -17,12 +17,12 @@ class DetectorConfigurationInfo(TypedDict):
 
 
 class AtomDetectorConfiguration(
-    DeviceConfiguration, ConfigurationHolder[ConfigurationName, DetectorConfiguration]
+    DeviceConfiguration, ConfigurationHolder[ImagingConfigurationName, DetectorConfiguration]
 ):
     """Holds the information needed to initialize an AtomDetector device."""
 
     def get_device_init_args(
-        self, configuration_name: ConfigurationName
+        self, configuration_name: ImagingConfigurationName
     ) -> dict[DeviceParameter, Any]:
         return super().get_device_init_args() | {
             "single_atom_detectors": self[configuration_name]
@@ -31,7 +31,7 @@ class AtomDetectorConfiguration(
     def get_device_type(self) -> str:
         return "AtomDetector"
 
-    def remove_configuration(self, configuration_name: ConfigurationName):
+    def remove_configuration(self, configuration_name: ImagingConfigurationName):
         """Remove a configuration from the configuration dictionary."""
 
         del self.detector_configurations[configuration_name]

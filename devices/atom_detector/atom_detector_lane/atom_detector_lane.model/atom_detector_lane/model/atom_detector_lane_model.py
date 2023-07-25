@@ -5,7 +5,7 @@ from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QWidget, QComboBox
 
-from atom_detector.configuration import ConfigurationName, AtomDetectorConfiguration
+from atom_detector.configuration import ImagingConfigurationName, AtomDetectorConfiguration
 from atom_detector_lane.configuration import AtomDetectorLane
 from lane.model import LaneModel
 
@@ -57,7 +57,7 @@ class AtomDetectorLaneModel(LaneModel[AtomDetectorLane]):
         self.setData(index, None)
 
     def _on_set_analyze_image(self, index: QModelIndex):
-        self.setData(index, ConfigurationName("..."))
+        self.setData(index, ImagingConfigurationName("..."))
 
     def create_editor(
         self, parent: QWidget, index: QModelIndex
