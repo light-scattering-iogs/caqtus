@@ -1,5 +1,8 @@
 from typing import Any, TypedDict
 
+from atom_detector.configuration import AtomDetectorConfiguration
+from atom_detector_lane.configuration import AtomDetectorLane
+from camera_lane.configuration import CameraLane
 from device.configuration import DeviceName, DeviceParameter
 from experiment.configuration import (
     ExperimentConfig,
@@ -9,7 +12,6 @@ from experiment.configuration import (
     ElliptecELL14RotationStageConfiguration,
 )
 from sequence.configuration import SequenceConfig
-from camera_lane.configuration import CameraLane
 
 
 class InitializationParameters(TypedDict):
@@ -32,6 +34,9 @@ def get_devices_initialization_parameters(
         | get_ni6738_initialization_parameters(experiment_config, sequence_config)
         | get_cameras_initialization_parameters(experiment_config, sequence_config)
         | get_elliptec_initialization_parameters(experiment_config, sequence_config)
+        | get_atom_detector_initialization_parameters(
+            experiment_config, sequence_config
+        )
     )
 
 
@@ -111,6 +116,34 @@ def get_elliptec_initialization_parameters(
             server=config.remote_server,
             init_kwargs=config.get_device_init_args(),
         )
+    return result
+
+
+def get_atom_detector_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[DeviceName, InitializationParameters]:
+
+    result = {}
+    for device_name, device_config in experiment_config.get_device_configs(
+        AtomDetectorConfiguration
+    ).items():
+        atom_detector_lanes = sequence_config.shot_configurations["shot"].get_lanes(
+            AtomDetectorLane
+        )
+        if device_name in atom_detector_lanes:
+            detector_lane = atom_detector_lanes[device_name]
+            if len(detector_lane.get_imaging_configurations()) > 1:
+                raise NotImplementedError(
+                    "Only one imaging configuration per atom detector is supported for now."
+                )
+            for imaging_configuration in detector_lane.get_imaging_configurations():
+                result[device_name] = InitializationParameters(
+                    type=device_config.get_device_type(),
+                    server=device_config.remote_server,
+                    init_kwargs=device_config.get_device_init_args(
+                        configuration_name=imaging_configuration
+                    ),
+                )
     return result
 
 

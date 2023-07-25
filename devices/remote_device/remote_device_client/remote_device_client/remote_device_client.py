@@ -15,6 +15,7 @@ REGISTERED_DEVICE_TYPES: list[str] = [
     "NI6738AnalogCard",
     "ImagingSourceCameraDMK33GR0134",
     "ElliptecELL14RotationStage",
+    "AtomDetector",
 ]
 
 for device_type in REGISTERED_DEVICE_TYPES:

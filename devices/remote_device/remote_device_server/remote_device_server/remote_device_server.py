@@ -45,6 +45,14 @@ except Exception:
     logger.info("Did not import NI6738AnalogCard")
 
 try:
+    from atom_detector.runtime import AtomDetector
+
+    imported_devices["AtomDetector"] = AtomDetector
+    logger.info("AtomDetector imported")
+except Exception:
+    logger.info("Did not import AtomDetector", exc_info=True)
+
+try:
     from imaging_source.runtime import ImagingSourceCameraDMK33GR0134
 
     imported_devices["ImagingSourceCameraDMK33GR0134"] = ImagingSourceCameraDMK33GR0134

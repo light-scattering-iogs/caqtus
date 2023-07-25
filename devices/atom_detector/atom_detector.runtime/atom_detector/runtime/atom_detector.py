@@ -1,13 +1,11 @@
-from typing import Generic
-
 import numpy as np
-from device.runtime import RuntimeDevice, Field
 
 from atom_detector.configuration import AtomLabel
+from device.runtime import RuntimeDevice, Field
 from single_atom_detector import SingleAtomDetector
 
 
-class AtomDetector(RuntimeDevice, Generic[AtomLabel]):
+class AtomDetector(RuntimeDevice):
     """Pseudo device that can detect the presence of atoms in an image.
 
     Attributes:

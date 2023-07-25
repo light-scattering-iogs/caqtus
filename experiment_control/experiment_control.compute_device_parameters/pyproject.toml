@@ -26,6 +26,8 @@ digital-lane-configuration = {path = "../../devices/sequencer/digital_lane/digit
 analog-lane-configuration = {path = "../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true}
 lane-configuration = {path = "../../common/lane/lane.configuration", develop = true}
 camera-lane-configuration = {path = "../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true}
+atom-detector-configuration = {path = "../../devices/atom_detector/atom_detector.configuration", develop = true}
+atom-detector-lane-configuration = {path = "../../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

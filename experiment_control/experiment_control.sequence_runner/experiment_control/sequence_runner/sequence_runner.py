@@ -193,6 +193,7 @@ class SequenceRunnerThread(Thread):
 
     async def prepare(self):
         devices = self._create_uninitialized_devices()
+        logger.debug(devices)
 
         for device_name, device in devices.items():
             # We initialize the devices through the stack to unsure that they are closed if an error occurs.
