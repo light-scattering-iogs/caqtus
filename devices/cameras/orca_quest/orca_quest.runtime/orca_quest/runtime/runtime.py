@@ -170,7 +170,7 @@ class OrcaQuestCamera(Camera):
                             (self.roi.width, self.roi.height), np.nan
                         )
                     raise CameraTimeoutError(
-                        f"{self.name} timed out after {timeout*1e3:.0f} ms before"
+                        f"{self.name} timed out after {timeout*1e3:.0f} ms without"
                         f" receiving a trigger, only received {picture_number} out of {len(self.exposures)} pictures"
                     )
                 continue

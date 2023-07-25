@@ -5,11 +5,11 @@ from collections import Counter
 from typing import ClassVar, Optional
 
 import numpy
-from image_types import ImageLabel, Image
 from pydantic import Field, validator
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
+from image_types import ImageLabel, Image
 from log_exception import log_exception
 
 logger = logging.getLogger(__name__)
@@ -174,6 +174,14 @@ class Camera(RuntimeDevice, ABC):
                 for index, name in enumerate(self.picture_names)
             }
 
+    def get_picture(self, picture_name: ImageLabel) -> Optional[Image]:
+        """Return the picture with the given name.
+
+        If the picture has not been acquired yet, return None.
+        """
+
+        return self._pictures[self.picture_names.index(picture_name)]
+
     def close(self):
         try:
             if self.is_acquisition_in_progress():
@@ -185,6 +193,9 @@ class Camera(RuntimeDevice, ABC):
         finally:
             super().close()
 
+    def get_picture_names(self) -> tuple[ImageLabel, ...]:
+        return self.picture_names
+
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + (
@@ -193,6 +204,8 @@ class Camera(RuntimeDevice, ABC):
             "read_picture",
             "read_all_pictures",
             "reset_acquisition",
+            "get_picture",
+            "get_picture_names",
         )
 
     @property
