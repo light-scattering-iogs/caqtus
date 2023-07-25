@@ -12,6 +12,7 @@ python = "^3.11"
 device-config = {path = "../../device/device.configuration", develop = true}
 single-atom-detector = {path = "../single_atom_detector", develop = true}
 validate-arguments = {path = "../../../common/validate_arguments"}
+configuration-holder = {path = "../../../common/configuration_holder", develop = true}
 
 
 [build-system]

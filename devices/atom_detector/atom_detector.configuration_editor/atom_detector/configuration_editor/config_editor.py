@@ -58,7 +58,7 @@ class ConfigurationModel(QAbstractListModel):
             return name
         elif role == Qt.ItemDataRole.ToolTipRole:
             modification_date = self._config.get_modification_date(name)
-            trap_config = self._config.get_configuration(name)
+            trap_config = self._config[name]
             return f"Number traps: {len(trap_config)}\nModification date: {modification_date:%Y-%m-%d %H:%M:%S}"
 
         return None
@@ -71,9 +71,9 @@ class ConfigurationModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             value = ConfigurationName(value)
             old_name = self._config_names[index.row()]
-            config = self._config.get_configuration(old_name)
-            self._config.remove_configuration(old_name)
-            self._config.set_configuration(value, config)
+            config = self._config[old_name]
+            del self._config[old_name]
+            self._config[value] = config
             self._config_names[index.row()] = value
 
             return True

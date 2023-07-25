@@ -1,4 +1,7 @@
 from collections.abc import Hashable
-from typing import TypeVar
+from typing import Protocol
 
-AtomLabel = TypeVar("AtomLabel", bound=Hashable)
+
+class AtomLabel(Hashable, Protocol):
+    def __str__(self) -> str:
+        ...
