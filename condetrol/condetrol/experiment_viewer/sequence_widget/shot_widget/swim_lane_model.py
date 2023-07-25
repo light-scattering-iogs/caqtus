@@ -13,6 +13,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QWidget
 
 from analog_lane.configuration import AnalogLane
+from atom_detector_lane.configuration import AtomDetectorLane
 from camera_lane.configuration import CameraLane
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from digital_lane.configuration import DigitalLane
@@ -319,6 +320,7 @@ class SwimLaneModel(QAbstractItemModel):
             insert_analog = insert_menu.addMenu("analog")
             insert_camera = insert_menu.addMenu("camera")
             insert_arranger = insert_menu.addMenu("arranger")
+            insert_detector = insert_menu.addMenu("detector")
 
             if index.row() < 2:
                 self.add_lane_create_action(insert_digital, DigitalLane, QModelIndex())
@@ -326,6 +328,9 @@ class SwimLaneModel(QAbstractItemModel):
                 self.add_lane_create_action(insert_camera, CameraLane, QModelIndex())
                 self.add_lane_create_action(
                     insert_arranger, TweezerArrangerLane, QModelIndex()
+                )
+                self.add_lane_create_action(
+                    insert_detector, AtomDetectorLane, QModelIndex()
                 )
 
                 return insert_menu

@@ -24,8 +24,6 @@ class ConfigurationHolder(SettingsModel, Generic[_K, _T], MutableMapping[_K, _T]
 
     configurations: dict[_K, ConfigurationInfo[_T]]
 
-
-
     def __getitem__(self, configuration_name: _K) -> _T:
         """Return a copy of the configuration associated with a given name."""
 

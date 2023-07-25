@@ -41,6 +41,7 @@ digital-lane-model = {path = "../devices/sequencer/digital_lane/digital_lane.mod
 analog-lane-model = {path = "../devices/sequencer/analog_lane/analog_lane.model", develop = true}
 camera-lane-model = {path = "../devices/cameras/camera/camera_lane/camera_lane.model", develop = true}
 atom-detector-lane-model = {path = "../devices/atom_detector/atom_detector_lane/atom_detector_lane.model", develop = true}
+atom-detector-lane-configuration = {path = "../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
 
 
 [tool.poetry.dev-dependencies]

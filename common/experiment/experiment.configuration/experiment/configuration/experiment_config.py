@@ -6,6 +6,8 @@ from pydantic import Field, validator
 from pydantic.color import Color
 
 from analog_lane.configuration import AnalogLane
+from atom_detector.configuration import AtomDetectorConfiguration
+from atom_detector_lane.configuration import AtomDetectorLane
 from camera.configuration import CameraConfiguration
 from camera_lane.configuration import CameraLane
 from device.configuration import DeviceName, DeviceConfiguration, DeviceConfigType
@@ -165,6 +167,10 @@ class ExperimentConfig(VersionedSettingsModel):
                 lanes.add(device_name)
             elif lane_type == TweezerArrangerLane and isinstance(
                 device_config, TweezerArrangerConfiguration
+            ):
+                lanes.add(device_name)
+            elif lane_type == AtomDetectorLane and isinstance(
+                device_config, AtomDetectorConfiguration
             ):
                 lanes.add(device_name)
         return lanes

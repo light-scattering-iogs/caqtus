@@ -21,8 +21,6 @@ class AtomDetectorConfiguration(
 ):
     """Holds the information needed to initialize an AtomDetector device."""
 
-    detector_configurations: dict[ConfigurationName, DetectorConfigurationInfo]
-
     def get_device_init_args(
         self, configuration_name: ConfigurationName
     ) -> dict[DeviceParameter, Any]:
