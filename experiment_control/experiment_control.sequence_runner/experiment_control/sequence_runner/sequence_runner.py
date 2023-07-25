@@ -71,6 +71,13 @@ logger.setLevel(logging.DEBUG)
 WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
 
 
+class ShotParameters(NamedTuple):
+    """Holds information necessary to compile a shot."""
+
+    shot_name: str
+    shot_context: StepContext
+
+
 class ShotDeviceParameters(NamedTuple):
     """Holds information necessary to execute a shot.
 
@@ -124,16 +131,18 @@ class SequenceRunnerThread(Thread):
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
         self._must_interrupt = must_interrupt
 
-        # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
-        # computed, and consumed when the shots are executed.
-        self._shot_parameter_queue: asyncio.Queue[ShotDeviceParameters] = asyncio.Queue(
-            maxsize=4
-        )
-
-        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
-        self._shot_storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
+        self._shot_parameters_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
             maxsize=10
         )
+
+        # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
+        # computed, and consumed when the shots are executed.
+        self._device_parameters_queue: asyncio.Queue[
+            ShotDeviceParameters
+        ] = asyncio.Queue(maxsize=4)
+
+        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
+        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(maxsize=10)
 
         # This stack is used to ensure that proper cleanup is done when an error occurs.
         # For now, it is only used to close the devices properly.
@@ -230,12 +239,15 @@ class SequenceRunnerThread(Thread):
             watch_for_interruption = task_group.create_task(
                 self.watch_for_interruption()
             )
+            compile_shots = task_group.create_task(self.compile_shots())
             run_shots = task_group.create_task(self.run_shots())
             store_shots = task_group.create_task(self.store_shots())
             context = await self.run_step(self._experiment_config.header, context)
             _ = await self.run_step(self._sequence_config.program, context)
-            await self._shot_parameter_queue.join()
-            await self._shot_storage_queue.join()
+            await self._shot_parameters_queue.join()
+            await self._device_parameters_queue.join()
+            await self._storage_queue.join()
+            compile_shots.cancel()
             run_shots.cancel()
             store_shots.cancel()
             watch_for_interruption.cancel()
@@ -248,18 +260,29 @@ class SequenceRunnerThread(Thread):
             if self._must_interrupt.is_set():
                 raise SequenceInterruptedException()
 
+    async def compile_shots(self) -> None:
+        while True:
+            shot_parameters = await self._shot_parameters_queue.get()
+            device_parameters = await self.compute_shot_parameters(
+                shot_parameters.shot_name,
+                shot_parameters.shot_context,
+                self._computation_executor,
+            )
+            await self._device_parameters_queue.put(device_parameters)
+            self._shot_parameters_queue.task_done()
+
     async def run_shots(self) -> None:
         while True:
-            shot_parameters = await self._shot_parameter_queue.get()
-            shot_data = await self.do_shot_with_retry(shot_parameters)
-            self._shot_parameter_queue.task_done()
-            await self._shot_storage_queue.put(shot_data)
+            device_parameters = await self._device_parameters_queue.get()
+            shot_data = await self.do_shot_with_retry(device_parameters)
+            self._device_parameters_queue.task_done()
+            await self._storage_queue.put(shot_data)
 
     async def store_shots(self) -> None:
         while True:
-            shot_data = await self._shot_storage_queue.get()
+            shot_data = await self._storage_queue.get()
             await self.store_shot(shot_data)
-            self._shot_storage_queue.task_done()
+            self._storage_queue.task_done()
 
     @singledispatchmethod
     async def run_step(self, step: Step, context: StepContext) -> StepContext:
@@ -388,14 +411,14 @@ class SequenceRunnerThread(Thread):
     async def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
-        shot_parameters = await self.compute_shot_parameters(
-            shot, context, self._computation_executor
+        await self._shot_parameters_queue.put(
+            ShotParameters(shot_name=shot.name, shot_context=context)
         )
-        await self._shot_parameter_queue.put(shot_parameters)
+
         return context.reset_history()
 
     async def compute_shot_parameters(
-        self, shot: ExecuteShot, context: StepContext, executor: Executor
+        self, shot_name: str, context: StepContext, executor: Executor
     ) -> ShotDeviceParameters:
         with DurationTimer() as timer:
             # For some reasons, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
@@ -412,7 +435,7 @@ class SequenceRunnerThread(Thread):
                 executor,
                 _wrap_compute_shot_parameters,
                 self._experiment_config_yaml,
-                self._sequence_config.shot_configurations[shot.name],
+                self._sequence_config.shot_configurations[shot_name],
                 context.variables,
             )
             change_params = await compute_change_params_task
@@ -422,7 +445,7 @@ class SequenceRunnerThread(Thread):
             "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
         )
         return ShotDeviceParameters(
-            shot_name=shot.name,
+            shot_name=shot_name,
             step_context=context,
             change_parameters=change_params,
             static_parameters=shot_params,
@@ -469,7 +492,7 @@ class SequenceRunnerThread(Thread):
                     child_step_index += 1
                 else:
                     child_step_index = 0
-                await self._shot_parameter_queue.join()
+                await self._device_parameters_queue.join()
         return context
 
     @run_step.register
