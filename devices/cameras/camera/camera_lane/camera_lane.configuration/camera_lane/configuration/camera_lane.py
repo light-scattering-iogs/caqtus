@@ -4,6 +4,7 @@ from typing import Optional
 
 from pydantic import validator
 
+from image_types import ImageLabel
 from settings_model import SettingsModel
 from lane.configuration import Lane
 
@@ -16,7 +17,7 @@ class CameraAction(SettingsModel, ABC):
 
 
 class TakePicture(CameraAction):
-    picture_name: str
+    picture_name: ImageLabel
 
 
 class CameraLane(Lane[Optional[CameraAction]]):
@@ -44,7 +45,7 @@ class CameraLane(Lane[Optional[CameraAction]]):
                     picture_names.add(action.picture_name)
         return actions
 
-    def get_picture_spans(self) -> list[tuple[str, int, int]]:
+    def get_picture_spans(self) -> list[tuple[ImageLabel, int, int]]:
         """Return a list of the pictures and the step index at which they start (included) and stop (excluded)"""
 
         result = []

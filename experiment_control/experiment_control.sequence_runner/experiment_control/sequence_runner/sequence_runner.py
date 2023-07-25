@@ -61,6 +61,7 @@ from .device_servers import (
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
+from ..compute_device_parameters.image_analysis import find_how_to_analyze_images
 
 if TYPE_CHECKING:
     from camera.runtime import Camera
@@ -150,7 +151,9 @@ class SequenceRunnerThread(Thread):
         ] = asyncio.Queue(maxsize=DEVICE_PARAMETER_QUEUE_SIZE)
 
         # When a shot is finished, its data is added to this queue. The data is then saved to the database.
-        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(maxsize=STORAGE_QUEUE_SIZE)
+        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
+            maxsize=STORAGE_QUEUE_SIZE
+        )
 
         # This stack is used to ensure that proper cleanup is done when an error occurs.
         # For now, it is only used to close the devices properly.
@@ -169,7 +172,10 @@ class SequenceRunnerThread(Thread):
             self._sequence.set_experiment_config(experiment_config_name, session)
             self._sequence.set_state(State.PREPARING, session)
 
+        self._image_analysis_flow = {}
+
     def run(self):
+        logger.debug(f"Image analysis flow: {self._image_analysis_flow}")
         try:
             self._run()
         except* SequenceInterruptedException:
@@ -192,6 +198,11 @@ class SequenceRunnerThread(Thread):
         await self.run_sequence()
 
     async def prepare(self):
+
+        self._image_analysis_flow = find_how_to_analyze_images(
+            self._sequence_config.shot_configurations["shot"]
+        )
+        logger.debug(f"Image analysis flow: {self._image_analysis_flow}")
         devices = self._create_uninitialized_devices()
         logger.debug(devices)
 
