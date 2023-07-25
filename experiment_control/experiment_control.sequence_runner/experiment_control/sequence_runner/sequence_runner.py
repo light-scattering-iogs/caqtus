@@ -70,6 +70,8 @@ logger.setLevel(logging.DEBUG)
 
 WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
 
+NUMBER_WORKERS = 4
+
 
 class ShotParameters(NamedTuple):
     """Holds information necessary to compile a shot."""
@@ -261,6 +263,11 @@ class SequenceRunnerThread(Thread):
                 raise SequenceInterruptedException()
 
     async def compile_shots(self) -> None:
+        async with asyncio.TaskGroup() as task_group:
+            for _ in range(NUMBER_WORKERS):
+                task_group.create_task(self._get_and_compile_shot())
+
+    async def _get_and_compile_shot(self) -> None:
         while True:
             shot_parameters = await self._shot_parameters_queue.get()
             device_parameters = await self.compute_shot_parameters(
