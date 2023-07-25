@@ -71,7 +71,7 @@ logger.setLevel(logging.DEBUG)
 WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
 
 
-class ShotParameters(NamedTuple):
+class ShotDeviceParameters(NamedTuple):
     """Holds information necessary to execute a shot.
 
     Args:
@@ -126,7 +126,7 @@ class SequenceRunnerThread(Thread):
 
         # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
         # computed, and consumed when the shots are executed.
-        self._shot_parameter_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
+        self._shot_parameter_queue: asyncio.Queue[ShotDeviceParameters] = asyncio.Queue(
             maxsize=4
         )
 
@@ -396,7 +396,7 @@ class SequenceRunnerThread(Thread):
 
     async def compute_shot_parameters(
         self, shot: ExecuteShot, context: StepContext, executor: Executor
-    ) -> ShotParameters:
+    ) -> ShotDeviceParameters:
         with DurationTimer() as timer:
             # For some reasons, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
             # the yaml representation of the configuration instead.
@@ -421,7 +421,7 @@ class SequenceRunnerThread(Thread):
         logger.info(
             "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
         )
-        return ShotParameters(
+        return ShotDeviceParameters(
             shot_name=shot.name,
             step_context=context,
             change_parameters=change_params,
@@ -482,7 +482,7 @@ class SequenceRunnerThread(Thread):
 
     async def do_shot_with_retry(
         self,
-        shot_params: ShotParameters,
+        shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
         number_of_attempts = 2  # must >= 1
         for attempt in range(number_of_attempts):
