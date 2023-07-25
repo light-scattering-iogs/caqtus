@@ -32,6 +32,7 @@ from experiment_control.compute_device_parameters import (
     get_devices_initialization_parameters,
     compute_parameters_on_variables_update,
 )
+from image_types import ImageLabel, Image
 from parameter_types import AnalogValue, add_unit, get_unit, magnitude_in_unit
 from sequence.configuration import (
     Step,
@@ -523,9 +524,8 @@ class SequenceRunnerThread(Thread):
         )
 
         with DurationTimer() as timer:
-            await self.run_shot()
+            data = await self.run_shot()
         logger.info("Shot execution duration:" f" {timer.duration_in_ms:.1f} ms")
-        data = self.extract_data()
         return data
 
     async def update_device_parameters(
@@ -545,35 +545,37 @@ class SequenceRunnerThread(Thread):
                 )
                 update_group.create_task(task)
 
-    async def run_shot(self) -> None:
+    async def run_shot(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         """Perform the shot.
 
         This is the actual shot execution that determines how to use the devices within a shot. It assumes that the
         devices have been correctly configured before.
         """
 
+        data: dict[DeviceName, dict[DataLabel, Data]] = {}
+
         if self._experiment_config.mock_experiment:
             await asyncio.sleep(0.5)
-            return
+            return data
 
         sequencers = self.get_sequencers_in_use()
 
         for sequencer in sequencers.values():
             sequencer.start_sequence()
 
+        camera_tasks = {}
+
         async with asyncio.TaskGroup() as run_group:
-            for camera in self.get_cameras().values():
-                run_group.create_task(asyncio.to_thread(camera.acquire_all_pictures))
+            for camera_name, camera in self.get_cameras().items():
+                camera_tasks[camera_name] = run_group.create_task(
+                    get_camera_pictures(camera)
+                )
             for sequencer in sequencers.values():
                 run_group.create_task(wait_on_sequencer(sequencer))
 
-    def extract_data(self) -> dict[DeviceName, dict[DataLabel, Data]]:
-        if self._experiment_config.mock_experiment:
-            return {}
+        for camera_name, camera_task in camera_tasks.items():
+            data[camera_name] = camera_task.result()
 
-        data = {}
-        for camera_name, camera in self.get_cameras().items():
-            data[camera_name] = camera.read_all_pictures()
         return data
 
     async def store_shot(
@@ -747,6 +749,20 @@ async def wait_on_sequencer(sequencer: Sequencer):
     """Wait for a sequencer to finish."""
     while not sequencer.has_sequence_finished():
         await asyncio.sleep(10e-3)
+
+
+async def get_camera_pictures(camera: Camera) -> dict[ImageLabel, Image]:
+    picture_names = camera.get_picture_names()
+    result = {}
+    for picture_name in picture_names:
+        result[picture_name] = await get_picture_from_camera(camera, picture_name)
+    return result
+
+
+async def get_picture_from_camera(camera: Camera, picture_name: ImageLabel) -> Image:
+    while not (image := camera.get_picture(picture_name)):
+        await asyncio.sleep(1e-3)
+    return image
 
 
 # This exception is used to interrupt the sequence and inherit from BaseException to prevent it from being caught
