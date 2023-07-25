@@ -23,6 +23,7 @@ camera-lane-configuration = { path = "../../../devices/cameras/camera/camera_lan
 analog-lane-configuration = { path = "../../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true }
 digital-lane-configuration = { path = "../../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true }
 tweezer-arranger-lane-configuration = { path = "../../../devices/tweezer_arranger/tweezer_arranger_lane/tweezer_arranger_lane.configuration", develop = true }
+atom-detector-lane-configuration = {path = "../../../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
 
 camera-configuration = {path = "../../../devices/cameras/camera/camera.configuration", develop = true}
 atom-detector-configuration = { path = "../../../devices/atom_detector/atom_detector.configuration", develop = true }

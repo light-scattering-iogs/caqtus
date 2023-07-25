@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "atom-detector-lane-configuration"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "atom_detector_lane"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+lane-configuration = {path = "../../../../common/lane/lane.configuration", develop = true}
+atom-detector-configuration = {path = "../../atom_detector.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
