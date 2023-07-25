@@ -559,14 +559,17 @@ class SequenceRunnerThread(Thread):
             return data
 
         sequencers = self.get_sequencers_in_use()
+        cameras = self.get_cameras_in_use()
 
         for sequencer in sequencers.values():
             sequencer.start_sequence()
 
-        camera_tasks = {}
+        for camera in cameras.values():
+            camera.start_acquisition()
 
+        camera_tasks = {}
         async with asyncio.TaskGroup() as run_group:
-            for camera_name, camera in self.get_cameras().items():
+            for camera_name, camera in cameras.items():
                 camera_tasks[camera_name] = run_group.create_task(
                     get_camera_pictures(camera)
                 )
@@ -623,7 +626,7 @@ class SequenceRunnerThread(Thread):
         )
         return dict(sorted_by_trigger_priority)
 
-    def get_cameras(self) -> dict[DeviceName, "Camera"]:
+    def get_cameras_in_use(self) -> dict[DeviceName, "Camera"]:
         return {
             device_name: device  # type: ignore
             for device_name, device in self._devices.items()
@@ -751,16 +754,18 @@ async def wait_on_sequencer(sequencer: Sequencer):
         await asyncio.sleep(10e-3)
 
 
-async def get_camera_pictures(camera: Camera) -> dict[ImageLabel, Image]:
+async def get_camera_pictures(camera: "Camera") -> dict[ImageLabel, Image]:
     picture_names = camera.get_picture_names()
     result = {}
     for picture_name in picture_names:
         result[picture_name] = await get_picture_from_camera(camera, picture_name)
+        logger.debug(f"Got picture '{picture_name}' from camera '{camera.get_name()}'")
+    camera.stop_acquisition()
     return result
 
 
-async def get_picture_from_camera(camera: Camera, picture_name: ImageLabel) -> Image:
-    while not (image := camera.get_picture(picture_name)):
+async def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image:
+    while (image := camera.get_picture(picture_name)) is None:
         await asyncio.sleep(1e-3)
     return image
 
