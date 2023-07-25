@@ -6,10 +6,11 @@ from typing import (
     TypedDict,
 )
 
+from atom_detector.configuration import AtomLabel
 from data_types import Data
 from device.configuration import DeviceName
 from experiment.session import ExperimentSession
-from image_types import Image, is_image
+from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
 from .chainable_function import ChainableFunction
@@ -24,15 +25,29 @@ V = TypeVar("V")
 
 
 class ImageImporter(ShotImporter[Image]):
-    def __init__(self, camera_name: DeviceName, image_name: str):
+    def __init__(self, camera_name: DeviceName, image: ImageLabel):
         self.camera_name = camera_name
-        self.image_name = image_name
+        self.image = image
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
-        value = _import_measures(shot, session)[f"{self.camera_name}.{self.image_name}"]
+        value = _import_measures(shot, session)[f"{self.camera_name}.{self.image}"]
         if not is_image(value):
             raise TypeError(
-                f"Expected image for {self.camera_name}.{self.image_name}, got {type(value)}"
+                f"Expected image for {self.camera_name}.{self.image}, got {type(value)}"
+            )
+        return value
+
+
+class AtomsImporter(ShotImporter[dict[AtomLabel, bool]]):
+    def __init__(self, detector: DeviceName, image: ImageLabel):
+        self.detector = detector
+        self.image = image
+
+    def __call__(self, shot: Shot, session: ExperimentSession) -> dict[AtomLabel, bool]:
+        value = _import_measures(shot, session)[f"{self.detector}.{self.image}"]
+        if not isinstance(value, dict):
+            raise TypeError(
+                f"Expected dictionary for {self.detector}.{self.image}, got {type(value)}"
             )
         return value
 

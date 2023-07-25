@@ -10,6 +10,7 @@ from typing import (
 )
 
 import numpy
+from benedict import benedict
 
 from parameter_types import Parameter
 from .chainable_function import ChainableFunction
@@ -76,7 +77,7 @@ def _break_namespaces(values: dict[Any, Parameter]) -> dict[str, Parameter]:
                 f"{key}.{sub_key}": v
                 for sub_key, v in _break_namespaces(value.__dict__).items()
             }
-        elif isinstance(value, dict):
+        elif isinstance(value, benedict):
             result |= {
                 f"{key}.{sub_key}": v for sub_key, v in _break_namespaces(value).items()
             }

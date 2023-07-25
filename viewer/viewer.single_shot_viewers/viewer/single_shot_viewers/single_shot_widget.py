@@ -98,6 +98,8 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     def _update_viewers(self, shot) -> None:
         for viewer in self._get_viewers().values():
             viewer.set_shot(shot)
+        for viewer in self._get_viewers().values():
+            viewer.update_view()
 
     def _get_viewers(self) -> dict[str, SingleShotViewer]:
         return {
