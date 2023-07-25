@@ -132,18 +132,13 @@ def get_atom_detector_initialization_parameters(
         )
         if device_name in atom_detector_lanes:
             detector_lane = atom_detector_lanes[device_name]
-            if len(detector_lane.get_imaging_configurations()) > 1:
-                raise NotImplementedError(
-                    "Only one imaging configuration per atom detector is supported for now."
-                )
-            for imaging_configuration in detector_lane.get_imaging_configurations():
-                result[device_name] = InitializationParameters(
-                    type=device_config.get_device_type(),
-                    server=device_config.remote_server,
-                    init_kwargs=device_config.get_device_init_args(
-                        configuration_name=imaging_configuration
-                    ),
-                )
+            result[device_name] = InitializationParameters(
+                type=device_config.get_device_type(),
+                server=device_config.remote_server,
+                init_kwargs=device_config.get_device_init_args(
+                    imaging_configurations_to_use=detector_lane.get_imaging_configurations()
+                ),
+            )
     return result
 
 
