@@ -68,7 +68,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
+WATCH_FOR_INTERRUPTION_INTERVAL = 0.1  # seconds
+
+
+# This is the number of processes that can run in parallel to compile the shots.
+NUMBER_WORKERS = 4
+
+PARAMETER_QUEUE_SIZE = 10
+DEVICE_PARAMETER_QUEUE_SIZE = 8
+STORAGE_QUEUE_SIZE = 10
 
 
 class ShotParameters(NamedTuple):
@@ -132,17 +140,17 @@ class SequenceRunnerThread(Thread):
         self._must_interrupt = must_interrupt
 
         self._shot_parameters_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
-            maxsize=10
+            maxsize=PARAMETER_QUEUE_SIZE
         )
 
         # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
         # computed, and consumed when the shots are executed.
         self._device_parameters_queue: asyncio.Queue[
             ShotDeviceParameters
-        ] = asyncio.Queue(maxsize=4)
+        ] = asyncio.Queue(maxsize=DEVICE_PARAMETER_QUEUE_SIZE)
 
         # When a shot is finished, its data is added to this queue. The data is then saved to the database.
-        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(maxsize=10)
+        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(maxsize=STORAGE_QUEUE_SIZE)
 
         # This stack is used to ensure that proper cleanup is done when an error occurs.
         # For now, it is only used to close the devices properly.
@@ -261,6 +269,11 @@ class SequenceRunnerThread(Thread):
                 raise SequenceInterruptedException()
 
     async def compile_shots(self) -> None:
+        async with asyncio.TaskGroup() as task_group:
+            for _ in range(NUMBER_WORKERS):
+                task_group.create_task(self._get_and_compile_shot())
+
+    async def _get_and_compile_shot(self) -> None:
         while True:
             shot_parameters = await self._shot_parameters_queue.get()
             device_parameters = await self.compute_shot_parameters(
