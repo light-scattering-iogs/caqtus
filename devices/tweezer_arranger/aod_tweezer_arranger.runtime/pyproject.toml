@@ -13,12 +13,18 @@ pycuda = "^2022.2.2"
 numpy = "^1.25.1"
 aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configuration", develop = true}
 tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
+pydantic = "^1.0"
+spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 mypy = "^1.4.1"
 matplotlib = "^3.7.2"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
 
 [build-system]
 requires = ["poetry-core"]

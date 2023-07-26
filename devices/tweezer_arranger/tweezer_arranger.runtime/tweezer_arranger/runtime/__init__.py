@@ -3,6 +3,13 @@ from .tweezer_arranger import (
     ArrangerInstruction,
     HoldTweezers,
     MoveTweezers,
+    RearrangeTweezers,
 )
 
-__all__ = ["TweezerArranger", "ArrangerInstruction", "HoldTweezers", "MoveTweezers"]
+__all__ = [
+    "TweezerArranger",
+    "ArrangerInstruction",
+    "HoldTweezers",
+    "MoveTweezers",
+    "RearrangeTweezers",
+]
