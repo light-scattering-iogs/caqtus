@@ -15,6 +15,7 @@ from spectum_awg_m4i66xx_x8.runtime import (
     SegmentName,
     StepName,
     StepConfiguration,
+    SegmentData,
 )
 from tweezer_arranger.configuration import (
     TweezerConfigurationName,
@@ -77,6 +78,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
         self._compute_static_signals()
+        self._write_static_segments()
 
         # self._awg.stop()
 
@@ -116,6 +118,17 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     self._signal_generator, tweezer_configuration
                 )
                 self._static_signals[tweezer_configuration_name] = signals
+
+    def _write_static_segments(self):
+        segment_data: dict[SegmentName, SegmentData] = {}
+        for step, instruction in enumerate(self.tweezer_sequence):
+            if isinstance(instruction, HoldTweezers):
+                static_segment = static_segment_names(step)[0]
+                segment_data[static_segment] = np.array(
+                    self._static_signals[instruction.tweezer_configuration]
+                )
+        with DurationTimerLog(logger, "Writing static segments"):
+            self._awg.update_parameters(segment_data=segment_data)
 
     @property
     def sampling_rate(self) -> int:

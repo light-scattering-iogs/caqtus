@@ -9,4 +9,4 @@ NumberChannels = NewType("NumberChannels", int)
 NumberSamples = NewType("NumberSamples", int)
 
 
-SegmentData = np.ndarray[tuple[NumberChannels, NumberSamples], np.int16]
+SegmentData = np.ndarray[tuple[NumberChannels, NumberSamples], np.dtype[np.int16]]
