@@ -18,6 +18,7 @@ from sequence.configuration import ShotConfiguration
 from sequencer.channel import ChannelInstruction
 from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
 from sequencer.instructions import ChannelLabel, SequencerInstruction
+from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
@@ -79,6 +80,7 @@ def compute_shot_parameters(
     }
 
     result |= sequencer_parameters
+    result |= compute_tweezer_arranger_instructions(shot_config, variables)
 
     return result
 
@@ -218,7 +220,10 @@ def get_camera_parameters(
         exposures = [
             duration for expose, start, stop, duration in instruction.triggers if expose
         ]
-        result[camera] = dict(timeout=instruction.timeout, exposures=exposures)
+        result[camera] = {
+            DeviceParameter("timeout"): instruction.timeout,
+            DeviceParameter("exposures"): exposures,
+        }
 
     return result
 
@@ -273,6 +278,28 @@ def compute_clock_step_requirements(
                 break
         else:
             result.append(instruction)
+    return result
+
+
+def compute_tweezer_arranger_instructions(
+    shot_config: ShotConfiguration, variables: VariableNamespace
+) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+    step_durations = compile_step_durations(
+        shot_config.step_names, shot_config.step_durations, variables
+    )
+
+    step_bounds = get_step_bounds(step_durations)
+
+    result = {}
+
+    tweezer_arranger_lanes = shot_config.get_lanes(TweezerArrangerLane)
+    for lane_name, lane in tweezer_arranger_lanes.items():
+        durations = []
+        for _, start, stop in lane.get_value_spans():
+            durations.append(step_bounds[stop] - step_bounds[start])
+        result[DeviceName(lane_name)] = {
+            DeviceParameter("tweezer_sequence_durations"): durations
+        }
     return result
 
 
