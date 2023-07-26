@@ -32,6 +32,6 @@ def find_how_to_analyze_images(
                         and detector_lane.end_index(image_start) >= image_stop
                     ):
                         result[camera_name][image_label][detector_name] = detector_lane[
-                            image_stop
+                            image_start
                         ]
     return result
