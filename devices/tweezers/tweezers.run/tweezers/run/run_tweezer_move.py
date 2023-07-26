@@ -50,7 +50,7 @@ def main():
         awg.update_parameters(segment_data=segments)
         awg.run()
         input()
-        awg.stop()
+        awg.stop_sequence()
 
 
 if __name__ == "__main__":

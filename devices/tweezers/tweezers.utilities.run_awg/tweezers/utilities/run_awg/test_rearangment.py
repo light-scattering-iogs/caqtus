@@ -11,7 +11,6 @@ from spectum_awg_m4i66xx_x8.runtime import (
 from trap_signal_generator.configuration import StaticTrapConfiguration
 from trap_signal_generator.runtime import StaticTrapGenerator, MovingTrapGenerator
 
-
 logging.basicConfig()
 
 with open("./config_x.yaml", "r") as f:
@@ -141,4 +140,4 @@ with SpectrumAWGM4i66xxX8(
 
     awg.run()
     input()
-    awg.stop()
+    awg.stop_sequence()

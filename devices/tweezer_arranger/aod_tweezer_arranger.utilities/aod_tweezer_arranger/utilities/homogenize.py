@@ -60,7 +60,7 @@ def homogenize(
     tweezer_configuration = copy.deepcopy(initial_tweezer_configuration)
 
     with awg:
-        awg.stop()
+        awg.stop_sequence()
 
     background_picture = acquire_picture(pixelfly)
 

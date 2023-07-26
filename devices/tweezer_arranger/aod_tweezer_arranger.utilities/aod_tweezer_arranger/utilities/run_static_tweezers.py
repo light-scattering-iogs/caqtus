@@ -41,7 +41,7 @@ def main():
         write_config_to_awg(awg, tweezer_config)
         awg.run()
         input()
-        awg.stop()
+        awg.stop_sequence()
 
 
 def initialize_awg(tweezer_config: AODTweezerConfiguration) -> SpectrumAWGM4i66xxX8:

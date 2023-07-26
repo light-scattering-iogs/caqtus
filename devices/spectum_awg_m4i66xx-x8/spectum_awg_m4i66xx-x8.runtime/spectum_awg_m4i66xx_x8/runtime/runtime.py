@@ -389,7 +389,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
         return self._step_names[step_index.value]
 
-    def stop(self):
+    def stop_sequence(self):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_STOP
         )

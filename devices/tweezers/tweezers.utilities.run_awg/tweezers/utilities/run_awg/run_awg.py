@@ -61,4 +61,4 @@ with SpectrumAWGM4i66xxX8(
     print(f"Time to update parameters: {(t1 - t0) * 1e3} ms")
     awg.run()
     input()
-    awg.stop()
+    awg.stop_sequence()

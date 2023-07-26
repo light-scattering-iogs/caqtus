@@ -81,8 +81,6 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self._compute_static_signals()
         self._write_static_segments()
 
-        # self._awg.stop()
-
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
         return SpectrumAWGM4i66xxX8(
             name=f"{self.name}_awg",
@@ -193,6 +191,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             )
 
     def start_sequence(self) -> None:
+        self._awg.stop_sequence()
         self._awg.run()
 
     def has_sequence_finished(self) -> bool:
