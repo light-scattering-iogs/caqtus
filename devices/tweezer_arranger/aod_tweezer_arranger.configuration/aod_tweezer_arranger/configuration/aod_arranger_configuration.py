@@ -23,10 +23,10 @@ class AODTweezerArrangerConfiguration(
     def get_device_init_args(
         self,
         tweezer_configurations_to_use: Set[TweezerConfigurationName],
-        tweezer_sequencer: Sequence[TweezerAction],
+        tweezer_sequence: Sequence[TweezerAction],
     ) -> dict[DeviceParameter, Any]:
         return super().get_device_init_args(
-            tweezer_configurations_to_use, tweezer_sequencer
+            tweezer_configurations_to_use, tweezer_sequence
         ) | {
             "awg_board_id": self.awg_board_id,
             "awg_max_power_x": self.awg_max_power_x,

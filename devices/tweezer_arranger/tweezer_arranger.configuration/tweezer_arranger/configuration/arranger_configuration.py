@@ -38,7 +38,7 @@ class TweezerArrangerConfiguration(
         sequence: list[ArrangerInstruction] = []
         for step, action in enumerate(tweezer_sequence):
             match action:
-                case HoldTweezersLane(configuration):
+                case HoldTweezersLane(configuration=configuration):
                     sequence.append(HoldTweezerInstruction(configuration))
                 case MoveTweezersLane():
                     previous = tweezer_sequence[step - 1]
