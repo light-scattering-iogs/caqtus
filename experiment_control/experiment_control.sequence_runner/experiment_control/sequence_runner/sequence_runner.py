@@ -32,6 +32,9 @@ from experiment_control.compute_device_parameters import (
     get_devices_initialization_parameters,
     compute_parameters_on_variables_update,
 )
+from experiment_control.compute_device_parameters.image_analysis import (
+    find_how_to_analyze_images,
+)
 from image_types import ImageLabel, Image
 from parameter_types import AnalogValue, add_unit, get_unit, magnitude_in_unit
 from sequence.configuration import (
@@ -61,7 +64,6 @@ from .device_servers import (
 from .sequence_context import StepContext
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
-from ..compute_device_parameters.image_analysis import find_how_to_analyze_images
 
 if TYPE_CHECKING:
     from camera.runtime import Camera
@@ -619,15 +621,47 @@ class SequenceRunnerThread(Thread):
         async with asyncio.TaskGroup() as run_group:
             for camera_name, camera in cameras.items():
                 camera_tasks[camera_name] = run_group.create_task(
-                    get_camera_pictures(camera)
+                    self.fetch_and_analyze_images(camera_name, camera)
                 )
             for sequencer in sequencers.values():
                 run_group.create_task(wait_on_sequencer(sequencer))
 
         for camera_name, camera_task in camera_tasks.items():
-            data[camera_name] = camera_task.result()
+            data |= camera_task.result()
 
         return data
+
+    async def fetch_and_analyze_images(
+        self, camera_name: DeviceName, camera: "Camera"
+    ) -> dict[DeviceName, dict[DataLabel, Data]]:
+        picture_names = camera.get_picture_names()
+
+        result: dict[DeviceName, dict[DataLabel, Data]] = {}
+        pictures = {}
+        for picture_name in picture_names:
+            picture = await get_picture_from_camera(camera, picture_name)
+            pictures[picture_name] = picture
+            logger.debug(
+                f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
+            )
+            if camera_name in self._image_analysis_flow:
+                if picture_name in self._image_analysis_flow[camera_name]:
+                    for detector, imaging_config in self._image_analysis_flow[
+                        camera_name
+                    ][picture_name].items():
+                        atoms = self._devices[detector].are_atoms_present(
+                            picture, imaging_config
+                        )
+                        logger.debug(
+                            f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
+                        )
+                        if not detector in result:
+                            result[detector] = {}
+                        result[detector][picture_name] = atoms
+        camera.stop_acquisition()
+
+        result[camera_name] = pictures
+        return result
 
     async def store_shot(
         self,
@@ -800,16 +834,6 @@ async def wait_on_sequencer(sequencer: Sequencer):
     """Wait for a sequencer to finish."""
     while not sequencer.has_sequence_finished():
         await asyncio.sleep(10e-3)
-
-
-async def get_camera_pictures(camera: "Camera") -> dict[ImageLabel, Image]:
-    picture_names = camera.get_picture_names()
-    result = {}
-    for picture_name in picture_names:
-        result[picture_name] = await get_picture_from_camera(camera, picture_name)
-        logger.debug(f"Got picture '{picture_name}' from camera '{camera.get_name()}'")
-    camera.stop_acquisition()
-    return result
 
 
 async def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image:
