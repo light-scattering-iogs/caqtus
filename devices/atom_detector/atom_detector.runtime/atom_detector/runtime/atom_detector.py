@@ -71,3 +71,11 @@ class AtomDetector(RuntimeDevice):
         single_atom_detectors = self.imaging_configurations[imaging_configuration]
 
         return set(single_atom_detectors.keys())
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "get_traps_labels",
+            "compute_signals",
+            "are_atoms_present",
+        )
