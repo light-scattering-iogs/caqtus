@@ -70,8 +70,17 @@ logger.setLevel(logging.DEBUG)
 
 WATCH_FOR_INTERRUPTION_INTERVAL = 0.1
 
+NUMBER_WORKERS = 4
+
 
 class ShotParameters(NamedTuple):
+    """Holds information necessary to compile a shot."""
+
+    shot_name: str
+    shot_context: StepContext
+
+
+class ShotDeviceParameters(NamedTuple):
     """Holds information necessary to execute a shot.
 
     Args:
@@ -124,16 +133,18 @@ class SequenceRunnerThread(Thread):
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
         self._must_interrupt = must_interrupt
 
-        # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
-        # computed, and consumed when the shots are executed.
-        self._shot_parameter_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
-            maxsize=4
-        )
-
-        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
-        self._shot_storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
+        self._shot_parameters_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
             maxsize=10
         )
+
+        # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
+        # computed, and consumed when the shots are executed.
+        self._device_parameters_queue: asyncio.Queue[
+            ShotDeviceParameters
+        ] = asyncio.Queue(maxsize=4)
+
+        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
+        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(maxsize=10)
 
         # This stack is used to ensure that proper cleanup is done when an error occurs.
         # For now, it is only used to close the devices properly.
@@ -230,12 +241,15 @@ class SequenceRunnerThread(Thread):
             watch_for_interruption = task_group.create_task(
                 self.watch_for_interruption()
             )
+            compile_shots = task_group.create_task(self.compile_shots())
             run_shots = task_group.create_task(self.run_shots())
             store_shots = task_group.create_task(self.store_shots())
             context = await self.run_step(self._experiment_config.header, context)
             _ = await self.run_step(self._sequence_config.program, context)
-            await self._shot_parameter_queue.join()
-            await self._shot_storage_queue.join()
+            await self._shot_parameters_queue.join()
+            await self._device_parameters_queue.join()
+            await self._storage_queue.join()
+            compile_shots.cancel()
             run_shots.cancel()
             store_shots.cancel()
             watch_for_interruption.cancel()
@@ -248,18 +262,34 @@ class SequenceRunnerThread(Thread):
             if self._must_interrupt.is_set():
                 raise SequenceInterruptedException()
 
+    async def compile_shots(self) -> None:
+        async with asyncio.TaskGroup() as task_group:
+            for _ in range(NUMBER_WORKERS):
+                task_group.create_task(self._get_and_compile_shot())
+
+    async def _get_and_compile_shot(self) -> None:
+        while True:
+            shot_parameters = await self._shot_parameters_queue.get()
+            device_parameters = await self.compute_shot_parameters(
+                shot_parameters.shot_name,
+                shot_parameters.shot_context,
+                self._computation_executor,
+            )
+            await self._device_parameters_queue.put(device_parameters)
+            self._shot_parameters_queue.task_done()
+
     async def run_shots(self) -> None:
         while True:
-            shot_parameters = await self._shot_parameter_queue.get()
-            shot_data = await self.do_shot_with_retry(shot_parameters)
-            self._shot_parameter_queue.task_done()
-            await self._shot_storage_queue.put(shot_data)
+            device_parameters = await self._device_parameters_queue.get()
+            shot_data = await self.do_shot_with_retry(device_parameters)
+            self._device_parameters_queue.task_done()
+            await self._storage_queue.put(shot_data)
 
     async def store_shots(self) -> None:
         while True:
-            shot_data = await self._shot_storage_queue.get()
+            shot_data = await self._storage_queue.get()
             await self.store_shot(shot_data)
-            self._shot_storage_queue.task_done()
+            self._storage_queue.task_done()
 
     @singledispatchmethod
     async def run_step(self, step: Step, context: StepContext) -> StepContext:
@@ -388,15 +418,15 @@ class SequenceRunnerThread(Thread):
     async def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
-        shot_parameters = await self.compute_shot_parameters(
-            shot, context, self._computation_executor
+        await self._shot_parameters_queue.put(
+            ShotParameters(shot_name=shot.name, shot_context=context)
         )
-        await self._shot_parameter_queue.put(shot_parameters)
+
         return context.reset_history()
 
     async def compute_shot_parameters(
-        self, shot: ExecuteShot, context: StepContext, executor: Executor
-    ) -> ShotParameters:
+        self, shot_name: str, context: StepContext, executor: Executor
+    ) -> ShotDeviceParameters:
         with DurationTimer() as timer:
             # For some reasons, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
             # the yaml representation of the configuration instead.
@@ -412,7 +442,7 @@ class SequenceRunnerThread(Thread):
                 executor,
                 _wrap_compute_shot_parameters,
                 self._experiment_config_yaml,
-                self._sequence_config.shot_configurations[shot.name],
+                self._sequence_config.shot_configurations[shot_name],
                 context.variables,
             )
             change_params = await compute_change_params_task
@@ -421,8 +451,8 @@ class SequenceRunnerThread(Thread):
         logger.info(
             "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
         )
-        return ShotParameters(
-            shot_name=shot.name,
+        return ShotDeviceParameters(
+            shot_name=shot_name,
             step_context=context,
             change_parameters=change_params,
             static_parameters=shot_params,
@@ -469,7 +499,7 @@ class SequenceRunnerThread(Thread):
                     child_step_index += 1
                 else:
                     child_step_index = 0
-                await self._shot_parameter_queue.join()
+                await self._device_parameters_queue.join()
         return context
 
     @run_step.register
@@ -482,7 +512,7 @@ class SequenceRunnerThread(Thread):
 
     async def do_shot_with_retry(
         self,
-        shot_params: ShotParameters,
+        shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
         number_of_attempts = 2  # must >= 1
         for attempt in range(number_of_attempts):
@@ -559,14 +589,17 @@ class SequenceRunnerThread(Thread):
             return data
 
         sequencers = self.get_sequencers_in_use()
+        cameras = self.get_cameras_in_use()
 
         for sequencer in sequencers.values():
             sequencer.start_sequence()
 
-        camera_tasks = {}
+        for camera in cameras.values():
+            camera.start_acquisition()
 
+        camera_tasks = {}
         async with asyncio.TaskGroup() as run_group:
-            for camera_name, camera in self.get_cameras().items():
+            for camera_name, camera in cameras.items():
                 camera_tasks[camera_name] = run_group.create_task(
                     get_camera_pictures(camera)
                 )
@@ -623,7 +656,7 @@ class SequenceRunnerThread(Thread):
         )
         return dict(sorted_by_trigger_priority)
 
-    def get_cameras(self) -> dict[DeviceName, "Camera"]:
+    def get_cameras_in_use(self) -> dict[DeviceName, "Camera"]:
         return {
             device_name: device  # type: ignore
             for device_name, device in self._devices.items()
@@ -751,16 +784,18 @@ async def wait_on_sequencer(sequencer: Sequencer):
         await asyncio.sleep(10e-3)
 
 
-async def get_camera_pictures(camera: Camera) -> dict[ImageLabel, Image]:
+async def get_camera_pictures(camera: "Camera") -> dict[ImageLabel, Image]:
     picture_names = camera.get_picture_names()
     result = {}
     for picture_name in picture_names:
         result[picture_name] = await get_picture_from_camera(camera, picture_name)
+        logger.debug(f"Got picture '{picture_name}' from camera '{camera.get_name()}'")
+    camera.stop_acquisition()
     return result
 
 
-async def get_picture_from_camera(camera: Camera, picture_name: ImageLabel) -> Image:
-    while not (image := camera.get_picture(picture_name)):
+async def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image:
+    while (image := camera.get_picture(picture_name)) is None:
         await asyncio.sleep(1e-3)
     return image
 
