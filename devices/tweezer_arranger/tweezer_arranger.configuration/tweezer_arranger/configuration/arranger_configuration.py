@@ -1,9 +1,10 @@
 from abc import ABC
 from collections.abc import Set, Sequence
-from typing import NewType, Generic, TypeVar, Any
+from typing import Generic, TypeVar, Any
 
 from configuration_holder import ConfigurationHolder
 from device.configuration import DeviceConfiguration, DeviceParameter
+from tweezer_arranger.configuration_name import TweezerConfigurationName
 from tweezer_arranger_lane.configuration import (
     TweezerAction,
     HoldTweezers as HoldTweezersLane,
@@ -17,8 +18,6 @@ from .arranger_instructions import (
     RearrangeTweezers as RearrangeTweezerInstruction,
 )
 from .tweezer_configuration import TweezerConfiguration
-
-TweezerConfigurationName = NewType("TweezerConfigurationName", str)
 
 TweezerConfigurationType = TypeVar(
     "TweezerConfigurationType", bound=TweezerConfiguration

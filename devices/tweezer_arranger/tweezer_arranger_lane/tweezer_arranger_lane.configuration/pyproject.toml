@@ -11,6 +11,7 @@ python = "^3.11"
 lane-configuration = {path = "../../../../common/lane/lane.configuration", develop = true}
 settings-model = {path = "../../../../common/settings_model", develop = true}
 tweezer-arranger-configuration = {path = "../../tweezer_arranger.configuration", develop = true}
+tweezer-arranger-configuration-name = {path = "../../tweezer_arranger.configuration_name", develop = true}
 
 
 [build-system]

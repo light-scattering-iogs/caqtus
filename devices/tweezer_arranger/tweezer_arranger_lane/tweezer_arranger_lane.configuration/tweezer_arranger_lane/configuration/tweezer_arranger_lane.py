@@ -3,7 +3,7 @@ from typing import Self
 
 from lane.configuration import Lane
 from settings_model import SettingsModel
-from tweezer_arranger.configuration import TweezerConfigurationName
+from tweezer_arranger.configuration_name import TweezerConfigurationName
 
 
 class TweezerAction(SettingsModel, ABC):
