@@ -236,6 +236,8 @@ def _get_next_step(
                 return move_step_name(current_step + 1)
             case RearrangeTweezers():
                 return rearrange_step_name(current_step + 1)
+            case _:
+                raise NotImplementedError
 
 
 def _get_steps(
