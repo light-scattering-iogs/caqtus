@@ -1,7 +1,7 @@
 from numbers import Real
 from typing import TypeGuard, Any
 
-from .data_type import Data, Array
+from .data_type import Data, Array, DataKey
 
 
 def is_data(data: Any) -> TypeGuard[Data]:
@@ -23,6 +23,13 @@ def is_data(data: Any) -> TypeGuard[Data]:
     elif isinstance(data, (list, tuple)):
         return all(is_data(x) for x in data)
     elif isinstance(data, dict):
-        return all(isinstance(k, str) and is_data(v) for k, v in data.items())
+        return all(is_valid_key(k) and is_data(v) for k, v in data.items())
 
     return False
+
+
+def is_valid_key(value: Any) -> TypeGuard[DataKey]:
+    if isinstance(value, bool | str | Real):
+        return True
+    elif isinstance(value, tuple):
+        return all(is_valid_key(x) for x in value)
