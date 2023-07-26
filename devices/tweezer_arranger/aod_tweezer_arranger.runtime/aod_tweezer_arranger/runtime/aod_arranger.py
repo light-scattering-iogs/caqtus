@@ -8,6 +8,7 @@ from pydantic import validator
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from duration_timer import DurationTimerLog
+from log_exception import log_exception
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -71,9 +72,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 )
         return configurations
 
+    @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
-        self._signal_generator = SignalGenerator(self.sampling_rate)
+        self._signal_generator = self._enter_context(SignalGenerator(self.sampling_rate))
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
         self._compute_static_signals()

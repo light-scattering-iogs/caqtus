@@ -78,27 +78,27 @@ def initialize_awg(tweezer_config: AODTweezerConfiguration) -> SpectrumAWGM4i66x
 
 
 def write_config_to_awg(
-        awg: SpectrumAWGM4i66xxX8, tweezer_config: AODTweezerConfiguration
+    awg: SpectrumAWGM4i66xxX8, tweezer_config: AODTweezerConfiguration
 ):
-    signal_generator = SignalGenerator(tweezer_config.sampling_rate)
-    data = np.array(
-        (
-            signal_generator.generate_signal_static_traps(
-                amplitudes=tweezer_config.amplitudes_x,
-                frequencies=tweezer_config.frequencies_x,
-                phases=tweezer_config.phases_x,
-                number_samples=tweezer_config.number_samples,
+    with SignalGenerator(tweezer_config.sampling_rate) as signal_generator:
+        data = np.array(
+            (
+                signal_generator.generate_signal_static_traps(
+                    amplitudes=tweezer_config.amplitudes_x,
+                    frequencies=tweezer_config.frequencies_x,
+                    phases=tweezer_config.phases_x,
+                    number_samples=tweezer_config.number_samples,
+                ),
+                signal_generator.generate_signal_static_traps(
+                    amplitudes=tweezer_config.amplitudes_y,
+                    frequencies=tweezer_config.frequencies_y,
+                    phases=tweezer_config.phases_y,
+                    number_samples=tweezer_config.number_samples,
+                ),
             ),
-            signal_generator.generate_signal_static_traps(
-                amplitudes=tweezer_config.amplitudes_y,
-                frequencies=tweezer_config.frequencies_y,
-                phases=tweezer_config.phases_y,
-                number_samples=tweezer_config.number_samples,
-            ),
-        ),
-        dtype=np.int16,
-    )
-    awg.update_parameters(segment_data={SegmentName("segment_0"): data})
+            dtype=np.int16,
+        )
+        awg.update_parameters(segment_data={SegmentName("segment_0"): data})
 
 
 if __name__ == "__main__":
