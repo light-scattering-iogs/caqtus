@@ -81,6 +81,8 @@ PARAMETER_QUEUE_SIZE = 10
 DEVICE_PARAMETER_QUEUE_SIZE = 8
 STORAGE_QUEUE_SIZE = 10
 
+NUMBER_WORKERS = 4
+
 
 class ShotParameters(NamedTuple):
     """Holds information necessary to compile a shot."""

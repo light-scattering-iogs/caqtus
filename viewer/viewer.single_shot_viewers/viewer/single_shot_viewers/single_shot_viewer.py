@@ -10,3 +10,6 @@ class SingleShotViewer(QWidget, QABC):
     @abstractmethod
     def set_shot(self, shot: Shot) -> None:
         ...
+
+    def update_view(self) -> None:
+        pass

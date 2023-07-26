@@ -19,6 +19,8 @@ variable-name = {path = "../../../common/variable/variable.name", develop = true
 data-types = {path = "../../../common/types/data_types", develop = true}
 parameter-types = {path = "../../../common/types/parameter_types", develop = true}
 device-name = {path = "../../../devices/device/device.name", develop = true}
+atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
+python-benedict = "^0.32.0"
 
 
 [build-system]
