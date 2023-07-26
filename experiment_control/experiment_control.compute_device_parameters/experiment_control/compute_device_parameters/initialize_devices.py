@@ -12,6 +12,8 @@ from experiment.configuration import (
     ElliptecELL14RotationStageConfiguration,
 )
 from sequence.configuration import SequenceConfig
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from tweezer_arranger_lane.configuration import TweezerArrangerLane
 
 
 class InitializationParameters(TypedDict):
@@ -35,6 +37,9 @@ def get_devices_initialization_parameters(
         | get_cameras_initialization_parameters(experiment_config, sequence_config)
         | get_elliptec_initialization_parameters(experiment_config, sequence_config)
         | get_atom_detector_initialization_parameters(
+            experiment_config, sequence_config
+        )
+        | get_tweezer_arranger_initialization_parameters(
             experiment_config, sequence_config
         )
     )
@@ -124,12 +129,13 @@ def get_atom_detector_initialization_parameters(
 ) -> dict[DeviceName, InitializationParameters]:
 
     result = {}
+    atom_detector_lanes = sequence_config.shot_configurations["shot"].get_lanes(
+        AtomDetectorLane
+    )
     for device_name, device_config in experiment_config.get_device_configs(
         AtomDetectorConfiguration
     ).items():
-        atom_detector_lanes = sequence_config.shot_configurations["shot"].get_lanes(
-            AtomDetectorLane
-        )
+
         if device_name in atom_detector_lanes:
             detector_lane = atom_detector_lanes[device_name]
             result[device_name] = InitializationParameters(
@@ -137,6 +143,30 @@ def get_atom_detector_initialization_parameters(
                 server=device_config.remote_server,
                 init_kwargs=device_config.get_device_init_args(
                     imaging_configurations_to_use=detector_lane.get_imaging_configurations()
+                ),
+            )
+    return result
+
+
+def get_tweezer_arranger_initialization_parameters(
+    experiment_config: ExperimentConfig, sequence_config: SequenceConfig
+) -> dict[DeviceName, InitializationParameters]:
+    result = {}
+
+    tweezer_arranger_lanes = sequence_config.shot_configurations["shot"].get_lanes(
+        TweezerArrangerLane
+    )
+    for device_name, device_config in experiment_config.get_device_configs(
+        TweezerArrangerConfiguration
+    ).items():
+        if device_name in tweezer_arranger_lanes:
+            arranger_lane = tweezer_arranger_lanes[device_name]
+            result[device_name] = InitializationParameters(
+                type=device_config.get_device_type(),
+                server=device_config.remote_server,
+                init_kwargs=device_config.get_device_init_args(
+                    tweezer_configurations_to_use=arranger_lane.get_static_configurations(),
+                    tweezer_sequence=arranger_lane.list_steps(),
                 ),
             )
     return result

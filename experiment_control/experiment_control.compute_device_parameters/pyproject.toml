@@ -28,6 +28,8 @@ lane-configuration = {path = "../../common/lane/lane.configuration", develop = t
 camera-lane-configuration = {path = "../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true}
 atom-detector-configuration = {path = "../../devices/atom_detector/atom_detector.configuration", develop = true}
 atom-detector-lane-configuration = {path = "../../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
+tweezer-arranger-configuration = {path = "../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
+tweezer-arranger-lane-configuration = {path = "../../devices/tweezer_arranger/tweezer_arranger_lane/tweezer_arranger_lane.configuration", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

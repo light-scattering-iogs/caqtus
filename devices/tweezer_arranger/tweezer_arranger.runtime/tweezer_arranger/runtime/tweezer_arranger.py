@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from dataclasses import dataclass
 from typing import TypeVar, Generic
 
 from pydantic import Field, validator
@@ -9,33 +8,15 @@ from device.runtime import RuntimeDevice
 from tweezer_arranger.configuration import (
     TweezerConfiguration,
     TweezerConfigurationName,
+    ArrangerInstruction,
+    HoldTweezers,
+    MoveTweezers,
+    RearrangeTweezers,
 )
 
 TweezerConfigurationType = TypeVar(
     "TweezerConfigurationType", bound=TweezerConfiguration
 )
-
-
-@dataclass(frozen=True)
-class ArrangerInstruction(ABC):
-    pass
-
-
-@dataclass(frozen=True)
-class HoldTweezers(ArrangerInstruction):
-    tweezer_configuration: TweezerConfigurationName
-
-
-@dataclass(frozen=True)
-class MoveTweezers(ArrangerInstruction):
-    initial_tweezer_configuration: TweezerConfigurationName
-    final_tweezer_configuration: TweezerConfigurationName
-
-
-@dataclass(frozen=True)
-class RearrangeTweezers(ArrangerInstruction):
-    initial_tweezer_configuration: TweezerConfigurationName
-    final_tweezer_configuration: TweezerConfigurationName
 
 
 class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):

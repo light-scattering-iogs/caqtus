@@ -19,15 +19,15 @@ from spectum_awg_m4i66xx_x8.runtime import (
     SegmentData,
 )
 from tweezer_arranger.configuration import (
-    TweezerConfigurationName,
-)
-from tweezer_arranger.runtime import (
-    TweezerArranger,
     ArrangerInstruction,
     HoldTweezers,
     MoveTweezers,
     RearrangeTweezers,
 )
+from tweezer_arranger.configuration import (
+    TweezerConfigurationName,
+)
+from tweezer_arranger.runtime import TweezerArranger
 from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 
 logger = logging.getLogger(__name__)
@@ -134,7 +134,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             raise ValueError(
                 "Last instruction in tweezer_sequence must be HoldTweezers"
             )
-        segment_data[last_segment] = self._static_signals[last_tweezer_config.tweezer_configuration]
+        segment_data[last_segment] = self._static_signals[
+            last_tweezer_config.tweezer_configuration
+        ]
 
         with DurationTimerLog(logger, "Writing static segments"):
             self._awg.update_parameters(segment_data=segment_data)
@@ -194,10 +196,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     def has_sequence_finished(self) -> bool:
         current_step = self._awg.get_current_step()
         logger.debug(f"Current step: {current_step}")
-        return (
-            current_step
-            == static_step_names(len(self.tweezer_sequence))[0]
-        )
+        return current_step == static_step_names(len(self.tweezer_sequence))[0]
 
 
 def _compute_static_signal(

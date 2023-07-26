@@ -42,4 +42,13 @@ class RearrangeTweezers(TweezerAction):
 
 
 class TweezerArrangerLane(Lane[TweezerAction]):
-    pass
+    def get_static_configurations(self) -> set[TweezerConfigurationName]:
+        result = set[TweezerConfigurationName]()
+        for cell_value, _, _ in self.get_value_spans():
+            if isinstance(cell_value, HoldTweezers):
+                result.add(cell_value.configuration)
+
+        return result
+
+    def list_steps(self) -> list[TweezerAction]:
+        return [cell_value for cell_value, _, _ in self.get_value_spans()]
