@@ -1,10 +1,12 @@
 import contextlib
 import datetime
+import logging
 from typing import Self
 
 
 class DurationTimer(contextlib.AbstractContextManager):
     """A timer that measures the duration of a context."""
+
     def __init__(self):
         self._start_time = None
         self._end_time = None
@@ -41,3 +43,14 @@ class DurationTimer(contextlib.AbstractContextManager):
             raise RuntimeError("Timer has not been stopped yet.")
         else:
             return self._end_time
+
+
+class DurationTimerLog(DurationTimer):
+    def __init__(self, logger: logging.Logger, message: str):
+        super().__init__()
+        self._logger = logger
+        self._message = message
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        super().__exit__(exc_type, exc_val, exc_tb)
+        self._logger.info(f"{self._message} took {self.duration_in_ms} ms")

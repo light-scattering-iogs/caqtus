@@ -1,3 +1,3 @@
-from .duration_timer import DurationTimer
+from .duration_timer import DurationTimer, DurationTimerLog
 
-__all__ = ["DurationTimer"]
+__all__ = ["DurationTimer", "DurationTimerLog"]
