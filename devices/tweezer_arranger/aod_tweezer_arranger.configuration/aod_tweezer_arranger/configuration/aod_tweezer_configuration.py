@@ -10,11 +10,11 @@ class AODTweezerConfiguration(SettingsModel, TweezerConfiguration2D):
     Fields:
         frequencies_x: The frequencies of each tone in Hz.
         phases_x: The phases of each tone in radian.
-        amplitude_x: The amplitudes of each tone. They have no dimension.
+        amplitudes_x: The amplitudes of each tone. They have no dimension.
         scale_x: The value to multiply the x-signal by to get the voltage to send to the AWG. Must be in V.
         frequencies_y: The frequencies of each tone in Hz.
         phases_y: The phases of each tone in radian.
-        amplitude_y: The amplitudes of each tone. They have no dimension.
+        amplitudes_y: The amplitudes of each tone. They have no dimension.
         scale_y: The value to multiply the y-signal by to get the voltage to send to the AWG. Must be in V.
         sampling_rate: The sampling rate of the AWG to generate the signal, in Hz.
         number_samples: The number of samples of the waveform. To generate a signal for longer times than

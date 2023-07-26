@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 from typing import TypeVar, Sequence
 
@@ -17,6 +18,10 @@ from tweezer_arranger.configuration import (
     TweezerConfigurationName,
 )
 from tweezer_arranger.runtime import TweezerArranger, ArrangerInstruction
+from .signal_generator import AWGSignalArray, SignalGenerator
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -33,6 +38,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     awg_max_power_y: float
 
     _awg: SpectrumAWGM4i66xxX8
+    _static_signals: dict[
+        TweezerConfigurationName, tuple[AWGSignalArray, AWGSignalArray]
+    ]
+    _signal_generator: SignalGenerator
 
     @validator("tweezer_configurations")
     def validate_tweezer_configurations(
@@ -57,6 +66,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     def initialize(self) -> None:
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
+        self._signal_generator = SignalGenerator(self.sampling_rate)
         # self._awg.stop()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
@@ -80,6 +90,21 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 repetition=1,
             )
             segment_names.add(SegmentName(fractional))
+
+            logger.debug(f"Computing signal for {config_name}")
+            signal_x = self._signal_generator.generate_signal_static_traps(
+                tweezer_config.amplitudes_x,
+                tweezer_config.frequencies_x,
+                tweezer_config.phases_x,
+                tweezer_config.number_samples,
+            )
+            signal_y = self._signal_generator.generate_signal_static_traps(
+                tweezer_config.amplitudes_y,
+                tweezer_config.frequencies_y,
+                tweezer_config.phases_y,
+                tweezer_config.number_samples,
+            )
+            self._static_signals[config_name] = (signal_x, signal_y)
         steps[StepName(last)] = StepConfiguration(
             segment=SegmentName(last),
             next_step=StepName(last),

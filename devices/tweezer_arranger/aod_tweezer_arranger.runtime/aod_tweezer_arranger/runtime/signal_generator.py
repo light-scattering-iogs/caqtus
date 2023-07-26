@@ -16,6 +16,8 @@ NumberSamples = NewType("NumberSamples", int)
 
 NUMBER_THREADS_PER_BLOCK = 1024
 
+AWGSignalArray = np.ndarray[NumberSamples, np.dtype[np.int16]]
+
 
 class SignalGenerator:
 
@@ -51,7 +53,7 @@ class SignalGenerator:
             frequencies: np.ndarray[NumberTones, np.dtype[float]],
             phases: np.ndarray[NumberTones, np.dtype[float]],
             number_samples: NumberSamples,
-    ) -> np.ndarray[NumberSamples, np.dtype[np.int16]]:
+    ) -> AWGSignalArray:
         number_tones = len(amplitudes)
         if not len(phases) == len(frequencies) == number_tones:
             raise ValueError(
