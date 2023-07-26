@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "remote_device_server"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.12"
 
 pydantic = "^1.10.2"
 
@@ -19,6 +19,7 @@ elliptec-ell14-runtime = {path = "../../elliptec_ell14/elliptec_ell14.runtime", 
 device-runtime = {path = "../../device/device.runtime", develop = true}
 atom-detector-runtime = {path = "../../atom_detector/atom_detector.runtime", develop = true}
 tweezer-arranger-runtime = {path = "../../tweezer_arranger/tweezer_arranger.runtime", develop = true}
+aod-tweezer-arranger-runtime = {path = "../../tweezer_arranger/aod_tweezer_arranger.runtime", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

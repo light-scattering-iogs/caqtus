@@ -53,6 +53,14 @@ except Exception:
     logger.info("Did not import AtomDetector", exc_info=True)
 
 try:
+    from aod_tweezer_arranger.runtime import AODTweezerArranger
+
+    imported_devices["AODTweezerArranger"] = AODTweezerArranger
+    logger.info("AODTweezerArranger imported")
+except Exception:
+    logger.info("Did not import AODTweezerArranger", exc_info=True)
+
+try:
     from imaging_source.runtime import ImagingSourceCameraDMK33GR0134
 
     imported_devices["ImagingSourceCameraDMK33GR0134"] = ImagingSourceCameraDMK33GR0134

@@ -16,6 +16,7 @@ REGISTERED_DEVICE_TYPES: list[str] = [
     "ImagingSourceCameraDMK33GR0134",
     "ElliptecELL14RotationStage",
     "AtomDetector",
+    "AODTweezerArranger",
 ]
 
 for device_type in REGISTERED_DEVICE_TYPES:
