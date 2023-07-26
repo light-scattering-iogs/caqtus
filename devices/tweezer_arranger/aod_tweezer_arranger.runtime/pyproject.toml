@@ -15,6 +15,7 @@ aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configurat
 tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
 pydantic = "^1.0"
 spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
+duration-timer = {path = "../../../common/duration_timer", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

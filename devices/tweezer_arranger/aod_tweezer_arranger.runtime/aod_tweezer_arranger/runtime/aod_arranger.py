@@ -2,9 +2,11 @@ import logging
 from collections.abc import Iterable
 from typing import TypeVar, Sequence
 
+import numpy as np
 from pydantic import validator
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
+from duration_timer import DurationTimerLog
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -24,7 +26,7 @@ from tweezer_arranger.runtime import (
     MoveTweezers,
     RearrangeTweezers,
 )
-from .signal_generator import AWGSignalArray, SignalGenerator
+from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -46,7 +48,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     _awg: SpectrumAWGM4i66xxX8
     _static_signals: dict[
         TweezerConfigurationName, tuple[AWGSignalArray, AWGSignalArray]
-    ]
+    ] = {}
     _signal_generator: SignalGenerator
 
     @validator("tweezer_configurations")
@@ -70,55 +72,15 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         return configurations
 
     def initialize(self) -> None:
-        pass
-        # self._awg = self._prepare_awg()
-        # self._enter_context(self._awg)
-        # self._signal_generator = SignalGenerator(self.sampling_rate)
+        super().initialize()
+        self._signal_generator = SignalGenerator(self.sampling_rate)
+        self._awg = self._prepare_awg()
+        self._enter_context(self._awg)
+        self._compute_static_signals()
+
         # self._awg.stop()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
-        steps: dict[StepName, StepConfiguration] = {}
-        segment_names: set[SegmentName] = set()
-        last = "last"
-        for config_name, tweezer_config in self.tweezer_configurations.values():
-            integer = f"{config_name}.integer"
-            fractional = f"{config_name}.fractional"
-
-            # Here the next_step and repetition are not correct, we'll need to update before starting the AWG sequence
-            steps[StepName(integer)] = StepConfiguration(
-                segment=SegmentName(integer),
-                next_step=StepName(fractional),
-                repetition=1,
-            )
-            segment_names.add(SegmentName(integer))
-            steps[StepName(fractional)] = StepConfiguration(
-                segment=SegmentName(fractional),
-                next_step=StepName(last),
-                repetition=1,
-            )
-            segment_names.add(SegmentName(fractional))
-
-            logger.debug(f"Computing signal for {config_name}")
-            signal_x = self._signal_generator.generate_signal_static_traps(
-                tweezer_config.amplitudes_x,
-                tweezer_config.frequencies_x,
-                tweezer_config.phases_x,
-                tweezer_config.number_samples,
-            )
-            signal_y = self._signal_generator.generate_signal_static_traps(
-                tweezer_config.amplitudes_y,
-                tweezer_config.frequencies_y,
-                tweezer_config.phases_y,
-                tweezer_config.number_samples,
-            )
-            self._static_signals[config_name] = (signal_x, signal_y)
-        steps[StepName(last)] = StepConfiguration(
-            segment=SegmentName(last),
-            next_step=StepName(last),
-            repetition=1,
-        )
-        segment_names.add(SegmentName(last))
-
         return SpectrumAWGM4i66xxX8(
             name=f"{self.name}_awg",
             board_id=self.awg_board_id,
@@ -138,9 +100,22 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             ),
             segment_names=_get_segment_names(self.tweezer_sequence),
             steps=_get_steps(self.tweezer_sequence),
-            first_step=StepName(last),
+            first_step=static_step_names(0)[0],
             sampling_rate=self.sampling_rate,
         )
+
+    def _compute_static_signals(self):
+        for (
+            tweezer_configuration_name,
+            tweezer_configuration,
+        ) in self.tweezer_configurations.items():
+            with DurationTimerLog(
+                logger, f"Computing static signal for {tweezer_configuration_name}"
+            ):
+                signals = _compute_static_signal(
+                    self._signal_generator, tweezer_configuration
+                )
+                self._static_signals[tweezer_configuration_name] = signals
 
     @property
     def sampling_rate(self) -> int:
@@ -157,10 +132,26 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         first_config = first(self.tweezer_configurations.values())
         return first_config.scale_y
 
-    def update_parameters(
-        self, *, tweezer_sequence_durations: Sequence[float]
-    ) -> None:
+    def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
         raise NotImplementedError
+
+
+def _compute_static_signal(
+    signal_generator: SignalGenerator, tweezer_configuration: AODTweezerConfiguration
+) -> tuple[AWGSignalArray, AWGSignalArray]:
+    static_signal_x = signal_generator.generate_signal_static_traps(
+        np.array(tweezer_configuration.amplitudes_x),
+        np.array(tweezer_configuration.frequencies_x),
+        np.array(tweezer_configuration.phases_x),
+        NumberSamples(tweezer_configuration.number_samples),
+    )
+    static_signal_y = signal_generator.generate_signal_static_traps(
+        np.array(tweezer_configuration.amplitudes_y),
+        np.array(tweezer_configuration.frequencies_y),
+        np.array(tweezer_configuration.phases_y),
+        NumberSamples(tweezer_configuration.number_samples),
+    )
+    return static_signal_x, static_signal_y
 
 
 def move_segment_name(step: int) -> SegmentName:
@@ -185,6 +176,7 @@ def static_step_names(
     return StepName(f"Static step {step} integral part"), StepName(
         f"Static step {step} fractional part"
     )
+
 
 def move_step_name(step: int) -> StepName:
     return StepName(f"Move step {step}")
