@@ -242,11 +242,11 @@ def compile_clock_requirements(
 
     sequencer = DeviceName("NI6738 card")
     sequencer_config = sequencer_configs[sequencer]
-    clock_instructions = []
+    sequencer_clock_instructions = []
     for step_index, clock_instruction in enumerate(
         compute_clock_step_requirements(sequencer_config, shot_config)
     ):
-        clock_instructions.append(
+        sequencer_clock_instructions.append(
             ClockInstruction(
                 start=step_bounds[step_index],
                 stop=step_bounds[step_index + 1],
@@ -254,7 +254,20 @@ def compile_clock_requirements(
                 order=clock_instruction,
             )
         )
-    return {sequencer: clock_instructions}
+    arranger = DeviceName("Tweezer Arranger")
+    arranger_clock_instructions = [
+        ClockInstruction(
+            start=step_bounds[0],
+            stop=step_bounds[-1],
+            time_step=1000,
+            order=ClockInstruction.StepInstruction.TriggerStart,
+        )
+    ]
+
+    return {
+        sequencer: sequencer_clock_instructions,
+        arranger: arranger_clock_instructions,
+    }
 
 
 def compute_clock_step_requirements(
