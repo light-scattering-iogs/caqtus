@@ -5,7 +5,6 @@ from pydantic import validator
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from spectum_awg_m4i66xx_x8.configuration import (
-    SpectrumAWGM4i66xxX8Configuration,
     ChannelSettings,
 )
 from spectum_awg_m4i66xx_x8.runtime import (
@@ -21,7 +20,17 @@ from tweezer_arranger.runtime import TweezerArranger, ArrangerInstruction
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
-    awg_configuration: SpectrumAWGM4i66xxX8Configuration
+    """Device that uses an AWG/AOD to rearrange and move tweezers.
+
+    Fields:
+        awg_board_id: The ID of the AWG board to use. Must be a SpectrumAWGM4i66xxX8 board.
+        awg_max_power_x: The maximum power that can be output by the AWG on the X axis, in dBm.
+        awg_max_power_y: The maximum power that can be output by the AWG on the Y axis, in dBm.
+    """
+
+    awg_board_id: str
+    awg_max_power_x: float
+    awg_max_power_y: float
 
     _awg: SpectrumAWGM4i66xxX8
 
@@ -51,39 +60,70 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         # self._awg.stop()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
-        first_config = first(self.tweezer_configurations.values())
+        steps: dict[StepName, StepConfiguration] = {}
+        segment_names: set[SegmentName] = set()
+        last = "last"
+        for config_name, tweezer_config in self.tweezer_configurations.values():
+            integer = f"{config_name}.integer"
+            fractional = f"{config_name}.fractional"
+
+            # Here the next_step and repetition are not correct, we'll need to update before starting the AWG sequence
+            steps[StepName(integer)] = StepConfiguration(
+                segment=SegmentName(integer),
+                next_step=StepName(fractional),
+                repetition=1,
+            )
+            segment_names.add(SegmentName(integer))
+            steps[StepName(fractional)] = StepConfiguration(
+                segment=SegmentName(fractional),
+                next_step=StepName(last),
+                repetition=1,
+            )
+            segment_names.add(SegmentName(fractional))
+        steps[StepName(last)] = StepConfiguration(
+            segment=SegmentName(last),
+            next_step=StepName(last),
+            repetition=1,
+        )
+        segment_names.add(SegmentName(last))
+
         return SpectrumAWGM4i66xxX8(
             name=f"{self.name}_awg",
-            board_id=self.awg_configuration.board_id,
+            board_id=self.awg_board_id,
             channel_settings=(
                 ChannelSettings(
                     name="X",
                     enabled=True,
-                    amplitude=first_config.scale_x,
-                    maximum_power=self.awg_configuration.channel_settings[
-                        0
-                    ].maximum_power,
+                    amplitude=self.scale_x,
+                    maximum_power=self.awg_max_power_x,
                 ),
                 ChannelSettings(
                     name="Y",
                     enabled=True,
-                    amplitude=first_config.scale_y,
-                    maximum_power=self.awg_configuration.channel_settings[
-                        1
-                    ].maximum_power,
+                    amplitude=self.scale_y,
+                    maximum_power=self.awg_max_power_y,
                 ),
             ),
-            segment_names={SegmentName("segment 0")},
-            steps={
-                StepName("Step 0"): StepConfiguration(
-                    segment=SegmentName("segment 0"),
-                    next_step=StepName("Step 0"),
-                    repetition=1,
-                )
-            },
-            first_step=StepName("Step 0"),
-            sampling_rate=round(first_config.sampling_rate),
+            segment_names=segment_names,
+            steps=steps,
+            first_step=StepName(last),
+            sampling_rate=round(self.sampling_rate),
         )
+
+    @property
+    def sampling_rate(self) -> int:
+        first_config = first(self.tweezer_configurations.values())
+        return round(first_config.sampling_rate)
+
+    @property
+    def scale_x(self) -> float:
+        first_config = first(self.tweezer_configurations.values())
+        return first_config.scale_x
+
+    @property
+    def scale_y(self) -> float:
+        first_config = first(self.tweezer_configurations.values())
+        return first_config.scale_y
 
     def update_parameters(self, *, instructions: Sequence[ArrangerInstruction]) -> None:
         raise NotImplementedError
