@@ -3,7 +3,7 @@ import ctypes
 import logging
 import math
 from collections.abc import Mapping
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import numpy as np
 from pydantic import Field, validator
@@ -201,20 +201,15 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         assert config.repetition <= spcm.SPCSEQ_LOOPMASK
         mask_upper = config.repetition | config.change_condition.value
-        logger.debug(config.change_condition.value)
 
         mask = mask_lower | (mask_upper << 32)
-
-        logger.debug(f"{step_name=}")
-        logger.debug(f"{step_index=}")
-        logger.debug(f"{mask & spcm.SPCSEQ_NEXTSTEPMASK=}")
-
         spcm.spcm_dwSetParam_i64(
             self._board_handle,
             spcm.SPC_SEQMODE_STEPMEM0 + step_index,
             mask,
         )
         self.check_error()
+        logger.debug(f"Setup step {step_name} with {config!r}")
 
     def _set_first_step(self, first_step: StepName):
         first_step_index = self._step_indices[first_step]
@@ -253,10 +248,18 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
 
     def update_parameters(
-        self, segment_data: Mapping[SegmentName, SegmentData]
+        self,
+        *,
+        segment_data: Optional[Mapping[SegmentName, SegmentData]] = None,
+        step_repetitions: Optional[Mapping[StepName, int]] = None,
     ) -> None:
-        for segment_name, data in segment_data.items():
-            self._check_and_write_segment_data(segment_name, data)
+        if segment_data is not None:
+            for segment_name, data in segment_data.items():
+                self._check_and_write_segment_data(segment_name, data)
+        if step_repetitions is not None:
+            for step_name, new_repetitions in step_repetitions.items():
+                self._steps[step_name].repetition = new_repetitions
+                self._setup_step(step_name, self._steps[step_name])
 
     def _check_and_write_segment_data(
         self,
@@ -290,6 +293,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         segment_index = self._get_segment_index(segment_name)
         self._write_segment_data(segment_index, data)
+        logger.debug(f"Wrote {data.shape[1]} samples to segment {segment_name}({segment_index})")
 
     def _get_segment_index(self, segment_name: SegmentName) -> int:
         try:
@@ -321,6 +325,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         flattened_data = np.dstack(tuple(data)).flatten(order="C")
         self._transfer_data(flattened_data)
+
 
     def _transfer_data(self, data: np.ndarray[np.int16]):
         data_length_bytes = len(data) * self._bytes_per_sample

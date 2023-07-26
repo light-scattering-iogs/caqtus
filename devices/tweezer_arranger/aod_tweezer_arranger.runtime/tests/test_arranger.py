@@ -1,4 +1,5 @@
 import logging
+import time
 
 import pytest
 
@@ -44,12 +45,37 @@ def test_arranger_initialization(sequence, static_tweezer_config):
         awg_board_id="/dev/spcm0",
         awg_max_power_x=-4,
         awg_max_power_y=-4,
-        tweezer_configurations={TweezerConfigurationName("5x5 tweezers"): static_tweezer_config},
+        tweezer_configurations={
+            TweezerConfigurationName("5x5 tweezers"): static_tweezer_config
+        },
         tweezer_sequence=sequence,
     )
 
     with arranger:
         pass
+
+
+def test_simple_hold(static_tweezer_config):
+    sequence = (
+        HoldTweezers(tweezer_configuration=TweezerConfigurationName("5x5 tweezers")),
+    )
+    arranger = AODTweezerArranger(
+        name=DeviceName("AOD Tweezer Arranger"),
+        awg_board_id="/dev/spcm0",
+        awg_max_power_x=-4,
+        awg_max_power_y=-4,
+        tweezer_configurations={
+            TweezerConfigurationName("5x5 tweezers"): static_tweezer_config
+        },
+        tweezer_sequence=sequence,
+    )
+
+    with arranger:
+        arranger.update_parameters(tweezer_sequence_durations=[1.0])
+        arranger.start_sequence()
+        logger.debug(arranger.has_sequence_finished())
+        time.sleep(1.5)
+        logger.debug(arranger.has_sequence_finished())
 
 
 @pytest.fixture

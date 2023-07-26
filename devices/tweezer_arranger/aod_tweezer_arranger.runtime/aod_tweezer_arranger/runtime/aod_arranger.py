@@ -1,4 +1,5 @@
 import logging
+import math
 from collections.abc import Iterable
 from typing import TypeVar, Sequence
 
@@ -47,9 +48,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     awg_max_power_y: float
 
     _awg: SpectrumAWGM4i66xxX8
-    _static_signals: dict[
-        TweezerConfigurationName, tuple[AWGSignalArray, AWGSignalArray]
-    ] = {}
+    _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
     _signal_generator: SignalGenerator
 
     @validator("tweezer_configurations")
@@ -117,16 +116,26 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 signals = _compute_static_signal(
                     self._signal_generator, tweezer_configuration
                 )
-                self._static_signals[tweezer_configuration_name] = signals
+                self._static_signals[tweezer_configuration_name] = np.array(
+                    signals, dtype=np.int16
+                )
 
-    def _write_static_segments(self):
+    def _write_static_segments(self) -> None:
         segment_data: dict[SegmentName, SegmentData] = {}
         for step, instruction in enumerate(self.tweezer_sequence):
             if isinstance(instruction, HoldTweezers):
                 static_segment = static_segment_names(step)[0]
-                segment_data[static_segment] = np.array(
-                    self._static_signals[instruction.tweezer_configuration]
-                )
+                segment_data[static_segment] = self._static_signals[
+                    instruction.tweezer_configuration
+                ]
+        last_segment = static_segment_names(len(self.tweezer_sequence))[0]
+        last_tweezer_config = self.tweezer_sequence[-1]
+        if not isinstance(last_tweezer_config, HoldTweezers):
+            raise ValueError(
+                "Last instruction in tweezer_sequence must be HoldTweezers"
+            )
+        segment_data[last_segment] = self._static_signals[last_tweezer_config.tweezer_configuration]
+
         with DurationTimerLog(logger, "Writing static segments"):
             self._awg.update_parameters(segment_data=segment_data)
 
@@ -146,7 +155,49 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         return first_config.scale_y
 
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
-        raise NotImplementedError
+        if not len(tweezer_sequence_durations) == len(self.tweezer_sequence):
+            raise ValueError(
+                "tweezer_sequence_durations must be the same length as tweezer_sequence"
+            )
+        # this is a limitation of the AWG that each segment must have a length
+        # that is a multiple of 32.
+        time_step = 32 / self.sampling_rate
+        step_repetitions = dict[StepName, int]()
+        segment_data: dict[SegmentName, SegmentData] = {}
+        for step, (instruction, (start, stop)) in enumerate(
+            zip(self.tweezer_sequence, get_step_bounds(tweezer_sequence_durations))
+        ):
+            if isinstance(instruction, HoldTweezers):
+                ticks = number_ticks(start, stop, time_step)
+                segment_tick_duration = (
+                    self.tweezer_configurations[
+                        instruction.tweezer_configuration
+                    ].number_samples
+                    // 32
+                )
+                repetitions, remainder = divmod(ticks, segment_tick_duration)
+
+                step_repetitions[static_step_names(step)[0]] = repetitions
+                segment_data[static_segment_names(step)[1]] = self._static_signals[
+                    instruction.tweezer_configuration
+                ][:, : remainder * 32]
+            else:
+                raise NotImplementedError
+        with DurationTimerLog(logger, "Updating awg parameters"):
+            self._awg.update_parameters(
+                segment_data=segment_data, step_repetitions=step_repetitions
+            )
+
+    def start_sequence(self) -> None:
+        self._awg.run()
+
+    def has_sequence_finished(self) -> bool:
+        current_step = self._awg.get_current_step()
+        logger.debug(f"Current step: {current_step}")
+        return (
+            current_step
+            == static_step_names(len(self.tweezer_sequence))[0]
+        )
 
 
 def _compute_static_signal(
@@ -292,3 +343,42 @@ _T = TypeVar("_T")
 
 def first(iterable: Iterable[_T]) -> _T:
     return next(iter(iterable))
+
+
+def number_ticks(start_time: float, stop_time: float, time_step: float) -> int:
+    """Returns the number of ticks between start_time and stop_time.
+
+    Args:
+        start_time: The start time in seconds.
+        stop_time: The stop time in seconds.
+        time_step: The time step in seconds.
+    """
+
+    return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
+
+
+def start_tick(start_time: float, time_step: float) -> int:
+    """Returns the included first tick index of the step starting at start_time."""
+
+    return math.ceil(start_time / time_step)
+
+
+def stop_tick(stop_time: float, time_step: float) -> int:
+    """Returns the excluded last tick index of the step ending at stop_time."""
+
+    return math.ceil(stop_time / time_step)
+
+
+def get_step_bounds(step_durations: Iterable[float]) -> list[tuple[float, float]]:
+    """Returns the step bounds for the given step durations.
+
+    For an iterable of step durations [d_0, d_1, ..., d_n], the step bounds are
+    (0, d_0), (d_0, d_0 + d_1), ..., (d_0 + ... + d_{n-1}, d_0 + ... + d_n).
+    """
+
+    step_bounds = []
+    start_time = 0.0
+    for duration in step_durations:
+        step_bounds.append((start_time, start_time + duration))
+        start_time += duration
+    return step_bounds
