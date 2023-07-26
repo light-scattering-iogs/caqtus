@@ -17,6 +17,7 @@ from typing import (
 
 import numpy as np
 
+from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.runtime import CameraTimeoutError
 from data_types import Data, DataLabel
 from device.configuration import DeviceName, DeviceParameter
@@ -67,6 +68,7 @@ from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRan
 
 if TYPE_CHECKING:
     from camera.runtime import Camera
+    from aod_tweezer_arranger.runtime import AODTweezerArranger
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -612,6 +614,10 @@ class SequenceRunnerThread(Thread):
 
         sequencers = self.get_sequencers_in_use()
         cameras = self.get_cameras_in_use()
+        tweezer_arrangers = self.get_tweezer_arrangers_in_use()
+
+        for tweezer_arranger in tweezer_arrangers.values():
+            tweezer_arranger.start_sequence()
 
         for sequencer in sequencers.values():
             sequencer.start_sequence()
@@ -720,6 +726,16 @@ class SequenceRunnerThread(Thread):
             )
         }
 
+    def get_tweezer_arrangers_in_use(self) -> dict[DeviceName, "AODTweezerArranger"]:
+        return {
+            device_name: device  # type: ignore
+            for device_name, device in self._devices.items()
+            if isinstance(
+                self._experiment_config.get_device_config(device_name),
+                AODTweezerArrangerConfiguration,
+            )
+        }
+
 
 def initialize_device(device: RuntimeDevice):
     """Initialize a device.
@@ -809,16 +825,6 @@ def strip_unit_from_variable_ranges(
         )
         raw_variable_ranges[variable_name] = evaluated_range
     return raw_variable_ranges
-
-
-def _get_sequencers(
-    devices: Mapping[DeviceName, RuntimeDevice]
-) -> dict[DeviceName, Sequencer]:
-    return {
-        device_name: device
-        for device_name, device in devices.items()
-        if isinstance(device, Sequencer)
-    }
 
 
 _T = TypeVar("_T")
