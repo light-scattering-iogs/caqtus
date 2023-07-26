@@ -75,7 +75,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
-        self._signal_generator = self._enter_context(SignalGenerator(self.sampling_rate))
+        self._signal_generator = self._enter_context(
+            SignalGenerator(self.sampling_rate)
+        )
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
         self._compute_static_signals()
@@ -192,12 +194,19 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
 
     def start_sequence(self) -> None:
         self._awg.stop_sequence()
-        self._awg.start_sequence()
+        self._awg.start_sequence(external_trigger=True)
 
     def has_sequence_finished(self) -> bool:
         current_step = self._awg.get_current_step()
         logger.debug(f"Current step: {current_step}")
         return current_step == static_step_names(len(self.tweezer_sequence))[0]
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "start_sequence",
+            "has_sequence_finished",
+        )
 
 
 def _compute_static_signal(
