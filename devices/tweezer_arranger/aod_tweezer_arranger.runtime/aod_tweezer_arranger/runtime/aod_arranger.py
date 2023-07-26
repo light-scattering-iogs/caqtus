@@ -8,6 +8,7 @@ from pydantic import validator
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from duration_timer import DurationTimerLog
+from log_exception import log_exception
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -71,15 +72,16 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 )
         return configurations
 
+    @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
-        self._signal_generator = SignalGenerator(self.sampling_rate)
+        self._signal_generator = self._enter_context(
+            SignalGenerator(self.sampling_rate)
+        )
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
         self._compute_static_signals()
         self._write_static_segments()
-
-        # self._awg.stop()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
         return SpectrumAWGM4i66xxX8(
@@ -191,12 +193,20 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             )
 
     def start_sequence(self) -> None:
-        self._awg.run()
+        self._awg.stop_sequence()
+        self._awg.start_sequence(external_trigger=True)
 
     def has_sequence_finished(self) -> bool:
         current_step = self._awg.get_current_step()
         logger.debug(f"Current step: {current_step}")
         return current_step == static_step_names(len(self.tweezer_sequence))[0]
+
+    @classmethod
+    def exposed_remote_methods(cls) -> tuple[str, ...]:
+        return super().exposed_remote_methods() + (
+            "start_sequence",
+            "has_sequence_finished",
+        )
 
 
 def _compute_static_signal(

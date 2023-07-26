@@ -48,9 +48,9 @@ def main():
 
     with awg:
         awg.update_parameters(segment_data=segments)
-        awg.run()
+        awg.start_sequence()
         input()
-        awg.stop()
+        awg.stop_sequence()
 
 
 if __name__ == "__main__":
