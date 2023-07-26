@@ -138,6 +138,6 @@ with SpectrumAWGM4i66xxX8(
     )
     awg.update_parameters(segment_data={"target_traps": data})
 
-    awg.run()
+    awg.stqrt_sequence()
     input()
     awg.stop_sequence()

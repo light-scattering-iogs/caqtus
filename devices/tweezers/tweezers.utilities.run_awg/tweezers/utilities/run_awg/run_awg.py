@@ -59,6 +59,6 @@ with SpectrumAWGM4i66xxX8(
     awg.update_parameters(segment_data={"segment_0": data_0})
     t1 = time.perf_counter()
     print(f"Time to update parameters: {(t1 - t0) * 1e3} ms")
-    awg.run()
+    awg.start_sequence()
     input()
     awg.stop_sequence()

@@ -192,7 +192,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
 
     def start_sequence(self) -> None:
         self._awg.stop_sequence()
-        self._awg.run()
+        self._awg.start_sequence()
 
     def has_sequence_finished(self) -> bool:
         current_step = self._awg.get_current_step()

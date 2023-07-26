@@ -39,7 +39,7 @@ def main():
 
     with awg:
         write_config_to_awg(awg, tweezer_config)
-        awg.run()
+        awg.start_sequence()
         input()
         awg.stop_sequence()
 

@@ -369,16 +369,17 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
         return segment_size.value
 
-    def run(self):
+    def start_sequence(self, external_trigger: bool = False):
         spcm.spcm_dwSetParam_i64(self._board_handle, spcm.SPC_TIMEOUT, 0)
         spcm.spcm_dwSetParam_i64(
             self._board_handle,
             spcm.SPC_M2CMD,
             spcm.M2CMD_CARD_START | spcm.M2CMD_CARD_ENABLETRIGGER,
         )
-        spcm.spcm_dwSetParam_i64(
-            self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_FORCETRIGGER
-        )
+        if not external_trigger:
+            spcm.spcm_dwSetParam_i64(
+                self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_FORCETRIGGER
+            )
         self.check_error()
 
     def get_current_step(self) -> StepName:

@@ -66,7 +66,7 @@ def homogenize(
 
     with awg:
         write_config_to_awg(awg, tweezer_configuration)
-        awg.run()
+        awg.start_sequence()
         picture = acquire_picture(pixelfly) - background_picture
 
     spot_analyzer = GridSpotAnalyzer(
@@ -83,7 +83,7 @@ def homogenize(
     for repetition in range(number_iterations):
         with awg:
             write_config_to_awg(awg, tweezer_configuration)
-            awg.run()
+            awg.start_sequence()
             time.sleep(0.05)
             picture = acquire_picture(pixelfly) - background_picture
 
