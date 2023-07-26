@@ -3,6 +3,7 @@ from typing import TypeVar, Sequence
 
 from pydantic import validator
 
+from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from spectum_awg_m4i66xx_x8.configuration import (
     SpectrumAWGM4i66xxX8Configuration,
     ChannelSettings,
@@ -14,10 +15,9 @@ from spectum_awg_m4i66xx_x8.runtime import (
     StepConfiguration,
 )
 from tweezer_arranger.configuration import (
-    AODTweezerConfiguration,
     TweezerConfigurationName,
 )
-from .tweezer_arranger import TweezerArranger, ArrangerInstruction
+from tweezer_arranger.runtime import TweezerArranger, ArrangerInstruction
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -48,7 +48,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     def initialize(self) -> None:
         self._awg = self._prepare_awg()
         self._enter_context(self._awg)
-        self._awg.stop()
+        # self._awg.stop()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
         first_config = first(self.tweezer_configurations.values())

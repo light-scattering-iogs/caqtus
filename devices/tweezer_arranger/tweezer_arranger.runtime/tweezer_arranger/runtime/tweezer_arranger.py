@@ -34,6 +34,15 @@ class MoveTweezers(ArrangerInstruction):
 
 
 class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
+    """Abstract class that define the interface for a device that can move and rearrange tweezers.
+
+    This class is meant to be inherited by a concrete class that implements the actual rearrangement. It is generic on
+    the type of the configuration of the tweezers, which is should be defined by the concrete class.
+
+    Fields:
+        tweezer_configurations: The configurations between which the tweezers can be moved.
+    """
+
     tweezer_configurations: dict[
         TweezerConfigurationName, TweezerConfigurationType
     ] = Field(allow_mutation=False)

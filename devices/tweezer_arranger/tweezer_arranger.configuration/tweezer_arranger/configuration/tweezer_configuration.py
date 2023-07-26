@@ -8,7 +8,12 @@ class TweezerLabel(Hashable, Protocol):
 
 
 class TweezerConfiguration(ABC):
-    """Contains the information to generate a static pattern of traps."""
+    """Abstract class that define the interface to generate a static pattern of traps.
+
+    It is meant to be subclassed by a concrete class that implements the actual configuration. For example, the
+    configuration of the tweezers could be defined by the frequencies to apply to an AOD or by the phases to apply to a
+    SLM.
+    """
 
     @property
     @abstractmethod
@@ -27,7 +32,7 @@ class TweezerConfiguration(ABC):
         """The units of the tweezer positions.
 
         This is mostly for documentation and plotting purposes, it can be different that what is used to store the
-        parameters. Typical values can be "μm".
+        device parameters. Typical values can be "μm".
         """
         raise NotImplementedError
 

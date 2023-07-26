@@ -18,10 +18,12 @@ imaging-source-runtime = {path = "../../cameras/imaging_source/imaging_source.ru
 elliptec-ell14-runtime = {path = "../../elliptec_ell14/elliptec_ell14.runtime", develop = true}
 device-runtime = {path = "../../device/device.runtime", develop = true}
 atom-detector-runtime = {path = "../../atom_detector/atom_detector.runtime", develop = true}
+tweezer-arranger-runtime = {path = "../../tweezer_arranger/tweezer_arranger.runtime", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
+mypy = "^1.4.1"
 
 [build-system]
 requires = ["poetry-core"]
