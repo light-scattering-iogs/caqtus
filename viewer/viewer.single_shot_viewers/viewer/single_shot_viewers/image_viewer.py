@@ -70,7 +70,7 @@ class ImageViewer(SingleShotViewer):
             except Exception as e:
                 self._set_exception(e)
             else:
-                self._set_image(np.transpose(image))
+                self._set_image(image)
 
     def update_view(self) -> None:
         self._canvas.draw()
