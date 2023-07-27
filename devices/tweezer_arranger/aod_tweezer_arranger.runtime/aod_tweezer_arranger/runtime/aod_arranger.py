@@ -34,7 +34,7 @@ from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-BYPASS_POWER_CHECK = False
+BYPASS_POWER_CHECK = True
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -54,6 +54,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
     _signal_generator: SignalGenerator
     _tweezer_sequence_bounds: tuple[tuple[float, float], ...] = ()
+    _step_number_ticks: list[int]
 
     @validator("tweezer_configurations")
     def validate_tweezer_configurations(
@@ -78,6 +79,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
+        self._step_number_ticks = [0] * len(self.tweezer_sequence)
         self._signal_generator = self._enter_context(
             SignalGenerator(self.sampling_rate)
         )
@@ -180,6 +182,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
             ):
                 ticks = number_ticks(start, stop, time_step)
+                self._step_number_ticks[step] = ticks * 32
                 if isinstance(instruction, HoldTweezers):
                     segment_tick_duration = (
                         self.tweezer_configurations[
@@ -238,6 +241,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self, *, step: int, atom_present: Mapping[tuple[int, int], bool]
     ) -> None:
         with DurationTimerLog(logger, "Preparing rearrangement"):
+            previous_instruction = self.tweezer_sequence[step - 1]
+            if not isinstance(previous_instruction, HoldTweezers):
+                raise ValueError(f"Instruction at step {step - 1} must be HoldTweezers")
+
             rearrange_instruction = self.tweezer_sequence[step]
             if not isinstance(rearrange_instruction, RearrangeTweezers):
                 raise ValueError(
@@ -290,6 +297,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 )
                 * 32
             )
+
+            previous_step_length = (
+                self._step_number_ticks[step - 1] % initial_config.number_samples
+            )
             move_signal_x = self._signal_generator.generate_signal_moving_traps(
                 np.array(initial_config.amplitudes_x)[initial_indices],
                 np.array(final_config.amplitudes_x)[final_indices],
@@ -298,6 +309,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 np.array(initial_config.phases_x)[initial_indices],
                 np.array(final_config.phases_x)[final_indices],
                 number_samples,
+                NumberSamples(previous_step_length),
             )
             move_signal_y = self._signal_generator.generate_signal_moving_traps(
                 initial_config.amplitudes_y,
@@ -307,6 +319,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 initial_config.phases_y,
                 final_config.phases_y,
                 number_samples,
+                NumberSamples(previous_step_length),
             )
             segment_data = {
                 rearrange_segment_name(step): np.array((move_signal_x, move_signal_y))

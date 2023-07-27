@@ -1,5 +1,4 @@
 import logging
-from threading import Thread
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,18 +27,20 @@ def test_moving_traps():
         final_phases = initial_phases
 
         with DurationTimerLog(logger, "Generating signal"):
-            thread = Thread(target=signal_generator.generate_signal_moving_traps, args=(
+            output_0 = signal_generator.generate_signal_static_traps(
                 initial_amplitudes,
-                final_amplitudes,
                 initial_frequencies,
-                final_frequencies,
                 initial_phases,
+                number_samples=NumberSamples(625_000),
+            )
+            output_2 = signal_generator.generate_signal_static_traps(
+                final_amplitudes,
+                final_frequencies,
                 final_phases,
-                NumberSamples(625_000),
-            ))
-            thread.start()
-            thread.join()
-            output = signal_generator.generate_signal_moving_traps(
+                number_samples=NumberSamples(625_000),
+            )
+
+            output_1 = signal_generator.generate_signal_moving_traps(
                 initial_amplitudes,
                 final_amplitudes,
                 initial_frequencies,
@@ -47,9 +48,12 @@ def test_moving_traps():
                 initial_phases,
                 final_phases,
                 number_samples=NumberSamples(625_000),
+                previous_step_length=NumberSamples(625_000)
             )
+
+        output = np.concatenate([output_0, output_1, output_2])
         logger.debug(output)
-        f, t, Zxx = stft(output, sampling_rate, nperseg=6_250)
+        f, t, Zxx = stft(output, sampling_rate, nperseg=10_000)
         plt.imshow(np.abs(Zxx), aspect="auto", extent=[t.min(), t.max(), f.min(), f.max()], origin="lower")
         plt.ylim(70e6, 90e6)
         plt.xlabel("Time [sec]")

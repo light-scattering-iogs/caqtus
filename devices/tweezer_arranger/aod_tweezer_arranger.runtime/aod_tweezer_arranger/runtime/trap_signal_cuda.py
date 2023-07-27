@@ -58,7 +58,7 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     }}
     
     extern "C" __global__
-    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step)
+    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_length)
     {{
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
@@ -68,7 +68,8 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
        for(unsigned int i=0; i < number_tones; i++){{
             float mean_frequency = 0.5 * (initial_frequencies[i] + final_frequencies[i]);
             float frequency_range = 0.5 * (final_frequencies[i] - initial_frequencies[i]);
-            float phase = X * (s * mean_frequency + frequency_range * phase_ramp(s)) + initial_phases[i];
+            float initial_phase = initial_phases[i] + TAU * previous_step_length * time_step * initial_frequencies[i];
+            float phase = X * (s * mean_frequency + frequency_range * phase_ramp(s)) + initial_phase;
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
             float amplitude_range = 0.5 * (final_amplitudes[i] - initial_amplitudes[i]);
             float amplitude = mean_amplitude + amplitude_range * amplitude_ramp(s);

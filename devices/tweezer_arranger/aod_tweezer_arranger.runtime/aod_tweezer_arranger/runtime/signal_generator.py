@@ -240,6 +240,7 @@ class SignalGenerator:
         initial_phases: Sequence[float],
         final_phases: Sequence[float],
         number_samples: NumberSamples,
+        previous_step_length: NumberSamples,
     ) -> AWGSignalArray:
         number_tones = len(initial_amplitudes)
         if (
@@ -293,6 +294,7 @@ class SignalGenerator:
                 np.array([number_samples], dtype=np.uint32),
                 np.array([number_tones], dtype=np.uint32),
                 np.array([self._time_step], dtype=np.float32),
+                np.array([previous_step_length], dtype=np.uint32),
             ]
             args = np.array([arg.ctypes.data for arg in arguments], dtype=np.uint64)
             number_blocks = math.ceil(number_samples / NUMBER_THREADS_PER_BLOCK)
