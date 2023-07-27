@@ -18,12 +18,12 @@ logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_ONE_TONE = 0.165  # V
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "5x5 tweezers"
+TWEEZER_CONFIG_NAME = "25x1"
 
 
 def main():
     frequencies_x = np.linspace(77e6, 86e6, 5)
-    frequencies_y = np.linspace(72e6, 81e6, 5)
+    frequencies_y = np.linspace(72e6, 78e6, 5)
 
     parser = argparse.ArgumentParser(
         description="Generate a configuration for a 2D static tweezer pattern."
@@ -41,7 +41,10 @@ def main():
     sampling_rate = args.sampling_rate
     segment_frequency = sampling_rate / number_samples
 
+
     frequencies_x = rounded_frequencies(frequencies_x, segment_frequency)
+    # frequencies_x[0] -= segment_frequency
+
     frequencies_y = rounded_frequencies(frequencies_y, segment_frequency)
 
     amplitudes_x = np.ones(len(frequencies_x)) / len(frequencies_x)
