@@ -397,7 +397,7 @@ def _get_segment_names(
             case MoveTweezers():
                 segments.add(move_segment_name(step))
             case RearrangeTweezers():
-                segments.add(move_segment_name(step))
+                segments.add(rearrange_segment_name(step))
             case _:
                 raise NotImplementedError
     # We add a segment for the last step to just loop over the last configuration
