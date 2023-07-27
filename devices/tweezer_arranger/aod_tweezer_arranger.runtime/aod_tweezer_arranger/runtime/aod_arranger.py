@@ -223,7 +223,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             self._awg.update_parameters(
                 segment_data=segment_data,
                 step_repetitions=step_repetitions,
-                bypass_power_check=BYPASS_POWER_CHECK
+                bypass_power_check=BYPASS_POWER_CHECK,
             )
 
     def start_sequence(self) -> None:

@@ -60,7 +60,6 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     extern "C" __global__
     void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step)
     {{
-     float tau = 6.283185307179586;  //tau = 2*pi
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
      float result = 0.0;
