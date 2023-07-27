@@ -116,9 +116,22 @@ class SignalGenerator:
         self._compute_static_traps_signal = cuModuleGetFunction(
             module, b"compute_static_traps_signal"
         )
+        self._compute_moving_traps_signal = cuModuleGetFunction(
+            module, b"compute_moving_traps_signal"
+        )
         self._amplitudes_gpu = cuModuleGetGlobal(module, b"amplitudes")[0]
         self._frequencies_gpu = cuModuleGetGlobal(module, b"frequencies")[0]
         self._phases_gpu = cuModuleGetGlobal(module, b"phases")[0]
+        self._initial_amplitudes_gpu = cuModuleGetGlobal(module, b"initial_amplitudes")[
+            0
+        ]
+        self._initial_frequencies_gpu = cuModuleGetGlobal(
+            module, b"initial_frequencies"
+        )[0]
+        self._initial_phases_gpu = cuModuleGetGlobal(module, b"initial_phases")[0]
+        self._final_amplitudes_gpu = cuModuleGetGlobal(module, b"final_amplitudes")[0]
+        self._final_frequencies_gpu = cuModuleGetGlobal(module, b"final_frequencies")[0]
+        self._final_phases_gpu = cuModuleGetGlobal(module, b"final_phases")[0]
         self._stream = cuStreamCreate(0)
         self._exit_stack.callback(cuStreamDestroy, self._stream)
 
@@ -199,9 +212,95 @@ class SignalGenerator:
             cuStreamSynchronize(self._stream)
         return output
 
+    def generate_signal_moving_traps(
+        self,
+        initial_amplitudes: np.ndarray[NumberTones, np.dtype[float]],
+        final_amplitudes: np.ndarray[NumberTones, np.dtype[float]],
+        initial_frequencies: np.ndarray[NumberTones, np.dtype[float]],
+        final_frequencies: np.ndarray[NumberTones, np.dtype[float]],
+        initial_phases: np.ndarray[NumberTones, np.dtype[float]],
+        final_phases: np.ndarray[NumberTones, np.dtype[float]],
+        number_samples: NumberSamples,
+    ) -> AWGSignalArray:
+        number_tones = len(initial_amplitudes)
+        if (
+            not len(initial_phases)
+            == len(initial_frequencies)
+            == len(initial_amplitudes)
+            == len(final_phases)
+            == len(final_frequencies)
+            == len(final_amplitudes)
+            == number_tones
+        ):
+            raise ValueError(
+                "Lengths of amplitudes, phases and frequencies must be equal."
+            )
+
+        output = np.zeros(number_samples, dtype=np.int16)
+        with ExitStack() as stack:
+            output_gpu = cuMemAlloc(output.nbytes)
+            stack.callback(cuMemFree, output_gpu)
+
+            self._copy_to_gpu(
+                self._initial_amplitudes_gpu,
+                np.array(initial_amplitudes, dtype=np.float32),
+            )
+            self._copy_to_gpu(
+                self._final_amplitudes_gpu,
+                np.array(final_amplitudes, dtype=np.float32),
+            )
+            self._copy_to_gpu(
+                self._initial_frequencies_gpu,
+                np.array(initial_frequencies, dtype=np.float32),
+            )
+            self._copy_to_gpu(
+                self._final_frequencies_gpu,
+                np.array(final_frequencies, dtype=np.float32),
+            )
+
+            self._copy_to_gpu(
+                self._initial_phases_gpu,
+                np.array(initial_phases, dtype=np.float32),
+            )
+            self._copy_to_gpu(
+                self._final_phases_gpu,
+                np.array(final_phases, dtype=np.float32),
+            )
+
+            arguments = [
+                np.array([int(output_gpu)], dtype=np.uint64),
+                np.array([number_samples], dtype=np.uint32),
+                np.array([number_tones], dtype=np.uint32),
+                np.array([self._time_step], dtype=np.float32),
+            ]
+            args = np.array([arg.ctypes.data for arg in arguments], dtype=np.uint64)
+            number_blocks = math.ceil(number_samples / NUMBER_THREADS_PER_BLOCK)
+            cuLaunchKernel(
+                self._compute_moving_traps_signal,
+                number_blocks,
+                1,
+                1,
+                NUMBER_THREADS_PER_BLOCK,
+                1,
+                1,
+                0,
+                self._stream,
+                args.ctypes.data,
+                0,
+            )
+            cuMemcpyDtoHAsync(
+                output.ctypes.data, output_gpu, output.nbytes, self._stream
+            )
+            cuStreamSynchronize(self._stream)
+        return output
+
+    def _copy_to_gpu(self, dst, src: np.ndarray):
+        cuMemcpyHtoDAsync(dst, src.ctypes.data, src.nbytes, self._stream)
+
 
 class NvrtcError(RuntimeError):
     pass
+
 
 class CudaError(RuntimeError):
     pass
