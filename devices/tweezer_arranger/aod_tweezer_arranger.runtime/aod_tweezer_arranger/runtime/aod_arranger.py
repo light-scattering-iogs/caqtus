@@ -208,7 +208,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     final_config.phases_y,
                     number_samples,
                 )
-                segment_data[move_segment_name(step)] = np.array(move_signal_x, move_signal_y, dtype=np.int16)
+                segment_data[move_segment_name(step)] = np.array((move_signal_x, move_signal_y), dtype=np.int16)
             else:
                 raise NotImplementedError
         with DurationTimerLog(logger, "Updating awg parameters"):
