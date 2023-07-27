@@ -15,6 +15,7 @@ settings-model = {path = "../../../common/settings_model", develop = true}
 device-config = {path = "../../device/device.configuration", develop = true}
 configuration-holder = {path = "../../../common/configuration_holder", develop = true}
 tweezer-arranger-configuration-name = {path = "../tweezer_arranger.configuration_name", develop = true}
+tweezer-arranger-lane-configuration = {path = "../tweezer_arranger_lane/tweezer_arranger_lane.configuration", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
