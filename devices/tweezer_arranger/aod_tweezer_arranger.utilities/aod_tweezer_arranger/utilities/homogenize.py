@@ -97,7 +97,7 @@ def homogenize(
 
         # Beware how to flip the intensity matrix depending on the imaging setup
         new_row_amplitudes, new_column_amplitudes = compute_new_amplitudes(
-            intensity_matrix[::-1, ::] * weight_matrix,
+            intensity_matrix[::, ::] * weight_matrix,
             beta,
             np.array(tweezer_configuration.amplitudes_x),
             np.array(tweezer_configuration.amplitudes_y),

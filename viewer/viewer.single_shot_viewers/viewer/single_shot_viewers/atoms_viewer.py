@@ -34,7 +34,7 @@ class AtomsViewer(SingleShotViewer):
     def _setup_ui(self) -> None:
         self._figure = Figure()
         self._axes = self._figure.add_subplot()
-        self._axes.set_aspect("equal")
+        # self._axes.set_aspect("equal")
         self._canvas = FigureCanvasQTAgg(self._figure)
 
         self.setLayout(QVBoxLayout())

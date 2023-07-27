@@ -18,12 +18,15 @@ logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_ONE_TONE = 0.165  # V
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "25x1"
+TWEEZER_CONFIG_NAME = "10x1"
 
 
 def main():
-    frequencies_x = np.linspace(77e6, 86e6, 5)
-    frequencies_y = np.linspace(72e6, 78e6, 5)
+
+    # beware here, the first frequency along x must be the highest one because it is the one at the left of the picture
+    # when imaging the atoms for rearrangement
+    frequencies_x = np.linspace(87e6, 75e6, 10)
+    frequencies_y = np.linspace(75e6, 75e6, 1)
 
     parser = argparse.ArgumentParser(
         description="Generate a configuration for a 2D static tweezer pattern."
@@ -41,9 +44,8 @@ def main():
     sampling_rate = args.sampling_rate
     segment_frequency = sampling_rate / number_samples
 
-
+    frequencies_x = prevent_beating_in_array(frequencies_x, segment_frequency)
     frequencies_x = rounded_frequencies(frequencies_x, segment_frequency)
-    # frequencies_x[0] -= segment_frequency
 
     frequencies_y = rounded_frequencies(frequencies_y, segment_frequency)
 
@@ -62,33 +64,40 @@ def main():
     session = get_standard_experiment_session()
     with session.activate():
         experiment_config = session.get_current_experiment_config()
-        arranger_config: AODTweezerArrangerConfiguration = experiment_config.get_device_config(
-            DEVICE_NAME)  # type: ignore
+        arranger_config: AODTweezerArrangerConfiguration = (
+            experiment_config.get_device_config(DEVICE_NAME)
+        )  # type: ignore
         arranger_config[TWEEZER_CONFIG_NAME] = config
         experiment_config.set_device_config(DEVICE_NAME, arranger_config)
         new_config_name = session.add_experiment_config(experiment_config)
         session.set_current_experiment_config(new_config_name)
 
 
-def rounded_frequencies(
-        frequencies: np.ndarray, segment_frequency: float
+def prevent_beating_in_array(
+    frequencies: np.ndarray, segment_frequency: float
 ) -> np.ndarray:
     spacing = (
-            np.round((frequencies[1] - frequencies[0]) / segment_frequency)
-            * segment_frequency
+        np.round((frequencies[1] - frequencies[0]) / segment_frequency)
+        * segment_frequency
     )
     frequencies = frequencies[0] + np.arange(len(frequencies)) * spacing
+    return frequencies
+
+
+def rounded_frequencies(
+    frequencies: np.ndarray, segment_frequency: float
+) -> np.ndarray:
     frequencies = np.round(frequencies / segment_frequency) * segment_frequency
     return frequencies
 
 
 def get_trap_config(
-        frequencies_x: np.ndarray,
-        amplitudes_x,
-        frequencies_y,
-        amplitudes_y,
-        sampling_rate: float,
-        number_samples: int,
+    frequencies_x: np.ndarray,
+    amplitudes_x,
+    frequencies_y,
+    amplitudes_y,
+    sampling_rate: float,
+    number_samples: int,
 ) -> AODTweezerConfiguration:
     static_trap_generator_x = StaticTrapGenerator(
         frequencies=frequencies_x,
@@ -99,9 +108,9 @@ def get_trap_config(
     )
 
     if (
-            smallest_beating_x := static_trap_generator_x.compute_smallest_frequency_beating(
-                4
-            )
+        smallest_beating_x := static_trap_generator_x.compute_smallest_frequency_beating(
+            4
+        )
     ) < 100e3:
         warn(
             f"There is beating of {smallest_beating_x * 1e-3:.1f} kHz in the X channel"
@@ -118,11 +127,13 @@ def get_trap_config(
     )
 
     if (
-            smallest_beating_y := static_trap_generator_y.compute_smallest_frequency_beating(
-                4
-            )
+        smallest_beating_y := static_trap_generator_y.compute_smallest_frequency_beating(
+            4
+        )
     ) < 100e3:
-        warn(f"There is beating of {smallest_beating_y * 1e-3:.1f} kHz in the Y channel")
+        warn(
+            f"There is beating of {smallest_beating_y * 1e-3:.1f} kHz in the Y channel"
+        )
 
     static_trap_generator_y.optimize_phases()
     return AODTweezerConfiguration(
