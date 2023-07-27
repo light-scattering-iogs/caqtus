@@ -1,3 +1,4 @@
+import logging
 import math
 from contextlib import ExitStack
 from typing import NewType, SupportsFloat, SupportsInt, Self
@@ -6,6 +7,9 @@ import numpy as np
 from cuda import nvrtc, cuda
 
 from .static_traps_cuda import get_static_traps_cuda_program
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 NumberTones = NewType("NumberTones", int)
 NumberSamples = NewType("NumberSamples", int)
@@ -20,10 +24,10 @@ def _check_cuda_error(fun):
         err, *result = fun(*args, **kwargs)
         if isinstance(err, cuda.CUresult):
             if err != cuda.CUresult.CUDA_SUCCESS:
-                raise RuntimeError("Cuda Error: {}".format(err))
+                raise CudaError(err)
         elif isinstance(err, nvrtc.nvrtcResult):
             if err != nvrtc.nvrtcResult.NVRTC_SUCCESS:
-                raise RuntimeError("Nvrtc Error: {}".format(err))
+                raise NvrtcError(err)
         else:
             raise RuntimeError("Unknown error type: {}".format(err))
         if len(result) == 0:
@@ -56,6 +60,8 @@ cuMemcpyHtoDAsync = _check_cuda_error(cuda.cuMemcpyHtoDAsync)
 cuLaunchKernel = _check_cuda_error(cuda.cuLaunchKernel)
 cuStreamSynchronize = _check_cuda_error(cuda.cuStreamSynchronize)
 cuMemcpyDtoHAsync = _check_cuda_error(cuda.cuMemcpyDtoHAsync)
+nvrtcGetProgramLogSize = _check_cuda_error(nvrtc.nvrtcGetProgramLogSize)
+nvrtcGetProgramLog = _check_cuda_error(nvrtc.nvrtcGetProgramLog)
 
 
 class SignalGenerator:
@@ -87,7 +93,13 @@ class SignalGenerator:
         # compute_61 refer to the architecture of the GPU used (6.1)
         # should be replaced for other GPUs
         opts = [b"--fmad=false", b"--gpu-architecture=compute_61"]
-        nvrtcCompileProgram(program, 2, opts)
+        try:
+            nvrtcCompileProgram(program, 2, opts)
+        except NvrtcError as error:
+            log_size = nvrtcGetProgramLogSize(program)
+            log = b" " * log_size
+            nvrtcGetProgramLog(program, log)
+            raise error from NvrtcError(f"{log.decode('utf8')}")
         ptx_size = nvrtcGetPTXSize(program)
         ptx = b" " * ptx_size
         nvrtcGetPTX(program, ptx)
@@ -186,3 +198,10 @@ class SignalGenerator:
             )
             cuStreamSynchronize(self._stream)
         return output
+
+
+class NvrtcError(RuntimeError):
+    pass
+
+class CudaError(RuntimeError):
+    pass
