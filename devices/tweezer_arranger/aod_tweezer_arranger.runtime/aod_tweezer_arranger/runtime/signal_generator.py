@@ -6,7 +6,7 @@ from typing import NewType, SupportsFloat, SupportsInt, Self
 import numpy as np
 from cuda import nvrtc, cuda
 
-from .static_traps_cuda import get_static_traps_cuda_program
+from .trap_signal_cuda import get_traps_cuda_program
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -86,7 +86,7 @@ class SignalGenerator:
         return self
 
     def _initialize(self):
-        source = get_static_traps_cuda_program(self._max_number_tones)
+        source = get_traps_cuda_program(self._max_number_tones)
         program = nvrtcCreateProgram(
             str.encode(source), b"generate_signal.cu", 0, [], []
         )
