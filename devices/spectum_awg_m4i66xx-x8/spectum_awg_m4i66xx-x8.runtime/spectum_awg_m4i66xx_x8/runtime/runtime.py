@@ -252,10 +252,11 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         *,
         segment_data: Optional[Mapping[SegmentName, SegmentData]] = None,
         step_repetitions: Optional[Mapping[StepName, int]] = None,
+        bypass_power_check: bool = False,
     ) -> None:
         if segment_data is not None:
             for segment_name, data in segment_data.items():
-                self._check_and_write_segment_data(segment_name, data)
+                self._check_and_write_segment_data(segment_name, data, bypass_power_check=bypass_power_check)
         if step_repetitions is not None:
             for step_name, new_repetitions in step_repetitions.items():
                 self._steps[step_name].repetition = new_repetitions
@@ -265,6 +266,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self,
         segment_name: SegmentName,
         data: SegmentData,
+        bypass_power_check: bool = False,
     ):
         data = np.array(data, dtype=np.int16)
         if data.shape[0] != self.number_channels_enabled:
@@ -277,19 +279,20 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                 f"Expected number of samples to be a multiple of 32, but got {data.shape[1]=}"
             )
 
-        for channel in range(self.number_channels_enabled):
-            channel_settings = self.channel_settings[channel]
-            power = self._measure_mean_power(data[channel], channel_settings.amplitude)
-            power_dbm = 10 * math.log10(power / 1e-3) if power > 0 else -np.inf
-            logger.info(
-                f"Channel {channel_settings.name} power for segment {segment_name}: {power_dbm:.2f} dBm"
-            )
-            if power_dbm > channel_settings.maximum_power:
-                raise ValueError(
-                    f"Power of {power_dbm:.2f} dBm exceeds maximum of "
-                    f"{channel_settings.maximum_power:.2f} dBm for channel "
-                    f"{channel_settings.name}"
+        if not bypass_power_check:
+            for channel in range(self.number_channels_enabled):
+                channel_settings = self.channel_settings[channel]
+                power = self._measure_mean_power(data[channel], channel_settings.amplitude)
+                power_dbm = 10 * math.log10(power / 1e-3) if power > 0 else -np.inf
+                logger.info(
+                    f"Channel {channel_settings.name} power for segment {segment_name}: {power_dbm:.2f} dBm"
                 )
+                if power_dbm > channel_settings.maximum_power:
+                    raise ValueError(
+                        f"Power of {power_dbm:.2f} dBm exceeds maximum of "
+                        f"{channel_settings.maximum_power:.2f} dBm for channel "
+                        f"{channel_settings.name}"
+                    )
 
         segment_index = self._get_segment_index(segment_name)
         self._write_segment_data(segment_index, data)

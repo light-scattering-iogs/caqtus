@@ -34,6 +34,8 @@ from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+BYPASS_POWER_CHECK = False
+
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
@@ -188,8 +190,12 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 ][:, : remainder * 32]
             elif isinstance(instruction, MoveTweezers):
                 number_samples = NumberSamples(ticks * 32)
-                initial_config = self.tweezer_configurations[instruction.initial_tweezer_configuration]
-                final_config = self.tweezer_configurations[instruction.final_tweezer_configuration]
+                initial_config = self.tweezer_configurations[
+                    instruction.initial_tweezer_configuration
+                ]
+                final_config = self.tweezer_configurations[
+                    instruction.final_tweezer_configuration
+                ]
                 move_signal_x = self._signal_generator.generate_signal_moving_traps(
                     initial_config.amplitudes_x,
                     final_config.amplitudes_x,
@@ -208,12 +214,16 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     final_config.phases_y,
                     number_samples,
                 )
-                segment_data[move_segment_name(step)] = np.array((move_signal_x, move_signal_y), dtype=np.int16)
+                segment_data[move_segment_name(step)] = np.array(
+                    (move_signal_x, move_signal_y), dtype=np.int16
+                )
             else:
                 raise NotImplementedError
         with DurationTimerLog(logger, "Updating awg parameters"):
             self._awg.update_parameters(
-                segment_data=segment_data, step_repetitions=step_repetitions
+                segment_data=segment_data,
+                step_repetitions=step_repetitions,
+                bypass_power_check=BYPASS_POWER_CHECK
             )
 
     def start_sequence(self) -> None:
