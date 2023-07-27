@@ -52,3 +52,10 @@ class TweezerArrangerLane(Lane[TweezerAction]):
 
     def list_steps(self) -> list[TweezerAction]:
         return [cell_value for cell_value, _, _ in self.get_value_spans()]
+
+    def get_rearrangement_steps(self) -> list[tuple[int, int, int]]:
+        result = []
+        for step, (cell_value, start, stop) in enumerate(self.get_value_spans()):
+            if isinstance(cell_value, RearrangeTweezers):
+                result.append((step, start, stop))
+        return result

@@ -35,6 +35,7 @@ from experiment_control.compute_device_parameters import (
 )
 from experiment_control.compute_device_parameters.image_analysis import (
     find_how_to_analyze_images,
+    find_how_to_rearrange,
 )
 from image_types import ImageLabel, Image
 from parameter_types import AnalogValue, add_unit, get_unit, magnitude_in_unit
@@ -208,7 +209,13 @@ class SequenceRunnerThread(Thread):
         self._image_analysis_flow = find_how_to_analyze_images(
             self._sequence_config.shot_configurations["shot"]
         )
-        logger.debug(f"Image analysis flow: {self._image_analysis_flow}")
+
+        self._image_flow, self._rearrange_flow = find_how_to_rearrange(
+            self._sequence_config.shot_configurations["shot"]
+        )
+        logger.debug(f"{self._image_flow=}")
+        logger.debug(f"{self._rearrange_flow=}")
+
         devices = self._create_uninitialized_devices()
         logger.debug(devices)
 
@@ -652,20 +659,23 @@ class SequenceRunnerThread(Thread):
             logger.debug(
                 f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
             )
-            if camera_name in self._image_analysis_flow:
-                if picture_name in self._image_analysis_flow[camera_name]:
-                    for detector, imaging_config in self._image_analysis_flow[
-                        camera_name
-                    ][picture_name].items():
-                        atoms = self._devices[detector].are_atoms_present(
-                            picture, imaging_config
-                        )
+            if (camera_name, picture_name) in self._image_flow:
+                for detector, imaging_config in self._image_flow[(camera_name, picture_name)]:
+                    atoms = self._devices[detector].are_atoms_present(
+                        picture, imaging_config
+                    )
+                    logger.debug(
+                        f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
+                    )
+                    if not detector in result:
+                        result[detector] = {}
+                    result[detector][picture_name] = atoms
+                    if (detector, picture_name) in self._rearrange_flow:
+                        tweezer_arranger, step = self._rearrange_flow[(detector, picture_name)]
+                        self._devices[tweezer_arranger].prepare_rearrangement(step=step, atom_present=atoms)
                         logger.debug(
-                            f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
+                            f"Tweezer arranger '{tweezer_arranger}' arranged tweezers in picture '{picture_name}'"
                         )
-                        if not detector in result:
-                            result[detector] = {}
-                        result[detector][picture_name] = atoms
         camera.stop_acquisition()
 
         result[camera_name] = pictures

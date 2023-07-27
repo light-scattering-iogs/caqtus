@@ -11,3 +11,13 @@ class AtomDetectorLane(Lane[Optional[ImagingConfigurationName]]):
             if value is not None:
                 result.add(value)
         return result
+
+    def get_analysis_spans(self) -> list[tuple[ImagingConfigurationName, int, int]]:
+        """Get the spans of the analysis.
+        """
+
+        result = []
+        for cell_value, start, stop in self.get_value_spans():
+            if isinstance(cell_value, ImagingConfigurationName):
+                result.append((cell_value, start, stop))
+        return result
