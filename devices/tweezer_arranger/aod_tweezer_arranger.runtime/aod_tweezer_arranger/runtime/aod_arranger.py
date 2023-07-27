@@ -1,7 +1,7 @@
 import logging
 import math
 from collections.abc import Iterable
-from typing import TypeVar, Sequence
+from typing import TypeVar, Sequence, Mapping
 
 import numpy as np
 from pydantic import validator
@@ -34,7 +34,7 @@ from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-BYPASS_POWER_CHECK = False
+BYPASS_POWER_CHECK = True
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -53,6 +53,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     _awg: SpectrumAWGM4i66xxX8
     _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
     _signal_generator: SignalGenerator
+    _tweezer_sequence_bounds: tuple[tuple[float, float], ...] = ()
 
     @validator("tweezer_configurations")
     def validate_tweezer_configurations(
@@ -162,67 +163,156 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
 
     @log_exception(logger)
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
-        if not len(tweezer_sequence_durations) == len(self.tweezer_sequence):
-            raise ValueError(
-                "tweezer_sequence_durations must be the same length as tweezer_sequence"
-            )
-        # this is a limitation of the AWG that each segment must have a length
-        # that is a multiple of 32.
-        time_step = 32 / self.sampling_rate
-        step_repetitions = dict[StepName, int]()
-        segment_data: dict[SegmentName, SegmentData] = {}
-        for step, (instruction, (start, stop)) in enumerate(
-            zip(self.tweezer_sequence, get_step_bounds(tweezer_sequence_durations))
-        ):
-            ticks = number_ticks(start, stop, time_step)
-            if isinstance(instruction, HoldTweezers):
-                segment_tick_duration = (
-                    self.tweezer_configurations[
-                        instruction.tweezer_configuration
-                    ].number_samples
-                    // 32
-                )
-                repetitions, remainder = divmod(ticks, segment_tick_duration)
-
-                step_repetitions[static_step_names(step)[0]] = repetitions
-                segment_data[static_segment_names(step)[1]] = self._static_signals[
-                    instruction.tweezer_configuration
-                ][:, : remainder * 32]
-            elif isinstance(instruction, MoveTweezers):
-                number_samples = NumberSamples(ticks * 32)
-                initial_config = self.tweezer_configurations[
-                    instruction.initial_tweezer_configuration
-                ]
-                final_config = self.tweezer_configurations[
-                    instruction.final_tweezer_configuration
-                ]
-                move_signal_x = self._signal_generator.generate_signal_moving_traps(
-                    initial_config.amplitudes_x,
-                    final_config.amplitudes_x,
-                    initial_config.frequencies_x,
-                    final_config.frequencies_x,
-                    initial_config.phases_x,
-                    final_config.phases_x,
-                    number_samples,
-                )
-                move_signal_y = self._signal_generator.generate_signal_moving_traps(
-                    initial_config.amplitudes_y,
-                    final_config.amplitudes_y,
-                    initial_config.frequencies_y,
-                    final_config.frequencies_y,
-                    initial_config.phases_y,
-                    final_config.phases_y,
-                    number_samples,
-                )
-                segment_data[move_segment_name(step)] = np.array(
-                    (move_signal_x, move_signal_y), dtype=np.int16
-                )
-            else:
-                raise NotImplementedError
         with DurationTimerLog(logger, "Updating awg parameters"):
+            if not len(tweezer_sequence_durations) == len(self.tweezer_sequence):
+                raise ValueError(
+                    "tweezer_sequence_durations must be the same length as tweezer_sequence"
+                )
+            self._tweezer_sequence_bounds = tuple(
+                get_step_bounds(tweezer_sequence_durations)
+            )
+            # this is a limitation of the AWG that each segment must have a length
+            # that is a multiple of 32.
+            time_step = 32 / self.sampling_rate
+            step_repetitions = dict[StepName, int]()
+            segment_data: dict[SegmentName, SegmentData] = {}
+            for step, (instruction, (start, stop)) in enumerate(
+                zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
+            ):
+                ticks = number_ticks(start, stop, time_step)
+                if isinstance(instruction, HoldTweezers):
+                    segment_tick_duration = (
+                        self.tweezer_configurations[
+                            instruction.tweezer_configuration
+                        ].number_samples
+                        // 32
+                    )
+                    repetitions, remainder = divmod(ticks, segment_tick_duration)
+
+                    step_repetitions[static_step_names(step)[0]] = repetitions
+                    segment_data[static_segment_names(step)[1]] = self._static_signals[
+                        instruction.tweezer_configuration
+                    ][:, : remainder * 32]
+                elif isinstance(instruction, MoveTweezers):
+                    number_samples = NumberSamples(ticks * 32)
+                    initial_config = self.tweezer_configurations[
+                        instruction.initial_tweezer_configuration
+                    ]
+                    final_config = self.tweezer_configurations[
+                        instruction.final_tweezer_configuration
+                    ]
+                    move_signal_x = self._signal_generator.generate_signal_moving_traps(
+                        initial_config.amplitudes_x,
+                        final_config.amplitudes_x,
+                        initial_config.frequencies_x,
+                        final_config.frequencies_x,
+                        initial_config.phases_x,
+                        final_config.phases_x,
+                        number_samples,
+                    )
+                    move_signal_y = self._signal_generator.generate_signal_moving_traps(
+                        initial_config.amplitudes_y,
+                        final_config.amplitudes_y,
+                        initial_config.frequencies_y,
+                        final_config.frequencies_y,
+                        initial_config.phases_y,
+                        final_config.phases_y,
+                        number_samples,
+                    )
+                    segment_data[move_segment_name(step)] = np.array(
+                        (move_signal_x, move_signal_y), dtype=np.int16
+                    )
+                elif isinstance(instruction, RearrangeTweezers):
+                    segment_data[rearrange_segment_name(step)] = np.zeros(
+                        (2, ticks * 32), dtype=np.int16
+                    )
+
             self._awg.update_parameters(
                 segment_data=segment_data,
                 step_repetitions=step_repetitions,
+                bypass_power_check=BYPASS_POWER_CHECK,
+            )
+
+    def prepare_rearrangement(
+        self, *, step: int, atom_present: Mapping[tuple[int, int], bool]
+    ) -> None:
+        with DurationTimerLog(logger, "Preparing rearrangement"):
+            rearrange_instruction = self.tweezer_sequence[step]
+            if not isinstance(rearrange_instruction, RearrangeTweezers):
+                raise ValueError(
+                    f"Instruction at step {step} must be RearrangeTweezers"
+                )
+            initial_config = self.tweezer_configurations[
+                rearrange_instruction.initial_tweezer_configuration
+            ]
+            final_config = self.tweezer_configurations[
+                rearrange_instruction.final_tweezer_configuration
+            ]
+
+            if not initial_config.number_tweezers_along_y == 1:
+                raise ValueError(
+                    f"Can only rearrange atoms if all atoms are in the same row"
+                )
+            if not final_config.number_tweezers_along_y == 1:
+                raise ValueError(
+                    f"Can only rearrange atoms if all atoms are in the same row"
+                )
+
+            initial_indices = []
+            for (x, y), present in atom_present.items():
+                if y != 0:
+                    raise ValueError(
+                        f"Can only rearrange atoms if they all are on the x-axis"
+                    )
+                if present:
+                    if x >= initial_config.number_tweezers_along_x:
+                        raise ValueError(
+                            f"Atom present at ({x}, {y}) but there are only "
+                            f"{initial_config.number_tweezers_along_x} tweezers along x"
+                        )
+                    else:
+                        initial_indices.append(x)
+            if len(initial_indices) > final_config.number_tweezers_along_x:
+                raise ValueError(
+                    f"Cannot rearrange {len(initial_indices)} atoms into "
+                    f"{final_config.number_tweezers_along_x} tweezers"
+                )
+
+            final_indices = [x for x in range(len(initial_indices))]
+
+            time_step = 32 / self.sampling_rate
+            number_samples = NumberSamples(
+                number_ticks(
+                    self._tweezer_sequence_bounds[step][0],
+                    self._tweezer_sequence_bounds[step][1],
+                    time_step,
+                )
+                * 32
+            )
+            move_signal_x = self._signal_generator.generate_signal_moving_traps(
+                np.array(initial_config.amplitudes_x)[initial_indices],
+                np.array(final_config.amplitudes_x)[final_indices],
+                np.array(initial_config.frequencies_x)[initial_indices],
+                np.array(final_config.frequencies_x)[final_indices],
+                np.array(initial_config.phases_x)[initial_indices],
+                np.array(final_config.phases_x)[final_indices],
+                number_samples,
+            )
+            move_signal_y = self._signal_generator.generate_signal_moving_traps(
+                initial_config.amplitudes_y,
+                final_config.amplitudes_y,
+                initial_config.frequencies_y,
+                final_config.frequencies_y,
+                initial_config.phases_y,
+                final_config.phases_y,
+                number_samples,
+            )
+            segment_data = {
+                rearrange_segment_name(step): np.array(move_signal_x, move_signal_y)
+            }
+
+            self._awg.update_parameters(
+                segment_data=segment_data,
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
 
@@ -240,6 +330,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         return super().exposed_remote_methods() + (
             "start_sequence",
             "has_sequence_finished",
+            "prepare_rearrangement",
         )
 
 
