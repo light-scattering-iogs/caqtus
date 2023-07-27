@@ -43,4 +43,3 @@ def test_moving_traps():
         plt.xlabel("Time [sec]")
         plt.ylabel("Frequency [Hz]")
         plt.show()
-        assert False

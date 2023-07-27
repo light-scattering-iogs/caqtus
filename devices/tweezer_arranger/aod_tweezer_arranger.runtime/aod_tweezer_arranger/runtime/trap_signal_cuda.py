@@ -7,6 +7,11 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     # be a problem.
 
     return f"""    
+    
+    #define PI 3.141592653589793
+    #define TAU 6.283185307179586
+    #define INV_PI 0.3183098861837907
+    
     __constant__ float frequencies[{max_number_tones}];
     __constant__ float amplitudes[{max_number_tones}];
     __constant__ float phases[{max_number_tones}];
@@ -14,10 +19,9 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     extern "C" __global__
     void compute_static_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step)
     {{
-     float tau = 6.283185307179586;  //tau = 2*pi
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float result = 0.0;
-     float x = time_step * tau * tid;
+     float x = time_step * TAU * tid;
      if (tid < number_samples){{
        for(unsigned int i=0; i < number_tones; i++){{
             float phase = x * frequencies[i] + phases[i];
@@ -43,13 +47,14 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     // Must be equal to -1 at s=0 and +1 at s=1
     __device__ float frequency_ramp(float s)
     {{
-        return -1.0 + 2.0 * s;
+        return -__cosf(PI * s);
     }}
     
     // Must be the integral of frequency_ramp over s from 0 to s
     __device__ float phase_ramp(float s)
     {{
-        return -1.0 * s + 0.5 * s * s;
+        
+        return -__sinf(PI * s) * INV_PI;
     }}
     
     extern "C" __global__
@@ -59,7 +64,7 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
      float result = 0.0;
-     float X = time_step * tau * number_samples;
+     float X = time_step * TAU * number_samples;
      if (tid < number_samples){{
        for(unsigned int i=0; i < number_tones; i++){{
             float mean_frequency = 0.5 * (initial_frequencies[i] + final_frequencies[i]);
