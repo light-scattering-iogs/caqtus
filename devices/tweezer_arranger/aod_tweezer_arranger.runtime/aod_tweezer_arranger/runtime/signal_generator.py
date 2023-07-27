@@ -1,5 +1,6 @@
 import logging
 import math
+from collections.abc import Sequence
 from contextlib import ExitStack
 from typing import NewType, SupportsFloat, SupportsInt, Self
 
@@ -214,12 +215,12 @@ class SignalGenerator:
 
     def generate_signal_moving_traps(
         self,
-        initial_amplitudes: np.ndarray[NumberTones, np.dtype[float]],
-        final_amplitudes: np.ndarray[NumberTones, np.dtype[float]],
-        initial_frequencies: np.ndarray[NumberTones, np.dtype[float]],
-        final_frequencies: np.ndarray[NumberTones, np.dtype[float]],
-        initial_phases: np.ndarray[NumberTones, np.dtype[float]],
-        final_phases: np.ndarray[NumberTones, np.dtype[float]],
+        initial_amplitudes: Sequence[float],
+        final_amplitudes: Sequence[float],
+        initial_frequencies: Sequence[float],
+        final_frequencies: Sequence[float],
+        initial_phases: Sequence[float],
+        final_phases: Sequence[float],
         number_samples: NumberSamples,
     ) -> AWGSignalArray:
         number_tones = len(initial_amplitudes)

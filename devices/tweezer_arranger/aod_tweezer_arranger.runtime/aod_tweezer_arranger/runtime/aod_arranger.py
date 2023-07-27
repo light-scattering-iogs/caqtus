@@ -171,8 +171,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         for step, (instruction, (start, stop)) in enumerate(
             zip(self.tweezer_sequence, get_step_bounds(tweezer_sequence_durations))
         ):
+            ticks = number_ticks(start, stop, time_step)
+            assert ticks % 32 == 0
             if isinstance(instruction, HoldTweezers):
-                ticks = number_ticks(start, stop, time_step)
                 segment_tick_duration = (
                     self.tweezer_configurations[
                         instruction.tweezer_configuration
@@ -185,6 +186,29 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 segment_data[static_segment_names(step)[1]] = self._static_signals[
                     instruction.tweezer_configuration
                 ][:, : remainder * 32]
+            elif isinstance(instruction, MoveTweezers):
+                number_samples = NumberSamples(ticks * 32)
+                initial_config = self.tweezer_configurations[instruction.initial_tweezer_configuration]
+                final_config = self.tweezer_configurations[instruction.final_tweezer_configuration]
+                move_signal_x = self._signal_generator.generate_signal_moving_traps(
+                    initial_config.amplitudes_x,
+                    final_config.amplitudes_x,
+                    initial_config.frequencies_x,
+                    final_config.frequencies_x,
+                    initial_config.phases_x,
+                    final_config.phases_x,
+                    number_samples,
+                )
+                move_signal_y = self._signal_generator.generate_signal_moving_traps(
+                    initial_config.amplitudes_y,
+                    final_config.amplitudes_y,
+                    initial_config.frequencies_y,
+                    final_config.frequencies_y,
+                    initial_config.phases_y,
+                    final_config.phases_y,
+                    number_samples,
+                )
+                segment_data[move_segment_name(step)] = np.array(move_signal_x, move_signal_y, dtype=np.int16)
             else:
                 raise NotImplementedError
         with DurationTimerLog(logger, "Updating awg parameters"):
