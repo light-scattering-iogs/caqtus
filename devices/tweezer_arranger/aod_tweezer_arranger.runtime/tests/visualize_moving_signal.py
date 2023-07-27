@@ -1,4 +1,5 @@
 import logging
+from threading import Thread
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,6 +28,17 @@ def test_moving_traps():
         final_phases = initial_phases
 
         with DurationTimerLog(logger, "Generating signal"):
+            thread = Thread(target=signal_generator.generate_signal_moving_traps, args=(
+                initial_amplitudes,
+                final_amplitudes,
+                initial_frequencies,
+                final_frequencies,
+                initial_phases,
+                final_phases,
+                NumberSamples(625_000),
+            ))
+            thread.start()
+            thread.join()
             output = signal_generator.generate_signal_moving_traps(
                 initial_amplitudes,
                 final_amplitudes,

@@ -53,4 +53,5 @@ class DurationTimerLog(DurationTimer):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super().__exit__(exc_type, exc_val, exc_tb)
-        self._logger.info(f"{self._message} took {self.duration_in_ms} ms")
+        if exc_type is None:
+            self._logger.info(f"{self._message} took {self.duration_in_ms} ms")

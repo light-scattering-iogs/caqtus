@@ -1,13 +1,20 @@
 import logging
 import math
+import threading
 from collections.abc import Sequence
 from contextlib import ExitStack
-from typing import NewType, SupportsFloat, SupportsInt, Self
+from typing import (
+    NewType,
+    SupportsFloat,
+    SupportsInt,
+    Self,
+)
 
 import numpy as np
-from cuda import nvrtc, cuda
+from cuda import nvrtc, cuda, cudart
 
 from .trap_signal_cuda import get_traps_cuda_program
+from .with_lock import with_lock
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -25,6 +32,9 @@ def _check_cuda_error(fun):
         err, *result = fun(*args, **kwargs)
         if isinstance(err, cuda.CUresult):
             if err != cuda.CUresult.CUDA_SUCCESS:
+                raise CudaError(err)
+        elif isinstance(err, cudart.cudaError_t):
+            if err != cudart.cudaError_t.cudaSuccess:
                 raise CudaError(err)
         elif isinstance(err, nvrtc.nvrtcResult):
             if err != nvrtc.nvrtcResult.NVRTC_SUCCESS:
@@ -63,6 +73,9 @@ cuStreamSynchronize = _check_cuda_error(cuda.cuStreamSynchronize)
 cuMemcpyDtoHAsync = _check_cuda_error(cuda.cuMemcpyDtoHAsync)
 nvrtcGetProgramLogSize = _check_cuda_error(nvrtc.nvrtcGetProgramLogSize)
 nvrtcGetProgramLog = _check_cuda_error(nvrtc.nvrtcGetProgramLog)
+cuCtxGetCurrent = _check_cuda_error(cuda.cuCtxGetCurrent)
+cuCtxSetCurrent = _check_cuda_error(cuda.cuCtxSetCurrent)
+cudaSetDevice = _check_cuda_error(cudart.cudaSetDevice)
 
 
 class SignalGenerator:
@@ -71,14 +84,15 @@ class SignalGenerator:
     ):
         """Instantiate a new cuda signal generator.
 
-        Since this object instantiate a cuda context, it is important to call the `close` method when the object is not
-        needed anymore.
+        This object should always be used as a context manager to acquire and release cuda resources properly.
+        It is thread safe in the sense that calling methods exploiting the cuda resources are protected by a lock.
         """
 
         self._sampling_rate = float(sampling_rate)
         self._time_step = 1 / self._sampling_rate
         self._max_number_tones = int(max_number_tones)
         self._exit_stack = ExitStack()
+        self.lock = threading.Lock()
 
     def __enter__(self) -> Self:
         self._exit_stack = ExitStack()
@@ -86,6 +100,7 @@ class SignalGenerator:
         self._initialize()
         return self
 
+    @with_lock
     def _initialize(self):
         source = get_traps_cuda_program(self._max_number_tones)
         program = nvrtcCreateProgram(
@@ -160,6 +175,8 @@ class SignalGenerator:
                 "Lengths of amplitudes, phases and frequencies must be equal."
             )
 
+        self._bind_thread_to_current_context()
+
         output = np.zeros(number_samples, dtype=np.int16)
         with ExitStack() as stack:
             output_gpu = cuMemAlloc(output.nbytes)
@@ -211,6 +228,7 @@ class SignalGenerator:
                 output.ctypes.data, output_gpu, output.nbytes, self._stream
             )
             cuStreamSynchronize(self._stream)
+
         return output
 
     def generate_signal_moving_traps(
@@ -236,6 +254,8 @@ class SignalGenerator:
             raise ValueError(
                 "Lengths of amplitudes, phases and frequencies must be equal."
             )
+
+        self._bind_thread_to_current_context()
 
         output = np.zeros(number_samples, dtype=np.int16)
         with ExitStack() as stack:
@@ -293,10 +313,14 @@ class SignalGenerator:
                 output.ctypes.data, output_gpu, output.nbytes, self._stream
             )
             cuStreamSynchronize(self._stream)
+
         return output
 
     def _copy_to_gpu(self, dst, src: np.ndarray):
         cuMemcpyHtoDAsync(dst, src.ctypes.data, src.nbytes, self._stream)
+
+    def _bind_thread_to_current_context(self):
+        cuCtxSetCurrent(self._context)
 
 
 class NvrtcError(RuntimeError):

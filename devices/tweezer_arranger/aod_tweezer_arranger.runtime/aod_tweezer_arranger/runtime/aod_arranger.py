@@ -158,6 +158,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         first_config = first(self.tweezer_configurations.values())
         return first_config.scale_y
 
+    @log_exception(logger)
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
         if not len(tweezer_sequence_durations) == len(self.tweezer_sequence):
             raise ValueError(
@@ -172,7 +173,6 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             zip(self.tweezer_sequence, get_step_bounds(tweezer_sequence_durations))
         ):
             ticks = number_ticks(start, stop, time_step)
-            assert ticks % 32 == 0
             if isinstance(instruction, HoldTweezers):
                 segment_tick_duration = (
                     self.tweezer_configurations[
