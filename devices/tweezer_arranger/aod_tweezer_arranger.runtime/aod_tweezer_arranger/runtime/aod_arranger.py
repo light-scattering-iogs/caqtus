@@ -34,7 +34,7 @@ from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-BYPASS_POWER_CHECK = True
+BYPASS_POWER_CHECK = False
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -233,6 +233,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
 
+    @log_exception(logger)
     def prepare_rearrangement(
         self, *, step: int, atom_present: Mapping[tuple[int, int], bool]
     ) -> None:
@@ -308,7 +309,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 number_samples,
             )
             segment_data = {
-                rearrange_segment_name(step): np.array(move_signal_x, move_signal_y)
+                rearrange_segment_name(step): np.array((move_signal_x, move_signal_y))
             }
 
             self._awg.update_parameters(
