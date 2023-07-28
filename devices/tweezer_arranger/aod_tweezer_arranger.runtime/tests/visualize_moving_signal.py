@@ -21,7 +21,7 @@ def test_moving_traps():
         initial_amplitudes = np.ones(len(initial_frequencies)) / len(
             initial_frequencies
         )
-        final_amplitudes = initial_amplitudes * 0.5
+        final_amplitudes = initial_amplitudes
 
         initial_phases = np.random.uniform(0, 2 * np.pi, len(initial_frequencies))
         final_phases = initial_phases
@@ -31,13 +31,13 @@ def test_moving_traps():
                 initial_amplitudes,
                 initial_frequencies,
                 initial_phases,
-                number_samples=NumberSamples(625_000),
+                number_samples=NumberSamples(325_000),
             )
             output_2 = signal_generator.generate_signal_static_traps(
                 final_amplitudes,
                 final_frequencies,
                 final_phases,
-                number_samples=NumberSamples(625_000),
+                number_samples=NumberSamples(325_000),
             )
 
             output_1 = signal_generator.generate_signal_moving_traps(
@@ -47,8 +47,8 @@ def test_moving_traps():
                 final_frequencies,
                 initial_phases,
                 final_phases,
-                number_samples=NumberSamples(625_047),
-                previous_step_length=NumberSamples(625_000)
+                number_samples=NumberSamples(300_047),
+                previous_step_length=NumberSamples(325_000)
             )
 
         output = np.concatenate([output_0, output_1, output_2])
