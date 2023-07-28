@@ -204,6 +204,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     final_config = self.tweezer_configurations[
                         instruction.final_tweezer_configuration
                     ]
+                    previous_step_length = (
+                            self._step_number_ticks[step - 1] % initial_config.number_samples
+                    )
                     move_signal_x = self._signal_generator.generate_signal_moving_traps(
                         initial_config.amplitudes_x,
                         final_config.amplitudes_x,
@@ -212,6 +215,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         initial_config.phases_x,
                         final_config.phases_x,
                         number_samples,
+                        NumberSamples(previous_step_length),
                     )
                     move_signal_y = self._signal_generator.generate_signal_moving_traps(
                         initial_config.amplitudes_y,
@@ -221,6 +225,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         initial_config.phases_y,
                         final_config.phases_y,
                         number_samples,
+                        NumberSamples(previous_step_length),
                     )
                     segment_data[move_segment_name(step)] = np.array(
                         (move_signal_x, move_signal_y), dtype=np.int16
