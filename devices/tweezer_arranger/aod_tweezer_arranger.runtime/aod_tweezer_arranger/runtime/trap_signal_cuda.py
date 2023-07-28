@@ -63,13 +63,30 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
      float result = 0.0;
-     float X = time_step * TAU * number_samples;
+     float T = time_step * number_samples;
      if (tid < number_samples){{
        for(unsigned int i=0; i < number_tones; i++){{
             float mean_frequency = 0.5 * (initial_frequencies[i] + final_frequencies[i]);
             float frequency_range = 0.5 * (final_frequencies[i] - initial_frequencies[i]);
             float initial_phase = initial_phases[i] + TAU * previous_step_length * time_step * initial_frequencies[i];
-            float phase = X * (s * mean_frequency + frequency_range * phase_ramp(s)) + initial_phase;
+            float phase_mismatch = final_phases[i] - initial_phase - (2 * PI * T) * mean_frequency;
+            float s0=0.0;
+            if(frequency_range != 0.0){{
+                s0 = 1.0;
+            }}
+            else {{
+                float phase_remainder = fmodf(phase_mismatch, 2 * PI);
+                if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
+                s0 = 1.0 - phase_remainder / (2 * PI * T * frequency_range);
+            }}   
+            float phase = 0.0;
+            if(s < s0){{
+                phase =  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0)) + initial_phase;
+            }}
+            else{{
+                phase =  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0)) + initial_phase;
+            }}
+            
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
             float amplitude_range = 0.5 * (final_amplitudes[i] - initial_amplitudes[i]);
             float amplitude = mean_amplitude + amplitude_range * amplitude_ramp(s);

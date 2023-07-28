@@ -16,7 +16,7 @@ def test_moving_traps():
     sampling_rate = 625_000_000
     with SignalGenerator(sampling_rate=sampling_rate) as signal_generator:
         initial_frequencies = np.linspace(77e6, 86e6, 15)
-        final_frequencies = initial_frequencies + 2e6
+        final_frequencies = initial_frequencies - 2e6
 
         initial_amplitudes = np.ones(len(initial_frequencies)) / len(
             initial_frequencies
@@ -47,7 +47,7 @@ def test_moving_traps():
                 final_frequencies,
                 initial_phases,
                 final_phases,
-                number_samples=NumberSamples(625_000),
+                number_samples=NumberSamples(625_047),
                 previous_step_length=NumberSamples(625_000)
             )
 
