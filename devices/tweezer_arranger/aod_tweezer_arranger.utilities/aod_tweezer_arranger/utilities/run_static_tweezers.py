@@ -23,7 +23,7 @@ logger.setLevel("DEBUG")
 logging.basicConfig()
 
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "5x5 tweezers"
+TWEEZER_CONFIG_NAME = "10x1"
 
 
 def main():

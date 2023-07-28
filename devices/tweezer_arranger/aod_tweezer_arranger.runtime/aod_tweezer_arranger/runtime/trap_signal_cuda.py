@@ -58,17 +58,35 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     }}
     
     extern "C" __global__
-    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step)
+    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_length)
     {{
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
      float result = 0.0;
-     float X = time_step * TAU * number_samples;
+     float T = time_step * number_samples;
      if (tid < number_samples){{
        for(unsigned int i=0; i < number_tones; i++){{
             float mean_frequency = 0.5 * (initial_frequencies[i] + final_frequencies[i]);
             float frequency_range = 0.5 * (final_frequencies[i] - initial_frequencies[i]);
-            float phase = X * (s * mean_frequency + frequency_range * phase_ramp(s)) + initial_phases[i];
+            float initial_phase = initial_phases[i] + TAU * previous_step_length * time_step * initial_frequencies[i];
+            float phase_mismatch = final_phases[i] - initial_phase - (2 * PI * T) * mean_frequency;
+            float s0=0.0;
+            if(frequency_range == 0.0){{
+                s0 = 1.0;
+            }}
+            else {{
+                float phase_remainder = fmodf(phase_mismatch, 2 * PI);
+                //if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
+                s0 = 1.0 - phase_remainder / (2 * PI * T * frequency_range);
+            }}   
+            float phase = 0.0;
+            if(s < s0){{
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0));
+            }}
+            else{{
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0));
+            }}
+            
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
             float amplitude_range = 0.5 * (final_amplitudes[i] - initial_amplitudes[i]);
             float amplitude = mean_amplitude + amplitude_range * amplitude_ramp(s);
