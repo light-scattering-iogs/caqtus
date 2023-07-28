@@ -25,7 +25,7 @@ def main():
 
     # beware here, the first frequency along x must be the highest one because it is the one at the left of the picture
     # when imaging the atoms for rearrangement
-    frequencies_x = np.linspace(87e6, 75e6, 10)
+    frequencies_x = np.linspace(88e6, 76.7e6, 10)
     frequencies_y = np.linspace(75e6, 75e6, 1)
 
     parser = argparse.ArgumentParser(
