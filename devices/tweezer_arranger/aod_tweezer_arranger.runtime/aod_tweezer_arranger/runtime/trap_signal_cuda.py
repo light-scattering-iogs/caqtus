@@ -71,20 +71,20 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
             float initial_phase = initial_phases[i] + TAU * previous_step_length * time_step * initial_frequencies[i];
             float phase_mismatch = final_phases[i] - initial_phase - (2 * PI * T) * mean_frequency;
             float s0=0.0;
-            if(1){{
+            if(frequency_range == 0.0){{
                 s0 = 1.0;
             }}
             else {{
                 float phase_remainder = fmodf(phase_mismatch, 2 * PI);
-                if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
+                //if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
                 s0 = 1.0 - phase_remainder / (2 * PI * T * frequency_range);
             }}   
             float phase = 0.0;
             if(s < s0){{
-                phase =  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0)) + initial_phase;
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0));
             }}
             else{{
-                phase =  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0)) + initial_phase;
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0));
             }}
             
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
