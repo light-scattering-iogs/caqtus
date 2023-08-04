@@ -1,7 +1,9 @@
 import datetime
 import re
+import typing
 
-from experiment.session import ExperimentSession
+if typing.TYPE_CHECKING:
+    from experiment.session import ExperimentSession
 
 _PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
@@ -23,10 +25,10 @@ class SequencePath:
             return True
         return _PATH_REGEX.match(path) is not None
 
-    def exists(self, experiment_session: ExperimentSession) -> bool:
+    def exists(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.does_path_exists(self)
 
-    def create(self, experiment_session: ExperimentSession) -> list["SequencePath"]:
+    def create(self, experiment_session: "ExperimentSession") -> list["SequencePath"]:
         """
         Create the path and all its ancestors if they don't exist
 
@@ -43,7 +45,7 @@ class SequencePath:
         return experiment_session.create_path(self)
 
     def delete(
-        self, experiment_session: ExperimentSession, delete_sequences: bool = False
+        self, experiment_session: "ExperimentSession", delete_sequences: bool = False
     ):
         """
         Delete the path and all its children if they exist
@@ -64,7 +66,7 @@ class SequencePath:
         experiment_session.delete_path(self, delete_sequences)
 
     def get_contained_sequences(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> list["SequencePath"]:
         """Return the children of this path that are sequences, including this path.
 
@@ -83,30 +85,30 @@ class SequencePath:
             result += child.get_contained_sequences(experiment_session)
         return result
 
-    def is_folder(self, experiment_session: ExperimentSession) -> bool:
+    def is_folder(self, experiment_session: "ExperimentSession") -> bool:
         return not self.is_sequence(experiment_session)
 
-    def is_sequence(self, experiment_session: ExperimentSession) -> bool:
+    def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.is_sequence_path(self)
 
     def is_root(self) -> bool:
         return self._path == ""
 
-    def has_children(self, experiment_session: ExperimentSession) -> int:
+    def has_children(self, experiment_session: "ExperimentSession") -> int:
         return bool(self.get_child_count(experiment_session))
 
-    def get_child_count(self, experiment_session: ExperimentSession) -> int:
+    def get_child_count(self, experiment_session: "ExperimentSession") -> int:
         return len(self.get_children(experiment_session))
 
     def get_children(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> set["SequencePath"]:
         """Return the direct descendants of this path."""
 
         return experiment_session.get_path_children(self)
 
     def get_creation_date(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
         return experiment_session.get_path_creation_date(self)
 

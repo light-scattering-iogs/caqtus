@@ -1,16 +1,20 @@
 from datetime import datetime
-from typing import Optional, TypedDict, Self, Iterable, Mapping
+from typing import Optional, TypedDict, Self, Iterable, Mapping, TYPE_CHECKING
 
 from data_types import Data, DataLabel
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSession
 from parameter_types import Parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from sql_model import State
 from variable.name import DottedVariableName
 from .path import SequencePath
 from .shot import Shot
+
+if TYPE_CHECKING:
+    from experiment.session import ExperimentSession
+else:
+    ExperimentSession = "ExperimentSession"
 
 
 class SequenceNotEditableError(Exception):

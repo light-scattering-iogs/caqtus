@@ -3,6 +3,7 @@ from pathlib import Path
 import platformdirs
 import sqlalchemy
 import sqlalchemy.orm
+from .experiment_session_sql import SQLExperimentSession
 import yaml
 
 from .experiment_session import ExperimentSession
@@ -29,7 +30,7 @@ class ExperimentSessionMaker:
     def __call__(self, async_session: bool = False) -> ExperimentSession:
         """Create a new ExperimentSession"""
 
-        return ExperimentSession(self._session_maker())
+        return SQLExperimentSession(self._session_maker())
 
     # The following methods are required to make ExperimentSessionMaker pickleable to
     # pass it to other processes. Since sqlalchemy engine is not pickleable, so we just
