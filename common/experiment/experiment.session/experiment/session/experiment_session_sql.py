@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy.orm
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
 
@@ -39,6 +40,72 @@ class SQLExperimentSession(ExperimentSession):
             self._transaction.__exit__(exc_type, exc_val, exc_tb)
             self._transaction = None
             self._is_active = False
+
+    # Path methods
+    def does_path_exists(self, path: SequencePath) -> bool:
+        session = self._get_sql_session()
+        return (
+            session.scalar(
+                select(SequencePathModel).filter(
+                    SequencePathModel.path == Ltree(str(path))
+                )
+            )
+            is not None
+        )
+
+    def is_sequence_path(self, path: SequencePath) -> bool:
+        path = self._query_path_model(path)
+        return bool(path.sequence)
+
+    def create_path(self, path: SequencePath) -> list[SequencePath]:
+        session = self._get_sql_session()
+
+        created_paths: list[SequencePath] = []
+
+        for ancestor in path.get_ancestors(strict=False):
+            if self.does_path_exists(ancestor):
+                if self.is_sequence_path(ancestor):
+                    raise RuntimeError(
+                        f"Cannot create path {self} because a sequence already exists"
+                        f" in this path {ancestor}"
+                    )
+            else:
+                SequencePathModel.create_path(str(ancestor), session)
+                created_paths.append(ancestor)
+        return created_paths
+
+    def delete_path(self, path: SequencePath, delete_sequences: bool = False):
+        session = self._get_sql_session()
+
+        if not delete_sequences:
+            if sub_sequences := path.get_contained_sequences(self):
+                raise RuntimeError(
+                    f"Cannot delete a path that contains sequences: {sub_sequences}"
+                )
+
+        session.delete(self._query_path_model(path))
+        session.flush()
+
+    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
+        session = self._get_sql_session()
+
+        if path.is_root():
+            query_children = (
+                session.query(SequencePathModel)
+                .filter(func.nlevel(SequencePathModel.path) == 1)
+                .order_by(SequencePathModel.creation_date)
+            )
+            children = session.scalars(query_children)
+        else:
+            path = self._query_path_model(path)
+            if path.sequence:
+                raise RuntimeError("Cannot check children of a sequence")
+            # noinspection PyUnresolvedReferences
+            children = path.children
+        return set(SequencePath(str(child.path)) for child in children)
+
+    def get_path_creation_date(self, path: SequencePath) -> datetime:
+        return self._query_path_model(path).creation_date
 
     # Sequence methods
     def does_sequence_exist(self, sequence: Sequence) -> bool:

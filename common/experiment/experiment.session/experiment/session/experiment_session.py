@@ -1,28 +1,12 @@
 import logging
-import re
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Iterable
 from contextlib import AbstractContextManager
-from datetime import datetime
-from pathlib import Path
 from threading import Lock
-from typing import Optional, overload, Literal
 
-import platformdirs
-import sqlalchemy
-import sqlalchemy.orm
 import yaml
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-from data_types import DataLabel, Data
-from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter
-from sequence.configuration import SequenceConfig
-from sequence.runtime import Sequence, Shot, SequencePath, SequenceStats
-from sql_model import State
-from sql_model.model import ExperimentConfigModel, CurrentExperimentConfigModel
-from variable.name import DottedVariableName
+from sequence.runtime import Sequence, Shot, SequencePath
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -32,12 +16,96 @@ class ExperimentSessionNotActiveError(RuntimeError):
     pass
 
 
-
-
 class ExperimentSession(AbstractContextManager["ExperimentSession"], ABC):
     def __init__(self, *args, **kwargs):
         self._is_active = False
         self._lock = Lock()
+
+    # Path methods
+    @abstractmethod
+    def does_path_exists(self, path: SequencePath) -> bool:
+        """Check if the path exists in the session.
+
+        Args:
+            path: the path to check for existence.
+
+        Returns:
+            True if the path exists in the session. False otherwise.
+        """
+
+        ...
+
+    @abstractmethod
+    def is_sequence_path(self, path: SequencePath) -> bool:
+        """Check if the path is a sequence.
+
+        Args:
+            path: the path to check.
+
+        Returns:
+            True if the path is a sequence path. False otherwise.
+        """
+
+        ...
+
+    @abstractmethod
+    def create_path(self, path: SequencePath) -> list[SequencePath]:
+        """Create the path in the session and its parent paths if they do not exist.
+
+        Args:
+            path: the path to create.
+
+        Returns:
+            A list of the paths that were created.
+        """
+
+        ...
+
+    @abstractmethod
+    def delete_path(self, path: SequencePath, delete_sequences: bool = False):
+        """
+        Delete the path and all its children if they exist
+
+        Warnings:
+            If delete_sequences is True, all sequences in the path will be deleted.
+
+        Args:
+            path: The path to delete. Children will be deleted recursively.
+            delete_sequences: If False, raise an error if the path or one of its
+            children is a sequence.
+
+        Raises:
+            RuntimeError: If the path or one of its children is a sequence and
+            delete_sequence is False
+        """
+
+        ...
+
+    @abstractmethod
+    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
+        """Get the children of the path.
+
+        Args:
+            path: the path to get the children for.
+
+        Returns:
+            The children of the path.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_path_creation_date(self, path: SequencePath) -> datetime:
+        """Get the creation date of the path.
+
+        Args:
+            path: the path to get the creation date for.
+
+        Returns:
+            The creation date of the path.
+        """
+
+        ...
 
     # Sequence methods
     @abstractmethod
@@ -188,7 +256,7 @@ class ExperimentSession(AbstractContextManager["ExperimentSession"], ABC):
 
     @abstractmethod
     def query_sequence_stats(
-            self, sequences: Iterable[Sequence]
+        self, sequences: Iterable[Sequence]
     ) -> dict[SequencePath, SequenceStats]:
         """Get the stats of the sequences.
 
@@ -520,13 +588,14 @@ class ExperimentSessionMaker:
 def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
     """Create a default ExperimentSessionMaker.
 
-    This function loads the parameters from a user config file. The file must follow the
-    format of the following example:
+        This function loads the parameters
+    config file. The file must follow the
+        format of the following example:
 
-    user: the_name_of_the_database_user
-    ip: 192.168.137.1  # The ip of the database server
-    password: the_password_to_the_database
-    database: the_name_of_the_database
+        user: the_name_of_the_database_user
+        ip: 192.168.137.1  # The ip of the database server
+        password: the_password_to_the_database
+        database: the_name_of_the_database
     """
 
     config_folder = platformdirs.user_config_path(
