@@ -1,19 +1,15 @@
 from datetime import datetime
 from typing import Optional, TypedDict, Self, Iterable, Mapping
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from data_types import Data, DataLabel, is_data_label, is_data
-from device.name import DeviceName, is_device_name
+from data_types import Data, DataLabel
+from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSession
-from parameter_types import Parameter, is_parameter
+from parameter_types import Parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
-from sql_model import SequenceModel, ShotModel, State, DataType
-from sql_model.sequence_state import InvalidSequenceStateError
+from sql_model import State
 from variable.name import DottedVariableName
-from .path import SequencePath, PathNotFoundError
+from .path import SequencePath
 from .shot import Shot
 
 
@@ -24,9 +20,11 @@ class SequenceNotEditableError(Exception):
 class Sequence:
     """Contains the runtime information and data of a sequence.
 
-    Only methods that take an ExperimentSession argument actually connect to the permanent storage of the experiment.
-    Such methods can raise SequenceNotFoundError if the sequence does not exist in the session. They are also expected
-    to be comparatively slow since they require a file system access, possibly over the network.
+    Only methods that take an ExperimentSession argument actually connect to the
+    permanent storage of the experiment. Such methods can raise SequenceNotFoundError if
+    the sequence does not exist in the session. They are also expected to be
+    comparatively slow since they require a file system access, possibly over the
+    network.
     """
 
     def __init__(self, path: SequencePath | str):
@@ -50,41 +48,35 @@ class Sequence:
         """Check if the sequence exists.
 
         Args:
-            experiment_session: The active experiment session in which to check for the sequence.
+            experiment_session: The active experiment session in which to check for the
+            sequence.
         """
 
-        try:
-            self._query_model(experiment_session.get_sql_session())
-            return True
-        except SequenceNotFoundError:
-            return False
+        return experiment_session.does_sequence_exist(self)
 
     def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
         """Get the creation date of the sequence.
 
         Args:
-            experiment_session: The active experiment session from which to get the creation date.
+            experiment_session: The active experiment session from which to get the
+            creation date.
         Raises:
             SequenceNotFoundError: If the sequence does not exist in the session.
         """
 
-        sequence_sql = self._query_model(experiment_session.get_sql_session())
-        # noinspection PyTypeChecker
-        return sequence_sql.creation_date
+        return experiment_session.get_sequence_creation_date(self)
 
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
         """Return the configuration of the sequence.
 
         Args:
-            experiment_session: The active experiment session from which to get the configuration.
+            experiment_session: The active experiment session from which to get the
+            configuration.
         Raises:
             SequenceNotFoundError: If the sequence does not exist in the session.
         """
 
-        yaml = self._query_model(
-            experiment_session.get_sql_session()
-        ).config.sequence_config_yaml
-        # noinspection PyTypeChecker
+        yaml = experiment_session.get_sequence_config_yaml(self)
         return SequenceConfig.from_yaml(yaml)
 
     def set_config(self, config: SequenceConfig, experiment_session: ExperimentSession):
@@ -93,43 +85,24 @@ class Sequence:
                 f"Expected instance of <SequenceConfig>, got {type(config)}"
             )
 
-        session = experiment_session.get_sql_session()
-        sequence = self._query_model(session)
-        if sequence.state != State.DRAFT:
-            raise SequenceNotEditableError(f"Sequence is in state {sequence.state}")
-        sequence.total_number_shots = config.compute_total_number_of_shots()
         yaml = config.to_yaml()
         assert (
             SequenceConfig.from_yaml(yaml) == config
         )  # will trigger validation before saving
-        sequence.config.sequence_config_yaml = yaml
-        sequence.modification_date = datetime.now()
-        session.flush()
+
+        experiment_session.set_sequence_config_yaml(
+            self, yaml, config.compute_total_number_of_shots()
+        )
 
     def set_experiment_config(
         self, experiment_config: str, experiment_session: ExperimentSession
     ):
-        if self.get_state(experiment_session) != State.DRAFT:
-            raise RuntimeError(
-                "Cannot set experiment config for a sequence that is not in draft state"
-            )
-        session = experiment_session.get_sql_session()
-        sequence = self._query_model(session)
-        sequence.set_experiment_config(experiment_config)
-        session.flush()
+        experiment_session.set_sequence_experiment_config(self, experiment_config)
 
     def get_experiment_config(
         self, experiment_session: ExperimentSession
     ) -> Optional[ExperimentConfig]:
-        session = experiment_session.get_sql_session()
-        sequence = self._query_model(session)
-
-        experience_config_model = sequence.get_experiment_config()
-        if experience_config_model is None:
-            return None
-        return ExperimentConfig.from_yaml(
-            experience_config_model.experiment_config_yaml
-        )
+        return experiment_session.get_sequence_experiment_config(self)
 
     def set_shot_config(
         self,
@@ -157,22 +130,13 @@ class Sequence:
         self.set_config(sequence_config, experiment_session)
 
     def get_state(self, experiment_session: ExperimentSession) -> State:
-        state = self._query_model(experiment_session.get_sql_session()).state
-        # noinspection PyTypeChecker
-        return state
+        return experiment_session.get_sequence_state(self)
 
     def set_state(self, new_state: State, experiment_session: ExperimentSession):
-        session = experiment_session.get_sql_session()
-        sequence = self._query_model(session)
-        sequence.set_state(new_state)
-        session.flush()
+        experiment_session.set_sequence_state(self, new_state)
 
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
-        sequence_sql = self._query_model(experiment_session.get_sql_session())
-        # noinspection PyTypeChecker
-        return [Shot(self, shot.name, shot.index) for shot in sequence_sql.shots][
-            : sequence_sql.number_completed_shots
-        ]
+        return experiment_session.get_sequence_shots(self)
 
     def create_shot(
         self,
@@ -183,18 +147,9 @@ class Sequence:
         measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
         experiment_session: ExperimentSession,
     ) -> Shot:
-        if self.get_state(experiment_session) != State.RUNNING:
-            raise InvalidSequenceStateError(
-                f"Can't create a shot unless the sequence is running"
-            )
-        session = experiment_session.get_sql_session()
-        sequence = self._query_model(session)
-        shot = ShotModel.create_shot(sequence, name, start_time, end_time, session)
-        shot.add_data(transform_parameters(parameters), DataType.PARAMETER, session)
-        shot.add_data(transform_measures(measures), DataType.MEASURE, session)
-        sequence.increment_number_completed_shots()
-        session.flush()
-        return Shot(self, shot.name, shot.index)
+        return experiment_session.create_sequence_shot(
+            self, name, start_time, end_time, parameters, measures
+        )
 
     @classmethod
     def create_sequence(
@@ -204,92 +159,27 @@ class Sequence:
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
     ) -> Self:
-        if not isinstance(sequence_config, SequenceConfig):
-            raise TypeError(
-                f"Type of sequence_config {type(sequence_config)} is not SequenceConfig"
-            )
-
-        path.create(experiment_session)
-        if path.has_children(experiment_session):
-            raise RuntimeError(
-                f"Cannot create a sequence at {path} because it is a folder with"
-                " children"
-            )
-
-        SequenceModel.create_sequence(
-            str(path),
-            sequence_config,
-            experiment_config_name,
-            experiment_session.get_sql_session(),
+        return experiment_session.create_sequence(
+            path, sequence_config, experiment_config_name
         )
-        sequence = cls(path)
-        return sequence
-
-    def _query_model(self, session: Session) -> SequenceModel:
-        try:
-            # noinspection PyProtectedMember
-            path = self._path._query_model(session)
-        except PathNotFoundError:
-            raise SequenceNotFoundError(
-                f"Could not find sequence '{self._path}' in database"
-            )
-        query_sequence = select(SequenceModel).where(SequenceModel.path == path)
-        result = session.execute(query_sequence)
-        # noinspection PyTypeChecker
-        if sequence := result.scalar():
-            return sequence
-        else:
-            raise SequenceNotFoundError(
-                f"Could not find sequence '{self._path}' in database"
-            )
 
     def get_stats(self, experiment_session: ExperimentSession) -> "SequenceStats":
-        session = experiment_session.get_sql_session()
-        # noinspection PyProtectedMember
-        sequence = self._path._query_model(session).get_sequence()
-        return SequenceStats(
-            state=sequence.get_state(),
-            total_number_shots=sequence.total_number_shots,
-            number_completed_shots=sequence.get_number_completed_shots(),
-            start_date=sequence.start_date,
-            stop_date=sequence.stop_date,
-        )
+        return experiment_session.get_sequence_stats(self)
 
     @classmethod
     def query_sequence_stats(
-        cls, sequences: Iterable[Self], experiment_session: ExperimentSession
+        cls, sequences: Iterable["Sequence"], experiment_session: ExperimentSession
     ) -> dict[SequencePath, "SequenceStats"]:
-        session = experiment_session.get_sql_session()
-        paths = SequencePath.query_path_models(
-            [sequence.path for sequence in sequences], experiment_session
-        )
-        query = select(SequenceModel).where(
-            SequenceModel.path_id.in_(path.id_ for path in paths)
-        )
-        result = session.execute(query)
-        return {
-            SequencePath(str(sequence.path)): SequenceStats(
-                state=sequence.get_state(),
-                total_number_shots=sequence.total_number_shots,
-                number_completed_shots=sequence.get_number_completed_shots(),
-                start_date=sequence.start_date,
-                stop_date=sequence.stop_date,
-            )
-            for sequence in result.scalars()
-        }
+        return experiment_session.query_sequence_stats(sequences)
 
     @classmethod
-    def get_all_sequence_names(cls, experiment_session: ExperimentSession) -> list[str]:
+    def get_all_sequence_names(cls, experiment_session: ExperimentSession) -> set[str]:
         """Get all the sequence names within a given session.
 
         Args:
-            experiment_session: The activated experiment session in which to query the sequences.
+            experiment_session: The activated experiment session in which to query the
+            sequences.
         """
-
-        session = experiment_session.get_sql_session()
-        query = select(SequenceModel)
-        result = session.execute(query)
-        return [str(sequence.path) for sequence in result.scalars()]
 
     def __eq__(self, other):
         if isinstance(other, Sequence):
@@ -310,44 +200,3 @@ class SequenceStats(TypedDict):
 
 class SequenceNotFoundError(Exception):
     pass
-
-
-def transform_parameters(
-    parameters: Mapping[DottedVariableName, Parameter]
-) -> dict[str, Parameter]:
-    result = {}
-    for dotted_name, parameter in parameters.items():
-        if not isinstance(dotted_name, DottedVariableName):
-            raise TypeError(
-                f"Expected instance of <DottedVariableName> for parameter name, got {type(dotted_name)}"
-            )
-        if not is_parameter(parameter):
-            raise TypeError(
-                f"Expected instance of <Parameter> for parameter '{dotted_name}', got {type(parameter)}"
-            )
-        result[str(dotted_name)] = parameter
-    return result
-
-
-def transform_measures(
-    measures: Mapping[DeviceName, Mapping[DataLabel, Data]]
-) -> dict[DeviceName, dict[DataLabel, Data]]:
-    result = {}
-    for device_name, data_group in measures.items():
-        if not is_device_name(device_name):
-            raise TypeError(
-                f"Expected instance of <DeviceName> for device name, got {type(device_name)}"
-            )
-        new_group = {}
-        for label, data in data_group.items():
-            if not is_data_label(label):
-                raise TypeError(
-                    f"Expected instance of <DataLabel> for data label, got {type(label)}"
-                )
-            if not is_data(data):
-                raise TypeError(
-                    f"Expected instance of <Data> for device '{device_name}', got {type(data)}"
-                )
-            new_group[DataLabel(label)] = data
-        result[DeviceName(device_name)] = new_group
-    return result

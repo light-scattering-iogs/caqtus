@@ -1,6 +1,8 @@
 import logging
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Mapping, Iterable
+from contextlib import AbstractContextManager
 from datetime import datetime
 from pathlib import Path
 from threading import Lock
@@ -12,8 +14,15 @@ import sqlalchemy.orm
 import yaml
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
+from data_types import DataLabel, Data
+from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
+from parameter_types import Parameter
+from sequence.configuration import SequenceConfig
+from sequence.runtime import Sequence, Shot, SequencePath, SequenceStats
+from sql_model import State
 from sql_model.model import ExperimentConfigModel, CurrentExperimentConfigModel
+from variable.name import DottedVariableName
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -21,6 +30,215 @@ logger.setLevel(logging.DEBUG)
 
 class ExperimentSessionNotActiveError(RuntimeError):
     pass
+
+
+
+
+class ExperimentSession(AbstractContextManager["ExperimentSession"], ABC):
+    def __init__(self, *args, **kwargs):
+        self._is_active = False
+        self._lock = Lock()
+
+    # Sequence methods
+    @abstractmethod
+    def does_sequence_exist(self, sequence: Sequence) -> bool:
+        """Check if the sequence exists in the session.
+
+        Args:
+            sequence: the sequence to check for existence.
+
+        Returns:
+            True if the sequence exists in the session. False otherwise.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_state(self, sequence: Sequence) -> State:
+        """Get the state of the sequence.
+
+        Args:
+            sequence: the sequence to get the state for.
+
+        Returns:
+            The state of the sequence.
+        """
+
+        ...
+
+    @abstractmethod
+    def set_sequence_state(self, sequence: Sequence, state: State):
+        """Set the state of the sequence.
+
+        This should mostly be used by the program running the experiment.
+
+        Args:
+            sequence: the sequence to set the state for.
+            state: the state to set.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_shots(self, sequence: Sequence) -> list[Shot]:
+        """Get the shots that have been run for the sequence.
+
+        Args:
+            sequence: the sequence to get the shots for.
+
+        Returns:
+            The shots of the sequence.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_creation_date(self, sequence: Sequence) -> datetime:
+        """Get the creation date of the sequence.
+
+        Args:
+            sequence: the sequence to get the creation date for.
+
+        Returns:
+            The creation date of the sequence.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_config_yaml(self, sequence: Sequence) -> str:
+        """Get the configuration of the sequence.
+
+        Args:
+            sequence: the sequence to get the configuration for.
+
+        Returns:
+            The configuration of the sequence as a yaml string.
+        """
+
+        ...
+
+    @abstractmethod
+    def set_sequence_config_yaml(
+        self, sequence: Sequence, yaml_config: str, total_number_shots: Optional[int]
+    ):
+        """Set the configuration of the sequence.
+
+        Args:
+            sequence: the sequence to set the configuration for.
+            yaml_config: the configuration of the sequence as a yaml string.
+            total_number_shots: the total number of shots that will be run for this
+                sequence. It is stored alongside the sequence configuration.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_experiment_config(
+        self, sequence: Sequence
+    ) -> Optional[ExperimentConfig]:
+        """Get the experiment config of the sequence.
+
+        Args:
+            sequence: the sequence to get the experiment config for.
+
+        Returns:
+            The experiment config of the sequence. If no experiment config is set for
+            the sequence, None is returned.
+        """
+
+        ...
+
+    @abstractmethod
+    def set_sequence_experiment_config(
+        self, sequence: Sequence, experiment_config: str
+    ):
+        """Set the experiment config of the sequence.
+
+        Args:
+            sequence: the sequence to set the experiment config for.
+            experiment_config: the name of the experiment config to set. The referred
+                experiment config must exist in the session.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
+        """Get the stats of the sequence.
+
+        Args:
+            sequence: the sequence to get the stats for.
+
+        Returns:
+            The stats of the sequence.
+        """
+
+        ...
+
+    @abstractmethod
+    def get_all_sequence_names(self) -> set[str]:
+        """Get the names of all sequences in the session.
+
+        Returns:
+            The names of all sequences in the session.
+        """
+
+        ...
+
+    @abstractmethod
+    def query_sequence_stats(
+            self, sequences: Iterable[Sequence]
+    ) -> dict[SequencePath, SequenceStats]:
+        """Get the stats of the sequences.
+
+        Args:
+            sequences: the sequences to get the stats for.
+
+        Returns:
+            The stats of the sequences.
+        """
+
+        ...
+
+    @abstractmethod
+    def create_sequence(
+        self,
+        path: SequencePath,
+        sequence_config: SequenceConfig,
+        experiment_config_name: Optional[str],
+    ) -> Sequence:
+        """Create a new sequence in the session."""
+
+        ...
+
+    @abstractmethod
+    def create_sequence_shot(
+        self,
+        sequence: Sequence,
+        name: str,
+        start_time: datetime,
+        end_time: datetime,
+        parameters: Mapping[DottedVariableName, Parameter],
+        measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
+    ):
+        """Create a new shot for the sequence."""
+
+        ...
+
+    # Experiment config methods
+    @abstractmethod
+    def get_experiment_config(self, name: str) -> ExperimentConfig:
+        """Get the experiment config with the given name.
+
+        Args:
+            name: the name of the experiment config to get.
+
+        Returns:
+            The experiment config with the given name.
+        """
+
+        ...
 
 
 class _ExperimentSession(ABC):
@@ -39,10 +257,6 @@ class _ExperimentSession(ABC):
     automatically rolled back to the beginning of the activation block. This prevents
     leaving some data in an inconsistent state.
     """
-
-    def __init__(self):
-        self._is_active = False
-        self._lock = Lock()
 
     def add_experiment_config(
         self,
@@ -83,11 +297,6 @@ class _ExperimentSession(ABC):
             if match := pattern.match(name):
                 numbers.append(int(match.group(1)))
         return f"config_{_find_first_unused_number(numbers)}"
-
-    def get_experiment_config(self, name: str) -> ExperimentConfig:
-        return ExperimentConfig.from_yaml(
-            ExperimentConfigModel.get_config(name, self.get_sql_session())
-        )
 
     def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
@@ -189,9 +398,7 @@ class _ExperimentSession(ABC):
             return ExperimentConfig.from_yaml(experiment_config_yaml)
         except Exception as e:
             name = self.get_current_experiment_config_name()
-            raise ValueError(
-                f"Failed to load experiment config '{name}'"
-            ) from e
+            raise ValueError(f"Failed to load experiment config '{name}'") from e
 
     def activate(self):
         """Activate the session
@@ -213,38 +420,13 @@ class _ExperimentSession(ABC):
 
         return self
 
-    @abstractmethod
-    def get_sql_session(self) -> sqlalchemy.orm.Session:
-        ...
 
-
-class ExperimentSession(_ExperimentSession):
+class __ExperimentSession(_ExperimentSession):
     """A synchronous version of the ExperimentSession"""
 
     def __init__(self, _session: sqlalchemy.orm.Session):
         super().__init__()
         self._sql_session = _session
-
-    def __enter__(self):
-        with self._lock:
-            if self._is_active:
-                raise RuntimeError("Session is already active")
-            self._transaction = self._sql_session.begin().__enter__()
-            self._is_active = True
-            return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        with self._lock:
-            self._transaction.__exit__(exc_type, exc_val, exc_tb)
-            self._transaction = None
-            self._is_active = False
-
-    def get_sql_session(self) -> sqlalchemy.orm.Session:
-        if not self._is_active:
-            raise ExperimentSessionNotActiveError(
-                "Experiment session was not activated"
-            )
-        return self._sql_session
 
 
 class AsyncExperimentSession(_ExperimentSession):
