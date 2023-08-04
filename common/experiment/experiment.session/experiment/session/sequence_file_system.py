@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
@@ -13,6 +14,7 @@ from variable.name import DottedVariableName
 
 
 class SequenceFileSystem(Protocol):
+    @abstractmethod
     def does_path_exists(self, path: SequencePath) -> bool:
         """Check if the path exists in the session.
 
@@ -23,8 +25,9 @@ class SequenceFileSystem(Protocol):
             True if the path exists in the session. False otherwise.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def is_sequence_path(self, path: SequencePath) -> bool:
         """Check if the path is a sequence.
 
@@ -35,8 +38,9 @@ class SequenceFileSystem(Protocol):
             True if the path is a sequence path. False otherwise.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def create_path(self, path: SequencePath) -> list[SequencePath]:
         """Create the path in the session and its parent paths if they do not exist.
 
@@ -47,8 +51,9 @@ class SequenceFileSystem(Protocol):
             A list of the paths that were created.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def delete_path(self, path: SequencePath, delete_sequences: bool = False):
         """
         Delete the path and all its children if they exist
@@ -66,8 +71,9 @@ class SequenceFileSystem(Protocol):
             delete_sequence is False
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_path_children(self, path: SequencePath) -> set[SequencePath]:
         """Get the children of the path.
 
@@ -78,8 +84,9 @@ class SequenceFileSystem(Protocol):
             The children of the path.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_path_creation_date(self, path: SequencePath) -> datetime:
         """Get the creation date of the path.
 
@@ -90,9 +97,10 @@ class SequenceFileSystem(Protocol):
             The creation date of the path.
         """
 
-        ...
+        raise NotImplementedError()
 
     # Sequence methods
+    @abstractmethod
     def does_sequence_exist(self, sequence: Sequence) -> bool:
         """Check if the sequence exists in the session.
 
@@ -103,8 +111,9 @@ class SequenceFileSystem(Protocol):
             True if the sequence exists in the session. False otherwise.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_state(self, sequence: Sequence) -> State:
         """Get the state of the sequence.
 
@@ -115,8 +124,9 @@ class SequenceFileSystem(Protocol):
             The state of the sequence.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def set_sequence_state(self, sequence: Sequence, state: State):
         """Set the state of the sequence.
 
@@ -127,8 +137,9 @@ class SequenceFileSystem(Protocol):
             state: the state to set.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_shots(self, sequence: Sequence) -> list[Shot]:
         """Get the shots that have been run for the sequence.
 
@@ -139,8 +150,9 @@ class SequenceFileSystem(Protocol):
             The shots of the sequence.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_creation_date(self, sequence: Sequence) -> datetime:
         """Get the creation date of the sequence.
 
@@ -151,8 +163,9 @@ class SequenceFileSystem(Protocol):
             The creation date of the sequence.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_config_yaml(self, sequence: Sequence) -> str:
         """Get the configuration of the sequence.
 
@@ -163,8 +176,9 @@ class SequenceFileSystem(Protocol):
             The configuration of the sequence as a yaml string.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def set_sequence_config_yaml(
         self, sequence: Sequence, yaml_config: str, total_number_shots: Optional[int]
     ):
@@ -177,8 +191,9 @@ class SequenceFileSystem(Protocol):
                 sequence. It is stored alongside the sequence configuration.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_experiment_config(
         self, sequence: Sequence
     ) -> Optional[ExperimentConfig]:
@@ -192,8 +207,9 @@ class SequenceFileSystem(Protocol):
             the sequence, None is returned.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def set_sequence_experiment_config(
         self, sequence: Sequence, experiment_config: str
     ):
@@ -205,8 +221,9 @@ class SequenceFileSystem(Protocol):
                 experiment config must exist in the session.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
         """Get the stats of the sequence.
 
@@ -217,8 +234,9 @@ class SequenceFileSystem(Protocol):
             The stats of the sequence.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def get_all_sequence_names(self) -> set[str]:
         """Get the names of all sequences in the session.
 
@@ -226,8 +244,9 @@ class SequenceFileSystem(Protocol):
             The names of all sequences in the session.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def query_sequence_stats(
         self, sequences: Iterable[Sequence]
     ) -> dict[SequencePath, SequenceStats]:
@@ -240,8 +259,9 @@ class SequenceFileSystem(Protocol):
             The stats of the sequences.
         """
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def create_sequence(
         self,
         path: SequencePath,
@@ -250,8 +270,9 @@ class SequenceFileSystem(Protocol):
     ) -> Sequence:
         """Create a new sequence in the session."""
 
-        ...
+        raise NotImplementedError()
 
+    @abstractmethod
     def create_sequence_shot(
         self,
         sequence: Sequence,
@@ -263,4 +284,4 @@ class SequenceFileSystem(Protocol):
     ):
         """Create a new shot for the sequence."""
 
-        ...
+        raise NotImplementedError()
