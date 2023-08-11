@@ -83,6 +83,9 @@ class SequencerChannelsModel(QAbstractTableModel):
                     return "Output"
                 elif section == 4:
                     return "Delay"
+        elif orientation == Qt.Orientation.Vertical:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return str(section)
         return super().headerData(section, orientation, role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
