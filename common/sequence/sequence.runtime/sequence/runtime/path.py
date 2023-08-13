@@ -1,13 +1,9 @@
 import datetime
 import re
-from typing import Self
+import typing
 
-from sqlalchemy import select, func
-from sqlalchemy.orm import Session
-from sqlalchemy_utils import Ltree
-
-from experiment.session import ExperimentSession
-from sql_model import SequencePathModel
+if typing.TYPE_CHECKING:
+    from experiment.session import ExperimentSession
 
 _PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
@@ -29,18 +25,10 @@ class SequencePath:
             return True
         return _PATH_REGEX.match(path) is not None
 
-    def exists(self, experiment_session: ExperimentSession):
-        session = experiment_session.get_sql_session()
-        return (
-            session.scalar(
-                select(SequencePathModel).filter(
-                    SequencePathModel.path == Ltree(self._path)
-                )
-            )
-            is not None
-        )
+    def exists(self, experiment_session: "ExperimentSession") -> bool:
+        return experiment_session.does_path_exists(self)
 
-    def create(self, experiment_session: ExperimentSession) -> list["SequencePath"]:
+    def create(self, experiment_session: "ExperimentSession") -> list["SequencePath"]:
         """
         Create the path and all its ancestors if they don't exist
 
@@ -53,63 +41,40 @@ class SequencePath:
         Raises:
             RuntimeError: If an ancestor exists and is a sequence
         """
-        session = experiment_session.get_sql_session()
 
-        created_path: list[SequencePath] = []
-
-        for ancestor in self.get_ancestors(strict=False):
-            if ancestor.exists(experiment_session):
-                if ancestor.is_sequence(experiment_session):
-                    raise RuntimeError(
-                        f"Cannot create path {self} because a sequence already exists"
-                        f" in this path {ancestor}"
-                    )
-            else:
-                SequencePathModel.create_path(str(ancestor), session)
-                created_path.append(ancestor)
-        return created_path
+        return experiment_session.create_path(self)
 
     def delete(
-        self, experiment_session: ExperimentSession, delete_sequences: bool = False
+        self, experiment_session: "ExperimentSession", delete_sequences: bool = False
     ):
         """
         Delete the path and all its children if they exist
 
         Warnings:
-            !!! If delete_sequences is True, all sequences in the path will be deleted
+            If delete_sequences is True, all sequences in the path will be deleted.
 
         Args:
             experiment_session: The experiment session to use
             delete_sequences: If False, raise an error if the path or one of its
-            children is a sequence
+            children is a sequence.
 
         Raises:
             RuntimeError: If the path or one of its children is a sequence and
             delete_sequence is False
         """
 
-        session = experiment_session.get_sql_session()
-
-        if not delete_sequences:
-            if sub_sequences := self.get_contained_sequences(experiment_session):
-                raise RuntimeError(
-                    f"Cannot delete a path that contains sequences: {sub_sequences}"
-                )
-
-        session.delete(self._query_model(session))
-        session.flush()
+        experiment_session.delete_path(self, delete_sequences)
 
     def get_contained_sequences(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> list["SequencePath"]:
-        """
-        Check if the path or one of its children is a sequence
+        """Return the children of this path that are sequences, including this path.
 
         Args:
-            experiment_session: The experiment session to use
+            experiment_session: The experiment session to use.
 
         Return:
-            A list of all sequences inside theis path and all its descendants
+            A list of all sequences inside this path and all its descendants.
         """
 
         if self.is_sequence(experiment_session):
@@ -120,46 +85,32 @@ class SequencePath:
             result += child.get_contained_sequences(experiment_session)
         return result
 
-    def is_folder(self, experiment_session: ExperimentSession) -> bool:
+    def is_folder(self, experiment_session: "ExperimentSession") -> bool:
         return not self.is_sequence(experiment_session)
 
-    def is_sequence(self, experiment_session: ExperimentSession) -> bool:
-        path = self._query_model(experiment_session.get_sql_session())
-        return bool(path.sequence)
+    def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
+        return experiment_session.is_sequence_path(self)
 
     def is_root(self) -> bool:
         return self._path == ""
 
-    def has_children(self, experiment_session: ExperimentSession) -> int:
+    def has_children(self, experiment_session: "ExperimentSession") -> int:
         return bool(self.get_child_count(experiment_session))
 
-    def get_child_count(self, experiment_session: ExperimentSession) -> int:
+    def get_child_count(self, experiment_session: "ExperimentSession") -> int:
         return len(self.get_children(experiment_session))
 
     def get_children(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> set["SequencePath"]:
-        session = experiment_session.get_sql_session()
+        """Return the direct descendants of this path."""
 
-        if self.is_root():
-            query_children = (
-                session.query(SequencePathModel)
-                .filter(func.nlevel(SequencePathModel.path) == 1)
-                .order_by(SequencePathModel.creation_date)
-            )
-            children = session.scalars(query_children)
-        else:
-            path = self._query_model(session)
-            if path.sequence:
-                raise RuntimeError("Cannot check children of a sequence")
-            # noinspection PyUnresolvedReferences
-            children = path.children
-        return set(SequencePath(str(child.path)) for child in children)
+        return experiment_session.get_path_children(self)
 
     def get_creation_date(
-        self, experiment_session: ExperimentSession
+        self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
-        return self._query_model(experiment_session.get_sql_session()).creation_date
+        return experiment_session.get_path_creation_date(self)
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
         ancestors = self._path.split(_PATH_SEPARATOR)
@@ -215,27 +166,6 @@ class SequencePath:
 
     def __hash__(self):
         return hash(self._path)
-
-    def _query_model(self, session: Session) -> SequencePathModel:
-        stmt = select(SequencePathModel).where(
-            SequencePathModel.path == Ltree(self._path)
-        )
-        result = session.execute(stmt)
-        # noinspection PyTypeChecker
-        if path := result.scalar():
-            return path
-        else:
-            raise PathNotFoundError(f"Could not find path '{self._path}' in database")
-
-    @classmethod
-    def query_path_models(
-        cls, paths: list[Self], session: ExperimentSession
-    ) -> list[SequencePathModel]:
-        stmt = select(SequencePathModel).where(
-            SequencePathModel.path.in_([Ltree(path._path) for path in paths])
-        )
-        result = session.get_sql_session().execute(stmt)
-        return result.scalars().all()
 
 
 class PathNotFoundError(Exception):

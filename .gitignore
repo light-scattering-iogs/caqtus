@@ -5,3 +5,4 @@
 .pytest_cache
 .hypothesis
 *.yaml
+__pycache__

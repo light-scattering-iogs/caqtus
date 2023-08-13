@@ -193,7 +193,9 @@ class SequenceModel(Base):
     ] = mapped_column()  # None indicates that this number is unknown
     number_completed_shots: Mapped[int] = mapped_column()
 
-    shots: Mapped[list["ShotModel"]] = relationship(cascade="all, delete-orphan")
+    shots: Mapped[list["ShotModel"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
 
     def __repr__(self):
         return (
@@ -310,7 +312,9 @@ class ShotModel(Base):
     start_time: Mapped[datetime] = mapped_column()
     end_time: Mapped[datetime] = mapped_column()
 
-    data: Mapped[list["DataModel"]] = relationship(cascade="all, delete-orphan")
+    data: Mapped[list["DataModel"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
 
     @classmethod
     def create_shot(

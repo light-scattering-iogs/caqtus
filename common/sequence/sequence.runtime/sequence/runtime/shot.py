@@ -6,13 +6,15 @@ from sqlalchemy.orm import Session
 
 from data_types import Data, DataLabel
 from device.name import DeviceName
-from experiment.session import ExperimentSession
 from parameter_types import Parameter
 from sql_model import ShotModel, DataType
 from variable.name import DottedVariableName
 
 if typing.TYPE_CHECKING:
+    from experiment.session import ExperimentSession
     from .sequence import Sequence
+else:
+    ExperimentSession = "ExperimentSession"
 
 
 class Shot:
