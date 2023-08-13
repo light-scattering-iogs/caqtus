@@ -194,7 +194,7 @@ class SequenceModel(Base):
     number_completed_shots: Mapped[int] = mapped_column()
 
     shots: Mapped[list["ShotModel"]] = relationship(
-        cascade="all, delete-orphan", passive_deletes=True
+        cascade="all, delete, delete-orphan", passive_deletes=True
     )
 
     def __repr__(self):
@@ -272,7 +272,7 @@ class SequenceModel(Base):
             self.start_date = None
             self.stop_date = None
             self.number_completed_shots = 0
-            self.shots[:] = []
+            self.shots.clear()
             self.state = State.DRAFT
         else:
             raise NotImplementedError()
@@ -313,7 +313,7 @@ class ShotModel(Base):
     end_time: Mapped[datetime] = mapped_column()
 
     data: Mapped[list["DataModel"]] = relationship(
-        cascade="all, delete-orphan", passive_deletes=True
+        back_populates="shot", cascade="all, delete", passive_deletes=True
     )
 
     @classmethod
@@ -378,7 +378,9 @@ class DataModel(Base):
     )
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    shot_id: Mapped[int] = mapped_column(ForeignKey("shot.id"), index=True)
+    shot_id: Mapped[int] = mapped_column(
+        ForeignKey("shot.id", ondelete="CASCADE"), index=True
+    )
     shot: Mapped["ShotModel"] = relationship(back_populates="data")
     type_: Mapped[DataType] = mapped_column()
     name: Mapped[str] = mapped_column()
