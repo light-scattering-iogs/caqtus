@@ -7,7 +7,11 @@ from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 
 from concurrent_updater import ConcurrentUpdater
-from experiment.session import ExperimentSessionMaker, ExperimentSession
+from experiment.session import (
+    ExperimentSessionMaker,
+    ExperimentSession,
+    PathIsSequenceError,
+)
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 from sequence.runtime import SequencePath, Sequence, State, SequenceStats
 
@@ -263,7 +267,11 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             program=SequenceSteps(), shot_configurations={"shot": ShotConfiguration()}
         )
         with self._session as session:
-            number_created_paths = len(new_path.create(session))
+            try:
+                number_created_paths = len(new_path.create(session))
+            except PathIsSequenceError as error:
+                _logger.warning(error)
+                return None
             if number_created_paths == 1:
                 Sequence.create_sequence(new_path, sequence_config, None, session)
                 new_child = _SequenceHierarchyItem(
@@ -298,6 +306,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             True if the sequence was duplicated, False otherwise
 
         """
+
         source_path = Sequence(source_index.internalPointer().sequence_path)
         target_path = self.create_new_sequence(source_index.parent(), target_name)
         if target_path is not None:
@@ -450,7 +459,9 @@ def _update_stats(item: _SequenceHierarchyItem, session: ExperimentSession):
     _apply_stats(item, stats)
 
 
-def _apply_stats(item: _SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]):
+def _apply_stats(
+    item: _SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]
+):
     """Apply stats to a sequence hierarchy item."""
 
     if item.is_sequence:

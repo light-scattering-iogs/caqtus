@@ -49,6 +49,9 @@ class SequenceFileSystem(Protocol):
 
         Returns:
             A list of the paths that were created.
+
+        Raises:
+            PathIsSequenceError: If the path or one of its ancestors is a sequence.
         """
 
         raise NotImplementedError()
@@ -285,3 +288,7 @@ class SequenceFileSystem(Protocol):
         """Create a new shot for the sequence."""
 
         raise NotImplementedError()
+
+
+class PathIsSequenceError(Exception):
+    pass

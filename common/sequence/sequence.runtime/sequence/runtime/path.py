@@ -39,7 +39,7 @@ class SequencePath:
             list of paths that were created when they didn't exist
 
         Raises:
-            RuntimeError: If an ancestor exists and is a sequence
+            PathIsSequenceError: If an ancestor exists and is a sequence
         """
 
         return experiment_session.create_path(self)
@@ -113,6 +113,15 @@ class SequencePath:
         return experiment_session.get_path_creation_date(self)
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
+        """Return the ancestors of this path.
+
+        Args:
+            strict: If True, the path itself will not be included in the result.
+
+        Returns:
+            All the paths that are above this path in the hierarchy.
+        """
+
         ancestors = self._path.split(_PATH_SEPARATOR)
         if strict:
             *ancestors, _ = ancestors

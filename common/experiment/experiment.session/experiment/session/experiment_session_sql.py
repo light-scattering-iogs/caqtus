@@ -25,6 +25,7 @@ from sql_model.model import (
 from sql_model.sequence_state import InvalidSequenceStateError
 from variable.name import DottedVariableName
 from .experiment_session import ExperimentSession, ExperimentSessionNotActiveError
+from .sequence_file_system import PathIsSequenceError
 
 
 class SQLExperimentSession(ExperimentSession):
@@ -67,14 +68,16 @@ class SQLExperimentSession(ExperimentSession):
 
         created_paths: list[SequencePath] = []
 
+        paths_to_create: list[SequencePath] = []
+
         for ancestor in path.get_ancestors(strict=False):
             if self.does_path_exists(ancestor):
                 if self.is_sequence_path(ancestor):
-                    raise RuntimeError(
-                        f"Cannot create path {self} because a sequence already exists"
-                        f" in this path {ancestor}"
+                    raise PathIsSequenceError(
+                        f"Cannot create path {path} because {ancestor} is already a sequence"
                     )
             else:
+                paths_to_create.append(ancestor)
                 SequencePathModel.create_path(str(ancestor), session)
                 created_paths.append(ancestor)
         return created_paths
