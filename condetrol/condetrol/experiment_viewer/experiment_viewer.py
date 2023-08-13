@@ -3,12 +3,14 @@ import time
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
+from typing import Callable, Optional
 
 from PyQt6 import QtCore
-from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer
+from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer, QThread
 from PyQt6.QtGui import (
     QAction,
     QCloseEvent,
+    QPalette,
 )
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -17,6 +19,8 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QTextBrowser,
+    QWidget,
+    QApplication,
 )
 
 from experiment.configuration import ExperimentConfig
@@ -24,6 +28,7 @@ from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
+from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_widget import SequenceWidget
@@ -163,6 +168,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
         )
         self.logs_listener.start()
+        self.worker = BlockingThread(self)
 
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
@@ -406,7 +412,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 "All associated data will be irremediably lost."
             )
             if self.exec_confirmation_message_box(message):
-                self.model.revert_to_draft(index)
+
+                def target():
+                    self.model.revert_to_draft(index)
+
+                self.worker.task = target
+                self.worker.start()
+
                 self.sequences_view.update()
 
     def exec_confirmation_message_box(self, message: str) -> bool:
@@ -425,3 +437,36 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if result == QMessageBox.StandardButton.Cancel:
             return False
         return True
+
+
+class BlockingThread(QThread):
+    """Execute a task in a new thread while blocking the parent widget."""
+
+    def __init__(self, parent: QWidget, task: Optional[Callable] = None):
+        super().__init__()
+        self.spinner = WaitingSpinner(
+            parent=parent,
+            disable_parent_when_spinning=True,
+            modality=Qt.WindowModality.ApplicationModal,
+            color=QApplication.palette().color(QPalette.ColorRole.Highlight),
+        )
+        self.finished.connect(self.spinner.stop)
+        self._task = task
+
+    @property
+    def task(self):
+        return self._task
+
+    @task.setter
+    def task(self, task: Callable):
+        self._task = task
+
+    def run(self):
+        self._task()
+
+    def start(self, priority: QThread.Priority = QThread.Priority.HighPriority) -> None:
+        self.wait()
+        self.spinner.start()
+        if self._task is None:
+            raise ValueError("No task was defined for the waiting thread")
+        super().start(priority)
