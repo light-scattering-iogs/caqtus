@@ -8,10 +8,10 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
 
-from data_types import Data, DataLabel
-from device.name import DeviceName
+from data_types import Data, DataLabel, is_data_label, is_data
+from device.name import DeviceName, is_device_name
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter
+from parameter_types import Parameter, is_parameter
 from sequence.configuration import SequenceConfig
 from sequence.runtime import Sequence, SequenceNotFoundError, SequencePath, Shot
 from sequence.runtime.path import PathNotFoundError
@@ -295,3 +295,49 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
         return self.parent_session._get_sql_session()
+
+
+def transform_parameters(
+    parameters: Mapping[DottedVariableName, Parameter]
+) -> dict[str, Parameter]:
+    result = {}
+    for dotted_name, parameter in parameters.items():
+        if not isinstance(dotted_name, DottedVariableName):
+            raise TypeError(
+                "Expected instance of <DottedVariableName> for parameter name, got"
+                f" {type(dotted_name)}"
+            )
+        if not is_parameter(parameter):
+            raise TypeError(
+                f"Expected instance of <Parameter> for parameter '{dotted_name}', got"
+                f" {type(parameter)}"
+            )
+        result[str(dotted_name)] = parameter
+    return result
+
+
+def transform_measures(
+    measures: Mapping[DeviceName, Mapping[DataLabel, Data]]
+) -> dict[DeviceName, dict[DataLabel, Data]]:
+    result = {}
+    for device_name, data_group in measures.items():
+        if not is_device_name(device_name):
+            raise TypeError(
+                "Expected instance of <DeviceName> for device name, got"
+                f" {type(device_name)}"
+            )
+        new_group = {}
+        for label, data in data_group.items():
+            if not is_data_label(label):
+                raise TypeError(
+                    "Expected instance of <DataLabel> for data label, got"
+                    f" {type(label)}"
+                )
+            if not is_data(data):
+                raise TypeError(
+                    f"Expected instance of <Data> for device '{device_name}', got"
+                    f" {type(data)}"
+                )
+            new_group[DataLabel(label)] = data
+        result[DeviceName(device_name)] = new_group
+    return result

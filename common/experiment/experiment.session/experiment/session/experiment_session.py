@@ -16,7 +16,6 @@ class ExperimentSessionNotActiveError(RuntimeError):
 
 class ExperimentSession(
     AbstractContextManager["ExperimentSession"],
-    ExperimentConfigCollection,
     Protocol,
 ):
     """Interface that define an experiment session.
@@ -43,6 +42,7 @@ class ExperimentSession(
 
     sequence_hierarchy: SequenceHierarchy
     shot_collection: ShotCollection
+    experiment_config_collection: ExperimentConfigCollection
 
     def activate(self):
         """Activate the session

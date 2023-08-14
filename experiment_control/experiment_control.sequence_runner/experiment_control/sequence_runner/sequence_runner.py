@@ -16,12 +16,14 @@ from typing import (
 )
 
 import numpy as np
+from device.runtime import RuntimeDevice
+from sequencer.runtime import Sequencer
+from variable.namespace import VariableNamespace
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.runtime import CameraTimeoutError
 from data_types import Data, DataLabel
 from device.configuration import DeviceName, DeviceParameter
-from device.runtime import RuntimeDevice
 from duration_timer import DurationTimer
 from experiment.configuration import (
     CameraConfiguration,
@@ -53,10 +55,8 @@ from sequence.configuration import (
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
 from sequencer.configuration import SequencerConfiguration
-from sequencer.runtime import Sequencer
 from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
-from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
 from .device_servers import (
     create_device_servers,
@@ -171,8 +171,10 @@ class SequenceRunnerThread(Thread):
         self._computation_executor = ProcessPoolExecutor()
 
         with self._session.activate() as session:
-            self._experiment_config = session.get_experiment_config(
-                experiment_config_name
+            self._experiment_config = (
+                session.experiment_config_collection.get_experiment_config(
+                    experiment_config_name
+                )
             )
             self._experiment_config_yaml = self._experiment_config.to_yaml()
             self._sequence_config = self._sequence.get_config(session)
@@ -205,7 +207,6 @@ class SequenceRunnerThread(Thread):
         await self.run_sequence()
 
     async def prepare(self):
-
         self._image_analysis_flow = find_how_to_analyze_images(
             self._sequence_config.shot_configurations["shot"]
         )
@@ -660,7 +661,9 @@ class SequenceRunnerThread(Thread):
                 f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
             )
             if (camera_name, picture_name) in self._image_flow:
-                for detector, imaging_config in self._image_flow[(camera_name, picture_name)]:
+                for detector, imaging_config in self._image_flow[
+                    (camera_name, picture_name)
+                ]:
                     atoms = self._devices[detector].are_atoms_present(
                         picture, imaging_config
                     )
@@ -671,8 +674,12 @@ class SequenceRunnerThread(Thread):
                         result[detector] = {}
                     result[detector][picture_name] = atoms
                     if (detector, picture_name) in self._rearrange_flow:
-                        tweezer_arranger, step = self._rearrange_flow[(detector, picture_name)]
-                        self._devices[tweezer_arranger].prepare_rearrangement(step=step, atom_present=atoms)
+                        tweezer_arranger, step = self._rearrange_flow[
+                            (detector, picture_name)
+                        ]
+                        self._devices[tweezer_arranger].prepare_rearrangement(
+                            step=step, atom_present=atoms
+                        )
                         logger.debug(
                             f"Tweezer arranger '{tweezer_arranger}' arranged tweezers in picture '{picture_name}'"
                         )
