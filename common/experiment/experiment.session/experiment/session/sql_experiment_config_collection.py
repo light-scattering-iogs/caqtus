@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Optional, TYPE_CHECKING, Iterator
 
 import sqlalchemy.orm
@@ -19,10 +18,8 @@ if TYPE_CHECKING:
 class SQLExperimentConfigCollection(ExperimentConfigCollection):
     parent_session: "SQLExperimentSession"
 
-    def __getitem__(self, name: str) -> ExperimentConfig:
-        return ExperimentConfig.from_yaml(
-            ExperimentConfigModel.get_config(name, self._get_sql_session())
-        )
+    def get_experiment_config_yaml(self, name: str) -> str:
+        return ExperimentConfigModel.get_config(name, self._get_sql_session())
 
     def __setitem__(self, name, experiment_config):
         if not isinstance(name, str):
@@ -43,7 +40,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         )
 
     def __delitem__(self, name: str):
-        raise NotImplementedError("Deleting experiment configs is not supported")
+        raise NotImplementedError("Deleting experiment configs is not supported yet")
 
     def __iter__(self) -> Iterator[str]:
         session = self._get_sql_session()
@@ -53,16 +50,6 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
 
     def __len__(self) -> int:
         return len(list(iter(self)))
-
-    def get_experiment_config_yamls(
-        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[str, str]:
-        results = ExperimentConfigModel.get_configs(
-            from_date,
-            to_date,
-            self._get_sql_session(),
-        )
-        return {name: yaml_ for name, yaml_ in results.items()}
 
     def add_experiment_config(
         self,
@@ -75,14 +62,14 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         self[name] = experiment_config
         return name
 
-    def set_current_experiment_config(self, name: str):
+    def set_current(self, name: str):
         if not isinstance(name, str):
             raise TypeError(f"Expected <str> for name, got {type(name)}")
         CurrentExperimentConfigModel.set_current_experiment_config(
             name=name, session=self._get_sql_session()
         )
 
-    def get_current_experiment_config_name(self) -> Optional[str]:
+    def get_current(self) -> Optional[str]:
         return CurrentExperimentConfigModel.get_current_experiment_config_name(
             session=self._get_sql_session()
         )

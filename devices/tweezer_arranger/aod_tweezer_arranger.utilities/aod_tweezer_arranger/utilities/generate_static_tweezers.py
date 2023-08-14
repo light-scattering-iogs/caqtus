@@ -65,9 +65,7 @@ def main():
 
     session = get_standard_experiment_session()
     with session.activate():
-        experiment_config = (
-            session.experiment_configs.get_current_experiment_config()
-        )
+        experiment_config = session.experiment_configs.get_current_config()
         arranger_config: AODTweezerArrangerConfiguration = (
             experiment_config.get_device_config(DEVICE_NAME)
         )  # type: ignore
@@ -76,9 +74,7 @@ def main():
         new_config_name = session.experiment_configs.add_experiment_config(
             experiment_config
         )
-        session.experiment_configs.set_current_experiment_config(
-            new_config_name
-        )
+        session.experiment_configs.set_current(new_config_name)
 
 
 def prevent_beating_in_array(

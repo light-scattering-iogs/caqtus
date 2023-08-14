@@ -1,32 +1,27 @@
 import re
 from abc import abstractmethod, ABC
 from collections.abc import MutableMapping
-from datetime import datetime
 from typing import Optional
 
 from experiment.configuration import ExperimentConfig
 
 
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
+    def __getitem__(self, name: str) -> ExperimentConfig:
+        return ExperimentConfig.from_yaml(self.get_experiment_config_yaml(name))
+
     @abstractmethod
-    def get_experiment_config_yamls(
-        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[str, str]:
-        """Get the experiment configuration raw yaml strings.
+    def get_experiment_config_yaml(self, name: str) -> str:
+        """Get the experiment configuration yaml string.
 
         Args:
-            from_date: Only query experiment configurations that were modified
-                after this date.
-            to_date: Only query experiment configurations that were modified before
-                this date.
+            name: The name of the experiment configuration.
 
         Returns:
-            A dictionary mapping experiment configuration names to their yaml string
-            representation. The yaml representations are not guaranteed to be valid if
-            the way the experiment configuration is represented changes.
+            The yaml string representation of the experiment configuration.
         """
 
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def add_experiment_config(
@@ -58,7 +53,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         return f"config_{_find_first_unused_number(numbers)}"
 
     @abstractmethod
-    def set_current_experiment_config(self, name: str):
+    def set_current(self, name: str):
         """Set the current experiment config.
 
         The current experiment config is the one associated to a sequence when it is
@@ -68,7 +63,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_current_experiment_config_name(self) -> Optional[str]:
+    def get_current(self) -> Optional[str]:
         """Get the name of the currently selected experiment config."""
 
         raise NotImplementedError()
@@ -82,13 +77,13 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             if the way the experiment configuration is represented changed.
         """
 
-        name = self.get_current_experiment_config_name()
+        name = self.get_current()
         if name is None:
             return None
-        experiment_config_yaml = self.get_experiment_config_yamls()[name]
+        experiment_config_yaml = self.get_experiment_config_yaml(name)
         return experiment_config_yaml
 
-    def get_current_experiment_config(self) -> Optional[ExperimentConfig]:
+    def get_current_config(self) -> Optional[ExperimentConfig]:
         """Get the current experiment configuration.
 
         Returns:
@@ -105,7 +100,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         try:
             return ExperimentConfig.from_yaml(experiment_config_yaml)
         except Exception as e:
-            name = self.get_current_experiment_config_name()
+            name = self.get_current()
             raise ValueError(f"Failed to load experiment config '{name}'") from e
 
 
