@@ -357,7 +357,7 @@ class ShotModel(Base):
 
         session.flush()
 
-    def get_data(self, type_: "DataType", session: Session):
+    def get_data(self, type_: "DataType", session: Session) -> dict[str, Any]:
         query = select(DataModel).filter(
             DataModel.shot == self, DataModel.type_ == type_
         )

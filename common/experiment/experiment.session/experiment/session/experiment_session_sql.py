@@ -1,8 +1,10 @@
 from collections.abc import Mapping, Iterable
 from datetime import datetime
-from typing import Optional
+from threading import Lock
+from typing import Optional, Any
 
 import sqlalchemy.orm
+from attrs import define
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
@@ -15,6 +17,7 @@ from sequence.configuration import SequenceConfig
 from sequence.runtime import Sequence, SequenceNotFoundError, SequencePath, Shot
 from sequence.runtime.path import PathNotFoundError
 from sequence.runtime.sequence import SequenceNotEditableError, SequenceStats
+from sequence.runtime.shot import ShotNotFoundError
 from sql_model import SequenceModel, SequencePathModel, State
 from sql_model.model import (
     ExperimentConfigModel,
@@ -24,14 +27,73 @@ from sql_model.model import (
 )
 from sql_model.sequence_state import InvalidSequenceStateError
 from variable.name import DottedVariableName
-from .experiment_session import ExperimentSession, ExperimentSessionNotActiveError
+from .experiment_session import (
+    ExperimentSession,
+    ExperimentSessionNotActiveError,
+    ShotCollection,
+)
 from .sequence_file_system import PathIsSequenceError
 
 
+@define
+class SQLShotCollection(ShotCollection):
+    parent_session: "SQLExperimentSession"
+
+    def get_shot_data(self, shot: Shot, data_type: DataType) -> dict[str, Any]:
+        shot_sql = self._query_shot_model(shot)
+        return shot_sql.get_data(data_type, self._get_sql_session())
+
+    def add_shot_data(
+        self, shot: Shot, data: dict[str, Any], data_type: DataType
+    ) -> None:
+        session = self._get_sql_session()
+        shot_sql = self._query_shot_model(shot)
+        shot_sql.add_data(data, DataType.SCORE, session)
+        session.flush()
+
+    def get_shot_start_time(self, shot: Shot) -> datetime:
+        shot_sql = self._query_shot_model(shot)
+        return shot_sql.start_time
+
+    def get_shot_end_time(self, shot: Shot) -> datetime:
+        shot_sql = self._query_shot_model(shot)
+        return shot_sql.end_time
+
+    def _query_shot_model(self, shot: Shot) -> ShotModel:
+        query_shot = select(ShotModel).where(
+            ShotModel.sequence == self._query_sequence_model(shot.sequence),
+            ShotModel.name == shot.name,
+            ShotModel.index == shot.index,
+        )
+        result = self._get_sql_session().execute(query_shot)
+        if shot := result.scalar():
+            return shot
+        else:
+            raise ShotNotFoundError(f"Could not find shot {shot} in database")
+
+    def _query_sequence_model(self, sequence: Sequence) -> SequenceModel:
+        # noinspection PyProtectedMember
+        return self.parent_session._query_sequence_model(sequence)
+
+    def _get_sql_session(self) -> sqlalchemy.orm.Session:
+        # noinspection PyProtectedMember
+        return self.parent_session._get_sql_session()
+
+
+@define(init=False)
 class SQLExperimentSession(ExperimentSession):
+    shot_collection: SQLShotCollection
+
+    _sql_session: sqlalchemy.orm.Session
+    _is_active: bool
+    _lock: Lock
+
     def __init__(self, session: sqlalchemy.orm.Session, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._sql_session = session
+        self._is_active = False
+        self._lock = Lock()
+        self.shot_collection = SQLShotCollection(parent_session=self)
 
     def __enter__(self):
         with self._lock:
@@ -205,7 +267,6 @@ class SQLExperimentSession(ExperimentSession):
     def query_sequence_stats(
         self, sequences: Iterable[Sequence]
     ) -> dict[SequencePath, SequenceStats]:
-
         paths = self._query_path_models([sequence.path for sequence in sequences])
         query = select(SequenceModel).where(
             SequenceModel.path_id.in_(path.id_ for path in paths)

@@ -1,13 +1,10 @@
 import typing
 from datetime import datetime
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from data_types import Data, DataLabel
 from device.name import DeviceName
 from parameter_types import Parameter
-from sql_model import ShotModel, DataType
+from sql_model import DataType
 from variable.name import DottedVariableName
 
 if typing.TYPE_CHECKING:
@@ -38,42 +35,34 @@ class Shot:
     def get_measures(
         self, experiment_session: ExperimentSession
     ) -> dict[DeviceName, dict[DataLabel, Data]]:
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        return shot_sql.get_data(DataType.MEASURE, session)
+        return self._get_data(DataType.MEASURE, experiment_session)
 
     def get_parameters(
         self, experiment_session: ExperimentSession
     ) -> dict[DottedVariableName, Parameter]:
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        result = shot_sql.get_data(DataType.PARAMETER, session)
+        result = self._get_data(DataType.PARAMETER, experiment_session)
         return {
             DottedVariableName(name): parameter for name, parameter in result.items()
         }
 
     def get_scores(self, experiment_session: ExperimentSession):
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        return shot_sql.get_data(DataType.SCORE, session)
+        return self._get_data(DataType.SCORE, experiment_session)
+
+    def _get_data(self, data_type: DataType, experiment_session: ExperimentSession):
+        return experiment_session.shot_collection.get_shot_data(
+            shot=self, data_type=data_type
+        )
 
     def add_scores(
         self, score: dict[str, float], experiment_session: ExperimentSession
     ):
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        shot_sql.add_data(score, DataType.SCORE, session)
-        session.flush()
+        experiment_session.shot_collection.add_shot_data(self, score, DataType.SCORE)
 
     def get_start_time(self, experiment_session: ExperimentSession) -> datetime:
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        return shot_sql.start_time
+        return experiment_session.shot_collection.get_shot_start_time(self)
 
     def get_end_time(self, experiment_session: ExperimentSession) -> datetime:
-        session = experiment_session.get_sql_session()
-        shot_sql = self._query_model(session)
-        return shot_sql.end_time
+        return experiment_session.shot_collection.get_shot_end_time(self)
 
     @property
     def sequence(self):
@@ -86,20 +75,6 @@ class Shot:
     @property
     def index(self):
         return self._index
-
-    def _query_model(self, session: typing.Optional[Session]) -> ShotModel:
-        # noinspection PyProtectedMember
-        query_shot = select(ShotModel).where(
-            ShotModel.sequence == self.sequence._query_model(session),
-            ShotModel.name == self.name,
-            ShotModel.index == self.index,
-        )
-        result = session.execute(query_shot)
-        # noinspection PyTypeChecker
-        if shot := result.scalar():
-            return shot
-        else:
-            raise ShotNotFoundError(f"Could not find shot {self!s} in database")
 
     def __eq__(self, other):
         return (

@@ -15,6 +15,7 @@ sqlalchemy = {extras = ["asyncio"], version = "^2.0.4"}
 
 sql_model = { path = "../../sql_model", develop = true }
 experiment-configuration = { path = "../experiment.configuration", develop = true }
+attrs = "^23.1.0"
 
 
 [build-system]

@@ -1,8 +1,11 @@
 import logging
-from abc import ABC
+from abc import abstractmethod
 from contextlib import AbstractContextManager
-from threading import Lock
+from datetime import datetime
+from typing import Protocol, Any
 
+from sequence.runtime import Shot
+from sql_model import DataType
 from .experiment_config_collection import ExperimentConfigCollection
 from .sequence_file_system import SequenceFileSystem
 
@@ -14,11 +17,39 @@ class ExperimentSessionNotActiveError(RuntimeError):
     pass
 
 
+class ShotCollection(Protocol):
+    @abstractmethod
+    def get_shot_data(self, shot: Shot, data_type: DataType) -> dict[str, Any]:
+        """Get the data of a given shot."""
+
+        raise NotImplementedError()
+
+    @abstractmethod
+    def add_shot_data(
+        self, shot: Shot, data: dict[str, Any], data_type: DataType
+    ) -> None:
+        """Add data to a given shot."""
+
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_shot_start_time(self, shot: Shot) -> datetime:
+        """Get the start time of a given shot."""
+
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_shot_end_time(self, shot: Shot) -> datetime:
+        """Get the end time of a given shot."""
+
+        raise NotImplementedError()
+
+
 class ExperimentSession(
     AbstractContextManager["ExperimentSession"],
     SequenceFileSystem,
     ExperimentConfigCollection,
-    ABC,
+    Protocol,
 ):
     """Manage the experiment session.
 
@@ -36,9 +67,7 @@ class ExperimentSession(
     leaving some data in an inconsistent state.
     """
 
-    def __init__(self, *args, **kwargs):
-        self._is_active = False
-        self._lock = Lock()
+    shot_collection: ShotCollection
 
     def activate(self):
         """Activate the session
