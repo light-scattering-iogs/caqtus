@@ -30,7 +30,7 @@ def main():
     session = get_standard_experiment_session()
     with session.activate():
         experiment_config = (
-            session.experiment_config_collection.get_current_experiment_config()
+            session.experiment_configs.get_current_experiment_config()
         )
         arranger_config: AODTweezerArrangerConfiguration = (
             experiment_config.get_device_config(DEVICE_NAME)

@@ -42,7 +42,7 @@ class ExperimentSession(
 
     sequence_hierarchy: SequenceHierarchy
     shot_collection: ShotCollection
-    experiment_config_collection: ExperimentConfigCollection
+    experiment_configs: ExperimentConfigCollection
 
     def activate(self):
         """Activate the session

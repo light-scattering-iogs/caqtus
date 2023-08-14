@@ -18,15 +18,17 @@ logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_ONE_TONE = 0.165  # V
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "10x1"
+TWEEZER_CONFIG_NAME = "1x10 bis"
 
 
 def main():
-
     # beware here, the first frequency along x must be the highest one because it is the one at the left of the picture
     # when imaging the atoms for rearrangement
-    frequencies_x = np.linspace(88e6, 76.7e6, 10)
-    frequencies_y = np.linspace(75e6, 75e6, 1)
+    frequencies_x = np.linspace(88e6 + 2.52e6, 76.7e6 - 2.52e6, 10)
+    frequencies_y = np.linspace(75e6, 70e6, 1)
+
+    # frequencies_x = np.array([88e6, 84.23e6])
+    # frequencies_y = np.linspace(75e6, 80e6, 1)
 
     parser = argparse.ArgumentParser(
         description="Generate a configuration for a 2D static tweezer pattern."
@@ -63,14 +65,20 @@ def main():
 
     session = get_standard_experiment_session()
     with session.activate():
-        experiment_config = session.get_current_experiment_config()
+        experiment_config = (
+            session.experiment_configs.get_current_experiment_config()
+        )
         arranger_config: AODTweezerArrangerConfiguration = (
             experiment_config.get_device_config(DEVICE_NAME)
         )  # type: ignore
         arranger_config[TWEEZER_CONFIG_NAME] = config
         experiment_config.set_device_config(DEVICE_NAME, arranger_config)
-        new_config_name = session.add_experiment_config(experiment_config)
-        session.set_current_experiment_config(new_config_name)
+        new_config_name = session.experiment_configs.add_experiment_config(
+            experiment_config
+        )
+        session.experiment_configs.set_current_experiment_config(
+            new_config_name
+        )
 
 
 def prevent_beating_in_array(

@@ -171,7 +171,7 @@ class SequenceRunnerThread(Thread):
         self._computation_executor = ProcessPoolExecutor()
 
         with self._session.activate() as session:
-            self._experiment_config = session.experiment_config_collection[
+            self._experiment_config = session.experiment_configs[
                 experiment_config_name
             ]
             self._experiment_config_yaml = self._experiment_config.to_yaml()

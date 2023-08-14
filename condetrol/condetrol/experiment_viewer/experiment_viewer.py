@@ -113,10 +113,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         with self._experiment_session_maker() as session:
             self._experiment_config = (
-                session.experiment_config_collection.get_current_experiment_config()
+                session.experiment_configs.get_current_experiment_config()
             )
             self._experiment_config_name = (
-                session.experiment_config_collection.get_current_experiment_config_name()
+                session.experiment_configs.get_current_experiment_config_name()
             )
 
         self.setupUi(self)
@@ -191,18 +191,18 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         with self._experiment_session_maker() as session:
             if (
                 self._experiment_config_name
-                == session.experiment_config_collection.get_current_experiment_config_name()
+                == session.experiment_configs.get_current_experiment_config_name()
             ):
                 return self._experiment_config
             else:
                 experiment_config = (
-                    session.experiment_config_collection.get_current_experiment_config()
+                    session.experiment_configs.get_current_experiment_config()
                 )
                 if experiment_config is None:
                     raise ValueError("No experiment config was defined")
 
                 self._experiment_config_name = (
-                    session.experiment_config_collection.get_current_experiment_config_name()
+                    session.experiment_configs.get_current_experiment_config_name()
                 )
                 self._experiment_config = experiment_config
             return self._experiment_config
@@ -313,7 +313,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if sequence_path:
             with self._experiment_session_maker() as session:
                 current_experiment_config = (
-                    session.experiment_config_collection.get_current_experiment_config_name()
+                    session.experiment_configs.get_current_experiment_config_name()
                 )
             self.experiment_manager.start_sequence(
                 current_experiment_config, sequence_path, self._experiment_session_maker
@@ -372,10 +372,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         new_experiment_config = editor.get_config()
         if current_config != new_experiment_config:
             with self._experiment_session_maker() as session:
-                new_name = session.experiment_config_collection.add_experiment_config(
+                new_name = session.experiment_configs.add_experiment_config(
                     new_experiment_config
                 )
-                session.experiment_config_collection.set_current_experiment_config(
+                session.experiment_configs.set_current_experiment_config(
                     new_name
                 )
             logger.info(f"Experiment config updated to {new_name}")

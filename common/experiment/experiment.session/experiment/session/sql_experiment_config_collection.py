@@ -75,4 +75,4 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
-        return self.parent_session._sql_session
+        return self.parent_session._get_sql_session()
