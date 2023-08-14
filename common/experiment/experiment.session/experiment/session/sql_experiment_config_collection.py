@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Iterator
 
 import sqlalchemy.orm
 from attr import frozen
@@ -19,16 +19,19 @@ if TYPE_CHECKING:
 class SQLExperimentConfigCollection(ExperimentConfigCollection):
     parent_session: "SQLExperimentSession"
 
-    def get_experiment_config(self, name: str) -> ExperimentConfig:
+    def __getitem__(self, name: str) -> ExperimentConfig:
         return ExperimentConfig.from_yaml(
             ExperimentConfigModel.get_config(name, self._get_sql_session())
         )
 
-    def get_all_experiment_config_names(self) -> set[str]:
+    def __iter__(self) -> Iterator[str]:
         session = self._get_sql_session()
         query_names = session.query(ExperimentConfigModel.name)
         names = {name for name in session.scalars(query_names)}
-        return names
+        return iter(names)
+
+    def __len__(self) -> int:
+        return len(list(iter(self)))
 
     def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None

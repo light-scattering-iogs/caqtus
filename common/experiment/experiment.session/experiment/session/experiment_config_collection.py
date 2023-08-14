@@ -1,35 +1,13 @@
 import re
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Optional, Protocol
+from typing import Optional
 
 from experiment.configuration import ExperimentConfig
 
 
-class ExperimentConfigCollection(Protocol):
-    @abstractmethod
-    def get_experiment_config(self, name: str) -> ExperimentConfig:
-        """Get the experiment config with the given name.
-
-        Args:
-            name: the name of the experiment config to get.
-
-        Returns:
-            The experiment config with the given name.
-        """
-
-        ...
-
-    @abstractmethod
-    def get_all_experiment_config_names(self) -> set[str]:
-        """Get the names of all experiment configs in the session.
-
-        Returns:
-            The names of all experiment configs in the session.
-        """
-
-        ...
-
+class ExperimentConfigCollection(Mapping[str, ExperimentConfig], ABC):
     def get_experiment_configs(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
     ) -> dict[str, ExperimentConfig]:
@@ -105,7 +83,7 @@ class ExperimentConfigCollection(Protocol):
     def _get_new_experiment_config_name(self) -> str:
         numbers = []
         pattern = re.compile("config_(\\d+)")
-        for name in self.get_all_experiment_config_names():
+        for name in self:
             if match := pattern.match(name):
                 numbers.append(int(match.group(1)))
         return f"config_{_find_first_unused_number(numbers)}"

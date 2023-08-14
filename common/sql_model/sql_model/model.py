@@ -82,7 +82,7 @@ class ExperimentConfigModel(Base):
         query = select(cls).where(cls.name == name)
         result = session.scalar(query)
         if result is None:
-            raise ValueError(f"Config {name} does not exist")
+            raise KeyError(f"Config {name} does not exist")
         return result.experiment_config_yaml
 
 
