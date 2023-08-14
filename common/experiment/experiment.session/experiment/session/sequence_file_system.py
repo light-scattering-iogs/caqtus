@@ -13,7 +13,7 @@ from sql_model import State
 from variable.name import DottedVariableName
 
 
-class SequenceFileSystem(Protocol):
+class SequenceHierarchy(Protocol):
     @abstractmethod
     def does_path_exists(self, path: SequencePath) -> bool:
         """Check if the path exists in the session.

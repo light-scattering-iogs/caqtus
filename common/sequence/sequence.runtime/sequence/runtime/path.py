@@ -26,7 +26,7 @@ class SequencePath:
         return _PATH_REGEX.match(path) is not None
 
     def exists(self, experiment_session: "ExperimentSession") -> bool:
-        return experiment_session.does_path_exists(self)
+        return experiment_session.sequence_hierarchy.does_path_exists(self)
 
     def create(self, experiment_session: "ExperimentSession") -> list["SequencePath"]:
         """
@@ -42,7 +42,7 @@ class SequencePath:
             PathIsSequenceError: If an ancestor exists and is a sequence
         """
 
-        return experiment_session.create_path(self)
+        return experiment_session.sequence_hierarchy.create_path(self)
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -63,7 +63,7 @@ class SequencePath:
             delete_sequence is False
         """
 
-        experiment_session.delete_path(self, delete_sequences)
+        experiment_session.sequence_hierarchy.delete_path(self, delete_sequences)
 
     def get_contained_sequences(
         self, experiment_session: "ExperimentSession"
@@ -89,7 +89,7 @@ class SequencePath:
         return not self.is_sequence(experiment_session)
 
     def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
-        return experiment_session.is_sequence_path(self)
+        return experiment_session.sequence_hierarchy.is_sequence_path(self)
 
     def is_root(self) -> bool:
         return self._path == ""
@@ -105,12 +105,12 @@ class SequencePath:
     ) -> set["SequencePath"]:
         """Return the direct descendants of this path."""
 
-        return experiment_session.get_path_children(self)
+        return experiment_session.sequence_hierarchy.get_path_children(self)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
-        return experiment_session.get_path_creation_date(self)
+        return experiment_session.sequence_hierarchy.get_path_creation_date(self)
 
     def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
         """Return the ancestors of this path.

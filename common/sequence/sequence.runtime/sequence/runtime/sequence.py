@@ -56,7 +56,7 @@ class Sequence:
             sequence.
         """
 
-        return experiment_session.does_sequence_exist(self)
+        return experiment_session.sequence_hierarchy.does_sequence_exist(self)
 
     def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
         """Get the creation date of the sequence.
@@ -68,7 +68,7 @@ class Sequence:
             SequenceNotFoundError: If the sequence does not exist in the session.
         """
 
-        return experiment_session.get_sequence_creation_date(self)
+        return experiment_session.sequence_hierarchy.get_sequence_creation_date(self)
 
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
         """Return the configuration of the sequence.
@@ -80,7 +80,7 @@ class Sequence:
             SequenceNotFoundError: If the sequence does not exist in the session.
         """
 
-        yaml = experiment_session.get_sequence_config_yaml(self)
+        yaml = experiment_session.sequence_hierarchy.get_sequence_config_yaml(self)
         return SequenceConfig.from_yaml(yaml)
 
     def set_config(self, config: SequenceConfig, experiment_session: ExperimentSession):
@@ -94,19 +94,23 @@ class Sequence:
             SequenceConfig.from_yaml(yaml) == config
         )  # will trigger validation before saving
 
-        experiment_session.set_sequence_config_yaml(
+        experiment_session.sequence_hierarchy.set_sequence_config_yaml(
             self, yaml, config.compute_total_number_of_shots()
         )
 
     def set_experiment_config(
         self, experiment_config: str, experiment_session: ExperimentSession
     ):
-        experiment_session.set_sequence_experiment_config(self, experiment_config)
+        experiment_session.sequence_hierarchy.set_sequence_experiment_config(
+            self, experiment_config
+        )
 
     def get_experiment_config(
         self, experiment_session: ExperimentSession
     ) -> Optional[ExperimentConfig]:
-        return experiment_session.get_sequence_experiment_config(self)
+        return experiment_session.sequence_hierarchy.get_sequence_experiment_config(
+            self
+        )
 
     def set_shot_config(
         self,
@@ -134,13 +138,13 @@ class Sequence:
         self.set_config(sequence_config, experiment_session)
 
     def get_state(self, experiment_session: ExperimentSession) -> State:
-        return experiment_session.get_sequence_state(self)
+        return experiment_session.sequence_hierarchy.get_sequence_state(self)
 
     def set_state(self, new_state: State, experiment_session: ExperimentSession):
-        experiment_session.set_sequence_state(self, new_state)
+        experiment_session.sequence_hierarchy.set_sequence_state(self, new_state)
 
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
-        return experiment_session.get_sequence_shots(self)
+        return experiment_session.sequence_hierarchy.get_sequence_shots(self)
 
     def create_shot(
         self,
@@ -151,7 +155,7 @@ class Sequence:
         measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
         experiment_session: ExperimentSession,
     ) -> Shot:
-        return experiment_session.create_sequence_shot(
+        return experiment_session.sequence_hierarchy.create_sequence_shot(
             self, name, start_time, end_time, parameters, measures
         )
 
@@ -163,18 +167,18 @@ class Sequence:
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
     ) -> Self:
-        return experiment_session.create_sequence(
+        return experiment_session.sequence_hierarchy.create_sequence(
             path, sequence_config, experiment_config_name
         )
 
     def get_stats(self, experiment_session: ExperimentSession) -> "SequenceStats":
-        return experiment_session.get_sequence_stats(self)
+        return experiment_session.sequence_hierarchy.get_sequence_stats(self)
 
     @classmethod
     def query_sequence_stats(
         cls, sequences: Iterable["Sequence"], experiment_session: ExperimentSession
     ) -> dict[SequencePath, "SequenceStats"]:
-        return experiment_session.query_sequence_stats(sequences)
+        return experiment_session.sequence_hierarchy.query_sequence_stats(sequences)
 
     @classmethod
     def get_all_sequence_names(cls, experiment_session: ExperimentSession) -> set[str]:
