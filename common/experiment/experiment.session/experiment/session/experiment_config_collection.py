@@ -8,37 +8,6 @@ from experiment.configuration import ExperimentConfig
 
 
 class ExperimentConfigCollection(Mapping[str, ExperimentConfig], ABC):
-    def get_experiment_configs(
-        self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
-    ) -> dict[str, ExperimentConfig]:
-        """Get the experiment configurations available within the session.
-
-        Args:
-            from_date: Only query experiment configurations that were modified
-                after this date.
-            to_date: Only query experiment configurations that were modified before
-                this date.
-
-        Returns:
-            A dictionary mapping experiment configuration names to the corresponding
-            ExperimentConfig object.
-
-        Raises:
-            ValueError: If the yaml representation of an experiment configuration is
-                invalid.
-        """
-
-        raw_yamls = self.get_experiment_config_yamls(from_date, to_date)
-        results = {}
-
-        for name, yaml_ in raw_yamls.items():
-            try:
-                results[name] = ExperimentConfig.from_yaml(yaml_)
-            except Exception as e:
-                raise ValueError(f"Failed to load experiment config '{name}'") from e
-
-        return results
-
     @abstractmethod
     def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
