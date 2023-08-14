@@ -29,9 +29,7 @@ class SQLExperimentSession(ExperimentSession):
         self._lock = Lock()
         self.shot_collection = SQLShotCollection(parent_session=self)
         self.sequence_hierarchy = SQLSequenceHierarchy(parent_session=self)
-        self.experiment_config_collection = SQLExperimentConfigCollection(
-            parent_session=self
-        )
+        self.experiment_configs = SQLExperimentConfigCollection(parent_session=self)
 
     def __enter__(self):
         with self._lock:
