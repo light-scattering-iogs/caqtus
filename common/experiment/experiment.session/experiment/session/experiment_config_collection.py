@@ -1,13 +1,13 @@
 import re
 from abc import abstractmethod, ABC
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from datetime import datetime
 from typing import Optional
 
 from experiment.configuration import ExperimentConfig
 
 
-class ExperimentConfigCollection(Mapping[str, ExperimentConfig], ABC):
+class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     @abstractmethod
     def get_experiment_config_yamls(
         self, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None
@@ -49,7 +49,7 @@ class ExperimentConfigCollection(Mapping[str, ExperimentConfig], ABC):
 
         ...
 
-    def _get_new_experiment_config_name(self) -> str:
+    def get_unused_name(self) -> str:
         numbers = []
         pattern = re.compile("config_(\\d+)")
         for name in self:

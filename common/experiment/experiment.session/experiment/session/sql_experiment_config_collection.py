@@ -24,6 +24,27 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
             ExperimentConfigModel.get_config(name, self._get_sql_session())
         )
 
+    def __setitem__(self, name, experiment_config):
+        if not isinstance(name, str):
+            raise TypeError(f"Expected <str> for name, got {type(name)}")
+        if not isinstance(experiment_config, ExperimentConfig):
+            raise TypeError(
+                f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
+            )
+        if name in self:
+            raise KeyError(f"Experiment config with name {name} already exists")
+        yaml_ = experiment_config.to_yaml()
+        assert ExperimentConfig.from_yaml(yaml_) == experiment_config
+        ExperimentConfigModel.add_config(
+            name=name,
+            yaml=yaml_,
+            comment=None,
+            session=self._get_sql_session(),
+        )
+
+    def __delitem__(self, name: str):
+        raise NotImplementedError("Deleting experiment configs is not supported")
+
     def __iter__(self) -> Iterator[str]:
         session = self._get_sql_session()
         query_names = session.query(ExperimentConfigModel.name)
@@ -50,15 +71,8 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         comment: Optional[str] = None,
     ) -> str:
         if name is None:
-            name = self._get_new_experiment_config_name()
-        yaml_ = experiment_config.to_yaml()
-        assert ExperimentConfig.from_yaml(yaml_) == experiment_config
-        ExperimentConfigModel.add_config(
-            name=name,
-            yaml=yaml_,
-            comment=comment,
-            session=self._get_sql_session(),
-        )
+            name = self.get_unused_name()
+        self[name] = experiment_config
         return name
 
     def set_current_experiment_config(self, name: str):
