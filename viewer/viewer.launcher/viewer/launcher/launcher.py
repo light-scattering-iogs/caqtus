@@ -3,11 +3,11 @@ import sys
 
 import qdarkstyle
 from PyQt6.QtWidgets import QApplication
-from viewer.single_shot_viewers import SingleShotWidget, ImageViewer, ParamsViewer, AtomsViewer
 
 from analyza.loading.importers import ImageImporter, import_parameters, break_namespaces, AtomsImporter
 from device.configuration import DeviceName
 from experiment.session import get_standard_experiment_session_maker
+from viewer.single_shot_viewers import SingleShotWidget, ImageViewer, ParamsViewer, AtomsViewer
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +18,12 @@ if __name__ == "__main__":
 
     widget = SingleShotWidget(
         viewers={
+            "Image 3": ImageViewer(
+                importer=ImageImporter(DeviceName("Orca Quest"), "picture 3")
+            ),
+            "Atoms 3": AtomsViewer(
+                importer=AtomsImporter(DeviceName("Atom detector"), "picture 3")
+            ),
             "Image 2": ImageViewer(
                 importer=ImageImporter(DeviceName("Orca Quest"), "picture 2")
             ),

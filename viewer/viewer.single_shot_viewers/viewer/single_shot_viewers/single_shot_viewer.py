@@ -9,7 +9,7 @@ from sequence.runtime import Shot
 class SingleShotViewer(QWidget, QABC):
     @abstractmethod
     def set_shot(self, shot: Shot) -> None:
-        ...
+        raise NotImplementedError()
 
     def update_view(self) -> None:
         pass
