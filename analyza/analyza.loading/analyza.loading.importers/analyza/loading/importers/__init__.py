@@ -16,14 +16,15 @@ from .importers import (
     import_scores,
     import_measures,
     import_time,
-    ImageImporter,
+    ImageLoader,
     AtomsImporter,
 )
-from .shot_importer import ShotImporter
+from .shot_importer import ShotImporter, ImageImporter
+
 
 __all__ = [
     "ShotImporter",
-    "ImageImporter",
+    "ImageLoader",
     "AtomsImporter",
     "import_all",
     "import_parameters",
@@ -40,4 +41,5 @@ __all__ = [
     "rename",
     "apply",
     "remove",
+    "ImageImporter",
 ]

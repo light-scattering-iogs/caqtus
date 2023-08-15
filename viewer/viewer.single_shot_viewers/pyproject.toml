@@ -23,6 +23,7 @@ parameter-types = {path = "../../common/types/parameter_types", develop = true}
 sequence-hierarchy = {path = "../../common/widgets/sequence_hierarchy", develop = true}
 viewer-sequence-watcher = {path = "../viewer.sequence_watcher", develop = true}
 attrs = "^23.1.0"
+serialization = {path = "../../common/serialization", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
