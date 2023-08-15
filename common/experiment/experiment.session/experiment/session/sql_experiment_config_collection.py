@@ -53,7 +53,17 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
             )
 
     def __delitem__(self, name: str):
-        raise NotImplementedError("Deleting experiment configs is not supported yet")
+        if not isinstance(name, str):
+            raise TypeError(f"Expected <str> for name, got {type(name)}")
+        if name not in self:
+            raise KeyError(f"Config '{name}' does not exist")
+        if bound_sequences := self.parent_session.sequence_hierarchy.get_bound_to_experiment_config(name):
+            sequences = ", ".join(str(sequences) for sequences in bound_sequences)
+            raise ReadOnlyExperimentConfigError(
+                f"Cannot delete experiment config '{name}' because it is bound to sequences: {sequences}."
+            )
+        self._get_sql_session().delete(self._query_model(name))
+        self._get_sql_session().flush()
 
     def __iter__(self) -> Iterator[str]:
         session = self._get_sql_session()
