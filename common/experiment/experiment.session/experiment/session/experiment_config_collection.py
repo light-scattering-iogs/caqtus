@@ -93,6 +93,31 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             name = self.get_current()
             raise ValueError(f"Failed to load experiment config '{name}'") from e
 
+    def set_current_config(self, config: ExperimentConfig) -> str:
+        """Update the current experiment configuration.
+
+        If the current experiment configuration is attached to a sequence, a new one will be created and set as the
+        current one. If the current experiment configuration is not attached to a sequence, it will be updated.
+
+        Args:
+            config: The new experiment configuration to set as the current one.
+
+        Returns:
+            The name of the current experiment configuration after the update.
+        """
+
+        current = self.get_current()
+        if current is None:
+            return self.add_experiment_config(config)
+        else:
+            try:
+                self[current] = config
+                return current
+            except ReadOnlyExperimentConfigError:
+                current = self.add_experiment_config(config)
+                self.set_current(current)
+                return current
+
     def get_current_experiment_config_yaml(self) -> Optional[str]:
         """Get the yaml representation of the current experiment configuration.
 

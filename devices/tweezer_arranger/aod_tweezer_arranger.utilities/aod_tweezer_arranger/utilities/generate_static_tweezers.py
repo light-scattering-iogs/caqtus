@@ -71,10 +71,7 @@ def main():
         )  # type: ignore
         arranger_config[TWEEZER_CONFIG_NAME] = config
         experiment_config.set_device_config(DEVICE_NAME, arranger_config)
-        new_config_name = session.experiment_configs.add_experiment_config(
-            experiment_config
-        )
-        session.experiment_configs.set_current(new_config_name)
+        session.experiment_configs.set_current_config(experiment_config)
 
 
 def prevent_beating_in_array(
