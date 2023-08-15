@@ -2,6 +2,8 @@ import datetime
 import re
 import typing
 
+from attr import frozen, field
+
 if typing.TYPE_CHECKING:
     from experiment.session import ExperimentSession
 
@@ -12,18 +14,38 @@ _PATH_REGEX = re.compile(
 )
 
 
+def _is_valid_path(path: str) -> bool:
+    if path == "":
+        return True
+    return _PATH_REGEX.match(path) is not None
+
+
+def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
+    if isinstance(path, SequencePath):
+        return path.path
+    elif isinstance(path, str):
+        return path
+    else:
+        raise TypeError(
+            f"Expected instance of <SequencePath> or <str>, got {type(path)}"
+        )
+
+
+@frozen
 class SequencePath:
-    def __init__(self, path: str):
-        if self.is_valid_path(path):
-            self._path = path
-        else:
-            raise ValueError(f"Invalid path format: '{path}'")
+    path: str = field(converter=convert_path_to_str)
+
+    @path.validator
+    def _validate_path(self, attribute, value):
+        if not _is_valid_path(value):
+            raise ValueError(f"Invalid path: {value}")
+
+    def __str__(self) -> str:
+        return self.path
 
     @classmethod
     def is_valid_path(cls, path: str) -> bool:
-        if path == "":
-            return True
-        return _PATH_REGEX.match(path) is not None
+        return _is_valid_path(path)
 
     def exists(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.sequence_hierarchy.does_path_exists(self)
@@ -92,7 +114,7 @@ class SequencePath:
         return experiment_session.sequence_hierarchy.is_sequence_path(self)
 
     def is_root(self) -> bool:
-        return self._path == ""
+        return self.path == ""
 
     def has_children(self, experiment_session: "ExperimentSession") -> int:
         return bool(self.get_child_count(experiment_session))
@@ -122,7 +144,7 @@ class SequencePath:
             All the paths that are above this path in the hierarchy.
         """
 
-        ancestors = self._path.split(_PATH_SEPARATOR)
+        ancestors = self.path.split(_PATH_SEPARATOR)
         if strict:
             *ancestors, _ = ancestors
 
@@ -139,27 +161,14 @@ class SequencePath:
 
     @property
     def name(self):
-        return self._path.split(_PATH_SEPARATOR)[-1]
+        return self.path.split(_PATH_SEPARATOR)[-1]
 
     @property
     def depth(self):
-        if self._path == "":
+        if self.path == "":
             return -1
         else:
-            return self._path.count(_PATH_SEPARATOR)
-
-    def __repr__(self):
-        return f"SequencePath({self._path!r})"
-
-    def __str__(self):
-        return self._path
-
-    def __eq__(self, other):
-        if isinstance(other, SequencePath):
-            return self._path == other._path
-        elif isinstance(other, str):
-            return self._path == other
-        return False
+            return self.path.count(_PATH_SEPARATOR)
 
     def __truediv__(self, other) -> "SequencePath":
         if isinstance(other, str):
@@ -168,13 +177,10 @@ class SequencePath:
             if self.is_root():
                 return SequencePath(other)
             else:
-                return SequencePath(f"{self._path}{_PATH_SEPARATOR}{other}")
+                return SequencePath(f"{self.path}{_PATH_SEPARATOR}{other}")
 
         else:
             raise TypeError(f"Can only append str to SequencePath not {type(other)}")
-
-    def __hash__(self):
-        return hash(self._path)
 
 
 class PathNotFoundError(Exception):

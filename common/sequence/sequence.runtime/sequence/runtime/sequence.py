@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional, TypedDict, Self, Iterable, Mapping, TYPE_CHECKING
 
+from attrs import frozen, field
+
 from data_types import Data, DataLabel
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
@@ -21,6 +23,7 @@ class SequenceNotEditableError(Exception):
     pass
 
 
+@frozen
 class Sequence:
     """Contains the runtime information and data of a sequence.
 
@@ -31,22 +34,10 @@ class Sequence:
     network.
     """
 
-    def __init__(self, path: SequencePath | str):
-        if isinstance(path, SequencePath):
-            self._path = path
-        elif isinstance(path, str):
-            self._path = SequencePath(path)
-        else:
-            raise TypeError(
-                f"Expected instance of <SequencePath> or <str>, got {type(path)}"
-            )
+    path: SequencePath = field(converter=SequencePath)
 
-    def __str__(self):
-        return f'Sequence("{str(self._path)}")'
-
-    @property
-    def path(self) -> SequencePath:
-        return self._path
+    def __str__(self) -> str:
+        return str(self.path)
 
     def exists(self, experiment_session: ExperimentSession) -> bool:
         """Check if the sequence exists.
@@ -189,13 +180,7 @@ class Sequence:
             sequences.
         """
 
-    def __eq__(self, other):
-        if isinstance(other, Sequence):
-            return self.path == other.path
-        return False
-
-    def __hash__(self):
-        return hash(self.path)
+        return experiment_session.sequence_hierarchy.get_all_sequence_names()
 
 
 class SequenceStats(TypedDict):
