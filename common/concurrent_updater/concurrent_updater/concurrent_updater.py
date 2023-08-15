@@ -1,9 +1,12 @@
 import logging
 import threading
-from typing import Callable, Optional
+from typing import Callable, Optional, ParamSpec, TypeVar
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
 
 
 class ConcurrentUpdater:
@@ -22,7 +25,14 @@ class ConcurrentUpdater:
         **kwargs: Keyword arguments to pass to the target function.
     """
 
-    def __init__(self, target: Callable, watch_interval: float = 1, name: Optional[str] = None, *args, **kwargs):
+    def __init__(
+        self,
+        target: Callable[_P, _T],
+        watch_interval: float = 1,
+        name: Optional[str] = None,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ):
         self.__target = target
         self.__args = args
         self.__kwargs = kwargs
@@ -30,7 +40,9 @@ class ConcurrentUpdater:
         if name is None:
             name = target.__name__
         self.__name = name
-        self.__thread = threading.Thread(target=self._update, name=self.__name, daemon=True)
+        self.__thread = threading.Thread(
+            target=self._update, name=self.__name, daemon=True
+        )
         self._must_stop = threading.Event()
         self.__lock = threading.Lock()
 
