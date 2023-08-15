@@ -2,13 +2,17 @@ from typing import Optional, TYPE_CHECKING, Iterator
 
 import sqlalchemy.orm
 from attr import frozen
+from sqlalchemy import select
 
 from experiment.configuration import ExperimentConfig
 from sql_model.model import (
     ExperimentConfigModel,
     CurrentExperimentConfigModel,
 )
-from .experiment_config_collection import ExperimentConfigCollection
+from .experiment_config_collection import (
+    ExperimentConfigCollection,
+    ReadOnlyExperimentConfigError,
+)
 
 if TYPE_CHECKING:
     from .experiment_session_sql import SQLExperimentSession
@@ -28,16 +32,25 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
             raise TypeError(
                 f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
             )
-        if name in self:
-            raise KeyError(f"Experiment config with name {name} already exists")
         yaml_ = experiment_config.to_yaml()
         assert ExperimentConfig.from_yaml(yaml_) == experiment_config
-        ExperimentConfigModel.add_config(
-            name=name,
-            yaml=yaml_,
-            comment=None,
-            session=self._get_sql_session(),
-        )
+        if name in self:
+            if bound_sequences := self.parent_session.sequence_hierarchy.get_bound_to_experiment_config(
+                name
+            ):
+                sequences = ", ".join(str(sequences) for sequences in bound_sequences)
+                raise ReadOnlyExperimentConfigError(
+                    f"Cannot overwrite experiment config '{name}' because it is bound to sequences: {sequences}."
+                )
+            self._query_model(name).yaml = yaml_
+            self._get_sql_session().flush()
+        else:
+            ExperimentConfigModel.add_config(
+                name=name,
+                yaml=yaml_,
+                comment=None,
+                session=self._get_sql_session(),
+            )
 
     def __delitem__(self, name: str):
         raise NotImplementedError("Deleting experiment configs is not supported yet")
@@ -73,6 +86,13 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         return CurrentExperimentConfigModel.get_current_experiment_config_name(
             session=self._get_sql_session()
         )
+
+    def _query_model(self, name: str) -> ExperimentConfigModel:
+        query = select(ExperimentConfigModel).where(ExperimentConfigModel.name == name)
+        result = self._get_sql_session().scalar(query)
+        if result is None:
+            raise KeyError(f"Config {name} does not exist")
+        return result
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember

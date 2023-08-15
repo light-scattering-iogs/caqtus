@@ -11,6 +11,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
     This defines the methods that are required to implement how to access the configurations of an experiment.
     """
+
     def __getitem__(self, name: str) -> ExperimentConfig:
         return ExperimentConfig.from_yaml(self.get_experiment_config_yaml(name))
 
@@ -72,21 +73,6 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
         raise NotImplementedError()
 
-    def get_current_experiment_config_yaml(self) -> Optional[str]:
-        """Get the yaml representation of the current experiment configuration.
-
-        Returns:
-            The yaml representation of the current experiment configuration if one is
-            set, None otherwise. The yaml representation is not guaranteed to be valid
-            if the way the experiment configuration is represented changed.
-        """
-
-        name = self.get_current()
-        if name is None:
-            return None
-        experiment_config_yaml = self.get_experiment_config_yaml(name)
-        return experiment_config_yaml
-
     def get_current_config(self) -> Optional[ExperimentConfig]:
         """Get the current experiment configuration.
 
@@ -107,9 +93,30 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             name = self.get_current()
             raise ValueError(f"Failed to load experiment config '{name}'") from e
 
+    def get_current_experiment_config_yaml(self) -> Optional[str]:
+        """Get the yaml representation of the current experiment configuration.
+
+        Returns:
+            The yaml representation of the current experiment configuration if one is
+            set, None otherwise. The yaml representation is not guaranteed to be valid
+            if the way the experiment configuration is represented changed.
+        """
+
+        name = self.get_current()
+        if name is None:
+            return None
+        experiment_config_yaml = self.get_experiment_config_yaml(name)
+        return experiment_config_yaml
+
 
 def _find_first_unused_number(numbers: list[int]) -> int:
     for index, value in enumerate(sorted(numbers)):
         if index != value:
             return index
     return len(numbers)
+
+
+class ReadOnlyExperimentConfigError(RuntimeError):
+    """Raised when trying to modify an experiment config that is attached to one or more sequences."""
+
+    pass
