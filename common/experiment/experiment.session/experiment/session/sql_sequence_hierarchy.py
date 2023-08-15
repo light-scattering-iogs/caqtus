@@ -172,6 +172,19 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         sequence_model.set_experiment_config(experiment_config)
         session.flush()
 
+    def get_bound_to_experiment_config(
+        self, experiment_config: str
+    ) -> frozenset[Sequence]:
+        session = self._get_sql_session()
+        query = (
+            session.query(SequenceModel)
+            .filter(SequenceModel.experiment_config_name == experiment_config)
+            .order_by(SequenceModel.creation_date)
+        )
+        return frozenset(
+            Sequence(SequencePath(str(sequence.path))) for sequence in query
+        )
+
     def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
         sequence_model = self._query_path_model(sequence.path).get_sequence()
         return SequenceStats(

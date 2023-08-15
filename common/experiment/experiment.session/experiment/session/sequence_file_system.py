@@ -227,6 +227,24 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError()
 
     @abstractmethod
+    def get_bound_to_experiment_config(
+        self, experiment_config: str
+    ) -> frozenset[Sequence]:
+        """Get the sequences that are bound to a given experiment config.
+
+        Once a sequence has been started, it is bound to the experiment config that was set as current at the time.
+        This method returns all sequences that were attached to a given experiment config when they were started.
+
+        Args:
+            experiment_config: the experiment config to get the sequences for.hj
+
+        Returns:
+            The sequences that have the given experiment config set as their current experiment config.
+        """
+
+        raise NotImplementedError()
+
+    @abstractmethod
     def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
         """Get the stats of the sequence.
 

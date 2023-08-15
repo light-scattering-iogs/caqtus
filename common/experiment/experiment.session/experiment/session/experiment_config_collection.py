@@ -7,6 +7,10 @@ from experiment.configuration import ExperimentConfig
 
 
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
+    """Interface for the set of experiment configurations in a session.
+
+    This defines the methods that are required to implement how to access the configurations of an experiment.
+    """
     def __getitem__(self, name: str) -> ExperimentConfig:
         return ExperimentConfig.from_yaml(self.get_experiment_config_yaml(name))
 
