@@ -1,5 +1,6 @@
-from typing import Mapping, TypeVar, Callable
+from typing import TypeVar, Callable
 
+from attr import AttrsInstance
 from cattrs.gen import (
     AttributeOverride,
     make_dict_unstructure_fn,
@@ -8,12 +9,10 @@ from cattrs.gen import (
 
 from .converters import converters
 
-_T = TypeVar("_T")
+_T = TypeVar("_T", bound=AttrsInstance)
 
 
-def customize(
-    **kwargs: Mapping[str, AttributeOverride]
-) -> Callable[[type[_T]], type[_T]]:
+def customize(**kwargs: AttributeOverride) -> Callable[[type[_T]], type[_T]]:
     def decorator(cls: type[_T]) -> type[_T]:
         for converter in converters.values():
             unstructure_hook = make_dict_unstructure_fn(cls, converter, **kwargs)
