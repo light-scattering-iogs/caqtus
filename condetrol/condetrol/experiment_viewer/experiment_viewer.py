@@ -206,7 +206,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if index.isValid():
             if self.model.is_sequence(index):
                 stats = self.model.get_sequence_stats(index)
-                state = stats["state"]
+                state = stats.state
                 if state == State.DRAFT:
                     start_sequence_action = QAction("Start")
                     menu.addAction(start_sequence_action)

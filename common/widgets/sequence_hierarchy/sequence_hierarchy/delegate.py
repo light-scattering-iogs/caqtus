@@ -28,7 +28,7 @@ class SequenceHierarchyDelegate(QStyledItemDelegate):
             opt.minimum = 0
             opt.maximum = 100
             opt.textVisible = True
-            state = sequence_stats["state"]
+            state = sequence_stats.state
             if state == State.DRAFT:
                 opt.progress = 0
                 opt.text = "draft"
@@ -36,9 +36,9 @@ class SequenceHierarchyDelegate(QStyledItemDelegate):
                 opt.progress = 0
                 opt.text = "preparing"
             else:
-                total = sequence_stats["total_number_shots"]
+                total = sequence_stats.total_number_shots
                 if total:
-                    opt.progress = sequence_stats["number_completed_shots"]
+                    opt.progress = sequence_stats.number_completed_shots
                     opt.maximum = total
                 else:
                     if state == State.RUNNING:  # filled bar with sliding reflects

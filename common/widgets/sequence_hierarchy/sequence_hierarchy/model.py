@@ -100,30 +100,27 @@ class SequenceHierarchyModel(QAbstractItemModel):
                 return stats
             elif index.column() == 2:
                 if stats:
-                    if (total := stats["total_number_shots"]) is None:
+                    if (total := stats.total_number_shots) is None:
                         total = "--"
-                    return f"{stats['number_completed_shots']}/{total}"
+                    return f"{stats.number_completed_shots}/{total}"
             elif index.column() == 3:
                 if stats:
-                    if (
-                        stats["state"] == State.DRAFT
-                        or stats["state"] == State.PREPARING
-                    ):
+                    if stats.state == State.DRAFT or stats.state == State.PREPARING:
                         return f"--/--"
-                    elif stats["state"] == State.RUNNING:
-                        running_duration = datetime.now() - stats["start_date"]
+                    elif stats.state == State.RUNNING:
+                        running_duration = datetime.now() - stats.start_date
                         if (
-                            stats["total_number_shots"] is None
-                            or stats["number_completed_shots"] == 0
+                            stats.total_number_shots is None
+                            or stats.number_completed_shots == 0
                         ):
                             remaining = "--"
                         else:
                             remaining = (
                                 running_duration
-                                / stats["number_completed_shots"]
+                                / stats.number_completed_shots
                                 * (
-                                    stats["total_number_shots"]
-                                    - stats["number_completed_shots"]
+                                    stats.total_number_shots
+                                    - stats.number_completed_shots
                                 )
                             )
                         if isinstance(remaining, timedelta):
@@ -133,8 +130,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
                             running_duration.total_seconds()
                         )
                         return f"{running_duration}/{remaining}"
-                    elif stats["state"] == State.FINISHED:
-                        total_duration = stats["stop_date"] - stats["start_date"]
+                    elif stats.state == State.FINISHED:
+                        total_duration = stats.stop_date - stats.start_date
                         total_duration = _format_seconds(total_duration.total_seconds())
                         return total_duration
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, TypedDict, Self, Iterable, Mapping, TYPE_CHECKING
+from typing import Optional, Self, Iterable, Mapping, TYPE_CHECKING
 
 from attrs import frozen, field
 
@@ -183,7 +183,8 @@ class Sequence:
         return experiment_session.sequence_hierarchy.get_all_sequence_names()
 
 
-class SequenceStats(TypedDict):
+@frozen
+class SequenceStats:
     state: State
     total_number_shots: Optional[int]
     number_completed_shots: int
