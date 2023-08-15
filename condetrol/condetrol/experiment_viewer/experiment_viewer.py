@@ -3,7 +3,7 @@ import time
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
-from typing import Callable, Optional
+from typing import Callable, Optional, ParamSpec
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer, QThread
@@ -22,13 +22,13 @@ from PyQt6.QtWidgets import (
     QWidget,
     QApplication,
 )
-from waiting_widget.spinner import WaitingSpinner
 
-from experiment.configuration import ExperimentConfig
+from concurrent_updater import ConcurrentUpdater
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
+from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_widget import SequenceWidget
@@ -111,6 +111,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
         self._experiment_session_maker = session_maker
 
+        with self._experiment_session_maker() as session:
+            self._experiment_config = session.experiment_configs.get_current_config()
+
         self.setupUi(self)
 
         # restore window geometry from last session
@@ -166,25 +169,31 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.logs_listener.start()
         self.worker = BlockingThread(self)
 
+        self._experiment_config_updater = ConcurrentUpdater(
+            target=self._update_experiment_config, watch_interval=1
+        )
+
+    def _update_experiment_config(self):
+        with self._experiment_session_maker() as session:
+            experiment_config = session.experiment_configs.get_current_config()
+            if experiment_config is None:
+                raise ValueError("No experiment config was defined")
+            if self._experiment_config != experiment_config:
+                self._experiment_config = experiment_config
+                logger.debug(f"Experiment config changed")
+
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
             return
         if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
                 Sequence(path),
-                self.get_current_experiment_config(),
+                self._experiment_config,
                 self._experiment_session_maker,
             )
             self.dock_widget.addDockWidget(
                 Qt.DockWidgetArea.RightDockWidgetArea, sequence_widget
             )
-
-    def get_current_experiment_config(self) -> ExperimentConfig:
-        with self._experiment_session_maker() as session:
-            experiment_config = session.experiment_configs.get_current_config()
-            if experiment_config is None:
-                raise ValueError("No experiment config was defined")
-            return experiment_config
 
     def show_context_menu(self, position):
         index = self.sequences_view.indexAt(position)
@@ -342,7 +351,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
 
-        current_config = self.get_current_experiment_config()
+        current_config = self._experiment_config
 
         editor = ConfigEditor(current_config)
         editor.exec()
@@ -353,12 +362,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 new_name = session.experiment_configs.set_current_config(
                     new_experiment_config
                 )
+            self._experiment_config = new_experiment_config
             logger.info(f"Experiment config updated from {old_name} to {new_name}")
-        self.update_experiment_config(new_experiment_config)
-
-    def update_experiment_config(self, new_config: ExperimentConfig):
-        for sequence_widget in self.findChildren(SequenceWidget):
-            sequence_widget.update_experiment_config(new_config)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
@@ -379,6 +384,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.experiment_manager.interrupt_sequence()
                 while self.experiment_manager.is_running():
                     time.sleep(0.1)
+        self.view_update_timer.stop()
         state = self.saveState()
         self.ui_settings.setValue(f"{__name__}/state", state)
         geometry = self.saveGeometry()
@@ -426,10 +432,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         return True
 
 
+_P = ParamSpec("_P")
+_T = ParamSpec("_T")
+
+
 class BlockingThread(QThread):
     """Execute a task in a new thread while blocking the parent widget."""
 
-    def __init__(self, parent: QWidget, task: Optional[Callable] = None):
+    def __init__(self, parent: QWidget, task: Optional[Callable[_P, _T]] = None):
         super().__init__()
         self.spinner = WaitingSpinner(
             parent=parent,
@@ -437,8 +447,10 @@ class BlockingThread(QThread):
             modality=Qt.WindowModality.ApplicationModal,
             color=QApplication.palette().color(QPalette.ColorRole.Highlight),
         )
-        self.finished.connect(self.spinner.stop)
+        self.finished.connect(self._on_finished)
         self._task = task
+        self.on_finished: Optional[Callable[_T, ...]] = None
+        self._result: Optional[_T] = None
 
     @property
     def task(self):
@@ -449,11 +461,20 @@ class BlockingThread(QThread):
         self._task = task
 
     def run(self):
-        self._task()
+        self._result = self._task()
 
-    def start(self, priority: QThread.Priority = QThread.Priority.HighPriority) -> None:
+    def start(
+        self, priority: QThread.Priority = QThread.Priority.NormalPriority
+    ) -> None:
         self.wait()
         self.spinner.start()
         if self._task is None:
             raise ValueError("No task was defined for the waiting thread")
         super().start(priority)
+
+    def _on_finished(self):
+        self.spinner.stop()
+        if self.on_finished is not None:
+            self.on_finished(self._result)
+            self.on_finished = None
+            self._result = None
