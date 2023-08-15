@@ -42,7 +42,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
                 raise ReadOnlyExperimentConfigError(
                     f"Cannot overwrite experiment config '{name}' because it is bound to sequences: {sequences}."
                 )
-            self._query_model(name).yaml = yaml_
+            self._query_model(name).experiment_config_yaml = yaml_
             self._get_sql_session().flush()
         else:
             ExperimentConfigModel.add_config(
@@ -57,7 +57,9 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
             raise TypeError(f"Expected <str> for name, got {type(name)}")
         if name not in self:
             raise KeyError(f"Config '{name}' does not exist")
-        if bound_sequences := self.parent_session.sequence_hierarchy.get_bound_to_experiment_config(name):
+        if bound_sequences := self.parent_session.sequence_hierarchy.get_bound_to_experiment_config(
+            name
+        ):
             sequences = ", ".join(str(sequences) for sequences in bound_sequences)
             raise ReadOnlyExperimentConfigError(
                 f"Cannot delete experiment config '{name}' because it is bound to sequences: {sequences}."
