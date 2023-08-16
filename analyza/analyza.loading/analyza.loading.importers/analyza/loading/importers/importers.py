@@ -16,8 +16,9 @@ from experiment.session import ExperimentSession
 from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
+from . import break_namespaces
 from .chainable_function import ChainableFunction
-from .shot_importer import ShotImporter, ImageImporter
+from .shot_importer import ShotImporter, ImageImporter, ParametersImporter
 
 P = ParamSpec("P")
 S = TypeVar("S")
@@ -43,6 +44,20 @@ class ImageLoader(ImageImporter):
 
 serialization.include_subclasses(
     ImageImporter, union_strategy=serialization.include_type
+)
+
+
+@define(slots=False)
+class ParametersLoader(ParametersImporter):
+    def __attrs_post_init__(self) -> None:
+        self._importer = import_parameters | break_namespaces
+
+    def __call__(self, shot: Shot, session: ExperimentSession) -> dict[str, Parameter]:
+        return self._importer(shot, session)
+
+
+serialization.include_subclasses(
+    ParametersImporter, union_strategy=serialization.include_type
 )
 
 

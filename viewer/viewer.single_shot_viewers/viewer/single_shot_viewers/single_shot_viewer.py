@@ -7,9 +7,9 @@ from qabc import QABC
 from sequence.runtime import Shot
 
 
-@define(init=False, slots=False)
+@define(slots=False)
 class SingleShotViewer(QWidget, QABC):
-    def __init__(self):
+    def __attrs_pre_init__(self) -> None:
         super().__init__()
 
     @abstractmethod

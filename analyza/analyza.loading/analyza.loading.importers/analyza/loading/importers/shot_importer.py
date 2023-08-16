@@ -1,9 +1,10 @@
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, Mapping
 
 from attr import define
 
 from experiment.session import ExperimentSession
 from image_types import Image
+from parameter_types import Parameter
 from sequence.runtime import Shot
 
 T = TypeVar("T", covariant=True)
@@ -23,4 +24,8 @@ class ShotImporter(Protocol[T]):
 class ImageImporter(ShotImporter[Image]):
     """A shot importer that returns an image from the shot."""
 
+    pass
+
+
+class ParametersImporter(ShotImporter[Mapping[str, Parameter]]):
     pass
