@@ -21,6 +21,6 @@ class ShotImporter(Protocol[T]):
 
 
 class ImageImporter(ShotImporter[Image]):
-    """An shot importer that returns an image from the shot."""
+    """A shot importer that returns an image from the shot."""
 
     pass
