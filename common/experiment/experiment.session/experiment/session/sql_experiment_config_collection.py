@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, TYPE_CHECKING, Iterator
 
 import sqlalchemy.orm
@@ -42,7 +43,9 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
                 raise ReadOnlyExperimentConfigError(
                     f"Cannot overwrite experiment config '{name}' because it is bound to sequences: {sequences}."
                 )
-            self._query_model(name).experiment_config_yaml = yaml_
+            experiment_config_model = self._query_model(name)
+            experiment_config_model.experiment_config_yaml = yaml_
+            experiment_config_model.modification_date = datetime.now()
             self._get_sql_session().flush()
         else:
             ExperimentConfigModel.add_config(
@@ -76,17 +79,6 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
     def __len__(self) -> int:
         return len(list(iter(self)))
 
-    def add_experiment_config(
-        self,
-        experiment_config: ExperimentConfig,
-        name: Optional[str] = None,
-        comment: Optional[str] = None,
-    ) -> str:
-        if name is None:
-            name = self.get_unused_name()
-        self[name] = experiment_config
-        return name
-
     def set_current(self, name: str):
         if not isinstance(name, str):
             raise TypeError(f"Expected <str> for name, got {type(name)}")
@@ -98,6 +90,9 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         return CurrentExperimentConfigModel.get_current_experiment_config_name(
             session=self._get_sql_session()
         )
+
+    def get_modification_date(self, name: str) -> datetime:
+        return self._query_model(name).modification_date
 
     def _query_model(self, name: str) -> ExperimentConfigModel:
         query = select(ExperimentConfigModel).where(ExperimentConfigModel.name == name)

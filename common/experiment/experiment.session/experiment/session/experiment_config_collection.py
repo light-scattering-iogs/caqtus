@@ -1,6 +1,7 @@
 import re
 from abc import abstractmethod, ABC
 from collections.abc import MutableMapping
+from datetime import datetime
 from typing import Optional
 
 from experiment.configuration import ExperimentConfig
@@ -28,12 +29,10 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
         raise NotImplementedError()
 
-    @abstractmethod
     def add_experiment_config(
         self,
         experiment_config: ExperimentConfig,
         name: Optional[str] = None,
-        comment: Optional[str] = None,
     ) -> str:
         """Add a new experiment config to the session.
 
@@ -41,13 +40,15 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             experiment_config: the experiment config to add to the session.
             name: an optional name to identify the experiment config. If no name is
                 provided an automatic value will be generated and returned.
-            comment: optional description of the experiment config to add.
 
         Returns:
             The value of name if provided, otherwise it will be a generated name.
         """
 
-        ...
+        if name is None:
+            name = self.get_unused_name()
+        self[name] = experiment_config
+        return name
 
     def get_unused_name(self) -> str:
         numbers = []
@@ -132,6 +133,18 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             return None
         experiment_config_yaml = self.get_experiment_config_yaml(name)
         return experiment_config_yaml
+
+    def get_modification_date(self, name: str) -> datetime:
+        """Get the modification date of an experiment config.
+
+        Args:
+            name: The name of the experiment config.
+
+        Returns:
+            The modification date of the experiment config.
+        """
+
+        raise NotImplementedError()
 
 
 def _find_first_unused_number(numbers: list[int]) -> int:
