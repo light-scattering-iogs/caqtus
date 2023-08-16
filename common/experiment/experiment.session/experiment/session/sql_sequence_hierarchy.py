@@ -144,7 +144,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         sequence_model.total_number_shots = total_number_shots
 
         sequence_model.config.sequence_config_yaml = config_yaml
-        sequence.modification_date = datetime.now()
+        sequence_model.modification_date = datetime.now()
         session.flush()
 
     def get_sequence_experiment_config(
