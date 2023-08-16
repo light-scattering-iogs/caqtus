@@ -1,30 +1,41 @@
 import threading
 from typing import Optional
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout
+from attr import define, field
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-from analyza.loading.importers import ShotImporter
+import serialization
+from analyza.loading.importers import AtomImporter2D
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from sequence.runtime import Shot
-from .single_shot_viewer import SingleShotViewer
+from ..single_shot_viewer import SingleShotViewer
 
 
+@serialization.customize(
+    _importer=serialization.override(rename="importer"),
+    _axes_equal=serialization.override(rename="axes_equal"),
+)
+@define(slots=False, init=False)
 class AtomsViewer(SingleShotViewer):
+    _importer: AtomImporter2D = field(default=None)
+    _axes_equal: bool = field(default=True)
+
     def __init__(
         self,
         *,
-        importer: ShotImporter[dict[tuple[float, float], bool]],
+        importer: AtomImporter2D,
+        axes_equal: bool = True,
         session: Optional[ExperimentSession] = None,
-        parent: Optional[QWidget] = None,
     ):
-        super().__init__(parent=parent)
+        super().__init__()
+
+        self.__attrs_init__(importer=importer, axes_equal=axes_equal)
 
         if session is None:
             session = get_standard_experiment_session()
 
-        self._importer = importer
         self._session = session
 
         self._lock = threading.Lock()
@@ -34,7 +45,8 @@ class AtomsViewer(SingleShotViewer):
     def _setup_ui(self) -> None:
         self._figure = Figure()
         self._axes = self._figure.add_subplot()
-        # self._axes.set_aspect("equal")
+        if self._axes_equal:
+            self._axes.set_aspect("equal")
         self._canvas = FigureCanvasQTAgg(self._figure)
 
         self.setLayout(QVBoxLayout())
@@ -73,3 +85,5 @@ class AtomsViewer(SingleShotViewer):
             color="red",
         )
         self._canvas.draw()
+
+

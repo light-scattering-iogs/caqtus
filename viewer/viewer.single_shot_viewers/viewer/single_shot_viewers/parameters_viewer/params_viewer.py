@@ -57,11 +57,6 @@ class ParametersViewer(SingleShotViewer):
         pass
 
 
-serialization.include_subclasses(
-    SingleShotViewer, (ParamsViewer,), union_strategy=serialization.include_type
-)
-
-
 class ParamsModel(QAbstractTableModel):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)

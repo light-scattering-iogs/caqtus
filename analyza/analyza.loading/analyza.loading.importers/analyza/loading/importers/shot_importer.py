@@ -22,10 +22,14 @@ class ShotImporter(Protocol[T]):
 
 
 class ImageImporter(ShotImporter[Image]):
-    """A shot importer that returns an image from the shot."""
+    """A shot importer returns an image from the shot."""
 
     pass
 
 
 class ParametersImporter(ShotImporter[Mapping[str, Parameter]]):
+    pass
+
+
+class AtomImporter2D(ShotImporter[dict[tuple[float, float], bool]]):
     pass

@@ -30,7 +30,7 @@ class SequenceWatcher(ConcurrentUpdater):
     def __init__(
         self,
         sequence: Sequence,
-        target: Callable[Concatenate[list[Shot], P], None],
+        target: Callable[Concatenate[Iterable[Shot], P], None],
         session: Optional[ExperimentSession] = None,
         watch_interval: float = DEFAULT_WATCH_INTERVAL,
         name: Optional[str] = None,

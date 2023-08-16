@@ -19,6 +19,8 @@ from sequence.runtime import Shot, Sequence
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
 from viewer.sequence_watcher import SequenceWatcher
 from .add_image_viewer import create_image_viewer
+from .atoms_viewer import create_atom_viewer
+from .parameters_viewer import create_parameters_viewer
 from .single_shot_viewer import SingleShotViewer
 from .single_shot_widget_ui import Ui_SingleShotWidget
 from .workspace import Workspace
@@ -72,6 +74,8 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
         self.actionImage.triggered.connect(self.on_add_image)
         self.actionSave_as.triggered.connect(self.on_save_as)
         self.actionLoad.triggered.connect(self.on_load)
+        self.actionParameters.triggered.connect(self.on_add_parameters_viewer)
+        self.actionAtoms.triggered.connect(self.on_add_atoms_viewer)
 
     def on_sequence_double_clicked(self, index: QModelIndex) -> None:
         path = self._model.get_path(index)
@@ -120,7 +124,8 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
             self.add_viewer(name, viewer)
 
     def extract_workspace(self) -> Workspace:
-        return Workspace(viewers=self._get_viewers())
+        viewers = self._get_viewers()
+        return Workspace(viewers=viewers)
 
     def clear(self) -> None:
         for subwindow in self._mdi_area.subWindowList():
@@ -128,6 +133,20 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
 
     def on_add_image(self):
         result = create_image_viewer(self._mdi_area)
+        if result is not None:
+            name, viewer = result
+            if name not in self._get_viewers():
+                self.add_viewer(name, viewer)
+
+    def on_add_parameters_viewer(self):
+        result = create_parameters_viewer(self._mdi_area)
+        if result is not None:
+            name, viewer = result
+            if name not in self._get_viewers():
+                self.add_viewer(name, viewer)
+
+    def on_add_atoms_viewer(self):
+        result = create_atom_viewer(self._mdi_area)
         if result is not None:
             name, viewer = result
             if name not in self._get_viewers():

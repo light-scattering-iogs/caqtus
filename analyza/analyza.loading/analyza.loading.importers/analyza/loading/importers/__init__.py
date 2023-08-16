@@ -17,19 +17,26 @@ from .importers import (
     import_measures,
     import_time,
     ImageLoader,
-    ParametersImporter,
     ParametersLoader,
-    AtomsImporter,
+    AtomsLoader,
+    AtomsLoader2D,
 )
-from .shot_importer import ShotImporter, ImageImporter
+from .shot_importer import (
+    ShotImporter,
+    ImageImporter,
+    ParametersImporter,
+    AtomImporter2D,
+)
 
 
 __all__ = [
     "ShotImporter",
+    "AtomsLoader",
+    "AtomsLoader2D",
     "ImageLoader",
-    "AtomsImporter",
     "ParametersImporter",
     "ParametersLoader",
+    "AtomImporter2D",
     "import_all",
     "import_parameters",
     "import_scores",

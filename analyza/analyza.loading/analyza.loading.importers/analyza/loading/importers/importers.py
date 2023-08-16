@@ -18,7 +18,12 @@ from parameter_types import Parameter
 from sequence.runtime import Shot
 from . import break_namespaces
 from .chainable_function import ChainableFunction
-from .shot_importer import ShotImporter, ImageImporter, ParametersImporter
+from .shot_importer import (
+    ShotImporter,
+    ImageImporter,
+    ParametersImporter,
+    AtomImporter2D,
+)
 
 P = ParamSpec("P")
 S = TypeVar("S")
@@ -61,18 +66,27 @@ serialization.include_subclasses(
 )
 
 
-class AtomsImporter(ShotImporter[dict[AtomLabel, bool]]):
-    def __init__(self, detector: DeviceName, image: ImageLabel):
-        self.detector = detector
-        self.image = image
+@define
+class AtomsLoader(ShotImporter[dict[AtomLabel, bool]]):
+    detector_name: DeviceName = field()
+    image: ImageLabel = field()
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> dict[AtomLabel, bool]:
-        value = _import_measures(shot, session)[f"{self.detector}.{self.image}"]
+        value = _import_measures(shot, session)[f"{self.detector_name}.{self.image}"]
         if not isinstance(value, dict):
             raise TypeError(
-                f"Expected dictionary for {self.detector}.{self.image}, got {type(value)}"
+                f"Expected dictionary for {self.detector_name}.{self.image}, got {type(value)}"
             )
         return value
+
+
+class AtomsLoader2D(AtomsLoader, AtomImporter2D):
+    pass
+
+
+serialization.include_subclasses(
+    AtomImporter2D, union_strategy=serialization.include_type
+)
 
 
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Parameter]:

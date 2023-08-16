@@ -31,7 +31,7 @@ class ImageViewerConfiguration:
 )
 @define(slots=False, init=False)
 class ImageViewer(SingleShotViewer):
-    _importer: ImageImporter = field()
+    _importer: ImageImporter = field(default=None)
 
     _vmin: Optional[float] = field(default=None)
     _vmax: Optional[float] = field(default=None)
@@ -151,6 +151,3 @@ class ImageViewer(SingleShotViewer):
             color="red",
         )
         self._canvas.draw()
-
-
-serialization.include_subclasses(SingleShotViewer, union_strategy=serialization.include_type)
