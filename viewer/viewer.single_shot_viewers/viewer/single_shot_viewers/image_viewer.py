@@ -151,3 +151,6 @@ class ImageViewer(SingleShotViewer):
             color="red",
         )
         self._canvas.draw()
+
+
+serialization.include_subclasses(SingleShotViewer, union_strategy=serialization.include_type)

@@ -41,7 +41,9 @@ class ImageLoader(ImageImporter):
         return value
 
 
-serialization.include_subclasses(ImageImporter)
+serialization.include_subclasses(
+    ImageImporter, union_strategy=serialization.include_type
+)
 
 
 class AtomsImporter(ShotImporter[dict[AtomLabel, bool]]):
