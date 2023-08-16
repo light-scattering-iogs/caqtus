@@ -23,13 +23,13 @@ from PyQt6.QtWidgets import (
     QApplication,
 )
 
-from concurrent_updater import ConcurrentUpdater
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
 from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
+from .current_experiment_config_watcher import CurrentExperimentConfigWatcher
 from .experiment_viewer_ui import Ui_MainWindow
 from .sequence_widget import SequenceWidget
 
@@ -111,8 +111,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.ui_settings = QSettings("Caqtus", "ExperimentControl")
         self._experiment_session_maker = session_maker
 
-        with self._experiment_session_maker() as session:
-            self._experiment_config = session.experiment_configs.get_current_config()
+        self._experiment_config_watcher = CurrentExperimentConfigWatcher(session_maker)
 
         self.setupUi(self)
 
@@ -169,27 +168,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.logs_listener.start()
         self.worker = BlockingThread(self)
 
-        self._experiment_config_updater = ConcurrentUpdater(
-            target=self._update_experiment_config, watch_interval=2
-        )
-        self._experiment_config_updater.start()
-
-    def _update_experiment_config(self):
-        with self._experiment_session_maker() as session:
-            experiment_config = session.experiment_configs.get_current_config()
-            if experiment_config is None:
-                raise ValueError("No experiment config was defined")
-            if self._experiment_config != experiment_config:
-                self._experiment_config = experiment_config
-                logger.debug(f"Experiment config changed")
-
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
             return
         if path := self.model.get_path(index):
             sequence_widget = SequenceWidget(
                 Sequence(path),
-                self._experiment_config,
+                self._experiment_config_watcher.get_current_config(),
                 self._experiment_session_maker,
             )
             self.dock_widget.addDockWidget(
@@ -352,7 +337,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def edit_config(self):
         """Open the experiment config editor then propagate the changes done"""
 
-        current_config = self._experiment_config
+        current_config = self._experiment_config_watcher.get_current_config()
 
         editor = ConfigEditor(current_config)
         editor.exec()
@@ -363,7 +348,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 new_name = session.experiment_configs.set_current_config(
                     new_experiment_config
                 )
-            self._experiment_config = new_experiment_config
             logger.info(f"Experiment config updated from {old_name} to {new_name}")
 
     def closeEvent(self, event: QCloseEvent) -> None:
