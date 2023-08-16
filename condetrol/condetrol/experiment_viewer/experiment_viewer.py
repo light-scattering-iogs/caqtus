@@ -172,6 +172,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self._experiment_config_updater = ConcurrentUpdater(
             target=self._update_experiment_config, watch_interval=1
         )
+        self._experiment_config_updater.start()
 
     def _update_experiment_config(self):
         with self._experiment_session_maker() as session:
