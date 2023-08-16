@@ -1,6 +1,7 @@
 import threading
-from typing import Optional, Iterable, Mapping
+from typing import Optional, Iterable
 
+import platformdirs
 from PyQt6.QtCore import pyqtSignal, QSignalBlocker, QTimer, Qt, QModelIndex
 from PyQt6.QtWidgets import (
     QWidget,
@@ -9,20 +10,23 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QSpinBox,
     QSizePolicy,
+    QFileDialog,
 )
 
+import serialization
 from experiment.session import ExperimentSessionMaker
 from sequence.runtime import Shot, Sequence
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
 from viewer.sequence_watcher import SequenceWatcher
+from .add_image_viewer import create_image_viewer
 from .single_shot_viewer import SingleShotViewer
 from .single_shot_widget_ui import Ui_SingleShotWidget
+from .workspace import Workspace
 
 
 class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     def __init__(
         self,
-        viewers: Mapping[str, SingleShotViewer],
         experiment_session_maker: ExperimentSessionMaker,
         parent: Optional[QWidget] = None,
     ):
@@ -31,10 +35,11 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
 
         self._sequence_watcher: Optional[SequenceWatcher] = None
 
-        self._setup_ui(viewers)
+        self._setup_ui()
+        self._viewer_widgets: dict[str, SingleShotViewer] = {}
         self._experiment_session_maker = experiment_session_maker
 
-    def _setup_ui(self, viewers: Mapping[str, SingleShotViewer]) -> None:
+    def _setup_ui(self) -> None:
         self.setupUi(self)
         self.setWindowTitle("Single Shot Viewer")
         self._sequence_hierarchy_view.setModel(self._model)
@@ -57,15 +62,16 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
         )
 
-        for name, viewer in viewers.items():
-            self.add_viewer(name, viewer)
-
         # noinspection PyUnresolvedReferences
         self._shot_selector.shot_changed.connect(self._update_viewers)
         self._action_cascade.triggered.connect(self._mdi_area.cascadeSubWindows)
         self._action_tile.triggered.connect(self._mdi_area.tileSubWindows)
         self._shot_selector_dock.setWidget(self._shot_selector)
         self._shot_selector_dock.setTitleBarWidget(QWidget())
+
+        self.actionImage.triggered.connect(self.on_add_image)
+        self.actionSave_as.triggered.connect(self.on_save_as)
+        self.actionLoad.triggered.connect(self.on_load)
 
     def on_sequence_double_clicked(self, index: QModelIndex) -> None:
         path = self._model.get_path(index)
@@ -91,6 +97,7 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
     def add_viewer(self, name: str, viewer: SingleShotViewer) -> None:
         subwindow = self._mdi_area.addSubWindow(viewer)
         subwindow.setWindowTitle(name)
+        subwindow.show()
 
     def reset(self) -> None:
         self._shot_selector.reset()
@@ -106,6 +113,51 @@ class SingleShotWidget(QMainWindow, Ui_SingleShotWidget):
             subwindow.windowTitle(): subwindow.widget()
             for subwindow in self._mdi_area.subWindowList()
         }
+
+    def load_workspace(self, workspace: Workspace) -> None:
+        self.clear()
+        for name, viewer in workspace.viewers.items():
+            self.add_viewer(name, viewer)
+
+    def extract_workspace(self) -> Workspace:
+        return Workspace(viewers=self._get_viewers())
+
+    def clear(self) -> None:
+        for subwindow in self._mdi_area.subWindowList():
+            self._mdi_area.removeSubWindow(subwindow)
+
+    def on_add_image(self):
+        result = create_image_viewer(self._mdi_area)
+        if result is not None:
+            name, viewer = result
+            if name not in self._get_viewers():
+                self.add_viewer(name, viewer)
+
+    def on_save_as(self):
+        directory = platformdirs.user_data_path(
+            appname="Viewer", appauthor="Caqtus", ensure_exists=True
+        )
+        file, _ = QFileDialog.getSaveFileName(
+            self, "Save Workspace", str(directory), "YAML (*.yaml)"
+        )
+        if file:
+            workspace = self.extract_workspace()
+            yaml = serialization.converters["yaml"].dumps(workspace, Workspace)
+            with open(file, "w") as file:
+                file.write(yaml)
+
+    def on_load(self):
+        directory = platformdirs.user_data_path(
+            appname="Viewer", appauthor="Caqtus", ensure_exists=True
+        )
+        file, _ = QFileDialog.getOpenFileName(
+            self, "Load Workspace", str(directory), "YAML (*.yaml)"
+        )
+        if file:
+            with open(file, "r") as file:
+                yaml = file.read()
+            workspace = serialization.converters["yaml"].loads(yaml, Workspace)
+            self.load_workspace(workspace)
 
 
 class ShotSelector(QWidget):

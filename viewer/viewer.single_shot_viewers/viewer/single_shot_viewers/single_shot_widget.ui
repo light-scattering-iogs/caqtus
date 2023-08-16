@@ -38,9 +38,20 @@
    </widget>
    <widget class="QMenu" name="menuAdd">
     <property name="title">
-     <string>Add</string>
+     <string>Add viewer</string>
     </property>
+    <addaction name="actionImage"/>
+    <addaction name="actionAtoms"/>
+    <addaction name="actionParameters"/>
    </widget>
+   <widget class="QMenu" name="menuWorkspace">
+    <property name="title">
+     <string>Workspace</string>
+    </property>
+    <addaction name="actionSave_as"/>
+    <addaction name="actionLoad"/>
+   </widget>
+   <addaction name="menuWorkspace"/>
    <addaction name="menuAdd"/>
    <addaction name="menuWindow"/>
   </widget>
@@ -82,6 +93,36 @@
   <action name="_action_tile">
    <property name="text">
     <string>Tile</string>
+   </property>
+  </action>
+  <action name="actionImage">
+   <property name="text">
+    <string>Image</string>
+   </property>
+  </action>
+  <action name="actionParameters">
+   <property name="text">
+    <string>Parameters</string>
+   </property>
+  </action>
+  <action name="actionAtoms">
+   <property name="text">
+    <string>Atoms</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionSave_as">
+   <property name="text">
+    <string>Save as</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load</string>
    </property>
   </action>
  </widget>
