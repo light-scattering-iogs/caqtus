@@ -5,8 +5,8 @@ import numpy as np
 
 from data_types import DataLabel, is_data_label
 
-Width = TypeVar("Width", bound=int)
-Height = TypeVar("Height", bound=int)
+Width = NewType("Width", int)
+Height = NewType("Height", int)
 
 T = TypeVar("T", bound=Real)
 

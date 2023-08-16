@@ -21,6 +21,8 @@ parameter-types = {path = "../../../common/types/parameter_types", develop = tru
 device-name = {path = "../../../devices/device/device.name", develop = true}
 atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
 python-benedict = "^0.32.0"
+attrs = "^23.1.0"
+serialization = {path = "../../../common/serialization", develop = true}
 
 
 [build-system]

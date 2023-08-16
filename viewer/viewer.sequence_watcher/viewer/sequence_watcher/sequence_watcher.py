@@ -58,12 +58,12 @@ class SequenceWatcher(ConcurrentUpdater):
     def _look_at_sequence(self, *args: P.args, **kwargs: P.kwargs):
         with self._session.activate() as session:
             stats = self._sequence.get_stats(session)
-        if stats["start_date"] != self._sequence_start_time:
+        if stats.start_date != self._sequence_start_time:
             if self._sequence_start_time is not None:
                 raise SequenceResetError("Sequence has been reset")
             else:
-                self._sequence_start_time = stats["start_date"]
-        if len(self._processed_shots) < stats["number_completed_shots"]:
+                self._sequence_start_time = stats.start_date
+        if len(self._processed_shots) < stats.number_completed_shots:
             with self._session.activate() as session:
                 shots = self._sequence.get_shots(session)
             new_shots = [shot for shot in shots if shot not in self._processed_shots]

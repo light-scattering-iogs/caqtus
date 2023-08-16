@@ -6,6 +6,9 @@ from typing import (
     TypedDict,
 )
 
+from attrs import define, field
+
+import serialization
 from atom_detector.configuration import AtomLabel
 from data_types import Data
 from device.configuration import DeviceName
@@ -14,7 +17,7 @@ from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
 from .chainable_function import ChainableFunction
-from .shot_importer import ShotImporter
+from .shot_importer import ShotImporter, ImageImporter
 
 P = ParamSpec("P")
 S = TypeVar("S")
@@ -24,10 +27,10 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class ImageImporter(ShotImporter[Image]):
-    def __init__(self, camera_name: DeviceName, image: ImageLabel):
-        self.camera_name = camera_name
-        self.image = image
+@define
+class ImageLoader(ImageImporter):
+    camera_name: DeviceName = field()
+    image: ImageLabel = field()
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
         value = _import_measures(shot, session)[f"{self.camera_name}.{self.image}"]
@@ -36,6 +39,9 @@ class ImageImporter(ShotImporter[Image]):
                 f"Expected image for {self.camera_name}.{self.image}, got {type(value)}"
             )
         return value
+
+
+serialization.include_subclasses(ImageImporter)
 
 
 class AtomsImporter(ShotImporter[dict[AtomLabel, bool]]):

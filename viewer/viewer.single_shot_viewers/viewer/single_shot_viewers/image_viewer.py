@@ -2,44 +2,94 @@ import threading
 from typing import Optional
 
 import numpy as np
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout
+from attr import field
+from attrs import define
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-from analyza.loading.importers import ShotImporter
+import serialization
+from analyza.loading.importers import ImageImporter
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from image_types import Image
 from sequence.runtime import Shot
 from .single_shot_viewer import SingleShotViewer
 
 
+@define
+class ImageViewerConfiguration:
+    vmin: Optional[float] = None
+    vmax: Optional[float] = None
+    cmap: Optional[str] = "viridis"
+
+
+@serialization.customize(
+    _importer=serialization.override(rename="importer"),
+    _vmin=serialization.override(rename="vmin"),
+    _vmax=serialization.override(rename="vmax"),
+    _cmap=serialization.override(rename="cmap"),
+)
+@define(slots=False, init=False)
 class ImageViewer(SingleShotViewer):
+    _importer: ImageImporter = field()
+
+    _vmin: Optional[float] = field(default=None)
+    _vmax: Optional[float] = field(default=None)
+    _cmap: Optional[str] = field(default="viridis")
+
     def __init__(
         self,
-        *,
-        importer: ShotImporter[Image],
-        session: Optional[ExperimentSession] = None,
-        parent: Optional[QWidget] = None,
+        importer: ImageImporter,
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
-        cmap: Optional[str] = None,
+        cmap: Optional[str] = "viridis",
+        session: Optional[ExperimentSession] = None,
     ):
-        super().__init__(parent=parent)
+        super().__init__()
 
-        if session is None:
-            session = get_standard_experiment_session()
-
-        self._importer = importer
-        self._session = session
-        self._image = None
+        self.__attrs_init__(importer=importer, vmin=vmin, vmax=vmax, cmap=cmap)
 
         self._lock = threading.Lock()
-
-        self._cmap = cmap
-        self._vmin: Optional[float] = vmin
-        self._vmax: Optional[float] = vmax
+        self._image = None
+        self._figure = None
+        self._axes = None
+        self._canvas = None
+        self._colorbar = None
+        if session is None:
+            session = get_standard_experiment_session()
+        self._session = session
 
         self._setup_ui()
+
+    @property
+    def cmap(self) -> Optional[str]:
+        return self._cmap
+
+    @cmap.setter
+    def cmap(self, cmap: Optional[str]) -> None:
+        self._cmap = cmap
+        self._image.set_cmap(cmap)
+        self.update_view()
+
+    @property
+    def vmin(self) -> Optional[float]:
+        return self._vmin
+
+    @vmin.setter
+    def vmin(self, vmin: Optional[float]) -> None:
+        self._vmin = vmin
+        self._image.set_clim(vmin=vmin)
+        self.update_view()
+
+    @property
+    def vmax(self) -> Optional[float]:
+        return self._vmax
+
+    @vmax.setter
+    def vmax(self, vmax: Optional[float]) -> None:
+        self._vmax = vmax
+        self._image.set_clim(vmax=vmax)
+        self.update_view()
 
     def _setup_ui(self) -> None:
         self._figure = Figure()
@@ -54,14 +104,15 @@ class ImageViewer(SingleShotViewer):
         self.layout().addWidget(navigation_toolbar)
         self.layout().addWidget(self._canvas)
 
-    def _setup_image(self, image: Image) -> None:
+    def _setup_image(self, image: Image):
         if self._colorbar is not None:
             self._colorbar.remove()
         self._axes.clear()
         self._image = self._axes.imshow(
-            image.T, origin="lower", cmap=self._cmap, vmin=self._vmin, vmax=self._vmax
+            image.T, origin="lower", cmap=self.cmap, vmin=self.vmin, vmax=self.vmax
         )
         self._colorbar = self._figure.colorbar(self._image, ax=self._axes)
+        return image
 
     def set_shot(self, shot: Shot) -> None:
         with self._lock, self._session.activate():
@@ -79,14 +130,14 @@ class ImageViewer(SingleShotViewer):
         if image.shape != self._image.get_array().shape:
             self._setup_image(image)
         self._image.set_data(image.T)
-        if self._vmin is None:
+        if self.vmin is None:
             vmin = np.min(image)
         else:
-            vmin = self._vmin
-        if self._vmax is None:
+            vmin = self.vmin
+        if self.vmax is None:
             vmax = np.max(image)
         else:
-            vmax = self._vmax
+            vmax = self.vmax
         self._image.set_clim(vmin=vmin, vmax=vmax)
 
     def _set_exception(self, error: Exception):
