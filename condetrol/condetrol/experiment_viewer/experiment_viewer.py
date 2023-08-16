@@ -170,7 +170,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.worker = BlockingThread(self)
 
         self._experiment_config_updater = ConcurrentUpdater(
-            target=self._update_experiment_config, watch_interval=1
+            target=self._update_experiment_config, watch_interval=2
         )
         self._experiment_config_updater.start()
 
