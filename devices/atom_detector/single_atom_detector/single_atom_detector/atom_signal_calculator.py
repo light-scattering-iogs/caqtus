@@ -37,7 +37,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
     def compute_signal(self, image: np.ndarray) -> float:
         """Compute the signal for each atom in the image"""
 
-        return float(np.sum(image * self._weighed_image)) - self.offset
+        return float(np.sum(image[self._x, self._y] * self._weights_np)) - self.offset
 
     def compute_signals(self, images: Iterable[np.array]) -> list[float]:
         """Compute the signal for each atom in each image in the iterable"""
@@ -78,6 +78,11 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
             *np.array(self._roi.indices).T
         ].tolist()
         self._weighed_image = weighted_map
+
+        self._weights_np = np.array(self._weights)
+
+        self._x = np.array([x for x, _ in self._roi.indices])
+        self._y = np.array([y for _, y in self._roi.indices])
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, atomic_signal_calculator: Self):
