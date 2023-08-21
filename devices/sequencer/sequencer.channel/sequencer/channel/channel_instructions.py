@@ -155,12 +155,11 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
         return type(self)(fun(self.values))
 
 
+@define(init=False, eq=False)
 class Concatenate(ChannelInstruction[ChannelType]):
-    """A sequence of instructions to be executed consecutively.
+    """A sequence of instructions to be executed consecutively."""
 
-    Attributes:
-        instructions: The instructions to be executed
-    """
+    _instructions: tuple[ChannelInstruction[ChannelType], ...]
 
     def __init__(
         self,
@@ -227,9 +226,6 @@ class Concatenate(ChannelInstruction[ChannelType]):
             dtype=self.dtype,
         )
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.instructions!r})"
-
     def __str__(self) -> str:
         body = "\n".join(
             f"  {i}: {instruction!s}" for i, instruction in enumerate(self.instructions)
@@ -249,6 +245,7 @@ class Concatenate(ChannelInstruction[ChannelType]):
         return type(self)([instruction.apply(fun) for instruction in self.instructions])
 
 
+@define(init=False, eq=False)
 class Repeat(ChannelInstruction[ChannelType]):
     """Repeat a single instruction a given number of times.
 
@@ -256,6 +253,9 @@ class Repeat(ChannelInstruction[ChannelType]):
         instruction: The instruction to be repeated.
         number_repetitions: The number of times to repeat the instruction. Must be greater or equal to 2.
     """
+
+    _instruction: ChannelInstruction[ChannelType]
+    _number_repetitions: int
 
     def __init__(
         self,
@@ -317,18 +317,6 @@ class Repeat(ChannelInstruction[ChannelType]):
         )
 
         return before_instruction, after_instruction
-
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({self.instruction!r},"
-            f" {self.number_repetitions!r})"
-        )
-
-    def __str__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({self.instruction!s},"
-            f" {self.number_repetitions!s})"
-        )
 
     def __eq__(self, other):
         if not isinstance(other, Repeat):
