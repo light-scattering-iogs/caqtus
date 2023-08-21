@@ -7,7 +7,8 @@ import numpy as np
 from experiment.configuration import ExperimentConfig
 from experiment_control.compute_device_parameters import (
     compile_step_durations,
-    compute_shot_parameters, get_step_bounds,
+    compute_shot_parameters,
+    get_step_bounds,
 )
 from sequence.configuration import SequenceConfig
 from sequencer.channel import ChannelInstruction, ChannelPattern, Repeat, Concatenate
