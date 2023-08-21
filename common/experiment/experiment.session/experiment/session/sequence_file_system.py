@@ -307,6 +307,19 @@ class SequenceHierarchy(Protocol):
 
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_sequences_in_state(self, state: State) -> set[Sequence]:
+        """Get all sequences in a given state.
+
+        Args:
+            state: The state to get the sequences for.
+
+        Returns:
+            The sequences in the given state.
+        """
+
+        raise NotImplementedError()
+
 
 class PathIsSequenceError(Exception):
     pass

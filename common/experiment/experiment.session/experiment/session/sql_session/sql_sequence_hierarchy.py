@@ -268,6 +268,11 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         session.flush()
         return Shot(sequence, shot.name, shot.index)
 
+    def get_sequences_in_state(self, state: State) -> set[Sequence]:
+        session = self._get_sql_session()
+        query = session.query(SequenceModel).filter(SequenceModel.state == state)
+        return {Sequence(SequencePath(str(sequence.path))) for sequence in query}
+
     def _query_sequence_model(self, sequence: Sequence) -> SequenceModel:
         try:
             path = self._query_path_model(sequence.path)
