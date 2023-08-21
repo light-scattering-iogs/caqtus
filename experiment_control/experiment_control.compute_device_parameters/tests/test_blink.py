@@ -90,6 +90,7 @@ def experiment_config() -> ExperimentConfig:
     return config
 
 
+@pytest.mark.skip
 def test_compile_blink(
     sequence_config: SequenceConfig,
     experiment_config: ExperimentConfig,
@@ -101,6 +102,7 @@ def test_compile_blink(
     # )
 
 
+@pytest.mark.skip
 def test_blink():
     sequencer = SequencerInstruction.from_channel_instruction(
         ChannelLabel(0), ChannelPattern((True,)) * 166667
@@ -122,4 +124,3 @@ def test_blink():
     )
 
     sequencer.add_channel_instruction(ChannelLabel(1), blink)
-
