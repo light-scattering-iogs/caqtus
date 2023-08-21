@@ -83,21 +83,24 @@ def test_compile_analog_lane() -> None:
     logger.debug(f"{number_rise=}")
     logger.debug(instruction.compact_length_repr())
     logger.debug(f"{len(instruction)=}")
-    # plot_instruction(instruction, durations, 50e-9)
-    # plot_instruction_band(instruction, 50e-9, vertical_offset=0)
-    # plot_steps(durations)
+    plot_instruction(instruction, durations, 50e-9)
+    plot_instruction_band(instruction, 50e-9, vertical_offset=0)
+    plot_steps(durations)
 
     instruction = parameters["NI6738 card"]["sequence"][12]
 
     logger.debug(f"{len(instruction)=}")
 
-    # plot_instruction_band(instruction, 3e-6, vertical_offset=1)
-    # plot_instruction(instruction, durations, 3e-6)
+    plot_instruction_band(instruction, 3e-6, vertical_offset=1)
+    plot_instruction(instruction, durations, 3e-6)
+    for i in range(9):
+        plt.axvline(i * 3e-6, ls="--", color="r")
+
     # plt.xlim(0.331 - 10e-6, 0.331 + 10e-6)
 
-    # plt.show()
+    plt.show()
 
-    logger.debug(instruction.compact_length_repr())
+    logger.debug(instruction)
 
     assert number_rise == number_changes(instruction)
 
