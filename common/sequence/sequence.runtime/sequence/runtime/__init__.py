@@ -1,14 +1,14 @@
 from .path import SequencePath
-from .shot import Shot
 from .sequence import Sequence, SequenceNotFoundError, SequenceStats
-
-from sql_model import State
+from .sequence_state import State, InvalidSequenceStateError
+from .shot import Shot
 
 __all__ = [
     "Sequence",
     "Shot",
     "SequencePath",
     "SequenceNotFoundError",
-    "State",
+    "InvalidSequenceStateError",
     "SequenceStats",
+    "State",
 ]

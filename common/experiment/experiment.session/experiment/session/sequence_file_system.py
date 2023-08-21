@@ -9,7 +9,7 @@ from experiment.configuration import ExperimentConfig
 from parameter_types import Parameter
 from sequence.configuration import SequenceConfig
 from sequence.runtime import Sequence, Shot, SequencePath, SequenceStats
-from sql_model import State
+from sequence.runtime import State
 from variable.name import DottedVariableName
 
 

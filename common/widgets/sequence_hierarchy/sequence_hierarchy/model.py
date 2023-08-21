@@ -13,7 +13,7 @@ from experiment.session import (
     PathIsSequenceError,
 )
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
-from sequence.runtime import SequencePath, Sequence, State, SequenceStats
+from sequence.runtime import SequencePath, Sequence, SequenceStats, State
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)

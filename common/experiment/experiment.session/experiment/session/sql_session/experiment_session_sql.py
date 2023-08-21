@@ -3,7 +3,7 @@ from threading import Lock
 import sqlalchemy.orm
 from attrs import define
 
-from .experiment_session import (
+from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )

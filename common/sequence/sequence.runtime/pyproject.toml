@@ -9,14 +9,11 @@ packages = [{include = "sequence"}]
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
 
-sqlalchemy = ">=2.0"
-sqlalchemy-utils = "^0.40.0"
 attrs = "^23.1.0"
 
 sequence-configuration = {path = "../sequence.configuration", develop = true}
 experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
 experiment-session = {path = "../../experiment/experiment.session", develop = true}
-sql-model = {path = "../../sql_model", develop = true}
 device-name = {path = "../../../devices/device/device.name", develop = true}
 data-types = {path = "../../types/data_types", develop = true}
 variable-name = {path = "../../variable/variable.name", develop = true}

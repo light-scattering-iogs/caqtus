@@ -6,11 +6,11 @@ from attr import frozen
 from sqlalchemy import select
 
 from experiment.configuration import ExperimentConfig
-from sql_model.model import (
+from .model import (
     ExperimentConfigModel,
     CurrentExperimentConfigModel,
 )
-from .experiment_config_collection import (
+from ..experiment_config_collection import (
     ExperimentConfigCollection,
     ReadOnlyExperimentConfigError,
 )

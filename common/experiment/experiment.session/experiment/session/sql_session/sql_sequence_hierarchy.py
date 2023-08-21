@@ -14,16 +14,14 @@ from experiment.configuration import ExperimentConfig
 from parameter_types import Parameter, is_parameter
 from sequence.configuration import SequenceConfig
 from sequence.runtime import Sequence, SequenceNotFoundError, SequencePath, Shot
+from sequence.runtime import State, InvalidSequenceStateError
 from sequence.runtime.path import PathNotFoundError
 from sequence.runtime.sequence import SequenceNotEditableError, SequenceStats
-from sql_model import SequenceModel, SequencePathModel, State
-from sql_model.model import (
-    ShotModel,
-    DataType,
-)
-from sql_model.sequence_state import InvalidSequenceStateError
 from variable.name import DottedVariableName
-from .sequence_file_system import PathIsSequenceError, SequenceHierarchy
+from .model import SequenceModel, SequencePathModel
+from .model import ShotModel
+from ..data_type import DataType
+from ..sequence_file_system import PathIsSequenceError, SequenceHierarchy
 
 if TYPE_CHECKING:
     from .experiment_session_sql import SQLExperimentSession

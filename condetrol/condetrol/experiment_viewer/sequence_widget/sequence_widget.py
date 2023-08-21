@@ -258,7 +258,8 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
         # noinspection PyUnresolvedReferences
         create_variable_action.triggered.connect(
             lambda: model.insert_step(
-                VariableDeclaration(name="new_variable", expression=Expression("...")), index
+                VariableDeclaration(name="new_variable", expression=Expression("...")),
+                index,
             )
         )
 
@@ -280,7 +281,10 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
         create_linspace_action.triggered.connect(
             lambda: model.insert_step(
                 LinspaceLoop(
-                    name="new_variable", start=Expression("..."), stop=Expression("..."), num=10
+                    name="new_variable",
+                    start=Expression("..."),
+                    stop=Expression("..."),
+                    num=10,
                 ),
                 index,
             )

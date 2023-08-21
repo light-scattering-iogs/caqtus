@@ -4,7 +4,7 @@ from datetime import datetime
 from data_types import Data, DataLabel
 from device.name import DeviceName
 from parameter_types import Parameter
-from sql_model import DataType
+from experiment.session.data_type import DataType
 from variable.name import DottedVariableName
 
 if typing.TYPE_CHECKING:

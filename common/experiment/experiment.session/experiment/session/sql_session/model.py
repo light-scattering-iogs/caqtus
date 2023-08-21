@@ -1,5 +1,3 @@
-import enum
-import typing
 from datetime import datetime
 from typing import Optional, Any
 
@@ -23,12 +21,10 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy_utils import Ltree, LtreeType
 
+from experiment.session.data_type import DataType
 from sequence.configuration import SequenceConfig
+from sequence.runtime.sequence_state import State
 from .base import Base
-from .sequence_state import State
-
-if typing.TYPE_CHECKING:
-    pass
 
 
 # Need to activate Ltree extension in Postgresql
@@ -362,13 +358,6 @@ class ShotModel(Base):
             DataModel.shot == self, DataModel.type_ == type_
         )
         return {data.name: data.value for data in session.scalars(query).all()}
-
-
-class DataType(enum.Enum):
-    PARAMETER = "parameter"
-    MEASURE = "measure"
-    ANALYSIS = "analysis"
-    SCORE = "score"
 
 
 class DataModel(Base):

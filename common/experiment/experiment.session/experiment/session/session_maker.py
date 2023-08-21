@@ -3,7 +3,7 @@ from pathlib import Path
 import platformdirs
 import sqlalchemy
 import sqlalchemy.orm
-from .experiment_session_sql import SQLExperimentSession
+from .sql_session import SQLExperimentSession
 import yaml
 
 from .experiment_session import ExperimentSession

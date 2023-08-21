@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Protocol, Any
 
 from sequence.runtime import Shot
-from sql_model import DataType
+from experiment.session.data_type import DataType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

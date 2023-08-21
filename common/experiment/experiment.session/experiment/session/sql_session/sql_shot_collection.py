@@ -7,14 +7,9 @@ from sqlalchemy import select
 
 from sequence.runtime import Sequence, Shot
 from sequence.runtime.shot import ShotNotFoundError
-from sql_model import SequenceModel
-from sql_model.model import (
-    ShotModel,
-    DataType,
-)
-from .experiment_session import (
-    ShotCollection,
-)
+from .model import SequenceModel, ShotModel
+from ..data_type import DataType
+from ..experiment_session import ShotCollection
 
 if TYPE_CHECKING:
     from .experiment_session_sql import SQLExperimentSession
@@ -33,6 +28,8 @@ class SQLShotCollection(ShotCollection):
     ) -> None:
         session = self._get_sql_session()
         shot_sql = self._query_shot_model(shot)
+        if not shot_sql.sequence.state.can_add_data(data_type):
+            raise ValueError(f"Cannot add data of type {data_type} to shot {shot}")
         shot_sql.add_data(data, DataType.SCORE, session)
         session.flush()
 

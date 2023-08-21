@@ -159,8 +159,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             address=("localhost", 60000), authkey=b"Deardear"
         )
         self.experiment_process_manager.connect()
+        # noinspection PyUnresolvedReferences
         self.experiment_manager: ExperimentManager = (
-            self.experiment_process_manager.ExperimentManager()  # type: ignore
+            self.experiment_process_manager.ExperimentManager(
+                session_maker=self._experiment_session_maker
+            )
         )
         self.logs_listener = QueueListener(
             self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
@@ -295,7 +298,6 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     started = self.experiment_manager.start_sequence(
                         current_experiment_config,
                         sequence_path,
-                        self._experiment_session_maker,
                     )
                     if not started:
                         logger.error(

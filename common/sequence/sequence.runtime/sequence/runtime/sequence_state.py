@@ -1,4 +1,8 @@
+import typing
 from enum import Enum
+
+if typing.TYPE_CHECKING:
+    from experiment.session import DataType
 
 
 class State(Enum):
@@ -17,6 +21,11 @@ class State(Enum):
         """Indicate if a sequence in this state can be edited."""
 
         return self in {State.DRAFT}
+
+    def can_add_data(self, data_type: "DataType") -> bool:
+        """Indicate if a sequence in this state can add data of the given type."""
+
+        return self in {State.RUNNING}
 
 
 _ALLOWED_TRANSITIONS = {
