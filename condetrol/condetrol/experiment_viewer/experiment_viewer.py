@@ -363,15 +363,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
-            message_box = QMessageBox(self)
-            message_box.setWindowTitle("Caqtus")
-            message_box.setText("A sequence is still running.")
-            message_box.setInformativeText("Do you want to interrupt it?")
-            message_box.setStandardButtons(
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-            )
-            message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-            message_box.setIcon(QMessageBox.Icon.Question)
+            message_box = create_on_close_message_box(self)
             result = message_box.exec()
             if result == QMessageBox.StandardButton.Cancel:
                 event.ignore()
@@ -380,16 +372,24 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.experiment_manager.interrupt_sequence()
                 while self.experiment_manager.is_running():
                     time.sleep(0.1)
+            elif result == QMessageBox.StandardButton.No:
+                pass
+
+        self.save_window_state()
         self.view_update_timer.stop()
+
+        # The following line waits to have all logs before closing, but for some reason, it blocks forever.
+        # It is commented for now, but can cause some logs to be lost.
+        # self.logs_listener.stop()
+
+        self.model.on_destroy()
+        super().closeEvent(event)
+
+    def save_window_state(self):
         state = self.saveState()
         self.ui_settings.setValue(f"{__name__}/state", state)
         geometry = self.saveGeometry()
         self.ui_settings.setValue(f"{__name__}/geometry", geometry)
-        # The following line waits to have all logs before closing, but for some reason, it blocks forever.
-        # It is commented for now, but can cause some logs to be lost.
-        # self.logs_listener.stop()
-        self.model.on_destroy()
-        super().closeEvent(event)
 
     def revert_to_draft(self, index: QModelIndex):
         """Remove all data files from a sequence"""
@@ -474,3 +474,18 @@ class BlockingThread(QThread):
             self.on_finished(self._result)
             self.on_finished = None
             self._result = None
+
+
+def create_on_close_message_box(parent: Optional[QWidget]) -> QMessageBox:
+    message_box = QMessageBox(parent)
+    message_box.setWindowTitle("Caqtus")
+    message_box.setText("A sequence is still running.")
+    message_box.setInformativeText("Do you want to interrupt it?")
+    message_box.setStandardButtons(
+        QMessageBox.StandardButton.Yes
+        | QMessageBox.StandardButton.No
+        | QMessageBox.StandardButton.Cancel
+    )
+    message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+    message_box.setIcon(QMessageBox.Icon.Question)
+    return message_box
