@@ -6,6 +6,7 @@ from functools import cached_property, singledispatchmethod, singledispatch
 from typing import NewType, TypeVar, Any, Self
 
 import numpy as np
+from attr import define
 
 from sequencer.channel import Concatenate as ChannelConcatenate, Repeat as ChannelRepeat
 from sequencer.channel import Splittable, ChannelPattern
@@ -187,8 +188,11 @@ def _(instruction: ChannelRepeat, channel: ChannelLabel) -> SequencerInstruction
     )
 
 
+@define(init=False, eq=False)
 class SequencerPattern(SequencerInstruction):
     """A sequence of output values for several channels."""
+
+    _channel_values: dict[ChannelLabel, ChannelPattern]
 
     def __init__(self, channel_values: Mapping[ChannelLabel, ChannelPattern]) -> None:
         if not all(
@@ -233,9 +237,6 @@ class SequencerPattern(SequencerInstruction):
     def flatten(self) -> Self:
         return self
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.values!r})"
-
     def __eq__(self, other):
         if not isinstance(other, SequencerPattern):
             return False
@@ -276,12 +277,15 @@ class SequencerPattern(SequencerInstruction):
         }
 
 
+@define(init=False, eq=False)
 class Concatenate(SequencerInstruction):
     """A sequence of instructions to be executed consecutively.
 
     Attributes:
         instructions: The instructions to be executed
     """
+
+    _instructions: tuple[SequencerInstruction, ...]
 
     def __init__(
         self,
@@ -361,15 +365,6 @@ class Concatenate(SequencerInstruction):
             )
         return SequencerPattern(result)
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.instructions!r})"
-
-    def __str__(self) -> str:
-        body = "\n".join(
-            f"  {i}: {instruction!s}" for i, instruction in enumerate(self.instructions)
-        )
-        return f"{self.__class__.__name__}(\n{body}\n)"
-
     def __eq__(self, other):
         if not isinstance(other, Concatenate):
             return False
@@ -392,6 +387,7 @@ class Concatenate(SequencerInstruction):
         return self.join(result, channel_types=self.channel_types)
 
 
+@define(init=False, eq=False)
 class Repeat(SequencerInstruction):
     """Repeat a single instruction a given number of times.
 
@@ -399,6 +395,9 @@ class Repeat(SequencerInstruction):
         instruction: The instruction to be repeated.
         number_repetitions: The number of times to repeat the instruction. Must be greater or equal to 2.
     """
+
+    _instruction: SequencerInstruction
+    _number_repetitions: int
 
     def __init__(
         self,
@@ -464,18 +463,6 @@ class Repeat(SequencerInstruction):
         )
 
         return before_instruction, after_instruction
-
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({self.instruction!r},"
-            f" {self.number_repetitions!r})"
-        )
-
-    def __str__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({self.instruction!s},"
-            f" {self.number_repetitions!s})"
-        )
 
     def __eq__(self, other):
         if not isinstance(other, Repeat):
