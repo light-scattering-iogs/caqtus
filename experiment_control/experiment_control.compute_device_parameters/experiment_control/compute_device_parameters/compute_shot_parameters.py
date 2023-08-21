@@ -272,7 +272,7 @@ def compile_clock_requirements(
 
 def compute_clock_step_requirements(
     sequencer_config: SequencerConfiguration, shot_config: ShotConfiguration
-) -> Sequence[ClockInstruction]:
+) -> list[ClockInstruction.StepInstruction]:
     lanes = {
         channel.description: lane
         for channel in sequencer_config.get_lane_channels()

@@ -290,18 +290,31 @@ def compile_clock_instruction(
         clock_single_pulse = (
             ChannelPattern([True]) * high + ChannelPattern([False]) * low
         )
+        clock_pulse_length = high + low
 
         clock_rep = number_ticks(
             clock_instruction.start, clock_instruction.stop, clock_instruction.time_step
         )
+        total_ticks = number_ticks(
+            clock_instruction.start, clock_instruction.stop, time_step
+        )
+        logger.debug(f"{clock_rep=}")
         if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
-            pattern = clock_single_pulse + ChannelPattern([False]) * (
-                multiplier * max(clock_rep - 1, 0)
-            )
+            if clock_rep == 0:
+                pattern = ChannelPattern([False]) * total_ticks
+            else:
+                pattern = clock_single_pulse + ChannelPattern([False]) * (
+                    total_ticks - clock_pulse_length
+                )
         elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
-            pattern = clock_single_pulse * clock_rep
+            if clock_rep == 0:
+                pattern = ChannelPattern([False]) * total_ticks
+            else:
+                pattern = clock_single_pulse * clock_rep + ChannelPattern([False]) * (
+                    total_ticks - clock_pulse_length * clock_rep
+                )
         elif clock_instruction.order == ClockInstruction.StepInstruction.NoClock:
-            pattern = ChannelPattern([False]) * clock_rep * multiplier
+            pattern = ChannelPattern([False]) * total_ticks
         else:
             raise NotImplementedError(
                 f"Order {clock_instruction.order} not implemented"
