@@ -1,0 +1,1090 @@
+!SequenceConfig
+program: !SequenceSteps
+  children:
+  - !VariableDeclaration
+    name: !DottedVariableName 'tweezer_power'
+    expression: !Expression '100%'
+  - !VariableDeclaration
+    name: !DottedVariableName 'hwp_angle'
+    expression: !Expression '137.5'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.tweezer_power'
+    expression: !Expression '40 %'
+  - !VariableDeclaration
+    name: !DottedVariableName 'kill.tweezer_power'
+    expression: !Expression '5 %'
+  - !VariableDeclaration
+    name: !DottedVariableName 'kill_duration'
+    expression: !Expression '1.5 us'
+  - !VariableDeclaration
+    name: !DottedVariableName 'kill.blue.frequency'
+    expression: !Expression '30 MHz'
+  - !ArangeLoop
+    name: !DottedVariableName 'rep'
+    start: !Expression '0'
+    stop: !Expression '500'
+    step: !Expression '1'
+    children:
+    - !ExecuteShot
+      name: shot
+shot_configurations:
+  shot: !ShotConfiguration
+    step_names:
+    - load
+    - ramp mot
+    - hold mot
+    - close shutter
+    - ramp X, Y
+    - ramp Z
+    - collisions
+    - picture 1
+    - ramp trap
+    - aom
+    - kill
+    - ramp trap
+    - picture 2
+    - nothing
+    - stop
+    step_durations:
+    - !Expression '10 ms'
+    - !Expression 'ramp_time'
+    - !Expression '150 ms'
+    - !Expression '1 ms'
+    - !Expression 'exposure'
+    - !Expression '10 ms'
+    - !Expression '10 ms'
+    - !Expression 'exposure'
+    - !Expression '10 ms'
+    - !Expression '1 us'
+    - !Expression '0.7 us'
+    - !Expression '5 ms'
+    - !Expression 'exposure'
+    - !Expression '1 ms'
+    - !Expression '10 ms'
+    lanes:
+    - !DigitalLane
+      name: 421 cell vertical (EOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+    - !DigitalLane
+      name: arranger trigger
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+    - !TweezerArrangerLane
+      name: Tweezer arranger
+      spans: !tuple
+      - 15
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      values: !tuple
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+      - !HoldTweezers
+        configuration: 5x5 tweezers
+    - !AtomDetectorLane
+      name: Atom detector
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 4
+      - 0
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - null
+      - null
+      - null
+      - null
+      - null
+      - null
+      - null
+      - 5x5 tweezers
+      - 5x5 tweezers
+      - 5x5 tweezers
+      - 5x5 tweezers
+      - null
+      - 5x5 tweezers
+      - null
+      - null
+    - !DigitalLane
+      name: 421 cell horizontal (shutter)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !DigitalLane
+      name: Push beam (shutter)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !DigitalLane
+      name: 421 cell vertical (shutter)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+    - !AnalogLane
+      name: 626 imaging power
+      spans: !tuple
+      - 6
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 4
+      - 0
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression 'imaging.power'
+      - !Expression '0dB'
+      units: dB
+    - !AnalogLane
+      name: 626 imaging frequency
+      spans: !tuple
+      - 6
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 4
+      - 0
+      - 0
+      - 0
+      - 3
+      - 0
+      - 0
+      - 1
+      - 1
+      values: !tuple
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      - !Expression 'imaging.frequency'
+      units: MHz
+    - !DigitalLane
+      name: 626 imaging (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+      - true
+      - false
+      - false
+      - false
+      - false
+      - true
+      - false
+      - false
+    - !AnalogLane
+      name: Push power
+      spans: !tuple
+      - 1
+      - 13
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression '0.7 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0 mW'
+      - !Expression '0.7 mW'
+      units: mW
+    - !CameraLane
+      name: Orca Quest
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - null
+      - null
+      - null
+      - null
+      - !TakePicture
+        picture_name: clear
+      - null
+      - null
+      - !TakePicture
+        picture_name: picture 1
+      - null
+      - null
+      - null
+      - null
+      - !TakePicture
+        picture_name: picture 2
+      - null
+      - null
+    - !DigitalLane
+      name: test trigger
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+    - !AnalogLane
+      name: Tweezers power (AOM)
+      spans: !tuple
+      - 4
+      - 0
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - !Expression 'tweezer_power'
+      - !Expression 'tweezer_power'
+      - !Expression 'tweezer_power'
+      - !Expression 'tweezer_power'
+      - !LinearRamp ''
+      - !Expression 'imaging.tweezer_power'
+      - !Expression 'imaging.tweezer_power'
+      - !Expression 'imaging.tweezer_power'
+      - !LinearRamp ''
+      - !Expression 'kill.tweezer_power'
+      - !Expression 'kill.tweezer_power'
+      - !LinearRamp ''
+      - !Expression 'imaging.tweezer_power'
+      - !Expression 'imaging.tweezer_power'
+      - !Expression '100 %'
+      units: ''
+    - !DigitalLane
+      name: 532 tweezers (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 2
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - false
+      - false
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - true
+      - false
+      - true
+    - !DigitalLane
+      name: 626 horizontal shutter
+      spans: !tuple
+      - 3
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - true
+      - true
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !AnalogLane
+      name: Z offset
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 2
+      - 0
+      - 1
+      - 8
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.z_current'
+      - !LinearRamp ''
+      - !Expression 'red_mot.z_current'
+      - !Expression '-2 A'
+      - !Expression '-2 A'
+      - !LinearRamp ''
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'imaging.z_current'
+      - !Expression 'mot_loading.z_current'
+      units: A
+    - !AnalogLane
+      name: Y offset
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 9
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.y_current'
+      - !LinearRamp ''
+      - !Expression 'red_mot.y_current'
+      - !Expression '0.21 A'
+      - !LinearRamp ''
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'imaging.y_current'
+      - !Expression 'mot_loading.y_current'
+      units: A
+    - !AnalogLane
+      name: X offset
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 9
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.x_current'
+      - !LinearRamp ''
+      - !Expression 'red_mot.x_current'
+      - !Expression '0.25 A'
+      - !LinearRamp ''
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'imaging.x_current'
+      - !Expression 'mot_loading.x_current'
+      units: A
+    - !AnalogLane
+      name: 626 power (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 12
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.red.power'
+      - !LinearRamp ''
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'red_mot.power'
+      - !Expression 'mot_loading.red.power'
+      units: dB
+    - !AnalogLane
+      name: 626 frequency (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 12
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.red.frequency'
+      - !LinearRamp ''
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'red_mot.frequency'
+      - !Expression 'mot_loading.red.frequency'
+      units: MHz
+    - !DigitalLane
+      name: 626 light (AOM)
+      spans: !tuple
+      - 3
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - true
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !AnalogLane
+      name: MOT coils current
+      spans: !tuple
+      - 1
+      - 1
+      - 12
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.current'
+      - !LinearRamp ''
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'red_mot.current'
+      - !Expression 'mot_loading.current'
+      units: A
+    - !AnalogLane
+      name: 421 cell power (AOM)
+      spans: !tuple
+      - 8
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+      - 1
+      - 4
+      - 0
+      - 0
+      - 0
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression 'mot_loading.blue.power'
+      - !Expression '100 %'
+      - !Expression '100 %'
+      - !Expression '100 %'
+      - !Expression '100 %'
+      - !Expression '100 %'
+      - !Expression '100 %'
+      - !Expression 'mot_loading.blue.power'
+      units: dB
+    - !AnalogLane
+      name: 421 cell frequency offset (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 6
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 4
+      - 0
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'kill.blue.frequency'
+      - !Expression 'kill.blue.frequency'
+      - !Expression 'kill.blue.frequency'
+      - !Expression 'kill.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      - !Expression 'mot_loading.blue.frequency'
+      units: MHz
+    - !DigitalLane
+      name: 421 cell (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - false
+      - true
+      - true
+      - true
+      - true
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !DigitalLane
+      name: 2D MOT (AOM)
+      spans: !tuple
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    - !DigitalLane
+      name: MOT coils
+      spans: !tuple
+      - 3
+      - 0
+      - 0
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      - 1
+      values: !tuple
+      - true
+      - true
+      - true
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - false
+      - true
+    lane_groups: !LaneGroupRoot
+    - arranger trigger
+    - Tweezer arranger
+    - Atom detector
+    - Orca Quest
+    - test trigger
+    - Tweezers power (AOM)
+    - 532 tweezers (AOM)
+    - !LaneGroup
+      name: 2D MOT
+      children: !tuple
+      - 2D MOT (AOM)
+      - Push power
+      - Push beam (shutter)
+    - !LaneGroup
+      name: Coils
+      children: !tuple
+      - X offset
+      - Y offset
+      - Z offset
+      - MOT coils
+      - MOT coils current
+    - !LaneGroup
+      name: 421 cell
+      children: !tuple
+      - 421 cell (AOM)
+      - 421 cell horizontal (shutter)
+      - 421 cell vertical (shutter)
+      - 421 cell vertical (EOM)
+      - 421 cell power (AOM)
+      - 421 cell frequency offset (AOM)
+    - !LaneGroup
+      name: '626'
+      children: !tuple
+      - 626 light (AOM)
+      - 626 horizontal shutter
+      - 626 power (AOM)
+      - 626 frequency (AOM)
+      - !LaneGroup
+        name: 626 imaging
+        children: !tuple
+        - 626 imaging power
+        - 626 imaging frequency
+        - 626 imaging (AOM)

@@ -9,6 +9,7 @@ packages = [{include = "sequencer"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 numpy = "^1.25.0"
+attrs = "^23.1.0"
 
 
 [tool.poetry.group.dev.dependencies]

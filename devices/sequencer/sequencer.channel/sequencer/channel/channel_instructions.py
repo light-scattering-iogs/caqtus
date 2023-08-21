@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import TypeVar, Generic, Any, Self, Iterable, Callable
 
 import numpy as np
+from attr import define
 
 from .splittable import Splittable
 
@@ -109,8 +110,11 @@ class ChannelInstruction(
         raise NotImplementedError
 
 
+@define(init=False, eq=False)
 class ChannelPattern(ChannelInstruction[ChannelType]):
     """A sequence of values to be output on a channel."""
+
+    _values: np.ndarray[Any, ChannelType]
 
     def __init__(self, values: Iterable[ChannelType], dtype=None) -> None:
         self._values: np.ndarray[Any, ChannelType] = np.array(values, dtype=dtype)  # type: ignore
@@ -141,9 +145,6 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
 
     def flatten(self) -> Self:
         return self
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({tuple(self.values)!r})"
 
     def __eq__(self, other):
         if not isinstance(other, ChannelPattern):

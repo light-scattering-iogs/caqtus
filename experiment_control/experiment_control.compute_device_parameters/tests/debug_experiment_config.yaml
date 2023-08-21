@@ -1,0 +1,1730 @@
+!ExperimentConfig
+version: 1.0.0
+device_servers:
+  Elizabeth: !DeviceServerConfiguration
+    address: 192.168.137.4
+    port: 65000
+    authkey: Deardear
+  James: !DeviceServerConfiguration
+    address: localhost
+    port: 65000
+    authkey: Deardear
+header: !SequenceSteps
+  children:
+  - !VariableDeclaration
+    name: !DottedVariableName 'ramp_time'
+    expression: !Expression '80 ms'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.red.power'
+    expression: !Expression '0 dB'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.red.frequency'
+    expression: !Expression '-3.2 MHz'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.current'
+    expression: !Expression '3.6 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.blue.power'
+    expression: !Expression '100 %'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.blue.frequency'
+    expression: !Expression '+19 MHz'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.x_current'
+    expression: !Expression '0.47 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.y_current'
+    expression: !Expression '0 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'mot_loading.z_current'
+    expression: !Expression '0.3 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.x_current'
+    expression: !Expression '0.25 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.y_current'
+    expression: !Expression '0.14A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.z_current'
+    expression: !Expression '-0.12 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.frequency'
+    expression: !Expression '-1.29 MHz'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.power'
+    expression: !Expression '-36 dB'
+  - !VariableDeclaration
+    name: !DottedVariableName 'red_mot.current'
+    expression: !Expression '1 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'push_power'
+    expression: !Expression '0.5 mW'
+  - !VariableDeclaration
+    name: !DottedVariableName 'exposure'
+    expression: !Expression '30 ms'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.x_current'
+    expression: !Expression '0.25 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.y_current'
+    expression: !Expression '4.94 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.z_current'
+    expression: !Expression '0.183 A'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.power'
+    expression: !Expression '-25 dB'
+  - !VariableDeclaration
+    name: !DottedVariableName 'imaging.frequency'
+    expression: !Expression '-18.03 MHz'
+  - !VariableDeclaration
+    name: !DottedVariableName 'hwp_angle'
+    expression: !Expression '137.5'
+device_configurations:
+  Orca Quest: !OrcaQuestCameraConfiguration
+    remote_server: Elizabeth
+    roi: !RectangularROI
+      original_image_size: !tuple
+      - 4096
+      - 2304
+      x: 2016
+      width: 128
+      y: 1056
+      height: 128
+    camera_number: 0
+  Spincore PulseBlaster sequencer: !SpincoreSequencerConfiguration
+    remote_server: James
+    time_step: 50
+    channels: !tuple
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'NI6738 card'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 2D MOT (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'MOT camera'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 70
+      - 130
+      - 180
+      - 0.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 421 cell (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: test trigger
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 255
+      - 255
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: MOT coils
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 218
+      - 165
+      - 32
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 626 light (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 255
+      - 69
+      - 0
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: Push beam (shutter)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 421 cell vertical (shutter)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 421 cell horizontal (shutter)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 421 cell vertical (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Orca Quest'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: seashell
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 626 horizontal shutter
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 532 tweezers (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: limegreen
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 626 imaging (AOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: 421 cell vertical (EOM)
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: arranger trigger
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color:
+      - 50
+      - 205
+      - 50
+      - 1.0
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    - !DigitalChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !DigitalMapping
+        invert: false
+      default_value: false
+      color: null
+      delay: 0.0
+    board_number: 0
+  NI6738 card: !NI6738SequencerConfiguration
+    remote_server: James
+    time_step: 3000
+    channels: !tuple
+    - !AnalogChannelConfiguration
+      description: Tweezers power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: ''
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - 0.0
+          - -6.0
+        - !tuple
+          - 0.079
+          - -5.0
+        - !tuple
+          - 0.281
+          - -4.0
+        - !tuple
+          - 0.544
+          - -3.0
+        - !tuple
+          - 0.788
+          - -2.0
+        - !tuple
+          - 0.949
+          - -1.0
+        - !tuple
+          - 1.0
+          - 0.0
+      default_value: 0.0
+      color:
+      - 85
+      - 255
+      - 0
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: MOT coils current
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - 0.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 1.67
+      default_value: 0.0
+      color:
+      - 218
+      - 165
+      - 32
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 frequency (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -20.0
+          - -6.0
+        - !tuple
+          - 20.0
+          - 6.0
+      default_value: 0.0
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 cell frequency offset (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -40.0
+          - -1.0
+        - !tuple
+          - 40.0
+          - 1.0
+      default_value: 0.0
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Z offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -3.0
+          - -10.0
+        - !tuple
+          - 3.0
+          - 10.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -68.91
+          - 0.0
+        - !tuple
+          - -67.94
+          - 1.0
+        - !tuple
+          - -54.93
+          - 1.5
+        - !tuple
+          - -48.07
+          - 1.6
+        - !tuple
+          - -43.4
+          - 1.7
+        - !tuple
+          - -33.92
+          - 2.0
+        - !tuple
+          - -25.58
+          - 2.5
+        - !tuple
+          - -20.78
+          - 3.0
+        - !tuple
+          - -14.72
+          - 4.0
+        - !tuple
+          - -10.95
+          - 5.0
+        - !tuple
+          - -8.03
+          - 6.0
+        - !tuple
+          - -5.63
+          - 7.0
+        - !tuple
+          - -3.56
+          - 8.0
+        - !tuple
+          - -1.68
+          - 9.0
+        - !tuple
+          - 0.0
+          - 10.0
+      default_value: 0.0
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: X offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - 0.0
+          - 0.0
+        - !tuple
+          - 6.0
+          - 3.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Y offset
+      output_mapping: !CalibratedAnalogMapping
+        input_units: A
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - 0.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 5.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 cell power (AOM)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -33.63
+          - -0.35
+        - !tuple
+          - -33.63
+          - -0.3
+        - !tuple
+          - -33.63
+          - -0.275
+        - !tuple
+          - -30.62
+          - -0.25
+        - !tuple
+          - -23.46
+          - -0.225
+        - !tuple
+          - -17.66
+          - -0.2
+        - !tuple
+          - -13.33
+          - -0.175
+        - !tuple
+          - -9.96
+          - -0.15
+        - !tuple
+          - -5.18
+          - -0.1
+        - !tuple
+          - -2.0
+          - -0.05
+        - !tuple
+          - 0.0
+          - 0.0
+      default_value: 0.0
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 421 frequency offset (laser)
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -200.0
+          - 6.0
+        - !tuple
+          - 200.0
+          - -6.0
+      default_value: 0.0
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: Push power
+      output_mapping: !CalibratedAnalogMapping
+        input_units: mW
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - 0.0
+          - 0.05
+        - !tuple
+          - 0.7
+          - 1.3
+      default_value: 0.0
+      color:
+      - 85
+      - 85
+      - 255
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 imaging frequency
+      output_mapping: !CalibratedAnalogMapping
+        input_units: MHz
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -20.0
+          - -6.0
+        - !tuple
+          - 20.0
+          - 6.0
+      default_value: 0.0
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: 626 imaging power
+      output_mapping: !CalibratedAnalogMapping
+        input_units: dB
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -49.0
+          - 0.5
+        - !tuple
+          - -36.0
+          - 0.55
+        - !tuple
+          - -24.0
+          - 0.6
+        - !tuple
+          - -13.0
+          - 0.65
+        - !tuple
+          - -6.6
+          - 0.7
+        - !tuple
+          - -2.0
+          - 0.8
+        - !tuple
+          - -1.0
+          - 0.9
+        - !tuple
+          - 0.0
+          - 1.0
+      default_value: 0.0
+      color:
+      - 255
+      - 85
+      - 0
+      - 1.0
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    - !AnalogChannelConfiguration
+      description: !ChannelSpecialPurpose 'Unused'
+      output_mapping: !CalibratedAnalogMapping
+        input_units: V
+        output_units: V
+        measured_data_points:
+        - !tuple
+          - -10.0
+          - 0.0
+        - !tuple
+          - 10.0
+          - 0.0
+      default_value: 0.0
+      color: null
+      delay: 0.0
+    device_id: Dev1
+  MOT camera: !ImagingSourceCameraDMK33GR0134Configuration
+    remote_server: James
+    roi: !RectangularROI
+      original_image_size: !tuple
+      - 1280
+      - 960
+      x: 0
+      width: 1280
+      y: 0
+      height: 960
+    camera_name: DMK 33GR0134 6120749
+    format: Y800
+  Tweezer HWP: !ElliptecELL14RotationStageConfiguration
+    remote_server: James
+    serial_port: COM9
+    device_id: 0
+    position: !Expression 'hwp_angle'
+  Tweezer arranger: !AODTweezerArrangerConfiguration
+    configurations:
+      5x5 tweezers: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 87000478.21024618
+          - 85000271.89211321
+          - 83000065.57398024
+          - 80999859.25584728
+          - 78999652.93771431
+          phases_x: !tuple
+          - 3.0140665252571273
+          - 0.15670021515279853
+          - 3.582573917317276
+          - 3.866832086271485
+          - 4.151123810440873
+          amplitudes_x: !tuple
+          - 0.21087447994802075
+          - 0.16677693361259102
+          - 0.23211284006577318
+          - 0.178755638869972
+          - 0.20466425963079665
+          scale_x: 0.36895121628746536
+          frequencies_y: !tuple
+          - 73000033.58667281
+          - 75000239.90480576
+          - 77000446.22293873
+          - 79000652.5410717
+          - 81000858.85920466
+          phases_y: !tuple
+          - 0.12416168747281997
+          - 4.175029693857268
+          - 1.9428314981396246
+          - 2.8520253900626074
+          - 3.7613798233823386
+          amplitudes_y: !tuple
+          - 0.1966561299347932
+          - 0.17823375451682794
+          - 0.22507499257102787
+          - 0.16846646304397908
+          - 0.224765197169198
+          scale_y: 0.36895121628746536
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-19 17:31:58.399389
+        modification_date: 2023-08-16 16:25:35.203379
+      5x5 tweezers test: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 76500644.54424484
+          - 79250553.38041864
+          - 81500660.53789856
+          - 83750767.69537847
+          - 86000874.85285838
+          phases_x: !tuple
+          - 5.792317252825378
+          - 3.5509699966783717
+          - 1.1718192926433488
+          - 0.6161451970331018
+          - 1.8839483014569673
+          amplitudes_x: !tuple
+          - 0.20194370308777052
+          - 0.20175737215909098
+          - 0.1916929451823251
+          - 0.20995992742724456
+          - 0.194121990523302
+          scale_x: 0.36895121628746536
+          frequencies_y: !tuple
+          - 72000430.22928502
+          - 74250537.38676493
+          - 76500644.54424484
+          - 78750751.70172475
+          - 81000858.85920466
+          phases_y: !tuple
+          - 5.191890498541996
+          - 1.9042678973327238
+          - 4.899911944130832
+          - 4.753960234004982
+          - 4.607985663076193
+          amplitudes_y: !tuple
+          - 0.195143168612619
+          - 0.17559251458676628
+          - 0.22007461318974333
+          - 0.17912266243597763
+          - 0.22487474068057298
+          scale_y: 0.36895121628746536
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-24 16:54:19.183680
+        modification_date: 2023-07-26 22:25:13.915065
+      5x5 tweezers closer: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 77000446.22293873
+          - 78500850.86237781
+          - 80001255.50181688
+          - 81501660.14125594
+          - 83002064.78069502
+          phases_x: !tuple
+          - 2.1631264418378877
+          - 3.147874605360295
+          - 4.132627916734977
+          - 1.975785577320474
+          - 6.1021288466670685
+          amplitudes_x: !tuple
+          - 0.21059880430053432
+          - 0.1729027774150298
+          - 0.23978608956371672
+          - 0.13954149231847626
+          - 0.22087004405900632
+          scale_x: 0.36895121628746536
+          frequencies_y: !tuple
+          - 72000430.22928502
+          - 73500834.8687241
+          - 75001239.50816315
+          - 76501644.14760223
+          - 78002048.7870413
+          phases_y: !tuple
+          - 1.2516695088376677
+          - 3.637155430443011
+          - 6.022660427560523
+          - 5.266552868739657
+          - 4.510472476483206
+          amplitudes_y: !tuple
+          - 0.2086101471288607
+          - 0.17563829305493875
+          - 0.23623247641301542
+          - 0.1389992361866393
+          - 0.22473634764970168
+          scale_y: 0.36895121628746536
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-27 11:20:58.013505
+        modification_date: 2023-07-27 11:23:53.021980
+      25x1: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 90000287.88576692
+          - 89487491.36342698
+          - 88974694.84108706
+          - 88461898.31874712
+          - 87949101.79640718
+          - 87436305.27406725
+          - 86923508.75172731
+          - 86410712.22938737
+          - 85897915.70704745
+          - 85385119.18470751
+          - 84872322.66236757
+          - 84359526.14002763
+          - 83846729.6176877
+          - 83333933.09534776
+          - 82821136.57300782
+          - 82308340.0506679
+          - 81795543.52832796
+          - 81282747.00598802
+          - 80769950.48364809
+          - 80257153.96130815
+          - 79744357.43896821
+          - 79231560.91662829
+          - 78718764.39428835
+          - 78205967.8719484
+          - 77693171.34960847
+          phases_x: !tuple
+          - 0.8776616255071125
+          - 2.294197332491005
+          - 0.08401375827897661
+          - 4.446786103697148
+          - 1.6143480113162014
+          - 2.98332862080024
+          - 0.7098123220981218
+          - 5.737527701444855
+          - 2.366682854890222
+          - 2.990980160893524
+          - 0.004166319069891955
+          - 0.6492900488271012
+          - 0.6546491466258036
+          - 1.0917470742880508
+          - 5.623337055911607
+          - 4.291464005742269
+          - 5.239031539069471
+          - 0.13027605624121594
+          - 2.9573198677942028
+          - 1.0204730970515332
+          - 1.5400430100318518
+          - 3.290540381789274
+          - 1.271631731834392
+          - 3.369140352747779
+          - 3.6168846102670473
+          amplitudes_x: !tuple
+          - 0.04092908252036022
+          - 0.04058338504084551
+          - 0.039682487187656296
+          - 0.04050998011046437
+          - 0.04031521564249577
+          - 0.04151080734872956
+          - 0.037186721472096264
+          - 0.03988313884203881
+          - 0.04049886012610288
+          - 0.040272153468467006
+          - 0.04162146867409609
+          - 0.039789748649048814
+          - 0.039111667057347706
+          - 0.04126432728649475
+          - 0.04040901557746284
+          - 0.04098021419284501
+          - 0.04076187899146527
+          - 0.03957568387364206
+          - 0.03913048746500431
+          - 0.03986451955327594
+          - 0.03956935173101058
+          - 0.03945122131087046
+          - 0.0388023915490159
+          - 0.03890780256856077
+          - 0.03909009984942809
+          scale_x: 0.8250000000000001
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 5.6862487311456915
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-27 15:38:11.053992
+        modification_date: 2023-07-28 14:47:43.987200
+      10x1: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 88000081.56763396
+          - 86744579.7507549
+          - 85489077.93387583
+          - 84233576.11699678
+          - 82978074.30011772
+          - 81722572.48323865
+          - 80467070.66635959
+          - 79211568.84948052
+          - 77956067.03260146
+          - 76700565.2157224
+          phases_x: !tuple
+          - 2.7963166134487554
+          - 1.2236494749039932
+          - 5.76806346162477
+          - 3.194307972549717
+          - 3.4161421151804086
+          - 4.351871246969641
+          - 1.0747431842341908
+          - 2.7217667010711724
+          - 1.222427487839952
+          - 2.5878305341614554
+          amplitudes_x: !tuple
+          - 0.10432480545439518
+          - 0.11082695352003386
+          - 0.11290309565123817
+          - 0.10677009015932962
+          - 0.09443763530330511
+          - 0.0991919167367226
+          - 0.09307656962247211
+          - 0.09061715006220777
+          - 0.09414488999918566
+          - 0.09050569518809021
+          scale_x: 0.5217758139277826
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 2.2261095362286447
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-27 15:59:16.072661
+        modification_date: 2023-08-11 17:56:11.109486
+      20x1: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 92000494.20389989
+          - 91105849.19903782
+          - 90211204.19417575
+          - 89316559.18931368
+          - 88421914.18445161
+          - 87527269.17958954
+          - 86632624.17472747
+          - 85737979.1698654
+          - 84843334.16500333
+          - 83948689.16014126
+          - 83054044.15527919
+          - 82159399.1504171
+          - 81264754.14555503
+          - 80370109.14069296
+          - 79475464.1358309
+          - 78580819.13096882
+          - 77686174.12610675
+          - 76791529.12124468
+          - 75896884.11638261
+          - 75002239.11152054
+          phases_x: !tuple
+          - 6.153158433489283
+          - 1.463588354230786
+          - 3.9582019631686918
+          - 4.561906637480517
+          - 1.4941617041257291
+          - 3.640981938150847
+          - 6.177407219124907
+          - 3.9595585101483803
+          - 1.3088616859878337
+          - 2.022170215145032
+          - 0.8100655644744329
+          - 4.480701792241711
+          - 4.077033673632354
+          - 6.136630562871236
+          - 5.272146158182672
+          - 1.6277817136344865
+          - 0.3096043602897316
+          - 5.85379645605618
+          - 6.253877903600092
+          - 6.20595002750192
+          amplitudes_x: !tuple
+          - 0.05193303916487423
+          - 0.0527731476354307
+          - 0.051121454625953563
+          - 0.05012017673209939
+          - 0.050924087439165516
+          - 0.05046423211420219
+          - 0.05011232585379471
+          - 0.049867082000733004
+          - 0.05063743920688285
+          - 0.0494472726387063
+          - 0.050526726425302225
+          - 0.048464792450865685
+          - 0.049106746573249205
+          - 0.05130289782524831
+          - 0.04979900420860893
+          - 0.048369668495196305
+          - 0.04945481069460547
+          - 0.0489817386894225
+          - 0.04820775341235737
+          - 0.0480798851679104
+          scale_x: 0.7379024325749307
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 2.358059020155495
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-28 14:40:19.601867
+        modification_date: 2023-07-28 16:20:38.317578
+      15x1: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 87000478.21024618
+          - 86335741.97758329
+          - 85671005.74492042
+          - 85006269.51225753
+          - 84341533.27959466
+          - 83676797.04693177
+          - 83012060.8142689
+          - 82347324.58160602
+          - 81682588.34894313
+          - 81017852.11628026
+          - 80353115.88361737
+          - 79688379.6509545
+          - 79023643.41829161
+          - 78358907.18562874
+          - 77694170.95296586
+          phases_x: !tuple
+          - 2.1938009513525163
+          - 3.308411035581828
+          - 3.8577429192922486
+          - 3.2590153744190125
+          - 4.021648191713712
+          - 6.130207600308677
+          - 2.344484748225735
+          - 3.1974403842352848
+          - 1.2915252789886376
+          - 0.22997279026438394
+          - 5.933234368148692
+          - 3.265827640253227
+          - 5.991800729070309
+          - 3.6228063142800564
+          - 1.262840860441461
+          amplitudes_x: !tuple
+          - 0.06624735872821372
+          - 0.06740811323940905
+          - 0.0674210801970778
+          - 0.06424485389707268
+          - 0.06871997769597979
+          - 0.0670562191254785
+          - 0.06749383851666825
+          - 0.0636431094569258
+          - 0.06785726856450569
+          - 0.0665755029545446
+          - 0.06827440861244603
+          - 0.0640372622718435
+          - 0.0659281041685575
+          - 0.06952393417580642
+          - 0.06524643246666727
+          scale_x: 0.6390422521242238
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 4.073224473988317
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-28 16:26:08.771808
+        modification_date: 2023-07-28 16:47:34.364904
+      10x1 higher: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 88000081.56763396
+          - 86744579.7507549
+          - 85489077.93387583
+          - 84233576.11699678
+          - 82978074.30011772
+          - 81722572.48323865
+          - 80467070.66635959
+          - 79211568.84948052
+          - 77956067.03260146
+          - 76700565.2157224
+          phases_x: !tuple
+          - 1.711502719949303
+          - 3.5897279912203275
+          - 6.266422934447034
+          - 3.7878253078564503
+          - 6.242758291299347
+          - 6.000152837591319
+          - 1.9947536388920697
+          - 1.3300907084617914
+          - 0.004368597144689256
+          - 6.09394269622343
+          amplitudes_x: !tuple
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          scale_x: 0.5217758139277826
+          frequencies_y: !tuple
+          - 68000017.59301908
+          phases_y: !tuple
+          - 3.9004413046072406
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-07-28 19:15:08.045241
+        modification_date: 2023-07-28 19:28:51.551526
+      20x1 tweezers: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 92000494.20389989
+          - 91000890.8465121
+          - 90001287.48912431
+          - 89001684.13173652
+          - 88002080.77434874
+          - 87002477.41696094
+          - 86002874.05957316
+          - 85003270.70218536
+          - 84003667.34479758
+          - 83004063.9874098
+          - 82004460.630022
+          - 81004857.27263422
+          - 80005253.91524643
+          - 79005650.55785865
+          - 78006047.20047085
+          - 77006443.84308307
+          - 76006840.48569527
+          - 75007237.12830749
+          - 74007633.7709197
+          - 73008030.41353191
+          phases_x: !tuple
+          - 0.9829484630173022
+          - 1.7649007955723608
+          - 2.3173590094990177
+          - 3.861457357949804
+          - 5.180117166864743
+          - 0.22546720755516603
+          - 4.070402696730163
+          - 5.62568957863267
+          - 5.657519956709644
+          - 2.827521297815006
+          - 5.842663533790305
+          - 2.204048681345753
+          - 0.04434062400970262
+          - 1.0575308424303491
+          - 0.058889645486488895
+          - 6.191555770686363
+          - 4.374125662212381
+          - 1.9985212386323399
+          - 0.5747180357396156
+          - 5.605717440937911
+          amplitudes_x: !tuple
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          - 0.05
+          scale_x: 0.7379024325749307
+          frequencies_y: !tuple
+          - 70999827.26853985
+          phases_y: !tuple
+          - 3.878981267558334
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-08-01 18:54:01.589593
+        modification_date: 2023-08-02 13:48:49.136940
+      15x1 tweezers: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 90000287.88576692
+          - 88928713.08664721
+          - 87857138.2875275
+          - 86785563.48840779
+          - 85713988.6892881
+          - 84642413.89016838
+          - 83570839.09104867
+          - 82499264.29192896
+          - 81427689.49280925
+          - 80356114.69368954
+          - 79284539.89456983
+          - 78212965.09545012
+          - 77141390.2963304
+          - 76069815.49721071
+          - 74998240.698091
+          phases_x: !tuple
+          - 1.804935084940931
+          - 0.5301677633727778
+          - 4.260345553895335
+          - 4.149046259205909
+          - 4.638851869008278
+          - 0.8298659259516414
+          - 0.7973547805954527
+          - 2.620101903043237
+          - 0.8387697151916127
+          - 0.3641492023910679
+          - 1.9068611286496315
+          - 5.819601465632828
+          - 0.8690573769852519
+          - 3.8131776001652664
+          - 0.7385382885356719
+          amplitudes_x: !tuple
+          - 0.0734727495798646
+          - 0.06441994435283452
+          - 0.06177234398206409
+          - 0.056774815194204825
+          - 0.06416340514840685
+          - 0.058573543508832114
+          - 0.06306768798404673
+          - 0.07097712421327594
+          - 0.059048606646357735
+          - 0.05718859020158858
+          - 0.05521943137592031
+          - 0.06613704618950744
+          - 0.06770848195096094
+          - 0.07953093649978571
+          - 0.09179339154031575
+          scale_x: 0.6390422521242238
+          frequencies_y: !tuple
+          - 70999827.26853985
+          phases_y: !tuple
+          - 3.7204366266194477
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-08-02 13:51:21.713418
+        modification_date: 2023-08-02 13:52:47.415027
+      10x1 tweezers 2: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 86739581.73396796
+          - 85485079.52044629
+          - 84230577.30692461
+          - 82976075.09340294
+          - 81721572.87988126
+          - 80467070.66635959
+          - 79212568.45283791
+          - 77958066.23931624
+          - 76703564.02579457
+          - 75449061.81227289
+          phases_x: !tuple
+          - 1.0752399984101224
+          - 1.8077415173431817
+          - 3.3405468775382183
+          - 6.0016058390365705
+          - 1.0253795637193661
+          - 5.922231613312978
+          - 0.7709844267190098
+          - 5.2453590320698344
+          - 2.772868466114557
+          - 1.4363721234510747
+          amplitudes_x: !tuple
+          - 0.10127727484249846
+          - 0.0975891967085312
+          - 0.10275617280502937
+          - 0.09259362300478251
+          - 0.09367541716145218
+          - 0.09396384848865427
+          - 0.08832695862368027
+          - 0.09485529807564687
+          - 0.10274159557826723
+          - 0.12699428710656077
+          scale_x: 0.5217758139277826
+          frequencies_y: !tuple
+          - 70999827.26853985
+          phases_y: !tuple
+          - 2.3969453902363638
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-08-02 14:50:16.637075
+        modification_date: 2023-08-02 15:01:16.514743
+      10x1 tweezers 3: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 89249585.7643687
+          - 87994083.94748963
+          - 86738582.13061057
+          - 85483080.3137315
+          - 84227578.49685244
+          - 82972076.67997338
+          - 81716574.86309431
+          - 80461073.04621527
+          - 79205571.2293362
+          - 77950069.41245714
+          phases_x: !tuple
+          - 5.369550792346297
+          - 0.47173573208040587
+          - 0.722710711840266
+          - 1.6379116022144538
+          - 5.491370316307762
+          - 0.5446423652117676
+          - 4.576167046762204
+          - 3.6755937164621995
+          - 1.6472781184955778
+          - 5.102458418397906
+          amplitudes_x: !tuple
+          - 0.09858286366290026
+          - 0.09696900617536698
+          - 0.09812340553854784
+          - 0.09642095937471111
+          - 0.10063881163600923
+          - 0.10078926868849625
+          - 0.09922793022549864
+          - 0.10672410585821228
+          - 0.10290085600426993
+          - 0.09920572840017265
+          scale_x: 0.5217758139277826
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 2.3577506182921972
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-08-02 15:12:05.154112
+        modification_date: 2023-08-02 15:12:47.352114
+      1x10 bis: !ConfigurationInfo
+        configuration: !AODTweezerConfiguration
+          frequencies_x: !tuple
+          - 90520081.63160858
+          - 88704801.93459235
+          - 86889522.23757613
+          - 85074242.5405599
+          - 83258962.84354368
+          - 81443683.14652745
+          - 79628403.44951123
+          - 77813123.752495
+          - 75997844.05547878
+          - 74182564.35846256
+          phases_x: !tuple
+          - 2.3190885476975995
+          - 5.2278844082836695
+          - 2.6497460367897037
+          - 1.2022925573639105
+          - 4.684930403606125
+          - 5.471511419063349
+          - 2.4953651192490995
+          - 2.8601592136067673
+          - 2.564118629432581
+          - 3.3993413019352245
+          amplitudes_x: !tuple
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          - 0.1
+          scale_x: 0.5217758139277826
+          frequencies_y: !tuple
+          - 75000239.90480576
+          phases_y: !tuple
+          - 3.879322757282447
+          amplitudes_y: !tuple
+          - 1.0
+          scale_y: 0.165
+          sampling_rate: 625000000.0
+          number_samples: 625248
+        creation_date: 2023-08-16 14:27:37.259264
+        modification_date: 2023-08-16 14:43:37.878602
+    remote_server: Elizabeth
+    awg_board_id: /dev/spcm0
+    awg_max_power_x: -4.0
+    awg_max_power_y: -4.0
+optimization_configurations:
+  MOT through objective: !OptimizerConfiguration
+    description: 'Optimize MOT fluorescence
+
+
+      Computes the fluorescence with the Orca Quest camera through the microscope.
+
+      It requires two images: a "picture" to which it substracts "background".'
+    script_path: !Path 'poetry run python optimize_mot.py'
+    parameters: ''
+    working_directory: !Path 'C:\Users\James\Desktop\caqtus\analyza\analyza\optimization_scripts'
+  tweezers imaging: !OptimizerConfiguration
+    description: 'Optimize tweezers signal over noise ratio
+
+      It requires two images: a "picture" to which it substracts "background".'
+    script_path: !Path 'poetry run python optimize_tweezer_imaging.py'
+    parameters: 2023.03_March.25.tweezer_reference
+    working_directory: !Path 'C:\Users\James\Desktop\caqtus\analyza\analyza\optimization_scripts'
+mock_experiment: false

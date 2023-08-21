@@ -8,7 +8,8 @@ from experiment_control.compute_device_parameters.compile_lane import (
     number_ticks,
     get_step_bounds,
 )
-from sequence.configuration import ShotConfiguration, DigitalLane
+from sequence.configuration import ShotConfiguration
+from digital_lane.configuration import DigitalLane
 from sequencer.channel import Concatenate, Repeat, ChannelPattern
 from variable.namespace import VariableNamespace
 
