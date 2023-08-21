@@ -109,6 +109,12 @@ class ChannelInstruction(
 
         raise NotImplementedError
 
+    @abstractmethod
+    def compact_length_repr(self) -> str:
+        """Return a compact representation of the length of the instruction."""
+
+        raise NotImplementedError
+
 
 @define(init=False, eq=False)
 class ChannelPattern(ChannelInstruction[ChannelType]):
@@ -153,6 +159,9 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
 
     def apply(self, fun: Callable[[ChannelType], ChannelType]):
         return type(self)(fun(self.values))
+
+    def compact_length_repr(self) -> str:
+        return f"{len(self)}"
 
 
 @define(init=False, eq=False)
@@ -243,6 +252,12 @@ class Concatenate(ChannelInstruction[ChannelType]):
 
     def apply(self, fun: Callable[[ChannelType], ChannelType]):
         return type(self)([instruction.apply(fun) for instruction in self.instructions])
+
+    def compact_length_repr(self) -> str:
+        inner = " + ".join(
+            instruction.compact_length_repr() for instruction in self.instructions
+        )
+        return f"({inner})"
 
 
 @define(init=False, eq=False)
@@ -339,3 +354,6 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     def apply(self, fun: Callable[[ChannelType], ChannelType]):
         return type(self)(self.instruction.apply(fun), self.number_repetitions)
+
+    def compact_length_repr(self) -> str:
+        return f"{self.instruction.compact_length_repr()} * {self.number_repetitions}"

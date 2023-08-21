@@ -18,6 +18,7 @@ logger.setLevel(logging.DEBUG)
 ChannelLabel = NewType("ChannelLabel", int)
 
 
+@define(init=False, eq=False)
 class SequencerInstruction(
     Splittable["SequencerInstruction"],
     ABC,
@@ -286,6 +287,7 @@ class Concatenate(SequencerInstruction):
     """
 
     _instructions: tuple[SequencerInstruction, ...]
+    _instruction_starts: np.ndarray
 
     def __init__(
         self,
