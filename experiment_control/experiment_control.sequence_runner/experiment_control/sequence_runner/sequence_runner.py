@@ -16,15 +16,13 @@ from typing import (
 )
 
 import numpy as np
-from device.runtime import RuntimeDevice
-from sequencer.runtime import Sequencer
-from variable.namespace import VariableNamespace
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.runtime import CameraTimeoutError
 from data_types import Data, DataLabel
 from device.configuration import DeviceName, DeviceParameter
-from duration_timer import DurationTimer
+from device.runtime import RuntimeDevice
+from duration_timer import DurationTimer, DurationTimerLog
 from experiment.configuration import (
     CameraConfiguration,
     ExperimentConfig,
@@ -55,8 +53,10 @@ from sequence.configuration import (
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
 from sequencer.configuration import SequencerConfiguration
+from sequencer.runtime import Sequencer
 from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
+from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
 from .device_servers import (
     create_device_servers,
@@ -83,8 +83,6 @@ NUMBER_WORKERS = 4
 PARAMETER_QUEUE_SIZE = 10
 DEVICE_PARAMETER_QUEUE_SIZE = 8
 STORAGE_QUEUE_SIZE = 10
-
-NUMBER_WORKERS = 4
 
 
 class ShotParameters(NamedTuple):
@@ -139,6 +137,7 @@ class SequenceRunnerThread(Thread):
         must_interrupt: Event,
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
+        self._session_maker = session_maker
         self._session = session_maker()
         self._save_session = session_maker()
         self._sequence = Sequence(sequence_path)
@@ -171,9 +170,7 @@ class SequenceRunnerThread(Thread):
         self._computation_executor = ProcessPoolExecutor()
 
         with self._session.activate() as session:
-            self._experiment_config = session.experiment_configs[
-                experiment_config_name
-            ]
+            self._experiment_config = session.experiment_configs[experiment_config_name]
             self._experiment_config_yaml = self._experiment_config.to_yaml()
             self._sequence_config = self._sequence.get_config(session)
             self._sequence.set_experiment_config(experiment_config_name, session)
@@ -457,8 +454,10 @@ class SequenceRunnerThread(Thread):
     async def compute_shot_parameters(
         self, shot_name: str, context: StepContext, executor: Executor
     ) -> ShotDeviceParameters:
-        with DurationTimer() as timer:
-            # For some reasons, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
+        with DurationTimerLog(
+            logger, "Shot parameters computation", display_start=True
+        ):
+            # For some reason, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
             # the yaml representation of the configuration instead.
             compute_change_params_task = async_run_in_executor(
                 executor,
@@ -478,15 +477,12 @@ class SequenceRunnerThread(Thread):
             change_params = await compute_change_params_task
             shot_params = await compute_static_params_task
 
-        logger.info(
-            "Shot parameters computation duration:" f" {timer.duration_in_ms:.1f} ms"
-        )
-        return ShotDeviceParameters(
-            shot_name=shot_name,
-            step_context=context,
-            change_parameters=change_params,
-            static_parameters=shot_params,
-        )
+            return ShotDeviceParameters(
+                shot_name=shot_name,
+                step_context=context,
+                change_parameters=change_params,
+                static_parameters=shot_params,
+            )
 
     @run_step.register
     async def _(self, loop: UserInputLoop, context: StepContext) -> StepContext:
@@ -576,16 +572,12 @@ class SequenceRunnerThread(Thread):
         change_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
         device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
     ) -> dict[DeviceName, Any]:
-        with DurationTimer() as timer:
+        with DurationTimerLog(logger, "Updating devices", display_start=True):
             await self.update_device_parameters(change_parameters)
             await self.update_device_parameters(device_parameters)
-        logger.info(
-            "Device parameters update duration:" f" {timer.duration_in_ms:.1f} ms"
-        )
 
-        with DurationTimer() as timer:
+        with DurationTimerLog(logger, "Running shot", display_start=True):
             data = await self.run_shot()
-        logger.info("Shot execution duration:" f" {timer.duration_in_ms:.1f} ms")
         return data
 
     async def update_device_parameters(
@@ -614,31 +606,28 @@ class SequenceRunnerThread(Thread):
 
         data: dict[DeviceName, dict[DataLabel, Data]] = {}
 
-        if self._experiment_config.mock_experiment:
-            await asyncio.sleep(0.5)
-            return data
-
         sequencers = self.get_sequencers_in_use()
         cameras = self.get_cameras_in_use()
         tweezer_arrangers = self.get_tweezer_arrangers_in_use()
 
-        for tweezer_arranger in tweezer_arrangers.values():
-            tweezer_arranger.start_sequence()
-
-        for sequencer in sequencers.values():
-            sequencer.start_sequence()
-
-        for camera in cameras.values():
-            camera.start_acquisition()
-
-        camera_tasks = {}
-        async with asyncio.TaskGroup() as run_group:
-            for camera_name, camera in cameras.items():
-                camera_tasks[camera_name] = run_group.create_task(
-                    self.fetch_and_analyze_images(camera_name, camera)
-                )
+        with DurationTimerLog(logger, "Starting devices", display_start=True):
+            for tweezer_arrangers in tweezer_arrangers.values():
+                tweezer_arrangers.start_sequence()
+            for camera in cameras.values():
+                camera.start_acquisition()
+            # we need the sequencers to be correctly triggered, so we start them in their priority order
             for sequencer in sequencers.values():
-                run_group.create_task(wait_on_sequencer(sequencer))
+                sequencer.start_sequence()
+
+        with DurationTimerLog(logger, "Doing shot", display_start=True):
+            camera_tasks = {}
+            async with asyncio.TaskGroup() as run_group:
+                for camera_name, camera in cameras.items():
+                    camera_tasks[camera_name] = run_group.create_task(
+                        self.fetch_and_analyze_images(camera_name, camera)
+                    )
+                for sequencer in sequencers.values():
+                    run_group.create_task(wait_on_sequencer(sequencer))
 
         for camera_name, camera_task in camera_tasks.items():
             data |= camera_task.result()
@@ -690,7 +679,8 @@ class SequenceRunnerThread(Thread):
         self,
         shot_data: ShotMetadata,
     ) -> Shot:
-        return await asyncio.to_thread(self.save_shot, shot_data)
+        with DurationTimerLog(logger, "Saving shot", display_start=True):
+            return await asyncio.to_thread(self.save_shot, shot_data)
 
     def save_shot(
         self,
