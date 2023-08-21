@@ -287,9 +287,20 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if sequence_path:
             with self._experiment_session_maker() as session:
                 current_experiment_config = session.experiment_configs.get_current()
-            self.experiment_manager.start_sequence(
-                current_experiment_config, sequence_path, self._experiment_session_maker
-            )
+                if current_experiment_config is None:
+                    logger.error(
+                        "No experiment config is currently set. Please set one before starting a sequence."
+                    )
+                else:
+                    started = self.experiment_manager.start_sequence(
+                        current_experiment_config,
+                        sequence_path,
+                        self._experiment_session_maker,
+                    )
+                    if not started:
+                        logger.error(
+                            "A sequence is already running. Please interrupt it before starting a new one."
+                        )
 
     def create_new_folder(self, index: QModelIndex):
         if index.isValid():
