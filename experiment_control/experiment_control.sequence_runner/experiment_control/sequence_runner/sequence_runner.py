@@ -194,8 +194,14 @@ class SequenceRunnerThread(Thread):
             logger.info("Sequence finished")
 
     def _run(self):
-        with self._shutdown_stack, self._computation_executor:
-            asyncio.run(self.async_run())
+        try:
+            with self._shutdown_stack:
+                asyncio.run(self.async_run())
+                logger.debug("Finished async run")
+            logger.debug("Closed devices")
+        finally:
+            self._computation_executor.shutdown(wait=False)
+        logger.debug("Closed subprocesses")
 
     async def async_run(self):
         await self.prepare()
@@ -845,6 +851,7 @@ def async_run_in_executor(
 
 async def wait_on_sequencer(sequencer: Sequencer):
     """Wait for a sequencer to finish."""
+
     while not sequencer.has_sequence_finished():
         await asyncio.sleep(10e-3)
 
