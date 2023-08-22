@@ -13,6 +13,12 @@ class Trigger(ABC):
     def is_software_trigger(self) -> bool:
         return isinstance(self, SoftwareTrigger)
 
+    def is_external_trigger_start(self) -> bool:
+        return isinstance(self, ExternalTriggerStart)
+
+    def is_external_clock(self) -> bool:
+        return isinstance(self, ExternalClock)
+
     @property
     @abstractmethod
     def priority(self) -> int:
