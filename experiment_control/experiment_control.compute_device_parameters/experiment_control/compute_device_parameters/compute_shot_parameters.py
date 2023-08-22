@@ -264,9 +264,20 @@ def compile_clock_requirements(
         )
     ]
 
+    pulse_streamer = DeviceName("Swabian pulse streamer")
+    pulse_streamer_clock_instructions = [
+        ClockInstruction(
+            start=step_bounds[0],
+            stop=step_bounds[-1],
+            time_step=1000,
+            order=ClockInstruction.StepInstruction.TriggerStart,
+        )
+    ]
+
     return {
         sequencer: sequencer_clock_instructions,
         arranger: arranger_clock_instructions,
+        pulse_streamer: pulse_streamer_clock_instructions,
     }
 
 

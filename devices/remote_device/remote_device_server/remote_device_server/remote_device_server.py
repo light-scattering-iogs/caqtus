@@ -19,6 +19,14 @@ try:
 except Exception:
     logger.info("Did not import ElliptecELL14RotationStage")
 
+try:
+    from swabian_pulse_streamer.runtime import SwabianPulseStreamer
+
+    imported_devices["SwabianPulseStreamer"] = SwabianPulseStreamer
+    logger.info("SwabianPulseStreamer imported")
+except Exception:
+    logger.info("Did not import SwabianPulseStreamer")
+
 
 try:
     from orca_quest.runtime import OrcaQuestCamera

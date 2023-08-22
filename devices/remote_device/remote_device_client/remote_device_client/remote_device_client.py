@@ -17,6 +17,7 @@ REGISTERED_DEVICE_TYPES: list[str] = [
     "ElliptecELL14RotationStage",
     "AtomDetector",
     "AODTweezerArranger",
+    "SwabianPulseStreamer",
 ]
 
 for device_type in REGISTERED_DEVICE_TYPES:

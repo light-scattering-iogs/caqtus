@@ -22,6 +22,7 @@ from sequencer.runtime import (
     Trigger,
     ExternalTriggerStart,
     TriggerEdge,
+    SoftwareTrigger,
 )
 
 
@@ -29,8 +30,9 @@ class SwabianPulseStreamer(Sequencer):
     # only support digital channels at the moment
     channel_number: ClassVar[int] = 8
     ip_address: str
-    trigger = Field(
-        default_factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING)
+    trigger: Trigger = Field(
+        default_factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
+        allow_mutation=False,
     )
 
     # only 1 ns time step supported
@@ -41,8 +43,8 @@ class SwabianPulseStreamer(Sequencer):
 
     @validator("trigger")
     def _validate_trigger(cls, trigger: Trigger) -> Trigger:
-        if not trigger.is_software_trigger() or isinstance(
-            trigger, ExternalTriggerStart
+        if not (
+            trigger.is_software_trigger() or isinstance(trigger, ExternalTriggerStart)
         ):
             raise ValueError("Only supports software trigger.")
         return trigger
@@ -52,6 +54,8 @@ class SwabianPulseStreamer(Sequencer):
 
         # There is no close method for the PulseStreamer class
         self._pulse_streamer = PulseStreamer(self.ip_address)
+
+    def setup_trigger(self) -> None:
         if self.trigger.is_software_trigger():
             start = TriggerStart.SOFTWARE
         elif isinstance(self.trigger, ExternalTriggerStart):
@@ -69,6 +73,7 @@ class SwabianPulseStreamer(Sequencer):
         super().update_parameters(sequence=sequence, **kwargs)
         self._sequence = self._construct_pulse_streamer_sequence(sequence)
         self._set_sequence_programmed()
+        self.setup_trigger()
 
     def start_sequence(self) -> None:
         super().start_sequence()
