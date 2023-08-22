@@ -8,11 +8,12 @@ from device.configuration import DeviceConfiguration, DeviceName
 from experiment.configuration import (
     ExperimentConfig,
     ElliptecELL14RotationStageConfiguration,
+    SwabianPulseStreamerConfiguration,
 )
 from .devices_editor_editor_ui import Ui_DevicesEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
-DEVICE_TYPES = ["ElliptecELL14RotationStage"]
+DEVICE_TYPES = ["ElliptecELL14RotationStage", "SwabianPulseStreamer"]
 
 
 class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
@@ -52,6 +53,11 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
     ) -> DeviceConfiguration:
         if device_type == "ElliptecELL14RotationStage":
             config = ElliptecELL14RotationStageConfiguration.get_default_config(
+                device_name, remote_server
+            )
+            return config
+        elif device_type == "SwabianPulseStreamer":
+            config = SwabianPulseStreamerConfiguration.get_default_config(
                 device_name, remote_server
             )
             return config

@@ -1,10 +1,11 @@
-from typing import ClassVar, Any, Type
+from typing import ClassVar, Any, Type, Self
 
 from device.configuration import DeviceParameter
 from sequencer.configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
+    DigitalMapping,
 )
 
 
@@ -28,3 +29,16 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
             "time_step": self.time_step,
         }
         return super().get_device_init_args(*args, **kwargs) | extra
+
+    @classmethod
+    def get_default_config(cls, device_name: str, remote_server: str) -> Self:
+        return cls(
+            device_name=device_name,
+            remote_server=remote_server,
+            ip_address="",
+            time_step=1,
+            channels=tuple(
+                DigitalChannelConfiguration(output_mapping=DigitalMapping())
+                for _ in range(cls.number_channels)
+            ),
+        )
