@@ -42,7 +42,7 @@ class ChannelInstruction(
     def __mul__(self, other: int) -> "ChannelInstruction[ChannelType]":
         multiplier = int(other)
         if multiplier < 0:
-            raise ValueError("Multiplier must be positive integer.")
+            raise ValueError(f"Multiplier must be positive integer, got {multiplier}.")
         elif multiplier == 0:
             return self.empty_like(self)
         elif multiplier == 1:

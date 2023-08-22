@@ -286,35 +286,26 @@ def compile_clock_instruction(
     instructions = []
 
     for clock_instruction in clock_requirements:
+        clock_start = start_tick(clock_instruction.start, clock_instruction.time_step)
+        clock_stop = stop_tick(clock_instruction.stop, clock_instruction.time_step)
         multiplier, high, low = high_low_clicks(clock_instruction.time_step, time_step)
         clock_single_pulse = (
             ChannelPattern([True]) * high + ChannelPattern([False]) * low
         )
-        clock_pulse_length = high + low
+        clock_pulse_length = len(clock_single_pulse)
 
-        clock_rep = number_ticks(
-            clock_instruction.start, clock_instruction.stop, clock_instruction.time_step
-        )
-        total_ticks = number_ticks(
-            clock_instruction.start, clock_instruction.stop, time_step
-        )
-        logger.debug(f"{clock_rep=}")
+        clock_rep = clock_stop - clock_start
         if clock_instruction.order == ClockInstruction.StepInstruction.TriggerStart:
             if clock_rep == 0:
-                pattern = ChannelPattern([False]) * total_ticks
+                pattern = ChannelPattern.empty(bool)
             else:
                 pattern = clock_single_pulse + ChannelPattern([False]) * (
-                    total_ticks - clock_pulse_length
+                    (clock_rep - 1) * clock_pulse_length
                 )
         elif clock_instruction.order == ClockInstruction.StepInstruction.Clock:
-            if clock_rep == 0:
-                pattern = ChannelPattern([False]) * total_ticks
-            else:
-                pattern = clock_single_pulse * clock_rep + ChannelPattern([False]) * (
-                    total_ticks - clock_pulse_length * clock_rep
-                )
+            pattern = clock_single_pulse * clock_rep
         elif clock_instruction.order == ClockInstruction.StepInstruction.NoClock:
-            pattern = ChannelPattern([False]) * total_ticks
+            pattern = ChannelPattern([False]) * clock_pulse_length * clock_rep
         else:
             raise NotImplementedError(
                 f"Order {clock_instruction.order} not implemented"
