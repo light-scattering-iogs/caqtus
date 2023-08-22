@@ -23,8 +23,14 @@ from spincore_sequencer.configuration_editor import (
     SpincorePulseBlasterDeviceConfigEditor,
 )
 from tweezer_arranger.configuration import TweezerArrangerConfiguration
-from tweezer_arranger.configuration_editor.arranger_editor import TweezerArrangerConfigEditor
+from tweezer_arranger.configuration_editor.arranger_editor import (
+    TweezerArrangerConfigEditor,
+)
 from yaml_clipboard_mixin import YAMLClipboardMixin
+from swabian_pulse_streamer.configuration_editor import (
+    SwabianPulseStreamerConfiguration,
+    SwabianPulseStreamerConfigurationEditor,
+)
 
 
 class ConfigSettingsEditor(QWidget, QABC):
@@ -116,6 +122,10 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
                 )
             case NI6738SequencerConfiguration():
                 return NI6738AnalogCardConfigEditor(device_config, remote_servers)
+            case SwabianPulseStreamerConfiguration():
+                return SwabianPulseStreamerConfigurationEditor(
+                    device_config, remote_servers
+                )
             case ElliptecELL14RotationStageConfiguration():
                 return ElliptecELL14RotationStageConfigEditor(
                     device_config, remote_servers

@@ -48,6 +48,7 @@ camera-lane-model = {path = "../devices/cameras/camera/camera_lane/camera_lane.m
 atom-detector-lane-model = {path = "../devices/atom_detector/atom_detector_lane/atom_detector_lane.model", develop = true}
 tweezer-arranger-lane-model = {path = "../devices/tweezer_arranger/tweezer_arranger_lane/tweezer_arranger_lane.model", develop = true}
 waiting-widget = {path = "../common/widgets/waiting_widget", develop = true}
+swabian-pulse-streamer-configuration-editor = {path = "../devices/swabian_pulse_streamer/swabian_pulse_streamer.configuration_editor", develop = true}
 
 
 

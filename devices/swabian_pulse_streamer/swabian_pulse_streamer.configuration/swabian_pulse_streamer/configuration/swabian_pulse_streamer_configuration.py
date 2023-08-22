@@ -6,6 +6,7 @@ from sequencer.configuration import (
     ChannelConfiguration,
     DigitalChannelConfiguration,
     DigitalMapping,
+    ChannelName,
 )
 
 
@@ -38,7 +39,9 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
             ip_address="",
             time_step=1,
             channels=tuple(
-                DigitalChannelConfiguration(output_mapping=DigitalMapping())
+                DigitalChannelConfiguration(
+                    output_mapping=DigitalMapping(), description=ChannelName("")
+                )
                 for _ in range(cls.number_channels)
             ),
         )

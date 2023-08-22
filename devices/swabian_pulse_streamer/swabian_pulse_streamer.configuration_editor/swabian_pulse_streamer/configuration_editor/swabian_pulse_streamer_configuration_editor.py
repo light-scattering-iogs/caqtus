@@ -5,7 +5,7 @@ from sequencer.configuration_editor import SequencerChannelView
 from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
 
 
-class SpincorePulseBlasterDeviceConfigEditor(
+class SwabianPulseStreamerConfigurationEditor(
     DeviceConfigEditor[SwabianPulseStreamerConfiguration]
 ):
     def __init__(
