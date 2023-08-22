@@ -1,5 +1,5 @@
 from functools import singledispatchmethod
-from typing import Optional
+from typing import Optional, ClassVar
 
 from pulsestreamer import (
     PulseStreamer,
@@ -25,7 +25,7 @@ from sequencer.runtime import (
 
 class SwabianPulseStreamer(Sequencer):
     # only support digital channels at the moment
-    channel_number = 8
+    channel_number: ClassVar[int] = 8
     ip_address: str
 
     # only 1 ns time step supported
@@ -100,7 +100,12 @@ class SwabianPulseStreamer(Sequencer):
             for channel in range(self.channel_number):
                 seq.setDigital(
                     channel,
-                    [(repeat.number_repetitions, channel_values[ChannelLabel(channel)])],
+                    [
+                        (
+                            repeat.number_repetitions,
+                            channel_values[ChannelLabel(channel)],
+                        )
+                    ],
                 )
             return seq
         else:
