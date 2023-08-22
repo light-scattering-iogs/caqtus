@@ -1,4 +1,4 @@
-from typing import ClassVar, Any
+from typing import ClassVar, Any, Type
 
 from device.configuration import DeviceParameter
 from sequencer.configuration import (
@@ -16,7 +16,7 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
     time_step: int
 
     @classmethod
-    def channel_types(cls) -> tuple[type[ChannelConfiguration], ...]:
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
         return (DigitalChannelConfiguration,) * cls.number_channels
 
     def get_device_type(self) -> str:
