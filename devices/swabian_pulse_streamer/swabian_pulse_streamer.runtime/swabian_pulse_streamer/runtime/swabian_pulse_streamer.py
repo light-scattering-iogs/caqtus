@@ -20,6 +20,8 @@ from sequencer.runtime import (
     Sequencer,
     SequenceNotConfiguredError,
     Trigger,
+    ExternalTriggerStart,
+    TriggerEdge,
 )
 
 
@@ -27,6 +29,9 @@ class SwabianPulseStreamer(Sequencer):
     # only support digital channels at the moment
     channel_number: ClassVar[int] = 8
     ip_address: str
+    trigger = Field(
+        default_factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING)
+    )
 
     # only 1 ns time step supported
     time_step: int = Field(ge=1, le=1, allow_mutation=False)
@@ -36,7 +41,9 @@ class SwabianPulseStreamer(Sequencer):
 
     @validator("trigger")
     def _validate_trigger(cls, trigger: Trigger) -> Trigger:
-        if not trigger.is_software_trigger():
+        if not trigger.is_software_trigger() or isinstance(
+            trigger, ExternalTriggerStart
+        ):
             raise ValueError("Only supports software trigger.")
         return trigger
 
@@ -46,9 +53,17 @@ class SwabianPulseStreamer(Sequencer):
         # There is no close method for the PulseStreamer class
         self._pulse_streamer = PulseStreamer(self.ip_address)
         if self.trigger.is_software_trigger():
-            self._pulse_streamer.setTrigger(TriggerStart.SOFTWARE, TriggerRearm.MANUAL)
+            start = TriggerStart.SOFTWARE
+        elif isinstance(self.trigger, ExternalTriggerStart):
+            if self.trigger.edge == TriggerEdge.RISING:
+                start = TriggerStart.HARDWARE_RISING
+            elif self.trigger.edge == TriggerEdge.FALLING:
+                start = TriggerStart.HARDWARE_FALLING
+            else:
+                raise ValueError("Only supports rising or falling edge.")
         else:
             raise ValueError("Only supports software trigger.")
+        self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         super().update_parameters(sequence=sequence, **kwargs)
