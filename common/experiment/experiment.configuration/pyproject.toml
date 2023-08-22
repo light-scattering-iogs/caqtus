@@ -36,6 +36,7 @@ imaging-source-configuration = { path = "../../../devices/cameras/imaging_source
 orca-quest-configuration = { path = "../../../devices/cameras/orca_quest/orca_quest.configuration", develop = true }
 aod-tweezer-arranger-configuration = {path = "../../../devices/tweezer_arranger/aod_tweezer_arranger.configuration", develop = true}
 ni6738-analog-card-configuration = {path = "../../../devices/ni6738_analog_card/ni6738_analog_card.configuration", develop = true}
+swabian-pulse-streamer-configuration = {path = "../../../devices/swabian_pulse_streamer/swabian_pulse_streamer.configuration", develop = true}
 
 
 [build-system]

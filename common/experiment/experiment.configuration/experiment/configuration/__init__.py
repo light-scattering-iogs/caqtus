@@ -10,6 +10,7 @@ from orca_quest.configuration import OrcaQuestCameraConfiguration
 from sequencer.configuration import ChannelSpecialPurpose
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
@@ -27,6 +28,7 @@ device_configs = [
     AtomDetectorConfiguration,
     TweezerArrangerConfiguration,
     AODTweezerArrangerConfiguration,
+    SwabianPulseStreamerConfiguration,
 ]
 
 __all__ = [
