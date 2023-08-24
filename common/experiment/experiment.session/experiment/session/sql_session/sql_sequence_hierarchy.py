@@ -1,3 +1,4 @@
+import difflib
 from collections.abc import Mapping, Iterable
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
@@ -277,17 +278,18 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         try:
             path = self._query_path_model(sequence.path)
         except PathNotFoundError:
-            raise SequenceNotFoundError(
-                f"Could not find sequence '{sequence}' in database"
-            )
+            message = f"Could not find sequence '{sequence}' in database"
+            names = self.get_all_sequence_names()
+            closest_names = difflib.get_close_matches(str(sequence.path), names, n=1)
+            if closest_names:
+                message += f"\nDid you mean {closest_names[0]}?"
+            raise SequenceNotFoundError(message)
         query_sequence = select(SequenceModel).where(SequenceModel.path == path)
         result = self._get_sql_session().execute(query_sequence)
         if sequence := result.scalar():
             return sequence
         else:
-            raise SequenceNotFoundError(
-                f"Could not find sequence '{sequence}' in database"
-            )
+            raise SequenceNotFoundError(f"Path '{sequence}' is not a sequence")
 
     def _query_path_model(self, path: SequencePath) -> SequencePathModel:
         stmt = select(SequencePathModel).where(
