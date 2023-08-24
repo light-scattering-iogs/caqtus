@@ -1,3 +1,4 @@
+import logging
 from functools import singledispatchmethod
 from typing import Optional, ClassVar
 
@@ -6,6 +7,7 @@ from pulsestreamer import (
     TriggerStart,
     TriggerRearm,
     Sequence as PulseStreamerSequence,
+    OutputState,
 )
 from pydantic import validator, Field
 
@@ -22,8 +24,11 @@ from sequencer.runtime import (
     Trigger,
     ExternalTriggerStart,
     TriggerEdge,
-    SoftwareTrigger,
 )
+
+logger = logging.getLogger(__name__)
+
+logger.setLevel(logging.DEBUG)
 
 
 class SwabianPulseStreamer(Sequencer):
@@ -54,6 +59,7 @@ class SwabianPulseStreamer(Sequencer):
 
         # There is no close method for the PulseStreamer class
         self._pulse_streamer = PulseStreamer(self.ip_address)
+        self.setup_trigger()
 
     def setup_trigger(self) -> None:
         if self.trigger.is_software_trigger():
@@ -72,14 +78,21 @@ class SwabianPulseStreamer(Sequencer):
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         super().update_parameters(sequence=sequence, **kwargs)
         self._sequence = self._construct_pulse_streamer_sequence(sequence)
+        last_values = sequence.get_last_values()
+        enabled_output = [
+            channel for channel, enabled in last_values.items() if enabled
+        ]
+        logger.debug(last_values)
+        self._final_state = OutputState(enabled_output, 0.0, 0.0)
         self._set_sequence_programmed()
-        self.setup_trigger()
 
     def start_sequence(self) -> None:
         super().start_sequence()
         if not self._sequence:
             raise SequenceNotConfiguredError("The sequence has not been set yet.")
-        self._pulse_streamer.stream(seq=self._sequence, n_runs=1)
+        self._pulse_streamer.stream(
+            seq=self._sequence, n_runs=1, final=self._final_state
+        )
         if self.trigger.is_software_trigger():
             self._pulse_streamer.startNow()
 

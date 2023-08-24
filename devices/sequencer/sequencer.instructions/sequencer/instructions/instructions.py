@@ -157,6 +157,12 @@ class SequencerInstruction(
 
         return _from_channel_instruction(instruction, channel)
 
+    @abstractmethod
+    def get_last_values(self) -> dict[ChannelLabel, ChannelType]:
+        """Return the last value of each channel."""
+
+        raise NotImplementedError
+
 
 @singledispatch
 def _from_channel_instruction(
@@ -388,6 +394,11 @@ class Concatenate(SequencerInstruction):
             channel_instruction = right
         return self.join(result, channel_types=self.channel_types)
 
+    def get_last_values(self) -> dict[ChannelLabel, ChannelType]:
+        """Return the last value of each channel."""
+
+        return self.instructions[-1].get_last_values()
+
 
 @define(init=False, eq=False)
 class Repeat(SequencerInstruction):
@@ -533,6 +544,11 @@ class Repeat(SequencerInstruction):
             channel, channel_macro_instruction
         )
         return Repeat(macro_instruction, len(self) // lcm)
+
+    def get_last_values(self) -> dict[ChannelLabel, ChannelType]:
+        """Return the last value of each channel."""
+
+        return self.instruction.get_last_values()
 
 
 _T = TypeVar("_T")
