@@ -1,3 +1,4 @@
+import sys
 from ctypes import CDLL, c_int, byref, c_int8, c_int16, POINTER, c_void_p
 from ctypes.util import find_library
 from enum import IntFlag, IntEnum
@@ -246,6 +247,10 @@ class PixelflyBoard(RuntimeDevice):
             != ErrCodes.NOERR
         ):
             raise RuntimeError(f"An error occurred while reading the image")
+        if numpy.max(image) == 2**self.bit_pix - 1:
+            sys.stderr.write(
+                "Warning: The image is saturated. The exposure time might be too long.\n"
+            )
         return image
 
     def read_temperature(self) -> float:
