@@ -199,6 +199,11 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         result = self._get_sql_session().execute(query)
         return {str(sequence.path) for sequence in result.scalars()}
 
+    def get_all_path_names(self) -> set[str]:
+        query = select(SequencePathModel)
+        result = self._get_sql_session().execute(query)
+        return {str(path.path) for path in result.scalars()}
+
     def query_sequence_stats(
         self, sequences: Iterable[Sequence]
     ) -> dict[SequencePath, SequenceStats]:
@@ -275,15 +280,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         return {Sequence(SequencePath(str(sequence.path))) for sequence in query}
 
     def _query_sequence_model(self, sequence: Sequence) -> SequenceModel:
-        try:
-            path = self._query_path_model(sequence.path)
-        except PathNotFoundError:
-            message = f"Could not find sequence '{sequence}' in database"
-            names = self.get_all_sequence_names()
-            closest_names = difflib.get_close_matches(str(sequence.path), names, n=1)
-            if closest_names:
-                message += f"\nDid you mean {closest_names[0]}?"
-            raise SequenceNotFoundError(message)
+        path = self._query_path_model(sequence.path)
         query_sequence = select(SequenceModel).where(SequenceModel.path == path)
         result = self._get_sql_session().execute(query_sequence)
         if sequence := result.scalar():
@@ -299,7 +296,12 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         if path := result.scalar():
             return path
         else:
-            raise PathNotFoundError(f"Could not find path '{path}' in database")
+            message = f"Could not find path {path} in database"
+            names = self.get_all_path_names()
+            closest_names = difflib.get_close_matches(str(path), names, n=1)
+            if closest_names:
+                message += f" Did you mean {closest_names[0]}?"
+            raise PathNotFoundError(message)
 
     def _query_path_models(
         self, paths: Iterable[SequencePath]
