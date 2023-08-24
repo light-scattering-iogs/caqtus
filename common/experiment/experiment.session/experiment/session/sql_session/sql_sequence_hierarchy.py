@@ -293,14 +293,14 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             SequencePathModel.path == Ltree(str(path))
         )
         result = self._get_sql_session().execute(stmt)
-        if path := result.scalar():
-            return path
+        if found := result.scalar():
+            return found
         else:
-            message = f"Could not find path {path} in database"
+            message = f"Could not find path {path} in database."
             names = self.get_all_path_names()
             closest_names = difflib.get_close_matches(str(path), names, n=1)
             if closest_names:
-                message += f" Did you mean {closest_names[0]}?"
+                message += f"\nDid you mean {closest_names[0]}?"
             raise PathNotFoundError(message)
 
     def _query_path_models(

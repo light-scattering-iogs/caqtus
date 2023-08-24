@@ -31,7 +31,7 @@ def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
         )
 
 
-@frozen
+@frozen(str=False)
 class SequencePath:
     path: str = field(converter=convert_path_to_str)
 
