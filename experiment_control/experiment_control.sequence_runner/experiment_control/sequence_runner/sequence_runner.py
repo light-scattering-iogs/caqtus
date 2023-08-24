@@ -9,13 +9,13 @@ from threading import Thread, Event
 from typing import (
     TYPE_CHECKING,
     Any,
-    NamedTuple,
     Callable,
     TypeVar,
     Awaitable,
 )
 
 import numpy as np
+from attr import frozen, define, field
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.runtime import CameraTimeoutError
@@ -85,47 +85,61 @@ DEVICE_PARAMETER_QUEUE_SIZE = 8
 STORAGE_QUEUE_SIZE = 10
 
 
-class ShotParameters(NamedTuple):
+@frozen
+class ShotParameters:
     """Holds information necessary to compile a shot."""
 
-    shot_name: str
-    shot_context: StepContext
+    name: str
+    index: int
+    context: StepContext
 
 
-class ShotDeviceParameters(NamedTuple):
+@frozen
+class ShotDeviceParameters:
     """Holds information necessary to execute a shot.
 
     Args:
-        shot_name: The name of the shot.
-        step_context: The context of the step that must be executed.
+        name: The name of the shot.
+        index: The index of the shot.
+        context: The context of the step that must be executed.
         change_parameters: The parameters that needs to be changed do to a variable having changed between shots, as
         computed by compute_parameters_on_variables_update. If no variable changed, this will be an empty dict.
         static_parameters: The parameters that need to be set for the shot, as computed by compute_shot_parameters. Even
         if no variable changed, this will be a non-empty dict.
     """
 
-    shot_name: str
-    step_context: StepContext
+    name: str
+    index: int
+    context: StepContext
     change_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
     static_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
 
 
-class ShotMetadata(NamedTuple):
+@frozen
+class ShotMetadata:
     """Holds information necessary to store a shot.
 
     Args:
-        shot_name: The name of the shot.
+        name: The name of the shot.
         start_time: The time at which the shot started.
         end_time: The time at which the shot ended.
         variables: The values of the variables that were used to execute the shot.
         data: The actual data that was acquired during the shot.
     """
 
-    shot_name: str
+    name: str
+    index: int
     start_time: datetime.datetime
     end_time: datetime.datetime
     variables: VariableNamespace
     data: dict[DeviceName, dict[DataLabel, Data]]
+
+
+@define
+class DevicesHandler:
+    sequencers: dict[DeviceName, Sequencer] = field(factory=dict)
+    cameras: dict[DeviceName, "Camera"] = field(factory=dict)
+    tweezer_arrangers: dict[DeviceName, "AODTweezerArranger"] = field(factory=dict)
 
 
 class SequenceRunnerThread(Thread):
@@ -177,6 +191,8 @@ class SequenceRunnerThread(Thread):
             self._sequence.set_state(State.PREPARING, session)
 
         self._image_analysis_flow = {}
+        self._current_shot = 0
+        self._device_handler = DevicesHandler()
 
     def run(self):
         logger.debug(f"Image analysis flow: {self._image_analysis_flow}")
@@ -192,16 +208,15 @@ class SequenceRunnerThread(Thread):
         else:
             self.finish(State.FINISHED)
             logger.info("Sequence finished")
+        finally:
+            DurationTimerLog.stats.clear()
 
     def _run(self):
         try:
             with self._shutdown_stack:
                 asyncio.run(self.async_run())
-                logger.debug("Finished async run")
-            logger.debug("Closed devices")
         finally:
             self._computation_executor.shutdown(wait=False)
-        logger.debug("Closed subprocesses")
 
     async def async_run(self):
         await self.prepare()
@@ -230,6 +245,16 @@ class SequenceRunnerThread(Thread):
         async with asyncio.TaskGroup() as task_group:
             for device in self._devices.values():
                 task_group.create_task(asyncio.to_thread(initialize_device, device))
+
+        self._device_handler.sequencers = get_sequencers_in_use(
+            self._devices, self._experiment_config
+        )
+        self._device_handler.cameras = get_cameras_in_use(
+            self._devices, self._experiment_config
+        )
+        self._device_handler.tweezer_arrangers = get_tweezer_arrangers_in_use(
+            self._devices, self._experiment_config
+        )
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
@@ -304,8 +329,7 @@ class SequenceRunnerThread(Thread):
         while True:
             shot_parameters = await self._shot_parameters_queue.get()
             device_parameters = await self.compute_shot_parameters(
-                shot_parameters.shot_name,
-                shot_parameters.shot_context,
+                shot_parameters,
                 self._computation_executor,
             )
             await self._device_parameters_queue.put(device_parameters)
@@ -452,24 +476,27 @@ class SequenceRunnerThread(Thread):
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
         await self._shot_parameters_queue.put(
-            ShotParameters(shot_name=shot.name, shot_context=context)
+            ShotParameters(name=shot.name, index=self._current_shot, context=context)
         )
+        self._current_shot += 1
 
         return context.reset_history()
 
     async def compute_shot_parameters(
-        self, shot_name: str, context: StepContext, executor: Executor
+        self, shot_parameters: ShotParameters, executor: Executor
     ) -> ShotDeviceParameters:
         with DurationTimerLog(
-            logger, "Shot parameters computation", display_start=True
+            logger,
+            f"Shot parameters computation {shot_parameters.index}",
+            display_start=True,
         ):
             # For some reason, ExperimentConfiguration cannot be pickled when using a ProcessPoolExecutor, so we pass
             # the yaml representation of the configuration instead.
             compute_change_params_task = async_run_in_executor(
                 executor,
                 _wrap_compute_parameters_on_variables_update,
-                context.updated_variables,
-                context.variables,
+                shot_parameters.context.updated_variables,
+                shot_parameters.context.variables,
                 self._experiment_config_yaml,
             )
 
@@ -477,15 +504,16 @@ class SequenceRunnerThread(Thread):
                 executor,
                 _wrap_compute_shot_parameters,
                 self._experiment_config_yaml,
-                self._sequence_config.shot_configurations[shot_name],
-                context.variables,
+                self._sequence_config.shot_configurations[shot_parameters.name],
+                shot_parameters.context.variables,
             )
             change_params = await compute_change_params_task
             shot_params = await compute_static_params_task
 
             return ShotDeviceParameters(
-                shot_name=shot_name,
-                step_context=context,
+                name=shot_parameters.name,
+                context=shot_parameters.context,
+                index=shot_parameters.index,
                 change_parameters=change_params,
                 static_parameters=shot_params,
             )
@@ -561,10 +589,11 @@ class SequenceRunnerThread(Thread):
                 )
             else:
                 return ShotMetadata(
-                    shot_name=shot_params.shot_name,
+                    name=shot_params.name,
+                    index=shot_params.index,
                     start_time=timer.start_time,
                     end_time=timer.end_time,
-                    variables=shot_params.step_context.variables,
+                    variables=shot_params.context.variables,
                     data=data,
                 )
             logger.warning(f"Attempt {attempt+1}/{number_of_attempts} failed")
@@ -612,27 +641,23 @@ class SequenceRunnerThread(Thread):
 
         data: dict[DeviceName, dict[DataLabel, Data]] = {}
 
-        sequencers = self.get_sequencers_in_use()
-        cameras = self.get_cameras_in_use()
-        tweezer_arrangers = self.get_tweezer_arrangers_in_use()
-
         with DurationTimerLog(logger, "Starting devices", display_start=True):
-            for tweezer_arrangers in tweezer_arrangers.values():
+            for tweezer_arrangers in self._device_handler.tweezer_arrangers.values():
                 tweezer_arrangers.start_sequence()
-            for camera in cameras.values():
+            for camera in self._device_handler.cameras.values():
                 camera.start_acquisition()
             # we need the sequencers to be correctly triggered, so we start them in their priority order
-            for sequencer in sequencers.values():
+            for sequencer in self._device_handler.sequencers.values():
                 sequencer.start_sequence()
 
         with DurationTimerLog(logger, "Doing shot", display_start=True):
             camera_tasks = {}
             async with asyncio.TaskGroup() as run_group:
-                for camera_name, camera in cameras.items():
+                for camera_name, camera in self._device_handler.cameras.items():
                     camera_tasks[camera_name] = run_group.create_task(
                         self.fetch_and_analyze_images(camera_name, camera)
                     )
-                for sequencer in sequencers.values():
+                for sequencer in self._device_handler.sequencers.values():
                     run_group.create_task(wait_on_sequencer(sequencer))
 
         for camera_name, camera_task in camera_tasks.items():
@@ -663,7 +688,7 @@ class SequenceRunnerThread(Thread):
                     logger.debug(
                         f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
                     )
-                    if not detector in result:
+                    if detector not in result:
                         result[detector] = {}
                     result[detector][picture_name] = atoms
                     if (detector, picture_name) in self._rearrange_flow:
@@ -685,7 +710,9 @@ class SequenceRunnerThread(Thread):
         self,
         shot_data: ShotMetadata,
     ) -> Shot:
-        with DurationTimerLog(logger, "Saving shot", display_start=True):
+        with DurationTimerLog(
+            logger, f"Saving shot {shot_data.index}", display_start=True
+        ):
             return await asyncio.to_thread(self.save_shot, shot_data)
 
     def save_shot(
@@ -698,54 +725,13 @@ class SequenceRunnerThread(Thread):
                 for name, value in shot_data.variables.to_flat_dict().items()
             }
             return self._sequence.create_shot(
-                name=shot_data.shot_name,
+                name=shot_data.name,
                 start_time=shot_data.start_time,
                 end_time=shot_data.end_time,
                 parameters=params,
                 measures=shot_data.data,
                 experiment_session=session,
             )
-
-    def get_sequencers_in_use(self) -> dict[DeviceName, Sequencer]:
-        """Return the sequencer devices used in the experiment.
-
-        The sequencers are sorted by trigger priority, with the highest priority first.
-        """
-
-        # Here we can't test the type of the runtime device itself because it is actually a proxy and not an instance of
-        # the actual device class, that's why we need to test the type of the configuration instead.
-        sequencers: dict[DeviceName, Sequencer] = {
-            device_name: device
-            for device_name, device in self._devices.items()
-            if isinstance(
-                self._experiment_config.get_device_config(device_name),
-                SequencerConfiguration,
-            )
-        }
-        sorted_by_trigger_priority = sorted(
-            sequencers.items(), key=lambda x: x[1].get_trigger_priority(), reverse=True
-        )
-        return dict(sorted_by_trigger_priority)
-
-    def get_cameras_in_use(self) -> dict[DeviceName, "Camera"]:
-        return {
-            device_name: device  # type: ignore
-            for device_name, device in self._devices.items()
-            if isinstance(
-                self._experiment_config.get_device_config(device_name),
-                CameraConfiguration,
-            )
-        }
-
-    def get_tweezer_arrangers_in_use(self) -> dict[DeviceName, "AODTweezerArranger"]:
-        return {
-            device_name: device  # type: ignore
-            for device_name, device in self._devices.items()
-            if isinstance(
-                self._experiment_config.get_device_config(device_name),
-                AODTweezerArrangerConfiguration,
-            )
-        }
 
 
 def initialize_device(device: RuntimeDevice):
@@ -866,3 +852,53 @@ async def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) ->
 # accidentally.
 class SequenceInterruptedException(BaseException):
     pass
+
+
+def get_sequencers_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, Sequencer]:
+    """Return the sequencer devices used in the experiment.
+
+    The sequencers are sorted by trigger priority, with the highest priority first.
+    """
+
+    # Here we can't test the type of the runtime device itself because it is actually a proxy and not an instance of
+    # the actual device class, that's why we need to test the type of the configuration instead.
+    sequencers: dict[DeviceName, Sequencer] = {
+        device_name: device
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            SequencerConfiguration,
+        )
+    }
+    sorted_by_trigger_priority = sorted(
+        sequencers.items(), key=lambda x: x[1].get_trigger_priority(), reverse=True
+    )
+    return dict(sorted_by_trigger_priority)
+
+
+def get_cameras_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, "Camera"]:
+    return {
+        device_name: device  # type: ignore
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            CameraConfiguration,
+        )
+    }
+
+
+def get_tweezer_arrangers_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, "AODTweezerArranger"]:
+    return {
+        device_name: device  # type: ignore
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            AODTweezerArrangerConfiguration,
+        )
+    }
