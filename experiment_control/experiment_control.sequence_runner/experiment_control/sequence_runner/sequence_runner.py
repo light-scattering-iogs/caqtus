@@ -660,7 +660,10 @@ class SequenceRunnerThread(Thread):
         result: dict[DeviceName, dict[DataLabel, Data]] = {}
         pictures = {}
         for picture_name in picture_names:
-            picture = await get_picture_from_camera(camera, picture_name)
+            with DurationTimerLog(
+                logger, f"Fetching picture '{picture_name}'", display_start=True
+            ):
+                picture = await get_picture_from_camera(camera, picture_name)
             pictures[picture_name] = picture
             logger.debug(
                 f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
@@ -682,12 +685,12 @@ class SequenceRunnerThread(Thread):
                         tweezer_arranger, step = self._rearrange_flow[
                             (detector, picture_name)
                         ]
-                        self._devices[tweezer_arranger].prepare_rearrangement(
-                            step=step, atom_present=atoms
-                        )
-                        logger.debug(
-                            f"Tweezer arranger '{tweezer_arranger}' arranged tweezers in picture '{picture_name}'"
-                        )
+                        with DurationTimerLog(
+                            logger, "Preparing rearrangement", display_start=True
+                        ):
+                            self._devices[tweezer_arranger].prepare_rearrangement(
+                                step=step, atom_present=atoms
+                            )
         camera.stop_acquisition()
 
         result[camera_name] = pictures
@@ -700,25 +703,32 @@ class SequenceRunnerThread(Thread):
         with DurationTimerLog(
             logger, f"Saving shot {shot_data.index}", display_start=True
         ):
-            return await asyncio.to_thread(self.save_shot, shot_data)
-
-    def save_shot(
-        self,
-        shot_data: ShotMetadata,
-    ) -> Shot:
-        with self._save_session as session:
-            params = {
-                name: value
-                for name, value in shot_data.variables.to_flat_dict().items()
-            }
-            return self._sequence.create_shot(
-                name=shot_data.name,
-                start_time=shot_data.start_time,
-                end_time=shot_data.end_time,
-                parameters=params,
-                measures=shot_data.data,
-                experiment_session=session,
+            return await async_run_in_executor(
+                self._computation_executor,
+                save_shot,
+                self._sequence,
+                shot_data,
+                self._session_maker,
             )
+
+
+def save_shot(
+    sequence: Sequence,
+    shot_data: ShotMetadata,
+    session_maker: ExperimentSessionMaker,
+) -> Shot:
+    with session_maker() as session:
+        params = {
+            name: value for name, value in shot_data.variables.to_flat_dict().items()
+        }
+        return sequence.create_shot(
+            name=shot_data.name,
+            start_time=shot_data.start_time,
+            end_time=shot_data.end_time,
+            parameters=params,
+            measures=shot_data.data,
+            experiment_session=session,
+        )
 
 
 def initialize_device(device: RuntimeDevice):
