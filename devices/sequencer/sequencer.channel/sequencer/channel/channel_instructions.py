@@ -115,6 +115,18 @@ class ChannelInstruction(
 
         raise NotImplementedError
 
+    @abstractmethod
+    def first_value(self) -> ChannelType:
+        """Return the first value of the instruction."""
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def last_value(self) -> ChannelType:
+        """Return the last value of the instruction."""
+
+        raise NotImplementedError
+
 
 @define(init=False, eq=False)
 class ChannelPattern(ChannelInstruction[ChannelType]):
@@ -162,6 +174,12 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
 
     def compact_length_repr(self) -> str:
         return f"{len(self)}"
+
+    def first_value(self) -> ChannelType:
+        return self.values[0]
+
+    def last_value(self) -> ChannelType:
+        return self.values[-1]
 
 
 @define(init=False, eq=False)
@@ -258,6 +276,12 @@ class Concatenate(ChannelInstruction[ChannelType]):
             instruction.compact_length_repr() for instruction in self.instructions
         )
         return f"({inner})"
+
+    def first_value(self) -> ChannelType:
+        return self.instructions[0].first_value()
+
+    def last_value(self) -> ChannelType:
+        return self.instructions[-1].last_value()
 
 
 @define(init=False, eq=False)
@@ -357,3 +381,9 @@ class Repeat(ChannelInstruction[ChannelType]):
 
     def compact_length_repr(self) -> str:
         return f"{self.instruction.compact_length_repr()} * {self.number_repetitions}"
+
+    def first_value(self) -> ChannelType:
+        return self.instruction.first_value()
+
+    def last_value(self) -> ChannelType:
+        return self.instruction.last_value()

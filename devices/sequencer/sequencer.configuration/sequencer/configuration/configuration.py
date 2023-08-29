@@ -150,3 +150,6 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
             if channel.description == name:
                 return i
         raise KeyError(f"Channel {name} not found")
+
+    def get_maximum_delay(self) -> float:
+        return max(channel.delay for channel in self.channels)
