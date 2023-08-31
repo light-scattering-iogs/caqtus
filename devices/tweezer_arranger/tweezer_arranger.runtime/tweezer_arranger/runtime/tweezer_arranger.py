@@ -80,3 +80,7 @@ class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
                 case _:
                     raise TypeError("Invalid instruction type")
         return sequence
+
+
+class RearrangementFailedError(RuntimeError):
+    pass

@@ -4,6 +4,7 @@ from .tweezer_arranger import (
     HoldTweezers,
     MoveTweezers,
     RearrangeTweezers,
+    RearrangementFailedError,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "HoldTweezers",
     "MoveTweezers",
     "RearrangeTweezers",
+    "RearrangementFailedError",
 ]

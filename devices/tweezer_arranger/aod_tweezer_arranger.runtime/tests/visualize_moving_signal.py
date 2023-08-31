@@ -75,33 +75,36 @@ def test_moving_traps_gpu():
         )
         initial_phases = np.random.uniform(0, 2 * np.pi, len(initial_frequencies))
 
-        final_amplitudes = initial_amplitudes[:25]
-        final_frequencies = initial_frequencies[:25]
-        final_phases = initial_phases[:25]
+        final_amplitudes = initial_amplitudes
+        final_frequencies = initial_frequencies + 1e6 * 0
+        final_phases = initial_phases
+
+        T = 625248
 
         with DurationTimerLog(logger, "Generating signal"):
             output_0 = signal_generator.generate_signal_static_traps(
                 initial_amplitudes,
                 initial_frequencies,
                 initial_phases,
-                number_samples=NumberSamples(625248),
-            )
+                number_samples=NumberSamples(T),
+            )[:2 * (T//3)]
             output_2 = signal_generator.generate_signal_static_traps(
                 final_amplitudes,
                 final_frequencies,
                 final_phases,
-                number_samples=NumberSamples(625248),
-            )
+                number_samples=NumberSamples(T),
+            )[1 * (T//3):]
 
             output_1 = signal_generator.generate_signal_moving_traps(
-                initial_amplitudes[::2],
+                initial_amplitudes,
                 final_amplitudes,
-                initial_frequencies[::2],
+                initial_frequencies,
                 final_frequencies,
-                initial_phases[::2],
+                initial_phases,
                 final_phases,
-                number_samples=NumberSamples(625248 // 2),
-                previous_step_length=NumberSamples(625248),
+                number_samples=NumberSamples(2 * (T//3)),
+                previous_step_stop=2 * (T//3),
+                next_step_start=(4 * (T//3)) % T
             )
 
         output = np.concatenate([output_0, output_1, output_2])
@@ -116,4 +119,6 @@ def test_moving_traps_gpu():
         plt.ylim(60, 110)
         plt.xlabel("Time [ms]")
         plt.ylabel("Frequency [MHz]")
+        # plt.axvline(T // 2 / sampling_rate * 1e3, color="white", ls="--", alpha=0.5)
+        # plt.axvline(3 * T // 2 / sampling_rate * 1e3, color="white", ls="--", alpha=0.5)
         plt.show()

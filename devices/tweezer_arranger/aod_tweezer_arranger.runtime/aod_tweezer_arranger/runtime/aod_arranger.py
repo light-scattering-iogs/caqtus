@@ -3,6 +3,7 @@ import math
 from typing import Sequence, Mapping, Literal, TypeVar, Iterable
 
 import numpy as np
+from attr import frozen
 from pydantic import validator
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
@@ -21,12 +22,13 @@ from spectum_awg_m4i66xx_x8.runtime import (
 from tweezer_arranger.configuration import (
     HoldTweezers,
     MoveTweezers,
-    RearrangeTweezers, ArrangerInstruction,
+    RearrangeTweezers,
+    ArrangerInstruction,
 )
 from tweezer_arranger.configuration import (
     TweezerConfigurationName,
 )
-from tweezer_arranger.runtime import TweezerArranger
+from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
 from .signal_generator import SignalGenerator, NumberSamples, AWGSignalArray
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 raise ValueError(
                     "All AODTweezerConfigurations must have the same sampling_rate"
                 )
+            if config.number_samples != first_config.number_samples:
+                raise ValueError(
+                    "All static tweezer configurations must have the same number of samples"
+                )
         return configurations
 
     @log_exception(logger)
@@ -106,7 +112,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             ),
             segment_names=_get_segment_names(self.tweezer_sequence),
             steps=_get_steps(self.tweezer_sequence),
-            first_step=static_step_names(0)[0],
+            first_step=static_step_names(0).integer,
             sampling_rate=self.sampling_rate,
         )
 
@@ -129,11 +135,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         segment_data: dict[SegmentName, SegmentData] = {}
         for step, instruction in enumerate(self.tweezer_sequence):
             if isinstance(instruction, HoldTweezers):
-                static_segment = static_segment_names(step)[0]
+                static_segment = static_segment_names(step).integer
                 segment_data[static_segment] = self._static_signals[
                     instruction.tweezer_configuration
                 ]
-        last_segment = static_segment_names(len(self.tweezer_sequence))[0]
+        last_segment = static_segment_names(len(self.tweezer_sequence)).integer
         last_tweezer_config = self.tweezer_sequence[-1]
         if not isinstance(last_tweezer_config, HoldTweezers):
             raise ValueError(
@@ -161,6 +167,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         first_config = first(self.tweezer_configurations.values())
         return first_config.scale_y
 
+    @property
+    def number_samples_per_loop(self) -> int:
+        first_config = first(self.tweezer_configurations.values())
+        return first_config.number_samples
+
     @log_exception(logger)
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
         with DurationTimerLog(logger, "Updating awg parameters"):
@@ -176,53 +187,75 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             time_step = 32 / self.sampling_rate
             step_repetitions = dict[StepName, int]()
             segment_data: dict[SegmentName, SegmentData] = {}
+            number_samples_per_loop = self.number_samples_per_loop
             for step, (instruction, (start, stop)) in enumerate(
                 zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
             ):
-                ticks = number_ticks(start, stop, time_step)
-                self._step_number_ticks[step] = ticks * 32
-                if isinstance(instruction, HoldTweezers):
-                    segment_tick_duration = (
-                        self.tweezer_configurations[
-                            instruction.tweezer_configuration
-                        ].number_samples
-                        // 32
-                    )
-                    repetitions, remainder = divmod(ticks, segment_tick_duration)
+                integer_start = (
+                    start_tick(start, number_samples_per_loop / self.sampling_rate)
+                    * number_samples_per_loop
+                )
+                integer_stop = (
+                    stop_tick(stop, number_samples_per_loop / self.sampling_rate)
+                    * number_samples_per_loop
+                )
+                before_start = start_tick(start, time_step) * 32
+                after_stop = stop_tick(stop, time_step) * 32
 
-                    step_repetitions[static_step_names(step)[0]] = repetitions
-                    segment_data[static_segment_names(step)[1]] = self._static_signals[
-                        instruction.tweezer_configuration
-                    ][:, : remainder * 32]
+                ticks = after_stop - before_start
+                self._step_number_ticks[step] = ticks
+                if isinstance(instruction, HoldTweezers):
+                    integer_repetitions = (
+                        integer_stop - integer_start
+                    ) // self.number_samples_per_loop
+                    step_repetitions[
+                        static_step_names(step).integer
+                    ] = integer_repetitions
+                    segment_data[
+                        static_segment_names(step).before
+                    ] = self._static_signals[instruction.tweezer_configuration][
+                        :, before_start % number_samples_per_loop :
+                    ]
+                    segment_data[
+                        static_segment_names(step).after
+                    ] = self._static_signals[instruction.tweezer_configuration][
+                        :, : after_stop % number_samples_per_loop
+                    ]
                 elif isinstance(instruction, MoveTweezers):
-                    number_samples = NumberSamples(ticks * 32)
-                    initial_config = self.tweezer_configurations[
+                    number_samples = NumberSamples(after_stop - before_start)
+                    previous_config = self.tweezer_configurations[
                         instruction.initial_tweezer_configuration
                     ]
-                    final_config = self.tweezer_configurations[
+                    next_config = self.tweezer_configurations[
                         instruction.final_tweezer_configuration
                     ]
-                    previous_step_length = (
-                        self._step_number_ticks[step - 1]
-                        % initial_config.number_samples
+                    previous_instruction_stop = (
+                        stop_tick(self._tweezer_sequence_bounds[step - 1][0], time_step)
+                        * 32
+                    )
+                    next_instruction_start = (
+                        start_tick(
+                            self._tweezer_sequence_bounds[step + 1][1], time_step
+                        )
+                        * 32
                     )
                     move_signal_x = self._signal_generator.generate_signal_moving_traps(
-                        initial_config.amplitudes_x,
-                        final_config.amplitudes_x,
-                        initial_config.frequencies_x,
-                        final_config.frequencies_x,
-                        initial_config.phases_x,
-                        final_config.phases_x,
+                        previous_config.amplitudes_x,
+                        next_config.amplitudes_x,
+                        previous_config.frequencies_x,
+                        next_config.frequencies_x,
+                        previous_config.phases_x,
+                        next_config.phases_x,
                         number_samples,
                         NumberSamples(previous_step_length),
                     )
                     move_signal_y = self._signal_generator.generate_signal_moving_traps(
-                        initial_config.amplitudes_y,
-                        final_config.amplitudes_y,
-                        initial_config.frequencies_y,
-                        final_config.frequencies_y,
-                        initial_config.phases_y,
-                        final_config.phases_y,
+                        previous_config.amplitudes_y,
+                        next_config.amplitudes_y,
+                        previous_config.frequencies_y,
+                        next_config.frequencies_y,
+                        previous_config.phases_y,
+                        next_config.phases_y,
                         number_samples,
                         NumberSamples(previous_step_length),
                     )
@@ -231,9 +264,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     )
                 elif isinstance(instruction, RearrangeTweezers):
                     segment_data[rearrange_segment_name(step)] = np.zeros(
-                        (2, ticks * 32), dtype=np.int16
+                        (2, ticks), dtype=np.int16
                     )
-
+                else:
+                    raise ValueError(f"Unknown instruction {instruction}")
+            del segment_data[static_segment_names(0).before]
             self._awg.update_parameters(
                 segment_data=segment_data,
                 step_repetitions=step_repetitions,
@@ -304,8 +339,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 * 32
             )
 
-            previous_step_length = (
-                self._step_number_ticks[step - 1] % initial_config.number_samples
+            previous_step_stop = (
+                stop_tick(self._tweezer_sequence_bounds[step - 1][1], time_step) * 32
+            )
+            next_step_start = (
+                start_tick(self._tweezer_sequence_bounds[step + 1][0], time_step) * 32
             )
             move_signal_x = self._signal_generator.generate_signal_moving_traps(
                 np.array(initial_config.amplitudes_x)[initial_indices],
@@ -315,7 +353,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 np.array(initial_config.phases_x)[initial_indices],
                 np.array(final_config.phases_x)[final_indices],
                 number_samples,
-                NumberSamples(previous_step_length),
+                previous_step_stop % self.number_samples_per_loop,
+                next_step_start % self.number_samples_per_loop,
             )
             move_signal_y = self._signal_generator.generate_signal_moving_traps(
                 initial_config.amplitudes_y,
@@ -325,7 +364,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 initial_config.phases_y,
                 final_config.phases_y,
                 number_samples,
-                NumberSamples(previous_step_length),
+                previous_step_stop % self.number_samples_per_loop,
+                next_step_start % self.number_samples_per_loop,
             )
             segment_data = {
                 rearrange_segment_name(step): np.array((move_signal_x, move_signal_y))
@@ -335,6 +375,18 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 segment_data=segment_data,
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
+            current_step = self._awg.get_current_step()
+            previous_steps = find_steps_before(
+                rearrange_step_name(step),
+                _get_steps(self.tweezer_sequence),
+                static_step_names(0).integer,
+            )
+            if current_step not in previous_steps:
+                raise RearrangementFailedError(
+                    f"AWG is not in the correct step. "
+                    f"Expected one of {previous_steps} but is {current_step}"
+                )
+            self._awg.save_segments_data()
 
     def start_sequence(self) -> None:
         self._awg.stop_sequence()
@@ -343,7 +395,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     def has_sequence_finished(self) -> bool:
         current_step = self._awg.get_current_step()
         logger.debug(f"Current step: {current_step}")
-        return current_step == static_step_names(len(self.tweezer_sequence))[0]
+        return current_step == static_step_names(len(self.tweezer_sequence)).integer
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
@@ -414,19 +466,37 @@ def rearrange_segment_name(step: int) -> SegmentName:
     return SegmentName(f"Rearrange segment {step}")
 
 
+@frozen
+class InstructionSegmentNames:
+    before: SegmentName
+    integer: SegmentName
+    after: SegmentName
+
+
 def static_segment_names(
     step: int,
-) -> tuple[SegmentName, SegmentName]:
-    return SegmentName(f"Static segment {step} integral part"), SegmentName(
-        f"Static segment {step} fractional part"
+) -> InstructionSegmentNames:
+    return InstructionSegmentNames(
+        before=SegmentName(f"Static segment {step} before part"),
+        integer=SegmentName(f"Static segment {step} integer part"),
+        after=SegmentName(f"Static segment {step} after part"),
     )
+
+
+@frozen
+class HoldInstructionStepNames:
+    before: StepName
+    integer: StepName
+    after: StepName
 
 
 def static_step_names(
     step: int,
-) -> tuple[StepName, StepName]:
-    return StepName(f"Static step {step} integral part"), StepName(
-        f"Static step {step} fractional part"
+) -> HoldInstructionStepNames:
+    return HoldInstructionStepNames(
+        before=StepName(f"Static step {step} before part"),
+        integer=StepName(f"Static step {step} integer part"),
+        after=StepName(f"Static step {step} after part"),
     )
 
 
@@ -445,9 +515,10 @@ def _get_segment_names(
     for step, instruction in enumerate(tweezer_sequence):
         match instruction:
             case HoldTweezers():
-                integral_part, fraction_part = static_segment_names(step)
-                segments.add(integral_part)
-                segments.add(fraction_part)
+                segment_names = static_segment_names(step)
+                segments.add(segment_names.before)
+                segments.add(segment_names.integer)
+                segments.add(segment_names.after)
             case MoveTweezers():
                 segments.add(move_segment_name(step))
             case RearrangeTweezers():
@@ -455,8 +526,9 @@ def _get_segment_names(
             case _:
                 raise NotImplementedError
     # We add a segment for the last step to just loop over the last configuration
-    integral_part, _ = static_segment_names(len(tweezer_sequence))
+    integral_part = static_segment_names(len(tweezer_sequence)).integer
     segments.add(integral_part)
+    segments.remove(static_segment_names(0).before)
     return segments
 
 
@@ -465,12 +537,12 @@ def _get_next_step(
     tweezer_sequence: Sequence[ArrangerInstruction],
 ) -> StepName:
     if current_step == len(tweezer_sequence) - 1:
-        return static_step_names(len(tweezer_sequence))[0]
+        return static_step_names(len(tweezer_sequence)).integer
     else:
         next_step_instruction = tweezer_sequence[current_step + 1]
         match next_step_instruction:
             case HoldTweezers():
-                return static_step_names(current_step + 1)[0]
+                return static_step_names(current_step + 1).before
             case MoveTweezers():
                 return move_step_name(current_step + 1)
             case RearrangeTweezers():
@@ -486,19 +558,22 @@ def _get_steps(
     for index, instruction in enumerate(tweezer_sequence):
         match instruction:
             case HoldTweezers():
-                integral_step_part, fractional_step_part = static_step_names(index)
-                integral_segment_part, fractional_segment_part = static_segment_names(
-                    index
-                )
+                instruction_step_names = static_step_names(index)
+                instruction_segment_names = static_segment_names(index)
 
-                # Here the repetition is not correct, we'll need to update before starting the AWG sequence
-                steps[integral_step_part] = StepConfiguration(
-                    segment=integral_segment_part,
-                    next_step=fractional_step_part,
+                steps[instruction_step_names.before] = StepConfiguration(
+                    segment=instruction_segment_names.before,
+                    next_step=instruction_step_names.integer,
                     repetition=1,
                 )
-                steps[fractional_step_part] = StepConfiguration(
-                    segment=fractional_segment_part,
+                # Below, the repetition is not correct, we'll need to update before starting the AWG sequence
+                steps[instruction_step_names.integer] = StepConfiguration(
+                    segment=instruction_segment_names.integer,
+                    next_step=instruction_step_names.after,
+                    repetition=1,
+                )
+                steps[instruction_step_names.after] = StepConfiguration(
+                    segment=instruction_segment_names.after,
                     next_step=_get_next_step(index, tweezer_sequence),
                     repetition=1,
                 )
@@ -516,14 +591,28 @@ def _get_steps(
                 )
             case _:
                 raise NotImplementedError
-    last_step = static_step_names(len(tweezer_sequence))[0]
-    last_segment = static_segment_names(len(tweezer_sequence))[0]
+    last_step = static_step_names(len(tweezer_sequence)).integer
+    last_segment = static_segment_names(len(tweezer_sequence)).integer
     steps[last_step] = StepConfiguration(
         segment=last_segment,
         next_step=last_step,
         repetition=1,
     )
+    del steps[static_step_names(0).before]
     return steps
+
+
+def find_steps_before(
+    step: StepName,
+    steps: dict[StepName, StepConfiguration],
+    initial_step: StepName,
+) -> list[StepName]:
+    result = list[StepName]()
+    current_step = initial_step
+    while current_step != step:
+        result.append(current_step)
+        current_step = steps[current_step].next_step
+    return result
 
 
 _T = TypeVar("_T")

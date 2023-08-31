@@ -78,7 +78,7 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
 
     
     extern "C" __global__
-    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_length)
+    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_stop, unsigned int next_step_start)
     {{
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
@@ -88,8 +88,9 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
        for(unsigned int i=0; i < number_tones; i++){{
             float mean_frequency = 0.5 * (initial_frequencies[i] + final_frequencies[i]);
             float frequency_range = 0.5 * (final_frequencies[i] - initial_frequencies[i]);
-            float initial_phase = initial_phases[i] + TAU * previous_step_length * time_step * initial_frequencies[i];
-            float phase_mismatch = final_phases[i] - initial_phase - (2 * PI * T) * mean_frequency;
+            float initial_phase = initial_phases[i] + 2 * PI * previous_step_stop * time_step * initial_frequencies[i];
+            float target_phases = final_phases[i] + 2 * PI * next_step_start * time_step * final_frequencies[i];
+            float phase_mismatch = target_phases - initial_phase - (2 * PI * T) * mean_frequency;
             float s0=0.0;
             if(frequency_range == 0.0){{
                 s0 = 1.0;
