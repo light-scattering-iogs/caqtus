@@ -28,6 +28,7 @@ duration-timer = {path = "../../common/duration_timer", develop = true}
 data-types = {path = "../../common/types/data_types", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
 sequencer-runtime = {path = "../../devices/sequencer/sequencer.runtime", develop = true}
+tweezer-arranger-runtime = {path = "../../devices/tweezer_arranger/tweezer_arranger.runtime", develop = true}
 
 
 [build-system]

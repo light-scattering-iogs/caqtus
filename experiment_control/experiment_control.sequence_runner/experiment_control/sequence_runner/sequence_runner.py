@@ -51,6 +51,7 @@ from sequence.configuration import (
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
 from sequencer.runtime import Sequencer
+from tweezer_arranger.runtime import RearrangementFailedError
 from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
@@ -567,7 +568,7 @@ class SequenceRunnerThread(Thread):
         self,
         shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
-        number_of_attempts = 2  # must >= 1
+        number_of_attempts = 3  # must >= 1
         for attempt in range(number_of_attempts):
             errors: list[Exception] = []
             try:
@@ -580,6 +581,9 @@ class SequenceRunnerThread(Thread):
                 logger.warning(
                     "A camera timeout error occurred, attempting to redo the failed shot"
                 )
+            except* RearrangementFailedError as e:
+                errors.extend(e.exceptions)
+                logger.warning("Rearrangement failed, attempting to redo the shot")
             else:
                 return ShotMetadata(
                     name=shot_params.name,
