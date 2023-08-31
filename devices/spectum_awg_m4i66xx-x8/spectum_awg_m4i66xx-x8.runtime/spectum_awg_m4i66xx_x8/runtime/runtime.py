@@ -256,7 +256,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     ) -> None:
         if segment_data is not None:
             for segment_name, data in segment_data.items():
-                self._check_and_write_segment_data(segment_name, data, bypass_power_check=bypass_power_check)
+                self._check_and_write_segment_data(
+                    segment_name, data, bypass_power_check=bypass_power_check
+                )
         if step_repetitions is not None:
             for step_name, new_repetitions in step_repetitions.items():
                 self._steps[step_name].repetition = new_repetitions
@@ -282,7 +284,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         if not bypass_power_check:
             for channel in range(self.number_channels_enabled):
                 channel_settings = self.channel_settings[channel]
-                power = self._measure_mean_power(data[channel], channel_settings.amplitude)
+                power = self._measure_mean_power(
+                    data[channel], channel_settings.amplitude
+                )
                 power_dbm = 10 * math.log10(power / 1e-3) if power > 0 else -np.inf
                 logger.info(
                     f"Channel {channel_settings.name} power for segment {segment_name}: {power_dbm:.2f} dBm"
@@ -296,7 +300,9 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         segment_index = self._get_segment_index(segment_name)
         self._write_segment_data(segment_index, data)
-        logger.debug(f"Wrote {data.shape[1]} samples to segment {segment_name}({segment_index})")
+        logger.debug(
+            f"Wrote {data.shape[1]} samples to segment {segment_name}({segment_index})"
+        )
 
     def _get_segment_index(self, segment_name: SegmentName) -> int:
         try:
@@ -328,7 +334,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
         flattened_data = np.dstack(tuple(data)).flatten(order="C")
         self._transfer_data(flattened_data)
-
 
     def _transfer_data(self, data: np.ndarray[np.int16]):
         data_length_bytes = len(data) * self._bytes_per_sample
