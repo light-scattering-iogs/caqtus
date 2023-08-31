@@ -46,6 +46,8 @@ BUILTINS = {
     "tanh": numpy.tanh,
     "sawtooth": sawtooth,
     "square_wave": square_wave,
+    "max": max,
+    "min": min,
 }
 
 
