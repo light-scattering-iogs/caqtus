@@ -1,7 +1,6 @@
 import logging
 import math
-from collections.abc import Iterable
-from typing import TypeVar, Sequence, Mapping
+from typing import Sequence, Mapping, Literal, TypeVar, Iterable
 
 import numpy as np
 from pydantic import validator
@@ -20,16 +19,15 @@ from spectum_awg_m4i66xx_x8.runtime import (
     SegmentData,
 )
 from tweezer_arranger.configuration import (
-    ArrangerInstruction,
     HoldTweezers,
     MoveTweezers,
-    RearrangeTweezers,
+    RearrangeTweezers, ArrangerInstruction,
 )
 from tweezer_arranger.configuration import (
     TweezerConfigurationName,
 )
 from tweezer_arranger.runtime import TweezerArranger
-from .signal_generator import AWGSignalArray, SignalGenerator, NumberSamples
+from .signal_generator import SignalGenerator, NumberSamples, AWGSignalArray
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -51,8 +49,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     awg_max_power_y: float
 
     _awg: SpectrumAWGM4i66xxX8
-    _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
     _signal_generator: SignalGenerator
+    _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
     _tweezer_sequence_bounds: tuple[tuple[float, float], ...] = ()
     _step_number_ticks: list[int]
 
@@ -205,7 +203,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         instruction.final_tweezer_configuration
                     ]
                     previous_step_length = (
-                            self._step_number_ticks[step - 1] % initial_config.number_samples
+                        self._step_number_ticks[step - 1]
+                        % initial_config.number_samples
                     )
                     move_signal_x = self._signal_generator.generate_signal_moving_traps(
                         initial_config.amplitudes_x,
@@ -271,27 +270,29 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     f"Can only rearrange atoms if all atoms are in the same row"
                 )
 
-            initial_indices = []
+            atoms_before = [False] * initial_config.number_tweezers_along_x
+
             for (x, y), present in atom_present.items():
                 if y != 0:
                     raise ValueError(
                         f"Can only rearrange atoms if they all are on the x-axis"
                     )
-                if present:
-                    if x >= initial_config.number_tweezers_along_x:
-                        raise ValueError(
-                            f"Atom present at ({x}, {y}) but there are only "
-                            f"{initial_config.number_tweezers_along_x} tweezers along x"
-                        )
-                    else:
-                        initial_indices.append(x)
-            if len(initial_indices) > final_config.number_tweezers_along_x:
-                raise ValueError(
-                    f"Cannot rearrange {len(initial_indices)} atoms into "
-                    f"{final_config.number_tweezers_along_x} tweezers"
-                )
+                if x >= initial_config.number_tweezers_along_x:
+                    raise ValueError(
+                        f"Atom present at ({x}, {y}) but there are only "
+                        f"{initial_config.number_tweezers_along_x} tweezers along x"
+                    )
+                else:
+                    atoms_before[x] = present
 
-            final_indices = [x for x in range(len(initial_indices))]
+            moves = compute_moves_1d(
+                atoms_before,
+                final_config.number_tweezers_along_x,
+                shift_towards="low",
+            )
+
+            initial_indices = [before for before, after in moves.items()]
+            final_indices = [after for before, after in moves.items()]
 
             time_step = 32 / self.sampling_rate
             number_samples = NumberSamples(
@@ -351,6 +352,40 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             "has_sequence_finished",
             "prepare_rearrangement",
         )
+
+
+def compute_moves_1d(
+    atoms_before: Sequence[bool],
+    number_target_traps: int,
+    shift_towards: Literal["low", "high"] = "low",
+) -> dict[int, int]:
+    """
+    Compute the moves for a rearrangement in 1D.
+
+    Args:
+        atoms_before: Indicated which traps are filled, i.e. atoms_before[i] is True if the trap with index i is filled
+            and False otherwise.
+        number_target_traps: The number of traps available for the rearrangement. This is the number of traps that could
+            be filled after the rearrangement if there was no limit on the number of atoms.
+        shift_towards: Whether to shift the atoms towards the low or high index traps.
+
+    Returns:
+        moves: A dictionary where moves[i] is the trap index that the atom at index i should be moved to.
+    """
+
+    initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
+
+    target_indices = [i for i, _ in enumerate(initial_indices)]
+    if shift_towards == "low":
+        pass
+    elif shift_towards == "high":
+        target_indices = [
+            i + number_target_traps - len(initial_indices) for i in target_indices
+        ]
+    else:
+        raise ValueError(f"Invalid shift_towards: {shift_towards}")
+
+    return dict(zip(initial_indices, target_indices))
 
 
 def _compute_static_signal(

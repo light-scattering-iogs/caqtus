@@ -56,12 +56,6 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
         return -__sinf(PI * s) * INV_PI;
     }}
     
-    // Must be the integral of frequency_ramp over s from 0 to s
-    __device__ float phase_ramp(float s)
-    {{
-        return phase_ramp_sin(s);      
-    }}
-    
     __device__ float phase_ramp_minimal_jolt(float s)
     {{
         return ((s < 1.0/4.0) ? (
@@ -74,6 +68,14 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
         (8.0/3.0)*powf(s, 4) - 32.0/3.0*powf(s, 3) + 16*powf(s, 2) - 29.0/3.0*s + 5.0/3.0
         )));
     }}
+    
+    // Must be the integral of frequency_ramp over s from 0 to s
+    __device__ float phase_ramp(float s)
+    {{
+        return phase_ramp_minimal_jolt(s);      
+    }}
+    
+
     
     extern "C" __global__
     void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_length)
