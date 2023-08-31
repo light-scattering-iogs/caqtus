@@ -8,6 +8,7 @@ packages = [{include = "duration_timer"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
+attrs = "^23.1.0"
 
 
 [build-system]

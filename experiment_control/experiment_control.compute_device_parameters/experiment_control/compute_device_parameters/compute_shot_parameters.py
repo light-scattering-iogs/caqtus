@@ -15,7 +15,7 @@ from experiment.configuration import (
 from expression import Expression
 from lane.configuration import Lane
 from sequence.configuration import ShotConfiguration
-from sequencer.channel import ChannelInstruction
+from sequencer.channel import ChannelInstruction, ChannelPattern
 from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
 from sequencer.instructions import ChannelLabel, SequencerInstruction
 from tweezer_arranger_lane.configuration import TweezerArrangerLane
@@ -91,58 +91,73 @@ def compile_sequencer_instructions(
     variables: VariableNamespace,
     camera_instructions: Mapping[DeviceName, CameraInstruction],
     clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
-) -> dict[ChannelLabel, ChannelInstruction[bool]]:
+) -> dict[ChannelLabel, ChannelInstruction]:
     step_durations = compile_step_durations(
         shot_config.step_names, shot_config.step_durations, variables
     )
-    instructions: dict[ChannelLabel, ChannelInstruction[bool]] = {}
+    instructions: dict[ChannelLabel, ChannelInstruction] = {}
 
     for channel_number, channel in enumerate(sequencer_config.channels):
         instructions[ChannelLabel(channel_number)] = compile_channel_instruction(
             channel,
+            sequencer_config,
             step_durations,
             variables,
             shot_config,
             camera_instructions,
             clock_requirements,
-            sequencer_config.time_step,
         )
+    max_delay = round_to_ns(sequencer_config.get_maximum_delay())
+    for channel_number, channel in enumerate(sequencer_config.channels):
+        delay = round_to_ns(channel.delay)
+        instruction = instructions[ChannelLabel(channel_number)]
+        pre_step = ChannelPattern([instruction.first_value()]) * delay
+        post_step = ChannelPattern([instruction.last_value()]) * (max_delay - delay)
+        instructions[ChannelLabel(channel_number)] = pre_step + instruction + post_step
+
     return instructions
+
+
+def round_to_ns(value: float) -> int:
+    ns = 1e-9
+    return round(value / ns)
 
 
 def compile_channel_instruction(
     channel: ChannelConfiguration,
+    sequencer_config: SequencerConfiguration,
     step_durations: Sequence[float],
     variables: VariableNamespace,
     shot_config: ShotConfiguration,
     camera_instructions: Mapping[DeviceName, CameraInstruction],
     clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
-    time_step: int,
 ) -> ChannelInstruction:
     if channel.has_special_purpose():
         target = DeviceName(str(channel.description))
         if target in camera_instructions:
             instruction = compile_camera_instruction(
-                camera_instructions[target], time_step
+                camera_instructions[target], sequencer_config.time_step
             )
         elif target in clock_requirements:
             instruction = compile_clock_instruction(
-                clock_requirements[target], time_step
+                clock_requirements[target], sequencer_config.time_step
             )
         elif channel.is_unused():
             instruction = empty_channel_instruction(
-                channel.default_value, step_durations, time_step
+                channel.default_value, step_durations, sequencer_config.time_step
             )
         else:
             instruction = empty_channel_instruction(
-                channel.default_value, step_durations, time_step
+                channel.default_value, step_durations, sequencer_config.time_step
             )
     else:
         if lane := shot_config.find_lane(channel.description):
-            instruction = compile_lane(lane, step_durations, time_step, variables)
+            instruction = compile_lane(
+                lane, step_durations, sequencer_config.time_step, variables
+            )
         else:
             instruction = empty_channel_instruction(
-                channel.default_value, step_durations, time_step
+                channel.default_value, step_durations, sequencer_config.time_step
             )
 
     instruction = instruction.apply(channel.output_mapping.convert)

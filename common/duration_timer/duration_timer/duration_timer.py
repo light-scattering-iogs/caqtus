@@ -57,10 +57,12 @@ class DurationTimerLog(DurationTimer):
     def __enter__(self) -> Self:
         super().__enter__()
         if self._display_start:
-            self._logger.info(f"Started {self._message}")
+            self._logger.info(f"Started:\t {self._message}")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super().__exit__(exc_type, exc_val, exc_tb)
         if exc_type is None:
-            self._logger.info(f"Finished {self._message} in {self.duration_in_ms} ms")
+            self._logger.info(
+                f"Finished:\t {self._message} in {self.duration_in_ms} ms"
+            )

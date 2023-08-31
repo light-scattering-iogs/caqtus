@@ -98,6 +98,10 @@ class Sequencer(RuntimeDevice, ABC):
             "get_trigger_priority",
         )
 
+    def close(self) -> None:
+        self.wait_sequence_finished()
+        super().close()
+
 
 class SequenceNotStartedError(RuntimeError):
     """Raised when the sequencer is asked to do something that requires it to have been started, but it has not been

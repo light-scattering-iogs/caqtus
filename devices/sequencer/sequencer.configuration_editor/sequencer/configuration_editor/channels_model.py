@@ -6,6 +6,8 @@ from PyQt6.QtCore import Qt
 
 from sequencer.configuration import ChannelConfiguration
 
+delay_multiplier = 1e-6
+
 
 class SequencerChannelsModel(QAbstractTableModel):
     """A model to display and edit the channels of a sequencer device."""
@@ -41,7 +43,7 @@ class SequencerChannelsModel(QAbstractTableModel):
             elif index.column() == 3:
                 return self._channels[index.row()].output_mapping
             elif index.column() == 4:
-                return self._channels[index.row()].delay
+                return self._channels[index.row()].delay / delay_multiplier
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
@@ -61,7 +63,7 @@ class SequencerChannelsModel(QAbstractTableModel):
                 self._channels[channel].output_mapping = value
                 return True
             elif index.column() == 4:
-                self._channels[channel].delay = value
+                self._channels[channel].delay = value * delay_multiplier
                 return True
         return super().setData(index, value, role)
 
@@ -82,7 +84,7 @@ class SequencerChannelsModel(QAbstractTableModel):
                 elif section == 3:
                     return "Output"
                 elif section == 4:
-                    return "Delay"
+                    return "Delay [µs]"
         elif orientation == Qt.Orientation.Vertical:
             if role == Qt.ItemDataRole.DisplayRole:
                 return str(section)
