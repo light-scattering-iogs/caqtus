@@ -229,16 +229,18 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     next_config = self.tweezer_configurations[
                         instruction.final_tweezer_configuration
                     ]
-                    previous_instruction_stop = (
-                        stop_tick(self._tweezer_sequence_bounds[step - 1][0], time_step)
+
+                    previous_step_stop = (
+                        stop_tick(self._tweezer_sequence_bounds[step - 1][1], time_step)
                         * 32
                     )
-                    next_instruction_start = (
+                    next_step_start = (
                         start_tick(
-                            self._tweezer_sequence_bounds[step + 1][1], time_step
+                            self._tweezer_sequence_bounds[step + 1][0], time_step
                         )
                         * 32
                     )
+
                     move_signal_x = self._signal_generator.generate_signal_moving_traps(
                         previous_config.amplitudes_x,
                         next_config.amplitudes_x,
@@ -247,7 +249,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         previous_config.phases_x,
                         next_config.phases_x,
                         number_samples,
-                        NumberSamples(previous_step_length),
+                        previous_step_stop % self.number_samples_per_loop,
+                        next_step_start % self.number_samples_per_loop,
                     )
                     move_signal_y = self._signal_generator.generate_signal_moving_traps(
                         previous_config.amplitudes_y,
@@ -257,7 +260,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         previous_config.phases_y,
                         next_config.phases_y,
                         number_samples,
-                        NumberSamples(previous_step_length),
+                        previous_step_stop % self.number_samples_per_loop,
+                        next_step_start % self.number_samples_per_loop,
                     )
                     segment_data[move_segment_name(step)] = np.array(
                         (move_signal_x, move_signal_y), dtype=np.int16
@@ -323,7 +327,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             moves = compute_moves_1d(
                 atoms_before,
                 final_config.number_tweezers_along_x,
-                shift_towards="low",
+                shift_towards="high",
             )
 
             initial_indices = [before for before, after in moves.items()]
@@ -427,12 +431,12 @@ def compute_moves_1d(
 
     initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
 
-    target_indices = [i for i, _ in enumerate(initial_indices)]
+    target_indices = [i for i, _ in enumerate(initial_indices) if i < 20]
     if shift_towards == "low":
         pass
     elif shift_towards == "high":
         target_indices = [
-            i + number_target_traps - len(initial_indices) for i in target_indices
+            i + number_target_traps - len(target_indices) for i in target_indices
         ]
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
