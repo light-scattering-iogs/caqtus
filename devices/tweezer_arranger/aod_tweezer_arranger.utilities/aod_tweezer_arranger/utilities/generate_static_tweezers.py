@@ -18,17 +18,18 @@ logger.setLevel(logging.DEBUG)
 
 AMPLITUDE_ONE_TONE = 0.165  # V
 DEVICE_NAME = DeviceName("Tweezer arranger")
-TWEEZER_CONFIG_NAME = "1x10 bis"
+TWEEZER_CONFIG_NAME = "30x1 2.67um - top"
 
 
 def main():
-    # beware here, the first frequency along x must be the highest one because it is the one at the left of the picture
-    # when imaging the atoms for rearrangement
-    frequencies_x = np.linspace(88e6 + 2.52e6, 76.7e6 - 2.52e6, 10)
-    frequencies_y = np.linspace(75e6, 70e6, 1)
+    # frequencies_x = np.linspace((99 - 11.239) * 1e6, 99e6, 50)
+    # frequencies_y = np.linspace(70e6, 80e6, 1)
 
-    # frequencies_x = np.array([88e6, 84.23e6])
-    # frequencies_y = np.linspace(75e6, 80e6, 1)
+    # frequencies_x = np.linspace(95e6, 99e6, 1)
+    # frequencies_y = np.linspace(70e6, (70+30)*1e6, 50)
+
+    frequencies_x = np.linspace(81.22e6, 98.99e6, 30)
+    frequencies_y = np.linspace(80e6, 80e6, 1)
 
     parser = argparse.ArgumentParser(
         description="Generate a configuration for a 2D static tweezer pattern."
@@ -49,6 +50,7 @@ def main():
     frequencies_x = prevent_beating_in_array(frequencies_x, segment_frequency)
     frequencies_x = rounded_frequencies(frequencies_x, segment_frequency)
 
+    frequencies_y = prevent_beating_in_array(frequencies_y, segment_frequency)
     frequencies_y = rounded_frequencies(frequencies_y, segment_frequency)
 
     amplitudes_x = np.ones(len(frequencies_x)) / len(frequencies_x)
@@ -77,6 +79,8 @@ def main():
 def prevent_beating_in_array(
     frequencies: np.ndarray, segment_frequency: float
 ) -> np.ndarray:
+    if len(frequencies) == 1:
+        return frequencies
     spacing = (
         np.round((frequencies[1] - frequencies[0]) / segment_frequency)
         * segment_frequency
@@ -100,10 +104,11 @@ def get_trap_config(
     sampling_rate: float,
     number_samples: int,
 ) -> AODTweezerConfiguration:
+    rng = np.random.default_rng(seed=0)
     static_trap_generator_x = StaticTrapGenerator(
         frequencies=frequencies_x,
         amplitudes=amplitudes_x,
-        phases=np.random.uniform(0, 2 * np.pi, len(frequencies_x)),
+        phases=rng.uniform(0, 2 * np.pi, len(frequencies_x)),
         sampling_rate=sampling_rate,
         number_samples=number_samples,
     )
@@ -122,7 +127,7 @@ def get_trap_config(
     static_trap_generator_y = StaticTrapGenerator(
         frequencies=frequencies_y,
         amplitudes=amplitudes_y,
-        phases=np.random.uniform(0, 2 * np.pi, len(frequencies_y)),
+        phases=rng.uniform(0, 2 * np.pi, len(frequencies_y)),
         sampling_rate=sampling_rate,
         number_samples=number_samples,
     )
