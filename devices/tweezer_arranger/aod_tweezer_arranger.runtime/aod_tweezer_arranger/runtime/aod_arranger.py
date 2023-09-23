@@ -435,6 +435,9 @@ def compute_moves_1d(
     if shift_towards == "low":
         pass
     elif shift_towards == "high":
+        if len(target_indices) == 0:
+            return {}
+        right_most_filled_trap = max(target_indices)
         target_indices = [
             i + number_target_traps - len(target_indices) for i in target_indices
         ]
