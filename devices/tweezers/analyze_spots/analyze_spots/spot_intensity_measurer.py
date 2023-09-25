@@ -1,6 +1,6 @@
 import copy
 from itertools import chain
-from typing import Callable, Sequence
+from typing import Callable, Sequence, Literal
 
 import numpy as np
 
@@ -14,9 +14,10 @@ EvaluationFunction = Callable[[np.ma.MaskedArray], float]
 class SpotAnalyzer:
     """Computes the intensities of spots in an image."""
 
-    def __init__(self):
+    def __init__(self, connectivity: Literal[4, 8] = 4):
         self._centroids: list[tuple[float, float]] = []
         self._rois: list[ROI] = []
+        self._connectivity = connectivity
 
     @property
     def centroids(self) -> list[tuple[float, float]]:
@@ -40,7 +41,9 @@ class SpotAnalyzer:
             The masked image, with the values outside the regions of interest masked out
         """
         self._centroids = locate_spots(
-            reference_image, threshold=np.max(reference_image) * relative_threshold
+            reference_image,
+            threshold=np.max(reference_image) * relative_threshold,
+            connectivity=self._connectivity,
         )
         masks = [
             np.logical_not(circular_mask(reference_image, trap_center, radius))
@@ -92,8 +95,10 @@ class SpotAnalyzer:
 class GridSpotAnalyzer(SpotAnalyzer):
     """Computes the intensities of spots in an image, assuming that the spots are arranged in a grid."""
 
-    def __init__(self, number_rows: int, number_columns: int):
-        super().__init__()
+    def __init__(
+        self, number_rows: int, number_columns: int, *, connectivity: Literal[4, 8] = 4
+    ):
+        super().__init__(connectivity=connectivity)
         self._number_rows = number_rows
         self._number_columns = number_columns
         self._coordinates: list[tuple[int, int]] = []

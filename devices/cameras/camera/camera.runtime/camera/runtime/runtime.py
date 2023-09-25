@@ -5,11 +5,11 @@ from collections import Counter
 from typing import ClassVar, Optional
 
 import numpy
-from image_types import ImageLabel, Image
 from pydantic import Field, validator
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
+from image_types import ImageLabel, Image
 from log_exception import log_exception
 
 logger = logging.getLogger(__name__)
@@ -93,9 +93,7 @@ class Camera(RuntimeDevice, ABC):
         """Update the exposures time of the camera"""
 
         if not (self.are_all_pictures_acquired() or self.no_pictures_acquired()):
-            raise RuntimeError(
-                f"Cannot update parameters while pictures are being acquired"
-            )
+            self.stop_acquisition()
 
         super().update_parameters(exposures=exposures, timeout=timeout)
 
