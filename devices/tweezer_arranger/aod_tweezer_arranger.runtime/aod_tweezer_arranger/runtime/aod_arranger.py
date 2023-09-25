@@ -36,6 +36,8 @@ logger.setLevel(logging.DEBUG)
 
 BYPASS_POWER_CHECK = True
 
+parity = 0
+
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
@@ -278,6 +280,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 step_repetitions=step_repetitions,
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
+            self._awg.save_segments_data()
 
     @log_exception(logger)
     def prepare_rearrangement(
@@ -327,6 +330,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             moves = compute_moves_1d(
                 atoms_before,
                 final_config.number_tweezers_along_x,
+                # 20,
                 shift_towards="high",
             )
 
@@ -431,7 +435,19 @@ def compute_moves_1d(
 
     initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
 
-    target_indices = [i for i, _ in enumerate(initial_indices) if i < 20]
+    target_indices = [
+       i for i, _ in enumerate(initial_indices) if i < number_target_traps
+    ]
+
+    target_indices = [
+        i for i in target_indices if i < 20
+    ]
+
+    global parity
+    target_indices = [
+        2 * i for i, _ in enumerate(target_indices) if 2 * i < number_target_traps
+    ]
+
     if shift_towards == "low":
         pass
     elif shift_towards == "high":
@@ -439,8 +455,9 @@ def compute_moves_1d(
             return {}
         right_most_filled_trap = max(target_indices)
         target_indices = [
-            i + number_target_traps - len(target_indices) for i in target_indices
+            i - right_most_filled_trap + number_target_traps - 1 - parity for i in target_indices
         ]
+        parity = 1 - parity
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
 
