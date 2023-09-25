@@ -1,9 +1,10 @@
+from abc import ABC, abstractmethod
 from typing import NewType, Iterator
 
 import numpy as np
 from attr import frozen, field
 
-from .base_instructions import InternalPattern
+from .base_instructions import InternalPattern, Pattern, SequenceInstruction
 
 ChannelLabel = NewType("ChannelLabel", int)
 ChannelValue = NewType("ChannelValue", object)
@@ -39,6 +40,20 @@ class SequencerInternalPattern(InternalPattern[dict[ChannelLabel, ChannelValue]]
             )
         else:
             raise TypeError(f"Index must be int or slice, not {type(item)}")
+
+
+class SequencerInstruction(SequenceInstruction[dict[ChannelLabel, ChannelValue]], ABC):
+    @abstractmethod
+    def flatten(self) -> "SequencerPattern":
+        raise NotImplementedError()
+
+
+@frozen
+class SequencerPattern(Pattern[dict[ChannelLabel, ChannelValue]], SequencerInstruction):
+    pattern: SequencerInternalPattern = field()
+
+    def flatten(self) -> "SequencerPattern":
+        return self
 
 
 def first(iterable):
