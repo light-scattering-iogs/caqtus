@@ -4,7 +4,13 @@ from typing import NewType, Iterator
 import numpy as np
 from attr import frozen, field
 
-from .base_instructions import InternalPattern, Pattern, SequenceInstruction, Add
+from .base_instructions import (
+    InternalPattern,
+    Pattern,
+    SequenceInstruction,
+    Add,
+    Multiply,
+)
 
 ChannelLabel = NewType("ChannelLabel", int)
 ChannelValue = NewType("ChannelValue", object)
@@ -58,8 +64,8 @@ class SequencerPattern(Pattern[dict[ChannelLabel, ChannelValue]], SequencerInstr
 
 @frozen
 class SequencerAdd(Add[dict[ChannelLabel, ChannelValue]], SequencerInstruction):
-    left: SequencerInstruction = field()
-    right: SequencerInstruction = field()
+    left: SequencerInstruction
+    right: SequencerInstruction
 
     def flatten(self) -> "SequencerPattern":
         left_pattern = self.left.flatten()
@@ -79,6 +85,21 @@ class SequencerAdd(Add[dict[ChannelLabel, ChannelValue]], SequencerInstruction):
                     right_pattern.pattern.values[channel],
                 )
             )
+        return SequencerPattern(SequencerInternalPattern(result))
+
+
+@frozen
+class SequencerMultiply(
+    Multiply[dict[ChannelLabel, ChannelValue]], SequencerInstruction
+):
+    repetitions: int
+    instruction: SequencerInstruction
+
+    def flatten(self) -> "SequencerPattern":
+        pattern = self.instruction.flatten().pattern
+        result = {}
+        for channel in pattern.values.keys():
+            result[channel] = np.tile(pattern.values[channel], self.repetitions)
         return SequencerPattern(SequencerInternalPattern(result))
 
 
