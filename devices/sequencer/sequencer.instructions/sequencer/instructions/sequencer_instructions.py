@@ -4,7 +4,7 @@ from typing import NewType, Iterator
 import numpy as np
 from attr import frozen, field
 
-from .base_instructions import InternalPattern, Pattern, SequenceInstruction
+from .base_instructions import InternalPattern, Pattern, SequenceInstruction, Add
 
 ChannelLabel = NewType("ChannelLabel", int)
 ChannelValue = NewType("ChannelValue", object)
@@ -54,6 +54,32 @@ class SequencerPattern(Pattern[dict[ChannelLabel, ChannelValue]], SequencerInstr
 
     def flatten(self) -> "SequencerPattern":
         return self
+
+
+@frozen
+class SequencerAdd(Add[dict[ChannelLabel, ChannelValue]], SequencerInstruction):
+    left: SequencerInstruction = field()
+    right: SequencerInstruction = field()
+
+    def flatten(self) -> "SequencerPattern":
+        left_pattern = self.left.flatten()
+        right_pattern = self.right.flatten()
+
+        if (
+            not left_pattern.pattern.values.keys()
+            == right_pattern.pattern.values.keys()
+        ):
+            raise ValueError("Left and right patterns must have the same channels")
+
+        result = {}
+        for channel in left_pattern.pattern.values.keys():
+            result[channel] = np.concatenate(
+                (
+                    left_pattern.pattern.values[channel],
+                    right_pattern.pattern.values[channel],
+                )
+            )
+        return SequencerPattern(SequencerInternalPattern(result))
 
 
 def first(iterable):
