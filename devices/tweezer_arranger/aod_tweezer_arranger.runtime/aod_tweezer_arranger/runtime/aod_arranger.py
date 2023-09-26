@@ -38,6 +38,8 @@ BYPASS_POWER_CHECK = True
 
 parity = 0
 
+pattern_line = 0
+
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
@@ -95,6 +97,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self._write_static_segments()
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
+        logger.debug(f"{_get_steps(self.tweezer_sequence)=}")
         return SpectrumAWGM4i66xxX8(
             name=f"{self.name}_awg",
             board_id=self.awg_board_id,
@@ -330,9 +333,19 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             moves = compute_moves_1d(
                 atoms_before,
                 final_config.number_tweezers_along_x,
-                # 20,
                 shift_towards="high",
             )
+            # path = Path(__file__).parent / "dy_array.npy"
+            # dy_pattern = np.load(str(path))
+            #
+            # global pattern_line
+            #
+            # moves = compute_moves_1d_pattern(
+            #     atoms_before,
+            #     dy_pattern[pattern_line, :],
+            # )
+            # pattern_line += 1
+            # pattern_line %= 50
 
             initial_indices = [before for before, after in moves.items()]
             final_indices = [after for before, after in moves.items()]
@@ -436,17 +449,15 @@ def compute_moves_1d(
     initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
 
     target_indices = [
-       i for i, _ in enumerate(initial_indices) if i < number_target_traps
+        i for i, _ in enumerate(initial_indices) if i < number_target_traps
     ]
 
-    target_indices = [
-        i for i in target_indices if i < 20
-    ]
+    target_indices = [i for i in target_indices if i < 20]
 
-    global parity
-    target_indices = [
-        2 * i for i, _ in enumerate(target_indices) if 2 * i < number_target_traps
-    ]
+    # global parity
+    # target_indices = [
+    #     2 * i for i, _ in enumerate(target_indices) if 2 * i < number_target_traps
+    # ]
 
     if shift_towards == "low":
         pass
@@ -455,11 +466,35 @@ def compute_moves_1d(
             return {}
         right_most_filled_trap = max(target_indices)
         target_indices = [
-            i - right_most_filled_trap + number_target_traps - 1 - parity for i in target_indices
+            i - right_most_filled_trap + number_target_traps - 1 - parity
+            for i in target_indices
         ]
-        parity = 1 - parity
+        # parity = 1 - parity
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
+
+    return dict(zip(initial_indices, target_indices))
+
+
+def compute_moves_1d_pattern(
+    atoms_before: Sequence[bool],
+    target_pattern: Sequence[bool],
+) -> dict[int, int]:
+    """
+    Compute the moves for a rearrangement in 1D.
+
+    Args:
+        atoms_before: Indicated which traps are filled, i.e. atoms_before[i] is True if the trap with index i is filled
+            and False otherwise.
+        target_pattern: The target pattern of the rearrangement. This is a sequence of booleans indicating which traps
+            should be filled after the rearrangement.
+
+    Returns:
+        moves: A dictionary where moves[i] is the trap index that the atom at index i should be moved to.
+    """
+
+    initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
+    target_indices = [i for i, filled in enumerate(target_pattern) if filled]
 
     return dict(zip(initial_indices, target_indices))
 
