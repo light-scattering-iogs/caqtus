@@ -196,13 +196,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             for step, (instruction, (start, stop)) in enumerate(
                 zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
             ):
-                integer_start = (
-                    start_tick(start, number_samples_per_loop / self.sampling_rate)
-                    * number_samples_per_loop
+                block_start = math.ceil(
+                    start / (number_samples_per_loop / self.sampling_rate)
                 )
-                integer_stop = (
-                    stop_tick(stop, number_samples_per_loop / self.sampling_rate)
-                    * number_samples_per_loop
+                block_stop = math.floor(
+                    stop / (number_samples_per_loop / self.sampling_rate)
                 )
                 before_start = start_tick(start, time_step) * 32
                 after_stop = stop_tick(stop, time_step) * 32
@@ -210,12 +208,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 ticks = after_stop - before_start
                 self._step_number_ticks[step] = ticks
                 if isinstance(instruction, HoldTweezers):
-                    integer_repetitions = (
-                        integer_stop - integer_start
-                    ) // self.number_samples_per_loop
-                    step_repetitions[
-                        static_step_names(step).integer
-                    ] = integer_repetitions
+                    step_repetitions[static_step_names(step).integer] = (
+                        block_stop - block_start
+                    )
                     segment_data[
                         static_segment_names(step).before
                     ] = self._static_signals[instruction.tweezer_configuration][
