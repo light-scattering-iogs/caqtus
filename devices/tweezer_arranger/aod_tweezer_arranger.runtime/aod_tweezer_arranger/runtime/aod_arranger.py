@@ -195,18 +195,13 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             time_step = 32 / self.sampling_rate
             step_repetitions = dict[StepName, int]()
             segment_data: dict[SegmentName, SegmentData] = {}
-            number_samples_per_loop = self.number_samples_per_loop
             for step, (instruction, (start, stop)) in enumerate(
                 zip(self.tweezer_sequence, new_tweezer_sequence_bounds)
             ):
-                have_step_bounds_changed = ((start, stop) != self._tweezer_sequence_bounds[step])
-
-                block_start = math.ceil(
-                    start / (number_samples_per_loop / self.sampling_rate)
-                )
-                block_stop = math.floor(
-                    stop / (number_samples_per_loop / self.sampling_rate)
-                )
+                have_step_bounds_changed = (
+                    start,
+                    stop,
+                ) != self._tweezer_sequence_bounds[step]
                 before_start = start_tick(start, time_step) * 32
                 after_stop = stop_tick(stop, time_step) * 32
 
@@ -215,19 +210,16 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 if isinstance(instruction, HoldTweezers):
                     if not have_step_bounds_changed:
                         continue
-                    step_repetitions[static_step_names(step).integer] = (
-                        block_stop - block_start
-                    )
+
+                    step_repetitions[
+                        static_step_names(step).integer
+                    ] = self.get_step_step_repetitions(start, stop)
                     segment_data[
                         static_segment_names(step).before
-                    ] = self._static_signals[instruction.tweezer_configuration][
-                        :, before_start % number_samples_per_loop :
-                    ]
+                    ] = self.get_before_part_data(start, stop, instruction)
                     segment_data[
                         static_segment_names(step).after
-                    ] = self._static_signals[instruction.tweezer_configuration][
-                        :, : after_stop % number_samples_per_loop
-                    ]
+                    ] = self.get_after_part_data(start, stop, instruction)
                 elif isinstance(instruction, MoveTweezers):
                     if not have_step_bounds_changed:
                         continue
@@ -244,9 +236,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         * 32
                     )
                     next_step_start = (
-                        start_tick(
-                            new_tweezer_sequence_bounds[step + 1][0], time_step
-                        )
+                        start_tick(new_tweezer_sequence_bounds[step + 1][0], time_step)
                         * 32
                     )
 
@@ -290,6 +280,39 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             )
             self._tweezer_sequence_bounds = new_tweezer_sequence_bounds
             self._awg.save_segments_data()
+
+    def get_before_part_data(
+        self, start: float, stop: float, instruction: HoldTweezers
+    ) -> SegmentData:
+        time_step = self.indivisible_time_step
+        before_start = start_tick(start, time_step) * 32
+        before = self._static_signals[instruction.tweezer_configuration][
+            :, before_start % self.number_samples_per_loop
+        ]
+        return before
+
+    def get_after_part_data(
+        self, start: float, stop: float, instruction: HoldTweezers
+    ) -> SegmentData:
+        time_step = self.indivisible_time_step
+        after_stop = stop_tick(stop, time_step) * 32
+        after = self._static_signals[instruction.tweezer_configuration][
+            :, : after_stop % self.number_samples_per_loop
+        ]
+        return after
+
+    def get_step_step_repetitions(self, start: float, stop: float) -> int:
+        block_start = math.ceil(
+            start / (self.number_samples_per_loop / self.sampling_rate)
+        )
+        block_stop = math.floor(
+            stop / (self.number_samples_per_loop / self.sampling_rate)
+        )
+        return block_stop - block_start
+
+    @property
+    def indivisible_time_step(self) -> float:
+        return 32 / self.sampling_rate
 
     @log_exception(logger)
     def prepare_rearrangement(
