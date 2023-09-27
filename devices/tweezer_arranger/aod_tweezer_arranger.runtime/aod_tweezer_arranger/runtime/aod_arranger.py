@@ -95,6 +95,9 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self._enter_context(self._awg)
         self._compute_static_signals()
         self._write_static_segments()
+        self._tweezer_sequence_bounds = tuple(
+            (math.nan, math.nan) for _ in self.tweezer_sequence
+        )
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
         logger.debug(f"{_get_steps(self.tweezer_sequence)=}")
@@ -184,7 +187,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 raise ValueError(
                     "tweezer_sequence_durations must be the same length as tweezer_sequence"
                 )
-            self._tweezer_sequence_bounds = tuple(
+            new_tweezer_sequence_bounds = tuple(
                 get_step_bounds(tweezer_sequence_durations)
             )
             # this is a limitation of the AWG that each segment must have a length
@@ -194,8 +197,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             segment_data: dict[SegmentName, SegmentData] = {}
             number_samples_per_loop = self.number_samples_per_loop
             for step, (instruction, (start, stop)) in enumerate(
-                zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
+                zip(self.tweezer_sequence, new_tweezer_sequence_bounds)
             ):
+                have_step_bounds_changed = ((start, stop) != self._tweezer_sequence_bounds[step])
+
                 block_start = math.ceil(
                     start / (number_samples_per_loop / self.sampling_rate)
                 )
@@ -208,6 +213,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 ticks = after_stop - before_start
                 self._step_number_ticks[step] = ticks
                 if isinstance(instruction, HoldTweezers):
+                    if not have_step_bounds_changed:
+                        continue
                     step_repetitions[static_step_names(step).integer] = (
                         block_stop - block_start
                     )
@@ -222,6 +229,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         :, : after_stop % number_samples_per_loop
                     ]
                 elif isinstance(instruction, MoveTweezers):
+                    if not have_step_bounds_changed:
+                        continue
                     number_samples = NumberSamples(after_stop - before_start)
                     previous_config = self.tweezer_configurations[
                         instruction.initial_tweezer_configuration
@@ -231,12 +240,12 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     ]
 
                     previous_step_stop = (
-                        stop_tick(self._tweezer_sequence_bounds[step - 1][1], time_step)
+                        stop_tick(new_tweezer_sequence_bounds[step - 1][1], time_step)
                         * 32
                     )
                     next_step_start = (
                         start_tick(
-                            self._tweezer_sequence_bounds[step + 1][0], time_step
+                            new_tweezer_sequence_bounds[step + 1][0], time_step
                         )
                         * 32
                     )
@@ -272,12 +281,14 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     )
                 else:
                     raise ValueError(f"Unknown instruction {instruction}")
-            del segment_data[static_segment_names(0).before]
+            if static_segment_names(0).before in segment_data:
+                del segment_data[static_segment_names(0).before]
             self._awg.update_parameters(
                 segment_data=segment_data,
                 step_repetitions=step_repetitions,
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
+            self._tweezer_sequence_bounds = new_tweezer_sequence_bounds
             self._awg.save_segments_data()
 
     @log_exception(logger)
@@ -340,7 +351,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             #     dy_pattern[pattern_line, :],
             # )
             # pattern_line += 1
-            # pattern_line %= 50
+            # pattern_line %= dy_pattern.shape[0]
 
             initial_indices = [before for before, after in moves.items()]
             final_indices = [after for before, after in moves.items()]
