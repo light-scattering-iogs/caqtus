@@ -26,7 +26,7 @@ from .clock_instruction import ClockInstruction
 from .compile_lane import (
     compile_lane,
     empty_channel_instruction,
-    get_step_bounds,
+    get_step_starts,
     compile_camera_instruction,
     compile_clock_instruction,
 )
@@ -194,7 +194,7 @@ def compute_camera_instructions(
         shot_config.step_names, shot_config.step_durations, variables
     )
 
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     result = {}
     shot_duration = sum(step_durations)
@@ -254,7 +254,7 @@ def compile_clock_requirements(
     step_durations = compile_step_durations(
         shot_config.step_names, shot_config.step_durations, variables
     )
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     sequencer = DeviceName("NI6738 card")
     sequencer_config = sequencer_configs[sequencer]
@@ -343,7 +343,7 @@ def compute_tweezer_arranger_instructions(
         shot_config.step_names, shot_config.step_durations, variables
     )
 
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     result = {}
 
