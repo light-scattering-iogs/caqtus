@@ -285,6 +285,8 @@ def compile_clock_instruction(
 ) -> ChannelInstruction[bool]:
     instructions = []
 
+    logger.debug(f"{clock_requirements=}")
+
     for clock_instruction in clock_requirements:
         clock_start = start_tick(clock_instruction.start, clock_instruction.time_step)
         clock_stop = stop_tick(clock_instruction.stop, clock_instruction.time_step)
@@ -312,7 +314,9 @@ def compile_clock_instruction(
             )
         instructions.append(pattern)
     length = number_ticks(0.0, clock_requirements[-1].stop, time_step)
-    return ChannelInstruction.join(instructions, dtype=bool).split(length)[0]
+    result = ChannelInstruction.join(instructions, dtype=bool).split(length)[0]
+    logger.debug(f"{result=}")
+    return result
 
 
 def high_low_clicks(
