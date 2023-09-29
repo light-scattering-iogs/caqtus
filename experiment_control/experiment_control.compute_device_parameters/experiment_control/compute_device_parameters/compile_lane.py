@@ -126,15 +126,31 @@ class CompileAnalogLane:
     def compile(self) -> ChannelInstruction[float]:
         step_starts = get_step_starts(self.step_durations)
         instructions = []
-        for cell, start, stop in self.lane.get_value_spans():
-            if isinstance(cell, Expression):
-                instructions.append(
-                    self._compile_expression_cell(
-                        cell, step_starts[start], step_starts[stop]
-                    )
+        for (
+            cell_value,
+            cell_start_index,
+            cell_stop_index,
+        ) in self.lane.get_value_spans():
+            cell_start_time = step_starts[cell_start_index]
+            cell_stop_time = step_starts[cell_stop_index]
+            if isinstance(cell_value, Expression):
+                instruction = self._compile_expression_cell(
+                    cell_value, cell_start_time, cell_stop_time
                 )
-            elif isinstance(cell, Ramp):
-                instructions.append(self._compile_ramp_cell(start))
+            elif isinstance(cell_value, Ramp):
+                instruction = self._compile_ramp_cell(cell_start_index)
+            else:
+                raise NotImplementedError(f"Unknown cell type {type(cell_value)}")
+
+            for step_index in range(cell_start_index, cell_stop_index):
+                step_start_tick = start_tick(
+                    step_starts[step_index], self.time_step * ns
+                )
+                step_stop_tick = stop_tick(
+                    step_starts[step_index + 1], self.time_step * ns
+                )
+                left, instruction = instruction.split(step_stop_tick - step_start_tick)
+                instructions.append(left)
         return ChannelInstruction.join(instructions, dtype=float)
 
     def _compile_expression_cell(
@@ -143,12 +159,8 @@ class CompileAnalogLane:
         variables = self.variables | units
         length = number_ticks(start, stop, self.time_step * ns)
         if _is_constant(expression):
-            result = (
-                ChannelPattern(
-                    [float(self._evaluate_expression(expression, variables))]
-                )
-                * length
-            )
+            value = self._evaluate_expression(expression, variables)
+            result = ChannelPattern([float(value)]) * length
         else:
             variables = variables | {
                 DottedVariableName("t"): (
