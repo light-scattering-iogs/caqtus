@@ -49,10 +49,13 @@ def instruction(draw, max_depth: int):
     )
 
 
-@given(instruction(max_depth=3), instruction(max_depth=3))
+@given(instruction(max_depth=5), instruction(max_depth=5))
 def test_addition(left, right):
     s = left + right
-    assert list(s) == list(left) + list(right)
+    assert np.all(
+        s.flatten().array
+        == np.concatenate([left.flatten().array, right.flatten().array])
+    )
 
 
 @composite
@@ -68,4 +71,6 @@ def instruction_and_slice(draw, max_depth: int):
 )
 def test_slice(args):
     instr, start, stop = args
-    assert list(instr[start:stop]) == list(instr)[start:stop]
+    assert np.all(
+        instr[start:stop].flatten().array == instr.flatten().array[start:stop]
+    )

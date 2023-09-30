@@ -56,7 +56,7 @@ class SequencerInstruction(SequenceInstruction[dict[ChannelLabel, ChannelValue]]
 
 @frozen
 class SequencerPattern(Pattern[dict[ChannelLabel, ChannelValue]], SequencerInstruction):
-    pattern: SequencerInternalPattern = field()
+    array: SequencerInternalPattern = field()
 
     def flatten(self) -> "SequencerPattern":
         return self

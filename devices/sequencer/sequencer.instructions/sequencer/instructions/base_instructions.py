@@ -1,16 +1,18 @@
-import itertools
 import logging
 from abc import ABC, abstractmethod
 from functools import cached_property
 from math import floor, ceil
-from typing import TypeVar, Protocol, runtime_checkable, overload, Iterator, Generic
+from typing import TypeVar, overload, Generic
 
+import numpy
 from attr import frozen, field
+from numpy.typing import NDArray, ArrayLike
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-T = TypeVar("T", covariant=True)
+S = TypeVar("S", covariant=True, bound=numpy.generic)
+T = TypeVar("T", covariant=True, bound=numpy.generic)
 
 
 class SequenceInstruction(ABC, Generic[T]):
@@ -37,17 +39,6 @@ class SequenceInstruction(ABC, Generic[T]):
 
         raise NotImplementedError()
 
-    @abstractmethod
-    def __iter__(self) -> Iterator[T]:
-        """Return an iterator over the explicit values represented by this instruction.
-
-        This is mostly useful for debugging purposes as it transforms an implicit
-        representation into an explicit one, thus losing all potential performance
-        benefits.
-        """
-
-        raise NotImplementedError()
-
     @overload
     def __getitem__(self, index: int) -> T:
         ...
@@ -56,8 +47,21 @@ class SequenceInstruction(ABC, Generic[T]):
     def __getitem__(self, index: slice) -> "SequenceInstruction[T]":
         ...
 
+    @overload
+    def __getitem__(self, index: str) -> "SequenceInstruction[S]":
+        ...
+
     @abstractmethod
     def __getitem__(self, index):
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def dtype(self) -> numpy.dtype[T]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def flatten(self) -> "Pattern[T]":
         raise NotImplementedError()
 
     def __add__(self, other) -> "SequenceInstruction[T]":
@@ -95,24 +99,8 @@ class SequenceInstruction(ABC, Generic[T]):
         return instruction[:0]
 
 
-@runtime_checkable
-class InternalPattern(Protocol[T]):
-    def __len__(self) -> int:
-        raise NotImplementedError()
-
-    def __iter__(self) -> Iterator[T]:
-        raise NotImplementedError()
-
-    @overload
-    def __getitem__(self, index: int) -> T:
-        ...
-
-    @overload
-    def __getitem__(self, index: slice) -> "InternalPattern[T]":
-        ...
-
-    def __getitem__(self, index):
-        raise NotImplementedError()
+def _to_numpy_array(array_like: ArrayLike) -> NDArray:
+    return numpy.array(array_like)
 
 
 @frozen
@@ -122,28 +110,32 @@ class Pattern(SequenceInstruction[T]):
     This is the most specific way to represent a sequence of values, by specifying them
     explicitly. It is also the most verbose and memory expensive way to represent the
     values.
-
-    Fields:
-        pattern: The sequence of values wrapped by this instruction. This must be a
-        sequence of values implementing the `__len__` and `__getitem__` methods, like
-        for example a list or a numpy array.
     """
 
-    pattern: InternalPattern[T]
+    array: NDArray[T] = field(converter=_to_numpy_array)
 
     def __len__(self) -> int:
-        return len(self.pattern)
+        return len(self.array)
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return self.pattern[index]
+            return self.array[index]
         elif isinstance(index, slice):
-            return Pattern(self.pattern[index])
+            return Pattern(self.array[index])
+        elif isinstance(index, str):
+            return Pattern(self.array[index])
         else:
             raise TypeError("Index must be int or slice.")
 
     def __iter__(self):
-        return iter(self.pattern)
+        return iter(self.array)
+
+    @cached_property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.array.dtype
+
+    def flatten(self) -> "Pattern[T]":
+        return self
 
 
 @frozen
@@ -169,15 +161,25 @@ class Add(SequenceInstruction[T]):
         if len(value) == 0:
             raise ValueError("Right instruction is empty.")
 
+    def __attrs_post_init__(self):
+        if self.left.dtype != self.right.dtype:
+            raise ValueError("Left and right instructions must have the same dtype.")
+
     def __len__(self) -> int:
         return self._length
-
-    def __iter__(self):
-        return itertools.chain(self.left, self.right)
 
     @cached_property
     def _length(self):
         return len(self.left) + len(self.right)
+
+    @cached_property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.left.dtype
+
+    def flatten(self) -> "Pattern[T]":
+        return Pattern(
+            numpy.concatenate([self.left.flatten().array, self.right.flatten().array])
+        )
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -197,6 +199,10 @@ class Add(SequenceInstruction[T]):
                     return self.left[start:] + self.right[: stop - len(self.left)]
             else:
                 return self.right[start - len(self.left) : stop - len(self.left)]
+        elif isinstance(index, str):
+            return Add(self.left[index], self.right[index])
+        else:
+            raise TypeError("Index must be int or slice or str.")
 
 
 @frozen
@@ -234,10 +240,8 @@ class Multiply(SequenceInstruction[T]):
     def _length(self):
         return self.repetitions * len(self.instruction)
 
-    def __iter__(self):
-        return itertools.chain.from_iterable(
-            itertools.repeat(self.instruction, self.repetitions)
-        )
+    def flatten(self) -> "Pattern[T]":
+        return Pattern(numpy.tile(self.instruction.flatten().array, self.repetitions))
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -287,8 +291,10 @@ class Multiply(SequenceInstruction[T]):
                     - next_instruction_start
                 ]
                 return before + middle + after
+        elif isinstance(index, str):
+            return Multiply(self.repetitions, self.instruction[index])
         else:
-            raise TypeError("Index must be int or slice.")
+            raise TypeError("Index must be int or slice or str.")
 
     def __mul__(self, other):
         if isinstance(other, int):
@@ -303,6 +309,10 @@ class Multiply(SequenceInstruction[T]):
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    @cached_property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.instruction.dtype
 
 
 def _normalize_integer_index(index: int, length: int) -> int:
