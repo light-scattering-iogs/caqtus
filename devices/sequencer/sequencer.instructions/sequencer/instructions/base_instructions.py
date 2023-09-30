@@ -409,6 +409,30 @@ def _normalize_slice(index: slice, length: int) -> tuple[int, int, int]:
 
 
 @singledispatch
+def number_operations(instruction: SequenceInstruction[T]) -> int:
+    raise NotImplementedError(
+        f"Cannot get number of operations of instruction with type {type(instruction)}."
+    )
+
+
+@number_operations.register
+def _(instruction: Pattern) -> int:
+    return 0
+
+
+@number_operations.register
+def _(instruction: Add) -> int:
+    return (
+        number_operations(instruction.left) + number_operations(instruction.right) + 1
+    )
+
+
+@number_operations.register
+def _(instruction: Multiply) -> int:
+    return number_operations(instruction.instruction) + 1
+
+
+@singledispatch
 def leaves(instruction: SequenceInstruction[T]) -> list[NDArray[T]]:
     raise NotImplementedError(
         f"Cannot get leaves of instruction with type {type(instruction)}."

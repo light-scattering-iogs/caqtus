@@ -6,6 +6,7 @@ from sequencer.instructions.base_instructions import (
     Pattern,
     SequenceInstruction,
     leaves,
+    number_operations,
 )
 
 
@@ -80,3 +81,8 @@ def test_dtype(instr: SequenceInstruction):
     l = leaves(instr)
     if len(l) > 0:
         assert all(l[0].dtype is leaf.dtype for leaf in l)
+
+
+@given(instruction(max_depth=5))
+def test_invariants(instr: SequenceInstruction):
+    assert number_operations(instr) <= len(instr)
