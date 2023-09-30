@@ -5,6 +5,7 @@ from math import floor, ceil
 from typing import TypeVar, overload, Generic
 
 import numpy
+from numpy.lib.recfunctions import merge_arrays
 from attr import frozen, field
 from numpy.typing import NDArray, ArrayLike
 
@@ -13,6 +14,7 @@ logger.setLevel(logging.DEBUG)
 
 S = TypeVar("S", covariant=True, bound=numpy.generic)
 T = TypeVar("T", covariant=True, bound=numpy.generic)
+U = TypeVar("U", covariant=True, bound=numpy.void)
 
 
 class SequenceInstruction(ABC, Generic[T]):
@@ -31,6 +33,9 @@ class SequenceInstruction(ABC, Generic[T]):
     Instances of this class are immutable. They can be concatenated with the `+`
     operator and repeated an integer number of times with the `*` operator. They can be
     subscripted with an integer or a slice.
+
+    The `|` operator can be used to merge the fields of two instructions. See numpy
+    structured arrays for more information on how the fields are merged.
     """
 
     @abstractmethod
@@ -92,6 +97,11 @@ class SequenceInstruction(ABC, Generic[T]):
     def __rmul__(self, other) -> "SequenceInstruction[T]":
         return self.__mul__(other)
 
+    @abstractmethod
+    def __or__(self, other) -> "SequenceInstruction[U]":
+        """Merge the fields of two instructions."""
+        raise NotImplementedError()
+
     @classmethod
     def empty_like(
         cls, instruction: "SequenceInstruction[T]"
@@ -136,6 +146,17 @@ class Pattern(SequenceInstruction[T]):
 
     def flatten(self) -> "Pattern[T]":
         return self
+
+    def __or__(self, other) -> "SequenceInstruction[U]":
+        if isinstance(other, SequenceInstruction):
+            if len(other) != len(self):
+                raise ValueError("Patterns must have the same length to be merged.")
+            merged_array = merge_arrays(
+                [self.array, other.flatten()], usemask=False
+            )
+            return Pattern(merged_array)
+        else:
+            return NotImplemented
 
 
 @frozen
