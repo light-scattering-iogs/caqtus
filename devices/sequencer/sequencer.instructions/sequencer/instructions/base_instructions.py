@@ -5,8 +5,9 @@ from math import floor, ceil
 from typing import TypeVar, overload, Generic
 
 import numpy
+from attr import field, define
+from attr.setters import frozen
 from numpy.lib.recfunctions import merge_arrays
-from attr import frozen, field
 from numpy.typing import NDArray, ArrayLike
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,13 @@ class SequenceInstruction(ABC, Generic[T]):
 
     @abstractmethod
     def __getitem__(self, index):
+        """Return the value or subsequence at the given index.
+
+        Beware that the returned value is a view of the original instruction, not a
+        copy. This means that modifying the returned value will modify the original
+        instruction.
+        """
+
         raise NotImplementedError()
 
     @property
@@ -70,6 +78,11 @@ class SequenceInstruction(ABC, Generic[T]):
         can be used to see if the instruction represents a structured array.
         """
 
+        raise NotImplementedError()
+
+    @dtype.setter
+    @abstractmethod
+    def dtype(self, value):
         raise NotImplementedError()
 
     @abstractmethod
@@ -126,7 +139,7 @@ def _to_numpy_array(array_like: ArrayLike) -> NDArray:
     return numpy.array(array_like)
 
 
-@frozen
+@define
 class Pattern(SequenceInstruction[T]):
     """Explicit representation of a sequence of values.
 
@@ -135,7 +148,7 @@ class Pattern(SequenceInstruction[T]):
     values.
     """
 
-    array: NDArray[T] = field(converter=_to_numpy_array)
+    array: NDArray[T] = field(converter=_to_numpy_array, on_setattr=frozen)
 
     def __len__(self) -> int:
         return len(self.array)
@@ -153,9 +166,13 @@ class Pattern(SequenceInstruction[T]):
     def __iter__(self):
         return iter(self.array)
 
-    @cached_property
+    @property
     def dtype(self) -> numpy.dtype[T]:
         return self.array.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.array.dtype = value
 
     def flatten(self) -> NDArray[T]:
         return self.array
@@ -164,15 +181,13 @@ class Pattern(SequenceInstruction[T]):
         if isinstance(other, SequenceInstruction):
             if len(other) != len(self):
                 raise ValueError("Patterns must have the same length to be merged.")
-            merged_array = merge_arrays(
-                [self.array, other.flatten()], usemask=False
-            )
+            merged_array = merge_arrays([self.array, other.flatten()], usemask=False)
             return Pattern(merged_array)
         else:
             return NotImplemented
 
 
-@frozen
+@define
 class Add(SequenceInstruction[T]):
     """Represent the concatenation of two sequences.
 
@@ -180,8 +195,8 @@ class Add(SequenceInstruction[T]):
     part cannot be empty.
     """
 
-    left: SequenceInstruction[T] = field()
-    right: SequenceInstruction[T] = field()
+    left: SequenceInstruction[T] = field(on_setattr=frozen)
+    right: SequenceInstruction[T] = field(on_setattr=frozen)
 
     # noinspection PyUnresolvedReferences
     @left.validator
@@ -199,6 +214,8 @@ class Add(SequenceInstruction[T]):
         if self.left.dtype != self.right.dtype:
             raise ValueError("Left and right instructions must have the same dtype.")
 
+        self.right.dtype = self.left.dtype
+
     def __len__(self) -> int:
         return self._length
 
@@ -206,9 +223,14 @@ class Add(SequenceInstruction[T]):
     def _length(self):
         return len(self.left) + len(self.right)
 
-    @cached_property
+    @property
     def dtype(self) -> numpy.dtype[T]:
         return self.left.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.left.dtype = value
+        self.right.dtype = value
 
     def flatten(self) -> NDArray[T]:
         return numpy.concatenate([self.left.flatten(), self.right.flatten()])
@@ -237,7 +259,7 @@ class Add(SequenceInstruction[T]):
             raise TypeError("Index must be int or slice or str.")
 
 
-@frozen
+@define
 class Multiply(SequenceInstruction[T]):
     """Represent the repetition of a sequence of values.
 
@@ -248,8 +270,8 @@ class Multiply(SequenceInstruction[T]):
     cannot be empty and the number of repetitions must be strictly greater than 1.
     """
 
-    repetitions: int = field()
-    instruction: SequenceInstruction[T] = field()
+    repetitions: int = field(on_setattr=frozen)
+    instruction: SequenceInstruction[T] = field(on_setattr=frozen)
 
     # noinspection PyUnresolvedReferences
     @repetitions.validator
@@ -342,9 +364,13 @@ class Multiply(SequenceInstruction[T]):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    @cached_property
+    @property
     def dtype(self) -> numpy.dtype[T]:
         return self.instruction.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.instruction.dtype = value
 
 
 def _normalize_integer_index(index: int, length: int) -> int:
