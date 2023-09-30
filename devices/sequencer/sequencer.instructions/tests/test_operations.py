@@ -2,7 +2,11 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import composite, booleans, integers
 
-from sequencer.instructions.base_instructions import Pattern
+from sequencer.instructions.base_instructions import (
+    Pattern,
+    SequenceInstruction,
+    leaves,
+)
 
 
 @composite
@@ -52,10 +56,7 @@ def instruction(draw, max_depth: int):
 @given(instruction(max_depth=5), instruction(max_depth=5))
 def test_addition(left, right):
     s = left + right
-    assert np.all(
-        s.flatten()
-        == np.concatenate([left.flatten(), right.flatten()])
-    )
+    assert np.all(s.flatten() == np.concatenate([left.flatten(), right.flatten()]))
 
 
 @composite
@@ -71,6 +72,11 @@ def instruction_and_slice(draw, max_depth: int):
 )
 def test_slice(args):
     instr, start, stop = args
-    assert np.all(
-        instr[start:stop].flatten() == instr.flatten()[start:stop]
-    )
+    assert np.all(instr[start:stop].flatten() == instr.flatten()[start:stop])
+
+
+@given(instruction(max_depth=5))
+def test_dtype(instr: SequenceInstruction):
+    l = leaves(instr)
+    if len(l) > 0:
+        assert all(l[0].dtype is leaf.dtype for leaf in l)

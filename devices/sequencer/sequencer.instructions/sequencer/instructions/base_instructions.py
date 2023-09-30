@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from functools import cached_property
+from functools import cached_property, singledispatch
 from math import floor, ceil
 from typing import TypeVar, overload, Generic
 
@@ -394,3 +394,25 @@ def _normalize_slice(index: slice, length: int) -> tuple[int, int, int]:
         step = index.step
 
     return start, stop, step
+
+
+@singledispatch
+def leaves(instruction: SequenceInstruction[T]) -> list[NDArray[T]]:
+    raise NotImplementedError(
+        f"Cannot get leaves of instruction with type {type(instruction)}."
+    )
+
+
+@leaves.register
+def _(instruction: Pattern) -> list[NDArray]:
+    return [instruction.array]
+
+
+@leaves.register
+def _(instruction: Add) -> list[NDArray]:
+    return leaves(instruction.left) + leaves(instruction.right)
+
+
+@leaves.register
+def _(instruction: Multiply) -> list[NDArray]:
+    return leaves(instruction.instruction)
