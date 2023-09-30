@@ -153,6 +153,9 @@ class Pattern(SequenceInstruction[T]):
     def __len__(self) -> int:
         return len(self.array)
 
+    def __str__(self):
+        return str(self.array)
+
     def __getitem__(self, index):
         if isinstance(index, int):
             return self.array[index]
@@ -218,6 +221,9 @@ class Add(SequenceInstruction[T]):
 
     def __len__(self) -> int:
         return self._length
+
+    def __str__(self):
+        return f"{self.left} + {self.right}"
 
     @cached_property
     def _length(self):
@@ -286,6 +292,12 @@ class Multiply(SequenceInstruction[T]):
     def _validate_instruction(self, _, value):
         if len(value) == 0:
             raise ValueError("Instruction is empty.")
+
+    def __str__(self):
+        if isinstance(self.instruction, Add):
+            return f"{self.repetitions} * ({self.instruction})"
+        else:
+            return f"{self.repetitions} * {self.instruction}"
 
     def __len__(self):
         return self._length
