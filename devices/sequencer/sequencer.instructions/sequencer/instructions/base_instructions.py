@@ -63,6 +63,13 @@ class SequenceInstruction(ABC, Generic[T]):
     @property
     @abstractmethod
     def dtype(self) -> numpy.dtype[T]:
+        """Return the data type of the values represented by this instruction.
+
+        The returned value is an instance of `numpy.dtype` and has all the properties of
+        a numpy data type. In particular, it has `fields` and `names` attributes that
+        can be used to see if the instruction represents a structured array.
+        """
+
         raise NotImplementedError()
 
     @abstractmethod
@@ -104,7 +111,6 @@ class SequenceInstruction(ABC, Generic[T]):
     def __rmul__(self, other) -> "SequenceInstruction[T]":
         return self.__mul__(other)
 
-    @abstractmethod
     def __or__(self, other) -> "SequenceInstruction[U]":
         """Merge the fields of two instructions."""
         raise NotImplementedError()
@@ -151,8 +157,8 @@ class Pattern(SequenceInstruction[T]):
     def dtype(self) -> numpy.dtype[T]:
         return self.array.dtype
 
-    def flatten(self) -> "Pattern[T]":
-        return self
+    def flatten(self) -> NDArray[T]:
+        return self.array
 
     def __or__(self, other) -> "SequenceInstruction[U]":
         if isinstance(other, SequenceInstruction):
