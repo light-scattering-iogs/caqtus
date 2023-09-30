@@ -66,7 +66,14 @@ class SequenceInstruction(ABC, Generic[T]):
         raise NotImplementedError()
 
     @abstractmethod
-    def flatten(self) -> "Pattern[T]":
+    def flatten(self) -> NDArray[T]:
+        """Return explicitly the sequence represented by this instruction.
+
+        This will unwrap the implicit instructions like `Multiply` and `Add` and return
+        a `numpy.ndarray` with the same values as the sequence represented by this
+        instruction.
+        """
+
         raise NotImplementedError()
 
     def __add__(self, other) -> "SequenceInstruction[T]":
@@ -197,10 +204,8 @@ class Add(SequenceInstruction[T]):
     def dtype(self) -> numpy.dtype[T]:
         return self.left.dtype
 
-    def flatten(self) -> "Pattern[T]":
-        return Pattern(
-            numpy.concatenate([self.left.flatten().array, self.right.flatten().array])
-        )
+    def flatten(self) -> NDArray[T]:
+        return numpy.concatenate([self.left.flatten(), self.right.flatten()])
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -261,8 +266,8 @@ class Multiply(SequenceInstruction[T]):
     def _length(self):
         return self.repetitions * len(self.instruction)
 
-    def flatten(self) -> "Pattern[T]":
-        return Pattern(numpy.tile(self.instruction.flatten().array, self.repetitions))
+    def flatten(self) -> NDArray[T]:
+        return numpy.tile(self.instruction.flatten(), self.repetitions)
 
     def __getitem__(self, index):
         if isinstance(index, int):
