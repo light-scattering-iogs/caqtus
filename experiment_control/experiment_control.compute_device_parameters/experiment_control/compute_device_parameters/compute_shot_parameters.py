@@ -263,8 +263,6 @@ def compile_clock_requirements(
         compute_clock_step_requirements(
             sequencer_config,
             shot_config,
-            step_bounds,
-            sequencer_config.time_step * 1e-9,
         )
     ):
         sequencer_clock_instructions.append(
@@ -305,8 +303,6 @@ def compile_clock_requirements(
 def compute_clock_step_requirements(
     sequencer_config: SequencerConfiguration,
     shot_config: ShotConfiguration,
-    step_starts: Sequence[float],
-    time_step: float,
 ) -> list[ClockInstruction.StepInstruction]:
     lanes = {
         channel.description: lane
@@ -319,11 +315,7 @@ def compute_clock_step_requirements(
         instruction = ClockInstruction.StepInstruction.NoClock
         for lane in lanes.values():
             if is_constant(lane, step):
-                cell_start_index = lane.start_index(step)
-                cell_start_tick = start_tick(step_starts[cell_start_index], time_step)
-                cell_start_time = cell_start_tick * time_step
-                if step_starts[step] <= cell_start_time < step_starts[step + 1]:
-                    instruction = ClockInstruction.StepInstruction.TriggerStart
+                instruction = ClockInstruction.StepInstruction.TriggerStart
             else:
                 result.append(ClockInstruction.StepInstruction.Clock)
                 break
