@@ -7,17 +7,19 @@ readme = "README.md"
 packages = [{ include = "aod_tweezer_arranger" }]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
 
 numpy = "^1.25.1"
-aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configuration", develop = true}
-tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
 pydantic = "^1.0"
-spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
-duration-timer = {path = "../../../common/duration_timer", develop = true}
 cuda-python = "^12.2.0"
 pypiwin32 = "^223"
 attrs = "^23.1.0"
+
+aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configuration", develop = true}
+tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
+spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
+duration-timer = {path = "../../../common/duration_timer", develop = true}
+
 
 
 [tool.poetry.group.dev.dependencies]

@@ -8,8 +8,10 @@ packages = [{include = "lane"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-settings-model = {path = "../../settings_model", develop = true}
+
 pydantic = "^1.0"
+
+settings-model = {path = "../../settings_model", develop = true}
 
 
 [build-system]

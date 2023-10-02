@@ -8,6 +8,7 @@ packages = [{include = "tweezer_arranger_lane"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
 lane-configuration = {path = "../../../../common/lane/lane.configuration", develop = true}
 settings-model = {path = "../../../../common/settings_model", develop = true}
 tweezer-arranger-configuration = {path = "../../tweezer_arranger.configuration", develop = true}

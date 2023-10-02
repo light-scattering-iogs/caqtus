@@ -7,7 +7,8 @@ readme = "README.md"
 packages = [{include = "analog_lane"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
+
 analog-lane-configuration = {path = "../analog_lane.configuration", develop = true}
 lane-model = {path = "../../../../common/lane/lane.model", develop = true}
 

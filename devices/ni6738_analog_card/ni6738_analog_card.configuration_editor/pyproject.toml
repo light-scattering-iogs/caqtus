@@ -7,13 +7,14 @@ readme = "README.md"
 packages = [{include = "ni6738_analog_card"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
+
+pyqt6 = "^6.5.1"
 
 device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
 device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
 ni6738-analog-card-configuration = {path = "../ni6738_analog_card.configuration", develop = true}
 sequencer-configuration-editor = {path = "../../sequencer/sequencer.configuration_editor", develop = true}
-pyqt6 = "^6.5.1"
 
 
 [build-system]

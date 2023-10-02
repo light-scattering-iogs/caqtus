@@ -9,6 +9,7 @@ packages = [{include = "remote_server_combobox"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 pyqt6 = "^6.5.0"
+
 device-server-name = {path = "../../../devices/remote_device/device_server/device_server.name", develop = true}
 
 

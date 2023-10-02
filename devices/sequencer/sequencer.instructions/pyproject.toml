@@ -8,6 +8,7 @@ packages = [{include = "sequencer"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
 sequencer-channel = {path = "../sequencer.channel", develop = true}
 
 

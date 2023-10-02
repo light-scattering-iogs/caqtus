@@ -7,8 +7,10 @@ readme = "README.md"
 packages = [{include = "lane"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
+
 pyqt6 = "^6.5.1"
+
 experiment-configuration = {path = "../../experiment/experiment.configuration", develop = true}
 
 

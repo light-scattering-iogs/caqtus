@@ -7,9 +7,11 @@ readme = "README.md"
 packages = [{include = "tweezer_arranger_lane"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
-lane-model = {path = "../../../../common/lane/lane.model", develop = true}
+python = "^3.11, <3.13"
+
 pyqt6 = "^6.5.1"
+
+lane-model = {path = "../../../../common/lane/lane.model", develop = true}
 tweezer-arranger-lane-configuration = {path = "../tweezer_arranger_lane.configuration", develop = true}
 
 
