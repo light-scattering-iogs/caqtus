@@ -7,10 +7,11 @@ readme = "README.md"
 packages = [{include = "analyza"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
+python = "^3.8, <3.13"
 
 numpy = "^1.24.3"
 scipy = "^1.10.1"
+
 inspect-function = {path = "../../common/inspect_function", develop = true}
 
 
