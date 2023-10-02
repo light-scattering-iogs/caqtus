@@ -1,1 +1,0 @@
-poetry run python -W error remote_device_server\remote_device_server.py
