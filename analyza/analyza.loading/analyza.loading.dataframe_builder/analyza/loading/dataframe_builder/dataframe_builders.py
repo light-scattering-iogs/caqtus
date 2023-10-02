@@ -2,7 +2,6 @@ import typing
 from typing import Any, Callable, Iterable, Optional
 
 import pandas
-from tqdm import tqdm
 
 from experiment.session import (
     ExperimentSessionMaker,
@@ -16,7 +15,9 @@ def build_dataframe_from_sequences(
     sequences: Iterable[Sequence],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session_maker: Optional[ExperimentSessionMaker] = None,
-    show_progress: bool = False,
+    iter_transform: Optional[
+        Callable[[Iterable[dict[str, Any]]], Iterable[dict[str, Any]]]
+    ] = None,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from multiple experiment sequences
 
@@ -26,7 +27,9 @@ def build_dataframe_from_sequences(
         dictionary will be the columns of the dataframe.
         session_maker: The session maker used to create the session to read the shot data. If None, a standard session
             maker will be used.
-        show_progress: If True, a progress bar will be shown.
+        iter_transform: A function that takes an iterable of dictionaries and returns an iterable of dictionaries. This
+            function will be applied to the iterable of dictionaries returned by the importer function. This can be
+            used to filter out unwanted data or to transform them
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
@@ -44,14 +47,16 @@ def build_dataframe_from_sequences(
         for sequence in sequences:
             shots.extend(sequence.get_shots(session))
 
-    return build_dataframe_from_shots(shots, importer, session_maker, show_progress)
+    return build_dataframe_from_shots(shots, importer, session_maker, iter_transform)
 
 
 def build_dataframe_from_sequence(
     sequence: Sequence,
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session_maker: Optional[ExperimentSessionMaker] = None,
-    show_progress: bool = False,
+    iter_transform: Optional[
+        Callable[[Iterable[dict[str, Any]]], Iterable[dict[str, Any]]]
+    ] = None,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from an experiment sequence
 
@@ -61,7 +66,9 @@ def build_dataframe_from_sequence(
         dictionary will be the columns of the dataframe.
         session_maker: The session maker used to create the session to read the shot data. If None, a standard session
             maker will be used.
-        show_progress: If True, a progress bar will be shown.
+        iter_transform: A function that takes an iterable of dictionaries and returns an iterable of dictionaries. This
+            function will be applied to the iterable of dictionaries returned by the importer function. This can be
+            used to filter out unwanted data or to transform them.
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
@@ -77,14 +84,16 @@ def build_dataframe_from_sequence(
     with session.activate():
         shots = sequence.get_shots(session)
 
-    return build_dataframe_from_shots(shots, importer, session_maker, show_progress)
+    return build_dataframe_from_shots(shots, importer, session_maker, iter_transform)
 
 
 def build_dataframe_from_shots(
     shots: typing.Sequence[Shot],
     importer: Callable[[Shot, ExperimentSession], dict[str, Any]],
     session_maker: Optional[ExperimentSessionMaker] = None,
-    show_progress: bool = False,
+    iter_transform: Optional[
+        Callable[[Iterable[dict[str, Any]]], Iterable[dict[str, Any]]]
+    ] = None,
 ) -> pandas.DataFrame:
     """Constructs a pandas dataframe from a sequence of shot
 
@@ -94,7 +103,9 @@ def build_dataframe_from_shots(
         dictionary will be the columns of the dataframe.
         session_maker: The session maker used to create the session to read the shot data. If None, a standard session
             maker will be used.
-        show_progress: If True, a progress bar will be shown.
+        iter_transform: A function that takes an iterable of dictionaries and returns an iterable of dictionaries. This
+            function will be applied to the iterable of dictionaries returned by the importer function. This can be
+            used to filter out unwanted data or to transform them
 
     Returns:
         A pandas dataframe with the data from the shots. The dataframe will have a multi-index with the sequence path as
@@ -115,8 +126,8 @@ def build_dataframe_from_shots(
     index = pandas.MultiIndex.from_tuples(indices, names=["sequence", "shot"])
 
     iterator = map(map_shot_to_row, shots)
-    if show_progress:
-        iterator = tqdm(iterator, total=len(shots))
+    if iter_transform is not None:
+        iterator = iter_transform(iterator)
     rows = list(iterator)
 
     return pandas.DataFrame(rows, index=index)
