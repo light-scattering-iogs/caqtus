@@ -1,4 +1,5 @@
 import logging
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -25,7 +26,7 @@ from .clock_instruction import ClockInstruction
 from .compile_lane import (
     compile_lane,
     empty_channel_instruction,
-    get_step_bounds,
+    get_step_starts,
     compile_camera_instruction,
     compile_clock_instruction,
 )
@@ -193,7 +194,7 @@ def compute_camera_instructions(
         shot_config.step_names, shot_config.step_durations, variables
     )
 
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     result = {}
     shot_duration = sum(step_durations)
@@ -253,13 +254,16 @@ def compile_clock_requirements(
     step_durations = compile_step_durations(
         shot_config.step_names, shot_config.step_durations, variables
     )
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     sequencer = DeviceName("NI6738 card")
     sequencer_config = sequencer_configs[sequencer]
     sequencer_clock_instructions = []
     for step_index, clock_instruction in enumerate(
-        compute_clock_step_requirements(sequencer_config, shot_config)
+        compute_clock_step_requirements(
+            sequencer_config,
+            shot_config,
+        )
     ):
         sequencer_clock_instructions.append(
             ClockInstruction(
@@ -297,7 +301,8 @@ def compile_clock_requirements(
 
 
 def compute_clock_step_requirements(
-    sequencer_config: SequencerConfiguration, shot_config: ShotConfiguration
+    sequencer_config: SequencerConfiguration,
+    shot_config: ShotConfiguration,
 ) -> list[ClockInstruction.StepInstruction]:
     lanes = {
         channel.description: lane
@@ -310,14 +315,17 @@ def compute_clock_step_requirements(
         instruction = ClockInstruction.StepInstruction.NoClock
         for lane in lanes.values():
             if is_constant(lane, step):
-                if lane.start_index(step) == step:
-                    instruction = ClockInstruction.StepInstruction.TriggerStart
+                instruction = ClockInstruction.StepInstruction.TriggerStart
             else:
                 result.append(ClockInstruction.StepInstruction.Clock)
                 break
         else:
             result.append(instruction)
     return result
+
+
+def start_tick(time: float, time_step: float) -> int:
+    return math.ceil(time / time_step)
 
 
 def compute_tweezer_arranger_instructions(
@@ -327,7 +335,7 @@ def compute_tweezer_arranger_instructions(
         shot_config.step_names, shot_config.step_durations, variables
     )
 
-    step_bounds = get_step_bounds(step_durations)
+    step_bounds = get_step_starts(step_durations)
 
     result = {}
 

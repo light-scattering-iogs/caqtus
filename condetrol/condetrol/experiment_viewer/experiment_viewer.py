@@ -3,7 +3,7 @@ import time
 from functools import partial
 from logging.handlers import QueueListener
 from multiprocessing.managers import BaseManager
-from typing import Callable, Optional, ParamSpec
+from typing import Callable, Optional, ParamSpec, TypeVar
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import QSettings, QModelIndex, Qt, QTimer, QThread
@@ -431,7 +431,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
 
 _P = ParamSpec("_P")
-_T = ParamSpec("_T")
+_T = TypeVar("_T")
 
 
 class BlockingThread(QThread):

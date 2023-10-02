@@ -130,10 +130,19 @@ class SequenceHierarchyModel(QAbstractItemModel):
                             running_duration.total_seconds()
                         )
                         return f"{running_duration}/{remaining}"
-                    elif stats.state == State.FINISHED:
-                        total_duration = stats.stop_date - stats.start_date
-                        total_duration = _format_seconds(total_duration.total_seconds())
-                        return total_duration
+                    elif (
+                        stats.state == State.FINISHED
+                        or stats.state == State.CRASHED
+                        or stats.state == State.INTERRUPTED
+                    ):
+                        try:
+                            total_duration = stats.stop_date - stats.start_date
+                            total_duration = _format_seconds(
+                                total_duration.total_seconds()
+                            )
+                            return total_duration
+                        except TypeError:
+                            return ""
 
     def headerData(
         self,

@@ -99,7 +99,10 @@ class Sequencer(RuntimeDevice, ABC):
         )
 
     def close(self) -> None:
-        self.wait_sequence_finished()
+        try:
+            self.wait_sequence_finished()
+        except SequenceNotStartedError:
+            pass
         super().close()
 
 

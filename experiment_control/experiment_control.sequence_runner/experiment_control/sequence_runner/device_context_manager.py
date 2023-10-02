@@ -22,10 +22,12 @@ class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
         self.close()
 
     def close(self):
+        # noinspection PyBroadException
         try:
             self._device.close()
             logger.debug(f"Device '{self._device.get_name()}' shut down.")
-        except Exception as error:
-            raise RuntimeError(
-                f"An error occurred while closing '{self._device.get_name()}'"
-            ) from error
+        except Exception:
+            logger.error(
+                f"An error occurred while closing '{self._device.get_name()}'",
+                exc_info=True,
+            )

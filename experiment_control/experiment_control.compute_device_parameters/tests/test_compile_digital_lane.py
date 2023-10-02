@@ -6,7 +6,7 @@ from experiment_control.compute_device_parameters import (
 )
 from experiment_control.compute_device_parameters.compile_lane import (
     number_ticks,
-    get_step_bounds,
+    get_step_starts,
 )
 from sequence.configuration import ShotConfiguration
 from digital_lane.configuration import DigitalLane
@@ -25,7 +25,7 @@ def test_digital_lane_compilation(
         step_names=shot_config.step_names,
         variables=variables,
     )
-    logger.debug(f"{get_step_bounds(durations)=}")
+    logger.debug(f"{get_step_starts(durations)=}")
 
     time_step = 50
 
