@@ -1,6 +1,6 @@
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from contextlib import AbstractContextManager, ExitStack
 from datetime import datetime
 from queue import PriorityQueue, Empty
@@ -111,6 +111,7 @@ class SequenceManager(AbstractContextManager):
 
         self._exit_stack = ExitStack()
         self._thread_pool = ThreadPoolExecutor()
+        self._process_pool = ProcessPoolExecutor()
         self._asked_to_interrupt = False
         self._stop_background_tasks = Event()
 
@@ -160,6 +161,7 @@ class SequenceManager(AbstractContextManager):
     def _prepare(self) -> None:
         self._exit_stack.__enter__()
         self._exit_stack.enter_context(self._thread_pool)
+        self._exit_stack.enter_context(self._process_pool)
 
         with self._session_maker() as session:
             self._experiment_config = session.experiment_configs[
@@ -387,7 +389,9 @@ class SequenceManager(AbstractContextManager):
             except Empty:
                 continue
             else:
-                save_shot(self._sequence, shot_data, self._session_maker)
+                self._process_pool.submit(
+                    save_shot, self._sequence, shot_data, self._session_maker
+                )
                 self._data_queue.task_done()
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -398,7 +402,7 @@ class SequenceManager(AbstractContextManager):
             else:
                 self._shot_parameters_queue.join()
                 self._device_shot_parameters_queue.join()
-                self._data_queue.join()
+            self._data_queue.join()
             self._stop_background_tasks.set()
             self._exit_stack.__exit__(exc_type, exc_value, traceback)
         except Exception:
