@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractContextManager, ExitStack
@@ -47,7 +48,7 @@ class DevicesHandler(AbstractContextManager):
     def __enter__(self):
         self._exit_stack.__enter__()
         try:
-            self._start_devices()
+            asyncio.run(self._start_devices())
         except Exception:
             self._exit_stack.close()
             raise
@@ -56,11 +57,16 @@ class DevicesHandler(AbstractContextManager):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         return self._exit_stack.__exit__(exc_type, exc_value, exc_traceback)
 
-    def _start_devices(self):
-        with ThreadPoolExecutor() as thread_pool, TaskGroup(thread_pool) as g:
+    async def _start_devices(self):
+        async with asyncio.TaskGroup() as g:
             for device_name, device in self._devices.items():
-                # We initialize the devices through the stack to unsure that they are closed if an error occurs.
-                g.add_task(self._exit_stack.enter_context, DeviceContextManager(device))
+                g.create_task(asyncio.to_thread(self._start_device, device))
+
+    def _start_device(self, device: RuntimeDevice):
+        with self._lock:
+            self._exit_stack.enter_context(DeviceContextManager(device))
+        device.initialize()
+        logger.info(f"Device '{device.get_name()}' initialized.")
 
     def update_device_parameters(
         self, device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]]

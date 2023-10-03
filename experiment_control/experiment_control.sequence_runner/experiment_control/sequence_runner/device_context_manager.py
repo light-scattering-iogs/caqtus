@@ -16,8 +16,6 @@ class DeviceContextManager(contextlib.AbstractContextManager[RuntimeDevice]):
         self._device = device
 
     def __enter__(self) -> RuntimeDevice:
-        self._device.initialize()
-        logger.info(f"Device '{self._device.get_name()}' initialized.")
         return self._device
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
