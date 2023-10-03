@@ -1,5 +1,9 @@
 from concurrent.futures import Executor, Future
 from contextlib import AbstractContextManager
+from typing import Callable, TypeVar, ParamSpec
+
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class TaskGroup(AbstractContextManager):
@@ -23,7 +27,11 @@ class TaskGroup(AbstractContextManager):
         if exceptions:
             raise ExceptionGroup("Unhandled exception(s) occurred", exceptions)
 
-    def add_task(self, task, *args, **kwargs):
+    def add_task(
+        self, task: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> Future[T]:
         if not self._entered:
             raise RuntimeError("Cannot add tasks to a TaskGroup that is not entered.")
-        return self._futures.append(self._executor.submit(task, *args, **kwargs))
+        future = self._executor.submit(task, *args, **kwargs)
+        self._futures.append(future)
+        return future

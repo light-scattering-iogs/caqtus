@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractContextManager, ExitStack
@@ -6,11 +5,12 @@ from threading import Lock
 from typing import (
     TYPE_CHECKING,
     Mapping,
+    Any,
 )
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.configuration import CameraConfiguration
-from device.configuration import DeviceName
+from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
 from experiment.configuration import ExperimentConfig
 from experiment_control.sequence_runner.device_context_manager import (
@@ -29,10 +29,20 @@ logger.setLevel(logging.DEBUG)
 
 
 class DevicesHandler(AbstractContextManager):
-    def __init__(self, devices: dict[DeviceName, RuntimeDevice]):
+    def __init__(
+        self,
+        devices: dict[DeviceName, RuntimeDevice],
+        experiment_config: ExperimentConfig,
+    ):
         self._devices = devices
         self._exit_stack = ExitStack()
         self._lock = Lock()
+
+        self.sequencers = get_sequencers_in_use(devices, experiment_config)
+        self.cameras = get_cameras_in_use(devices, experiment_config)
+        self.tweezer_arrangers = get_tweezer_arrangers_in_use(
+            devices, experiment_config
+        )
 
     def __enter__(self):
         self._exit_stack.__enter__()
@@ -52,17 +62,19 @@ class DevicesHandler(AbstractContextManager):
                 # We initialize the devices through the stack to unsure that they are closed if an error occurs.
                 g.add_task(self._exit_stack.enter_context, DeviceContextManager(device))
 
-    async def start_shot(self):
-        async with TaskGroup() as g:
-            initial_tasks = []
+    def update_device_parameters(
+        self, device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]]
+    ):
+        with ThreadPoolExecutor() as thread_pool, TaskGroup(thread_pool) as g:
+            for device_name, parameters in device_parameters.items():
+                g.add_task(update_device, self._devices[device_name], parameters)
+
+    def start_shot(self):
+        with ThreadPoolExecutor() as thread_pool, TaskGroup(thread_pool) as g:
             for tweezer_arrangers in self.tweezer_arrangers.values():
-                initial_tasks.append(
-                    g.create_task(asyncio.to_thread(tweezer_arrangers.start_sequence))
-                )
+                g.add_task(tweezer_arrangers.start_sequence)
             for camera in self.cameras.values():
-                initial_tasks.append(
-                    g.create_task(asyncio.to_thread(camera.start_acquisition))
-                )
+                g.add_task(camera.start_acquisition)
         # we need the sequencers to be correctly triggered, so we start them in their priority order
         for sequencer in self.sequencers.values():
             sequencer.start_sequence()
@@ -116,3 +128,11 @@ def get_tweezer_arrangers_in_use(
             AODTweezerArrangerConfiguration,
         )
     }
+
+
+def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):
+    try:
+        if parameters:
+            device.update_parameters(**parameters)
+    except Exception as error:
+        raise RuntimeError(f"Failed to update device {device.get_name()}") from error

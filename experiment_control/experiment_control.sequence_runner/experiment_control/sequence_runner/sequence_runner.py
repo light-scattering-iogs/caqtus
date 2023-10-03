@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import logging
 from collections.abc import Mapping
 from concurrent.futures import Executor
@@ -14,13 +13,10 @@ from typing import (
 )
 
 import numpy as np
-from attr import frozen
 
-from camera.runtime import CameraTimeoutError
-from data_types import Data, DataLabel
 from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
-from duration_timer import DurationTimer, DurationTimerLog
+from duration_timer import DurationTimerLog
 from experiment.configuration import (
     ExperimentConfig,
 )
@@ -33,7 +29,6 @@ from experiment_control.compute_device_parameters.image_analysis import (
     find_how_to_analyze_images,
     find_how_to_rearrange,
 )
-from image_types import ImageLabel, Image
 from parameter_types import AnalogValue, add_unit, get_unit, magnitude_in_unit
 from sequence.configuration import (
     Step,
@@ -48,8 +43,6 @@ from sequence.configuration import (
     ShotConfiguration,
 )
 from sequence.runtime import SequencePath, Sequence, Shot, State
-from sequencer.runtime import Sequencer
-from tweezer_arranger.runtime import RearrangementFailedError
 from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
@@ -60,12 +53,12 @@ from .devices_handler import (
     get_tweezer_arrangers_in_use,
 )
 from .sequence_context import StepContext
-from .sequence_manager import SequenceManager, ShotParameters, ShotDeviceParameters
+from .sequence_manager import SequenceManager, ShotParameters, ShotDeviceParameters, ShotMetadata
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
 
 if TYPE_CHECKING:
-    from camera.runtime import Camera
+    pass
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -79,26 +72,6 @@ NUMBER_WORKERS = 8
 PARAMETER_QUEUE_SIZE = 10
 DEVICE_PARAMETER_QUEUE_SIZE = 8
 STORAGE_QUEUE_SIZE = 10
-
-
-@frozen
-class ShotMetadata:
-    """Holds information necessary to store a shot.
-
-    Args:
-        name: The name of the shot.
-        start_time: The time at which the shot started.
-        end_time: The time at which the shot ended.
-        variables: The values of the variables that were used to execute the shot.
-        data: The actual data that was acquired during the shot.
-    """
-
-    name: str
-    index: int
-    start_time: datetime.datetime
-    end_time: datetime.datetime
-    variables: VariableNamespace
-    data: dict[DeviceName, dict[DataLabel, Data]]
 
 
 class SequenceRunnerThread(Thread):
@@ -153,27 +126,8 @@ class SequenceRunnerThread(Thread):
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
 
-    def _run(self):
-        try:
-            with self._shutdown_stack:
-                asyncio.run(self.async_run())
-        finally:
-            self._computation_executor.shutdown(wait=False)
-
-    async def async_run(self):
-        await self.prepare()
-        await self.run_sequence()
-
     async def prepare(self):
-        self._image_analysis_flow = find_how_to_analyze_images(
-            self._sequence_config.shot_configurations["shot"]
-        )
 
-        self._image_flow, self._rearrange_flow = find_how_to_rearrange(
-            self._sequence_config.shot_configurations["shot"]
-        )
-        logger.debug(f"{self._image_flow=}")
-        logger.debug(f"{self._rearrange_flow=}")
 
         logger.debug(devices)
 
@@ -199,10 +153,6 @@ class SequenceRunnerThread(Thread):
 
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
-
-    def finish(self, state: State):
-        with self._session as session:
-            self._sequence.set_state(state, session)
 
     def run_sequence(self):
         """Run the sequence.
@@ -488,143 +438,6 @@ class SequenceRunnerThread(Thread):
     ):
         raise NotImplementedError
 
-    async def do_shot_with_retry(
-        self,
-        shot_params: ShotDeviceParameters,
-    ) -> ShotMetadata:
-        number_of_attempts = 3  # must >= 1
-        for attempt in range(number_of_attempts):
-            errors: list[Exception] = []
-            try:
-                with DurationTimer() as timer:
-                    data = await self.do_shot(
-                        shot_params.change_parameters, shot_params.static_parameters
-                    )
-            except* CameraTimeoutError as e:
-                errors.extend(e.exceptions)
-                logger.warning(
-                    "A camera timeout error occurred, attempting to redo the failed shot"
-                )
-            except* RearrangementFailedError as e:
-                errors.extend(e.exceptions)
-                logger.warning("Rearrangement failed, attempting to redo the shot")
-            else:
-                return ShotMetadata(
-                    name=shot_params.name,
-                    index=shot_params.index,
-                    start_time=timer.start_time,
-                    end_time=timer.end_time,
-                    variables=shot_params.context.variables,
-                    data=data,
-                )
-            logger.warning(f"Attempt {attempt+1}/{number_of_attempts} failed")
-        # noinspection PyUnboundLocalVariable
-        raise ExceptionGroup(
-            f"Could not execute shot after {number_of_attempts} attempts", errors
-        )
-
-    async def do_shot(
-        self,
-        change_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
-        device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
-    ) -> dict[DeviceName, Any]:
-        with DurationTimerLog(logger, "Updating devices", display_start=True):
-            await self.update_device_parameters(change_parameters)
-            await self.update_device_parameters(device_parameters)
-
-        with DurationTimerLog(logger, "Running shot", display_start=True):
-            data = await self.run_shot()
-        return data
-
-    async def update_device_parameters(
-        self, device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]]
-    ):
-        if self._experiment_config.mock_experiment:
-            return
-
-        async with asyncio.TaskGroup() as update_group:
-            # There is no need to shield the tasks from cancellation because they are running synchronous functions
-            # in other threads and cannot be cancelled in middle of execution.
-            # Some devices might be updated while others not if an exception is raised, but I don't think it is a
-            # problem.
-            for device_name, parameters in device_parameters.items():
-                task = asyncio.to_thread(
-                    update_device, self._devices[device_name], parameters
-                )
-                update_group.create_task(task)
-
-    async def run_shot(self) -> dict[DeviceName, dict[DataLabel, Data]]:
-        """Perform the shot.
-
-        This is the actual shot execution that determines how to use the devices within a shot. It assumes that the
-        devices have been correctly configured before.
-        """
-
-        data: dict[DeviceName, dict[DataLabel, Data]] = {}
-
-        with DurationTimerLog(logger, "Starting devices", display_start=True):
-            await self._device_handler.start_shot()
-
-        with DurationTimerLog(logger, "Doing shot", display_start=True):
-            camera_tasks = {}
-            async with asyncio.TaskGroup() as run_group:
-                for camera_name, camera in self._device_handler.cameras.items():
-                    camera_tasks[camera_name] = run_group.create_task(
-                        self.fetch_and_analyze_images(camera_name, camera)
-                    )
-                for sequencer in self._device_handler.sequencers.values():
-                    run_group.create_task(wait_on_sequencer(sequencer))
-
-        for camera_name, camera_task in camera_tasks.items():
-            data |= camera_task.result()
-
-        return data
-
-    async def fetch_and_analyze_images(
-        self, camera_name: DeviceName, camera: "Camera"
-    ) -> dict[DeviceName, dict[DataLabel, Data]]:
-        picture_names = camera.get_picture_names()
-
-        result: dict[DeviceName, dict[DataLabel, Data]] = {}
-        pictures = {}
-        for picture_name in picture_names:
-            with DurationTimerLog(
-                logger, f"Fetching picture '{picture_name}'", display_start=True
-            ):
-                picture = await get_picture_from_camera(camera, picture_name)
-            pictures[picture_name] = picture
-            logger.debug(
-                f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
-            )
-            if (camera_name, picture_name) in self._image_flow:
-                for detector, imaging_config in self._image_flow[
-                    (camera_name, picture_name)
-                ]:
-                    atoms = self._devices[detector].are_atoms_present(
-                        picture, imaging_config
-                    )
-                    logger.debug(
-                        f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
-                    )
-                    if detector not in result:
-                        result[detector] = {}
-                    result[detector][picture_name] = atoms
-                    if (detector, picture_name) in self._rearrange_flow:
-                        tweezer_arranger, step = self._rearrange_flow[
-                            (detector, picture_name)
-                        ]
-                        with DurationTimerLog(
-                            logger, "Preparing rearrangement", display_start=True
-                        ):
-                            self._devices[tweezer_arranger].prepare_rearrangement(
-                                step=step, atom_present=atoms
-                            )
-        camera.stop_acquisition()
-        logger.debug(f"Stopped acquisition of camera '{camera.get_name()}'")
-
-        result[camera_name] = pictures
-        return result
-
     async def store_shot(
         self,
         shot_data: ShotMetadata,
@@ -670,14 +483,6 @@ def initialize_device(device: RuntimeDevice):
         logger.info(f"Device '{device.get_name()}' started.")
     except Exception as error:
         raise RuntimeError(f"Could not start device '{device.get_name()}'") from error
-
-
-def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):
-    try:
-        if parameters:
-            device.update_parameters(**parameters)
-    except Exception as error:
-        raise RuntimeError(f"Failed to update device {device.get_name()}") from error
 
 
 def _wrap_compute_parameters_on_variables_update(
@@ -759,19 +564,6 @@ def async_run_in_executor(
     """Schedula a function to run in an executor and return an awaitable for its result."""
 
     return asyncio.get_running_loop().run_in_executor(executor, func, *args)
-
-
-async def wait_on_sequencer(sequencer: Sequencer):
-    """Wait for a sequencer to finish."""
-
-    while not sequencer.has_sequence_finished():
-        await asyncio.sleep(10e-3)
-
-
-async def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image:
-    while (image := camera.get_picture(picture_name)) is None:
-        await asyncio.sleep(1e-3)
-    return image
 
 
 # This exception is used to interrupt the sequence and inherit from BaseException to prevent it from being caught
