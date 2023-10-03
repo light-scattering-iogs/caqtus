@@ -28,7 +28,7 @@ from experiment_control.compute_device_parameters.image_analysis import (
 )
 from image_types import ImageLabel, Image
 from sequence.configuration import SequenceConfig
-from sequence.runtime import SequencePath, Sequence, State
+from sequence.runtime import SequencePath, Sequence, State, Shot
 from sequencer.runtime import Sequencer
 from tweezer_arranger.runtime import RearrangementFailedError
 from variable.namespace import VariableNamespace
@@ -121,8 +121,8 @@ class SequenceManager(AbstractContextManager):
         self._shot_parameters_queue = PriorityQueue[ShotParameters](
             max_schedulable_shots
         )
-        self._device_shot_parameters_queue = PriorityQueue[ShotDeviceParameters](5)
-        self._data_queue = PriorityQueue[ShotMetadata](3)
+        self._device_shot_parameters_queue = PriorityQueue[ShotDeviceParameters]()
+        self._data_queue = PriorityQueue[ShotMetadata]()
         self._current_shot = 0
 
     @property
@@ -160,8 +160,7 @@ class SequenceManager(AbstractContextManager):
     def _prepare(self) -> None:
         self._exit_stack.__enter__()
         self._exit_stack.enter_context(self._thread_pool)
-        self._thread_pool.submit(self._consume_shot_parameters)
-        self._thread_pool.submit(self._consume_device_shot_parameters)
+
         with self._session_maker() as session:
             self._experiment_config = session.experiment_configs[
                 self._experiment_config_name
@@ -171,6 +170,13 @@ class SequenceManager(AbstractContextManager):
         devices = self._create_uninitialized_devices()
         self._device_manager = DevicesHandler(devices, self._experiment_config)
         self._exit_stack.enter_context(self._device_manager)
+
+        task_group = TaskGroup(self._thread_pool)
+        self._exit_stack.enter_context(task_group)
+
+        task_group.add_task(self._consume_shot_parameters)
+        task_group.add_task(self._consume_device_shot_parameters)
+        task_group.add_task(self._consume_shot_data)
 
         self._image_analysis_flow = find_how_to_analyze_images(
             self._sequence_config.shot_configurations["shot"]
@@ -251,7 +257,7 @@ class SequenceManager(AbstractContextManager):
                 continue
             else:
                 shot_data = self.do_shot_with_retry(device_parameters)
-                # self._data_queue.put(shot_data)
+                self._data_queue.put(shot_data)
                 self._device_shot_parameters_queue.task_done()
 
     def do_shot_with_retry(
@@ -374,14 +380,25 @@ class SequenceManager(AbstractContextManager):
         result[camera_name] = pictures
         return result
 
+    def _consume_shot_data(self) -> None:
+        while not self._stop_background_tasks.is_set():
+            try:
+                shot_data = self._data_queue.get(timeout=10e-3)
+            except Empty:
+                continue
+            else:
+                save_shot(self._sequence, shot_data, self._session_maker)
+                self._data_queue.task_done()
+
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
         try:
             if error_occurred or self.asked_to_interrupt():
-                self._thread_pool.shutdown(cancel_futures=True)
+                self._thread_pool.shutdown(wait=False, cancel_futures=True)
             else:
                 self._shot_parameters_queue.join()
                 self._device_shot_parameters_queue.join()
+                self._data_queue.join()
             self._stop_background_tasks.set()
             self._exit_stack.__exit__(exc_type, exc_value, traceback)
         except Exception:
@@ -427,3 +444,22 @@ def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image
     while (image := camera.get_picture(picture_name)) is None:
         time.sleep(1e-3)
     return image
+
+
+def save_shot(
+    sequence: Sequence,
+    shot_data: ShotMetadata,
+    session_maker: ExperimentSessionMaker,
+) -> Shot:
+    with session_maker() as session:
+        params = {
+            name: value for name, value in shot_data.variables.to_flat_dict().items()
+        }
+        return sequence.create_shot(
+            name=shot_data.name,
+            start_time=shot_data.start_time,
+            end_time=shot_data.end_time,
+            parameters=params,
+            measures=shot_data.data,
+            experiment_session=session,
+        )
