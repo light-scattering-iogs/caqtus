@@ -1,9 +1,8 @@
 import asyncio
-import contextlib
 import datetime
 import logging
 from collections.abc import Mapping
-from concurrent.futures import ProcessPoolExecutor, Executor
+from concurrent.futures import Executor
 from functools import singledispatchmethod
 from threading import Thread, Event
 from typing import (
@@ -28,7 +27,6 @@ from experiment.configuration import (
 from experiment.session import ExperimentSessionMaker
 from experiment_control.compute_device_parameters import (
     compute_shot_parameters,
-    get_devices_initialization_parameters,
     compute_parameters_on_variables_update,
 )
 from experiment_control.compute_device_parameters.image_analysis import (
@@ -56,18 +54,13 @@ from units import Quantity, units, DimensionalityError
 from variable.name import DottedVariableName
 from variable.namespace import VariableNamespace
 from .device_context_manager import DeviceContextManager
-from .device_servers import (
-    create_device_servers,
-    connect_to_device_servers,
-    create_devices,
-)
 from .devices_handler import (
-    DevicesHandler,
     get_sequencers_in_use,
     get_cameras_in_use,
     get_tweezer_arrangers_in_use,
 )
 from .sequence_context import StepContext
+from .sequence_manager import SequenceManager, ShotParameters, ShotDeviceParameters
 from .user_input_loop.exec_user_input import ExecUserInput
 from .user_input_loop.input_widget import RawVariableRange, EvaluatedVariableRange
 
@@ -81,41 +74,11 @@ WATCH_FOR_INTERRUPTION_INTERVAL = 0.1  # seconds
 
 
 # This is the number of processes that can run in parallel to compile the shots.
-NUMBER_WORKERS = 4
+NUMBER_WORKERS = 8
 
 PARAMETER_QUEUE_SIZE = 10
 DEVICE_PARAMETER_QUEUE_SIZE = 8
 STORAGE_QUEUE_SIZE = 10
-
-
-@frozen
-class ShotParameters:
-    """Holds information necessary to compile a shot."""
-
-    name: str
-    index: int
-    context: StepContext
-
-
-@frozen
-class ShotDeviceParameters:
-    """Holds information necessary to execute a shot.
-
-    Args:
-        name: The name of the shot.
-        index: The index of the shot.
-        context: The context of the step that must be executed.
-        change_parameters: The parameters that needs to be changed do to a variable having changed between shots, as
-        computed by compute_parameters_on_variables_update. If no variable changed, this will be an empty dict.
-        static_parameters: The parameters that need to be set for the shot, as computed by compute_shot_parameters. Even
-        if no variable changed, this will be a non-empty dict.
-    """
-
-    name: str
-    index: int
-    context: StepContext
-    change_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
-    static_parameters: dict[DeviceName, dict[DeviceParameter, Any]]
 
 
 @frozen
@@ -147,63 +110,48 @@ class SequenceRunnerThread(Thread):
         must_interrupt: Event,
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
-        self._session_maker = session_maker
-        self._session = session_maker()
-        self._save_session = session_maker()
-        self._sequence = Sequence(sequence_path)
+        self._sequence_manager = SequenceManager(
+            experiment_config_name, sequence_path, session_maker
+        )
         self._devices: dict[DeviceName, RuntimeDevice] = {}
 
         # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
         self._must_interrupt = must_interrupt
 
-        self._shot_parameters_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
-            maxsize=PARAMETER_QUEUE_SIZE
-        )
-
-        # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
-        # computed, and consumed when the shots are executed.
-        self._device_parameters_queue: asyncio.Queue[
-            ShotDeviceParameters
-        ] = asyncio.Queue(maxsize=DEVICE_PARAMETER_QUEUE_SIZE)
-
-        # When a shot is finished, its data is added to this queue. The data is then saved to the database.
-        self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
-            maxsize=STORAGE_QUEUE_SIZE
-        )
-
-        # This stack is used to ensure that proper cleanup is done when an error occurs.
-        # For now, it is only used to close the devices properly.
-        self._shutdown_stack = contextlib.ExitStack()
-
-        # This executor is used to run the computations that are done in the background. Using a ProcessPoolExecutor
-        # allows to run them in parallel unlike a ThreadPoolExecutor that runs them concurrently.
-        self._computation_executor = ProcessPoolExecutor()
-
-        with self._session.activate() as session:
-            self._experiment_config = session.experiment_configs[experiment_config_name]
-            self._experiment_config_yaml = self._experiment_config.to_yaml()
-            self._sequence_config = self._sequence.get_config(session)
-            self._sequence.set_experiment_config(experiment_config_name, session)
-            self._sequence.set_state(State.PREPARING, session)
-
-        self._image_analysis_flow = {}
-        self._current_shot = 0
-        self._device_handler = DevicesHandler()
+        # self._shot_parameters_queue: asyncio.Queue[ShotParameters] = asyncio.Queue(
+        #     maxsize=PARAMETER_QUEUE_SIZE
+        # )
+        #
+        # # This queue contains the information of the next shots to execute. Items are added when new shot parameters are
+        # # computed, and consumed when the shots are executed.
+        # self._device_parameters_queue: asyncio.Queue[
+        #     ShotDeviceParameters
+        # ] = asyncio.Queue(maxsize=DEVICE_PARAMETER_QUEUE_SIZE)
+        #
+        # # When a shot is finished, its data is added to this queue. The data is then saved to the database.
+        # self._storage_queue: asyncio.Queue[ShotMetadata] = asyncio.Queue(
+        #     maxsize=STORAGE_QUEUE_SIZE
+        # )
+        #
+        # # This stack is used to ensure that proper cleanup is done when an error occurs.
+        # # For now, it is only used to close the devices properly.
+        # self._shutdown_stack = contextlib.ExitStack()
+        #
+        # # This executor is used to run the computations that are done in the background. Using a ProcessPoolExecutor
+        # # allows to run them in parallel unlike a ThreadPoolExecutor that runs them concurrently.
+        # self._computation_executor = ProcessPoolExecutor()
+        #
+        # self._image_analysis_flow = {}
+        # self._current_shot = 0
+        # self._device_handler = DevicesHandler()
 
     def run(self):
-        logger.debug(f"Image analysis flow: {self._image_analysis_flow}")
         try:
-            self._run()
-        except* SequenceInterruptedException:
-            self.finish(State.INTERRUPTED)
-            logger.info("Sequence interrupted")
-        except* Exception:
-            self.finish(State.CRASHED)
+            with self._sequence_manager:
+                self.run_sequence()
+        except Exception:
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
-        else:
-            self.finish(State.FINISHED)
-            logger.info("Sequence finished")
 
     def _run(self):
         try:
@@ -227,7 +175,6 @@ class SequenceRunnerThread(Thread):
         logger.debug(f"{self._image_flow=}")
         logger.debug(f"{self._rearrange_flow=}")
 
-        devices = self._create_uninitialized_devices()
         logger.debug(devices)
 
         for device_name, device in devices.items():
@@ -253,34 +200,11 @@ class SequenceRunnerThread(Thread):
         with self._session.activate() as session:
             self._sequence.set_state(State.RUNNING, session)
 
-    def _create_uninitialized_devices(self) -> dict[DeviceName, RuntimeDevice]:
-        """Create the devices on their respective servers.
-
-        The devices are created with the initial parameters specified in the experiment and sequence configs, but the
-        connection to the devices is not established. The device objects are proxies to the actual devices that are
-        running in other processes, possibly on other computers.
-        """
-
-        remote_device_servers = create_device_servers(
-            self._experiment_config.device_servers
-        )
-        connect_to_device_servers(remote_device_servers)
-
-        initialization_parameters = get_devices_initialization_parameters(
-            self._experiment_config, self._sequence_config
-        )
-        devices = create_devices(
-            initialization_parameters,
-            remote_device_servers,
-            self._experiment_config.mock_experiment,
-        )
-        return devices
-
     def finish(self, state: State):
         with self._session as session:
             self._sequence.set_state(state, session)
 
-    async def run_sequence(self):
+    def run_sequence(self):
         """Run the sequence.
 
         This function will first run the sequence header used to populate the context with constants, then it will run
@@ -289,22 +213,24 @@ class SequenceRunnerThread(Thread):
 
         context = StepContext[AnalogValue]()
 
-        async with asyncio.TaskGroup() as task_group:
-            watch_for_interruption = task_group.create_task(
-                self.watch_for_interruption()
-            )
-            compile_shots = task_group.create_task(self.compile_shots())
-            run_shots = task_group.create_task(self.run_shots())
-            store_shots = task_group.create_task(self.store_shots())
-            context = await self.run_step(self._experiment_config.header, context)
-            _ = await self.run_step(self._sequence_config.program, context)
-            await self._shot_parameters_queue.join()
-            await self._device_parameters_queue.join()
-            await self._storage_queue.join()
-            compile_shots.cancel()
-            run_shots.cancel()
-            store_shots.cancel()
-            watch_for_interruption.cancel()
+        # async with asyncio.TaskGroup() as task_group:
+        #     watch_for_interruption = task_group.create_task(
+        #         self.watch_for_interruption()
+        #     )
+        #     compile_shots = task_group.create_task(self.compile_shots())
+        #     run_shots = task_group.create_task(self.run_shots())
+        #     store_shots = task_group.create_task(self.store_shots())
+        context = self.run_step(
+            self._sequence_manager.experiment_config.header, context
+        )
+        _ = self.run_step(self._sequence_manager.sequence_config.program, context)
+        # await self._shot_parameters_queue.join()
+        # await self._device_parameters_queue.join()
+        # await self._storage_queue.join()
+        # compile_shots.cancel()
+        # run_shots.cancel()
+        # store_shots.cancel()
+        # watch_for_interruption.cancel()
 
     async def watch_for_interruption(self):
         """Raise SequenceInterrupted if the sequence must be interrupted."""
@@ -343,7 +269,7 @@ class SequenceRunnerThread(Thread):
             self._storage_queue.task_done()
 
     @singledispatchmethod
-    async def run_step(self, step: Step, context: StepContext) -> StepContext:
+    def run_step(self, step: Step, context: StepContext) -> StepContext:
         """Execute a given step of the sequence
 
         This function should be implemented for each Step type that can be run on the
@@ -361,7 +287,7 @@ class SequenceRunnerThread(Thread):
         raise NotImplementedError(f"run_step is not implemented for {type(step)}")
 
     @run_step.register
-    async def _(
+    def _(
         self,
         steps: SequenceSteps,
         context: StepContext,
@@ -373,11 +299,11 @@ class SequenceRunnerThread(Thread):
         """
 
         for step in steps.children:
-            context = await self.run_step(step, context)
+            context = self.run_step(step, context)
         return context
 
     @run_step.register
-    async def _(
+    def _(
         self,
         declaration: VariableDeclaration,
         context: StepContext,
@@ -391,7 +317,7 @@ class SequenceRunnerThread(Thread):
         return context.update_variable(declaration.name, value)
 
     @run_step.register
-    async def _(
+    def _(
         self,
         arange_loop: ArangeLoop,
         context: StepContext,
@@ -424,11 +350,11 @@ class SequenceRunnerThread(Thread):
         for value in np.arange(start.magnitude, stop.magnitude, step.magnitude):
             context = context.update_variable(arange_loop.name, value * unit)
             for step in arange_loop.children:
-                context = await self.run_step(step, context)
+                context = self.run_step(step, context)
         return context
 
     @run_step.register
-    async def _(
+    def _(
         self,
         linspace_loop: LinspaceLoop,
         context: StepContext,
@@ -462,18 +388,16 @@ class SequenceRunnerThread(Thread):
         for value in np.linspace(start.magnitude, stop.magnitude, num):
             context = context.update_variable(linspace_loop.name, value * unit)
             for step in linspace_loop.children:
-                context = await self.run_step(step, context)
+                context = self.run_step(step, context)
         return context
 
     @run_step.register
-    async def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
+    def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
-        await self._shot_parameters_queue.put(
-            ShotParameters(name=shot.name, index=self._current_shot, context=context)
-        )
-        self._current_shot += 1
-
+        if self._must_interrupt.is_set():
+            self._sequence_manager.interrupt_sequence()
+        self._sequence_manager.schedule_shot(shot.name, context)
         return context.reset_history()
 
     async def compute_shot_parameters(
@@ -696,6 +620,7 @@ class SequenceRunnerThread(Thread):
                                 step=step, atom_present=atoms
                             )
         camera.stop_acquisition()
+        logger.debug(f"Stopped acquisition of camera '{camera.get_name()}'")
 
         result[camera_name] = pictures
         return result
