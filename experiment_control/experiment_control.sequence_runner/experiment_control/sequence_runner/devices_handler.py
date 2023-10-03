@@ -36,7 +36,11 @@ class DevicesHandler(AbstractContextManager):
 
     def __enter__(self):
         self._exit_stack.__enter__()
-        self._start_devices()
+        try:
+            self._start_devices()
+        except Exception:
+            self._exit_stack.close()
+            raise
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
