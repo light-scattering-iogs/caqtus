@@ -1,10 +1,10 @@
+import asyncio
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from asyncio import PriorityQueue, Event
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from contextlib import AbstractContextManager, ExitStack
 from datetime import datetime
-from queue import PriorityQueue, Empty
-from threading import Event
 from typing import Self, Any, Optional, Mapping
 
 from attr import frozen, field
@@ -115,6 +115,8 @@ class SequenceManager(AbstractContextManager):
         self._asked_to_interrupt = False
         self._stop_background_tasks = Event()
 
+        self._runner = asyncio.Runner()
+
         self._device_manager: DevicesHandler
 
         if max_schedulable_shots is None:
@@ -122,9 +124,14 @@ class SequenceManager(AbstractContextManager):
         self._shot_parameters_queue = PriorityQueue[ShotParameters](
             max_schedulable_shots
         )
-        self._device_shot_parameters_queue = PriorityQueue[ShotDeviceParameters]()
+        self._device_shot_parameters_queue = PriorityQueue[ShotDeviceParameters](
+            max_schedulable_shots
+        )
         self._data_queue = PriorityQueue[ShotMetadata]()
         self._current_shot = 0
+        self._sequence_future: Future
+
+        self._background_tasks = set()
 
     @property
     def experiment_config(self) -> ExperimentConfig:
@@ -135,16 +142,26 @@ class SequenceManager(AbstractContextManager):
         return self._sequence_config
 
     def schedule_shot(self, shot_name: str, shot_context: StepContext) -> None:
-        if self.asked_to_interrupt():
-            raise SequenceInterruptedError(
-                "Cannot schedule a shot after the sequence was interrupted."
-            )
-        self._shot_parameters_queue.put(
-            ShotParameters(
-                name=shot_name, index=self._current_shot, context=shot_context
-            )
+        if self._sequence_future.done():
+            if self._sequence_future.exception() is not None:
+                raise RuntimeError(
+                    "Can't schedule new shots because an error occurred while running the sequence"
+                ) from self._sequence_future.exception()
+            else:
+                raise RuntimeError(
+                    "Can't schedule new shots because the sequence has finished running"
+                )
+        shot_params = ShotParameters(
+            name=shot_name, index=self._current_shot, context=shot_context
         )
+        asyncio.run_coroutine_threadsafe(
+            self._push_shot(shot_params),
+            self._runner.get_loop(),
+        ).result()
         self._current_shot += 1
+
+    async def _push_shot(self, shot_params: ShotParameters) -> None:
+        await self._shot_parameters_queue.put(shot_params)
 
     def __enter__(self) -> Self:
         with self._session_maker() as session:
@@ -153,6 +170,7 @@ class SequenceManager(AbstractContextManager):
         try:
             self._prepare()
             self._set_sequence_state(State.RUNNING)
+            self._start_sequence()
         except Exception:
             self._set_sequence_state(State.CRASHED)
             raise
@@ -173,13 +191,6 @@ class SequenceManager(AbstractContextManager):
         self._device_manager = DevicesHandler(devices, self._experiment_config)
         self._exit_stack.enter_context(self._device_manager)
 
-        task_group = TaskGroup(self._thread_pool)
-        self._exit_stack.enter_context(task_group)
-
-        task_group.add_task(self._consume_shot_parameters)
-        task_group.add_task(self._consume_device_shot_parameters)
-        task_group.add_task(self._consume_shot_data)
-
         self._image_analysis_flow = find_how_to_analyze_images(
             self._sequence_config.shot_configurations["shot"]
         )
@@ -189,6 +200,22 @@ class SequenceManager(AbstractContextManager):
         )
         logger.debug(f"{self._image_flow=}")
         logger.debug(f"{self._rearrange_flow=}")
+
+        self._runner = asyncio.Runner()
+
+    def _start_sequence(self) -> None:
+        def fun():
+            self._exit_stack.enter_context(self._runner)
+            self._runner.run(self._run_sequence())
+        self._sequence_future = self._thread_pool.submit(fun)
+
+    async def _run_sequence(self) -> None:
+        async with asyncio.TaskGroup() as g:
+            self._background_tasks.add(g.create_task(self._consume_shot_parameters()))
+            self._background_tasks.add(
+                g.create_task(self._consume_device_shot_parameters())
+            )
+            self._background_tasks.add(g.create_task(self._consume_shot_data()))
 
     def _create_uninitialized_devices(self) -> dict[DeviceName, RuntimeDevice]:
         """Create the devices on their respective servers.
@@ -213,18 +240,14 @@ class SequenceManager(AbstractContextManager):
         )
         return devices
 
-    def _consume_shot_parameters(self) -> None:
-        while not self._stop_background_tasks.is_set():
-            try:
-                shot_parameters = self._shot_parameters_queue.get(timeout=10e-3)
-            except Empty:
-                continue
-            else:
-                with DurationTimerLog(logger, "Computing shot parameters"):
-                    devices_shot_parameters = self.compute_shot_parameters(
-                        shot_parameters
-                    )
-                self._device_shot_parameters_queue.put(devices_shot_parameters)
+    async def _consume_shot_parameters(self) -> None:
+        while True:
+            shot_parameters = await self._shot_parameters_queue.get()
+            with DurationTimerLog(logger, "Computing shot parameters"):
+                devices_shot_parameters = await asyncio.to_thread(
+                    self.compute_shot_parameters, shot_parameters
+                )
+                await self._device_shot_parameters_queue.put(devices_shot_parameters)
                 self._shot_parameters_queue.task_done()
 
     def compute_shot_parameters(
@@ -249,20 +272,25 @@ class SequenceManager(AbstractContextManager):
             static_parameters=shot_params,
         )
 
-    def _consume_device_shot_parameters(self) -> None:
-        while not self._stop_background_tasks.is_set():
-            try:
-                device_parameters = self._device_shot_parameters_queue.get(
-                    timeout=10e-3
-                )
-            except Empty:
-                continue
-            else:
-                shot_data = self.do_shot_with_retry(device_parameters)
-                self._data_queue.put(shot_data)
-                self._device_shot_parameters_queue.task_done()
+    async def _consume_device_shot_parameters(self) -> None:
+        while True:
+            device_parameters = await self._device_shot_parameters_queue.get()
+            shot_data = await self.do_shot_with_retry(device_parameters)
+            await self._data_queue.put(shot_data)
+            self._device_shot_parameters_queue.task_done()
 
-    def do_shot_with_retry(
+    async def stop_background_tasks(self, wait: bool = True):
+        if wait:
+            await asyncio.gather(
+                self._shot_parameters_queue.join(),
+                self._device_shot_parameters_queue.join(),
+                self._data_queue.join(),
+                return_exceptions=True,
+            )
+        for task in self._background_tasks:
+            task.cancel()
+
+    async def do_shot_with_retry(
         self,
         shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
@@ -271,8 +299,10 @@ class SequenceManager(AbstractContextManager):
             errors: list[Exception] = []
             try:
                 with DurationTimer() as timer:
-                    data = self.do_shot(
-                        shot_params.change_parameters, shot_params.static_parameters
+                    data = await asyncio.to_thread(
+                        self.do_shot,
+                        shot_params.change_parameters,
+                        shot_params.static_parameters,
                     )
             except* CameraTimeoutError as e:
                 errors.extend(e.exceptions)
@@ -382,29 +412,24 @@ class SequenceManager(AbstractContextManager):
         result[camera_name] = pictures
         return result
 
-    def _consume_shot_data(self) -> None:
-        while not self._stop_background_tasks.is_set():
-            try:
-                shot_data = self._data_queue.get(timeout=10e-3)
-            except Empty:
-                continue
-            else:
-                self._process_pool.submit(
-                    save_shot, self._sequence, shot_data, self._session_maker
-                )
-                self._data_queue.task_done()
+    async def _consume_shot_data(self) -> None:
+        while True:
+            shot_data = await self._data_queue.get()
+            await asyncio.to_thread(
+                save_shot, self._sequence, shot_data, self._session_maker
+            )
+            self._data_queue.task_done()
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
         try:
-            if error_occurred or self.asked_to_interrupt():
-                self._thread_pool.shutdown(wait=False, cancel_futures=True)
+            if error_occurred:
+                self._sequence_future.cancel()
             else:
-                self._shot_parameters_queue.join()
-                self._device_shot_parameters_queue.join()
-            self._data_queue.join()
-            self._stop_background_tasks.set()
-            self._exit_stack.__exit__(exc_type, exc_value, traceback)
+                asyncio.run_coroutine_threadsafe(
+                    self.stop_background_tasks(wait=True), asyncio.get_running_loop()
+                ).result()
+                self._sequence_future.result()
         except Exception:
             self._set_sequence_state(State.CRASHED)
             raise
@@ -420,6 +445,8 @@ class SequenceManager(AbstractContextManager):
                 self._set_sequence_state(State.INTERRUPTED)
             else:
                 self._set_sequence_state(State.FINISHED)
+        finally:
+            self._exit_stack.__exit__(exc_type, exc_value, traceback)
 
     def interrupt_sequence(self) -> None:
         self._asked_to_interrupt = True
