@@ -1,20 +1,24 @@
 import asyncio
 import logging
-from asyncio import TaskGroup
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import AbstractContextManager, ExitStack
+from threading import Lock
 from typing import (
     TYPE_CHECKING,
     Mapping,
 )
-
-from attr import define, field
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.configuration import CameraConfiguration
 from device.configuration import DeviceName
 from device.runtime import RuntimeDevice
 from experiment.configuration import ExperimentConfig
+from experiment_control.sequence_runner.device_context_manager import (
+    DeviceContextManager,
+)
 from sequencer.configuration import SequencerConfiguration
 from sequencer.runtime import Sequencer
+from .task_group import TaskGroup
 
 if TYPE_CHECKING:
     from camera.runtime import Camera
@@ -24,11 +28,25 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@define
-class DevicesHandler:
-    sequencers: dict[DeviceName, Sequencer] = field(factory=dict)
-    cameras: dict[DeviceName, "Camera"] = field(factory=dict)
-    tweezer_arrangers: dict[DeviceName, "AODTweezerArranger"] = field(factory=dict)
+class DevicesHandler(AbstractContextManager):
+    def __init__(self, devices: dict[DeviceName, RuntimeDevice]):
+        self._devices = devices
+        self._exit_stack = ExitStack()
+        self._lock = Lock()
+
+    def __enter__(self):
+        self._exit_stack.__enter__()
+        self._start_devices()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        return self._exit_stack.__exit__(exc_type, exc_value, exc_traceback)
+
+    def _start_devices(self):
+        with ThreadPoolExecutor() as thread_pool, TaskGroup(thread_pool) as g:
+            for device_name, device in self._devices.items():
+                # We initialize the devices through the stack to unsure that they are closed if an error occurs.
+                g.add_task(self._exit_stack.enter_context, DeviceContextManager(device))
 
     async def start_shot(self):
         async with TaskGroup() as g:
