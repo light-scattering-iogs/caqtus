@@ -91,14 +91,17 @@ class DevicesHandler(AbstractContextManager):
         self._thread_pool.submit(asyncio.run, self._start_shot()).result()
 
     async def _start_shot(self):
+        sequencers = list(self.sequencers.values())
         async with asyncio.TaskGroup() as g:
             for tweezer_arranger in self.tweezer_arrangers.values():
                 g.create_task(asyncio.to_thread(tweezer_arranger.start_sequence))
             for camera in self.cameras.values():
                 g.create_task(asyncio.to_thread(camera.start_acquisition))
-        # we need the sequencers to be correctly triggered, so we start them in their priority order
-        for sequencer in self.sequencers.values():
-            sequencer.start_sequence()
+            for sequencer in sequencers[:-1]:
+                g.create_task(asyncio.to_thread(sequencer.start_sequence))
+
+        # We start the sequencer with the lower priority last so that it can trigger the other sequencers.
+        sequencers[-1].start_sequence()
 
 
 def get_sequencers_in_use(
