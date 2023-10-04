@@ -43,7 +43,6 @@ class SequenceRunnerThread(Thread):
         self._sequence_manager = SequenceManager(
             experiment_config_name, sequence_path, session_maker, must_interrupt
         )
-        self._devices: dict[DeviceName, RuntimeDevice] = {}
 
     def run(self):
         try:

@@ -2,7 +2,6 @@ import asyncio
 import logging
 import threading
 import time
-from asyncio import PriorityQueue, Event
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from contextlib import AbstractContextManager, ExitStack
 from datetime import datetime
@@ -96,6 +95,15 @@ class ShotMetadata:
 
 
 class SequenceManager(AbstractContextManager):
+    """Manage running shots on the experiment and saving the result.
+
+    Objects of this class are context managers that must be used with the 'with' statement. Upon entering the context,
+    the sequence manager will initialize the necessary devices and mark the sequence as running. When the
+    `schedule_shot` method is called, it will add the shot context to a queue of shots to be executed. The shots will be
+    executed asynchronously and the results will be saved to the database. When the context is exited, the sequence will
+    be marked as finished or crashed depending on whether an exception occurred or not.
+    """
+
     def __init__(
         self,
         experiment_config_name: str,
@@ -104,6 +112,19 @@ class SequenceManager(AbstractContextManager):
         interrupt_event: threading.Event,
         max_schedulable_shots: Optional[int] = 1,
     ) -> None:
+        """Create a new sequence manager.
+
+        Args:
+            experiment_config_name: The name of the experiment configuration to use for running this sequence. It must
+            be present in the session.
+            sequence_path: The path of the sequence to start running. It must be present in the session and have a shot
+            configuration.
+            session_maker: Used to access the session containing the experiment data.
+            interrupt_event: A threading event that must be set when the sequence must be interrupted.
+            max_schedulable_shots: The maximum number of shots that can be scheduled at the same time. If None, there
+            is no limit.
+        """
+
         self._experiment_config_name = experiment_config_name
         self._experiment_config: ExperimentConfig
         self._sequence = Sequence(sequence_path)
@@ -120,11 +141,11 @@ class SequenceManager(AbstractContextManager):
 
         if max_schedulable_shots is None:
             max_schedulable_shots = 0
-        self._shot_parameters_queue = PriorityQueue[ShotParameters](
+        self._shot_parameters_queue = asyncio.PriorityQueue[ShotParameters](
             max_schedulable_shots
         )
-        self._device_shot_parameters_queue = PriorityQueue[ShotDeviceParameters](1)
-        self._data_queue = PriorityQueue[ShotMetadata](1)
+        self._device_shot_parameters_queue = asyncio.PriorityQueue[ShotDeviceParameters](1)
+        self._data_queue = asyncio.PriorityQueue[ShotMetadata](1)
         self._current_shot = 0
         self._sequence_future: Future
 
@@ -142,6 +163,21 @@ class SequenceManager(AbstractContextManager):
         return self._sequence_config
 
     def schedule_shot(self, shot_name: str, shot_context: StepContext) -> None:
+        """Plan a shot to be executed.
+
+        Ask the sequence manager to prepare to run a new shot with the given context. This function returns immediately
+        and the shot will be executed asynchronously. The shots might not be executed in the order they were scheduled,
+        but their index will be in the order they were scheduled.
+
+        Args:
+            shot_name: The name label of the shot to execute. Usually 'shot'.
+            shot_context: The values of the variables that will be used when the shot will run.
+
+        Raises:
+            RuntimeError: If the sequence has not started running yet or if it has finished running.
+            Exception: Any exception that occurred while running the sequence.
+        """
+
         if not self._sequence_started.is_set():
             raise RuntimeError(
                 "Can't schedule new shots because the sequence has not started running"
@@ -447,6 +483,8 @@ class SequenceManager(AbstractContextManager):
             self._data_queue.task_done()
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Finish the sequence."""
+
         error_occurred = exc_value is not None
 
         try:
@@ -457,10 +495,10 @@ class SequenceManager(AbstractContextManager):
                     self._runner.get_loop(),
                 ).result(timeout=5)
             self._sequence_future.result(timeout=5)
-        except *SequenceInterruptedException:
+        except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
-        except *Exception:
+        except* Exception:
             self._set_sequence_state(State.CRASHED)
             raise
         else:
