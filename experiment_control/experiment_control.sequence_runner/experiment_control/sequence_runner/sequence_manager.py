@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pickle
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
@@ -93,6 +94,35 @@ class ShotMetadata:
     variables: VariableNamespace = field(eq=False)
     data: dict[DeviceName, dict[DataLabel, Data]] = field(eq=False)
 
+def nothing():
+    pass
+
+
+def wrap_compute_shot_parameters(
+    shot_parameters: ShotParameters,
+    shot_config,
+    pickled_experiment_config: bytes,
+) -> ShotDeviceParameters:
+    experiment_config = pickle.loads(pickled_experiment_config)
+    change_params = compute_parameters_on_variables_update(
+        shot_parameters.context.updated_variables,
+        shot_parameters.context.variables,
+        experiment_config,
+    )
+    shot_params = compute_shot_parameters(
+        experiment_config,
+        shot_config,
+        shot_parameters.context.variables,
+    )
+
+    return ShotDeviceParameters(
+        name=shot_parameters.name,
+        context=shot_parameters.context,
+        index=shot_parameters.index,
+        change_parameters=change_params,
+        static_parameters=shot_params,
+    )
+
 
 class SequenceManager(AbstractContextManager):
     """Manage running shots on the experiment and saving the result.
@@ -110,7 +140,7 @@ class SequenceManager(AbstractContextManager):
         sequence_path: SequencePath,
         session_maker: ExperimentSessionMaker,
         interrupt_event: threading.Event,
-        max_schedulable_shots: Optional[int] = 10,
+        max_schedulable_shots: Optional[int] = 1,
     ) -> None:
         """Create a new sequence manager.
 
@@ -144,7 +174,9 @@ class SequenceManager(AbstractContextManager):
         self._shot_parameters_queue = asyncio.PriorityQueue[ShotParameters](
             max_schedulable_shots
         )
-        self._device_shot_parameters_queue = asyncio.PriorityQueue[ShotDeviceParameters](5)
+        self._device_shot_parameters_queue = asyncio.PriorityQueue[
+            ShotDeviceParameters
+        ](5)
         self._data_queue = asyncio.PriorityQueue[ShotMetadata](10)
         self._current_shot = 0
         self._sequence_future: Future
@@ -233,6 +265,9 @@ class SequenceManager(AbstractContextManager):
         self._exit_stack.enter_context(self._thread_pool)
         self._exit_stack.enter_context(self._process_pool)
 
+        # This task is here to force the process pool to initialize now and not the first time it is used.
+        task = self._process_pool.submit(nothing)
+
         with self._session_maker() as session:
             self._experiment_config = session.experiment_configs[
                 self._experiment_config_name
@@ -254,6 +289,9 @@ class SequenceManager(AbstractContextManager):
         logger.debug(f"{self._rearrange_flow=}")
 
         self._runner = asyncio.Runner()
+
+        self._pickled_experiment_config = pickle.dumps(self._experiment_config)
+        task.result()
 
     def _start_sequence(self) -> None:
         def fun():
@@ -307,33 +345,16 @@ class SequenceManager(AbstractContextManager):
         while True:
             shot_parameters = await self._shot_parameters_queue.get()
             with DurationTimerLog(logger, "Computing shot parameters"):
-                devices_shot_parameters = await asyncio.to_thread(
-                    self.compute_shot_parameters, shot_parameters
+                loop = asyncio.get_running_loop()
+                devices_shot_parameters = await loop.run_in_executor(
+                    self._process_pool,
+                    wrap_compute_shot_parameters,
+                    shot_parameters,
+                    self._sequence_config.shot_configurations[shot_parameters.name],
+                    self._pickled_experiment_config,
                 )
                 await self._device_shot_parameters_queue.put(devices_shot_parameters)
                 self._shot_parameters_queue.task_done()
-
-    def compute_shot_parameters(
-        self, shot_parameters: ShotParameters
-    ) -> ShotDeviceParameters:
-        change_params = compute_parameters_on_variables_update(
-            shot_parameters.context.updated_variables,
-            shot_parameters.context.variables,
-            self.experiment_config,
-        )
-        shot_params = compute_shot_parameters(
-            self.experiment_config,
-            self._sequence_config.shot_configurations[shot_parameters.name],
-            shot_parameters.context.variables,
-        )
-
-        return ShotDeviceParameters(
-            name=shot_parameters.name,
-            context=shot_parameters.context,
-            index=shot_parameters.index,
-            change_parameters=change_params,
-            static_parameters=shot_params,
-        )
 
     async def _consume_device_shot_parameters(self) -> None:
         while True:
@@ -442,7 +463,7 @@ class SequenceManager(AbstractContextManager):
             ):
                 picture = get_picture_from_camera(camera, picture_name)
             pictures[picture_name] = picture
-            logger.info(
+            logger.debug(
                 f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
             )
             if (camera_name, picture_name) in self._image_flow:
@@ -451,9 +472,6 @@ class SequenceManager(AbstractContextManager):
                 ]:
                     atoms = self._device_manager._devices[detector].are_atoms_present(
                         picture, imaging_config
-                    )
-                    logger.info(
-                        f"Detector '{detector}' found atoms: {atoms} in picture '{picture_name}'"
                     )
                     if detector not in result:
                         result[detector] = {}
@@ -469,7 +487,7 @@ class SequenceManager(AbstractContextManager):
                                 tweezer_arranger
                             ].prepare_rearrangement(step=step, atom_present=atoms)
         camera.stop_acquisition()
-        logger.info(f"Stopped acquisition of camera '{camera.get_name()}'")
+        logger.debug(f"Stopped acquisition of camera '{camera.get_name()}'")
 
         result[camera_name] = pictures
         return result
@@ -493,8 +511,8 @@ class SequenceManager(AbstractContextManager):
                 asyncio.run_coroutine_threadsafe(
                     self.stop_background_tasks(wait=wait_for_completion),
                     self._runner.get_loop(),
-                ).result(timeout=5)
-            self._sequence_future.result(timeout=5)
+                ).result()
+            self._sequence_future.result()
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
