@@ -110,7 +110,7 @@ class SequenceManager(AbstractContextManager):
         sequence_path: SequencePath,
         session_maker: ExperimentSessionMaker,
         interrupt_event: threading.Event,
-        max_schedulable_shots: Optional[int] = 1,
+        max_schedulable_shots: Optional[int] = 10,
     ) -> None:
         """Create a new sequence manager.
 
@@ -144,8 +144,8 @@ class SequenceManager(AbstractContextManager):
         self._shot_parameters_queue = asyncio.PriorityQueue[ShotParameters](
             max_schedulable_shots
         )
-        self._device_shot_parameters_queue = asyncio.PriorityQueue[ShotDeviceParameters](1)
-        self._data_queue = asyncio.PriorityQueue[ShotMetadata](1)
+        self._device_shot_parameters_queue = asyncio.PriorityQueue[ShotDeviceParameters](5)
+        self._data_queue = asyncio.PriorityQueue[ShotMetadata](10)
         self._current_shot = 0
         self._sequence_future: Future
 
