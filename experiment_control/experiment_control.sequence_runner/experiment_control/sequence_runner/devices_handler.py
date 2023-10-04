@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import AbstractContextManager, ExitStack
 from threading import Lock
 from typing import (
@@ -42,11 +43,14 @@ class DevicesHandler(AbstractContextManager):
         self.tweezer_arrangers = get_tweezer_arrangers_in_use(
             devices, experiment_config
         )
+        self._thread_pool = ThreadPoolExecutor(max_workers=1)
 
     def __enter__(self):
         self._exit_stack.__enter__()
+        self._exit_stack.enter_context(self._thread_pool)
         try:
-            asyncio.run(self._start_devices())
+            with asyncio.Runner() as runner:
+                runner.run(self._start_devices())
         except Exception:
             self._exit_stack.close()
             raise
@@ -69,7 +73,8 @@ class DevicesHandler(AbstractContextManager):
     def update_device_parameters(
         self, device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]]
     ):
-        asyncio.run(self._update_device_parameters(device_parameters))
+        with asyncio.Runner() as runner:
+            runner.run(self._update_device_parameters(device_parameters))
 
     async def _update_device_parameters(
         self, device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]]
@@ -83,7 +88,7 @@ class DevicesHandler(AbstractContextManager):
                 )
 
     def start_shot(self):
-        asyncio.run(self._start_shot())
+        self._thread_pool.submit(asyncio.run, self._start_shot()).result()
 
     async def _start_shot(self):
         async with asyncio.TaskGroup() as g:
