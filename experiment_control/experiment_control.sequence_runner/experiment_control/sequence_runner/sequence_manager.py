@@ -304,7 +304,8 @@ class SequenceManager(AbstractContextManager):
 
     async def _run_sequence(self) -> None:
         async with asyncio.TaskGroup() as g:
-            self._background_tasks.add(g.create_task(self._consume_shot_parameters()))
+            for _ in range(4):
+                self._background_tasks.add(g.create_task(self._consume_shot_parameters()))
             self._background_tasks.add(
                 g.create_task(self._consume_device_shot_parameters())
             )
@@ -353,8 +354,8 @@ class SequenceManager(AbstractContextManager):
                     self._sequence_config.shot_configurations[shot_parameters.name],
                     self._pickled_experiment_config,
                 )
-                await self._device_shot_parameters_queue.put(devices_shot_parameters)
-                self._shot_parameters_queue.task_done()
+            await self._device_shot_parameters_queue.put(devices_shot_parameters)
+            self._shot_parameters_queue.task_done()
 
     async def _consume_device_shot_parameters(self) -> None:
         while True:
