@@ -101,6 +101,7 @@ class SequenceManager(AbstractContextManager):
         experiment_config_name: str,
         sequence_path: SequencePath,
         session_maker: ExperimentSessionMaker,
+        interrupt_event: threading.Event,
         max_schedulable_shots: Optional[int] = 1,
     ) -> None:
         self._experiment_config_name = experiment_config_name
@@ -112,8 +113,6 @@ class SequenceManager(AbstractContextManager):
         self._exit_stack = ExitStack()
         self._thread_pool = ThreadPoolExecutor()
         self._process_pool = ProcessPoolExecutor()
-        self._asked_to_interrupt = False
-        self._stop_background_tasks = Event()
 
         self._runner = asyncio.Runner()
 
@@ -132,6 +131,7 @@ class SequenceManager(AbstractContextManager):
         self._background_tasks = set()
 
         self._sequence_started = threading.Event()
+        self._interrupt_event = interrupt_event
 
     @property
     def experiment_config(self) -> ExperimentConfig:
@@ -149,10 +149,9 @@ class SequenceManager(AbstractContextManager):
 
         def check_error():
             if not self._sequence_future.running():
-                if self._sequence_future.exception() is not None:
-                    raise RuntimeError(
-                        "Can't schedule new shots because an error occurred while running the sequence"
-                    ) from self._sequence_future.exception()
+                exception = self._sequence_future.exception()
+                if exception is not None:
+                    raise exception
                 else:
                     raise RuntimeError(
                         "Can't schedule new shots because the sequence has finished running"
@@ -223,10 +222,8 @@ class SequenceManager(AbstractContextManager):
     def _start_sequence(self) -> None:
         def fun():
             self._exit_stack.enter_context(self._runner)
-            logger.debug(f"Starting sequence inside thread {threading.get_ident()}")
             self._runner.run(self._run_sequence())
 
-        logger.debug(f"Starting sequence from thread {threading.get_ident()}")
         self._sequence_future = self._thread_pool.submit(fun)
 
         self._sequence_started.wait()
@@ -238,7 +235,14 @@ class SequenceManager(AbstractContextManager):
                 g.create_task(self._consume_device_shot_parameters())
             )
             self._background_tasks.add(g.create_task(self._consume_shot_data()))
+            self._background_tasks.add(g.create_task(self._watch_for_interrupt()))
             self._sequence_started.set()
+
+    async def _watch_for_interrupt(self) -> None:
+        while True:
+            await asyncio.sleep(50e-3)
+            if self._interrupt_event.is_set():
+                raise SequenceInterruptedException()
 
     def _create_uninitialized_devices(self) -> dict[DeviceName, RuntimeDevice]:
         """Create the devices on their respective servers.
@@ -445,25 +449,18 @@ class SequenceManager(AbstractContextManager):
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
 
-        logger.debug("Stopping background tasks")
-
         try:
-            # print(f"{self._sequence_future.running()=}")
-            # print(f"{self._sequence_future.exception()=}")
-            # if self._sequence_future.exception():
-            #     raise self._sequence_future.exception()
             if self._sequence_future.running():
-                logger.debug("Waiting for sequence to finish")
                 wait_for_completion = not error_occurred
                 asyncio.run_coroutine_threadsafe(
                     self.stop_background_tasks(wait=wait_for_completion),
                     self._runner.get_loop(),
                 ).result(timeout=5)
-                logger.debug("Background tasks stopped")
-            logger.debug("Waiting for sequence to finish")
             self._sequence_future.result(timeout=5)
-            logger.debug("Sequence finished")
-        except Exception:
+        except *SequenceInterruptedException:
+            self._set_sequence_state(State.INTERRUPTED)
+            raise
+        except *Exception:
             self._set_sequence_state(State.CRASHED)
             raise
         else:
@@ -474,19 +471,12 @@ class SequenceManager(AbstractContextManager):
         finally:
             self._exit_stack.__exit__(exc_type, exc_value, traceback)
 
-    def interrupt_sequence(self) -> None:
-        self._asked_to_interrupt = True
-        self._stop_background_tasks.set()
-
-    def asked_to_interrupt(self) -> bool:
-        return self._asked_to_interrupt
-
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
             self._sequence.set_state(state, session)
 
 
-class SequenceInterruptedError(RuntimeError):
+class SequenceInterruptedException(RuntimeError):
     pass
 
 

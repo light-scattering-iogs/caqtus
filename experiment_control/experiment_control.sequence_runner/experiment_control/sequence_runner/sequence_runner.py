@@ -22,7 +22,7 @@ from sequence.configuration import (
 from sequence.runtime import SequencePath
 from units import Quantity, units, DimensionalityError
 from .sequence_context import StepContext
-from .sequence_manager import SequenceManager
+from .sequence_manager import SequenceManager, SequenceInterruptedException
 
 if TYPE_CHECKING:
     pass
@@ -41,18 +41,17 @@ class SequenceRunnerThread(Thread):
     ):
         super().__init__(name=f"thread_{str(sequence_path)}")
         self._sequence_manager = SequenceManager(
-            experiment_config_name, sequence_path, session_maker
+            experiment_config_name, sequence_path, session_maker, must_interrupt
         )
         self._devices: dict[DeviceName, RuntimeDevice] = {}
-
-        # We watch this event while running the sequence and raise SequenceInterrupted if it becomes set.
-        self._must_interrupt = must_interrupt
 
     def run(self):
         try:
             with self._sequence_manager:
                 self.run_sequence()
-        except Exception:
+        except *SequenceInterruptedException:
+            pass
+        except *Exception:
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
 
@@ -197,7 +196,5 @@ class SequenceRunnerThread(Thread):
     def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
-        if self._must_interrupt.is_set():
-            self._sequence_manager.interrupt_sequence()
         self._sequence_manager.schedule_shot(shot.name, context)
         return context.reset_history()
