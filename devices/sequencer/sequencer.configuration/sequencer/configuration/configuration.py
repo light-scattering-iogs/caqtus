@@ -4,9 +4,10 @@ from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar
 from pydantic import validator, Field
 from pydantic.color import Color
 
-from device.configuration import DeviceConfiguration
+from device.configuration import DeviceConfiguration, DeviceParameter
 from settings_model import SettingsModel, yaml
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
+from .trigger import Trigger
 
 ChannelName = NewType("ChannelName", str)
 
@@ -116,6 +117,7 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
     number_channels: ClassVar[int]
     time_step: int = Field(ge=1)
     channels: tuple[ChannelConfiguration, ...]
+    trigger: Trigger
 
     @classmethod
     @abstractmethod
@@ -153,3 +155,7 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
 
     def get_maximum_delay(self) -> float:
         return max(channel.delay for channel in self.channels)
+
+    def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
+        extra = {"trigger": self.trigger}
+        return super().get_device_init_args(*args, **kwargs) | extra
