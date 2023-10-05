@@ -60,30 +60,37 @@ def compute_shot_parameters(
     clock_requirements = compile_clock_requirements(
         sequencer_configs, shot_config, variables
     )
-    sequencer_instructions = {
-        sequencer_name: compile_sequencer_instructions(
-            sequencer_config,
+
+    sequences = dict[DeviceName, SequencerInstruction]()
+    for sequencer in get_sequencers_ordered_by_dependency():
+        instructions = compile_sequencer_instructions(
+            sequencer_configs[sequencer],
             shot_config,
             variables,
             camera_instructions,
             clock_requirements,
         )
-        for sequencer_name, sequencer_config in sequencer_configs.items()
-    }
+        sequences[sequencer] = convert_to_sequence(
+            instructions, sequencer_configs[sequencer]
+        )
 
     sequencer_parameters = {
-        sequencer_name: {
-            DeviceParameter("sequence"): convert_to_sequence(
-                instructions, sequencer_configs[sequencer_name]
-            )
-        }
-        for sequencer_name, instructions in sequencer_instructions.items()
+        sequencer_name: {DeviceParameter("sequence"): sequence}
+        for sequencer_name, sequence in sequences.items()
     }
 
     result |= sequencer_parameters
     result |= compute_tweezer_arranger_instructions(shot_config, variables)
 
     return result
+
+
+def get_sequencers_ordered_by_dependency() -> list[DeviceName]:
+    return [
+        DeviceName("NI6738 card"),
+        DeviceName("Swabian pulse streamer"),
+        DeviceName("Spincore Pulseblaster"),
+    ]
 
 
 def compile_sequencer_instructions(
