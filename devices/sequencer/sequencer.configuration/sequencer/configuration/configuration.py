@@ -6,6 +6,7 @@ from pydantic.color import Color
 
 from device.configuration import DeviceConfiguration
 from settings_model import SettingsModel, yaml
+from .trigger import Trigger
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 
 ChannelName = NewType("ChannelName", str)
@@ -116,6 +117,7 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
     number_channels: ClassVar[int]
     time_step: int = Field(ge=1)
     channels: tuple[ChannelConfiguration, ...]
+    trigger: Trigger
 
     @classmethod
     @abstractmethod
