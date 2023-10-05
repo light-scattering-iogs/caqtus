@@ -10,7 +10,9 @@ from cattrs.strategies import (
 
 from .converters import converters
 
-include_type = partial(configure_tagged_union, tag_name="class")
+
+def include_type(tag_name: str = "class") -> Callable[[Any, BaseConverter], Any]:
+    return partial(configure_tagged_union, tag_name=tag_name)
 
 
 def include_subclasses(

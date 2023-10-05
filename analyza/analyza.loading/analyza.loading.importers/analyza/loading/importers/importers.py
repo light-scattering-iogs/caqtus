@@ -48,7 +48,7 @@ class ImageLoader(ImageImporter):
 
 
 serialization.include_subclasses(
-    ImageImporter, union_strategy=serialization.include_type
+    ImageImporter, union_strategy=serialization.include_type()
 )
 
 
@@ -62,7 +62,7 @@ class ParametersLoader(ParametersImporter):
 
 
 serialization.include_subclasses(
-    ParametersImporter, union_strategy=serialization.include_type
+    ParametersImporter, union_strategy=serialization.include_type()
 )
 
 
@@ -85,7 +85,7 @@ class AtomsLoader2D(AtomsLoader, AtomImporter2D):
 
 
 serialization.include_subclasses(
-    AtomImporter2D, union_strategy=serialization.include_type
+    AtomImporter2D, union_strategy=serialization.include_type()
 )
 
 

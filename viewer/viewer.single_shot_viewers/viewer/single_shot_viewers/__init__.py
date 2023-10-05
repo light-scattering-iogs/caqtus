@@ -5,7 +5,7 @@ from .parameters_viewer import ParametersViewer
 from .single_shot_viewer import SingleShotViewer
 from .single_shot_widget import SingleShotWidget
 
-serialization.include_subclasses(SingleShotViewer, union_strategy=serialization.include_type)
+serialization.include_subclasses(SingleShotViewer, union_strategy=serialization.include_type())
 
 __all__ = [
     "SingleShotViewer",
