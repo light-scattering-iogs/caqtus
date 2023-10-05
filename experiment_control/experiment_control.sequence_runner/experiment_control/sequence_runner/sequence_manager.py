@@ -94,6 +94,7 @@ class ShotMetadata:
     variables: VariableNamespace = field(eq=False)
     data: dict[DeviceName, dict[DataLabel, Data]] = field(eq=False)
 
+
 def nothing():
     pass
 
@@ -305,7 +306,9 @@ class SequenceManager(AbstractContextManager):
     async def _run_sequence(self) -> None:
         async with asyncio.TaskGroup() as g:
             for _ in range(4):
-                self._background_tasks.add(g.create_task(self._consume_shot_parameters()))
+                self._background_tasks.add(
+                    g.create_task(self._consume_shot_parameters())
+                )
             self._background_tasks.add(
                 g.create_task(self._consume_device_shot_parameters())
             )
@@ -496,8 +499,13 @@ class SequenceManager(AbstractContextManager):
     async def _consume_shot_data(self) -> None:
         while True:
             shot_data = await self._data_queue.get()
-            await asyncio.to_thread(
-                save_shot, self._sequence, shot_data, self._session_maker
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                self._process_pool,
+                save_shot,
+                self._sequence,
+                shot_data,
+                self._session_maker,
             )
             self._data_queue.task_done()
 
