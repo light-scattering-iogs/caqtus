@@ -13,6 +13,15 @@ from .configuration import (
     DigitalChannelConfiguration,
 )
 
+from .trigger import (
+    Trigger,
+    SoftwareTrigger,
+    ExternalTriggerStart,
+    ExternalClock,
+    ExternalClockOnChange,
+    TriggerEdge,
+)
+
 __all__ = [
     "SequencerConfiguration",
     "ChannelSpecialPurpose",
@@ -24,4 +33,10 @@ __all__ = [
     "DigitalMapping",
     "OutputMapping",
     "CalibratedAnalogMapping",
+    "Trigger",
+    "SoftwareTrigger",
+    "ExternalTriggerStart",
+    "ExternalClock",
+    "ExternalClockOnChange",
+    "TriggerEdge",
 ]

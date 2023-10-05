@@ -8,8 +8,10 @@ packages = [{include = "sequencer"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
 device-config = {path = "../../device/device.configuration", develop = true}
 settings-model = {path = "../../../common/settings_model", develop = true}
+attrs = "^23.1.0"
 
 
 [build-system]

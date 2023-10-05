@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum
 
 
 class TriggerEdge(Enum):
-    RISING = auto()
-    FALLING = auto()
-    BOTH = auto()
+    RISING = "rising"
+    FALLING = "falling"
+    BOTH = "both"
 
 
 class Trigger(ABC):
