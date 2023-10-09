@@ -2,13 +2,16 @@ import copy
 import ctypes
 import logging
 import math
+import pickle
 from collections.abc import Mapping
+from pathlib import Path
 from typing import ClassVar, Optional
 
 import numpy as np
 from pydantic import Field, validator
 
 from device.runtime import RuntimeDevice
+from duration_timer import DurationTimerLog
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
@@ -350,18 +353,19 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
             0,
             data_length_bytes,
         )
-        spcm.spcm_dwSetParam_i64(
-            self._board_handle,
-            spcm.SPC_M2CMD,
-            spcm.M2CMD_DATA_STARTDMA | spcm.M2CMD_DATA_WAITDMA,
-        )
-        self.check_error()
+        with DurationTimerLog(logger, "Transfering data"):
+            spcm.spcm_dwSetParam_i64(
+                self._board_handle,
+                spcm.SPC_M2CMD,
+                spcm.M2CMD_DATA_STARTDMA | spcm.M2CMD_DATA_WAITDMA,
+            )
+            self.check_error()
 
-        spcm.spcm_dwSetParam_i64(
-            self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_DATA_STOPDMA
-        )
-        spcm.spcm_dwInvalidateBuf(self._board_handle, spcm.SPCM_BUF_DATA)
-        self.check_error()
+            spcm.spcm_dwSetParam_i64(
+                self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_DATA_STOPDMA
+            )
+            spcm.spcm_dwInvalidateBuf(self._board_handle, spcm.SPCM_BUF_DATA)
+            self.check_error()
 
     def _get_segment_size(self, segment_index: int) -> int:
         """Return the number of samples in the segment."""
