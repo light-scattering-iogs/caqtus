@@ -210,7 +210,6 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 if isinstance(instruction, HoldTweezers):
                     if not have_step_bounds_changed:
                         continue
-
                     step_repetitions[
                         static_step_names(step).integer
                     ] = self.get_step_step_repetitions(start, stop)
@@ -287,7 +286,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         time_step = self.indivisible_time_step
         before_start = start_tick(start, time_step) * 32
         before = self._static_signals[instruction.tweezer_configuration][
-            :, before_start % self.number_samples_per_loop
+            :, before_start % self.number_samples_per_loop :
         ]
         return before
 
@@ -481,12 +480,7 @@ def compute_moves_1d(
         i for i, _ in enumerate(initial_indices) if i < number_target_traps
     ]
 
-    target_indices = [i for i in target_indices if i < 20]
-
-    # global parity
-    # target_indices = [
-    #     2 * i for i, _ in enumerate(target_indices) if 2 * i < number_target_traps
-    # ]
+    # target_indices = [i for i in target_indices if i < 1]
 
     if shift_towards == "low":
         pass
@@ -498,7 +492,6 @@ def compute_moves_1d(
             i - right_most_filled_trap + number_target_traps - 1 - parity
             for i in target_indices
         ]
-        # parity = 1 - parity
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
 
