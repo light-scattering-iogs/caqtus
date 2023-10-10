@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Sequence, Mapping, Literal, TypeVar, Iterable
+from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 
 import numpy as np
 from attr import frozen
@@ -466,36 +466,40 @@ def compute_moves_1d(
     Args:
         atoms_before: Indicated which traps are filled, i.e. atoms_before[i] is True if the trap with index i is filled
             and False otherwise.
-        number_target_traps: The number of traps available for the rearrangement. This is the number of traps that could
+        number_target_traps: The number of traps available after the move. This is the number of traps that could
             be filled after the rearrangement if there was no limit on the number of atoms.
+        max_number_atoms_to_keep: Drop extra atoms if their number is higher than this. If None, all atoms are kept.
         shift_towards: Whether to shift the atoms towards the low or high index traps.
 
     Returns:
         moves: A dictionary where moves[i] is the trap index that the atom at index i should be moved to.
     """
 
-    initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
+    number_atoms_before = sum(atoms_before)
 
-    target_indices = [
-        i for i, _ in enumerate(initial_indices) if i < number_target_traps
-    ]
-
-    # target_indices = [i for i in target_indices if i < 1]
+    if max_number_atoms_to_keep is not None:
+        if max_number_atoms_to_keep > number_target_traps:
+            raise ValueError(
+                f"max_number_atoms_to_keep ({max_number_atoms_to_keep}) must be smaller than "
+                f"number_target_traps ({number_target_traps})."
+            )
+        initial_number_atoms = min(number_atoms_before, max_number_atoms_to_keep)
+    else:
+        initial_number_atoms = min(number_atoms_before, number_target_traps)
 
     if shift_towards == "low":
-        pass
+        offset = 0
     elif shift_towards == "high":
-        if len(target_indices) == 0:
-            return {}
-        right_most_filled_trap = max(target_indices)
-        target_indices = [
-            i - right_most_filled_trap + number_target_traps - 1 - parity
-            for i in target_indices
-        ]
+        offset = number_target_traps - initial_number_atoms
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
 
-    return dict(zip(initial_indices, target_indices))
+    target_pattern = [False] * number_target_traps
+    target_pattern[offset : offset + initial_number_atoms] = [
+        True
+    ] * initial_number_atoms
+
+    return compute_moves_1d_pattern(atoms_before, target_pattern)
 
 
 def compute_moves_1d_pattern(
