@@ -6,6 +6,7 @@ from pydantic.color import Color
 
 from device.configuration import DeviceConfiguration, DeviceParameter
 from settings_model import SettingsModel, yaml
+from .trigger import Trigger
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 from .trigger import Trigger
 
