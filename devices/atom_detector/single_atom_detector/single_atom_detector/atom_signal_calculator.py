@@ -72,6 +72,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
             np.zeros(self._roi.original_image_size), mask=mask
         )
         weighted_image[indices[:, 0], indices[:, 1]] = self._weights
+        return weighted_image
 
     @classmethod
     def from_weighted_map(
