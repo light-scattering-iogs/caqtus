@@ -35,7 +35,11 @@ class TweezerArrangerConfiguration(
         tweezer_configurations_to_use: Set[TweezerConfigurationName],
         tweezer_sequence: Sequence[TweezerAction],
     ) -> dict[DeviceParameter, Any]:
+        """Get the arguments to initialize a tweezer arranger device."""
+
         sequence: list[ArrangerInstruction] = []
+
+        # Here we check that the tweezer sequence passed is valid, and we create lower level instructions accordingly
         for step, action in enumerate(tweezer_sequence):
             match action:
                 case HoldTweezersLane(configuration=configuration):
@@ -73,6 +77,8 @@ class TweezerArrangerConfiguration(
                         )
                     )
 
+        # We return a dictionary of tweezer configurations that will be used and the sequence that indicates in
+        # which order to use them
         return super().get_device_init_args() | {
             "tweezer_configurations": {
                 configuration_name: self[configuration_name]
