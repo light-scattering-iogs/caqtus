@@ -5,7 +5,7 @@ from pydantic import Field
 
 from device.runtime import RuntimeDevice
 from sequencer.instructions import SequencerInstruction
-from .trigger import Trigger, SoftwareTrigger
+from sequencer.configuration.trigger import Trigger, SoftwareTrigger
 
 
 class Sequencer(RuntimeDevice, ABC):

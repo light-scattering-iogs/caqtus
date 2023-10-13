@@ -9,7 +9,6 @@ packages = [{include = "tweezer_arranger"}]
 [tool.poetry.dependencies]
 python = "^3.9"
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

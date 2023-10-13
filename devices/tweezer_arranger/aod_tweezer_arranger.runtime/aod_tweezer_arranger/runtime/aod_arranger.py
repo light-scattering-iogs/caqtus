@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import Sequence, Mapping, Literal, TypeVar, Iterable
+from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional, Any
 
 import numpy as np
 from attr import frozen
@@ -35,6 +35,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 BYPASS_POWER_CHECK = True
+
+parity = 0
+
+pattern_line = 0
 
 
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
@@ -80,6 +84,55 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 )
         return configurations
 
+    @validator("tweezer_sequence")
+    def validate_tweezer_sequence(
+        cls, sequence: Sequence[ArrangerInstruction], values: Mapping[str, Any]
+    ) -> Sequence[ArrangerInstruction]:
+        # Here we check if there is a phase mismatch between two tweezer configurations we are moving between.
+        # There can be a mismatch if we 'move' the frequency of a tweezer with the same initial and target frequency.
+        # In this case the frequency is not actually changed, so we don't have the extra degree of freedom to
+        # choose the phase after the move and this can cause a discontinuity in the signal if the target phase is different
+        # from the initial phase.
+        tweezer_configurations: dict[
+            TweezerConfigurationName, AODTweezerConfiguration
+        ] = values["tweezer_configurations"]
+        sequence = super().validate_tweezer_sequence(sequence)
+        for index, instruction in enumerate(sequence):
+            if isinstance(instruction, (MoveTweezers, RearrangeTweezers)):
+                previous_configuration = tweezer_configurations[
+                    instruction.initial_tweezer_configuration
+                ]
+                next_instruction = tweezer_configurations[
+                    instruction.final_tweezer_configuration
+                ]
+
+                if mismatched_frequencies := phase_mismatch(
+                    previous_configuration.frequencies_x,
+                    previous_configuration.phases_x,
+                    next_instruction.frequencies_x,
+                    next_instruction.phases_x,
+                ):
+                    raise ValueError(
+                        f"There is a phase mismatch when moving from {instruction.initial_tweezer_configuration} to "
+                        f"{instruction.final_tweezer_configuration} on the X axis. This is because the frequencies "
+                        f"{mismatched_frequencies} are held constant during the move but the phases of the initial and "
+                        f"final configurations are different."
+                    )
+                if mismatched_frequencies := phase_mismatch(
+                    previous_configuration.frequencies_y,
+                    previous_configuration.phases_y,
+                    next_instruction.frequencies_y,
+                    next_instruction.phases_y,
+                ):
+                    raise ValueError(
+                        f"There is a phase mismatch when moving from {instruction.initial_tweezer_configuration} to "
+                        f"{instruction.final_tweezer_configuration} on the Y axis. This is because the frequencies "
+                        f"{mismatched_frequencies} are held constant during the move but the phases of the initial and "
+                        f"final configurations are different."
+                    )
+
+        return sequence
+
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
@@ -91,8 +144,12 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         self._enter_context(self._awg)
         self._compute_static_signals()
         self._write_static_segments()
+        self._tweezer_sequence_bounds = tuple(
+            (math.nan, math.nan) for _ in self.tweezer_sequence
+        )
 
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
+        logger.debug(f"{_get_steps(self.tweezer_sequence)=}")
         return SpectrumAWGM4i66xxX8(
             name=f"{self.name}_awg",
             board_id=self.awg_board_id,
@@ -179,7 +236,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 raise ValueError(
                     "tweezer_sequence_durations must be the same length as tweezer_sequence"
                 )
-            self._tweezer_sequence_bounds = tuple(
+            new_tweezer_sequence_bounds = tuple(
                 get_step_bounds(tweezer_sequence_durations)
             )
             # this is a limitation of the AWG that each segment must have a length
@@ -187,41 +244,33 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             time_step = 32 / self.sampling_rate
             step_repetitions = dict[StepName, int]()
             segment_data: dict[SegmentName, SegmentData] = {}
-            number_samples_per_loop = self.number_samples_per_loop
             for step, (instruction, (start, stop)) in enumerate(
-                zip(self.tweezer_sequence, self._tweezer_sequence_bounds)
+                zip(self.tweezer_sequence, new_tweezer_sequence_bounds)
             ):
-                integer_start = (
-                    start_tick(start, number_samples_per_loop / self.sampling_rate)
-                    * number_samples_per_loop
-                )
-                integer_stop = (
-                    stop_tick(stop, number_samples_per_loop / self.sampling_rate)
-                    * number_samples_per_loop
-                )
+                have_step_bounds_changed = (
+                    start,
+                    stop,
+                ) != self._tweezer_sequence_bounds[step]
                 before_start = start_tick(start, time_step) * 32
                 after_stop = stop_tick(stop, time_step) * 32
 
                 ticks = after_stop - before_start
                 self._step_number_ticks[step] = ticks
                 if isinstance(instruction, HoldTweezers):
-                    integer_repetitions = (
-                        integer_stop - integer_start
-                    ) // self.number_samples_per_loop
+                    if not have_step_bounds_changed:
+                        continue
                     step_repetitions[
                         static_step_names(step).integer
-                    ] = integer_repetitions
+                    ] = self.get_step_step_repetitions(start, stop)
                     segment_data[
                         static_segment_names(step).before
-                    ] = self._static_signals[instruction.tweezer_configuration][
-                        :, before_start % number_samples_per_loop :
-                    ]
+                    ] = self.get_before_part_data(start, stop, instruction)
                     segment_data[
                         static_segment_names(step).after
-                    ] = self._static_signals[instruction.tweezer_configuration][
-                        :, : after_stop % number_samples_per_loop
-                    ]
+                    ] = self.get_after_part_data(start, stop, instruction)
                 elif isinstance(instruction, MoveTweezers):
+                    if not have_step_bounds_changed:
+                        continue
                     number_samples = NumberSamples(after_stop - before_start)
                     previous_config = self.tweezer_configurations[
                         instruction.initial_tweezer_configuration
@@ -231,13 +280,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     ]
 
                     previous_step_stop = (
-                        stop_tick(self._tweezer_sequence_bounds[step - 1][1], time_step)
+                        stop_tick(new_tweezer_sequence_bounds[step - 1][1], time_step)
                         * 32
                     )
                     next_step_start = (
-                        start_tick(
-                            self._tweezer_sequence_bounds[step + 1][0], time_step
-                        )
+                        start_tick(new_tweezer_sequence_bounds[step + 1][0], time_step)
                         * 32
                     )
 
@@ -272,12 +319,47 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     )
                 else:
                     raise ValueError(f"Unknown instruction {instruction}")
-            del segment_data[static_segment_names(0).before]
+            if static_segment_names(0).before in segment_data:
+                del segment_data[static_segment_names(0).before]
             self._awg.update_parameters(
                 segment_data=segment_data,
                 step_repetitions=step_repetitions,
                 bypass_power_check=BYPASS_POWER_CHECK,
             )
+            self._tweezer_sequence_bounds = new_tweezer_sequence_bounds
+
+    def get_before_part_data(
+        self, start: float, stop: float, instruction: HoldTweezers
+    ) -> SegmentData:
+        time_step = self.indivisible_time_step
+        before_start = start_tick(start, time_step) * 32
+        before = self._static_signals[instruction.tweezer_configuration][
+            :, before_start % self.number_samples_per_loop :
+        ]
+        return before
+
+    def get_after_part_data(
+        self, start: float, stop: float, instruction: HoldTweezers
+    ) -> SegmentData:
+        time_step = self.indivisible_time_step
+        after_stop = stop_tick(stop, time_step) * 32
+        after = self._static_signals[instruction.tweezer_configuration][
+            :, : after_stop % self.number_samples_per_loop
+        ]
+        return after
+
+    def get_step_step_repetitions(self, start: float, stop: float) -> int:
+        block_start = math.ceil(
+            start / (self.number_samples_per_loop / self.sampling_rate)
+        )
+        block_stop = math.floor(
+            stop / (self.number_samples_per_loop / self.sampling_rate)
+        )
+        return block_stop - block_start
+
+    @property
+    def indivisible_time_step(self) -> float:
+        return 32 / self.sampling_rate
 
     @log_exception(logger)
     def prepare_rearrangement(
@@ -300,34 +382,35 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 rearrange_instruction.final_tweezer_configuration
             ]
 
-            if not initial_config.number_tweezers_along_y == 1:
+            if not initial_config.number_tweezers_along_x == 1:
                 raise ValueError(
-                    f"Can only rearrange atoms if all atoms are in the same row"
+                    f"Can only rearrange atoms if all atoms are in the same column"
                 )
-            if not final_config.number_tweezers_along_y == 1:
+            if not final_config.number_tweezers_along_x == 1:
                 raise ValueError(
-                    f"Can only rearrange atoms if all atoms are in the same row"
+                    f"Can only rearrange atoms if all atoms are in the same column"
                 )
 
-            atoms_before = [False] * initial_config.number_tweezers_along_x
+            atoms_before = [False] * initial_config.number_tweezers_along_y
 
             for (x, y), present in atom_present.items():
-                if y != 0:
+                if x != 0:
                     raise ValueError(
-                        f"Can only rearrange atoms if they all are on the x-axis"
+                        f"Can only rearrange atoms if they all are on the y-axis"
                     )
-                if x >= initial_config.number_tweezers_along_x:
+                if y >= initial_config.number_tweezers_along_y:
                     raise ValueError(
                         f"Atom present at ({x}, {y}) but there are only "
-                        f"{initial_config.number_tweezers_along_x} tweezers along x"
+                        f"{initial_config.number_tweezers_along_y} tweezers along y"
                     )
                 else:
-                    atoms_before[x] = present
+                    atoms_before[y] = present
 
             moves = compute_moves_1d(
                 atoms_before,
-                final_config.number_tweezers_along_x,
-                shift_towards="high",
+                final_config.number_tweezers_along_y,
+                max_number_atoms_to_keep=20,
+                shift_towards="low",
             )
 
             initial_indices = [before for before, after in moves.items()]
@@ -349,24 +432,24 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             next_step_start = (
                 start_tick(self._tweezer_sequence_bounds[step + 1][0], time_step) * 32
             )
-            move_signal_x = self._signal_generator.generate_signal_moving_traps(
-                np.array(initial_config.amplitudes_x)[initial_indices],
-                np.array(final_config.amplitudes_x)[final_indices],
-                np.array(initial_config.frequencies_x)[initial_indices],
-                np.array(final_config.frequencies_x)[final_indices],
-                np.array(initial_config.phases_x)[initial_indices],
-                np.array(final_config.phases_x)[final_indices],
+            move_signal_y = self._signal_generator.generate_signal_moving_traps(
+                np.array(initial_config.amplitudes_y)[initial_indices],
+                np.array(final_config.amplitudes_y)[final_indices],
+                np.array(initial_config.frequencies_y)[initial_indices],
+                np.array(final_config.frequencies_y)[final_indices],
+                np.array(initial_config.phases_y)[initial_indices],
+                np.array(final_config.phases_y)[final_indices],
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
             )
-            move_signal_y = self._signal_generator.generate_signal_moving_traps(
-                initial_config.amplitudes_y,
-                final_config.amplitudes_y,
-                initial_config.frequencies_y,
-                final_config.frequencies_y,
-                initial_config.phases_y,
-                final_config.phases_y,
+            move_signal_x = self._signal_generator.generate_signal_moving_traps(
+                initial_config.amplitudes_x,
+                final_config.amplitudes_x,
+                initial_config.frequencies_x,
+                final_config.frequencies_x,
+                initial_config.phases_x,
+                final_config.phases_x,
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
@@ -413,6 +496,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
 def compute_moves_1d(
     atoms_before: Sequence[bool],
     number_target_traps: int,
+    max_number_atoms_to_keep: Optional[int] = None,
     shift_towards: Literal["low", "high"] = "low",
 ) -> dict[int, int]:
     """
@@ -421,28 +505,61 @@ def compute_moves_1d(
     Args:
         atoms_before: Indicated which traps are filled, i.e. atoms_before[i] is True if the trap with index i is filled
             and False otherwise.
-        number_target_traps: The number of traps available for the rearrangement. This is the number of traps that could
+        number_target_traps: The number of traps available after the move. This is the number of traps that could
             be filled after the rearrangement if there was no limit on the number of atoms.
+        max_number_atoms_to_keep: Drop extra atoms if their number is higher than this. If None, all atoms are kept.
         shift_towards: Whether to shift the atoms towards the low or high index traps.
 
     Returns:
         moves: A dictionary where moves[i] is the trap index that the atom at index i should be moved to.
     """
 
-    initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
+    number_atoms_before = sum(atoms_before)
 
-    target_indices = [i for i, _ in enumerate(initial_indices) if i < 20]
+    if max_number_atoms_to_keep is not None:
+        if max_number_atoms_to_keep > number_target_traps:
+            raise ValueError(
+                f"max_number_atoms_to_keep ({max_number_atoms_to_keep}) must be smaller than "
+                f"number_target_traps ({number_target_traps})."
+            )
+        initial_number_atoms = min(number_atoms_before, max_number_atoms_to_keep)
+    else:
+        initial_number_atoms = min(number_atoms_before, number_target_traps)
+
     if shift_towards == "low":
-        pass
+        offset = 0
     elif shift_towards == "high":
-        if len(target_indices) == 0:
-            return {}
-        right_most_filled_trap = max(target_indices)
-        target_indices = [
-            i + number_target_traps - len(target_indices) for i in target_indices
-        ]
+        offset = number_target_traps - initial_number_atoms
     else:
         raise ValueError(f"Invalid shift_towards: {shift_towards}")
+
+    target_pattern = [False] * number_target_traps
+    target_pattern[offset : offset + initial_number_atoms] = [
+        True
+    ] * initial_number_atoms
+
+    return compute_moves_1d_pattern(atoms_before, target_pattern)
+
+
+def compute_moves_1d_pattern(
+    atoms_before: Sequence[bool],
+    target_pattern: Sequence[bool],
+) -> dict[int, int]:
+    """
+    Compute the moves for a rearrangement in 1D.
+
+    Args:
+        atoms_before: Indicated which traps are filled, i.e. atoms_before[i] is True if the trap with index i is filled
+            and False otherwise.
+        target_pattern: The target pattern of the rearrangement. This is a sequence of booleans indicating which traps
+            should be filled after the rearrangement.
+
+    Returns:
+        moves: A dictionary where moves[i] is the trap index that the atom at index i should be moved to.
+    """
+
+    initial_indices = [i for i, filled in enumerate(atoms_before) if filled]
+    target_indices = [i for i, filled in enumerate(target_pattern) if filled]
 
     return dict(zip(initial_indices, target_indices))
 
@@ -666,3 +783,32 @@ def get_step_bounds(step_durations: Iterable[float]) -> list[tuple[float, float]
         step_bounds.append((start_time, start_time + duration))
         start_time += duration
     return step_bounds
+
+
+def phase_mismatch(
+    initial_frequencies: Sequence[float],
+    initial_phases: Sequence[float],
+    target_frequencies: Sequence[float],
+    target_phases: Sequence[float],
+) -> list[float]:
+    """
+    Returns True if there is a phase mismatch between the initial and target configuration for a move.
+
+    This indicates if there is an issue if one of the target frequencies is equal to the initial frequency, but their
+    phases are different.
+
+    Returns: A list of the frequencies for which there is a phase mismatch.
+    """
+
+    mismatched_frequencies = []
+
+    for initial_frequency, initial_phase, target_frequency, target_phase in zip(
+        initial_frequencies,
+        initial_phases,
+        target_frequencies,
+        target_phases,
+        strict=True,
+    ):
+        if initial_frequency == target_frequency and initial_phase != target_phase:
+            mismatched_frequencies.append(initial_frequency)
+    return mismatched_frequencies

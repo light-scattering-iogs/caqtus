@@ -7,9 +7,10 @@ readme = "README.md"
 packages = [{include = "camera_lane"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
-settings-model = {path = "../../../../../common/settings_model", develop = true}
+python = "^3.11, <3.13"
 pydantic = "^1.0"
+
+settings-model = {path = "../../../../../common/settings_model", develop = true}
 lane-configuration = {path = "../../../../../common/lane/lane.configuration", develop = true}
 image-types = {path = "../../../../../common/types/image_types", develop = true}
 

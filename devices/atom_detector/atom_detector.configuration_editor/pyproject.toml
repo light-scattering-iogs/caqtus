@@ -8,10 +8,10 @@ packages = [{include = "atom_detector"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+pyqt6 = "^6.5.0"
 
 device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
 atom-detector-configuration = {path = "../atom_detector.configuration", develop = true}
-pyqt6 = "^6.5.0"
 device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
 
 

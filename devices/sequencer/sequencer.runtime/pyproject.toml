@@ -7,9 +7,11 @@ readme = "README.md"
 packages = [{include = "sequencer"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
+
 sequencer-instructions = {path = "../sequencer.instructions", develop = true}
 device-runtime = {path = "../../device/device.runtime", develop = true}
+sequencer-configuration = {path = "../sequencer.configuration", develop = true}
 
 
 [build-system]

@@ -7,10 +7,12 @@ readme = "README.md"
 packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
+
+pyqt6 = "^6.5.1"
+
 device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
 elliptec-ell14-configuration = {path = "../elliptec_ell14.configuration", develop = true}
-pyqt6 = "^6.5.1"
 device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
 
 

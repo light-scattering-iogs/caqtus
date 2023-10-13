@@ -295,21 +295,4 @@ def compile_clock_instruction(
     return ChannelInstruction.join(instructions, dtype=bool).split(length)[0]
 
 
-def high_low_clicks(
-    clock_time_step: int, sequencer_time_step: int
-) -> tuple[int, int, int]:
-    """Return the number of steps the sequencer must be high then low to produce a clock pulse."""
-    if not clock_time_step >= 2 * sequencer_time_step:
-        raise ValueError(
-            "Clock time step must be at least twice the sequencer time step"
-        )
-    div, mod = divmod(clock_time_step, sequencer_time_step)
-    if not mod == 0:
-        logger.debug(f"{clock_time_step=}, {sequencer_time_step=}, {div=}, {mod=}")
-        raise ValueError(
-            "Clock time step must be an integer multiple of the sequencer time step"
-        )
-    if div % 2 == 0:
-        return div, div // 2, div // 2
-    else:
-        return div, div // 2 + 1, div // 2
+

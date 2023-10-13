@@ -7,8 +7,9 @@ readme = "README.md"
 packages = [{include = "expression_widget"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
+python = "^3.8, <3.13"
 pyqt6 = "^6.5.0"
+
 expression = {path = "../../expression", develop = true}
 
 

@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Self, Iterable
+from typing import Self, Iterable, Sequence, SupportsFloat
 
 import numpy as np
 import yaml
@@ -20,19 +20,24 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
 
     def __init__(
         self,
-        weighted_map: np.ma.MaskedArray,
-        offset: Real = 0.0,
+        roi: ArbitraryROI,
+        weights: Sequence[float],
+        offset: SupportsFloat = 0.0,
     ):
         """Create a new weighted atom signal calculator
 
         Args:
-            weighted_map: A masked array with the same shape as the original image. When computing the signal, only the
-                values that are not masked are used.
+            roi: The ROI to use to compute the signal
+            weights: The weights to use to compute the signal. It must have the same length as the ROI. The pixel at
+            roi.indices[i] will be multiplied by weights[i] to compute the signal.
         """
 
-        self.weighted_map = weighted_map
-
-        self.offset = offset
+        self._weights = list(weights)
+        self._roi = roi
+        self._weights_np = np.array(self._weights)
+        self.offset = float(offset)
+        self._x = np.array([x for x, _ in self._roi.indices])
+        self._y = np.array([y for _, y in self._roi.indices])
 
     def compute_signal(self, image: np.ndarray) -> float:
         """Compute the signal for each atom in the image"""
@@ -57,13 +62,22 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
             raise TypeError(f"offset must be a real number, not {type(offset)}")
         self._offset = float(offset)
 
-    @property
-    def weighted_map(self):
+    def to_weighted_map(self):
         """Return the weighted map used to compute the signal"""
-        return self._weighed_image
 
-    @weighted_map.setter
-    def weighted_map(self, weighted_map: np.ma.MaskedArray):
+        indices = np.array(self._roi.indices)
+        mask = np.full(self._roi.original_image_size, True)
+        mask[indices[:, 0], indices[:, 1]] = False
+        weighted_image = np.ma.MaskedArray(
+            np.zeros(self._roi.original_image_size), mask=mask
+        )
+        weighted_image[indices[:, 0], indices[:, 1]] = self._weights
+        return weighted_image
+
+    @classmethod
+    def from_weighted_map(
+        cls, weighted_map: np.ma.MaskedArray, offset: SupportsFloat = 0.0
+    ) -> Self:
         """Set the weighted map used to compute the signal"""
 
         if not isinstance(weighted_map, np.ma.MaskedArray):
@@ -73,16 +87,9 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
         if weighted_map.ndim != 2:
             raise ValueError(f"weighted_map must be 2D, not {weighted_map.ndim}D")
 
-        self._roi = ArbitraryROI.from_mask(np.logical_not(weighted_map.mask))
-        self._weights: list[float] = weighted_map[
-            *np.array(self._roi.indices).T
-        ].tolist()
-        self._weighed_image = weighted_map
-
-        self._weights_np = np.array(self._weights)
-
-        self._x = np.array([x for x, _ in self._roi.indices])
-        self._y = np.array([y for _, y in self._roi.indices])
+        roi = ArbitraryROI.from_mask(np.logical_not(weighted_map.mask))
+        weights: list[float] = weighted_map[*np.array(roi.indices).T].tolist()
+        return cls(roi, weights, offset)
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, atomic_signal_calculator: Self):
@@ -101,17 +108,7 @@ class WeightedAtomSignalCalculator(YAMLSerializable):
     def constructor(cls, loader: yaml.Loader, node: yaml.Node):
         """Construct an object from a yaml node"""
 
-        kwargs = loader.construct_mapping(node, deep=True)
-        roi: ArbitraryROI = kwargs["roi"]
-        weights = kwargs["weights"]
-        offset = kwargs.get("offset", 0.0)
-
-        indices = np.array(roi.indices)
-        mask = np.full(roi.original_image_size, True)
-        mask[indices[:, 0], indices[:, 1]] = False
-        weighted_image = np.ma.MaskedArray(np.zeros(roi.original_image_size), mask=mask)
-        weighted_image[indices[:, 0], indices[:, 1]] = weights
-        return cls(weighted_image, offset)
+        return cls(**loader.construct_mapping(node, deep=True))
 
     def __eq__(self, other):
         if not isinstance(other, WeightedAtomSignalCalculator):

@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "experiment"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
 
 pydantic = "^1.10.4"
 

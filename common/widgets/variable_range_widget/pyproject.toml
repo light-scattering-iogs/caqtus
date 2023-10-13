@@ -7,8 +7,9 @@ readme = "README.md"
 packages = [{include = "variable_range_widget"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.12"
+python = "^3.8, <3.13"
 pyqt6 = "^6.5.0"
+
 expression = {path = "../../expression", develop = true}
 rename-dict-key = {path = "../../rename_dict_key", develop = true}
 variable-name = {path = "../../variable/variable.name", develop = true}

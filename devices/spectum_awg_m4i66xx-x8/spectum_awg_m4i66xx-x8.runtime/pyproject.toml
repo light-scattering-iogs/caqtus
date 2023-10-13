@@ -16,6 +16,7 @@ spectum-awg-m4i66xx-x8-configuration = {path = "../spectum_awg_m4i66xx-x8.config
 
 device-runtime = {path = "../../device/device.runtime", develop = true}
 settings-model = {path = "../../../common/settings_model"}
+duration-timer = {path = "../../../common/duration_timer", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

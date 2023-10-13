@@ -29,6 +29,8 @@ atom-detector-runtime = {path = "../../devices/atom_detector/atom_detector.runti
 analyze-spots = {path = "../../devices/tweezers/analyze_spots", develop = true}
 analyza-maximum-likelihood = {path = "../analyza.maximum_likelihood", develop = true}
 analyza-functions = {path = "../analyza.functions", develop = true}
+sympy = "^1.12"
+lmfit = "^1.2.2"
 
 
 

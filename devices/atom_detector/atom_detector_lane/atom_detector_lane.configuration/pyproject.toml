@@ -8,6 +8,7 @@ packages = [{include = "atom_detector_lane"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+
 lane-configuration = {path = "../../../../common/lane/lane.configuration", develop = true}
 atom-detector-configuration = {path = "../../atom_detector.configuration", develop = true}
 

@@ -1,5 +1,4 @@
-from .sequencer import Sequencer, SequenceNotStartedError, SequenceNotConfiguredError
-from .trigger import (
+from sequencer.configuration import (
     Trigger,
     SoftwareTrigger,
     ExternalTriggerStart,
@@ -7,6 +6,7 @@ from .trigger import (
     ExternalClockOnChange,
     TriggerEdge,
 )
+from .sequencer import Sequencer, SequenceNotStartedError, SequenceNotConfiguredError
 
 __all__ = [
     "Sequencer",

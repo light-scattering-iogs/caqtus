@@ -1,103 +1,30 @@
 import logging
-import os
 from multiprocessing.managers import BaseManager
-from typing import Type
+from typing import Type, Iterable
 
 from device.runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logging.basicConfig()
-
-imported_devices: dict[str, Type[RuntimeDevice]] = {}
-
-try:
-    from elliptec_ell14.runtime import ElliptecELL14RotationStage
-
-    imported_devices["ElliptecELL14RotationStage"] = ElliptecELL14RotationStage
-    logger.info("ElliptecELL14RotationStage imported")
-except Exception:
-    logger.info("Did not import ElliptecELL14RotationStage")
-
-try:
-    from swabian_pulse_streamer.runtime import SwabianPulseStreamer
-
-    imported_devices["SwabianPulseStreamer"] = SwabianPulseStreamer
-    logger.info("SwabianPulseStreamer imported")
-except Exception:
-    logger.info("Did not import SwabianPulseStreamer")
+logger.setLevel(logging.INFO)
 
 
-try:
-    from orca_quest.runtime import OrcaQuestCamera
+class RemoteDeviceServer:
+    def __init__(self, address: tuple[str, int], authkey: bytes):
+        self._address = address
+        self._authkey = authkey
+        self._remote_device_manager_class: BaseManager = type("RemoteDeviceManager", (BaseManager,), {})  # type: ignore
 
-    imported_devices["OrcaQuestCamera"] = OrcaQuestCamera
-    logger.info("OrcaQuestCamera imported")
-except Exception:
-    logger.info("Did not import OrcaQuestCamera")
+    def register(
+        self, type_name: str, device_type: Type[RuntimeDevice], exposed: Iterable[str]
+    ):
+        self._remote_device_manager_class.register(
+            type_name, device_type, exposed=list(exposed)
+        )
 
-try:
-    from spincore_sequencer.runtime import SpincorePulseBlaster
-
-    imported_devices["SpincorePulseBlaster"] = SpincorePulseBlaster
-    logger.info("SpincorePulseBlaster imported")
-except Exception:
-    logger.info("Did not import SpincorePulseBlaster")
-
-try:
-    from ni6738_analog_card.runtime import NI6738AnalogCard
-
-    imported_devices["NI6738AnalogCard"] = NI6738AnalogCard
-    logger.info("NI6738AnalogCard imported")
-except Exception:
-    logger.info("Did not import NI6738AnalogCard")
-
-try:
-    from atom_detector.runtime import AtomDetector
-
-    imported_devices["AtomDetector"] = AtomDetector
-    logger.info("AtomDetector imported")
-except Exception:
-    logger.info("Did not import AtomDetector", exc_info=True)
-
-try:
-    from aod_tweezer_arranger.runtime import AODTweezerArranger
-
-    imported_devices["AODTweezerArranger"] = AODTweezerArranger
-    logger.info("AODTweezerArranger imported")
-except Exception:
-    logger.info("Did not import AODTweezerArranger", exc_info=True)
-
-try:
-    from imaging_source.runtime import ImagingSourceCameraDMK33GR0134
-
-    imported_devices["ImagingSourceCameraDMK33GR0134"] = ImagingSourceCameraDMK33GR0134
-    logger.info("ImagingSourceCameraDMK33GR0134 imported")
-except Exception:
-    logger.info("Did not import ImagingSourceCameraDMK33GR0134")
-
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG")
-
-
-class RemoteDeviceServerManager(BaseManager):
-    pass
-
-
-for type_name, device_type in imported_devices.items():
-    RemoteDeviceServerManager.register(
-        type_name, device_type, exposed=device_type.exposed_remote_methods()
-    )
-
-password = os.environ.get("CAQTUS_DEVICE_SERVER_PASSWORD", None)
-if password is None:
-    raise ValueError(
-        "The environment variable 'CAQTUS_DEVICE_SERVER_PASSWORD' is not set to any value"
-    )
-
-manager = RemoteDeviceServerManager(
-    address=("", 65000), authkey=bytes(password, encoding="utf-8")
-)
-server = manager.get_server()
-server.serve_forever()
+    def serve_forever(self):
+        manager = self._remote_device_manager_class(
+            address=self._address, authkey=self._authkey
+        )
+        server = manager.get_server()
+        logger.info("Remote device server started")
+        server.serve_forever()

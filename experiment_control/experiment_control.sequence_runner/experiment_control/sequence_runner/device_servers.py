@@ -4,6 +4,7 @@ from typing import Mapping
 
 from device.configuration import DeviceName
 from device.runtime import RuntimeDevice
+from device_server.name import DeviceServerName
 from experiment.configuration import DeviceServerConfiguration
 from experiment_control.compute_device_parameters.initialize_devices import (
     InitializationParameters,
@@ -15,7 +16,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def create_device_servers(
-    device_server_configs: Mapping[str, DeviceServerConfiguration]
+    device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration]
 ) -> dict[str, RemoteDeviceClientManager]:
     device_servers: dict[str, RemoteDeviceClientManager] = {}
     for server_name, server_config in device_server_configs.items():

@@ -7,9 +7,10 @@ readme = "README.md"
 packages = [{include = "analyza"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.12"
+python = "^3.11, <3.13"
+
 pandas = "^2.0.2"
-tqdm = "^4.65.0"
+
 experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
 sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
 

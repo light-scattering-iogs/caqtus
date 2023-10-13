@@ -13,3 +13,6 @@ converters = {
 
 def unstructure(obj: Any, unstructure_as: Any = None):
     return converters["unconfigured"].unstructure(obj, unstructure_as=unstructure_as)
+
+def structure(obj: Any, cls: Any = None):
+    return converters["unconfigured"].structure(obj, cls)
