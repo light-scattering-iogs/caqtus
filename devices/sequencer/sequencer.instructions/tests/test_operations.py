@@ -9,6 +9,7 @@ from sequencer.instructions.base_instructions import (
     Pattern,
     SequenceInstruction,
     number_operations,
+    depth,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def construct_pattern(length: int) -> Pattern:
 
 
 @composite
-def fixed_depth_instruction(draw, length: int, depth: int) -> SequenceInstruction:
+def fixed_depth_instruction(draw, length: int, depth: int):
     if not (length >= depth >= 0):
         raise ValueError("Invalid length or depth.")
     if depth == 0:
@@ -59,7 +60,9 @@ def fixed_depth_instruction(draw, length: int, depth: int) -> SequenceInstructio
         )
 
         shallowest_length = length - deepest_length
-        shallowest_depth = draw(integers(min_value=1, max_value=shallowest_length))
+        shallowest_depth = draw(
+            integers(min_value=1, max_value=min(shallowest_length, depth - 1))
+        )
         shallowest_instruction = draw(
             fixed_depth_instruction(
                 depth=shallowest_depth,
@@ -73,7 +76,7 @@ def fixed_depth_instruction(draw, length: int, depth: int) -> SequenceInstructio
 
 
 @composite
-def instruction(draw, max_length: int, max_depth: int):
+def draw_instruction_and_params(draw, max_length: int, max_depth: int):
     if not (max_length >= max_depth >= 0):
         raise ValueError("Invalid length or depth.")
     length = draw(integers(min_value=0, max_value=max_length))
@@ -81,7 +84,19 @@ def instruction(draw, max_length: int, max_depth: int):
         depth = 0
     else:
         depth = draw(integers(min_value=1, max_value=length))
-    return draw(fixed_depth_instruction(length=length, depth=depth))
+    return draw(fixed_depth_instruction(length=length, depth=depth)), length, depth
+
+
+@given(draw_instruction_and_params(max_length=100, max_depth=5))
+def test_length_and_depth(args):
+    instr, length, d = args
+    assert len(instr) == length
+    assert depth(instr) == d, f"{instr} has depth {depth(instr)}"
+
+
+@composite
+def instruction(draw, max_length: int, max_depth: int):
+    return draw(draw_instruction_and_params(max_length, max_depth))[0]
 
 
 @given(

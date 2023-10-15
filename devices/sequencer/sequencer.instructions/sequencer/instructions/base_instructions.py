@@ -452,3 +452,28 @@ def _(instruction: Add) -> list[NDArray]:
 @leaves.register
 def _(instruction: Multiply) -> list[NDArray]:
     return leaves(instruction.instruction)
+
+
+@singledispatch
+def depth(instruction: SequenceInstruction[T]) -> int:
+    raise NotImplementedError(
+        f"Cannot get depth of instruction with type {type(instruction)}."
+    )
+
+
+@depth.register
+def _(instruction: Pattern) -> int:
+    if len(instruction) == 0:
+        return 0
+    else:
+        return 1
+
+
+@depth.register
+def _(instruction: Add) -> int:
+    return max(depth(instruction.left), depth(instruction.right)) + 1
+
+
+@depth.register
+def _(instruction: Multiply) -> int:
+    return depth(instruction.instruction) + 1
