@@ -3,8 +3,9 @@ from contextlib import ExitStack, AbstractContextManager
 from functools import singledispatchmethod
 from typing import ClassVar, Self, Optional, TypeVar
 
-from device.configuration import DeviceName
 from pydantic import BaseModel, Field, Extra
+
+from device.configuration import DeviceName
 
 _T = TypeVar("_T")
 
@@ -101,7 +102,11 @@ class RuntimeDevice(BaseModel, ABC):
         self._close_stack = None
 
     def __enter__(self):
-        self.initialize()
+        try:
+            self.initialize()
+        except Exception:
+            self.close()
+            raise
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
