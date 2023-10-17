@@ -1,16 +1,21 @@
-import itertools
 import logging
 from abc import ABC, abstractmethod
-from functools import cached_property
+from functools import cached_property, singledispatch
 from math import floor, ceil
-from typing import TypeVar, Protocol, runtime_checkable, overload, Iterator, Generic
+from typing import TypeVar, overload, Generic
 
-from attr import frozen, field
+import numpy
+from attr import field, define
+from attr.setters import frozen
+from numpy.lib.recfunctions import merge_arrays
+from numpy.typing import NDArray, ArrayLike
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-T = TypeVar("T", covariant=True)
+S = TypeVar("S", covariant=True, bound=numpy.generic)
+T = TypeVar("T", covariant=True, bound=numpy.generic)
+U = TypeVar("U", covariant=True, bound=numpy.void)
 
 
 class SequenceInstruction(ABC, Generic[T]):
@@ -29,22 +34,14 @@ class SequenceInstruction(ABC, Generic[T]):
     Instances of this class are immutable. They can be concatenated with the `+`
     operator and repeated an integer number of times with the `*` operator. They can be
     subscripted with an integer or a slice.
+
+    The `|` operator can be used to merge the fields of two instructions. See numpy
+    structured arrays for more information on how the fields are merged.
     """
 
     @abstractmethod
     def __len__(self) -> int:
         """Return the length of the sequence represented by this instruction."""
-
-        raise NotImplementedError()
-
-    @abstractmethod
-    def __iter__(self) -> Iterator[T]:
-        """Return an iterator over the explicit values represented by this instruction.
-
-        This is mostly useful for debugging purposes as it transforms an implicit
-        representation into an explicit one, thus losing all potential performance
-        benefits.
-        """
 
         raise NotImplementedError()
 
@@ -56,8 +53,47 @@ class SequenceInstruction(ABC, Generic[T]):
     def __getitem__(self, index: slice) -> "SequenceInstruction[T]":
         ...
 
+    @overload
+    def __getitem__(self, index: str) -> "SequenceInstruction[S]":
+        ...
+
     @abstractmethod
     def __getitem__(self, index):
+        """Return the value or subsequence at the given index.
+
+        Beware that the returned value is a view of the original instruction, not a
+        copy. This means that modifying the returned value will modify the original
+        instruction.
+        """
+
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def dtype(self) -> numpy.dtype[T]:
+        """Return the data type of the values represented by this instruction.
+
+        The returned value is an instance of `numpy.dtype` and has all the properties of
+        a numpy data type. In particular, it has `fields` and `names` attributes that
+        can be used to see if the instruction represents a structured array.
+        """
+
+        raise NotImplementedError()
+
+    @dtype.setter
+    @abstractmethod
+    def dtype(self, value):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def flatten(self) -> NDArray[T]:
+        """Return explicitly the sequence represented by this instruction.
+
+        This will unwrap the implicit instructions like `Multiply` and `Add` and return
+        a `numpy.ndarray` with the same values as the sequence represented by this
+        instruction.
+        """
+
         raise NotImplementedError()
 
     def __add__(self, other) -> "SequenceInstruction[T]":
@@ -88,6 +124,10 @@ class SequenceInstruction(ABC, Generic[T]):
     def __rmul__(self, other) -> "SequenceInstruction[T]":
         return self.__mul__(other)
 
+    def __or__(self, other) -> "SequenceInstruction[U]":
+        """Merge the fields of two instructions."""
+        raise NotImplementedError()
+
     @classmethod
     def empty_like(
         cls, instruction: "SequenceInstruction[T]"
@@ -95,58 +135,62 @@ class SequenceInstruction(ABC, Generic[T]):
         return instruction[:0]
 
 
-@runtime_checkable
-class InternalPattern(Protocol[T]):
-    def __len__(self) -> int:
-        raise NotImplementedError()
-
-    def __iter__(self) -> Iterator[T]:
-        raise NotImplementedError()
-
-    @overload
-    def __getitem__(self, index: int) -> T:
-        ...
-
-    @overload
-    def __getitem__(self, index: slice) -> "InternalPattern[T]":
-        ...
-
-    def __getitem__(self, index):
-        raise NotImplementedError()
+def _to_numpy_array(array_like: ArrayLike) -> NDArray:
+    return numpy.array(array_like)
 
 
-@frozen
+@define
 class Pattern(SequenceInstruction[T]):
     """Explicit representation of a sequence of values.
 
     This is the most specific way to represent a sequence of values, by specifying them
     explicitly. It is also the most verbose and memory expensive way to represent the
     values.
-
-    Fields:
-        pattern: The sequence of values wrapped by this instruction. This must be a
-        sequence of values implementing the `__len__` and `__getitem__` methods, like
-        for example a list or a numpy array.
     """
 
-    pattern: InternalPattern[T]
+    array: NDArray[T] = field(converter=_to_numpy_array, on_setattr=frozen)
 
     def __len__(self) -> int:
-        return len(self.pattern)
+        return len(self.array)
+
+    def __str__(self):
+        return str(self.array)
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return self.pattern[index]
+            return self.array[index]
         elif isinstance(index, slice):
-            return Pattern(self.pattern[index])
+            return Pattern(self.array[index])
+        elif isinstance(index, str):
+            return Pattern(self.array[index])
         else:
             raise TypeError("Index must be int or slice.")
 
     def __iter__(self):
-        return iter(self.pattern)
+        return iter(self.array)
+
+    @property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.array.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.array.dtype = value
+
+    def flatten(self) -> NDArray[T]:
+        return self.array
+
+    def __or__(self, other) -> "SequenceInstruction[U]":
+        if isinstance(other, SequenceInstruction):
+            if len(other) != len(self):
+                raise ValueError("Patterns must have the same length to be merged.")
+            merged_array = merge_arrays([self.array, other.flatten()], usemask=False)
+            return Pattern(merged_array)
+        else:
+            return NotImplemented
 
 
-@frozen
+@define
 class Add(SequenceInstruction[T]):
     """Represent the concatenation of two sequences.
 
@@ -154,8 +198,8 @@ class Add(SequenceInstruction[T]):
     part cannot be empty.
     """
 
-    left: SequenceInstruction[T] = field()
-    right: SequenceInstruction[T] = field()
+    left: SequenceInstruction[T] = field(on_setattr=frozen)
+    right: SequenceInstruction[T] = field(on_setattr=frozen)
 
     # noinspection PyUnresolvedReferences
     @left.validator
@@ -169,15 +213,33 @@ class Add(SequenceInstruction[T]):
         if len(value) == 0:
             raise ValueError("Right instruction is empty.")
 
+    def __attrs_post_init__(self):
+        if self.left.dtype != self.right.dtype:
+            raise ValueError("Left and right instructions must have the same dtype.")
+
+        self.right.dtype = self.left.dtype
+
     def __len__(self) -> int:
         return self._length
 
-    def __iter__(self):
-        return itertools.chain(self.left, self.right)
+    def __str__(self):
+        return f"{self.left} + {self.right}"
 
     @cached_property
     def _length(self):
         return len(self.left) + len(self.right)
+
+    @property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.left.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.left.dtype = value
+        self.right.dtype = value
+
+    def flatten(self) -> NDArray[T]:
+        return numpy.concatenate([self.left.flatten(), self.right.flatten()])
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -197,9 +259,13 @@ class Add(SequenceInstruction[T]):
                     return self.left[start:] + self.right[: stop - len(self.left)]
             else:
                 return self.right[start - len(self.left) : stop - len(self.left)]
+        elif isinstance(index, str):
+            return Add(self.left[index], self.right[index])
+        else:
+            raise TypeError("Index must be int or slice or str.")
 
 
-@frozen
+@define
 class Multiply(SequenceInstruction[T]):
     """Represent the repetition of a sequence of values.
 
@@ -210,8 +276,8 @@ class Multiply(SequenceInstruction[T]):
     cannot be empty and the number of repetitions must be strictly greater than 1.
     """
 
-    repetitions: int = field()
-    instruction: SequenceInstruction[T] = field()
+    repetitions: int = field(on_setattr=frozen)
+    instruction: SequenceInstruction[T] = field(on_setattr=frozen)
 
     # noinspection PyUnresolvedReferences
     @repetitions.validator
@@ -227,6 +293,12 @@ class Multiply(SequenceInstruction[T]):
         if len(value) == 0:
             raise ValueError("Instruction is empty.")
 
+    def __str__(self):
+        if isinstance(self.instruction, Add):
+            return f"{self.repetitions} * ({self.instruction})"
+        else:
+            return f"{self.repetitions} * {self.instruction}"
+
     def __len__(self):
         return self._length
 
@@ -234,10 +306,8 @@ class Multiply(SequenceInstruction[T]):
     def _length(self):
         return self.repetitions * len(self.instruction)
 
-    def __iter__(self):
-        return itertools.chain.from_iterable(
-            itertools.repeat(self.instruction, self.repetitions)
-        )
+    def flatten(self) -> NDArray[T]:
+        return numpy.tile(self.instruction.flatten(), self.repetitions)
 
     def __getitem__(self, index):
         if isinstance(index, int):
@@ -287,8 +357,10 @@ class Multiply(SequenceInstruction[T]):
                     - next_instruction_start
                 ]
                 return before + middle + after
+        elif isinstance(index, str):
+            return Multiply(self.repetitions, self.instruction[index])
         else:
-            raise TypeError("Index must be int or slice.")
+            raise TypeError("Index must be int or slice or str.")
 
     def __mul__(self, other):
         if isinstance(other, int):
@@ -303,6 +375,14 @@ class Multiply(SequenceInstruction[T]):
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    @property
+    def dtype(self) -> numpy.dtype[T]:
+        return self.instruction.dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        self.instruction.dtype = value
 
 
 def _normalize_integer_index(index: int, length: int) -> int:
@@ -326,3 +406,74 @@ def _normalize_slice(index: slice, length: int) -> tuple[int, int, int]:
         step = index.step
 
     return start, stop, step
+
+
+@singledispatch
+def number_operations(instruction: SequenceInstruction[T]) -> int:
+    raise NotImplementedError(
+        f"Cannot get number of operations of instruction with type {type(instruction)}."
+    )
+
+
+@number_operations.register
+def _(instruction: Pattern) -> int:
+    return 0
+
+
+@number_operations.register
+def _(instruction: Add) -> int:
+    return (
+        number_operations(instruction.left) + number_operations(instruction.right) + 1
+    )
+
+
+@number_operations.register
+def _(instruction: Multiply) -> int:
+    return number_operations(instruction.instruction) + 1
+
+
+@singledispatch
+def leaves(instruction: SequenceInstruction[T]) -> list[NDArray[T]]:
+    raise NotImplementedError(
+        f"Cannot get leaves of instruction with type {type(instruction)}."
+    )
+
+
+@leaves.register
+def _(instruction: Pattern) -> list[NDArray]:
+    return [instruction.array]
+
+
+@leaves.register
+def _(instruction: Add) -> list[NDArray]:
+    return leaves(instruction.left) + leaves(instruction.right)
+
+
+@leaves.register
+def _(instruction: Multiply) -> list[NDArray]:
+    return leaves(instruction.instruction)
+
+
+@singledispatch
+def depth(instruction: SequenceInstruction[T]) -> int:
+    raise NotImplementedError(
+        f"Cannot get depth of instruction with type {type(instruction)}."
+    )
+
+
+@depth.register
+def _(instruction: Pattern) -> int:
+    if len(instruction) == 0:
+        return 0
+    else:
+        return 1
+
+
+@depth.register
+def _(instruction: Add) -> int:
+    return max(depth(instruction.left), depth(instruction.right)) + 1
+
+
+@depth.register
+def _(instruction: Multiply) -> int:
+    return depth(instruction.instruction) + 1
