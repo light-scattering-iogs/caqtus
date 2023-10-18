@@ -41,7 +41,8 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     // Must be equal to -1 at s=0 and +1 at s=1
     __device__ float amplitude_ramp(float s)
     {{
-        return -1.0 + 2.0 * s;
+        //return -1.0 + 2.0 * s;
+        return -__cosf(PI * s);
     }} 
     
     // Must be equal to -1 at s=0 and +1 at s=1
@@ -72,7 +73,7 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     // Must be the integral of frequency_ramp over s from 0 to s
     __device__ float phase_ramp(float s)
     {{
-        return phase_ramp_minimal_jolt(s);      
+        return phase_ramp_sin(s);      
     }}
     
 
