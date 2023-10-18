@@ -86,6 +86,14 @@ class NoisyLossyBimodalDistribution:
             + self.proba_detection_loss(threshold, n0, p0, n1, p_loss, σ)
         )
 
+    def lossless_fidelity(
+            self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
+    ):
+        return (
+                self.proba_no_detection_zero_atom(threshold, n0, p0, n1, p_loss, σ)
+                + self.proba_detection_one_atom(threshold, n0, p0, n1, p_loss, σ)
+        )
+
     def proba_no_detection_zero_atom(
         self, threshold: ArrayLike, n0: int, p0: float, n1: int, p_loss: float, σ: float
     ):
