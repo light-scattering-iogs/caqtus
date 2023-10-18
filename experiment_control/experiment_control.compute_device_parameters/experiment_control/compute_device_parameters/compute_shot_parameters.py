@@ -1,10 +1,12 @@
 import logging
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import singledispatch
 from typing import Any, Optional
 
 import numpy as np
+from attr import define, field
 
 from analog_lane.configuration import AnalogLane, Ramp
 from camera_lane.configuration import CameraLane, TakePicture
@@ -17,8 +19,21 @@ from expression import Expression
 from lane.configuration import Lane
 from sequence.configuration import ShotConfiguration
 from sequencer.channel import ChannelInstruction, ChannelPattern
-from sequencer.configuration import SequencerConfiguration, ChannelConfiguration
-from sequencer.instructions import ChannelLabel, SequencerInstruction
+from sequencer.configuration import (
+    SequencerConfiguration,
+    ChannelConfiguration,
+    ExternalTriggerStart,
+    ExternalClock,
+    ExternalClockOnChange,
+    Trigger,
+)
+from sequencer.instructions import (
+    ChannelLabel,
+    SequencerInstruction,
+    SequencerPattern,
+    Concatenate,
+    Repeat,
+)
 from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from variable.namespace import VariableNamespace
 from .camera_instruction import CameraInstruction
@@ -28,12 +43,14 @@ from .compile_lane import (
     empty_channel_instruction,
     get_step_starts,
     compile_camera_instruction,
-    compile_clock_instruction,
 )
 from .compile_steps import compile_step_durations
+from .timing import number_ticks
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+ns = 1e-9
 
 
 @dataclass
@@ -50,80 +67,213 @@ def compute_shot_parameters(
 ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
     """Compute the parameters to be applied to the devices before a shot."""
 
-    result: dict[DeviceName, dict[DeviceParameter, Any]] = {}
+    return SequenceCompiler(
+        experiment_config=experiment_config,
+        shot_config=shot_config,
+        variables=variables,
+    ).compile()
 
-    camera_instructions = compute_camera_instructions(shot_config, variables)
+    # clock_requirements = compile_clock_requirements(
+    #     sequencer_configs, shot_config, variables
+    # )
 
-    result |= get_camera_parameters(camera_instructions)
 
-    sequencer_configs = experiment_config.get_device_configs(SequencerConfiguration)
-    clock_requirements = compile_clock_requirements(
-        sequencer_configs, shot_config, variables
-    )
+@define
+class SequenceCompiler:
+    experiment_config: ExperimentConfig
+    shot_config: ShotConfiguration
+    variables: VariableNamespace
 
-    sequences = dict[DeviceName, SequencerInstruction]()
-    for sequencer in get_sequencers_ordered_by_dependency():
-        instructions = compile_sequencer_instructions(
-            sequencer_configs[sequencer],
-            shot_config,
-            variables,
-            camera_instructions,
-            clock_requirements,
+    step_durations: list[float] = field(init=False)
+    step_bounds: list[float] = field(init=False)
+    sequencer_configs: dict[DeviceName, SequencerConfiguration] = field(init=False)
+
+    def __attrs_post_init__(self):
+        self.step_durations = compile_step_durations(
+            self.shot_config.step_names, self.shot_config.step_durations, self.variables
         )
-        sequences[sequencer] = convert_to_sequence(
-            instructions, sequencer_configs[sequencer]
+        self.step_bounds = get_step_starts(self.step_durations)
+        self.sequencer_configs = self.experiment_config.get_device_configs(
+            SequencerConfiguration
         )
 
-    sequencer_parameters = {
-        sequencer_name: {DeviceParameter("sequence"): sequence}
-        for sequencer_name, sequence in sequences.items()
-    }
+    def compile(self) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+        result: dict[DeviceName, dict[DeviceParameter, Any]] = {}
 
-    result |= sequencer_parameters
-    result |= compute_tweezer_arranger_instructions(shot_config, variables)
+        camera_instructions = self.compute_camera_instructions()
+        result |= get_camera_parameters(camera_instructions)
 
-    return result
+        result |= self.compile_sequencers_instructions(camera_instructions)
+
+        result |= self.compute_tweezer_arranger_instructions()
+
+        return result
+
+    def compile_sequencers_instructions(
+        self, camera_instructions: Mapping[DeviceName, CameraInstruction]
+    ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+        sequences = dict[DeviceName, SequencerInstruction]()
+        for sequencer in get_sequencers_ordered_by_dependency():
+            instructions = self.compile_sequencer_instructions(
+                self.sequencer_configs[sequencer],
+                camera_instructions,
+                sequences,
+            )
+            sequences[sequencer] = convert_to_sequence(
+                instructions, self.sequencer_configs[sequencer]
+            )
+
+        sequencer_parameters = {
+            sequencer_name: {DeviceParameter("sequence"): sequence}
+            for sequencer_name, sequence in sequences.items()
+        }
+
+        return sequencer_parameters
+
+    def compile_sequencer_instructions(
+        self,
+        sequencer_config: SequencerConfiguration,
+        camera_instructions: Mapping[DeviceName, CameraInstruction],
+        sequences: Mapping[DeviceName, SequencerInstruction],
+    ) -> dict[ChannelLabel, ChannelInstruction]:
+        instructions: dict[ChannelLabel, ChannelInstruction] = {}
+
+        for channel_number, channel in enumerate(sequencer_config.channels):
+            instructions[
+                ChannelLabel(channel_number)
+            ] = self.compile_channel_instruction(
+                channel,
+                sequencer_config,
+                camera_instructions,
+                sequences,
+            )
+        max_delay = round_to_ns(sequencer_config.get_maximum_delay())
+        for channel_number, channel in enumerate(sequencer_config.channels):
+            delay = round_to_ns(channel.delay)
+            instruction = instructions[ChannelLabel(channel_number)]
+            pre_step = ChannelPattern([instruction.first_value()]) * delay
+            post_step = ChannelPattern([instruction.last_value()]) * (max_delay - delay)
+            instructions[ChannelLabel(channel_number)] = (
+                pre_step + instruction + post_step
+            )
+
+        return instructions
+
+    def compute_camera_instructions(self) -> dict[DeviceName, CameraInstruction]:
+        """Compute the parameters to be applied to each camera.
+
+        Returns:
+            A dictionary mapping camera names to their parameters
+        """
+
+        step_durations = self.step_durations
+
+        step_bounds = self.step_bounds
+
+        result = {}
+        shot_duration = sum(step_durations)
+
+        camera_lanes = self.shot_config.get_lanes(CameraLane)
+        for lane_name, lane in camera_lanes.items():
+            triggers = []
+            for value, start, stop in lane.get_value_spans():
+                if isinstance(value, TakePicture):
+                    state = True
+                else:
+                    state = False
+                duration = sum(step_durations[start:stop])
+                triggers.append(
+                    (state, step_bounds[start], step_bounds[stop], duration)
+                )
+            instructions = CameraInstruction(
+                timeout=shot_duration
+                + 1,  # add a second to be safe and not timeout too early if the shot takes time to start
+                triggers=triggers,
+            )
+            result[DeviceName(lane_name)] = instructions
+        return result
+
+    def compute_tweezer_arranger_instructions(
+        self,
+    ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
+        step_bounds = self.step_bounds
+
+        result = {}
+
+        tweezer_arranger_lanes = self.shot_config.get_lanes(TweezerArrangerLane)
+        for lane_name, lane in tweezer_arranger_lanes.items():
+            durations = []
+            for _, start, stop in lane.get_value_spans():
+                durations.append(step_bounds[stop] - step_bounds[start])
+            result[DeviceName(lane_name)] = {
+                DeviceParameter("tweezer_sequence_durations"): durations
+            }
+        return result
+
+    def compile_channel_instruction(
+        self,
+        channel: ChannelConfiguration,
+        sequencer_config: SequencerConfiguration,
+        camera_instructions: Mapping[DeviceName, CameraInstruction],
+        sequences: Mapping[DeviceName, SequencerInstruction],
+    ) -> ChannelInstruction:
+        if channel.has_special_purpose():
+            target = DeviceName(str(channel.description))
+            if target in camera_instructions:
+                instruction = compile_camera_instruction(
+                    camera_instructions[target], sequencer_config.time_step
+                )
+            elif target in sequences:
+                length = number_ticks(
+                    self.step_bounds[0],
+                    self.step_bounds[-1],
+                    sequencer_config.time_step * ns,
+                )
+
+                instruction = compile_clock_instruction(
+                    sequences[target],
+                    self.sequencer_configs[target].time_step,
+                    sequencer_config.time_step,
+                    length,
+                    self.sequencer_configs[target].trigger,
+                )
+            elif channel.is_unused():
+                instruction = empty_channel_instruction(
+                    channel.default_value,
+                    self.step_durations,
+                    sequencer_config.time_step,
+                )
+            else:
+                instruction = empty_channel_instruction(
+                    channel.default_value,
+                    self.step_durations,
+                    sequencer_config.time_step,
+                )
+        else:
+            if lane := self.shot_config.find_lane(channel.description):
+                instruction = compile_lane(
+                    lane,
+                    self.step_durations,
+                    sequencer_config.time_step,
+                    self.variables,
+                )
+            else:
+                instruction = empty_channel_instruction(
+                    channel.default_value,
+                    self.step_durations,
+                    sequencer_config.time_step,
+                )
+
+        instruction = instruction.apply(channel.output_mapping.convert)
+        return instruction
 
 
 def get_sequencers_ordered_by_dependency() -> list[DeviceName]:
     return [
         DeviceName("NI6738 card"),
         DeviceName("Swabian pulse streamer"),
-        DeviceName("Spincore Pulseblaster"),
+        DeviceName("Spincore PulseBlaster sequencer"),
     ]
-
-
-def compile_sequencer_instructions(
-    sequencer_config: SequencerConfiguration,
-    shot_config: ShotConfiguration,
-    variables: VariableNamespace,
-    camera_instructions: Mapping[DeviceName, CameraInstruction],
-    clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
-) -> dict[ChannelLabel, ChannelInstruction]:
-    step_durations = compile_step_durations(
-        shot_config.step_names, shot_config.step_durations, variables
-    )
-    instructions: dict[ChannelLabel, ChannelInstruction] = {}
-
-    for channel_number, channel in enumerate(sequencer_config.channels):
-        instructions[ChannelLabel(channel_number)] = compile_channel_instruction(
-            channel,
-            sequencer_config,
-            step_durations,
-            variables,
-            shot_config,
-            camera_instructions,
-            clock_requirements,
-        )
-    max_delay = round_to_ns(sequencer_config.get_maximum_delay())
-    for channel_number, channel in enumerate(sequencer_config.channels):
-        delay = round_to_ns(channel.delay)
-        instruction = instructions[ChannelLabel(channel_number)]
-        pre_step = ChannelPattern([instruction.first_value()]) * delay
-        post_step = ChannelPattern([instruction.last_value()]) * (max_delay - delay)
-        instructions[ChannelLabel(channel_number)] = pre_step + instruction + post_step
-
-    return instructions
 
 
 def round_to_ns(value: float) -> int:
@@ -131,45 +281,98 @@ def round_to_ns(value: float) -> int:
     return round(value / ns)
 
 
-def compile_channel_instruction(
-    channel: ChannelConfiguration,
-    sequencer_config: SequencerConfiguration,
-    step_durations: Sequence[float],
-    variables: VariableNamespace,
-    shot_config: ShotConfiguration,
-    camera_instructions: Mapping[DeviceName, CameraInstruction],
-    clock_requirements: dict[DeviceName, Sequence[ClockInstruction]],
+def compile_clock_instruction(
+    target_sequence: SequencerInstruction,
+    target_time_step: int,
+    base_time_step: int,
+    sequence_length: int,
+    trigger: Trigger,
 ) -> ChannelInstruction:
-    if channel.has_special_purpose():
-        target = DeviceName(str(channel.description))
-        if target in camera_instructions:
-            instruction = compile_camera_instruction(
-                camera_instructions[target], sequencer_config.time_step
-            )
-        elif target in clock_requirements:
-            instruction = compile_clock_instruction(
-                clock_requirements[target], sequencer_config.time_step
-            )
-        elif channel.is_unused():
-            instruction = empty_channel_instruction(
-                channel.default_value, step_durations, sequencer_config.time_step
-            )
-        else:
-            instruction = empty_channel_instruction(
-                channel.default_value, step_durations, sequencer_config.time_step
-            )
-    else:
-        if lane := shot_config.find_lane(channel.description):
-            instruction = compile_lane(
-                lane, step_durations, sequencer_config.time_step, variables
-            )
-        else:
-            instruction = empty_channel_instruction(
-                channel.default_value, step_durations, sequencer_config.time_step
-            )
 
-    instruction = instruction.apply(channel.output_mapping.convert)
+    if isinstance(trigger, ExternalTriggerStart):
+        clock_single_pulse = ChannelPattern([True]) * 10
+        instruction = clock_single_pulse + ChannelPattern([False]) * (
+            sequence_length - len(clock_single_pulse)
+        )
+    elif isinstance(trigger, ExternalClock):
+        multiplier, high, low = high_low_clicks(target_time_step, base_time_step)
+        clock_single_pulse = (
+            ChannelPattern([True]) * high + ChannelPattern([False]) * low
+        )
+        instruction = clock_single_pulse * (sequence_length // multiplier)
+        instruction = instruction + ChannelPattern([False]) * (
+            sequence_length - len(instruction)
+        )
+    elif isinstance(trigger, ExternalClockOnChange):
+        multiplier, high, low = high_low_clicks(target_time_step, base_time_step)
+        clock_single_pulse = (
+            ChannelPattern([True]) * high + ChannelPattern([False]) * low
+        )
+        instruction, _ = get_adaptive_clock(target_sequence, clock_single_pulse).split(
+            sequence_length
+        )
+    else:
+        raise NotImplementedError(f"Trigger {trigger} not implemented")
     return instruction
+
+
+@singledispatch
+def get_adaptive_clock(
+    target_sequence: SequencerInstruction, clock_pulse: ChannelInstruction
+) -> ChannelInstruction:
+    raise NotImplementedError(f"Target sequence {target_sequence} not implemented")
+
+
+@get_adaptive_clock.register
+def _(
+    target_sequence: SequencerPattern, clock_pulse: ChannelInstruction
+) -> ChannelInstruction:
+    return clock_pulse * len(target_sequence)
+
+
+@get_adaptive_clock.register
+def _(
+    target_sequence: Concatenate, clock_pulse: ChannelInstruction
+) -> ChannelInstruction:
+    return ChannelInstruction.join(
+        (
+            get_adaptive_clock(sequence, clock_pulse)
+            for sequence in target_sequence.instructions
+        ),
+        dtype=bool,
+    )
+
+
+@get_adaptive_clock.register
+def _(target_sequence: Repeat, clock_pulse: ChannelInstruction) -> ChannelInstruction:
+    if len(target_sequence.instruction) == 1:
+        return clock_pulse + ChannelPattern([False]) * (
+            (len(target_sequence) - 1) * len(clock_pulse)
+        )
+    else:
+        raise NotImplementedError(
+            "Only one instruction is supported in a repeat block at the moment"
+        )
+
+
+def high_low_clicks(
+    clock_time_step: int, sequencer_time_step: int
+) -> tuple[int, int, int]:
+    """Return the number of steps the sequencer must be high then low to produce a clock pulse."""
+    if not clock_time_step >= 2 * sequencer_time_step:
+        raise ValueError(
+            "Clock time step must be at least twice the sequencer time step"
+        )
+    div, mod = divmod(clock_time_step, sequencer_time_step)
+    if not mod == 0:
+        logger.debug(f"{clock_time_step=}, {sequencer_time_step=}, {div=}, {mod=}")
+        raise ValueError(
+            "Clock time step must be an integer multiple of the sequencer time step"
+        )
+    if div % 2 == 0:
+        return div, div // 2, div // 2
+    else:
+        return div, div // 2 + 1, div // 2
 
 
 def convert_to_sequence(
@@ -186,43 +389,6 @@ def convert_to_sequence(
             channel_label, channel_instructions[channel_label]
         )
     return sequence
-
-
-def compute_camera_instructions(
-    shot_config: ShotConfiguration, variables: VariableNamespace
-) -> dict[DeviceName, CameraInstruction]:
-    """Compute the parameters to be applied to each camera.
-
-    Returns:
-        A dictionary mapping camera names to their parameters
-    """
-
-    step_durations = compile_step_durations(
-        shot_config.step_names, shot_config.step_durations, variables
-    )
-
-    step_bounds = get_step_starts(step_durations)
-
-    result = {}
-    shot_duration = sum(step_durations)
-
-    camera_lanes = shot_config.get_lanes(CameraLane)
-    for lane_name, lane in camera_lanes.items():
-        triggers = []
-        for value, start, stop in lane.get_value_spans():
-            if isinstance(value, TakePicture):
-                state = True
-            else:
-                state = False
-            duration = sum(step_durations[start:stop])
-            triggers.append((state, step_bounds[start], step_bounds[stop], duration))
-        instructions = CameraInstruction(
-            timeout=shot_duration
-            + 1,  # add a second to be safe and not timeout too early if the shot takes time to start
-            triggers=triggers,
-        )
-        result[DeviceName(lane_name)] = instructions
-    return result
 
 
 def get_camera_parameters(
@@ -333,28 +499,6 @@ def compute_clock_step_requirements(
 
 def start_tick(time: float, time_step: float) -> int:
     return math.ceil(time / time_step)
-
-
-def compute_tweezer_arranger_instructions(
-    shot_config: ShotConfiguration, variables: VariableNamespace
-) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-    step_durations = compile_step_durations(
-        shot_config.step_names, shot_config.step_durations, variables
-    )
-
-    step_bounds = get_step_starts(step_durations)
-
-    result = {}
-
-    tweezer_arranger_lanes = shot_config.get_lanes(TweezerArrangerLane)
-    for lane_name, lane in tweezer_arranger_lanes.items():
-        durations = []
-        for _, start, stop in lane.get_value_spans():
-            durations.append(step_bounds[stop] - step_bounds[start])
-        result[DeviceName(lane_name)] = {
-            DeviceParameter("tweezer_sequence_durations"): durations
-        }
-    return result
 
 
 def get_constant_steps(
