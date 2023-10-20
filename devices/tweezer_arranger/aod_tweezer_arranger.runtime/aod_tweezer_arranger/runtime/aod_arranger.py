@@ -807,7 +807,7 @@ def phase_mismatch(
         initial_phases,
         target_frequencies,
         target_phases,
-        strict=True,
+        strict=False,
     ):
         if initial_frequency == target_frequency and initial_phase != target_phase:
             mismatched_frequencies.append(initial_frequency)

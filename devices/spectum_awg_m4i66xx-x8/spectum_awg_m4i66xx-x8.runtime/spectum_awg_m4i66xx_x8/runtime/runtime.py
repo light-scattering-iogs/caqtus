@@ -4,7 +4,6 @@ import logging
 import math
 import pickle
 from collections.abc import Mapping
-from pathlib import Path
 from typing import ClassVar, Optional
 
 import numpy as np
@@ -61,6 +60,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
     _step_indices: dict[StepName, int]
     _step_names: dict[int, StepName]
     _bytes_per_sample: int
+    _segment_data: dict[SegmentName, SegmentData]
 
     def __init__(
         self,
@@ -87,6 +87,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         }
         self._step_indices = {name: index for index, name in enumerate(self._steps)}
         self._step_names = {index: name for name, index in self._step_indices.items()}
+        self._segment_data = {}
 
     @validator("channel_settings")
     def validate_channel_settings(cls, channel_settings):
@@ -262,10 +263,15 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                 self._check_and_write_segment_data(
                     segment_name, data, bypass_power_check=bypass_power_check
                 )
+                self._segment_data[segment_name] = data
         if step_repetitions is not None:
             for step_name, new_repetitions in step_repetitions.items():
                 self._steps[step_name].repetition = new_repetitions
                 self._setup_step(step_name, self._steps[step_name])
+
+    def save_segment_data(self) -> None:
+        with open("data.pkl", "wb") as f:
+            pickle.dump(self._segment_data, f)
 
     def _check_and_write_segment_data(
         self,
@@ -406,6 +412,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_STOP
         )
+        self.save_segment_data()
         self.check_error()
 
     def check_error(self):
