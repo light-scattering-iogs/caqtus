@@ -473,7 +473,6 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     f"AWG is not in the correct step. "
                     f"Expected one of {previous_steps} but is {current_step}"
                 )
-            self._awg.save_segments_data()
 
     def start_sequence(self) -> None:
         self._awg.stop_sequence()
