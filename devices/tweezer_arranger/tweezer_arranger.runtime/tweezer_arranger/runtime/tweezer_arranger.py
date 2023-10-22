@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TypeVar, Generic
 
-from pydantic import Field, validator
+from attrs import define, field
+from attrs.setters import frozen
 
 from device.runtime import RuntimeDevice
 from tweezer_arranger.configuration import (
@@ -19,6 +20,7 @@ TweezerConfigurationType = TypeVar(
 )
 
 
+@define(slots=False)
 class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
     """Abstract class that define the interface for a device that can move and rearrange tweezers.
 
@@ -32,18 +34,16 @@ class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
 
     tweezer_configurations: dict[
         TweezerConfigurationName, TweezerConfigurationType
-    ] = Field(allow_mutation=False)
+    ] = field(on_setattr=frozen)
 
-    tweezer_sequence: tuple[ArrangerInstruction, ...] = Field(allow_mutation=False)
+    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(on_setattr=frozen)
 
     @abstractmethod
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
         raise NotImplementedError
 
-    @validator("tweezer_sequence")
-    def validate_tweezer_sequence(
-        cls, sequence: tuple[ArrangerInstruction, ...]
-    ) -> tuple[ArrangerInstruction, ...]:
+    @tweezer_sequence.validator  # type: ignore
+    def validate_tweezer_sequence(self, _, sequence: tuple[ArrangerInstruction, ...]):
         for index, instruction in enumerate(sequence):
             match instruction:
                 case HoldTweezers():
@@ -79,7 +79,6 @@ class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
                         )
                 case _:
                     raise TypeError("Invalid instruction type")
-        return sequence
 
 
 class RearrangementFailedError(RuntimeError):

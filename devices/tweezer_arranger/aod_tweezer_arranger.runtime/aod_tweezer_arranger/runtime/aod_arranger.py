@@ -1,12 +1,14 @@
 import logging
 import math
-from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional, Any
+from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 
 import numpy as np
-from attr import frozen
-from pydantic import validator
+from attrs import define, field, frozen
+from attrs.setters import frozen as frozen_setter
+from attrs.validators import instance_of
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
+from device.name import DeviceName
 from duration_timer import DurationTimerLog
 from log_exception import log_exception
 from spectum_awg_m4i66xx_x8.configuration import (
@@ -41,6 +43,7 @@ parity = 0
 pattern_line = 0
 
 
+@define
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
 
@@ -50,20 +53,29 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
         awg_max_power_y: The maximum power that can be output by the AWG on the Y axis, in dBm.
     """
 
-    awg_board_id: str
-    awg_max_power_x: float
-    awg_max_power_y: float
+    tweezer_configurations: dict[
+        TweezerConfigurationName, AODTweezerConfiguration
+    ] = field(on_setattr=frozen)
+    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(on_setattr=frozen_setter)
 
-    _awg: SpectrumAWGM4i66xxX8
-    _signal_generator: SignalGenerator
-    _static_signals: dict[TweezerConfigurationName, SegmentData] = {}
-    _tweezer_sequence_bounds: tuple[tuple[float, float], ...] = ()
-    _step_number_ticks: list[int]
+    awg_board_id: str = field(validator=instance_of(str), on_setattr=frozen_setter)
+    awg_max_power_x: field(validator=instance_of(float), on_setattr=frozen_setter)
+    awg_max_power_y: field(validator=instance_of(float), on_setattr=frozen_setter)
 
-    @validator("tweezer_configurations")
+    _awg: SpectrumAWGM4i66xxX8 = field(init=False)
+    _step_number_ticks: list[int] = field(init=False)
+    _signal_generator: SignalGenerator = field(init=False)
+    _static_signals: dict[TweezerConfigurationName, SegmentData] = field(
+        factory=dict, init=False
+    )
+    _tweezer_sequence_bounds: tuple[tuple[float, float], ...] = field(
+        factory=tuple, init=False
+    )
+
+    @tweezer_configurations.validator  # type: ignore
     def validate_tweezer_configurations(
-        cls, configurations: dict[TweezerConfigurationName, AODTweezerConfiguration]
-    ) -> dict[TweezerConfigurationName, AODTweezerConfiguration]:
+        self, _, configurations: dict[TweezerConfigurationName, AODTweezerConfiguration]
+    ):
         first_config = first(configurations.values())
         for config in configurations.values():
             if config.scale_x != first_config.scale_x:
@@ -82,21 +94,21 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 raise ValueError(
                     "All static tweezer configurations must have the same number of samples"
                 )
-        return configurations
 
-    @validator("tweezer_sequence")
+    @tweezer_sequence.validator  # type: ignore
     def validate_tweezer_sequence(
-        cls, sequence: Sequence[ArrangerInstruction], values: Mapping[str, Any]
-    ) -> Sequence[ArrangerInstruction]:
+        self, attribute, sequence: tuple[ArrangerInstruction, ...]
+    ):
+        super().validate_tweezer_sequence(attribute, sequence)
+
         # Here we check if there is a phase mismatch between two tweezer configurations we are moving between.
         # There can be a mismatch if we 'move' the frequency of a tweezer with the same initial and target frequency.
         # In this case the frequency is not actually changed, so we don't have the extra degree of freedom to
-        # choose the phase after the move and this can cause a discontinuity in the signal if the target phase is different
-        # from the initial phase.
+        # choose the phase after the move and this can cause a discontinuity in the signal if the target phase is
+        # different from the initial phase.
         tweezer_configurations: dict[
             TweezerConfigurationName, AODTweezerConfiguration
-        ] = values["tweezer_configurations"]
-        sequence = super().validate_tweezer_sequence(sequence)
+        ] = self.tweezer_configurations
         for index, instruction in enumerate(sequence):
             if isinstance(instruction, (MoveTweezers, RearrangeTweezers)):
                 previous_configuration = tweezer_configurations[
@@ -131,8 +143,6 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         f"final configurations are different."
                     )
 
-        return sequence
-
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
@@ -151,7 +161,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     def _prepare_awg(self) -> SpectrumAWGM4i66xxX8:
         logger.debug(f"{_get_steps(self.tweezer_sequence)=}")
         return SpectrumAWGM4i66xxX8(
-            name=f"{self.name}_awg",
+            name=DeviceName(f"{self.name}_awg"),
             board_id=self.awg_board_id,
             channel_settings=(
                 ChannelSettings(
@@ -167,7 +177,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                     maximum_power=self.awg_max_power_y,
                 ),
             ),
-            segment_names=_get_segment_names(self.tweezer_sequence),
+            segment_names=frozenset(_get_segment_names(self.tweezer_sequence)),
             steps=_get_steps(self.tweezer_sequence),
             first_step=static_step_names(0).integer,
             sampling_rate=self.sampling_rate,

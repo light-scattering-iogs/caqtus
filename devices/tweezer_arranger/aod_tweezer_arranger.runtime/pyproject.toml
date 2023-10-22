@@ -10,7 +10,6 @@ packages = [{ include = "aod_tweezer_arranger" }]
 python = "^3.11, <3.13"
 
 numpy = "^1.25.1"
-pydantic = "^1.0"
 cuda-python = "^12.2.0"
 pypiwin32 = "^223"
 attrs = "^23.1.0"
