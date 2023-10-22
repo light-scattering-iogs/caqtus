@@ -11,7 +11,7 @@ _T = TypeVar("_T")
 
 
 @define(slots=False)
-class RuntimeDevice(ABC, AbstractContextManager):
+class RuntimeDevice(AbstractContextManager, ABC):
     """A class that is instantiated to directly control a physical device
 
     All devices used in the experiment must inherit from this class.
