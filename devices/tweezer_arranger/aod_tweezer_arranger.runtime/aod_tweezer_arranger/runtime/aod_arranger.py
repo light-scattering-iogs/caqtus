@@ -5,7 +5,7 @@ from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 import numpy as np
 from attrs import define, field, frozen
 from attrs.setters import frozen as frozen_setter
-from attrs.validators import instance_of
+from attrs.validators import instance_of, deep_mapping, deep_iterable
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from device.name import DeviceName
@@ -55,8 +55,23 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
 
     tweezer_configurations: dict[
         TweezerConfigurationName, AODTweezerConfiguration
-    ] = field(on_setattr=frozen)
-    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(on_setattr=frozen_setter)
+    ] = field(
+        converter=dict,
+        validator=deep_mapping(
+            key_validator=instance_of(str),
+            value_validator=instance_of(AODTweezerConfiguration),
+            mapping_validator=instance_of(dict),
+        ),
+        on_setattr=frozen_setter,
+    )
+    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(
+        converter=tuple,
+        validator=deep_iterable(
+            member_validator=instance_of(ArrangerInstruction),
+            iterable_validator=instance_of(tuple),
+        ),
+        on_setattr=frozen_setter,
+    )
 
     awg_board_id: str = field(validator=instance_of(str), on_setattr=frozen_setter)
     awg_max_power_x: field(validator=instance_of(float), on_setattr=frozen_setter)

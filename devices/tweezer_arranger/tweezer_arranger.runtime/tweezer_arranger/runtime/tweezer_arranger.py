@@ -4,6 +4,7 @@ from typing import TypeVar, Generic
 
 from attrs import define, field
 from attrs.setters import frozen
+from attrs.validators import instance_of, deep_iterable
 
 from device.runtime import RuntimeDevice
 from tweezer_arranger.configuration import (
@@ -36,7 +37,14 @@ class TweezerArranger(RuntimeDevice, ABC, Generic[TweezerConfigurationType]):
         TweezerConfigurationName, TweezerConfigurationType
     ] = field(on_setattr=frozen)
 
-    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(on_setattr=frozen)
+    tweezer_sequence: tuple[ArrangerInstruction, ...] = field(
+        converter=tuple,
+        validator=deep_iterable(
+            member_validator=instance_of(ArrangerInstruction),
+            iterable_validator=instance_of(tuple),
+        ),
+        on_setattr=frozen,
+    )
 
     @abstractmethod
     def update_parameters(self, *, tweezer_sequence_durations: Sequence[float]) -> None:
