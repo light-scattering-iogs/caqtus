@@ -9,7 +9,7 @@ packages = [{include = "elliptec_ell14"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 
-pydantic = "^1.10.7"
+attrs = "^23.1.0"
 pyserial = "^3.5"
 thorlabs-elliptec = "^1.1.0"
 
