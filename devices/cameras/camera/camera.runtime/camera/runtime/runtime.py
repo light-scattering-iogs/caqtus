@@ -6,7 +6,7 @@ from typing import ClassVar, Optional
 
 import numpy
 from attrs import define, field
-from attrs.setters import frozen
+from attrs.setters import frozen, validate, convert, pipe
 from attrs.validators import instance_of, deep_iterable
 
 from camera.configuration import RectangularROI
@@ -54,6 +54,9 @@ class Camera(RuntimeDevice, ABC):
     - _is_acquisition_in_progress
     """
 
+    sensor_width: ClassVar[int]
+    sensor_height: ClassVar[int]
+
     picture_names: tuple[ImageLabel, ...] = field(
         converter=tuple,
         validator=deep_iterable(
@@ -64,17 +67,15 @@ class Camera(RuntimeDevice, ABC):
     roi: RectangularROI = field(
         validator=instance_of(RectangularROI), on_setattr=frozen
     )
-    timeout: float = field(validator=instance_of(float), on_setattr=frozen)
+    timeout: float = field(converter=float, on_setattr=convert)
     exposures: list[float] = field(
         converter=list,
         validator=deep_iterable(
             member_validator=instance_of(float), iterable_validator=instance_of(list)
-        )
+        ),
+        on_setattr=pipe(convert, validate)
     )
     external_trigger: bool = field(validator=instance_of(bool), on_setattr=frozen)
-
-    sensor_width: ClassVar[int]
-    sensor_height: ClassVar[int]
 
     _pictures: list[Optional[numpy.ndarray]] = field(factory=list, init=False)
 

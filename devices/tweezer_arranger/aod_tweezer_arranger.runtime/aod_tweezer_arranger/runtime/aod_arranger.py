@@ -74,8 +74,8 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     )
 
     awg_board_id: str = field(validator=instance_of(str), on_setattr=frozen_setter)
-    awg_max_power_x: field(validator=instance_of(float), on_setattr=frozen_setter)
-    awg_max_power_y: field(validator=instance_of(float), on_setattr=frozen_setter)
+    awg_max_power_x: float = field(converter=float, on_setattr=frozen_setter)
+    awg_max_power_y: float = field(converter=float, on_setattr=frozen_setter)
 
     _awg: SpectrumAWGM4i66xxX8 = field(init=False)
     _step_number_ticks: list[int] = field(init=False)
