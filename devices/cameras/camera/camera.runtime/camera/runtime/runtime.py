@@ -77,8 +77,9 @@ class Camera(RuntimeDevice, ABC):
             if count > 1:
                 raise ValueError(f"Picture name {name} is used several times")
 
-    def validate_exposures(self):
-        num_exposures = len(self.exposures)
+    @exposures.validator  # type: ignore
+    def validate_exposures(self, _, exposures):
+        num_exposures = len(exposures)
         num_names = len(self.picture_names)
         if num_names != num_exposures:
             raise ValueError(
@@ -86,14 +87,8 @@ class Camera(RuntimeDevice, ABC):
                 f" ({num_exposures}) must match"
             )
 
-        if any(exposure > self.timeout for exposure in self.exposures):
+        if any(exposure > self.timeout for exposure in exposures):
             raise ValueError(f"Exposure is longer than timeout")
-
-    def __attrs_post_init__(self):
-        self.validate_exposures()
-
-    def initialize(self):
-        super().initialize()
 
     @log_exception(logger)
     def update_parameters(self, exposures: list[float], timeout: float) -> None:
