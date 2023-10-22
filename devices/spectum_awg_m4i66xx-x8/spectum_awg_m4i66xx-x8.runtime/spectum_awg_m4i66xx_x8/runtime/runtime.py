@@ -1,4 +1,3 @@
-import copy
 import ctypes
 import logging
 import math
@@ -7,7 +6,9 @@ from collections.abc import Mapping
 from typing import ClassVar, Optional
 
 import numpy as np
-from pydantic import Field, validator
+from attrs import define, field
+from attrs.setters import frozen
+from attrs.validators import instance_of, ge
 
 from device.runtime import RuntimeDevice
 from duration_timer import DurationTimerLog
@@ -30,6 +31,7 @@ AMPLITUDE_REGISTERS = (
 )
 
 
+@define(slots=False)
 class SpectrumAWGM4i66xxX8(RuntimeDevice):
     """Class to control the Spectrum M4i.66xx.x8 AWG
 
@@ -44,56 +46,40 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
 
     NUMBER_CHANNELS: ClassVar[NumberChannels] = NumberChannels(2)
 
-    board_id: str = Field(
-        allow_mutation=False,
+    board_id: str = field(validator=instance_of(str), on_setattr=frozen)
+    sampling_rate: int = field(validator=(instance_of(int), ge(0)), on_setattr=frozen)
+    channel_settings: tuple[ChannelSettings, ...] = field(
+        validator=instance_of(tuple), on_setattr=frozen
     )
-    sampling_rate: int = Field(allow_mutation=False)
-    channel_settings: tuple[ChannelSettings, ...] = Field(allow_mutation=False)
-    segment_names: frozenset[SegmentName] = Field(
-        allow_mutation=False,
+    segment_names: frozenset[SegmentName] = field(
+        validator=instance_of(frozenset), on_setattr=frozen
     )
-    first_step: StepName = Field(allow_mutation=False)
+    steps: dict[StepName, StepConfiguration] = field(on_setattr=frozen)
+    first_step: StepName = field(on_setattr=frozen)
 
-    _board_handle: spcm.drv_handle
-    _segment_indices: dict[SegmentName, int]
-    _steps: dict[StepName, StepConfiguration]
-    _step_indices: dict[StepName, int]
-    _step_names: dict[int, StepName]
-    _bytes_per_sample: int
-    _segment_data: dict[SegmentName, SegmentData]
+    _board_handle: spcm.drv_handle = field(init=False)
+    _segment_indices: dict[SegmentName, int] = field(init=False)
 
-    def __init__(
+    _step_indices: dict[StepName, int] = field(init=False)
+    _step_names: dict[int, StepName] = field(init=False)
+    _bytes_per_sample: int = field(init=False)
+    _segment_data: dict[SegmentName, SegmentData] = field(init=False)
+
+    def __attrs_post_init__(
         self,
-        name: str,
-        board_id: str,
-        sampling_rate: int,
-        channel_settings: tuple[ChannelSettings, ...],
-        segment_names: set[SegmentName],
-        steps: Mapping[StepName, StepConfiguration],
-        first_step: StepName,
     ):
-        super().__init__(
-            name=name,
-            board_id=board_id,
-            sampling_rate=sampling_rate,
-            channel_settings=channel_settings,
-            segment_names=segment_names,
-            steps=steps,
-            first_step=first_step,
-        )
-        self._steps = copy.deepcopy(dict(steps))
         self._segment_indices = {
             name: index for index, name in enumerate(self.segment_names)
         }
-        self._step_indices = {name: index for index, name in enumerate(self._steps)}
+        self._step_indices = {name: index for index, name in enumerate(self.steps)}
         self._step_names = {index: name for name, index in self._step_indices.items()}
         self._segment_data = {}
 
-    @validator("channel_settings")
-    def validate_channel_settings(cls, channel_settings):
-        if len(channel_settings) != cls.NUMBER_CHANNELS:
+    @channel_settings.validator  # type: ignore
+    def validate_channel_settings(self, _, channel_settings):
+        if len(channel_settings) != self.NUMBER_CHANNELS:
             raise ValueError(
-                f"Expected {cls.NUMBER_CHANNELS} channel settings, but got {len(channel_settings)}"
+                f"Expected {self.NUMBER_CHANNELS} channel settings, but got {len(channel_settings)}"
             )
         return channel_settings
 
@@ -189,7 +175,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         self.check_error()
 
     def _setup_sequence(self):
-        for step_name, step_config in self._steps.items():
+        for step_name, step_config in self.steps.items():
             self._setup_step(step_name, step_config)
 
         self._set_first_step(self.first_step)
@@ -266,8 +252,8 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
                 self._segment_data[segment_name] = data
         if step_repetitions is not None:
             for step_name, new_repetitions in step_repetitions.items():
-                self._steps[step_name].repetition = new_repetitions
-                self._setup_step(step_name, self._steps[step_name])
+                self.steps[step_name].repetition = new_repetitions
+                self._setup_step(step_name, self.steps[step_name])
 
     def save_segment_data(self) -> None:
         with open("data.pkl", "wb") as f:
