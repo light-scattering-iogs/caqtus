@@ -7,14 +7,12 @@ readme = "README.md"
 packages = [{include = "swabian_pulse_streamer"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
 
-pydantic = "^1.0"
+attrs = "^23.1.0"
 pulsestreamer = "^1.7.0"
 
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
-
-
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
