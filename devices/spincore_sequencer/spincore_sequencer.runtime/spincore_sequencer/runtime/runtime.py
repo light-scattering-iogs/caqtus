@@ -4,7 +4,9 @@ from enum import IntFlag
 from functools import singledispatchmethod
 from typing import ClassVar
 
-from pydantic import Field, validator
+from attrs import define, field
+from attrs.setters import frozen
+from attrs.validators import instance_of, ge
 
 from log_exception import log_exception
 from sequencer.instructions import (
@@ -29,29 +31,44 @@ class SpincoreStatus(IntFlag):
     Waiting = 2**3
 
 
+@define(slots=False)
 class SpincorePulseBlaster(Sequencer):
     """
 
     Fields:
         clock_cycle: Duration of a clock cycle in ns
         time_step: Digitization time in ns
+
+        board_number: The number used to refer to a given spincore pulseblaster. If there are multiple boards connected
+        to the computer, they are numbered from 0 to n-1.
+        spincore_lib_debug: If True, the spincore library will log debug messages in a file in the current working
+        directory. This can be useful to debug the program, but generates large files.
+        time_step: The time step of the sequencer in nanoseconds.
+        trigger: Indicates how the sequence is started and how it is clocked. Only SoftwareTrigger is supported at the
+        moment.
     """
 
     channel_number: ClassVar[int] = 24
     clock_cycle: ClassVar[int] = 10
 
-    board_number: int = 0
-    spincore_lib_debug: bool = False
-    time_step: int = Field(ge=5 * clock_cycle)
-    trigger: Trigger = Field(default_factory=SoftwareTrigger)
+    board_number: int = field(default=0, validator=instance_of(int), on_setattr=frozen)
+    spincore_lib_debug: bool = field(
+        default=False, validator=instance_of(bool), on_setattr=frozen
+    )
+    time_step: int = field(
+        validator=[instance_of(int), ge(5 * clock_cycle)], on_setattr=frozen
+    )
+    trigger: Trigger = field(
+        factory=SoftwareTrigger, validator=instance_of(Trigger), on_setattr=frozen
+    )
 
-    @validator("trigger")
-    def _validate_trigger(cls, trigger: Trigger) -> Trigger:
-        if not isinstance(trigger, SoftwareTrigger):
+    @trigger.validator  # type: ignore
+    def _validate_trigger(self, _, value):
+        if not isinstance(value, SoftwareTrigger):
             raise NotImplementedError(
-                f"Trigger type {type(trigger)} is not implemented for the Spincore PulseBlaster"
+                f"Trigger type {type(value)} is not implemented for the Spincore PulseBlaster"
             )
-        return trigger
+        return value
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
