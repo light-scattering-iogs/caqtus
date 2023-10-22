@@ -51,13 +51,14 @@ class SpincorePulseBlaster(Sequencer):
     channel_number: ClassVar[int] = 24
     clock_cycle: ClassVar[int] = 10
 
+    time_step: int = field(
+        validator=[instance_of(int), ge(5 * clock_cycle)], on_setattr=frozen
+    )
     board_number: int = field(default=0, validator=instance_of(int), on_setattr=frozen)
     spincore_lib_debug: bool = field(
         default=False, validator=instance_of(bool), on_setattr=frozen
     )
-    time_step: int = field(
-        validator=[instance_of(int), ge(5 * clock_cycle)], on_setattr=frozen
-    )
+
     trigger: Trigger = field(
         factory=SoftwareTrigger, validator=instance_of(Trigger), on_setattr=frozen
     )
