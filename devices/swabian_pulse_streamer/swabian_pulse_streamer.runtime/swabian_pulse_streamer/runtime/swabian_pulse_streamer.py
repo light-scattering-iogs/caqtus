@@ -2,6 +2,9 @@ import logging
 from functools import singledispatchmethod
 from typing import Optional, ClassVar
 
+from attr.validators import instance_of, ge, le
+from attrs import define, field
+from attrs.setters import frozen
 from pulsestreamer import (
     PulseStreamer,
     TriggerStart,
@@ -9,7 +12,6 @@ from pulsestreamer import (
     Sequence as PulseStreamerSequence,
     OutputState,
 )
-from pydantic import validator, Field
 
 from sequencer.instructions import (
     SequencerInstruction,
@@ -31,28 +33,29 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+@define(slots=False)
 class SwabianPulseStreamer(Sequencer):
     # only support digital channels at the moment
     channel_number: ClassVar[int] = 8
-    ip_address: str
-    trigger: Trigger = Field(
-        default_factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
-        allow_mutation=False,
+
+    ip_address: str = field(validator=instance_of(str), on_setattr=frozen)
+    # only 1 ns time step supported
+    time_step: int = field(validator=[ge(1), le(1)], on_setattr=frozen)
+
+    trigger: Trigger = field(
+        factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
+        validator=instance_of(Trigger),
+        on_setattr=frozen,
     )
 
-    # only 1 ns time step supported
-    time_step: int = Field(ge=1, le=1, allow_mutation=False)
+    _pulse_streamer: PulseStreamer = field(init=False)
+    _sequence: Optional[PulseStreamerSequence] = field(default=None, init=False)
 
-    _pulse_streamer: PulseStreamer
-    _sequence: Optional[PulseStreamerSequence] = None
-
-    @validator("trigger")
-    def _validate_trigger(cls, trigger: Trigger) -> Trigger:
-        if not (
-            trigger.is_software_trigger() or isinstance(trigger, ExternalTriggerStart)
-        ):
-            raise ValueError("Only supports software trigger.")
-        return trigger
+    @trigger.validator  # type: ignore
+    def _validate_trigger(self, attribute, value):
+        if not (value.is_software_trigger() or isinstance(value, ExternalTriggerStart)):
+            raise ValueError("Only supports software or external trigger start.")
+        return value
 
     def initialize(self) -> None:
         super().initialize()

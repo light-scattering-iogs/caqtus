@@ -13,7 +13,9 @@ from abc import ABC, abstractmethod
 from typing import Literal
 
 import numpy
-from pydantic import Field
+from attrs import define, field
+from attrs.setters import frozen
+from attrs.validators import instance_of, in_, ge, le
 
 from camera.runtime import Camera, CameraTimeoutError
 from .tisgrabber import declareFunctions, D, T, HGRABBER, IC_SUCCESS
@@ -47,15 +49,23 @@ def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
     return new_image
 
 
+@define(slots=False)
 class ImagingSourceCamera(Camera, ABC):
+    """
 
-    camera_name: str = Field(description="The name of the camera", allow_mutation=False)
-    format: Literal["Y16", "Y800"] = Field(allow_mutation=False)
+    Fields:
+        camera_name: The name of the camera
+    """
 
-    _grabber_handle: ctypes.POINTER(HGRABBER) = None
-    _acquisition_thread: threading.Thread = None
-    _temp_dir: pathlib.Path = None
-    _settings_file: pathlib.Path = None
+    camera_name: str = field(validator=instance_of(str), on_setattr=frozen)
+    format: Literal["Y16", "Y800"] = field(
+        default="Y16", validator=in_(["Y16", "Y800"]), on_setattr=frozen
+    )
+
+    _grabber_handle: ctypes.POINTER(HGRABBER) = field(init=False)
+    _acquisition_thread: threading.Thread = field(init=False)
+    _temp_dir: pathlib.Path = field(init=False)
+    _settings_file: pathlib.Path = field(init=False)
 
     def initialize(self):
         super().initialize()
@@ -205,44 +215,42 @@ class ImagingSourceCamera(Camera, ABC):
             # raise RuntimeError(f"Failed to reset properties for {self.name}: {error}")
 
 
+@define(slots=False)
 class ImagingSourceCameraDMK33GR0134(ImagingSourceCamera):
-    """ImagingSource camera DMK33GR0134"""
+    """ImagingSource camera DMK33GR0134
 
-    brightness: int = Field(
+    Fields:
+        brightness: Brightness of the camera
+        contrast: Contrast of the camera
+        sharpness: Sharpness of the camera
+        gamma: Gamma of the camera
+        gain: Gain of the camera, in dB
+    """
+
+    brightness: int = field(
         default=0,
-        ge=0,
-        le=4095,
-        description="Brightness of the camera",
-        allow_mutation=False,
+        validator=(instance_of(int), in_(range(0, 4096))),
+        on_setattr=frozen,
     )
-    contrast: int = Field(
+    contrast: int = field(
         default=0,
-        ge=-10,
-        le=30,
-        description="Contrast of the camera",
-        allow_mutation=False,
+        validator=(instance_of(int), in_(range(-10, 31))),
+        on_setattr=frozen,
     )
-    sharpness: int = Field(
+    sharpness: int = field(
         default=0,
-        ge=0,
-        le=14,
-        description="Sharpness of the camera",
-        allow_mutation=False,
+        validator=(instance_of(int), in_(range(0, 15))),
+        on_setattr=frozen,
     )
-    gamma: float = Field(
+    gamma: float = field(
         default=1.0,
-        ge=0.01,
-        le=5.0,
-        description="Gamma of the camera",
-        allow_mutation=False,
+        validator=(instance_of(float), ge(0.01), le(5.0)),
+        on_setattr=frozen,
     )
-    gain: float = Field(
+    gain: float = field(
         default=0,
-        ge=0,
-        le=18.04,
-        description="Gain of the camera",
-        units="dB",
-        allow_mutation=False,
+        validator=(instance_of(float), ge(0), le(18.04)),
+        on_setattr=frozen,
     )
 
     def _setup_properties(self):

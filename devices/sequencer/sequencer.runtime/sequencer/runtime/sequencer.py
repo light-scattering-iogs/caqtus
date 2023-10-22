@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
-from pydantic import Field
+from attr import define, field
+from attr.setters import frozen
+from attr.validators import ge, instance_of
 
 from device.runtime import RuntimeDevice
-from sequencer.instructions import SequencerInstruction
 from sequencer.configuration.trigger import Trigger, SoftwareTrigger
+from sequencer.instructions import SequencerInstruction
 
 
+@define(slots=False)
 class Sequencer(RuntimeDevice, ABC):
     """Base class for all sequencers.
 
@@ -17,11 +20,14 @@ class Sequencer(RuntimeDevice, ABC):
     """
 
     channel_number: ClassVar[int]
-    time_step: int = Field(ge=1, allow_mutation=False)
-    trigger: Trigger = Field(default_factory=SoftwareTrigger, allow_mutation=False)
 
-    _sequence_programmed: bool = False
-    _sequence_started: bool = False
+    time_step: int = field(on_setattr=frozen, converter=int, validator=ge(1))
+    trigger: Trigger = field(
+        factory=SoftwareTrigger, on_setattr=frozen, validator=instance_of(Trigger)
+    )
+
+    _sequence_programmed: bool = field(default=False, init=False)
+    _sequence_started: bool = field(default=False, init=False)
 
     @abstractmethod
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
@@ -103,7 +109,8 @@ class Sequencer(RuntimeDevice, ABC):
             self.wait_sequence_finished()
         except SequenceNotStartedError:
             pass
-        super().close()
+        finally:
+            super().close()
 
 
 class SequenceNotStartedError(RuntimeError):

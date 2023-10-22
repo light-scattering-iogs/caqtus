@@ -39,6 +39,5 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
         extra = {
             "device_id": self.device_id,
             "time_step": self.time_step,
-            "external_clock": True,
         }
         return super().get_device_init_args() | extra

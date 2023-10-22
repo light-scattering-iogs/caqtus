@@ -3,13 +3,16 @@ import time
 from contextlib import closing
 from typing import Optional
 
-from pydantic import Field
+from attr.validators import instance_of, optional
+from attrs import define, field
+from attrs.setters import frozen
 from serial import SerialException
 from thorlabs_elliptec import ELLx, ELLStatus
 
 from device.runtime import RuntimeDevice
 
 
+@define(slots=False)
 class ElliptecELL14RotationStage(RuntimeDevice):
     """A class for controlling Thorlabs Elliptec ELL14 rotation stages.
 
@@ -21,14 +24,13 @@ class ElliptecELL14RotationStage(RuntimeDevice):
             serial port.
     """
 
-    serial_port: str = Field(allow_mutation=False)
-    device_id: int = Field(allow_mutation=False)
-    initial_position: Optional[float] = Field(default=None, allow_mutation=False)
+    serial_port: str = field(validator=instance_of(str), on_setattr=frozen)
+    device_id: int = field(validator=instance_of(int), on_setattr=frozen)
+    initial_position: Optional[float] = field(
+        default=None, validator=optional(instance_of(float)), on_setattr=False
+    )
 
-    _device: Optional[ELLx] = None
-
-    class Config(RuntimeDevice.Config):
-        validate_all = False
+    _device: ELLx = field(init=False)
 
     def initialize(self) -> None:
         """Connect to the device and initialize it."""
@@ -68,8 +70,7 @@ class ElliptecELL14RotationStage(RuntimeDevice):
                 f"Could not move device {self.name} to position {position}"
             ) from error
 
-    @property
-    def position(self) -> float:
+    def read_position(self) -> float:
         """The current position of the stage in degrees."""
 
         if self._device is None:

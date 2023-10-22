@@ -1,20 +1,39 @@
 import numpy as np
+from attrs import define, field
+from attrs.setters import frozen
 
 from atom_detector.configuration import (
     AtomLabel,
     ImagingConfigurationName,
     ImagingConfiguration,
 )
-from device.runtime import RuntimeDevice, Field
+from device.runtime import RuntimeDevice
 from image_types import Image
+from single_atom_detector import SingleAtomDetector
 
 
+@define(slots=False)
 class AtomDetector(RuntimeDevice):
     """Pseudo device that can detect the presence of atoms in an image."""
 
     imaging_configurations: dict[
         ImagingConfigurationName, ImagingConfiguration
-    ] = Field(allow_mutation=False)
+    ] = field(on_setattr=frozen)
+
+    @imaging_configurations.validator  # type: ignore
+    def _validate_imaging_configurations(self, _, value):
+        if not isinstance(value, dict):
+            raise TypeError("imaging_configurations must be a dict.")
+        for imaging_configuration in value.values():
+            if not isinstance(imaging_configuration, dict):
+                raise TypeError(
+                    "imaging_configurations must be a dict of dict of SingleAtomDetector."
+                )
+            for single_atom_detector in imaging_configuration.values():
+                if not isinstance(single_atom_detector, SingleAtomDetector):
+                    raise TypeError(
+                        "imaging_configurations must be a dict of dict of SingleAtomDetector."
+                    )
 
     def initialize(self) -> None:
         super().initialize()
