@@ -52,7 +52,7 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         validator=instance_of(tuple), on_setattr=frozen
     )
     segment_names: frozenset[SegmentName] = field(
-        validator=instance_of(frozenset), on_setattr=frozen
+        converter=frozenset, validator=instance_of(frozenset), on_setattr=frozen
     )
     steps: dict[StepName, StepConfiguration] = field(on_setattr=frozen)
     first_step: StepName = field(on_setattr=frozen)
@@ -398,7 +398,6 @@ class SpectrumAWGM4i66xxX8(RuntimeDevice):
         spcm.spcm_dwSetParam_i64(
             self._board_handle, spcm.SPC_M2CMD, spcm.M2CMD_CARD_STOP
         )
-        self.save_segment_data()
         self.check_error()
 
     def check_error(self):

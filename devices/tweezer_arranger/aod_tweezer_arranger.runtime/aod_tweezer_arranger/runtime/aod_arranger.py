@@ -43,7 +43,7 @@ parity = 0
 pattern_line = 0
 
 
-@define
+@define(slots=False)
 class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
 
@@ -514,7 +514,11 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             "start_sequence",
             "has_sequence_finished",
             "prepare_rearrangement",
+            "save_awg_data",
         )
+
+    def save_awg_data(self) -> None:
+        self._awg.save_segment_data()
 
 
 def compute_moves_1d(
