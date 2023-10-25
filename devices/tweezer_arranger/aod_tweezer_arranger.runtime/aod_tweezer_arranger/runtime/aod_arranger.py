@@ -407,33 +407,33 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 rearrange_instruction.final_tweezer_configuration
             ]
 
-            if not initial_config.number_tweezers_along_x == 1:
+            if not initial_config.number_tweezers_along_y == 1:
                 raise ValueError(
-                    f"Can only rearrange atoms if all atoms are in the same column"
+                    f"Can only rearrange atoms if all atoms are in the same row"
                 )
-            if not final_config.number_tweezers_along_x == 1:
+            if not final_config.number_tweezers_along_y == 1:
                 raise ValueError(
-                    f"Can only rearrange atoms if all atoms are in the same column"
+                    f"Can only rearrange atoms if all atoms are in the same row"
                 )
 
-            atoms_before = [False] * initial_config.number_tweezers_along_y
+            atoms_before = [False] * initial_config.number_tweezers_along_x
 
             for (x, y), present in atom_present.items():
-                if x != 0:
+                if y != 0:
                     raise ValueError(
-                        f"Can only rearrange atoms if they all are on the y-axis"
+                        f"Can only rearrange atoms if they all are on the x-axis"
                     )
-                if y >= initial_config.number_tweezers_along_y:
+                if x >= initial_config.number_tweezers_along_x:
                     raise ValueError(
                         f"Atom present at ({x}, {y}) but there are only "
-                        f"{initial_config.number_tweezers_along_y} tweezers along y"
+                        f"{initial_config.number_tweezers_along_x} tweezers along x"
                     )
                 else:
-                    atoms_before[y] = present
+                    atoms_before[x] = present
 
             moves = compute_moves_1d(
                 atoms_before,
-                final_config.number_tweezers_along_y,
+                final_config.number_tweezers_along_x,
                 max_number_atoms_to_keep=20,
                 shift_towards="low",
             )
@@ -457,24 +457,24 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
             next_step_start = (
                 start_tick(self._tweezer_sequence_bounds[step + 1][0], time_step) * 32
             )
-            move_signal_y = self._signal_generator.generate_signal_moving_traps(
-                np.array(initial_config.amplitudes_y)[initial_indices],
-                np.array(final_config.amplitudes_y)[final_indices],
-                np.array(initial_config.frequencies_y)[initial_indices],
-                np.array(final_config.frequencies_y)[final_indices],
-                np.array(initial_config.phases_y)[initial_indices],
-                np.array(final_config.phases_y)[final_indices],
+            move_signal_x = self._signal_generator.generate_signal_moving_traps(
+                np.array(initial_config.amplitudes_x)[initial_indices],
+                np.array(final_config.amplitudes_x)[final_indices],
+                np.array(initial_config.frequencies_x)[initial_indices],
+                np.array(final_config.frequencies_x)[final_indices],
+                np.array(initial_config.phases_x)[initial_indices],
+                np.array(final_config.phases_x)[final_indices],
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
             )
-            move_signal_x = self._signal_generator.generate_signal_moving_traps(
-                initial_config.amplitudes_x,
-                final_config.amplitudes_x,
-                initial_config.frequencies_x,
-                final_config.frequencies_x,
-                initial_config.phases_x,
-                final_config.phases_x,
+            move_signal_y = self._signal_generator.generate_signal_moving_traps(
+                initial_config.amplitudes_y,
+                final_config.amplitudes_y,
+                initial_config.frequencies_y,
+                final_config.frequencies_y,
+                initial_config.phases_y,
+                final_config.phases_y,
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
