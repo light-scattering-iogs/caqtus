@@ -12,7 +12,6 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
-from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
     SequencerPattern,
@@ -21,7 +20,7 @@ from sequencer.instructions import (
     Repeat,
 )
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
-from util import run_on_change_method
+from util import run_on_change_method, log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

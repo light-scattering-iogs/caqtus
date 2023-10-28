@@ -11,7 +11,7 @@ from attrs.setters import frozen
 from attrs.validators import instance_of
 
 from camera.runtime import Camera, CameraTimeoutError
-from log_exception import log_exception
+from util import log_exception
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP
 

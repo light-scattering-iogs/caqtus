@@ -8,7 +8,6 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
-from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
     SequencerPattern,
@@ -17,6 +16,7 @@ from sequencer.instructions import (
     Concatenate,
 )
 from sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
+from util import log_exception
 from . import spinapi
 from .spinapi import ns
 
