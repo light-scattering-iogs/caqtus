@@ -13,6 +13,7 @@ from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.configuration import CameraConfiguration
 from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
+from duration_timer import DurationTimerLog
 from experiment.configuration import ExperimentConfig
 from experiment_control.sequence_runner.device_context_manager import (
     DeviceContextManager,
@@ -161,6 +162,9 @@ def get_tweezer_arrangers_in_use(
 def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):
     try:
         if parameters:
-            device.update_parameters(**parameters)
+            with DurationTimerLog(
+                logger, f"Updating device {device.get_name()}", display_start=True
+            ):
+                device.update_parameters(**parameters)
     except Exception as error:
         raise RuntimeError(f"Failed to update device {device.get_name()}") from error
