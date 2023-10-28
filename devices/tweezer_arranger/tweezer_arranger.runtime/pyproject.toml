@@ -13,9 +13,6 @@ attrs = "^23.1.0"
 
 device-runtime = { path = "../../device/device.runtime", develop = true }
 tweezer-arranger-configuration = { path = "../tweezer_arranger.configuration", develop = true }
-log-exception = {path = "../../../common/log_exception", develop = true}
-
-
 
 [build-system]
 requires = ["poetry-core"]
