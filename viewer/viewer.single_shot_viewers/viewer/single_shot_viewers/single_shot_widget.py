@@ -13,10 +13,10 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
-import serialization
 from experiment.session import ExperimentSessionMaker
 from sequence.runtime import Shot, Sequence
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
+from util import serialization
 from viewer.sequence_watcher import SequenceWatcher
 from .add_image_viewer import create_image_viewer
 from .atoms_viewer import create_atom_viewer

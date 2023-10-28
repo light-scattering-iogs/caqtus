@@ -11,6 +11,7 @@ python = "^3.11, <3.13"
 
 numpy = "^1.24.3"
 
+util = {path = "../../../util", develop = true}
 experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
 sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
 device-config = {path = "../../../devices/device/device.configuration", develop = true}
@@ -21,8 +22,6 @@ parameter-types = {path = "../../../common/types/parameter_types", develop = tru
 device-name = {path = "../../../devices/device/device.name", develop = true}
 atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
 python-benedict = "^0.32.0"
-attrs = "^23.1.0"
-serialization = {path = "../../../common/serialization", develop = true}
 
 
 [build-system]

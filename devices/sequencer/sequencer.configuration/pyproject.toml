@@ -9,10 +9,9 @@ packages = [{include = "sequencer"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
+util = {path = "../../../util", develop = true}
 device-config = {path = "../../device/device.configuration", develop = true}
 settings-model = {path = "../../../common/settings_model", develop = true}
-attrs = "^23.1.0"
-serialization = {path = "../../../common/serialization", develop = true}
 
 
 [tool.poetry.group.test.dependencies]

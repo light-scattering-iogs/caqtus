@@ -1,4 +1,3 @@
-import serialization
 from sequencer.configuration.trigger import (
     SoftwareTrigger,
     ExternalTriggerStart,
@@ -7,6 +6,7 @@ from sequencer.configuration.trigger import (
     ExternalClock,
 )
 from settings_model import YAMLSerializable
+from util import serialization
 
 
 def test_trigger_serialization():

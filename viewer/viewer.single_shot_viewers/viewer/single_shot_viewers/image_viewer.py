@@ -3,20 +3,18 @@ from typing import Optional
 
 import numpy as np
 from PyQt6.QtWidgets import QVBoxLayout
-from attr import field
-from attrs import define
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-import serialization
 from analyza.loading.importers import ImageImporter
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from image_types import Image
 from sequence.runtime import Shot
+from util import attrs, serialization
 from .single_shot_viewer import SingleShotViewer
 
 
-@define
+@attrs.define
 class ImageViewerConfiguration:
     vmin: Optional[float] = None
     vmax: Optional[float] = None
@@ -29,13 +27,13 @@ class ImageViewerConfiguration:
     _vmax=serialization.override(rename="vmax"),
     _cmap=serialization.override(rename="cmap"),
 )
-@define(slots=False, init=False)
+@attrs.define(slots=False, init=False)
 class ImageViewer(SingleShotViewer):
-    _importer: ImageImporter = field(default=None)
+    _importer: ImageImporter = attrs.field(default=None)
 
-    _vmin: Optional[float] = field(default=None)
-    _vmax: Optional[float] = field(default=None)
-    _cmap: Optional[str] = field(default="viridis")
+    _vmin: Optional[float] = attrs.field(default=None)
+    _vmax: Optional[float] = attrs.field(default=None)
+    _cmap: Optional[str] = attrs.field(default="viridis")
 
     def __init__(
         self,

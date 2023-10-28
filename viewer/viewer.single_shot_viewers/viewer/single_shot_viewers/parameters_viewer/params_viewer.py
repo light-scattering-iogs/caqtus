@@ -4,13 +4,12 @@ from typing import Optional
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget, QTableView, QVBoxLayout
-from attr import define, field
 
-import serialization
 from analyza.loading.importers import ParametersImporter
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from parameter_types import Parameter
 from sequence.runtime import Shot
+from util import attrs, serialization
 from ..single_shot_viewer import SingleShotViewer
 
 ParameterName = str
@@ -19,9 +18,9 @@ ParameterName = str
 @serialization.customize(
     _importer=serialization.override(rename="importer"),
 )
-@define(slots=False, init=False)
+@attrs.define(slots=False, init=False)
 class ParametersViewer(SingleShotViewer):
-    _importer: ParametersImporter = field(default=None)
+    _importer: ParametersImporter = attrs.field(default=None)
 
     def __init__(
         self,

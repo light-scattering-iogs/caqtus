@@ -2,14 +2,13 @@ import threading
 from typing import Optional
 
 from PyQt6.QtWidgets import QVBoxLayout
-from attr import define, field
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 
-import serialization
 from analyza.loading.importers import AtomImporter2D
 from experiment.session import ExperimentSession, get_standard_experiment_session
 from sequence.runtime import Shot
+from util import attrs, serialization
 from ..single_shot_viewer import SingleShotViewer
 
 
@@ -17,10 +16,10 @@ from ..single_shot_viewer import SingleShotViewer
     _importer=serialization.override(rename="importer"),
     _axes_equal=serialization.override(rename="axes_equal"),
 )
-@define(slots=False, init=False)
+@attrs.define(slots=False, init=False)
 class AtomsViewer(SingleShotViewer):
-    _importer: AtomImporter2D = field(default=None)
-    _axes_equal: bool = field(default=True)
+    _importer: AtomImporter2D = attrs.field(default=None)
+    _axes_equal: bool = attrs.field(default=True)
 
     def __init__(
         self,
@@ -85,5 +84,3 @@ class AtomsViewer(SingleShotViewer):
             color="red",
         )
         self._canvas.draw()
-
-
