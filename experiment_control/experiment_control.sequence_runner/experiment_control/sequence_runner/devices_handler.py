@@ -103,6 +103,10 @@ class DevicesHandler(AbstractContextManager):
         # We start the sequencer with the lower priority last so that it can trigger the other sequencers.
         sequencers[-1].start_sequence()
 
+    def finish_shot(self):
+        for tweezer_arranger in self.tweezer_arrangers.values():
+            tweezer_arranger.save_awg_data()
+
 
 def get_sequencers_in_use(
     devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
