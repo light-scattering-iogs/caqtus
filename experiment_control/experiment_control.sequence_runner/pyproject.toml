@@ -12,6 +12,7 @@ python = "^3.11, <3.13"
 numpy = "^1.24.3"
 pyqt6 = "^6.5.0"
 
+util = {path = "../../util", develop = true}
 camera-runtime = {path = "../../devices/cameras/camera/camera.runtime", develop = true}
 device-config = {path = "../../devices/device/device.configuration", develop = true}
 device-runtime = {path = "../../devices/device/device.runtime", develop = true}
@@ -24,7 +25,6 @@ units = {path = "../../common/units", develop = true}
 variable-name = {path = "../../common/variable/variable.name", develop = true}
 variable-namespace = {path = "../../common/variable/variable.namespace", develop = true}
 experiment-control-compute-device-parameters = {path = "../experiment_control.compute_device_parameters", develop = true}
-duration-timer = {path = "../../common/duration_timer", develop = true}
 data-types = {path = "../../common/types/data_types", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
 sequencer-runtime = {path = "../../devices/sequencer/sequencer.runtime", develop = true}

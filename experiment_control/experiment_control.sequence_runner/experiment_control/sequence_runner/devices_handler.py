@@ -13,13 +13,13 @@ from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from camera.configuration import CameraConfiguration
 from device.configuration import DeviceName, DeviceParameter
 from device.runtime import RuntimeDevice
-from duration_timer import DurationTimerLog
 from experiment.configuration import ExperimentConfig
 from experiment_control.sequence_runner.device_context_manager import (
     DeviceContextManager,
 )
 from sequencer.configuration import SequencerConfiguration
 from sequencer.runtime import Sequencer
+from util import DurationTimerLog
 
 if TYPE_CHECKING:
     from camera.runtime import Camera

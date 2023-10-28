@@ -9,7 +9,6 @@ from attrs.validators import instance_of, deep_mapping, deep_iterable
 
 from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from device.name import DeviceName
-from duration_timer import DurationTimerLog
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -30,7 +29,7 @@ from tweezer_arranger.configuration import (
     TweezerConfigurationName,
 )
 from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
-from util import log_exception
+from util import log_exception, DurationTimerLog
 from .signal_generator import SignalGenerator, NumberSamples, AWGSignalArray
 
 logger = logging.getLogger(__name__)

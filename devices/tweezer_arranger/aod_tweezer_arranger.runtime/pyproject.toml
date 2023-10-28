@@ -18,7 +18,6 @@ util = {path = "../../../util", develop = true}
 aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configuration", develop = true}
 tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
 spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}
-duration-timer = {path = "../../../common/duration_timer", develop = true}
 
 
 

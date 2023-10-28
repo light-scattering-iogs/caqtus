@@ -11,8 +11,8 @@ from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
 from device.runtime import RuntimeDevice
-from duration_timer import DurationTimerLog
 from spectum_awg_m4i66xx_x8.configuration import ChannelSettings
+from util import DurationTimerLog
 from .pyspcm import pyspcm as spcm
 from .pyspcm.py_header import spcerr
 from .pyspcm.py_header.regs import ERRORTEXTLEN

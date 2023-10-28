@@ -6,7 +6,7 @@ from scipy.signal import stft
 
 from aod_tweezer_arranger.runtime import SignalGenerator
 from aod_tweezer_arranger.runtime.signal_generator import NumberSamples
-from duration_timer import DurationTimerLog
+from util import DurationTimerLog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -87,13 +87,13 @@ def test_moving_traps_gpu():
                 initial_frequencies,
                 initial_phases,
                 number_samples=NumberSamples(T),
-            )[:2 * (T//3)]
+            )[: 2 * (T // 3)]
             output_2 = signal_generator.generate_signal_static_traps(
                 final_amplitudes,
                 final_frequencies,
                 final_phases,
                 number_samples=NumberSamples(T),
-            )[1 * (T//3):]
+            )[1 * (T // 3) :]
 
             output_1 = signal_generator.generate_signal_moving_traps(
                 initial_amplitudes,
@@ -102,9 +102,9 @@ def test_moving_traps_gpu():
                 final_frequencies,
                 initial_phases,
                 final_phases,
-                number_samples=NumberSamples(2 * (T//3)),
-                previous_step_stop=2 * (T//3),
-                next_step_start=(4 * (T//3)) % T
+                number_samples=NumberSamples(2 * (T // 3)),
+                previous_step_stop=2 * (T // 3),
+                next_step_start=(4 * (T // 3)) % T,
             )
 
         output = np.concatenate([output_0, output_1, output_2])

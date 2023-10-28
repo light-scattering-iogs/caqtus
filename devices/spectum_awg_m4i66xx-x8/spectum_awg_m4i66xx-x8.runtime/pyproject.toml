@@ -12,11 +12,11 @@ python = "^3.10"
 numpy = ">=1.18"
 attrs = "^23.1.0"
 
+util = {path = "../../../util", develop = true}
 spectum-awg-m4i66xx-x8-configuration = {path = "../spectum_awg_m4i66xx-x8.configuration", develop = true}
-
 device-runtime = {path = "../../device/device.runtime", develop = true}
 settings-model = {path = "../../../common/settings_model"}
-duration-timer = {path = "../../../common/duration_timer", develop = true}
+
 
 
 
