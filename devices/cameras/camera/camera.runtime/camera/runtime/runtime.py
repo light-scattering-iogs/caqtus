@@ -6,8 +6,8 @@ from typing import ClassVar, Optional
 
 import numpy
 from attrs import define, field
-from attrs.setters import frozen
-from attrs.validators import instance_of
+from attrs.setters import frozen, validate, convert, pipe
+from attrs.validators import instance_of, deep_iterable
 
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
@@ -54,18 +54,28 @@ class Camera(RuntimeDevice, ABC):
     - _is_acquisition_in_progress
     """
 
+    sensor_width: ClassVar[int]
+    sensor_height: ClassVar[int]
+
     picture_names: tuple[ImageLabel, ...] = field(
-        validator=instance_of(tuple), on_setattr=frozen
+        converter=tuple,
+        validator=deep_iterable(
+            member_validator=instance_of(str), iterable_validator=instance_of(tuple)
+        ),
+        on_setattr=frozen,
     )
     roi: RectangularROI = field(
         validator=instance_of(RectangularROI), on_setattr=frozen
     )
-    timeout: float = field(validator=instance_of(float), on_setattr=frozen)
-    exposures: list[float] = field(validator=instance_of(list))
+    timeout: float = field(converter=float, on_setattr=convert)
+    exposures: list[float] = field(
+        converter=list,
+        validator=deep_iterable(
+            member_validator=instance_of(float), iterable_validator=instance_of(list)
+        ),
+        on_setattr=pipe(convert, validate)
+    )
     external_trigger: bool = field(validator=instance_of(bool), on_setattr=frozen)
-
-    sensor_width: ClassVar[int]
-    sensor_height: ClassVar[int]
 
     _pictures: list[Optional[numpy.ndarray]] = field(factory=list, init=False)
 
@@ -77,8 +87,9 @@ class Camera(RuntimeDevice, ABC):
             if count > 1:
                 raise ValueError(f"Picture name {name} is used several times")
 
-    def validate_exposures(self):
-        num_exposures = len(self.exposures)
+    @exposures.validator  # type: ignore
+    def validate_exposures(self, _, exposures):
+        num_exposures = len(exposures)
         num_names = len(self.picture_names)
         if num_names != num_exposures:
             raise ValueError(
@@ -86,14 +97,8 @@ class Camera(RuntimeDevice, ABC):
                 f" ({num_exposures}) must match"
             )
 
-        if any(exposure > self.timeout for exposure in self.exposures):
+        if any(exposure > self.timeout for exposure in exposures):
             raise ValueError(f"Exposure is longer than timeout")
-
-    def __attrs_post_init__(self):
-        self.validate_exposures()
-
-    def initialize(self):
-        super().initialize()
 
     @log_exception(logger)
     def update_parameters(self, exposures: list[float], timeout: float) -> None:

@@ -3,10 +3,12 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, Future
 from copy import copy
-from typing import Optional, Any
+from typing import Optional, Any, ClassVar
 
 import numpy as np
-from pydantic import Field
+from attrs import define, field
+from attrs.setters import frozen
+from attrs.validators import instance_of
 
 from camera.runtime import Camera, CameraTimeoutError
 from log_exception import log_exception
@@ -24,21 +26,27 @@ else:
     raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr()}")
 
 
+@define(slots=False)
 class OrcaQuestCamera(Camera):
-    # only some specific roi values are allowed for this camera !
-    camera_number: int = Field(
-        description="The camera number used to identify the specific camera.",
-        allow_mutation=False,
-    )
+    """
 
-    sensor_width = 4096
-    sensor_height = 2304
+    Beware that not all roi values are allowed for this camera. In doubt, try to check if the ROI is valid using the
+    HCImageLive software.
 
-    _pictures: list[Optional[np.ndarray]]
-    _camera: Dcam
-    _current_exposure: Optional[float] = None
-    _thread_pool_executor: ThreadPoolExecutor
-    _future: Optional[Future] = None
+    Fields:
+        camera_number: The camera number used to identify the specific camera.
+    """
+
+    sensor_width: ClassVar[int] = 4096
+    sensor_height: ClassVar[int] = 2304
+
+    camera_number: int = field(validator=instance_of(int), on_setattr=frozen)
+
+    _pictures: list[Optional[np.ndarray]] = field(init=False)
+    _camera: Dcam = field(init=False)
+    _thread_pool_executor: ThreadPoolExecutor = field(init=False)
+    _current_exposure: Optional[float] = field(default=None, init=False)
+    _future: Optional[Future] = field(default=None, init=False)
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:

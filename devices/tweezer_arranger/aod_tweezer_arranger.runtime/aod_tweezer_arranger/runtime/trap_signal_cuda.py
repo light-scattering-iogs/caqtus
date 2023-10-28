@@ -57,6 +57,18 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
         return -__sinf(PI * s) * INV_PI;
     }}
     
+    __device__ float reach_constant_velocity_adiabatically(float s)
+    {{
+        float u = min(0.5, s);
+        float v = min(0.25, s);
+        
+        return -2.0/3.0*powf(s, 4) + (8.0/3.0)*powf(s, 3) - 2*powf(s, 2) - 1.0/3.0*s + (4.0/3.0)*powf(min(1.0/2.0, s), 4) - 8.0/3.0*powf(min(1.0/2.0, s), 3) + 2*powf(min(1.0/2.0, s), 2) - 2.0/3.0*min(1.0/2.0, s);
+        //return (4.0/3.0)*s*s - 5.0/3.0*s + (32.0/9.0)*powf(min(1.0/4.0, s), 4) - 32.0/9.0*powf(min(1.0/4.0, s), 3) + (4.0/3.0)*powf(min(1.0/4.0, s), 2) - 2.0/9.0*min(1.0/4.0, s) - 16.0/9.0*powf(min(1.0/2.0, s), 4) + (32.0/9.0)*powf(min(1.0/2.0, s), 3) - 8.0/3.0*powf(min(1.0/2.0, s), 2) + (8.0/9.0)*min(1.0/2.0, s);
+        
+        //return 4. /3. * s * s - 5.
+        //return 4. * s * s / 3. - 5. / 3. * s + 8. / 9. * u * u * u -4./3. *u * u + 2./3. * u;  
+    }}
+    
     __device__ float phase_ramp_minimal_jolt(float s)
     {{
         return ((s < 1.0/4.0) ? (
@@ -73,6 +85,7 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     // Must be the integral of frequency_ramp over s from 0 to s
     __device__ float phase_ramp(float s)
     {{
+        //return reach_constant_velocity_adiabatically(s);
         return phase_ramp_sin(s);      
     }}
     
