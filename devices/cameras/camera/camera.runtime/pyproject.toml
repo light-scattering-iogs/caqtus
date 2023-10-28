@@ -12,10 +12,10 @@ python = "^3.11"
 attrs = "^23.1.0"
 numpy = "^1.23.4"
 
+util = {path = "../../../../util", develop = true}
 camera-configuration = {path = "../camera.configuration", develop = true}
 device-runtime = {path = "../../../device/device.runtime", develop = true}
 image-types = {path = "../../../../common/types/image_types", develop = true}
-log-exception = {path = "../../../../common/log_exception", develop = true}
 
 
 [build-system]

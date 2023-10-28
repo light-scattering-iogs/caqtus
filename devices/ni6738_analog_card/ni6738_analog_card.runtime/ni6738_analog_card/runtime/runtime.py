@@ -12,7 +12,6 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
-from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
     SequencerPattern,
@@ -21,6 +20,7 @@ from sequencer.instructions import (
     Repeat,
 )
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
+from util import run_on_change_method, log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -84,10 +84,16 @@ class NI6738AnalogCard(Sequencer):
 
         self._stop_task()
 
+        self._program_sequence(sequence)
+
+        self._set_sequence_programmed()
+
+    @run_on_change_method
+    def _program_sequence(self, sequence: SequencerInstruction) -> None:
+        logger.debug("Programmed ni6738")
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
         )
-        logger.debug(f"Writing {values.shape[1]} samples to the analog card")
 
         if not values.shape[0] == self.channel_number:
             raise ValueError(
@@ -97,7 +103,6 @@ class NI6738AnalogCard(Sequencer):
         self._configure_timing(number_samples)
 
         self._write_values(values)
-        self._set_sequence_programmed()
 
     def _write_values(self, values: numpy.ndarray) -> None:
         if (

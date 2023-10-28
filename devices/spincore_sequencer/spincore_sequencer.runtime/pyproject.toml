@@ -12,7 +12,7 @@ python = "^3.11"
 
 attrs = "^23.1.0"
 
-log-exception = {path = "../../../common/log_exception", develop = true}
+util = {path = "../../../util", develop = true}
 sequencer-instructions = {path = "../../sequencer/sequencer.instructions", develop = true}
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
 

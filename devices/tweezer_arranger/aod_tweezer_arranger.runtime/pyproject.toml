@@ -14,6 +14,7 @@ cuda-python = "^12.2.0"
 pypiwin32 = "^223"
 attrs = "^23.1.0"
 
+util = {path = "../../../util", develop = true}
 aod-tweezer-arranger-configuration = {path = "../aod_tweezer_arranger.configuration", develop = true}
 tweezer-arranger-runtime = {path = "../tweezer_arranger.runtime", develop = true}
 spectum-awg-m4i66xx-x8-runtime = {path = "../../spectum_awg_m4i66xx-x8/spectum_awg_m4i66xx-x8.runtime", develop = true}

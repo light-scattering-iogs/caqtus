@@ -12,7 +12,7 @@ from attrs.validators import instance_of, deep_iterable
 from camera.configuration import RectangularROI
 from device.runtime import RuntimeDevice
 from image_types import ImageLabel, Image
-from log_exception import log_exception
+from util import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -73,7 +73,7 @@ class Camera(RuntimeDevice, ABC):
         validator=deep_iterable(
             member_validator=instance_of(float), iterable_validator=instance_of(list)
         ),
-        on_setattr=pipe(convert, validate)
+        on_setattr=pipe(convert, validate),
     )
     external_trigger: bool = field(validator=instance_of(bool), on_setattr=frozen)
 
