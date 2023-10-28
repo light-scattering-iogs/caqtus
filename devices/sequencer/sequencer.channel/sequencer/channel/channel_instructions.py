@@ -167,7 +167,7 @@ class ChannelPattern(ChannelInstruction[ChannelType]):
     def __eq__(self, other):
         if not isinstance(other, ChannelPattern):
             return False
-        return np.array_equal(self.values, other.values)
+        return np.array_equal(self._values, other._values)
 
     def apply(self, fun: Callable[[ChannelType], ChannelType]):
         return type(self)(fun(self.values))
@@ -262,7 +262,7 @@ class Concatenate(ChannelInstruction[ChannelType]):
     def __eq__(self, other):
         if not isinstance(other, Concatenate):
             return False
-        return self.instructions == other.instructions
+        return self._instructions == other._instructions
 
     @cached_property
     def dtype(self) -> ChannelType:
@@ -361,8 +361,8 @@ class Repeat(ChannelInstruction[ChannelType]):
         if not isinstance(other, Repeat):
             return False
         return (
-            self.instruction == other.instruction
-            and self.number_repetitions == other.number_repetitions
+            self._instruction == other._instruction
+            and self._number_repetitions == other._number_repetitions
         )
 
     def __mul__(self, other):

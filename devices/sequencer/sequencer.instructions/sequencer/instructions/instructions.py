@@ -213,6 +213,11 @@ class SequencerPattern(SequencerInstruction):
             raise ValueError("Channel patterns must have the same duration.")
         self._channel_values = dict(channel_values)
 
+    def __hash__(self):
+        key_hash = hash(tuple(self._channel_values.keys()))
+        value_hash = hash(tuple(self._channel_values.values()))
+        return hash((key_hash, value_hash))
+
     @property
     def channel_types(self) -> dict[ChannelLabel, ChannelType]:
         return {label: pattern.dtype for label, pattern in self._channel_values.items()}
@@ -247,7 +252,7 @@ class SequencerPattern(SequencerInstruction):
     def __eq__(self, other):
         if not isinstance(other, SequencerPattern):
             return False
-        return self.values == other.values
+        return self._channel_values == other._channel_values
 
     def __getitem__(self, key):
         return self.values[key]
@@ -307,6 +312,9 @@ class Concatenate(SequencerInstruction):
         )
         if len(self._instructions) <= 1:
             raise ValueError("Concatenation must have at least two instructions.")
+
+    def __hash__(self):
+        return hash(tuple(self._instructions))
 
     @property
     def instructions(self) -> tuple[SequencerInstruction, ...]:
@@ -376,7 +384,7 @@ class Concatenate(SequencerInstruction):
     def __eq__(self, other):
         if not isinstance(other, Concatenate):
             return False
-        return self.instructions == other.instructions
+        return self._instructions == other._instructions
 
     @cached_property
     def channel_types(self) -> dict[ChannelLabel, ChannelType]:
@@ -421,6 +429,9 @@ class Repeat(SequencerInstruction):
         self._number_repetitions = number_repetitions
         if number_repetitions < 2:
             raise ValueError("Number of repetitions must be greater or equal to 2.")
+
+    def __hash__(self):
+        return hash((self._instruction, self._number_repetitions))
 
     @property
     def instruction(self) -> SequencerInstruction:
@@ -481,8 +492,8 @@ class Repeat(SequencerInstruction):
         if not isinstance(other, Repeat):
             return False
         return (
-            self.instruction == other.instruction
-            and self.number_repetitions == other.number_repetitions
+            self._instruction == other._instruction
+            and self._number_repetitions == other._number_repetitions
         )
 
     def __mul__(self, other):
