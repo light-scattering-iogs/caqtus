@@ -1,14 +1,10 @@
 import logging
 from functools import singledispatchmethod
 from threading import Thread, Event
-from typing import (
-    TYPE_CHECKING,
-)
+from typing import assert_never
 
 import numpy as np
 
-from device.configuration import DeviceName
-from device.runtime import RuntimeDevice
 from experiment.session import ExperimentSessionMaker
 from parameter_types import AnalogValue
 from sequence.configuration import (
@@ -23,9 +19,6 @@ from sequence.runtime import SequencePath
 from units import Quantity, units, DimensionalityError
 from .sequence_context import StepContext
 from .sequence_manager import SequenceManager, SequenceInterruptedException
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -48,9 +41,9 @@ class SequenceRunnerThread(Thread):
         try:
             with self._sequence_manager:
                 self.run_sequence()
-        except *SequenceInterruptedException:
+        except* SequenceInterruptedException:
             pass
-        except *Exception:
+        except* Exception:
             logger.error("An error occurred while running the sequence", exc_info=True)
             raise
 
@@ -84,7 +77,7 @@ class SequenceRunnerThread(Thread):
             a new object.
         """
 
-        raise NotImplementedError(f"run_step is not implemented for {type(step)}")
+        return assert_never(step)
 
     @run_step.register
     def _(
