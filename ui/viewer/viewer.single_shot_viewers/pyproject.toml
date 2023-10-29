@@ -14,14 +14,15 @@ pyqt6 = "^6.5.1"
 matplotlib = "^3.7.1"
 numpy = "^1.24.3"
 
+qabc = {path = "../widgets/qabc", develop = true}
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
+
 util = {path = "../../util", develop = true}
 analyza-loading-importers = {path = "../../analyza/analyza.loading/analyza.loading.importers", develop = true}
 experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
 image-types = {path = "../../common/types/image_types", develop = true}
 sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
-qabc = {path = "../../common/widgets/qabc", develop = true}
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
-sequence-hierarchy = {path = "../../common/widgets/sequence_hierarchy", develop = true}
 viewer-sequence-watcher = {path = "../viewer.sequence_watcher", develop = true}
 
 
