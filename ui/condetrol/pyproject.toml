@@ -10,7 +10,6 @@ python = "^3.11, <3.13"
 pyqt6 = "^6.4.1"
 pyqt6-charts = "^6.5.0"
 QDarkStyle = "^3.1"
-sqlalchemy = ">=2.0"
 
 settings_model = { path = "../common/settings_model/", develop = true }
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
