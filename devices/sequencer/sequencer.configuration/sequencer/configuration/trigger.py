@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 
-from attr import define
-
-import serialization
 from settings_model.yaml_serializable import yaml, YAMLSerializable
+from util import attrs, serialization
 
 
 class TriggerEdge(Enum):
@@ -13,7 +11,7 @@ class TriggerEdge(Enum):
     BOTH = "both"
 
 
-@define
+@attrs.define
 class Trigger(ABC):
     def is_software_trigger(self) -> bool:
         return isinstance(self, SoftwareTrigger)
@@ -35,14 +33,14 @@ class Trigger(ABC):
         raise NotImplementedError
 
 
-@define
+@attrs.define
 class SoftwareTrigger(Trigger):
     @property
     def priority(self) -> int:
         return 0
 
 
-@define
+@attrs.define
 class ExternalTriggerStart(Trigger):
     edge: TriggerEdge = TriggerEdge.RISING
 
@@ -51,7 +49,7 @@ class ExternalTriggerStart(Trigger):
         return 1
 
 
-@define
+@attrs.define
 class ExternalClock(Trigger):
     edge: TriggerEdge = TriggerEdge.RISING
 
@@ -60,7 +58,7 @@ class ExternalClock(Trigger):
         return 1
 
 
-@define
+@attrs.define
 class ExternalClockOnChange(Trigger):
     edge: TriggerEdge = TriggerEdge.RISING
 
@@ -69,7 +67,9 @@ class ExternalClockOnChange(Trigger):
         return 1
 
 
-serialization.include_subclasses(Trigger, union_strategy=serialization.include_type(tag_name="trigger_type"))
+serialization.include_subclasses(
+    Trigger, union_strategy=serialization.include_type(tag_name="trigger_type")
+)
 
 
 def trigger_representer(dumper: yaml.Dumper, value: Trigger):
@@ -83,7 +83,9 @@ YAMLSerializable.get_dumper().add_representer(Trigger, trigger_representer)
 YAMLSerializable.get_dumper().add_representer(SoftwareTrigger, trigger_representer)
 YAMLSerializable.get_dumper().add_representer(ExternalTriggerStart, trigger_representer)
 YAMLSerializable.get_dumper().add_representer(ExternalClock, trigger_representer)
-YAMLSerializable.get_dumper().add_representer(ExternalClockOnChange, trigger_representer)
+YAMLSerializable.get_dumper().add_representer(
+    ExternalClockOnChange, trigger_representer
+)
 
 
 def trigger_constructor(loader: yaml.Loader, node: yaml.SequenceNode):

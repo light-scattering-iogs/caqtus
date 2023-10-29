@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "serial-port-widget"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+packages = [{include = "serial_port_widget"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+pyqt6 = "^6.5.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

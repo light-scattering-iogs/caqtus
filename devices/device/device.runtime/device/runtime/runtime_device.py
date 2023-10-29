@@ -1,16 +1,17 @@
 from abc import ABC, abstractmethod
 from contextlib import ExitStack, AbstractContextManager
-from functools import singledispatchmethod
-from typing import ClassVar, Self, Optional, TypeVar
+from typing import ClassVar, Optional, TypeVar
 
-from pydantic import BaseModel, Field, Extra
+from attr import define, field
+from attr.setters import frozen
 
 from device.configuration import DeviceName
 
 _T = TypeVar("_T")
 
 
-class RuntimeDevice(BaseModel, ABC):
+@define(slots=False)
+class RuntimeDevice(AbstractContextManager, ABC):
     """A class that is instantiated to directly control a physical device
 
     All devices used in the experiment must inherit from this class.
@@ -34,10 +35,15 @@ class RuntimeDevice(BaseModel, ABC):
         subclassing them.
     """
 
-    name: DeviceName = Field(allow_mutation=False)
+    name: DeviceName = field(on_setattr=frozen)
 
-    _close_stack: Optional[ExitStack] = None
-    __devices_already_in_use: ClassVar[dict[DeviceName, Self]] = {}
+    _close_stack: Optional[ExitStack] = field(init=False, default=None)
+    __devices_already_in_use: ClassVar[dict[DeviceName, "RuntimeDevice"]] = {}
+
+    @name.validator  # type: ignore
+    def _validate_name(self, attribute, value):
+        if not isinstance(value, str):
+            raise TypeError(f"Expected DeviceName, got {type(value)}")
 
     @abstractmethod
     def initialize(self) -> None:
@@ -118,14 +124,6 @@ class RuntimeDevice(BaseModel, ABC):
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return "initialize", "update_parameters", "close", "get_name"
-
-    class Config:
-        validate_assignment = True
-        use_enum_values = True
-        validate_all = True
-        keep_untouched = (singledispatchmethod,)
-        arbitrary_types_allowed = True
-        extra = Extra.allow
 
 
 class UninitializedDeviceError(Exception):

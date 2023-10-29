@@ -1,0 +1,71 @@
+[tool.poetry]
+name = "condetrol"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+pyqt6 = "^6.4.1"
+pyqt6-charts = "^6.5.0"
+QDarkStyle = "^3.1"
+
+qabc = {path = "../widgets/qabc", develop = true}
+yaml-clipboard-mixin = {path = "../widgets/yaml_clipboard_mixin", develop = true}
+remote-server-combobox = {path = "../widgets/remote_server_combobox", develop = true}
+serial-port-widget = {path = "../widgets/serial_port_widget", develop = true}
+expression-widget = {path = "../widgets/expression_widget", develop = true}
+variable-range-widget = {path = "../widgets/variable_range_widget", develop = true}
+waiting-widget = {path = "../widgets/waiting_widget", develop = true}
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
+
+settings_model = { path = "../../common/settings_model/", develop = true }
+experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
+sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
+sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+concurrent-updater = {path = "../../common/concurrent_updater", develop = true}
+experiment-control-manager = {path = "../../experiment_control/experiment_control.manager", develop = true}
+device-config = {path = "../../devices/device/device.configuration", develop = true}
+sequencer-configuration = {path = "../../devices/sequencer/sequencer.configuration", develop = true}
+device-name = {path = "../../devices/device/device.name", develop = true}
+device-configuration-editor = {path = "../../devices/device/device.configuration_editor", develop = true}
+
+elliptec-ell14-configuration-editor = {path = "../../devices/elliptec_ell14/elliptec_ell14.configuration_editor", develop = true}
+spincore-sequencer-configuration-editor = {path = "../../devices/spincore_sequencer/spincore_sequencer.configuration_editor", develop = true}
+ni6738-analog-card-configuration-editor = {path = "../../devices/ni6738_analog_card/ni6738_analog_card.configuration_editor", develop = true}
+tweezer-arranger-configuration-editor = {path = "../../devices/tweezer_arranger/tweezer_arranger.configuration_editor", develop = true}
+orca-quest-configuration-editor = {path = "../../devices/cameras/orca_quest/orca_quest.configuration_editor", develop = true}
+swabian-pulse-streamer-configuration-editor = {path = "../../devices/swabian_pulse_streamer/swabian_pulse_streamer.configuration_editor", develop = true}
+
+lane-configuration = {path = "../../common/lane/lane.configuration", develop = true}
+digital-lane-configuration = {path = "../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true}
+analog-lane-configuration = {path = "../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true}
+camera-lane-configuration = {path = "../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true}
+atom-detector-lane-configuration = {path = "../../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
+
+digital-lane-model = {path = "../../devices/sequencer/digital_lane/digital_lane.model", develop = true}
+analog-lane-model = {path = "../../devices/sequencer/analog_lane/analog_lane.model", develop = true}
+camera-lane-model = {path = "../../devices/cameras/camera/camera_lane/camera_lane.model", develop = true}
+atom-detector-lane-model = {path = "../../devices/atom_detector/atom_detector_lane/atom_detector_lane.model", develop = true}
+tweezer-arranger-lane-model = {path = "../../devices/tweezer_arranger/tweezer_arranger_lane/tweezer_arranger_lane.model", develop = true}
+
+
+
+[tool.poetry.dev-dependencies]
+black = "^22.6.0"
+jupyter = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.12.0"
+jupyter = "^1.0.0"
+matplotlib = "^3.7.1"
+mypy = "^1.3.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

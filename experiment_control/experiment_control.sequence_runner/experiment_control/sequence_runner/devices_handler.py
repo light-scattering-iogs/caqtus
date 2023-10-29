@@ -19,6 +19,7 @@ from experiment_control.sequence_runner.device_context_manager import (
 )
 from sequencer.configuration import SequencerConfiguration
 from sequencer.runtime import Sequencer
+from util import DurationTimerLog
 
 if TYPE_CHECKING:
     from camera.runtime import Camera
@@ -103,6 +104,10 @@ class DevicesHandler(AbstractContextManager):
         # We start the sequencer with the lower priority last so that it can trigger the other sequencers.
         sequencers[-1].start_sequence()
 
+    def finish_shot(self):
+        for tweezer_arranger in self.tweezer_arrangers.values():
+            tweezer_arranger.save_awg_data()
+
 
 def get_sequencers_in_use(
     devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
@@ -157,6 +162,9 @@ def get_tweezer_arrangers_in_use(
 def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):
     try:
         if parameters:
-            device.update_parameters(**parameters)
+            with DurationTimerLog(
+                logger, f"Updating device {device.get_name()}", display_start=True
+            ):
+                device.update_parameters(**parameters)
     except Exception as error:
         raise RuntimeError(f"Failed to update device {device.get_name()}") from error

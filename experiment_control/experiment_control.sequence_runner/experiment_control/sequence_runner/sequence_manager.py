@@ -15,7 +15,6 @@ from data_types import DataLabel, Data
 from device.configuration import DeviceParameter
 from device.name import DeviceName
 from device.runtime import RuntimeDevice
-from duration_timer import DurationTimerLog, DurationTimer
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from experiment_control.compute_device_parameters import (
@@ -32,6 +31,7 @@ from sequence.configuration import SequenceConfig
 from sequence.runtime import SequencePath, Sequence, State, Shot
 from sequencer.runtime import Sequencer
 from tweezer_arranger.runtime import RearrangementFailedError
+from util import DurationTimer, DurationTimerLog
 from variable.namespace import VariableNamespace
 from .device_servers import (
     create_device_servers,

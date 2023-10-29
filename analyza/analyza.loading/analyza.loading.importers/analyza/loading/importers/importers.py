@@ -6,9 +6,6 @@ from typing import (
     TypedDict,
 )
 
-from attrs import define, field
-
-import serialization
 from atom_detector.configuration import AtomLabel
 from data_types import Data
 from device.configuration import DeviceName
@@ -16,6 +13,7 @@ from experiment.session import ExperimentSession
 from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
+from util import attrs, serialization
 from . import break_namespaces
 from .chainable_function import ChainableFunction
 from .shot_importer import (
@@ -33,10 +31,10 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-@define
+@attrs.define
 class ImageLoader(ImageImporter):
-    camera_name: DeviceName = field()
-    image: ImageLabel = field()
+    camera_name: DeviceName = attrs.field()
+    image: ImageLabel = attrs.field()
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
         value = _import_measures(shot, session)[f"{self.camera_name}.{self.image}"]
@@ -52,7 +50,7 @@ serialization.include_subclasses(
 )
 
 
-@define(slots=False)
+@attrs.define(slots=False)
 class ParametersLoader(ParametersImporter):
     def __attrs_post_init__(self) -> None:
         self._importer = import_parameters | break_namespaces
@@ -66,10 +64,10 @@ serialization.include_subclasses(
 )
 
 
-@define
+@attrs.define
 class AtomsLoader(ShotImporter[dict[AtomLabel, bool]]):
-    detector_name: DeviceName = field()
-    image: ImageLabel = field()
+    detector_name: DeviceName = attrs.field()
+    image: ImageLabel = attrs.field()
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> dict[AtomLabel, bool]:
         value = _import_measures(shot, session)[f"{self.detector_name}.{self.image}"]

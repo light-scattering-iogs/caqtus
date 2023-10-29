@@ -8,9 +8,10 @@ import nidaqmx.constants
 import nidaqmx.system
 import numpy
 import numpy as np
-from pydantic import Extra, Field, validator
+from attrs import define, field
+from attrs.setters import frozen
+from attrs.validators import instance_of, ge
 
-from log_exception import log_exception
 from sequencer.instructions import (
     SequencerInstruction,
     SequencerPattern,
@@ -19,6 +20,7 @@ from sequencer.instructions import (
     Repeat,
 )
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
+from util import run_on_change_method, log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -26,48 +28,37 @@ logger.setLevel("DEBUG")
 ns = 1e-9
 
 
-class NI6738AnalogCard(Sequencer, extra=Extra.allow):
+@define(slots=False)
+class NI6738AnalogCard(Sequencer):
     """Device class to program the NI6738 analog card.
 
     Fields:
         device_id: The ID of the device to use. It is the name of the device as it appears in the NI MAX software, e.g.
         Dev1.
         time_step: The smallest allowed time step, in nanoseconds.
-        external_clock: Whether to use an external clock to trigger the analog card. If False, the internal clock of the
-        card is used. Otherwise, the clock is taken from the PFI0 line of the device on the rising edge. Only True is
-        implemented at the moment.
+        trigger: Indicates how the sequence is started and how it is clocked.
     """
 
     channel_number: ClassVar[int] = 32
 
-    device_id: str
-    time_step: int = Field(ge=2500)
-    external_clock: bool = True
-    trigger: Trigger = Field(default_factory=ExternalClockOnChange)
+    device_id: str = field(validator=instance_of(str), on_setattr=frozen)
+    time_step: int = field(validator=[instance_of(int), ge(2500)], on_setattr=frozen)
+    trigger: Trigger = field(
+        factory=ExternalClockOnChange, validator=instance_of(Trigger), on_setattr=frozen
+    )
 
-    _task: nidaqmx.Task
+    _task: nidaqmx.Task = field(init=False)
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("run", "stop")
 
-    @validator("external_clock")
-    def _validate_external_clock(cls, external_clock: bool) -> bool:
-        if not external_clock:
-            raise NotImplementedError("Internal clock is not implemented")
-        return external_clock
-
-    @validator("trigger")
-    def _validate_trigger(cls, trigger: Trigger) -> Trigger:
-        if not isinstance(trigger, ExternalClockOnChange):
-            raise NotImplementedError(
-                f"Trigger type {type(trigger)} is not implemented"
-            )
-        if trigger.edge != TriggerEdge.RISING:
-            raise NotImplementedError(
-                f"Trigger edge {trigger.edge} is not implemented"
-            )
-        return trigger
+    @trigger.validator  # type: ignore
+    def _validate_trigger(self, _, value):
+        if not isinstance(value, ExternalClockOnChange):
+            raise NotImplementedError(f"Trigger type {type(value)} is not implemented")
+        if value.edge != TriggerEdge.RISING:
+            raise NotImplementedError(f"Trigger edge {value.edge} is not implemented")
 
     @log_exception(logger)
     def initialize(self) -> None:
@@ -88,15 +79,21 @@ class NI6738AnalogCard(Sequencer, extra=Extra.allow):
             )
 
     @log_exception(logger)
-    def update_parameters(self, *, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         """Write a sequence of voltages to the analog card."""
 
         self._stop_task()
 
+        self._program_sequence(sequence)
+
+        self._set_sequence_programmed()
+
+    @run_on_change_method
+    def _program_sequence(self, sequence: SequencerInstruction) -> None:
+        logger.debug("Programmed ni6738")
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
         )
-        logger.debug(f"Writing {values.shape[1]} samples to the analog card")
 
         if not values.shape[0] == self.channel_number:
             raise ValueError(
@@ -106,7 +103,6 @@ class NI6738AnalogCard(Sequencer, extra=Extra.allow):
         self._configure_timing(number_samples)
 
         self._write_values(values)
-        self._set_sequence_programmed()
 
     def _write_values(self, values: numpy.ndarray) -> None:
         if (

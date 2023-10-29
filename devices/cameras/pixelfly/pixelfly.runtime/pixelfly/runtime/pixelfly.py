@@ -3,6 +3,7 @@ from ctypes import CDLL, c_int, byref, c_int8, c_int16, POINTER, c_void_p
 from ctypes.util import find_library
 from enum import IntFlag, IntEnum
 
+import attrs
 import numpy
 
 from device.runtime import RuntimeDevice
@@ -66,6 +67,7 @@ def load_pixelfly_library() -> CDLL:
     return lib
 
 
+@attrs.define
 class PixelflyBoard(RuntimeDevice):
     board_number: int
     mode: Mode
@@ -76,8 +78,8 @@ class PixelflyBoard(RuntimeDevice):
     bit_pix: PixelDepth = PixelDepth.BITS_12
     exp_level: int = 0
 
-    _lib = CDLL
-    _handle = c_int
+    _lib: CDLL = attrs.field(init=False)
+    _handle: c_int = attrs.field(init=False)
 
     """
     Args:
@@ -106,6 +108,7 @@ class PixelflyBoard(RuntimeDevice):
 
     bit_pix: Set the bit width of the transferred pixels.
     """
+
 
     def update_parameters(self) -> None:
         pass
