@@ -11,10 +11,11 @@ python = "^3.10"
 
 pyqt6 = "^6.5.0"
 
+qabc = {path = "../../../ui/widgets/qabc", develop = true}
+yaml-clipboard-mixin = {path = "../../../ui/widgets/yaml_clipboard_mixin", develop = true}
+
 device-config = {path = "../device.configuration", develop = true}
 device-server-name = {path = "../../remote_device/device_server/device_server.name", develop = true}
-qabc = {path = "../../../common/widgets/qabc", develop = true}
-yaml-clipboard-mixin = {path = "../../../common/widgets/yaml_clipboard_mixin", develop = true}
 
 
 [build-system]

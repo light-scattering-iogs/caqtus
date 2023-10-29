@@ -8,6 +8,7 @@ packages = [{include = "mapping_model"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+
 pyqt6 = "^6.5.0"
 
 

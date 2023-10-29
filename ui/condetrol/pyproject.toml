@@ -17,7 +17,8 @@ remote-server-combobox = {path = "../widgets/remote_server_combobox", develop = 
 serial-port-widget = {path = "../widgets/serial_port_widget", develop = true}
 expression-widget = {path = "../widgets/expression_widget", develop = true}
 variable-range-widget = {path = "../widgets/variable_range_widget", develop = true}
-waiting-widget = {path = "..widgets/waiting_widget", develop = true}
+waiting-widget = {path = "../widgets/waiting_widget", develop = true}
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 
 settings_model = { path = "../../common/settings_model/", develop = true }
 experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
@@ -26,7 +27,6 @@ sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = t
 concurrent-updater = {path = "../../common/concurrent_updater", develop = true}
 experiment-control-manager = {path = "../../experiment_control/experiment_control.manager", develop = true}
 device-config = {path = "../../devices/device/device.configuration", develop = true}
-sequence-hierarchy = {path = "../../common/widgets/sequence_hierarchy", develop = true}
 sequencer-configuration = {path = "../../devices/sequencer/sequencer.configuration", develop = true}
 device-name = {path = "../../devices/device/device.name", develop = true}
 device-configuration-editor = {path = "../../devices/device/device.configuration_editor", develop = true}
