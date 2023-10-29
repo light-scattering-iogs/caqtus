@@ -9,9 +9,9 @@ packages = [{include = "viewer"}]
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
 
-concurrent-updater = {path = "../../common/concurrent_updater", develop = true}
-experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
-sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+concurrent-updater = {path = "../../../common/concurrent_updater", develop = true}
+experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
+sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
 
 
 [build-system]
