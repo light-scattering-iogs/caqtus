@@ -9,6 +9,8 @@ packages = [{include = "serial_port_widget"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 
+pyqt6 = "^6.5.3"
+
 
 [build-system]
 requires = ["poetry-core"]

@@ -8,13 +8,14 @@ packages = [{include = "sequence_hierarchy"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
+
 pyqt6 = "^6.5.1"
 anytree = "^2.8.0"
 
-concurrent-updater = {path = "../../concurrent_updater", develop = true}
-experiment-session = {path = "../../experiment/experiment.session", develop = true}
-sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
-sequence-runtime = {path = "../../sequence/sequence.runtime", develop = true}
+concurrent-updater = {path = "../../../common/concurrent_updater", develop = true}
+experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
+sequence-configuration = {path = "../../../common/sequence/sequence.configuration", develop = true}
+sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
 
 
 [build-system]

@@ -10,10 +10,10 @@ packages = [{include = "variable_range_widget"}]
 python = "^3.8, <3.13"
 pyqt6 = "^6.5.0"
 
-expression = {path = "../../expression", develop = true}
-rename-dict-key = {path = "../../rename_dict_key", develop = true}
-variable-name = {path = "../../variable/variable.name", develop = true}
-sequence-configuration = {path = "../../sequence/sequence.configuration", develop = true}
+expression = {path = "../../../common/expression", develop = true}
+rename-dict-key = {path = "../../../common/rename_dict_key", develop = true}
+variable-name = {path = "../../../common/variable/variable.name", develop = true}
+sequence-configuration = {path = "../../../common/sequence/sequence.configuration", develop = true}
 
 
 [build-system]
