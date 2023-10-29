@@ -11,17 +11,18 @@ pyqt6 = "^6.4.1"
 pyqt6-charts = "^6.5.0"
 QDarkStyle = "^3.1"
 
+qabc = {path = "../widgets/qabc", develop = true}
+yaml-clipboard-mixin = {path = "../widgets/yaml_clipboard_mixin", develop = true}
+remote-server-combobox = {path = "../widgets/remote_server_combobox", develop = true}
+serial-port-widget = {path = "../widgets/serial_port_widget", develop = true}
+expression-widget = {path = "../widgets/expression_widget", develop = true}
+variable-range-widget = {path = "../widgets/variable_range_widget", develop = true}
+
 settings_model = { path = "../common/settings_model/", develop = true }
 experiment-configuration = {path = "../common/experiment/experiment.configuration", develop = true}
 sequence-configuration = {path = "../common/sequence/sequence.configuration", develop = true}
 sequence-runtime = {path = "../common/sequence/sequence.runtime", develop = true}
-qabc = {path = "../common/widgets/qabc", develop = true}
-yaml-clipboard-mixin = {path = "../common/widgets/yaml_clipboard_mixin", develop = true}
 concurrent-updater = {path = "../common/concurrent_updater", develop = true}
-remote-server-combobox = {path = "../common/widgets/remote_server_combobox", develop = true}
-serial-port-widget = {path = "../common/widgets/serial_port_widget", develop = true}
-expression-widget = {path = "../common/widgets/expression_widget", develop = true}
-variable-range-widget = {path = "../common/widgets/variable_range_widget", develop = true}
 experiment-control-manager = {path = "../experiment_control/experiment_control.manager", develop = true}
 device-config = {path = "../devices/device/device.configuration", develop = true}
 sequence-hierarchy = {path = "../common/widgets/sequence_hierarchy", develop = true}
