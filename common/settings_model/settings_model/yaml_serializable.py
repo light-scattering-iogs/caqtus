@@ -1,4 +1,5 @@
 import abc
+import pprint
 from enum import Enum
 from pathlib import Path, WindowsPath
 from typing import Type, Self, TypeVar
@@ -7,11 +8,14 @@ import yaml
 from pydantic import SecretStr, PostgresDsn
 from pydantic.color import Color
 
+from util import attrs
 from .version import Version
 
 yaml.SafeDumper.ignore_aliases = lambda *args: True
 
 YamlNode = TypeVar("YamlNode", bound=yaml.Node)
+
+_C = TypeVar("_C", bound=attrs.AttrsInstance)
 
 
 class YAMLSerializable(abc.ABC):
@@ -23,6 +27,30 @@ class YAMLSerializable(abc.ABC):
         """Register subclasses for serialization and deserialization to yaml"""
         cls.get_dumper().add_representer(cls, cls.representer)
         cls.get_loader().add_constructor(f"!{cls.__name__}", cls.constructor)
+
+    @classmethod
+    def register_attrs_class(cls, other_cls: type[_C]):
+        fields = attrs.fields(other_cls)
+
+        def representer(dumper: yaml.Dumper, instance: _C):
+            return dumper.represent_mapping(
+                f"!{other_cls.__name__}",
+                {field.name: getattr(instance, field.name) for field in fields},
+            )
+
+        cls.get_dumper().add_representer(other_cls, representer)
+
+        def constructor(loader: yaml.Loader, node: yaml.Node) -> _C:
+            kwargs = loader.construct_mapping(node, deep=True)
+
+            try:
+                return other_cls(**kwargs)
+            except Exception as e:
+                raise ValueError(
+                    f"Could not construct {cls.__name__} from\n {pprint.pformat(kwargs)}"
+                ) from e
+
+        cls.get_loader().add_constructor(f"!{other_cls.__name__}", constructor)
 
     @classmethod
     def get_dumper(cls):

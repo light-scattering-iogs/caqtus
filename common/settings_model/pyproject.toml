@@ -5,10 +5,12 @@ description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
+
 PyYAML = "^6.0"
 pydantic = "^1.9.2"
 semver = "^3.0.0"
+util = {path = "../../util", develop = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
