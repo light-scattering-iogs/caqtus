@@ -452,6 +452,8 @@ class SequenceManager(AbstractContextManager):
         for camera_name, camera_task in camera_tasks.items():
             data |= camera_task.result()
 
+        self._device_manager.finish_shot()
+
         return data
 
     def fetch_and_analyze_images(
