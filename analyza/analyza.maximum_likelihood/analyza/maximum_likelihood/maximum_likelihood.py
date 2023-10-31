@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from inspect_function import get_parameters
+from util.inspect_function import get_parameters
 
 Parameters = dict[str, float]
 Values = np.ndarray

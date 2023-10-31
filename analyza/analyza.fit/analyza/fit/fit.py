@@ -5,7 +5,7 @@ import numpy
 import pandas
 from scipy.optimize import curve_fit
 
-from inspect_function import get_parameters
+from util.inspect_function import get_parameters
 
 
 def fit_to_data(
