@@ -2,7 +2,7 @@ import ast
 from collections.abc import Mapping
 from copy import deepcopy
 from functools import cached_property
-from typing import Optional, Any, Self
+from typing import Optional, Any
 
 import numpy
 import token_utils
@@ -51,7 +51,7 @@ BUILTINS = {
 }
 
 
-class Expression(YAMLSerializable):
+class Expression:
     """Python expression that can be evaluated to return a python object
 
     It may depend on other upstream variables that must be specified during evaluation.
@@ -169,32 +169,6 @@ class Expression(YAMLSerializable):
     def code(self):
         return compile(self.ast, filename="<string>", mode="eval")
 
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, expr: Self):
-        return dumper.represent_scalar(
-            f"!{cls.__name__}",
-            expr.body,
-        )
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        if not isinstance(node, yaml.ScalarNode):
-            raise yaml.constructor.ConstructorError(
-                None,
-                None,
-                f"Expected a scalar node but got {type(node)}",
-                node.start_mark,
-            )
-        value = loader.construct_scalar(node)
-        if not isinstance(value, str):
-            raise yaml.constructor.ConstructorError(
-                None,
-                None,
-                "Expected a string",
-                node.start_mark,
-            )
-        return cls(body=value)
-
     def __eq__(self, other):
         if isinstance(other, Expression):
             return self.body == other.body
@@ -213,6 +187,38 @@ class Expression(YAMLSerializable):
             return Expression(v)
         else:
             raise TypeError("Expression must be a string or Expression object")
+
+
+def expression_representer(dumper: yaml.Dumper, expr: Expression):
+    cls = type(expr)
+    return dumper.represent_scalar(
+        f"!{cls.__name__}",
+        expr.body,
+    )
+
+
+def expression_constructor(loader: yaml.Loader, node: yaml.Node):
+    if not isinstance(node, yaml.ScalarNode):
+        raise yaml.constructor.ConstructorError(
+            None,
+            None,
+            f"Expected a scalar node but got {type(node)}",
+            node.start_mark,
+        )
+    value = loader.construct_scalar(node)
+    if not isinstance(value, str):
+        raise yaml.constructor.ConstructorError(
+            None,
+            None,
+            "Expected a string",
+            node.start_mark,
+        )
+    return Expression(body=value)
+
+
+
+YAMLSerializable.get_dumper().add_representer(Expression, expression_representer)
+YAMLSerializable.get_loader().add_constructor(f"!Expression", expression_constructor)
 
 
 def add_implicit_multiplication(source: str) -> str:
