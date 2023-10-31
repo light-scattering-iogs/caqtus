@@ -10,6 +10,7 @@ import yaml
 from scipy.signal import sawtooth
 
 from settings_model import YAMLSerializable
+from util import serialization
 from variable.name import VariableName, DottedVariableName
 
 
@@ -82,7 +83,7 @@ class Expression:
         """
         if builtins is None:
             builtins = BUILTINS
-        self._body = body
+        self.body = body
         self._last_value = None
         self._last_evaluation_variables = None
         self._builtins = builtins
@@ -96,7 +97,9 @@ class Expression:
 
     # noinspection PyPropertyAccess
     @body.setter
-    def body(self, value: str):
+    def body(self, value):
+        if not isinstance(value, str):
+            raise TypeError("Expression body must be a string")
         self._body = value
         if hasattr(self, "ast"):
             del self.ast
@@ -175,6 +178,8 @@ class Expression:
         else:
             return False
 
+    # This is a hack to use expressions as pydantic fields. The two methods below
+    # can be removed once we remove pydantic dependency from the project.
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
@@ -189,36 +194,8 @@ class Expression:
             raise TypeError("Expression must be a string or Expression object")
 
 
-def expression_representer(dumper: yaml.Dumper, expr: Expression):
-    cls = type(expr)
-    return dumper.represent_scalar(
-        f"!{cls.__name__}",
-        expr.body,
-    )
-
-
-def expression_constructor(loader: yaml.Loader, node: yaml.Node):
-    if not isinstance(node, yaml.ScalarNode):
-        raise yaml.constructor.ConstructorError(
-            None,
-            None,
-            f"Expected a scalar node but got {type(node)}",
-            node.start_mark,
-        )
-    value = loader.construct_scalar(node)
-    if not isinstance(value, str):
-        raise yaml.constructor.ConstructorError(
-            None,
-            None,
-            "Expected a string",
-            node.start_mark,
-        )
-    return Expression(body=value)
-
-
-
-YAMLSerializable.get_dumper().add_representer(Expression, expression_representer)
-YAMLSerializable.get_loader().add_constructor(f"!Expression", expression_constructor)
+serialization.register_unstructure_hook(Expression, lambda expr: expr.body)
+serialization.register_structure_hook(Expression, lambda body, _: Expression(body))
 
 
 def add_implicit_multiplication(source: str) -> str:
@@ -270,3 +247,36 @@ class EvaluationError(Exception):
         self._variables = deepcopy(variables)
         message = f"Error while evaluating expression '{body}'"
         super().__init__(message)
+
+
+# YAMLSerializable will be removed in the future, the lines below are here for
+# legacy until we remove it.
+def expression_representer(dumper: yaml.Dumper, expr: Expression):
+    cls = type(expr)
+    return dumper.represent_scalar(
+        f"!{cls.__name__}",
+        expr.body,
+    )
+
+
+def expression_constructor(loader: yaml.Loader, node: yaml.Node):
+    if not isinstance(node, yaml.ScalarNode):
+        raise yaml.constructor.ConstructorError(
+            None,
+            None,
+            f"Expected a scalar node but got {type(node)}",
+            node.start_mark,
+        )
+    value = loader.construct_scalar(node)
+    if not isinstance(value, str):
+        raise yaml.constructor.ConstructorError(
+            None,
+            None,
+            "Expected a string",
+            node.start_mark,
+        )
+    return Expression(body=value)
+
+
+YAMLSerializable.get_dumper().add_representer(Expression, expression_representer)
+YAMLSerializable.get_loader().add_constructor(f"!Expression", expression_constructor)
