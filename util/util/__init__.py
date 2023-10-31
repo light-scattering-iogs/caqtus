@@ -1,7 +1,9 @@
-from .duration_timer import DurationTimer, DurationTimerLog
+import attrs as attrs
+
+import inspect_function as inspect_function
 from ._log_exception import log_exception
 from ._run_on_change_only import run_on_change_method
-import attrs as attrs
+from .duration_timer import DurationTimer, DurationTimerLog
 
 __all__ = [
     "run_on_change_method",
