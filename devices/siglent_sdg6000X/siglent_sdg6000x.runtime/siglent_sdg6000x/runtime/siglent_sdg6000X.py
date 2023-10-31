@@ -7,9 +7,9 @@ from pydantic import Field, validator
 from pyvisa.constants import AccessModes
 
 from settings_model import SettingsModel
-from device import RuntimeDevice
-from modulation import SiglentSDG6000XModulation
-from waveforms import SiglentSDG6000XWaveform, DCVoltage
+from device.runtime import RuntimeDevice
+from .modulation import SiglentSDG6000XModulation
+from .waveforms import SiglentSDG6000XWaveform, DCVoltage
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
