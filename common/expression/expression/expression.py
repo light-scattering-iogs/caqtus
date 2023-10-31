@@ -114,8 +114,26 @@ class Expression:
     def __str__(self) -> str:
         return self.body
 
+    def check_syntax(self) -> Optional[SyntaxError]:
+        """Force parsing of the expression.
+
+        It is not necessary to call this method explicitly, as the expression will be
+        parsed automatically when it is evaluated. However, this method can be used
+        to force the parsing to happen at a specific time, for example to catch
+        syntax errors early.
+
+        Returns:
+            None if the expression is valid, or a SyntaxError otherwise.
+        """
+
+        try:
+            self._parse_ast()
+        except SyntaxError as error:
+            return error
+
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables"""
+
         # Only keep the variables the expression actually depends on. This allows to
         # cache the last evaluation if these variables don't change but some other do.
         useful_variables = set(variables) & self.upstream_variables
@@ -150,27 +168,27 @@ class Expression:
                     if node.id not in builtins:
                         variables.add(VariableName(node.id))
 
-        FindNameVisitor().visit(self.ast)
+        FindNameVisitor().visit(self._ast)
         return frozenset(variables)
 
     @cached_property
-    def ast(self) -> ast.Expression:
+    def _ast(self) -> ast.Expression:
         """Computes the abstract syntax tree for this expression"""
 
+        return self._parse_ast()
+
+    def _parse_ast(self) -> ast.Expression:
         expr = self.body
         if self._allow_percentage:
             expr = expr.replace("%", "*(1e-2)")
 
         if self._implicit_multiplication:
             expr = add_implicit_multiplication(expr)
-        try:
-            return ast.parse(expr, mode="eval")
-        except SyntaxError as error:
-            raise SyntaxError(f"Syntax error in the expression '{expr}'") from error
+        return ast.parse(expr, mode="eval")
 
     @cached_property
     def code(self):
-        return compile(self.ast, filename="<string>", mode="eval")
+        return compile(self._ast, filename="<string>", mode="eval")
 
     def __eq__(self, other):
         if isinstance(other, Expression):
