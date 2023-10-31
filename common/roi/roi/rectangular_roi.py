@@ -1,9 +1,11 @@
 import numpy as np
-from pydantic import validator, Field
 
+from settings_model import YAMLSerializable
+from util import attrs
 from .roi import ROI
 
 
+@attrs.define(slots=False)
 class RectangularROI(ROI):
     """Rectangular region of interest inside an image.
 
@@ -14,10 +16,46 @@ class RectangularROI(ROI):
         height: height of the roi.
     """
 
-    x: int = Field(..., ge=0)
-    width: int = Field(..., ge=0)
-    y: int = Field(..., ge=0)
-    height: int = Field(..., ge=0)
+    x: int = attrs.field(
+        validator=[attrs.validators.instance_of(int), attrs.validators.ge(0)],
+        on_setattr=attrs.setters.validate,
+    )
+    width: int = attrs.field(
+        validator=[attrs.validators.instance_of(int), attrs.validators.ge(0)],
+        on_setattr=attrs.setters.validate,
+    )
+    y: int = attrs.field(
+        validator=[attrs.validators.instance_of(int), attrs.validators.ge(0)],
+        on_setattr=attrs.setters.validate,
+    )
+    height: int = attrs.field(
+        validator=[attrs.validators.instance_of(int), attrs.validators.ge(0)],
+        on_setattr=attrs.setters.validate,
+    )
+
+    @x.validator
+    def _validate_x(self, _, x):
+        if x >= self.original_image_size[0]:
+            raise ValueError("x must be smaller than original_width")
+        return x
+
+    @width.validator
+    def _validate_width(self, _, width):
+        if self.x + width > self.original_image_size[0]:
+            raise ValueError("x + width must be smaller than original_width")
+        return width
+
+    @y.validator
+    def _validate_y(self, _, y):
+        if y >= self.original_image_size[1]:
+            raise ValueError("y must be smaller than original_height")
+        return y
+
+    @height.validator
+    def _validate_height(self, _, height):
+        if self.y + height > self.original_image_size[1]:
+            raise ValueError("y + height must be smaller than original_height")
+        return height
 
     def get_mask(self) -> np.ndarray:
         """A boolean array with the same shape as the original image.
@@ -52,38 +90,5 @@ class RectangularROI(ROI):
 
         return self.y + self.height - 1
 
-    @validator("x")
-    def _validate_x(cls, x, values):
-        if "original_image_size" not in values:
-            raise ValueError("original_image_size is not defined")
-        if x >= values["original_image_size"][0]:
-            raise ValueError("x must be smaller than original_width")
-        return x
 
-    @validator("width")
-    def _validate_width(cls, width, values):
-        if "original_image_size" not in values:
-            raise ValueError("original_image_size is not defined")
-        if "x" not in values:
-            raise ValueError("x is not defined")
-        if values["x"] + width > values["original_image_size"][0]:
-            raise ValueError("x + width must be smaller than original_width")
-        return width
-
-    @validator("y")
-    def _validate_y(cls, y, values):
-        if "original_image_size" not in values:
-            raise ValueError("original_image_size is not defined")
-        if y >= values["original_image_size"][1]:
-            raise ValueError("y must be smaller than original_height")
-        return y
-
-    @validator("height")
-    def _validate_height(cls, height, values):
-        if "original_image_size" not in values:
-            raise ValueError("original_image_size is not defined")
-        if "y" not in values:
-            raise ValueError("y is not defined")
-        if values["y"] + height > values["original_image_size"][1]:
-            raise ValueError("y + height must be smaller than original_height")
-        return height
+YAMLSerializable.register_attrs_class(RectangularROI)
