@@ -88,7 +88,6 @@ class NI6738AnalogCard(Sequencer):
 
         self._set_sequence_programmed()
 
-    @run_on_change_method
     def _program_sequence(self, sequence: SequencerInstruction) -> None:
         logger.debug("Programmed ni6738")
         values = np.concatenate(
