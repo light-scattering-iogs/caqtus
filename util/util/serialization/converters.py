@@ -4,12 +4,14 @@ from cattrs.converters import Converter
 from cattrs.preconf.json import make_converter as make_json_converter
 from cattrs.preconf.pyyaml import make_converter as make_yaml_converter
 
+unstruct_collection_overrides = {tuple: tuple}
+
 T = TypeVar("T")
 
 converters = {
-    "json": make_json_converter(),
-    "yaml": make_yaml_converter(),
-    "unconfigured": Converter(),
+    "json": make_json_converter(unstruct_collection_overrides=unstruct_collection_overrides),
+    "yaml": make_yaml_converter(unstruct_collection_overrides=unstruct_collection_overrides),
+    "unconfigured": Converter(unstruct_collection_overrides=unstruct_collection_overrides)
 }
 
 

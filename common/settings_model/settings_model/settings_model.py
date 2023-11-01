@@ -50,9 +50,7 @@ class SettingsModel(YAMLSerializable, BaseModel, ABC):
         validate_assignment = True
         arbitrary_types_allowed = True
         validate_all = True
-        keep_untouched = (
-            cached_property,
-        )
+        keep_untouched = (cached_property,)
 
     @classmethod
     def representer(cls, dumper: yaml.Dumper, settings: Self):
@@ -78,7 +76,9 @@ class SettingsModel(YAMLSerializable, BaseModel, ABC):
         try:
             return cls(**kwargs)
         except Exception as e:
-            raise ValueError(f"Could not construct {cls.__name__} from\n {pprint.pformat(kwargs)}") from e
+            raise ValueError(
+                f"Could not construct {cls.__name__} from\n {pprint.pformat(kwargs)}"
+            ) from e
 
 
 class VersionedSettingsModel(SettingsModel, ABC):
