@@ -85,8 +85,8 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     // Must be the integral of frequency_ramp over s from 0 to s
     __device__ float phase_ramp(float s)
     {{
-        //return reach_constant_velocity_adiabatically(s);
-        return phase_ramp_sin(s);      
+        return reach_constant_velocity_adiabatically(s);
+        //return phase_ramp_sin(s);      
     }}
     
 
@@ -112,14 +112,14 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
             else {{
                 float phase_remainder = fmodf(phase_mismatch, 2 * PI);
                 //if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
-                s0 = 1.0 - phase_remainder / (2 * PI * T * frequency_range);
+                s0 = (1.0 - phase_remainder / (2 * PI * T * frequency_range)) / (1-phase_ramp(1.0));
             }}   
             float phase = 0.0;
             if(s < s0){{
                 phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0));
             }}
             else{{
-                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0));
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0 + s0 * phase_ramp(1.0)));
             }}
             
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
