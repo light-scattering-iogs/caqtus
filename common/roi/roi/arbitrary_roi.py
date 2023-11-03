@@ -1,9 +1,9 @@
 from typing import Self
 
 import numpy as np
-
 from settings_model import YAMLSerializable
 from util import attrs
+
 from .roi import ROI
 
 
@@ -48,7 +48,8 @@ class ArbitraryROI(ROI):
         if len(shape) != 2:
             raise ValueError("mask must be 2D")
         shape = shape[0], shape[1]
-        return cls(original_image_size=shape, indices=np.argwhere(mask).tolist())
+        indices = np.argwhere(mask).tolist()
+        return cls(original_image_size=shape, indices=tuple(tuple(index) for index in indices))
 
     @indices.validator
     def validate_indices(self, _, indices):
