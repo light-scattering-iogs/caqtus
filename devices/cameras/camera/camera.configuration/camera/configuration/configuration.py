@@ -1,11 +1,13 @@
 from abc import ABC
 from typing import Any
 
-from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration import DeviceConfigurationAttrs, DeviceParameter
 from roi import RectangularROI
+from util import attrs
 
 
-class CameraConfiguration(DeviceConfiguration, ABC):
+@attrs.define(slots=False)
+class CameraConfiguration(DeviceConfigurationAttrs, ABC):
     """Contains static information to initialize a camera.
 
     This class is meant to be subclassed to add device-specific attributes.
@@ -14,12 +16,15 @@ class CameraConfiguration(DeviceConfiguration, ABC):
         roi: The region of interest to keep from the image taken by the camera.
     """
 
-    roi: RectangularROI
+    roi: RectangularROI = attrs.field(
+        validator=attrs.validators.instance_of(RectangularROI),
+        on_setattr=attrs.setters.validate,
+    )
 
     def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         return super().get_device_init_args() | {
-            "roi": self.roi,
-            "external_trigger": True,
+            DeviceParameter("roi"): self.roi,
+            DeviceParameter("external_trigger"): True,
         }
 
     @staticmethod
