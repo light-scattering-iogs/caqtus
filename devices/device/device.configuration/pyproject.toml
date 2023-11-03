@@ -15,6 +15,7 @@ pydantic = "^1.10.7"
 settings-model = {path = "../../../common/settings_model", develop = true}
 units = {path = "../../../common/units", develop = true}
 device-name = {path = "../device.name", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 
