@@ -4,7 +4,6 @@ from typing import Optional
 import numpy
 import pandas
 from scipy.optimize import curve_fit
-
 from util.inspect_function import get_parameters
 
 
@@ -51,6 +50,7 @@ def fit_to_data(
         sigma = group[y].sem().values
     else:
         sigma = group[se].mean().values
+    sigma[numpy.where(sigma == 0)] = numpy.mean(sigma)
     if any(numpy.isnan(sigma)):
         sigma = None
     try:
