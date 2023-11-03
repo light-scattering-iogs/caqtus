@@ -1,7 +1,7 @@
 import numpy as np
-
 from settings_model import YAMLSerializable
 from util import attrs
+
 from .roi import ROI
 
 
@@ -37,25 +37,21 @@ class RectangularROI(ROI):
     def _validate_x(self, _, x):
         if x >= self.original_image_size[0]:
             raise ValueError("x must be smaller than original_width")
-        return x
 
     @width.validator
     def _validate_width(self, _, width):
         if self.x + width > self.original_image_size[0]:
             raise ValueError("x + width must be smaller than original_width")
-        return width
 
     @y.validator
     def _validate_y(self, _, y):
         if y >= self.original_image_size[1]:
             raise ValueError("y must be smaller than original_height")
-        return y
 
     @height.validator
     def _validate_height(self, _, height):
         if self.y + height > self.original_image_size[1]:
             raise ValueError("y + height must be smaller than original_height")
-        return height
 
     def get_mask(self) -> np.ndarray:
         """A boolean array with the same shape as the original image.
