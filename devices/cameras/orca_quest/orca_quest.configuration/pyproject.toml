@@ -9,6 +9,7 @@ packages = [{include = "orca_quest"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
+util = {path = "../../../../util", develop = true}
 camera-configuration = {path = "../../camera/camera.configuration", develop = true}
 device-config = {path = "../../../device/device.configuration", develop = true}
 

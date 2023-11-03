@@ -10,7 +10,12 @@ from atom_detector.configuration import AtomDetectorConfiguration
 from atom_detector_lane.configuration import AtomDetectorLane
 from camera.configuration import CameraConfiguration
 from camera_lane.configuration import CameraLane
-from device.configuration import DeviceName, DeviceConfiguration, DeviceConfigType
+from device.configuration import (
+    DeviceName,
+    DeviceConfiguration,
+    DeviceConfigurationAttrs,
+    DeviceConfigType,
+)
 from device_server.name import DeviceServerName
 from digital_lane.configuration import DigitalLane
 from lane.configuration import Lane
@@ -66,9 +71,9 @@ class ExperimentConfig(VersionedSettingsModel):
         default_factory=SequenceSteps,
     )
 
-    device_configurations: dict[DeviceName, DeviceConfiguration] = Field(
-        default_factory=dict
-    )
+    device_configurations: dict[
+        DeviceName, DeviceConfiguration | DeviceConfigurationAttrs
+    ] = Field(default_factory=dict)
 
     optimization_configurations: dict[str, OptimizerConfiguration] = Field(
         default_factory=dict,

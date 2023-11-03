@@ -16,6 +16,7 @@ experiment-control-sequence-runner = {path = "../experiment_control.sequence_run
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 mypy = "^1.4.1"
+jupyter = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]

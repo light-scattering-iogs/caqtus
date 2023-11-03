@@ -9,6 +9,7 @@ packages = [{include = "camera"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
+util = {path = "../../../../util", develop = true}
 device-config = {path = "../../../device/device.configuration", develop = true}
 roi = {path = "../../../../common/roi", develop = true}
 

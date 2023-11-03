@@ -9,8 +9,9 @@ from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from orca_quest.configuration import OrcaQuestCameraConfiguration
 from sequencer.configuration import ChannelSpecialPurpose
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
-from tweezer_arranger.configuration import TweezerArrangerConfiguration
 from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from util import serialization
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
@@ -30,6 +31,16 @@ device_configs = [
     AODTweezerArrangerConfiguration,
     SwabianPulseStreamerConfiguration,
 ]
+
+
+# We can only register the subclasses of CameraConfiguration for serialization now,
+# after all of them have been defined and imported
+serialization.include_subclasses(
+    CameraConfiguration,
+    union_strategy=serialization.strategies.include_type(
+        tag_name="camera_configuration_type"
+    ),
+)
 
 __all__ = [
     ChannelSpecialPurpose,

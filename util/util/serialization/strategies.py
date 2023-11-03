@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, TypeVar
 
 from attr import AttrsInstance
 from cattrs import BaseConverter
@@ -10,14 +10,16 @@ from cattrs.strategies import (
 
 from .converters import converters
 
+_C = TypeVar("_C", bound=AttrsInstance)
+
 
 def include_type(tag_name: str = "class") -> Callable[[Any, BaseConverter], Any]:
     return partial(configure_tagged_union, tag_name=tag_name)
 
 
 def include_subclasses(
-    parent_class: type[AttrsInstance],
-    subclasses: Optional[tuple[type[AttrsInstance]]] = None,
+    parent_class: type[_C],
+    subclasses: Optional[tuple[type[_C]]] = None,
     union_strategy: Optional[Callable[[Any, BaseConverter], Any]] = None,
 ) -> None:
     for converter in converters.values():
