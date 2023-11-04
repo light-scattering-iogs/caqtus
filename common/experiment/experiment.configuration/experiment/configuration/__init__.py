@@ -2,7 +2,7 @@ __version__ = "0.1.0"
 
 from aod_tweezer_arranger.configuration import AODTweezerArrangerConfiguration
 from atom_detector.configuration import AtomDetectorConfiguration
-from device.configuration import DeviceParameter
+from device.configuration import DeviceParameter, DeviceConfigurationAttrs
 from elliptec_ell14.configuration import ElliptecELL14RotationStageConfiguration
 from imaging_source.configuration import ImagingSourceCameraDMK33GR0134Configuration
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
@@ -33,12 +33,12 @@ device_configs = [
 ]
 
 
-# We can only register the subclasses of CameraConfiguration for serialization now,
+# We can only register the subclasses of DeviceConfiguration for serialization now,
 # after all of them have been defined and imported
 serialization.include_subclasses(
-    CameraConfiguration,
+    DeviceConfigurationAttrs,
     union_strategy=serialization.strategies.include_type(
-        tag_name="camera_configuration_type"
+        tag_name="device_configuration_type"
     ),
 )
 
