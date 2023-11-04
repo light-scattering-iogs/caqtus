@@ -1,10 +1,11 @@
-import datetime
 from collections.abc import Set
-from typing import Any, TypedDict, NewType
+from typing import Any, NewType
 
 from configuration_holder import ConfigurationHolder
-from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration import DeviceConfigurationAttrs, DeviceParameter
+from settings_model import YAMLSerializable
 from single_atom_detector import SingleAtomDetector
+from util import attrs
 from .atom_label import AtomLabel
 
 ImagingConfigurationName = NewType("ImagingConfigurationName", str)
@@ -12,13 +13,9 @@ ImagingConfigurationName = NewType("ImagingConfigurationName", str)
 ImagingConfiguration = dict[AtomLabel, SingleAtomDetector]
 
 
-class DetectorConfigurationInfo(TypedDict):
-    configuration: dict[AtomLabel, SingleAtomDetector]
-    modification_date: datetime.datetime
-
-
+@attrs.define(slots=False)
 class AtomDetectorConfiguration(
-    DeviceConfiguration,
+    DeviceConfigurationAttrs,
     ConfigurationHolder[ImagingConfigurationName, ImagingConfiguration],
 ):
     """Holds the information needed to initialize an AtomDetector device."""
@@ -35,3 +32,6 @@ class AtomDetectorConfiguration(
 
     def get_device_type(self) -> str:
         return "AtomDetector"
+
+
+YAMLSerializable.register_attrs_class(AtomDetectorConfiguration)
