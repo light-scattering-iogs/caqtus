@@ -1,20 +1,26 @@
 from datetime import datetime
 from typing import Generic, TypeVar, MutableMapping
 
-from settings_model import SettingsModel
+from settings_model import YAMLSerializable
+from util import attrs
 from validate_arguments import validate_arguments
 
 _T = TypeVar("_T")
 _K = TypeVar("_K")
 
 
-class ConfigurationInfo(Generic[_T], SettingsModel):
+@attrs.define
+class ConfigurationInfo(Generic[_T]):
     configuration: _T
     creation_date: datetime
     modification_date: datetime
 
 
-class ConfigurationHolder(SettingsModel, Generic[_K, _T], MutableMapping[_K, _T]):
+YAMLSerializable.register_attrs_class(ConfigurationInfo)
+
+
+@attrs.define(slots=False)
+class ConfigurationHolder(Generic[_K, _T], MutableMapping[_K, _T]):
     """Holds several configuration with their creation and modification dates.
 
     This class behaves like a mutable mapping from configuration names to configurations
