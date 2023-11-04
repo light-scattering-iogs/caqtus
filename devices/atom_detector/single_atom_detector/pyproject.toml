@@ -14,6 +14,7 @@ pyyaml = "^6.0"
 
 roi = {path = "../../../common/roi", develop = true}
 settings-model = {path = "../../../common/settings_model", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 [build-system]
