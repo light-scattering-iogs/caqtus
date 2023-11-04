@@ -27,7 +27,7 @@ class AtomDetectorConfiguration(
         self, imaging_configurations_to_use: Set[ImagingConfigurationName]
     ) -> dict[DeviceParameter, Any]:
         return super().get_device_init_args() | {
-            "imaging_configurations": {
+            DeviceParameter("imaging_configurations"): {
                 configuration_name: self[configuration_name]
                 for configuration_name in imaging_configurations_to_use
             }
