@@ -5,8 +5,8 @@ from pydantic import validator, Field
 from pydantic.color import Color
 
 from device.configuration import DeviceConfiguration, DeviceParameter
-from settings_model import SettingsModel, yaml
-from .trigger import Trigger
+from settings_model import SettingsModel, yaml, YAMLSerializable
+from util import attrs
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 from .trigger import Trigger
 
@@ -20,8 +20,9 @@ def is_channel_name(name: Any) -> TypeGuard[ChannelName]:
 MappingType = TypeVar("MappingType", bound=OutputMapping)
 
 
-class ChannelSpecialPurpose(SettingsModel):
-    purpose: str
+@attrs.define
+class ChannelSpecialPurpose:
+    purpose: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
 
     def __hash__(self):
         return hash(self.purpose)
@@ -30,28 +31,41 @@ class ChannelSpecialPurpose(SettingsModel):
         return self.purpose
 
     @classmethod
-    def representer(cls, dumper: yaml.Dumper, channel_purpose: "ChannelSpecialPurpose"):
-        return dumper.represent_scalar(f"!{cls.__name__}", channel_purpose.purpose)
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        if not isinstance(node, yaml.ScalarNode):
-            raise ValueError(
-                f"Cannot construct {cls.__name__} from {node}. Expected a scalar node"
-            )
-        purpose = loader.construct_scalar(node)
-        if not isinstance(purpose, str):
-            raise ValueError(
-                f"Cannot construct {cls.__name__} from {node}. Expected a string"
-            )
-        return cls(purpose=purpose)
-
-    @classmethod
     def unused(cls):
         return cls(purpose="Unused")
 
     def is_unused(self) -> bool:
         return self.purpose == "Unused"
+
+
+def channel_purpose_representer(
+    dumper: yaml.Dumper, channel_purpose: ChannelSpecialPurpose
+):
+    return dumper.represent_scalar(f"!ChannelSpecialPurpose", channel_purpose.purpose)
+
+
+YAMLSerializable.get_dumper().add_representer(
+    ChannelSpecialPurpose, channel_purpose_representer
+)
+
+
+def channel_purpose_constructor(loader: yaml.Loader, node: yaml.Node):
+    if not isinstance(node, yaml.ScalarNode):
+        raise ValueError(
+            f"Cannot construct ChannelSpecialPurpose from {node}. Expected a scalar"
+            " node"
+        )
+    purpose = loader.construct_scalar(node)
+    if not isinstance(purpose, str):
+        raise ValueError(
+            f"Cannot construct ChannelSpecialPurpose from {node}. Expected a string"
+        )
+    return ChannelSpecialPurpose(purpose=purpose)
+
+
+YAMLSerializable.get_loader().add_constructor(
+    "!ChannelSpecialPurpose", channel_purpose_constructor
+)
 
 
 LogicalType = TypeVar("LogicalType")
@@ -109,10 +123,10 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
 
     Fields:
         number_channels: The number of channels of the device.
-        time_step: The quantization time step used, in nanoseconds. The device can only update its output at multiples
-            of this time step.
-        channels: The configuration of the channels of the device. The length of this list must match the number of
-            channels of the device.
+        time_step: The quantization time step used, in nanoseconds. The device can only
+            update its output at multiples of this time step.
+        channels: The configuration of the channels of the device. The length of this
+            list must match the number of channels of the device.
     """
 
     number_channels: ClassVar[int]
