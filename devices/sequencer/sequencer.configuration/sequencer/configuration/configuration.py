@@ -76,20 +76,27 @@ OutputType = TypeVar("OutputType")
 class ChannelConfiguration(SettingsModel, ABC):
     """Contains information to configure the output of a channel.
 
-    This is used to translate from logical values to output values. The logical values are the values that are asked
-    for in the sequence. The output values are the values that are actually output on the channel.
+    This is used to translate from logical values to output values. The logical values
+    are the values that are asked for in the sequence. The output values are the values
+    that are actually output on the channel.
 
     Fields:
-        description: The name of the lane that should be output on this channel or a special purpose if the channel is
-            used for something else, like triggering a camera or another sequencer.
-        output_mapping: A mapping from the logical values of the channel to the output valued. This is used to translate
-            human-readable values to the actual values that are output on the channel.
-        default_value: The default value of the channel. This is the value that is output when the channel is not used.
-        before_value: The value to use for the channel before the first step of the sequence.
-        after_value: The value to use for the channel after the last step of the sequence.
+        description: The name of the lane that should be output on this channel or a
+            special purpose if the channel is used for something else, like triggering a
+            camera or another sequencer.
+        output_mapping: A mapping from the logical values of the channel to the output
+            values. This is used to translate human-readable values to the actual values
+            that are output on the channel.
+        default_value: The default value of the channel. This is the value that is
+            output when the channel is not used.
+        before_value: The value to use for the channel before the first step of the
+            sequence.
+        after_value: The value to use for the channel after the last step of the
+            sequence.
         color: The color to use for the channel in the GUI.
-        delay: The delay to apply to the channel. This is used to compensate for the delay between the logical time and
-            the actual effect of the channel. A positive delay means that the output is retarder, i.e. its output will
+        delay: The delay to apply to the channel. This is used to compensate for the
+            delay between the logical time and the actual effect of the channel. A
+            positive delay means that the output is retarder, i.e. its output will
             change after the logical time.
     """
 
