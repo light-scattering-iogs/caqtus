@@ -5,7 +5,7 @@ import numpy
 
 from settings_model import YAMLSerializable
 from units import Quantity, UndefinedUnitError
-from util import attrs
+from util import attrs, serialization
 
 InputType = TypeVar("InputType")
 OutputType = TypeVar("OutputType")
@@ -178,3 +178,6 @@ class CalibratedAnalogMapping(AnalogMapping):
 
 
 YAMLSerializable.register_attrs_class(CalibratedAnalogMapping)
+serialization.include_subclasses(
+    AnalogMapping, union_strategy=serialization.include_type(tag_name="mapping_type")
+)

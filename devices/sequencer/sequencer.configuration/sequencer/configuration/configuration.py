@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar
+from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar, Generic
 
+import attr.setters
 from pydantic import validator, Field
 from pydantic.color import Color
 
 from device.configuration import DeviceConfiguration, DeviceParameter
-from settings_model import SettingsModel, yaml, YAMLSerializable
-from util import attrs
+from settings_model import yaml, YAMLSerializable
+from util import attrs, serialization
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 from .trigger import Trigger
 
@@ -72,8 +73,8 @@ LogicalType = TypeVar("LogicalType")
 OutputType = TypeVar("OutputType")
 
 
-# Generic[LogicalType, OutputType]
-class ChannelConfiguration(SettingsModel, ABC):
+@attrs.define(slots=False)
+class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     """Contains information to configure the output of a channel.
 
     This is used to translate from logical values to output values. The logical values
@@ -100,11 +101,16 @@ class ChannelConfiguration(SettingsModel, ABC):
             change after the logical time.
     """
 
-    description: ChannelName | ChannelSpecialPurpose
-    output_mapping: OutputMapping  # [LogicalType, OutputType]
-    default_value: Any  # LogicalType
+    description: ChannelName | ChannelSpecialPurpose = attrs.field(
+        validator=attrs.validators.instance_of((str, ChannelSpecialPurpose)),
+        on_setattr=attrs.setters.validate,
+    )
+    output_mapping: OutputMapping[LogicalType, OutputType]
+    default_value: LogicalType
     color: Optional[Color] = None
-    delay: float = 0.0
+    delay: float = attrs.field(
+        default=0.0, converter=float, on_setattr=attr.setters.convert
+    )
 
     def has_special_purpose(self) -> bool:
         return isinstance(self.description, ChannelSpecialPurpose)
@@ -113,16 +119,72 @@ class ChannelConfiguration(SettingsModel, ABC):
         return self.has_special_purpose() and self.description.is_unused()
 
 
-# ChannelConfiguration[bool, bool]
-class DigitalChannelConfiguration(ChannelConfiguration):
-    output_mapping: DigitalMapping
-    default_value: bool = False
+def description_structure(description: Any, _) -> str | ChannelSpecialPurpose:
+    if isinstance(description, str):
+        return description
+    elif isinstance(description, dict):
+        return ChannelSpecialPurpose(purpose=description["purpose"])
+    else:
+        raise TypeError(f"Can't construct description from {description}")
 
 
-# ChannelConfiguration[float, float]
-class AnalogChannelConfiguration(ChannelConfiguration):
-    output_mapping: AnalogMapping
-    default_value: float = 0.0
+serialization.register_structure_hook(
+    ChannelName | ChannelSpecialPurpose, description_structure
+)
+
+
+def color_unstructure(color: Color):
+    return color.original()
+
+
+serialization.register_unstructure_hook(Color, color_unstructure)
+
+
+def color_structure(color: Any, _) -> Color:
+    return Color(color)
+
+
+serialization.register_structure_hook(Color, color_structure)
+
+
+@attrs.define(slots=False)
+class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
+    output_mapping: DigitalMapping = attrs.field(
+        validator=attrs.validators.instance_of(DigitalMapping),
+        on_setattr=attrs.setters.validate,
+    )
+    default_value: bool = attrs.field(
+        default=False, converter=bool, on_setattr=attrs.setters.convert
+    )
+    # We need to redefine these fields just because they have default values and can't
+    # come above output_mapping.
+    color: Optional[Color] = None
+    delay: float = attrs.field(
+        default=0.0, converter=float, on_setattr=attr.setters.convert
+    )
+
+
+YAMLSerializable.register_attrs_class(DigitalChannelConfiguration)
+
+
+@attrs.define(slots=False)
+class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
+    output_mapping: AnalogMapping = attrs.field(
+        validator=attrs.validators.instance_of(AnalogMapping),
+        on_setattr=attrs.setters.validate,
+    )
+    default_value: float = attrs.field(
+        default=0.0, converter=float, on_setattr=attrs.setters.convert
+    )
+    # We need to redefine these fields just because they have default values and can't
+    # come above output_mapping.
+    color: Optional[Color] = None
+    delay: float = attrs.field(
+        default=0.0, converter=float, on_setattr=attr.setters.convert
+    )
+
+
+YAMLSerializable.register_attrs_class(AnalogChannelConfiguration)
 
 
 class SequencerConfiguration(DeviceConfiguration, ABC):
