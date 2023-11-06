@@ -11,6 +11,9 @@ class TriggerEdge(Enum):
     BOTH = "both"
 
 
+serialization.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)
+
+
 @attrs.define
 class Trigger(ABC):
     def is_software_trigger(self) -> bool:
