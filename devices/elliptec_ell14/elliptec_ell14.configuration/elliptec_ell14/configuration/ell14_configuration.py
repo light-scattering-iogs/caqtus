@@ -1,17 +1,18 @@
 import logging
 from typing import Any, Self
 
-from pydantic import Field
-
-from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration import DeviceConfigurationAttrs, DeviceParameter
 from expression import Expression
+from settings_model import YAMLSerializable
 from units import units
+from util import attrs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
+@attrs.define(slots=False)
+class ElliptecELL14RotationStageConfiguration(DeviceConfigurationAttrs):
     """Holds static configuration to control an ELL14 rotation stage device
 
     Attributes:
@@ -28,17 +29,24 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
             position.
     """
 
-    serial_port: str
-    device_id: int = Field(ge=0, le=255)
-    position: Expression
+    serial_port: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+    device_id: int = attrs.field(
+        converter=int,
+        validator=[attrs.validators.ge(0), attrs.validators.le(255)],
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
+    )
+    position: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
 
     def get_device_type(self) -> str:
         return "ElliptecELL14RotationStage"
 
     def get_device_init_args(self) -> dict[DeviceParameter, Any]:
         extra = {
-            "serial_port": self.serial_port,
-            "device_id": self.device_id,
+            DeviceParameter("serial_port"): self.serial_port,
+            DeviceParameter("device_id"): self.device_id,
         }
         dependent_variables = self.position.upstream_variables.difference(units.keys())
         if dependent_variables:
@@ -48,7 +56,7 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
                 " are set"
             )
         else:
-            extra["initial_position"] = self.position.evaluate(units)
+            extra[DeviceParameter("initial_position")] = self.position.evaluate(units)
         return super().get_device_init_args() | extra
 
     @classmethod
@@ -60,3 +68,6 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfiguration):
             device_id=0,
             position=Expression("0"),
         )
+
+
+YAMLSerializable.register_attrs_class(ElliptecELL14RotationStageConfiguration)
