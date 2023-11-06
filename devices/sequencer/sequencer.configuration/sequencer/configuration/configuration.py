@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar, Generic
 
 import attr.setters
-from pydantic import validator, Field
+from pydantic import validator
 from pydantic.color import Color
 
-from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration import DeviceConfigurationAttrs, DeviceParameter
 from settings_model import yaml, YAMLSerializable
 from util import attrs, serialization
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
@@ -187,7 +187,8 @@ class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
 YAMLSerializable.register_attrs_class(AnalogChannelConfiguration)
 
 
-class SequencerConfiguration(DeviceConfiguration, ABC):
+@attrs.define(slots=False)
+class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
     """Holds the static configuration of a sequencer device.
 
     Fields:
@@ -199,9 +200,19 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
     """
 
     number_channels: ClassVar[int]
-    time_step: int = Field(ge=1)
-    channels: tuple[ChannelConfiguration, ...]
-    trigger: Trigger
+    time_step: int = attrs.field(
+        converter=int,
+        validator=attrs.validators.ge(1),
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
+    )
+    channels: tuple[ChannelConfiguration, ...] = attrs.field(
+        converter=tuple,
+        validator=attrs.validators.deep_iterable(
+            member_validator=attrs.validators.instance_of(ChannelConfiguration)
+        ),
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
+    )
+    trigger: Trigger = attrs.field(validator=attrs.validators.instance_of(Trigger))
 
     @classmethod
     @abstractmethod
@@ -241,5 +252,5 @@ class SequencerConfiguration(DeviceConfiguration, ABC):
         return max(channel.delay for channel in self.channels)
 
     def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
-        extra = {"trigger": self.trigger}
+        extra = {DeviceParameter("trigger"): self.trigger}
         return super().get_device_init_args(*args, **kwargs) | extra
