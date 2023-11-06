@@ -1,24 +1,30 @@
-from abc import abstractmethod
-from typing import Generic, TypeVar
+from abc import abstractmethod, ABC
+from typing import Generic, TypeVar, Iterable
 
 import numpy
-from pydantic import validator
 
-from settings_model import SettingsModel
+from settings_model import YAMLSerializable
 from units import Quantity, UndefinedUnitError
+from util import attrs
 
 InputType = TypeVar("InputType")
 OutputType = TypeVar("OutputType")
 
 
-class OutputMapping(Generic[InputType, OutputType]):
+@attrs.define(slots=False)
+class OutputMapping(Generic[InputType, OutputType], ABC):
     @abstractmethod
     def convert(self, input_: InputType) -> OutputType:
-        ...
+        raise NotImplementedError(
+            "All subclasses of OutputMapping must implement convert"
+        )
 
 
-class DigitalMapping(SettingsModel, OutputMapping[bool, bool]):
-    invert: bool = False
+@attrs.define(slots=False)
+class DigitalMapping(OutputMapping[bool, bool]):
+    invert: bool = attrs.field(
+        default=False, converter=bool, on_setattr=attrs.setters.convert
+    )
 
     def convert(self, input_):
         if self.invert:
@@ -27,7 +33,11 @@ class DigitalMapping(SettingsModel, OutputMapping[bool, bool]):
             return input_
 
 
-class AnalogMapping(OutputMapping[float, float]):
+YAMLSerializable.register_attrs_class(DigitalMapping)
+
+
+@attrs.define(slots=False)
+class AnalogMapping(OutputMapping[float, float], ABC):
     """Abstract class for a mapping between some input quantity to an output quantity
 
     Warnings:
@@ -65,7 +75,13 @@ class AnalogMapping(OutputMapping[float, float]):
         return f"{input_units}/{output_units}"
 
 
-class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
+def data_points_converter(data_points: Iterable[tuple[float, float]]):
+    point_to_tuple = [(x, y) for x, y in data_points]
+    return tuple(sorted(point_to_tuple))
+
+
+@attrs.define(slots=False)
+class CalibratedAnalogMapping(AnalogMapping):
     """Convert between input and output quantities by interpolating a set of measured points
 
     This mapping is for example useful when one needs to convert an experimentally measurable quantity (e.g. the
@@ -79,45 +95,31 @@ class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
         measured_data_points: tuple of (input, output) tuples. The points will be rearranged to have the inputs sorted.
     """
 
-    input_units: str = ""
-    output_units: str = ""
-    measured_data_points: tuple[tuple[float, float], ...]
+    measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
+        converter=data_points_converter, on_setattr=attrs.setters.convert
+    )
+    input_units: str = attrs.field(
+        default="", converter=str, on_setattr=attrs.setters.convert
+    )
+    output_units: str = attrs.field(
+        default="", converter=str, on_setattr=attrs.setters.convert
+    )
 
-    @validator("input_units")
-    def validate_input_units(cls, input_units):
+    @input_units.validator
+    def validate_input_units(self, _, input_units):
         try:
             Quantity(1, units=input_units)
         except UndefinedUnitError:
             raise ValueError(f"Unknown input units: {input_units}")
         return input_units
 
-    @validator("output_units")
-    def validate_output_units(cls, output_units):
+    @output_units.validator
+    def validate_output_units(self, _, output_units):
         try:
             Quantity(1, units=output_units)
         except UndefinedUnitError:
             raise ValueError(f"Unknown output units: {output_units}")
         return output_units
-
-    @validator("measured_data_points")
-    def sort_by_input(cls, measured_data_points):
-        return sorted(measured_data_points)
-
-    def __init__(self, input_units: str = "", output_units: str = "", **kwargs):
-        if "measured_data_points" in kwargs:
-            measured_data_points = kwargs.pop("measured_data_points")
-        elif "input_values" in kwargs and "output_values" in kwargs:
-            input_values = kwargs.pop("input_values")
-            output_values = kwargs.pop("output_values")
-            measured_data_points = tuple(zip(input_values, output_values))
-        else:
-            measured_data_points = tuple()
-
-        super().__init__(
-            input_units=input_units,
-            output_units=output_units,
-            measured_data_points=measured_data_points,
-        )
 
     def get_input_units(self) -> str:
         return self.input_units
@@ -173,3 +175,6 @@ class CalibratedAnalogMapping(SettingsModel, AnalogMapping):
         new_data_points = list(self.measured_data_points)
         new_data_points.insert(index, (input_, output))
         self.measured_data_points = tuple(new_data_points)
+
+
+YAMLSerializable.register_attrs_class(CalibratedAnalogMapping)
