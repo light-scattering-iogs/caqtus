@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Callable, TypeVar
 
 from cattrs.converters import Converter
@@ -9,9 +10,15 @@ unstruct_collection_overrides = {tuple: tuple}
 T = TypeVar("T")
 
 converters = {
-    "json": make_json_converter(unstruct_collection_overrides=unstruct_collection_overrides),
-    "yaml": make_yaml_converter(unstruct_collection_overrides=unstruct_collection_overrides),
-    "unconfigured": Converter(unstruct_collection_overrides=unstruct_collection_overrides)
+    "json": make_json_converter(
+        unstruct_collection_overrides=unstruct_collection_overrides
+    ),
+    "yaml": make_yaml_converter(
+        unstruct_collection_overrides=unstruct_collection_overrides
+    ),
+    "unconfigured": Converter(
+        unstruct_collection_overrides=unstruct_collection_overrides
+    ),
 }
 
 
@@ -47,3 +54,20 @@ def register_structure_hook(cls: Any, func: Callable[[Any, type[T]], T]) -> None
 
     for converter in converters.values():
         converter.register_structure_hook(cls, func)
+
+
+# datetime serialization
+
+
+def unstructure_datetime(obj: datetime) -> str:
+    return obj.isoformat()
+
+
+register_unstructure_hook(datetime, unstructure_datetime)
+
+
+def structure_datetime(serialized: str, _) -> datetime:
+    return datetime.fromisoformat(serialized)
+
+
+register_structure_hook(datetime, structure_datetime)
