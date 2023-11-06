@@ -7,7 +7,7 @@ from .converters import (
     register_unstructure_hook,
     register_structure_hook,
 )
-from .customize import customize
+from .customize import customize, AttributeOverride
 from .strategies import include_subclasses, include_type
 
 __all__ = [
@@ -17,6 +17,7 @@ __all__ = [
     "register_structure_hook",
     "register_unstructure_hook",
     "customize",
+    "AttributeOverride",
     "override",
     "include_subclasses",
     "include_type",
