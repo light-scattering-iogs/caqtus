@@ -32,6 +32,9 @@ class YAMLSerializable(abc.ABC):
     def register_attrs_class(cls, other_cls: type[_C]):
         fields = attrs.fields(other_cls)
 
+        # fields that are not init are not serialized by default
+        fields = [field for field in fields if field.init]
+
         def representer(dumper: yaml.Dumper, instance: _C):
             return dumper.represent_mapping(
                 f"!{other_cls.__name__}",
@@ -47,7 +50,8 @@ class YAMLSerializable(abc.ABC):
                 return other_cls(**kwargs)
             except Exception as e:
                 raise ValueError(
-                    f"Could not construct {cls.__name__} from\n {pprint.pformat(kwargs)}"
+                    f"Could not construct {cls.__name__} from\n"
+                    f" {pprint.pformat(kwargs)}"
                 ) from e
 
         cls.get_loader().add_constructor(f"!{other_cls.__name__}", constructor)
