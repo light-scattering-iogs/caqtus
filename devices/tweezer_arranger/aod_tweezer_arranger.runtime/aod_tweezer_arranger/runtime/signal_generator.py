@@ -8,6 +8,7 @@ from typing import (
     SupportsFloat,
     SupportsInt,
     Self,
+    Literal,
 )
 
 import numpy as np
@@ -242,6 +243,7 @@ class SignalGenerator:
         number_samples: NumberSamples,
         previous_step_stop: int,
         next_step_start: int,
+        move_type: Literal["sin", "throw"],
     ) -> AWGSignalArray:
         number_tones = len(initial_amplitudes)
         if (
@@ -289,7 +291,7 @@ class SignalGenerator:
                 self._final_phases_gpu,
                 np.array(final_phases, dtype=np.float32),
             )
-
+            move_for_c = 0 if move_type == "sin" else 1
             arguments = [
                 np.array([int(output_gpu)], dtype=np.uint64),
                 np.array([number_samples], dtype=np.uint32),
@@ -297,6 +299,7 @@ class SignalGenerator:
                 np.array([self._time_step], dtype=np.float32),
                 np.array([previous_step_stop], dtype=np.uint32),
                 np.array([next_step_start], dtype=np.uint32),
+                np.array([move_for_c], dtype=np.uint32),
             ]
             args = np.array([arg.ctypes.data for arg in arguments], dtype=np.uint64)
             number_blocks = math.ceil(number_samples / NUMBER_THREADS_PER_BLOCK)

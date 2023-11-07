@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Self, Literal
 
 from lane.configuration import Lane
 from settings_model import YAMLSerializable
@@ -31,12 +31,15 @@ YAMLSerializable.register_attrs_class(HoldTweezers)
 
 @attrs.define
 class MoveType(ABC):
-    pass
+    @abstractmethod
+    def __str__(self) -> Literal["sin", "throw"]:
+        raise NotImplementedError
 
 
 @attrs.define
 class SinMove(MoveType):
-    pass
+    def __str__(self):
+        return "sin"
 
 
 YAMLSerializable.register_attrs_class(SinMove)
@@ -44,7 +47,8 @@ YAMLSerializable.register_attrs_class(SinMove)
 
 @attrs.define
 class ThrowMove(MoveType):
-    pass
+    def __str__(self):
+        return "throw"
 
 
 YAMLSerializable.register_attrs_class(ThrowMove)
