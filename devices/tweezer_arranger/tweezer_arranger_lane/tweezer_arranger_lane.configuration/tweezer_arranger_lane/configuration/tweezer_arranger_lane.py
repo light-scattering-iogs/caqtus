@@ -2,16 +2,19 @@ from abc import ABC, abstractmethod
 from typing import Self
 
 from lane.configuration import Lane
-from settings_model import SettingsModel
+from settings_model import YAMLSerializable
 from tweezer_arranger.configuration_name import TweezerConfigurationName
+from util import attrs
 
 
-class TweezerAction(SettingsModel, ABC):
+@attrs.define
+class TweezerAction(ABC):
     @abstractmethod
     def __str__(self) -> str:
         raise NotImplementedError
 
 
+@attrs.define
 class HoldTweezers(TweezerAction):
     configuration: TweezerConfigurationName
 
@@ -23,7 +26,38 @@ class HoldTweezers(TweezerAction):
         return cls(configuration=TweezerConfigurationName("..."))
 
 
+YAMLSerializable.register_attrs_class(HoldTweezers)
+
+
+@attrs.define
+class MoveType(ABC):
+    pass
+
+
+@attrs.define
+class SinMove(MoveType):
+    pass
+
+
+YAMLSerializable.register_attrs_class(SinMove)
+
+
+@attrs.define
+class ThrowMove(MoveType):
+    pass
+
+
+YAMLSerializable.register_attrs_class(ThrowMove)
+
+
+@attrs.define
 class MoveTweezers(TweezerAction):
+    move_type: MoveType = attrs.field(
+        factory=SinMove,
+        validator=attrs.validators.instance_of(MoveType),
+        on_setattr=attrs.setters.validate,
+    )
+
     def __str__(self):
         return "Move"
 
@@ -32,13 +66,26 @@ class MoveTweezers(TweezerAction):
         return cls()
 
 
+YAMLSerializable.register_attrs_class(MoveTweezers)
+
+
+@attrs.define
 class RearrangeTweezers(TweezerAction):
+    move_type: MoveType = attrs.field(
+        factory=SinMove,
+        validator=attrs.validators.instance_of(MoveType),
+        on_setattr=attrs.setters.validate,
+    )
+
     def __str__(self):
         return "Rearrange"
 
     @classmethod
     def default(cls) -> Self:
         return cls()
+
+
+YAMLSerializable.register_attrs_class(RearrangeTweezers)
 
 
 class TweezerArrangerLane(Lane[TweezerAction]):
