@@ -1,26 +1,29 @@
-from abc import ABC
-from dataclasses import dataclass
+import abc
 
+from tweezer_arranger_lane.configuration import MoveType
+from util import attrs
 from .arranger_configuration import TweezerConfigurationName
 
 
-@dataclass(frozen=True)
-class ArrangerInstruction(ABC):
+@attrs.frozen
+class ArrangerInstruction(abc.ABC):
     pass
 
 
-@dataclass(frozen=True)
+@attrs.frozen
 class HoldTweezers(ArrangerInstruction):
     tweezer_configuration: TweezerConfigurationName
 
 
-@dataclass(frozen=True)
+@attrs.frozen
 class MoveTweezers(ArrangerInstruction):
     initial_tweezer_configuration: TweezerConfigurationName
     final_tweezer_configuration: TweezerConfigurationName
+    move_type: MoveType
 
 
-@dataclass(frozen=True)
+@attrs.frozen
 class RearrangeTweezers(ArrangerInstruction):
     initial_tweezer_configuration: TweezerConfigurationName
     final_tweezer_configuration: TweezerConfigurationName
+    move_type: MoveType
