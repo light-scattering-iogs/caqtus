@@ -57,7 +57,9 @@ class TweezerArrangerConfiguration(
                         )
                     sequence.append(
                         MoveTweezerInstruction(
-                            previous.configuration, following.configuration
+                            previous.configuration,
+                            following.configuration,
+                            move_type=action.move_type,
                         )
                     )
                 case RearrangeTweezersLane():
@@ -73,16 +75,18 @@ class TweezerArrangerConfiguration(
                         )
                     sequence.append(
                         RearrangeTweezerInstruction(
-                            previous.configuration, following.configuration
+                            previous.configuration,
+                            following.configuration,
+                            move_type=action.move_type,
                         )
                     )
 
         # We return a dictionary of tweezer configurations that will be used and the sequence that indicates in
         # which order to use them
         return super().get_device_init_args() | {
-            "tweezer_configurations": {
+            DeviceParameter("tweezer_configurations"): {
                 configuration_name: self[configuration_name]
                 for configuration_name in tweezer_configurations_to_use
             },
-            "tweezer_sequence": sequence,
+            DeviceParameter("tweezer_sequence"): sequence,
         }

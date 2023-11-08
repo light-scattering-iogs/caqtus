@@ -3,12 +3,22 @@ import math
 from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 
 import numpy as np
+from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from attrs import define, field, frozen
 from attrs.setters import frozen as frozen_setter
 from attrs.validators import instance_of, deep_mapping, deep_iterable
-
-from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from device.name import DeviceName
+from tweezer_arranger.configuration import (
+    HoldTweezers,
+    MoveTweezers,
+    RearrangeTweezers,
+    ArrangerInstruction,
+)
+from tweezer_arranger.configuration import (
+    TweezerConfigurationName,
+)
+from util import log_exception, DurationTimerLog
+
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -19,17 +29,7 @@ from spectum_awg_m4i66xx_x8.runtime import (
     StepConfiguration,
     SegmentData,
 )
-from tweezer_arranger.configuration import (
-    HoldTweezers,
-    MoveTweezers,
-    RearrangeTweezers,
-    ArrangerInstruction,
-)
-from tweezer_arranger.configuration import (
-    TweezerConfigurationName,
-)
 from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
-from util import log_exception, DurationTimerLog
 from .signal_generator import SignalGenerator, NumberSamples, AWGSignalArray
 
 logger = logging.getLogger(__name__)
@@ -322,6 +322,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         number_samples,
                         previous_step_stop % self.number_samples_per_loop,
                         next_step_start % self.number_samples_per_loop,
+                        str(instruction.move_type),
                     )
                     move_signal_y = self._signal_generator.generate_signal_moving_traps(
                         previous_config.amplitudes_y,
@@ -333,6 +334,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                         number_samples,
                         previous_step_stop % self.number_samples_per_loop,
                         next_step_start % self.number_samples_per_loop,
+                        str(instruction.move_type),
                     )
                     segment_data[move_segment_name(step)] = np.array(
                         (move_signal_x, move_signal_y), dtype=np.int16
@@ -466,6 +468,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
+                str(rearrange_instruction.move_type),
             )
             move_signal_y = self._signal_generator.generate_signal_moving_traps(
                 initial_config.amplitudes_y,
@@ -477,6 +480,7 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 number_samples,
                 previous_step_stop % self.number_samples_per_loop,
                 next_step_start % self.number_samples_per_loop,
+                str(rearrange_instruction.move_type),
             )
             segment_data = {
                 rearrange_segment_name(step): np.array((move_signal_x, move_signal_y))
