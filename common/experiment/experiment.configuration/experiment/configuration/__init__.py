@@ -12,6 +12,7 @@ from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
 from tweezer_arranger.configuration import TweezerArrangerConfiguration
 from util import serialization
+from util.inspect_subclasses import get_concrete_subclasses
 from .experiment_config import (
     ExperimentConfig,
     DeviceConfigNotFoundError,
@@ -36,7 +37,11 @@ device_configs = [
 # We can only register the subclasses of DeviceConfiguration for serialization now,
 # after all of them have been defined and imported
 serialization.include_subclasses(
-    DeviceConfigurationAttrs,
+    DeviceConfigurationAttrs,  # type: ignore
+    # we don't register abstract classes for serialization since they can't be
+    # instantiated anyway. This prevents us to have to define a serialization hook for
+    # all the ABCs.
+    subclasses=tuple(get_concrete_subclasses(DeviceConfigurationAttrs)),  # type: ignore
     union_strategy=serialization.strategies.include_type(
         tag_name="device_configuration_type"
     ),

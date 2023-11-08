@@ -1,9 +1,9 @@
 from abc import ABC
 from collections.abc import Set, Sequence
-from typing import Generic, TypeVar, Any
+from typing import TypeVar, Any
 
 from configuration_holder import ConfigurationHolder
-from device.configuration import DeviceConfiguration, DeviceParameter
+from device.configuration import DeviceConfigurationAttrs, DeviceParameter
 from tweezer_arranger.configuration_name import TweezerConfigurationName
 from tweezer_arranger_lane.configuration import (
     TweezerAction,
@@ -11,6 +11,7 @@ from tweezer_arranger_lane.configuration import (
     MoveTweezers as MoveTweezersLane,
     RearrangeTweezers as RearrangeTweezersLane,
 )
+from util import attrs
 from .arranger_instructions import (
     ArrangerInstruction,
     HoldTweezers as HoldTweezerInstruction,
@@ -24,11 +25,11 @@ TweezerConfigurationType = TypeVar(
 )
 
 
+@attrs.define(slots=False)
 class TweezerArrangerConfiguration(
-    DeviceConfiguration,
+    DeviceConfigurationAttrs,
     ConfigurationHolder[TweezerConfigurationName, TweezerConfigurationType],
     ABC,
-    Generic[TweezerConfigurationType],
 ):
     def get_device_init_args(
         self,
@@ -39,7 +40,8 @@ class TweezerArrangerConfiguration(
 
         sequence: list[ArrangerInstruction] = []
 
-        # Here we check that the tweezer sequence passed is valid, and we create lower level instructions accordingly
+        # Here we check that the tweezer sequence passed is valid, and we create lower
+        # level instructions accordingly
         for step, action in enumerate(tweezer_sequence):
             match action:
                 case HoldTweezersLane(configuration=configuration):
@@ -48,12 +50,14 @@ class TweezerArrangerConfiguration(
                     previous = tweezer_sequence[step - 1]
                     if not isinstance(previous, HoldTweezersLane):
                         raise ValueError(
-                            f"Cannot move tweezers at step {step} without holding them first."
+                            f"Cannot move tweezers at step {step} without holding them"
+                            " first."
                         )
                     following = tweezer_sequence[step + 1]
                     if not isinstance(following, HoldTweezersLane):
                         raise ValueError(
-                            f"Cannot move tweezers at step {step} without holding them afterwards."
+                            f"Cannot move tweezers at step {step} without holding them"
+                            " afterwards."
                         )
                     sequence.append(
                         MoveTweezerInstruction(
@@ -66,12 +70,14 @@ class TweezerArrangerConfiguration(
                     previous = tweezer_sequence[step - 1]
                     if not isinstance(previous, HoldTweezersLane):
                         raise ValueError(
-                            f"Cannot rearrange tweezers at step {step} without holding them first."
+                            f"Cannot rearrange tweezers at step {step} without holding"
+                            " them first."
                         )
                     following = tweezer_sequence[step + 1]
                     if not isinstance(following, HoldTweezersLane):
                         raise ValueError(
-                            f"Cannot rearrange tweezers at step {step} without holding them afterwards."
+                            f"Cannot rearrange tweezers at step {step} without holding"
+                            " them afterwards."
                         )
                     sequence.append(
                         RearrangeTweezerInstruction(
@@ -81,8 +87,8 @@ class TweezerArrangerConfiguration(
                         )
                     )
 
-        # We return a dictionary of tweezer configurations that will be used and the sequence that indicates in
-        # which order to use them
+        # We return a dictionary of tweezer configurations that will be used and the
+        # sequence that indicates in which order to use them.
         return super().get_device_init_args() | {
             DeviceParameter("tweezer_configurations"): {
                 configuration_name: self[configuration_name]

@@ -20,7 +20,7 @@ YAMLSerializable.register_attrs_class(ConfigurationInfo)
 
 
 @attrs.define(slots=False)
-class ConfigurationHolder(Generic[_K, _T], MutableMapping[_K, _T]):
+class ConfigurationHolder(MutableMapping[_K, _T]):
     """Holds several configuration with their creation and modification dates.
 
     This class behaves like a mutable mapping from configuration names to configurations
