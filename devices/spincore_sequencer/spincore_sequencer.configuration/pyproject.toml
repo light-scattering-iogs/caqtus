@@ -13,6 +13,7 @@ pydantic = "^1.10.4"
 
 device-config = {path = "../../device/device.configuration", develop = true}
 sequencer-configuration = {path = "../../sequencer/sequencer.configuration", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 [build-system]

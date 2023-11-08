@@ -11,6 +11,7 @@ python = "^3.11"
 
 sequencer-configuration = {path = "../../sequencer/sequencer.configuration", develop = true}
 device-config = {path = "../../device/device.configuration", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 [build-system]

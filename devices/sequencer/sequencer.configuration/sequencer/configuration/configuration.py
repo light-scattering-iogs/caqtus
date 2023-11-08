@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar, Generic
 
 import attr.setters
-from pydantic import validator
 from pydantic.color import Color
 
 from device.configuration import DeviceConfigurationAttrs, DeviceParameter
@@ -107,7 +106,11 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     )
     output_mapping: OutputMapping[LogicalType, OutputType]
     default_value: LogicalType
-    color: Optional[Color] = None
+    color: Optional[Color] = attrs.field(
+        default=None,
+        converter=attrs.converters.optional(Color),
+        on_setattr=attr.setters.convert,
+    )
     delay: float = attrs.field(
         default=0.0, converter=float, on_setattr=attr.setters.convert
     )
@@ -158,7 +161,11 @@ class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
     )
     # We need to redefine these fields just because they have default values and can't
     # come above output_mapping.
-    color: Optional[Color] = None
+    color: Optional[Color] = attrs.field(
+        default=None,
+        converter=attrs.converters.optional(Color),
+        on_setattr=attr.setters.convert,
+    )
     delay: float = attrs.field(
         default=0.0, converter=float, on_setattr=attr.setters.convert
     )
@@ -178,7 +185,11 @@ class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
     )
     # We need to redefine these fields just because they have default values and can't
     # come above output_mapping.
-    color: Optional[Color] = None
+    color: Optional[Color] = attrs.field(
+        default=None,
+        converter=attrs.converters.optional(Color),
+        on_setattr=attr.setters.convert,
+    )
     delay: float = attrs.field(
         default=0.0, converter=float, on_setattr=attr.setters.convert
     )
@@ -219,19 +230,18 @@ class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
     def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
         ...
 
-    @validator("channels")
-    def validate_channels(cls, channels):
-        if len(channels) != cls.number_channels:
+    @channels.validator  # type: ignore
+    def validate_channels(self, _, channels):
+        if len(channels) != self.number_channels:
             raise ValueError(
                 f"The length of channels ({len(channels)}) doesn't match the number of"
-                f" channels {cls.number_channels}"
+                f" channels {self.number_channels}"
             )
-        for channel, channel_type in zip(channels, cls.channel_types(), strict=True):
+        for channel, channel_type in zip(channels, self.channel_types(), strict=True):
             if not isinstance(channel, channel_type):
                 raise TypeError(
                     f"Channel {channel} is not of the expected type {channel_type}"
                 )
-        return channels
 
     def get_lane_channels(self) -> list[ChannelConfiguration]:
         """Get the channels associated to a lane, i.e. those without special purpose"""
