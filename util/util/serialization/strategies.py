@@ -19,7 +19,7 @@ def include_type(tag_name: str = "class") -> Callable[[Any, BaseConverter], Any]
 
 def include_subclasses(
     parent_class: type[_C],
-    subclasses: Optional[tuple[type[_C]]] = None,
+    subclasses: Optional[tuple[type[_C], ...]] = None,
     union_strategy: Optional[Callable[[Any, BaseConverter], Any]] = None,
 ) -> None:
     for converter in converters.values():
