@@ -4,8 +4,9 @@ from datetime import datetime
 from data_types import Data, DataLabel
 from device.name import DeviceName
 from parameter_types import Parameter
-from experiment.session.data_type import DataType
 from variable.name import DottedVariableName
+
+from experiment.session.data_type import DataType
 
 if typing.TYPE_CHECKING:
     from experiment.session import ExperimentSession
@@ -35,21 +36,26 @@ class Shot:
     def get_measures(
         self, experiment_session: ExperimentSession
     ) -> dict[DeviceName, dict[DataLabel, Data]]:
-        return self._get_data(DataType.MEASURE, experiment_session)
+        return self._get_data_by_type(DataType.MEASURE, experiment_session)
 
     def get_parameters(
         self, experiment_session: ExperimentSession
     ) -> dict[DottedVariableName, Parameter]:
-        result = self._get_data(DataType.PARAMETER, experiment_session)
+        result = self._get_data_by_type(DataType.PARAMETER, experiment_session)
         return {
             DottedVariableName(name): parameter for name, parameter in result.items()
         }
 
     def get_scores(self, experiment_session: ExperimentSession):
-        return self._get_data(DataType.SCORE, experiment_session)
+        return self._get_data_by_type(DataType.SCORE, experiment_session)
 
-    def _get_data(self, data_type: DataType, experiment_session: ExperimentSession):
+    def get_data_by_label(self, data_label: str, experiment_session: ExperimentSession):
         return experiment_session.shot_collection.get_shot_data(
+            shot=self, data_label=data_label
+        )
+
+    def _get_data_by_type(self, data_type: DataType, experiment_session: ExperimentSession):
+        return experiment_session.shot_collection.get_all_shot_data(
             shot=self, data_type=data_type
         )
 
