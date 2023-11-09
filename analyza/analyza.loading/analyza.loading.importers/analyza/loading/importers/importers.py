@@ -3,16 +3,17 @@ from typing import (
     Any,
     TypeVar,
     ParamSpec,
-    TypedDict,
+    TypedDict, TypeGuard,
 )
 
-from atom_detector.configuration import AtomLabel
 from data_types import Data
 from device.configuration import DeviceName
-from experiment.session import ExperimentSession
 from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
+
+from atom_detector.configuration import AtomLabel
+from experiment.session import ExperimentSession
 from util import attrs, serialization
 from . import break_namespaces
 from .chainable_function import ChainableFunction
@@ -37,7 +38,7 @@ class ImageLoader(ImageImporter):
     image: ImageLabel = attrs.field()
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
-        value = _import_measures(shot, session)[f"{self.camera_name}.{self.image}"]
+        value = shot.get_data_by_label(self.camera_name, session)[self.image]
         if not is_image(value):
             raise TypeError(
                 f"Expected image for {self.camera_name}.{self.image}, got {type(value)}"
@@ -50,7 +51,7 @@ serialization.include_subclasses(
 )
 
 
-@attrs.define(slots=False)
+@attrs.define
 class ParametersLoader(ParametersImporter):
     def __attrs_post_init__(self) -> None:
         self._importer = import_parameters | break_namespaces
@@ -66,16 +67,29 @@ serialization.include_subclasses(
 
 @attrs.define
 class AtomsLoader(ShotImporter[dict[AtomLabel, bool]]):
-    detector_name: DeviceName = attrs.field()
-    image: ImageLabel = attrs.field()
+    detector_name: DeviceName = attrs.field(converter=str)
+    image: ImageLabel = attrs.field(converter=str)
+    check_return_type: bool = attrs.field(default=False, converter=bool)
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> dict[AtomLabel, bool]:
-        value = _import_measures(shot, session)[f"{self.detector_name}.{self.image}"]
-        if not isinstance(value, dict):
-            raise TypeError(
-                f"Expected dictionary for {self.detector_name}.{self.image}, got {type(value)}"
-            )
+        value = shot.get_data_by_label(self.detector_name, session)[self.image]
+        if self.check_return_type:
+            if not self._check_return_type(value):
+                raise TypeError(
+                    f"Expected dict[AtomLabel, bool] for {self.detector_name}.{self.image}, got {type(value)}"
+                )
         return value
+
+    @staticmethod
+    def _check_return_type(value: Any) -> TypeGuard[dict[AtomLabel, bool]]:
+        if not isinstance(value, dict):
+            return False
+        for key, value in value.items():
+            if not isinstance(key, AtomLabel):
+                return False
+            if not isinstance(value, bool):
+                return False
+        return True
 
 
 class AtomsLoader2D(AtomsLoader, AtomImporter2D):
