@@ -83,16 +83,18 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
     }}
     
     // Must be the integral of frequency_ramp over s from 0 to s
-    __device__ float phase_ramp(float s)
+    __device__ float phase_ramp(float s, unsigned int move_type)
     {{
-        return reach_constant_velocity_adiabatically(s);
-        //return phase_ramp_sin(s);      
+        if (move_type == 0)
+            return phase_ramp_sin(s);   
+        else if (move_type == 1)
+            return reach_constant_velocity_adiabatically(s);
     }}
     
 
     
     extern "C" __global__
-    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_stop, unsigned int next_step_start)
+    void compute_moving_traps_signal(short *output, unsigned int number_samples, unsigned int number_tones, float time_step, unsigned int previous_step_stop, unsigned int next_step_start, unsigned int move_type)
     {{
      unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
      float s = float(tid) / float(number_samples);
@@ -112,14 +114,14 @@ def get_traps_cuda_program(max_number_tones: int) -> str:
             else {{
                 float phase_remainder = fmodf(phase_mismatch, 2 * PI);
                 //if (phase_remainder < 0.0) phase_remainder += 2 * PI; 
-                s0 = (1.0 - phase_remainder / (2 * PI * T * frequency_range)) / (1-phase_ramp(1.0));
+                s0 = (1.0 - phase_remainder / (2 * PI * T * frequency_range)) / (1-phase_ramp(1.0, move_type));
             }}   
             float phase = 0.0;
             if(s < s0){{
-                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0));
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * s0 * phase_ramp(s / s0, move_type));
             }}
             else{{
-                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0 + s0 * phase_ramp(1.0)));
+                phase = initial_phase +  2 * PI * T * (s * mean_frequency + frequency_range * (s-s0 + s0 * phase_ramp(1.0, move_type)));
             }}
             
             float mean_amplitude = 0.5 * (initial_amplitudes[i] + final_amplitudes[i]);
