@@ -1,3 +1,4 @@
+import copy
 import logging
 from collections.abc import Iterable
 from typing import Optional, Type
@@ -213,7 +214,7 @@ class ExperimentConfig(VersionedSettingsModel):
             raise DeviceConfigNotFoundError(
                 f"Could not find a device named {device_name}"
             )
-        return config.copy(deep=True)
+        return copy.deepcopy(config)
 
     def set_device_config(self, device_name: DeviceName, config: DeviceConfiguration):
         """Change a device configuration in the experiment configuration.
@@ -239,7 +240,7 @@ class ExperimentConfig(VersionedSettingsModel):
                 f"Could not find a device named '{device_name}'"
             )
 
-        self.device_configurations[device_name] = config.copy(deep=True)
+        self.device_configurations[device_name] = copy.deepcopy(config)
 
     @validate_arguments
     def add_device_config(self, name: DeviceName, config: DeviceConfiguration):
@@ -252,7 +253,7 @@ class ExperimentConfig(VersionedSettingsModel):
         if name in self.device_configurations:
             raise ValueError(f"Device name '{name}' is already being used")
 
-        self.device_configurations[name] = config.copy(deep=True)
+        self.device_configurations[name] = copy.deepcopy(config)
 
     def get_optimizer_config(self, optimizer_name: str) -> OptimizerConfiguration:
         try:
