@@ -4,14 +4,17 @@ from typing import Optional, Self
 
 from anytree import NodeMixin
 
+from util import attrs
 
+
+@attrs.define
 class Step(NodeMixin, ABC):
     def __init__(
-        self, parent: Optional[Self] = None, children: Optional[list[Self]] = None
+        self, parent: Optional[Self] = None, children: Optional[Iterable[Self]] = None
     ):
         self.parent = parent
         if children is not None:
-            self.children = children
+            self.children = list(children)
 
     def row(self):
         if self.is_root:
@@ -32,16 +35,6 @@ class Step(NodeMixin, ABC):
     @abstractmethod
     def __eq__(self, other):
         raise NotImplementedError()
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not isinstance(v, cls):
-            raise TypeError(f"Expected {cls.__name__}, got {type(v).__name__}")
-        return v
 
 
 def compute_total_number_shots(steps: Iterable[Step]) -> Optional[int]:

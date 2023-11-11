@@ -17,6 +17,7 @@ units = {path = "../../units", develop = true}
 settings-model = {path = "../../settings_model", develop = true}
 digital-lane-configuration = {path = "../../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true}
 analog-lane-configuration = {path = "../../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 [build-system]

@@ -1,17 +1,37 @@
-from typing import Optional, Self
+from collections.abc import Iterable
+from typing import Optional
 
 import numpy
 import yaml
 
 from expression import Expression
 from sequence.configuration.steps.step import Step, compute_total_number_shots
-from settings_model import YAMLSerializable, validate_arguments
 from units import Quantity, units
+from util import attrs
 from variable.name import DottedVariableName
 
 
-class ArangeLoop(Step, YAMLSerializable):
-    @validate_arguments
+@attrs.define
+class ArangeLoop(Step):
+    """Represent a loop over a variable with constant step size for this variable."""
+
+    name: DottedVariableName = attrs.field(
+        validator=attrs.validators.instance_of(DottedVariableName),
+        on_setattr=attrs.setters.validate,
+    )
+    start: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+    stop: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+    step: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+
     def __init__(
         self,
         name: DottedVariableName,
@@ -19,36 +39,12 @@ class ArangeLoop(Step, YAMLSerializable):
         stop: Expression,
         step: Expression,
         parent: Optional[Step] = None,
-        children: Optional[list[Step]] = None,
+        children: Optional[Iterable[Step]] = None,
     ):
-        self.name = name
-        self.start = start
-        self.stop = stop
-        self.step = step
+        self.__attrs_init__(name, start, stop, step, parent, children)
         if not children:
             children = []
-        Step.__init__(self, parent, children)
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: Self):
-        return dumper.represent_mapping(
-            f"!{cls.__name__}",
-            {
-                "name": step.name,
-                "start": step.start,
-                "stop": step.stop,
-                "step": step.step,
-                "children": [child for child in step.children],
-            },
-        )
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        mapping = loader.construct_mapping(node, deep=True)
-        try:
-            return cls(**mapping)
-        except Exception as e:
-            raise ValueError(f"Cannot construct {cls.__name__} from {mapping}") from e
+        super().__init__(parent, children)
 
     def __str__(self):
         return (
@@ -58,7 +54,7 @@ class ArangeLoop(Step, YAMLSerializable):
 
     def __eq__(self, other):
         if not isinstance(other, ArangeLoop):
-            return False
+            return NotImplemented
         return (
             self.name == other.name
             and self.start == other.start
@@ -88,3 +84,26 @@ class ArangeLoop(Step, YAMLSerializable):
             return multiplier * number_sub_steps
         except Exception:
             return None
+
+
+def representer(dumper: yaml.Dumper, step: ArangeLoop):
+    return dumper.represent_mapping(
+        f"!{ArangeLoop.__name__}",
+        {
+            "name": step.name,
+            "start": step.start,
+            "stop": step.stop,
+            "step": step.step,
+            "children": [child for child in step.children],
+        },
+    )
+
+
+def constructor(loader: yaml.Loader, node: yaml.Node):
+    mapping = loader.construct_mapping(node, deep=True)
+    try:
+        return ArangeLoop(**mapping)
+    except Exception as e:
+        raise ValueError(
+            f"Cannot construct {ArangeLoop.__name__} from {mapping}"
+        ) from e

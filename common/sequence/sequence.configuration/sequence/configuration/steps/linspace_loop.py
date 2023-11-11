@@ -1,14 +1,35 @@
-from typing import Optional, Self
+from typing import Optional
 
 import yaml
 
 from expression import Expression
-from settings_model import YAMLSerializable, validate_arguments
+from settings_model import YAMLSerializable
+from util import attrs
 from variable.name import DottedVariableName
 from .step import Step, compute_total_number_shots
 
 
-class LinspaceLoop(Step, YAMLSerializable):
+@attrs.define
+class LinspaceLoop(Step):
+    """Represent a loop over a variable with a given number of steps."""
+
+    name: DottedVariableName = attrs.field(
+        validator=attrs.validators.instance_of(DottedVariableName),
+        on_setattr=attrs.setters.validate,
+    )
+    start: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+    stop: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+    num: int = attrs.field(
+        converter=int,
+        on_setattr=attrs.setters.convert,
+    )
+
     def __init__(
         self,
         name: DottedVariableName,
@@ -18,70 +39,10 @@ class LinspaceLoop(Step, YAMLSerializable):
         parent: Optional[Step] = None,
         children: Optional[list[Step]] = None,
     ):
-        self.name = name
-        self.start = start
-        self.stop = stop
-        self.num = num
+        self.__attrs_init__(name, start, stop, num)
         if not children:
             children = []
-        Step.__init__(self, parent, children)
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    @validate_arguments
-    def name(self, value: DottedVariableName):
-        self._name = value
-
-    @property
-    def start(self):
-        return self._start
-
-    @start.setter
-    @validate_arguments
-    def start(self, value: Expression):
-        self._start = value
-
-    @property
-    def stop(self):
-        return self._stop
-
-    @stop.setter
-    @validate_arguments
-    def stop(self, value: Expression):
-        self._stop = value
-
-    @property
-    def num(self):
-        return self._num
-
-    @num.setter
-    @validate_arguments
-    def num(self, value: int):
-        self._num = value
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, step: Self):
-        return dumper.represent_mapping(
-            f"!{cls.__name__}",
-            {
-                "name": step.name,
-                "start": step.start,
-                "stop": step.stop,
-                "num": step.num,
-                "children": [child for child in step.children],
-            },
-        )
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node):
-        mapping = loader.construct_mapping(node, deep=True)
-        try:
-            return cls(**mapping)
-        except Exception as e:
-            raise ValueError(f"Cannot construct {cls.__name__} from {mapping}") from e
+        super().__init__(self, parent, children)
 
     def __str__(self):
         return (
@@ -91,7 +52,7 @@ class LinspaceLoop(Step, YAMLSerializable):
 
     def __eq__(self, other):
         if not isinstance(other, LinspaceLoop):
-            return False
+            return NotImplemented
         return (
             self.name == other.name
             and self.start == other.start
@@ -105,3 +66,32 @@ class LinspaceLoop(Step, YAMLSerializable):
         if number_sub_steps is None:
             return None
         return self.num * number_sub_steps
+
+
+def representer(dumper: yaml.Dumper, step: LinspaceLoop):
+    return dumper.represent_mapping(
+        f"!{LinspaceLoop.__name__}",
+        {
+            "name": step.name,
+            "start": step.start,
+            "stop": step.stop,
+            "num": step.num,
+            "children": [child for child in step.children],
+        },
+    )
+
+
+YAMLSerializable.get_dumper().add_representer(LinspaceLoop, representer)
+
+
+def constructor(loader: yaml.Loader, node: yaml.Node):
+    mapping = loader.construct_mapping(node, deep=True)
+    try:
+        return LinspaceLoop(**mapping)
+    except Exception as e:
+        raise ValueError(
+            f"Cannot construct {LinspaceLoop.__name__} from {mapping}"
+        ) from e
+
+
+YAMLSerializable.get_loader().add_constructor(f"!{LinspaceLoop.__name__}", constructor)
