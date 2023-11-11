@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from experiment.configuration import ExperimentConfig
+from settings_model import YAMLSerializable
 
 
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
@@ -14,7 +15,24 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     """
 
     def __getitem__(self, name: str) -> ExperimentConfig:
-        return ExperimentConfig.from_yaml(self.get_experiment_config_yaml(name))
+        """Get an experiment configuration by name.
+
+        This method will read the serialized experiment configuration string from the session and deserialize it. If the
+        deserialization fails, an exception will be raised. It might then be necessary to call the method
+        `get_experiment_config_yaml` to check that the yaml string is valid.
+        """
+
+        try:
+            experiment_config = YAMLSerializable.load(
+                self.get_experiment_config_yaml(name)
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to load experiment config '{name}'") from e
+        if not isinstance(experiment_config, ExperimentConfig):
+            raise TypeError(
+                f"Expected an ExperimentConfig, got {type(experiment_config)}"
+            )
+        return experiment_config
 
     @abstractmethod
     def get_experiment_config_yaml(self, name: str) -> str:
@@ -25,6 +43,31 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
         Returns:
             The yaml string representation of the experiment configuration.
+        """
+
+        raise NotImplementedError()
+
+    def __setitem__(self, name: str, experiment_config: ExperimentConfig):
+        if not isinstance(name, str):
+            raise TypeError(f"Expected <str> for name, got {type(name)}")
+        if not isinstance(experiment_config, ExperimentConfig):
+            raise TypeError(
+                f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
+            )
+        yaml_config = YAMLSerializable.dump(experiment_config)
+        if YAMLSerializable.from_yaml(yaml_config) != experiment_config:
+            raise AssertionError("The experiment config was not correctly serialized.")
+        self._set_experiment_config_yaml(name, yaml_config)
+
+    @abstractmethod
+    def _set_experiment_config_yaml(self, name: str, yaml_config: str):
+        """Set the experiment configuration yaml string.
+
+        This is a private method that should not be called directly. Instead, the method `__setitem__` should be used.
+
+        Args:
+            name: The name of the experiment configuration.
+            yaml_config: The yaml string representation of the experiment configuration.
         """
 
         raise NotImplementedError()
@@ -64,13 +107,21 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
         The current experiment config is the one associated to a sequence when it is
         launched.
+
+        Args:
+            name: The name of the experiment config to set as the current one. There must be an experiment config with
+                this name in the session.
         """
 
         raise NotImplementedError()
 
     @abstractmethod
     def get_current(self) -> Optional[str]:
-        """Get the name of the currently selected experiment config."""
+        """Get the name of the currently selected experiment config.
+
+        Returns:
+            the name of the currently selected experiment config if one is set, None otherwise.
+        """
 
         raise NotImplementedError()
 
@@ -84,15 +135,11 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             configuration is invalid.
         """
 
-        experiment_config_yaml = self.get_current_experiment_config_yaml()
-        if experiment_config_yaml is None:
+        current_config_name = self.get_current()
+        if current_config_name is None:
             return None
-
-        try:
-            return ExperimentConfig.from_yaml(experiment_config_yaml)
-        except Exception as e:
-            name = self.get_current()
-            raise ValueError(f"Failed to load experiment config '{name}'") from e
+        else:
+            return self[current_config_name]
 
     def set_current_config(self, config: ExperimentConfig) -> str:
         """Update the current experiment configuration.
@@ -104,7 +151,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             config: The new experiment configuration to set as the current one.
 
         Returns:
-            The name of the current experiment configuration after the update.
+            The name given to the current experiment configuration after the update.
         """
 
         current = self.get_current()
