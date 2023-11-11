@@ -3,7 +3,6 @@ import logging
 from collections.abc import Iterable
 from typing import Optional, Type
 
-from pydantic import Field, validator
 from pydantic.color import Color
 
 from analog_lane.configuration import AnalogLane
@@ -13,7 +12,6 @@ from camera.configuration import CameraConfiguration
 from camera_lane.configuration import CameraLane
 from device.configuration import (
     DeviceName,
-    DeviceConfiguration,
     DeviceConfigurationAttrs,
     DeviceConfigType,
 )
@@ -29,9 +27,11 @@ from sequencer.configuration import (
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
 )
-from settings_model import VersionedSettingsModel, Version
+from settings_model import Version
+from settings_model import YAMLSerializable
 from tweezer_arranger.configuration import TweezerArrangerConfiguration
 from tweezer_arranger_lane.configuration import TweezerArrangerLane
+from util import attrs
 from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
 from .optimization_config import OptimizerConfiguration
@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
 
 
-class ExperimentConfig(VersionedSettingsModel):
+@attrs.define
+class ExperimentConfig:
     """Holds static configuration of the experiment.
 
     This configuration is used to instantiate the devices and to run the experiment. It
@@ -62,25 +63,45 @@ class ExperimentConfig(VersionedSettingsModel):
          there will be no actual data acquisition. This is meant to be used for testing.
     """
 
-    __version__ = "1.0.0"
-
-    device_servers: dict[DeviceServerName, DeviceServerConfiguration] = Field(
-        default_factory=dict,
+    device_servers: dict[DeviceServerName, DeviceServerConfiguration] = attrs.field(
+        factory=dict,
+        converter=dict,
+        validator=attrs.validators.deep_mapping(
+            key_validator=attrs.validators.instance_of(str),
+            value_validator=attrs.validators.instance_of(DeviceServerConfiguration),
+        ),
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    header: SequenceSteps = Field(
-        default_factory=SequenceSteps,
+    header: SequenceSteps = attrs.field(
+        factory=SequenceSteps,
+        validator=attrs.validators.instance_of(SequenceSteps),
+        on_setattr=attrs.setters.validate,
     )
 
-    device_configurations: dict[
-        DeviceName, DeviceConfiguration | DeviceConfigurationAttrs
-    ] = Field(default_factory=dict)
-
-    optimization_configurations: dict[str, OptimizerConfiguration] = Field(
-        default_factory=dict,
+    device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = attrs.field(
+        factory=dict,
+        converter=dict,
+        validator=attrs.validators.deep_mapping(
+            key_validator=attrs.validators.instance_of(str),
+            value_validator=attrs.validators.instance_of(DeviceConfigurationAttrs),
+        ),
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    mock_experiment: bool = False
+    optimization_configurations: dict[str, OptimizerConfiguration] = attrs.field(
+        factory=dict,
+        converter=dict,
+        validator=attrs.validators.deep_mapping(
+            key_validator=attrs.validators.instance_of(str),
+            value_validator=attrs.validators.instance_of(OptimizerConfiguration),
+        ),
+        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
+    )
+
+    mock_experiment: bool = attrs.field(
+        default=False, converter=bool, on_setattr=attrs.setters.convert
+    )
 
     @classmethod
     def update_parameters_version(cls, config: dict) -> dict:
@@ -88,9 +109,9 @@ class ExperimentConfig(VersionedSettingsModel):
             config["version"] = Version(major=1, minor=0, patch=0)
         return config
 
-    @validator("device_configurations")
+    @device_configurations.validator  # type: ignore
     def validate_device_configurations(
-        cls, device_configurations: dict[DeviceName, DeviceConfiguration]
+        self, _, device_configurations: dict[DeviceName, DeviceConfigurationAttrs]
     ):
         channel_names: set[ChannelName] = set()
         for device_name, device_configuration in device_configurations.items():
@@ -107,7 +128,6 @@ class ExperimentConfig(VersionedSettingsModel):
                         " already used by an other device:"
                         f" {channel_names & device_channel_names}"
                     )
-        return device_configurations
 
     def get_color(
         self, channel: ChannelName | ChannelSpecialPurpose
@@ -195,7 +215,7 @@ class ExperimentConfig(VersionedSettingsModel):
             if isinstance(config, config_type)
         }
 
-    def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
+    def get_device_config(self, device_name: DeviceName) -> DeviceConfigurationAttrs:
         """Return a copy of the configuration of a given device.
 
         Args:
@@ -216,7 +236,9 @@ class ExperimentConfig(VersionedSettingsModel):
             )
         return copy.deepcopy(config)
 
-    def set_device_config(self, device_name: DeviceName, config: DeviceConfiguration):
+    def set_device_config(
+        self, device_name: DeviceName, config: DeviceConfigurationAttrs
+    ):
         """Change a device configuration in the experiment configuration.
 
         Args:
@@ -229,7 +251,7 @@ class ExperimentConfig(VersionedSettingsModel):
                 name.
         """
 
-        if not isinstance(config, DeviceConfiguration):
+        if not isinstance(config, DeviceConfigurationAttrs):
             raise TypeError(
                 "config must be an instance of <DeviceConfiguration>, got"
                 f" {type(config)}"
@@ -243,7 +265,7 @@ class ExperimentConfig(VersionedSettingsModel):
         self.device_configurations[device_name] = copy.deepcopy(config)
 
     @validate_arguments
-    def add_device_config(self, name: DeviceName, config: DeviceConfiguration):
+    def add_device_config(self, name: DeviceName, config: DeviceConfigurationAttrs):
         """Add a new device configuration to the experiment configuration.
 
         Raises:
@@ -252,6 +274,12 @@ class ExperimentConfig(VersionedSettingsModel):
 
         if name in self.device_configurations:
             raise ValueError(f"Device name '{name}' is already being used")
+
+        if not isinstance(config, DeviceConfigurationAttrs):
+            raise TypeError(
+                "config must be an instance of <DeviceConfiguration>, got"
+                f" {type(config)}"
+            )
 
         self.device_configurations[name] = copy.deepcopy(config)
 
@@ -274,6 +302,9 @@ class ExperimentConfig(VersionedSettingsModel):
         """Return the names of all device servers registered in the configuration."""
 
         return list(self.device_servers.keys())
+
+
+YAMLSerializable.register_attrs_class(ExperimentConfig)
 
 
 class DeviceConfigNotFoundError(RuntimeError):
