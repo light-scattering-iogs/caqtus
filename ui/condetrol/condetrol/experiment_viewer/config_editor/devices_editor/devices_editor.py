@@ -4,7 +4,7 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from device.configuration import DeviceConfiguration, DeviceName
+from device.configuration import DeviceConfigurationAttrs, DeviceName
 from experiment.configuration import (
     ExperimentConfig,
     ElliptecELL14RotationStageConfiguration,
@@ -17,7 +17,7 @@ DEVICE_TYPES = ["ElliptecELL14RotationStage", "SwabianPulseStreamer"]
 
 
 class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
-    device_added = pyqtSignal(DeviceConfiguration)
+    device_added = pyqtSignal(DeviceConfigurationAttrs)
 
     def __init__(
         self,
@@ -49,8 +49,8 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
 
     @staticmethod
     def create_default_device_config(
-            device_type: str, device_name: DeviceName, remote_server: str
-    ) -> DeviceConfiguration:
+        device_type: str, device_name: DeviceName, remote_server: str
+    ) -> DeviceConfigurationAttrs:
         if device_type == "ElliptecELL14RotationStage":
             config = ElliptecELL14RotationStageConfiguration.get_default_config(
                 device_name, remote_server

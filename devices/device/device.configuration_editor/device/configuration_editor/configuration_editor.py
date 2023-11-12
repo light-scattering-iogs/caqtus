@@ -8,11 +8,11 @@ from typing import Generic, TypeVar, Collection
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
 
-from device.configuration import DeviceConfiguration
+from device.configuration import DeviceConfigurationAttrs
 from device_server.name import DeviceServerName
 from qabc import QABC
 
-_T = TypeVar("_T", bound=DeviceConfiguration)
+_T = TypeVar("_T", bound=DeviceConfigurationAttrs)
 
 
 class DeviceConfigEditor(QWidget, Generic[_T], QABC):

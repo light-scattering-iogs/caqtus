@@ -82,4 +82,4 @@ class DeviceConfigurationAttrs(ABC):
         return {}
 
 
-DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
+DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfigurationAttrs)

@@ -4,7 +4,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
 
-from device.configuration import DeviceConfiguration
+from device.configuration import DeviceConfigurationAttrs
 from device.configuration_editor import (
     DeviceConfigEditor,
     NotImplementedDeviceDeviceConfigEditor,
@@ -146,11 +146,11 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
         )
         return experiment_config
 
-    def convert_to_external_use(self) -> DeviceConfiguration:
+    def convert_to_external_use(self) -> DeviceConfigurationAttrs:
         return self._device_config_editor.get_device_config()
 
-    def update_from_external_source(self, external_source: DeviceConfiguration):
-        if not isinstance(external_source, DeviceConfiguration):
+    def update_from_external_source(self, external_source: DeviceConfigurationAttrs):
+        if not isinstance(external_source, DeviceConfigurationAttrs):
             raise TypeError(
                 f"Expected a DeviceConfiguration, got {type(external_source)}"
             )
