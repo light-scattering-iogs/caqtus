@@ -103,7 +103,7 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         tree_label: str,
     ) -> ConfigSettingsEditor:
 
-        config = self._config.copy(deep=True)
+        config = deepcopy(self._config)
         if tree_label == "System":
             return SystemSettingsEditor(config, tree_label)
         elif tree_label == "Constants":
