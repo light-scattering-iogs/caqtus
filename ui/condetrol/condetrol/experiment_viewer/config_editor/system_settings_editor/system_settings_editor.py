@@ -1,3 +1,4 @@
+import copy
 from typing import Optional
 
 from PyQt6.QtWidgets import QWidget
@@ -33,7 +34,7 @@ class SystemSettingsEditor(ConfigSettingsEditor, Ui_SystemSettingsEditor):
     def update_config(self, config: ExperimentConfig) -> ExperimentConfig:
         """Update the experiment config to match the UI."""
 
-        config = config.copy(deep=True)
+        config = copy.deepcopy(config)
         config.mock_experiment = self._mock_experiment_checkbox.isChecked()
         return config
 

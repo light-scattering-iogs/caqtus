@@ -83,7 +83,7 @@ class ConfigSettingsEditor(QWidget, QABC):
             return super().get_experiment_config()
         """
 
-        return self._experiment_config.copy(deep=True)
+        return copy.deepcopy(self._experiment_config)
 
 
 class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
