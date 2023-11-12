@@ -9,7 +9,7 @@ from sequence.configuration.steps.step import Step, compute_total_number_shots
 from settings_model import YAMLSerializable
 from units import Quantity, units
 from util import attrs, serialization
-from variable.name import DottedVariableName
+from variable.name import DottedVariableName, dotted_variable_name_converter
 
 
 @attrs.define
@@ -17,8 +17,8 @@ class ArangeLoop(Step):
     """Represent a loop over a variable with constant step size for this variable."""
 
     name: DottedVariableName = attrs.field(
-        validator=attrs.validators.instance_of(DottedVariableName),
-        on_setattr=attrs.setters.validate,
+        converter=dotted_variable_name_converter,
+        on_setattr=attrs.setters.convert,
     )
     start: Expression = attrs.field(
         validator=attrs.validators.instance_of(Expression),

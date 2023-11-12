@@ -6,7 +6,7 @@ import yaml
 from expression import Expression
 from settings_model import YAMLSerializable
 from util import attrs, serialization
-from variable.name import DottedVariableName
+from variable.name import DottedVariableName, dotted_variable_name_converter
 from .step import Step, compute_total_number_shots
 
 
@@ -15,8 +15,8 @@ class LinspaceLoop(Step):
     """Represent a loop over a variable with a given number of steps."""
 
     name: DottedVariableName = attrs.field(
-        validator=attrs.validators.instance_of(DottedVariableName),
-        on_setattr=attrs.setters.validate,
+        converter=dotted_variable_name_converter,
+        on_setattr=attrs.setters.convert,
     )
     start: Expression = attrs.field(
         validator=attrs.validators.instance_of(Expression),

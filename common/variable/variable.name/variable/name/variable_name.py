@@ -1,7 +1,7 @@
 import re
 from collections import UserString
 from collections.abc import Iterable
-from typing import Self
+from typing import Self, Any
 
 from settings_model import yaml, YAMLSerializable
 
@@ -43,6 +43,15 @@ class DottedVariableName(UserString, YAMLSerializable):
         if isinstance(value, str):
             return cls(value)
         raise ValueError(f"Invalid variable name: {value}")
+
+
+def dotted_variable_name_converter(name: Any) -> DottedVariableName:
+    if isinstance(name, DottedVariableName):
+        return name
+    elif isinstance(name, str):
+        return DottedVariableName(name)
+    else:
+        raise ValueError(f"Invalid variable name: {name}")
 
 
 class VariableName(DottedVariableName):

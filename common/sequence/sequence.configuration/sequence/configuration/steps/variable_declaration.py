@@ -5,7 +5,7 @@ import yaml
 from expression import Expression
 from settings_model import YAMLSerializable
 from util import attrs, serialization
-from variable.name import DottedVariableName
+from variable.name import DottedVariableName, dotted_variable_name_converter
 from .step import Step
 
 
@@ -14,8 +14,8 @@ class VariableDeclaration(Step):
     """Represents a step that declares or overwrite a variable."""
 
     name: DottedVariableName = attrs.field(
-        validator=attrs.validators.instance_of(DottedVariableName),
-        on_setattr=attrs.setters.validate,
+        converter=dotted_variable_name_converter,
+        on_setattr=attrs.setters.convert,
     )
     expression: Expression = attrs.field(
         validator=attrs.validators.instance_of(Expression),
