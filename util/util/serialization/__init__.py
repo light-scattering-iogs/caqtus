@@ -6,6 +6,8 @@ from .converters import (
     structure,
     register_unstructure_hook,
     register_structure_hook,
+    to_json,
+    from_json,
 )
 from .customize import customize, AttributeOverride
 from .strategies import include_subclasses, include_type
@@ -16,6 +18,8 @@ __all__ = [
     "unstructure",
     "register_structure_hook",
     "register_unstructure_hook",
+    "to_json",
+    "from_json",
     "customize",
     "AttributeOverride",
     "override",

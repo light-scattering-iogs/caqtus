@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 class SQLExperimentConfigCollection(ExperimentConfigCollection):
     parent_session: "SQLExperimentSession"
 
-    def get_experiment_config_yaml(self, name: str) -> str:
+    def get_experiment_config_json(self, name: str) -> str:
         return ExperimentConfigModel.get_config(name, self._get_sql_session())
 
-    def _set_experiment_config_yaml(self, name: str, yaml_config: str):
+    def _set_experiment_config_json(self, name: str, json_config: str):
         if name in self:
             bound_sequences = (
                 self.parent_session.sequence_hierarchy.get_bound_to_experiment_config(
@@ -39,13 +39,13 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
                     f"{sequences}."
                 )
             experiment_config_model = self._query_model(name)
-            experiment_config_model.experiment_config_yaml = yaml_config
+            experiment_config_model.experiment_config_yaml = json_config
             experiment_config_model.modification_date = datetime.now()
             self._get_sql_session().flush()
         else:
             ExperimentConfigModel.add_config(
                 name=name,
-                yaml=yaml_config,
+                yaml=json_config,
                 comment=None,
                 session=self._get_sql_session(),
             )

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Callable, TypeVar
 
 from cattrs.converters import Converter
-from cattrs.preconf.json import make_converter as make_json_converter
+from cattrs.preconf.json import make_converter as make_json_converter, JsonConverter
 from cattrs.preconf.pyyaml import make_converter as make_yaml_converter
 
 unstruct_collection_overrides = {tuple: tuple}
@@ -71,3 +71,13 @@ def structure_datetime(serialized: str, _) -> datetime:
 
 
 register_structure_hook(datetime, structure_datetime)
+
+
+def to_json(obj: Any, unstructure_as: Any = None) -> str:
+    converter: JsonConverter = converters["json"]  # type: ignore
+    return converter.dumps(obj, unstructure_as=unstructure_as, indent=2)
+
+
+def from_json(serialized: str, cls: type[T]) -> T:
+    converter: JsonConverter = converters["json"]  # type: ignore
+    return converter.loads(serialized, cls)

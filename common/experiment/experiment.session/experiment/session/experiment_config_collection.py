@@ -6,6 +6,7 @@ from typing import Optional
 
 from experiment.configuration import ExperimentConfig
 from settings_model import YAMLSerializable
+from util import serialization
 
 
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
@@ -23,8 +24,8 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         """
 
         try:
-            experiment_config = YAMLSerializable.load(
-                self.get_experiment_config_yaml(name)
+            experiment_config = serialization.from_json(
+                self.get_experiment_config_json(name), ExperimentConfig
             )
         except Exception as e:
             raise ValueError(f"Failed to load experiment config '{name}'") from e
@@ -35,7 +36,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         return experiment_config
 
     @abstractmethod
-    def get_experiment_config_yaml(self, name: str) -> str:
+    def get_experiment_config_json(self, name: str) -> str:
         """Get the experiment configuration yaml string.
 
         Args:
@@ -54,20 +55,20 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             raise TypeError(
                 f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
             )
-        yaml_config = YAMLSerializable.dump(experiment_config)
-        if YAMLSerializable.load(yaml_config) != experiment_config:
+        json_config = serialization.to_json(experiment_config, ExperimentConfig)
+        if serialization.from_json(json_config, ExperimentConfig) != experiment_config:
             raise AssertionError("The experiment config was not correctly serialized.")
-        self._set_experiment_config_yaml(name, yaml_config)
+        self._set_experiment_config_json(name, json_config)
 
     @abstractmethod
-    def _set_experiment_config_yaml(self, name: str, yaml_config: str):
+    def _set_experiment_config_json(self, name: str, json_config: str):
         """Set the experiment configuration yaml string.
 
         This is a private method that should not be called directly. Instead, the method `__setitem__` should be used.
 
         Args:
             name: The name of the experiment configuration.
-            yaml_config: The yaml string representation of the experiment configuration.
+            json_config: The yaml string representation of the experiment configuration.
         """
 
         raise NotImplementedError()
@@ -178,7 +179,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         name = self.get_current()
         if name is None:
             return None
-        experiment_config_yaml = self.get_experiment_config_yaml(name)
+        experiment_config_yaml = self.get_experiment_config_json(name)
         return experiment_config_yaml
 
     def get_modification_date(self, name: str) -> datetime:
