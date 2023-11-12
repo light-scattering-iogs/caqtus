@@ -55,7 +55,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
                 f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
             )
         yaml_config = YAMLSerializable.dump(experiment_config)
-        if YAMLSerializable.from_yaml(yaml_config) != experiment_config:
+        if YAMLSerializable.load(yaml_config) != experiment_config:
             raise AssertionError("The experiment config was not correctly serialized.")
         self._set_experiment_config_yaml(name, yaml_config)
 
