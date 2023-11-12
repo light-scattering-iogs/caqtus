@@ -6,6 +6,7 @@ import yaml
 
 from expression import Expression
 from sequence.configuration.steps.step import Step, compute_total_number_shots
+from settings_model import YAMLSerializable
 from units import Quantity, units
 from util import attrs, serialization
 from variable.name import DottedVariableName
@@ -126,6 +127,9 @@ def representer(dumper: yaml.Dumper, step: ArangeLoop):
     )
 
 
+YAMLSerializable.get_dumper().add_representer(ArangeLoop, representer)
+
+
 def constructor(loader: yaml.Loader, node: yaml.Node):
     mapping = loader.construct_mapping(node, deep=True)
     try:
@@ -134,3 +138,6 @@ def constructor(loader: yaml.Loader, node: yaml.Node):
         raise ValueError(
             f"Cannot construct {ArangeLoop.__name__} from {mapping}"
         ) from e
+
+
+YAMLSerializable.get_loader().add_constructor(f"!{ArangeLoop.__name__}", constructor)
