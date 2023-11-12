@@ -30,7 +30,6 @@ from experiment.session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     Step,
-    SequenceSteps,
     VariableDeclaration,
     ArangeLoop,
     LinspaceLoop,
@@ -39,6 +38,7 @@ from sequence.configuration import (
     UserInputLoop,
 )
 from sequence.runtime import Sequence, State
+from settings_model import YAMLSerializable
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .shot_widget import ShotWidget
 from ..steps_editor import StepDelegate
@@ -70,7 +70,7 @@ class SequenceStepsModel(StepsModel):
         self._sequence_program = sequence_config.program
 
         self.undo_stack = UndoStack()
-        self.undo_stack.push(self._sequence_program.to_yaml())
+        self.undo_stack.push(YAMLSerializable.dump(self._sequence_program))
 
         self._state_updater = SequenceStateWatcher(
             sequence, session_maker, watch_interval=0.5
@@ -98,7 +98,7 @@ class SequenceStepsModel(StepsModel):
     def save_config(self, session: ExperimentSession, save_undo: bool = True):
         self._sequence.set_steps_program(self._sequence_program, session)
         if save_undo:
-            self.undo_stack.push(self._sequence_program.to_yaml())
+            self.undo_stack.push(YAMLSerializable.dump(self._sequence_program))
 
     def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
         with self._edit_session as session:
@@ -174,7 +174,7 @@ class SequenceStepsModel(StepsModel):
         with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 new_yaml = self.undo_stack.undo()
-                new_steps = SequenceSteps.from_yaml(new_yaml)
+                new_steps = YAMLSerializable.load(new_yaml)
 
                 self.beginResetModel()
                 self._sequence_program = new_steps
@@ -186,7 +186,7 @@ class SequenceStepsModel(StepsModel):
         with self._session as session:
             if self.get_sequence_state(session) == State.DRAFT:
                 new_yaml = self.undo_stack.redo()
-                new_steps = SequenceSteps.from_yaml(new_yaml)
+                new_steps = YAMLSerializable.load(new_yaml)
                 self.beginResetModel()
                 self._sequence_program = new_steps
                 self.save_config(session, save_undo=False)
