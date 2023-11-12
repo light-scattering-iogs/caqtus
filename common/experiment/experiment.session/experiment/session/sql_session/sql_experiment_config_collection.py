@@ -5,8 +5,6 @@ import sqlalchemy.orm
 from attr import frozen
 from sqlalchemy import select
 
-from experiment.configuration import ExperimentConfig
-from settings_model import YAMLSerializable
 from .model import (
     ExperimentConfigModel,
     CurrentExperimentConfigModel,
@@ -75,6 +73,16 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
 
     def __len__(self) -> int:
         return len(list(iter(self)))
+
+    def __contains__(self, item: str):
+        # Here we redefine __contains__ because the default implementation of MutableMapping.__contains__ calls
+        # __getitem__ which is slow since we need to deserialize the associated experiment config.
+        if not isinstance(item, str):
+            raise TypeError(f"Expected <str> for item, got {type(item)}")
+        query = select(ExperimentConfigModel.name).where(
+            ExperimentConfigModel.name == item
+        )
+        return self._get_sql_session().execute(query).one_or_none() is not None
 
     def set_current(self, name: str):
         if not isinstance(name, str):
