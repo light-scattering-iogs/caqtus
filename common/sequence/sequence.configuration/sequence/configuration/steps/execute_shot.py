@@ -4,18 +4,23 @@ import yaml
 
 from sequence.configuration.steps.step import Step
 from settings_model import YAMLSerializable
+from util import attrs, serialization
 
 ShotName = str
 
 
+@attrs.define
 class ExecuteShot(Step):
     """Represents a step that executes a shot on the machine."""
 
-    def __init__(self, name: ShotName, parent: Optional[Step] = None):
-        if not isinstance(name, ShotName):
-            raise TypeError(f"Expected <str> for name, got {type(name)}")
+    name: ShotName = attrs.field(
+        converter=str,
+        on_setattr=attrs.setters.convert,
+    )
+
+    def __init__(self, name: ShotName):
+        super().__init__()
         self.name = name
-        super().__init__(parent, None)
 
     def __str__(self):
         return f"Do {self.name}"
@@ -27,6 +32,24 @@ class ExecuteShot(Step):
 
     def expected_number_shots(self) -> Optional[int]:
         return 1
+
+
+def unstructure_hook(execute_shot: ExecuteShot):
+    return {
+        "name": str(execute_shot.name),
+    }
+
+
+serialization.register_unstructure_hook(ExecuteShot, unstructure_hook)
+
+
+def structure_hook(data: dict[str, str], cls: type[ExecuteShot]) -> ExecuteShot:
+    return ExecuteShot(
+        name=data["name"],
+    )
+
+
+serialization.register_structure_hook(ExecuteShot, structure_hook)
 
 
 def representer(dumper: yaml.Dumper, step: ExecuteShot):

@@ -7,7 +7,7 @@ import yaml
 from expression import Expression
 from sequence.configuration.steps.step import Step, compute_total_number_shots
 from units import Quantity, units
-from util import attrs
+from util import attrs, serialization
 from variable.name import DottedVariableName
 
 
@@ -41,10 +41,11 @@ class ArangeLoop(Step):
         parent: Optional[Step] = None,
         children: Optional[Iterable[Step]] = None,
     ):
-        self.__attrs_init__(name, start, stop, step, parent, children)
-        if not children:
-            children = []
-        super().__init__(parent, children)
+        super().__init__(parent=parent, children=children)
+        self.name = name
+        self.start = start
+        self.stop = stop
+        self.step = step
 
     def __str__(self):
         return (
@@ -84,6 +85,32 @@ class ArangeLoop(Step):
             return multiplier * number_sub_steps
         except Exception:
             return None
+
+
+def unstructure_hook(arange_loop: ArangeLoop) -> dict:
+    return {
+        "name": str(arange_loop.name),
+        "start": serialization.unstructure(arange_loop.start, Expression),
+        "stop": serialization.unstructure(arange_loop.stop, Expression),
+        "step": serialization.unstructure(arange_loop.step, Expression),
+        "children": serialization.unstructure(arange_loop.children, tuple[Step, ...]),
+    }
+
+
+serialization.register_unstructure_hook(ArangeLoop, unstructure_hook)
+
+
+def structure_hook(data: dict, cls: type[ArangeLoop]) -> ArangeLoop:
+    return ArangeLoop(
+        name=DottedVariableName(data["name"]),
+        start=serialization.structure(data["start"], Expression),
+        stop=serialization.structure(data["stop"], Expression),
+        step=serialization.structure(data["step"], Expression),
+        children=serialization.structure(data["children"], tuple[Step, ...]),
+    )
+
+
+serialization.register_structure_hook(ArangeLoop, structure_hook)
 
 
 def representer(dumper: yaml.Dumper, step: ArangeLoop):

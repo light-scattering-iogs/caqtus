@@ -1,10 +1,10 @@
-from typing import Optional, Self
+from typing import Optional
 
 import yaml
 
 from expression import Expression
 from settings_model import YAMLSerializable
-from util import attrs
+from util import attrs, serialization
 from variable.name import DottedVariableName
 from .step import Step
 
@@ -22,14 +22,10 @@ class VariableDeclaration(Step):
         on_setattr=attrs.setters.validate,
     )
 
-    def __init__(
-        self,
-        name: DottedVariableName,
-        expression: Expression,
-        parent: Optional[Self] = None,
-    ):
-        self.__attrs_init__(name, expression)
-        super().__init__(parent, None)
+    def __init__(self, name: DottedVariableName, expression: Expression):
+        super().__init__()
+        self.name = name
+        self.expression = expression
 
     def __repr__(self):
         return f"VariableDeclaration({self.name}, {self.expression})"
@@ -44,6 +40,30 @@ class VariableDeclaration(Step):
 
     def expected_number_shots(self) -> Optional[int]:
         return 0
+
+
+def unstructure_hook(variable_declaration: VariableDeclaration):
+    return {
+        "name": str(variable_declaration.name),
+        "expression": serialization.unstructure(
+            variable_declaration.expression, Expression
+        ),
+    }
+
+
+serialization.register_unstructure_hook(VariableDeclaration, unstructure_hook)
+
+
+def structure_hook(
+    data: dict[str, str], cls: type[VariableDeclaration]
+) -> VariableDeclaration:
+    return VariableDeclaration(
+        name=DottedVariableName(data["name"]),
+        expression=serialization.structure(data["expression"], Expression),
+    )
+
+
+serialization.register_structure_hook(VariableDeclaration, structure_hook)
 
 
 def representer(dumper: yaml.Dumper, step: VariableDeclaration):

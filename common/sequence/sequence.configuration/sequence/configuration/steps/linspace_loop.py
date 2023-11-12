@@ -1,10 +1,11 @@
+from collections.abc import Iterable
 from typing import Optional
 
 import yaml
 
 from expression import Expression
 from settings_model import YAMLSerializable
-from util import attrs
+from util import attrs, serialization
 from variable.name import DottedVariableName
 from .step import Step, compute_total_number_shots
 
@@ -37,12 +38,13 @@ class LinspaceLoop(Step):
         stop: Expression,
         num: int,
         parent: Optional[Step] = None,
-        children: Optional[list[Step]] = None,
+        children: Optional[Iterable[Step]] = None,
     ):
-        self.__attrs_init__(name, start, stop, num)
-        if not children:
-            children = []
-        super().__init__(self, parent, children)
+        super().__init__(parent=parent, children=children)
+        self.name = name
+        self.start = start
+        self.stop = stop
+        self.num = num
 
     def __str__(self):
         return (
@@ -66,6 +68,32 @@ class LinspaceLoop(Step):
         if number_sub_steps is None:
             return None
         return self.num * number_sub_steps
+
+
+def unstructure_hook(linspace_loop: LinspaceLoop) -> dict:
+    return {
+        "name": str(linspace_loop.name),
+        "start": serialization.unstructure(linspace_loop.start, Expression),
+        "stop": serialization.unstructure(linspace_loop.stop, Expression),
+        "num": serialization.unstructure(linspace_loop.num, int),
+        "children": serialization.unstructure(linspace_loop.children, tuple[Step, ...]),
+    }
+
+
+serialization.register_unstructure_hook(LinspaceLoop, unstructure_hook)
+
+
+def structure_hook(data: dict, cls: type[LinspaceLoop]) -> LinspaceLoop:
+    return LinspaceLoop(
+        name=DottedVariableName(data["name"]),
+        start=serialization.structure(data["start"], Expression),
+        stop=serialization.structure(data["stop"], Expression),
+        num=serialization.structure(data["num"], int),
+        children=serialization.structure(data["children"], tuple[Step, ...]),
+    )
+
+
+serialization.register_structure_hook(LinspaceLoop, structure_hook)
 
 
 def representer(dumper: yaml.Dumper, step: LinspaceLoop):
