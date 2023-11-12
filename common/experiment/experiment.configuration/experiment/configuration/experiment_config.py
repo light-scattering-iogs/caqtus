@@ -74,7 +74,7 @@ class ExperimentConfig:
     )
 
     header: SequenceSteps = attrs.field(
-        factory=SequenceSteps,
+        factory=lambda: SequenceSteps(),
         validator=attrs.validators.instance_of(SequenceSteps),
         on_setattr=attrs.setters.validate,
     )
