@@ -34,7 +34,6 @@ from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from util import attrs
 from validate_arguments import validate_arguments
 from .device_server_config import DeviceServerConfiguration
-from .optimization_config import OptimizerConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -85,16 +84,6 @@ class ExperimentConfig:
         validator=attrs.validators.deep_mapping(
             key_validator=attrs.validators.instance_of(str),
             value_validator=attrs.validators.instance_of(DeviceConfigurationAttrs),
-        ),
-        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
-    )
-
-    optimization_configurations: dict[str, OptimizerConfiguration] = attrs.field(
-        factory=dict,
-        converter=dict,
-        validator=attrs.validators.deep_mapping(
-            key_validator=attrs.validators.instance_of(str),
-            value_validator=attrs.validators.instance_of(OptimizerConfiguration),
         ),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
@@ -282,14 +271,6 @@ class ExperimentConfig:
             )
 
         self.device_configurations[name] = copy.deepcopy(config)
-
-    def get_optimizer_config(self, optimizer_name: str) -> OptimizerConfiguration:
-        try:
-            return self.optimization_configurations[optimizer_name]
-        except KeyError:
-            raise ValueError(
-                f"Could not find an optimizer configuration named {optimizer_name}"
-            )
 
     def get_device_runtime_type(self, device_name: DeviceName) -> str:
         """Return the runtime type of device."""
