@@ -2,18 +2,37 @@ import asyncio
 import collections
 import concurrent.futures
 import contextlib
+import datetime
 import itertools
+import logging
 import threading
-from typing import Mapping, Iterable, Self
+from typing import Mapping, Iterable, Self, Any
 
-from camera.runtime import Camera
+from camera.runtime import Camera, CameraTimeoutError
+from data_types import Data
+from device.configuration import DeviceParameter
 from device.name import DeviceName
 from device.runtime import RuntimeDevice
 from sequencer.runtime import Sequencer
-from tweezer_arranger.runtime import TweezerArranger
+from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
+from util import DurationTimer, attrs
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+@attrs.frozen
+class ShotResult:
+    start_time: datetime.datetime
+    end_time: datetime.datetime
+    data: Data
 
 
 class ShotRunner(contextlib.AbstractContextManager):
+    """Runs shot on the experiment.
+
+    All communication with the devices are done inside this class.
+    """
     def __init__(
         self,
         sequencers: Mapping[DeviceName, Sequencer],
@@ -57,6 +76,7 @@ class ShotRunner(contextlib.AbstractContextManager):
         """Prepare to run shots.
 
         When entering the shot runner, all the devices will be initialized.
+        Cannot be used inside an already running asyncio event loop.
         """
 
         self._exit_stack.__enter__()
@@ -69,8 +89,7 @@ class ShotRunner(contextlib.AbstractContextManager):
         return self
 
     def _initialize_devices(self) -> None:
-        # We create a new loop in a new thread, because we don't know if we are running inside a loop already.
-        self._thread_pool.submit(asyncio.run, self._initialize_devices()).result()
+        asyncio.run(self._initialize_devices_async())
 
     async def _initialize_devices_async(self) -> None:
         async with asyncio.TaskGroup() as g:
@@ -92,6 +111,57 @@ class ShotRunner(contextlib.AbstractContextManager):
         """
 
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+
+    def do_shot(
+        self,
+        device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]],
+        number_of_attempts: int,
+    ) -> ShotResult:
+        """Run a shot, retrying if it fails because of a camera timeout or a rearrangement failure.
+
+        Cannot be used inside an already running asyncio event loop.
+        """
+        return asyncio.run(
+            self._do_shot_with_retry(device_parameters, number_of_attempts)
+        )
+
+    async def _do_shot_with_retry(
+        self,
+        device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]],
+        number_of_attempts: int,
+    ) -> ShotResult:
+
+        number_of_attempts = int(number_of_attempts)
+        if number_of_attempts < 1:
+            raise ValueError("number_of_attempts must be >= 1")
+
+        for attempt in range(number_of_attempts):
+            errors: list[Exception] = []
+            try:
+                with DurationTimer() as timer:
+                    data = await asyncio.to_thread(
+                        self._do_single_shot,
+                        device_parameters,
+                    )
+            except* CameraTimeoutError as e:
+                errors.extend(e.exceptions)
+                logger.warning(
+                    "A camera timeout error occurred, attempting to redo the failed shot"
+                )
+            except* RearrangementFailedError as e:
+                errors.extend(e.exceptions)
+                logger.warning("Rearrangement failed, attempting to redo the shot")
+            else:
+                return ShotResult(
+                    start_time=timer.start_time,
+                    end_time=timer.end_time,
+                    data=data,
+                )
+            logger.warning(f"Attempt {attempt+1}/{number_of_attempts} failed")
+        # noinspection PyUnboundLocalVariable
+        raise ExceptionGroup(
+            f"Could not execute shot after {number_of_attempts} attempts", errors
+        )
 
 
 def _check_name_unique(names: Iterable[DeviceName]):

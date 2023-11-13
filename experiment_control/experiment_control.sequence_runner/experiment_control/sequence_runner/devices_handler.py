@@ -109,54 +109,7 @@ class DevicesHandler(AbstractContextManager):
             tweezer_arranger.save_awg_data()
 
 
-def get_sequencers_in_use(
-    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
-) -> dict[DeviceName, Sequencer]:
-    """Return the sequencer devices used in the experiment.
 
-    The sequencers are sorted by trigger priority, with the highest priority first.
-    """
-
-    # Here we can't test the type of the runtime device itself because it is actually a proxy and not an instance of
-    # the actual device class, that's why we need to test the type of the configuration instead.
-    sequencers: dict[DeviceName, Sequencer] = {
-        device_name: device
-        for device_name, device in devices.items()
-        if isinstance(
-            experiment_config.get_device_config(device_name),
-            SequencerConfiguration,
-        )
-    }
-    sorted_by_trigger_priority = sorted(
-        sequencers.items(), key=lambda x: x[1].get_trigger_priority(), reverse=True
-    )
-    return dict(sorted_by_trigger_priority)
-
-
-def get_cameras_in_use(
-    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
-) -> dict[DeviceName, "Camera"]:
-    return {
-        device_name: device  # type: ignore
-        for device_name, device in devices.items()
-        if isinstance(
-            experiment_config.get_device_config(device_name),
-            CameraConfiguration,
-        )
-    }
-
-
-def get_tweezer_arrangers_in_use(
-    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
-) -> dict[DeviceName, "AODTweezerArranger"]:
-    return {
-        device_name: device  # type: ignore
-        for device_name, device in devices.items()
-        if isinstance(
-            experiment_config.get_device_config(device_name),
-            AODTweezerArrangerConfiguration,
-        )
-    }
 
 
 def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):

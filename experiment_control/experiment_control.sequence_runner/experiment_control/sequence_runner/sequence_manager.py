@@ -10,7 +10,8 @@ from typing import Self, Any, Optional, Mapping
 
 from attr import frozen, field
 
-from camera.runtime import CameraTimeoutError, Camera
+from camera.configuration import CameraConfiguration
+from camera.runtime import Camera
 from data_types import DataLabel, Data
 from device.configuration import DeviceParameter
 from device.name import DeviceName
@@ -29,17 +30,19 @@ from experiment_control.compute_device_parameters.image_analysis import (
 from image_types import ImageLabel, Image
 from sequence.configuration import SequenceConfig
 from sequence.runtime import SequencePath, Sequence, State, Shot
+from sequencer.configuration import SequencerConfiguration
 from sequencer.runtime import Sequencer
-from tweezer_arranger.runtime import RearrangementFailedError
-from util import DurationTimer, DurationTimerLog
+from tweezer_arranger.configuration import TweezerArrangerConfiguration
+from tweezer_arranger.runtime import TweezerArranger
+from util import DurationTimerLog
 from variable.namespace import VariableNamespace
 from .device_servers import (
     create_device_servers,
     connect_to_device_servers,
     create_devices,
 )
-from .devices_handler import DevicesHandler
 from .sequence_context import StepContext
+from .shot_runner import ShotRunner
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -168,7 +171,7 @@ class SequenceManager(AbstractContextManager):
 
         self._runner = asyncio.Runner()
 
-        self._device_manager: DevicesHandler
+        self._shot_runner: ShotRunner
 
         if max_schedulable_shots is None:
             max_schedulable_shots = 0
@@ -276,8 +279,25 @@ class SequenceManager(AbstractContextManager):
             self._sequence_config = self._sequence.get_config(session)
 
         devices = self._create_uninitialized_devices()
-        self._device_manager = DevicesHandler(devices, self._experiment_config)
-        self._exit_stack.enter_context(self._device_manager)
+        sequencers = get_sequencers_in_use(devices, self._experiment_config)
+        cameras = get_cameras_in_use(devices, self._experiment_config)
+        tweezer_arrangers = get_tweezer_arrangers_in_use(
+            devices, self._experiment_config
+        )
+        extra_devices = {
+            device_name: device
+            for device_name, device in devices.items()
+            if device_name not in sequencers
+            and device_name not in cameras
+            and device_name not in tweezer_arrangers
+        }
+        self._shot_runner = ShotRunner(
+            sequencers=sequencers,
+            cameras=cameras,
+            tweezer_arrangers=tweezer_arrangers,
+            extra_devices=extra_devices,
+        )
+        self._exit_stack.enter_context(self._shot_runner)
 
         self._image_analysis_flow = find_how_to_analyze_images(
             self._sequence_config.shot_configurations["shot"]
@@ -380,36 +400,23 @@ class SequenceManager(AbstractContextManager):
         shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
         number_of_attempts = 3  # must >= 1
-        for attempt in range(number_of_attempts):
-            errors: list[Exception] = []
-            try:
-                with DurationTimer() as timer:
-                    data = await asyncio.to_thread(
-                        self.do_shot,
-                        shot_params.change_parameters,
-                        shot_params.static_parameters,
-                    )
-            except* CameraTimeoutError as e:
-                errors.extend(e.exceptions)
-                logger.warning(
-                    "A camera timeout error occurred, attempting to redo the failed shot"
-                )
-            except* RearrangementFailedError as e:
-                errors.extend(e.exceptions)
-                logger.warning("Rearrangement failed, attempting to redo the shot")
-            else:
-                return ShotMetadata(
-                    name=shot_params.name,
-                    index=shot_params.index,
-                    start_time=timer.start_time,
-                    end_time=timer.end_time,
-                    variables=shot_params.context.variables,
-                    data=data,
-                )
-            logger.warning(f"Attempt {attempt+1}/{number_of_attempts} failed")
-        # noinspection PyUnboundLocalVariable
-        raise ExceptionGroup(
-            f"Could not execute shot after {number_of_attempts} attempts", errors
+
+        # Need to merge these two properly if a device is present in both
+        device_parameters = (
+            shot_params.change_parameters | shot_params.static_parameters
+        )
+
+        result = await asyncio.to_thread(
+            self._shot_runner.do_shot, device_parameters, number_of_attempts
+        )
+
+        return ShotMetadata(
+            name=shot_params.name,
+            index=shot_params.index,
+            start_time=result.start_time,
+            end_time=result.end_time,
+            variables=shot_params.context.variables,
+            data=result.data,
         )
 
     def do_shot(
@@ -577,3 +584,53 @@ def save_shot(
             measures=shot_data.data,
             experiment_session=session,
         )
+
+
+def get_sequencers_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, Sequencer]:
+    """Return the sequencer devices used in the experiment.
+
+    The sequencers are sorted by trigger priority, with the highest priority first.
+    """
+
+    # Here we can't test the type of the runtime device itself because it is actually a proxy and not an instance of
+    # the actual device class, that's why we need to test the type of the configuration instead.
+    sequencers: dict[DeviceName, Sequencer] = {
+        device_name: device  # type: ignore
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            SequencerConfiguration,
+        )
+    }
+    sorted_by_trigger_priority = sorted(
+        sequencers.items(), key=lambda x: x[1].get_trigger_priority(), reverse=True
+    )
+    return dict(sorted_by_trigger_priority)
+
+
+def get_cameras_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, "Camera"]:
+    return {
+        device_name: device  # type: ignore
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            CameraConfiguration,
+        )
+    }
+
+
+def get_tweezer_arrangers_in_use(
+    devices: Mapping[DeviceName, RuntimeDevice], experiment_config: ExperimentConfig
+) -> dict[DeviceName, TweezerArranger]:
+    return {
+        device_name: device  # type: ignore
+        for device_name, device in devices.items()
+        if isinstance(
+            experiment_config.get_device_config(device_name),
+            TweezerArrangerConfiguration,
+        )
+    }
