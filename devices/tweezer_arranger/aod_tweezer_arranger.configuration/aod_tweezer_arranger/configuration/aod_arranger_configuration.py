@@ -43,4 +43,7 @@ class AODTweezerArrangerConfiguration(
         }
 
 
+TweezerArrangerConfiguration.register(AODTweezerArrangerConfiguration)
+
+
 YAMLSerializable.register_attrs_class(AODTweezerArrangerConfiguration)

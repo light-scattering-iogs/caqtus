@@ -89,7 +89,7 @@ class TweezerArrangerConfiguration(
 
         # We return a dictionary of tweezer configurations that will be used and the
         # sequence that indicates in which order to use them.
-        return super().get_device_init_args() | {
+        return DeviceConfigurationAttrs.get_device_init_args(self) | {
             DeviceParameter("tweezer_configurations"): {
                 configuration_name: self[configuration_name]
                 for configuration_name in tweezer_configurations_to_use
