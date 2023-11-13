@@ -13,9 +13,10 @@ def find_how_to_analyze_images(
     """Find out how to analyze images.
 
     This function returns a dictionary that maps from a camera name to a dictionary that maps from a picture name to a
-    tuple of the name of the device that should analyze the picture and the name of the detector that should be used to
-    analyze the picture.
+    tuple of the name of the device that should analyze the picture and the name of the configuration that should be
+    used to analyze the picture.
     """
+
     result: dict[
         DeviceName, dict[ImageLabel, dict[DeviceName, "ImagingConfigurationName"]]
     ] = {}

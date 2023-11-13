@@ -2,7 +2,6 @@ import asyncio
 import logging
 import pickle
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from contextlib import AbstractContextManager, ExitStack
 from datetime import datetime
@@ -24,10 +23,8 @@ from experiment_control.compute_device_parameters import (
     compute_shot_parameters,
 )
 from experiment_control.compute_device_parameters.image_analysis import (
-    find_how_to_analyze_images,
     find_how_to_rearrange,
 )
-from image_types import ImageLabel, Image
 from sequence.configuration import SequenceConfig
 from sequence.runtime import SequencePath, Sequence, State, Shot
 from sequencer.configuration import SequencerConfiguration
@@ -296,18 +293,11 @@ class SequenceManager(AbstractContextManager):
             cameras=cameras,
             tweezer_arrangers=tweezer_arrangers,
             extra_devices=extra_devices,
+            analysis_flow=find_how_to_rearrange(
+                self._sequence_config.shot_configurations["shot"]
+            ),
         )
         self._exit_stack.enter_context(self._shot_runner)
-
-        self._image_analysis_flow = find_how_to_analyze_images(
-            self._sequence_config.shot_configurations["shot"]
-        )
-
-        self._image_flow, self._rearrange_flow = find_how_to_rearrange(
-            self._sequence_config.shot_configurations["shot"]
-        )
-        logger.debug(f"{self._image_flow=}")
-        logger.debug(f"{self._rearrange_flow=}")
 
         self._runner = asyncio.Runner()
 
@@ -383,7 +373,7 @@ class SequenceManager(AbstractContextManager):
     async def _consume_device_shot_parameters(self) -> None:
         while True:
             device_parameters = await self._device_shot_parameters_queue.get()
-            shot_data = await self.do_shot_with_retry(device_parameters)
+            shot_data = await self.do_shot(device_parameters)
             await self._data_queue.put(shot_data)
             self._device_shot_parameters_queue.task_done()
 
@@ -395,7 +385,7 @@ class SequenceManager(AbstractContextManager):
         for task in self._background_tasks:
             task.cancel()
 
-    async def do_shot_with_retry(
+    async def do_shot(
         self,
         shot_params: ShotDeviceParameters,
     ) -> ShotMetadata:
@@ -418,92 +408,6 @@ class SequenceManager(AbstractContextManager):
             variables=shot_params.context.variables,
             data=result.data,
         )
-
-    def do_shot(
-        self,
-        change_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
-        device_parameters: Mapping[DeviceName, dict[DeviceParameter, Any]],
-    ) -> dict[DeviceName, Any]:
-        with DurationTimerLog(logger, "Updating devices", display_start=True):
-            self._device_manager.update_device_parameters(change_parameters)
-            self._device_manager.update_device_parameters(device_parameters)
-
-        with DurationTimerLog(logger, "Running shot", display_start=True):
-            data = asyncio.run(self.run_shot())
-        return data
-
-    async def run_shot(self) -> dict[DeviceName, dict[DataLabel, Data]]:
-        """Perform the shot.
-
-        This is the actual shot execution that determines how to use the devices within a shot. It assumes that the
-        devices have been correctly configured before.
-        """
-
-        data: dict[DeviceName, dict[DataLabel, Data]] = {}
-
-        with DurationTimerLog(logger, "Starting devices", display_start=True):
-            self._device_manager.start_shot()
-
-        with DurationTimerLog(logger, "Doing shot", display_start=True):
-            camera_tasks = {}
-            async with asyncio.TaskGroup() as g:
-                for camera_name, camera in self._device_manager.cameras.items():
-                    camera_tasks[camera_name] = g.create_task(
-                        asyncio.to_thread(
-                            self.fetch_and_analyze_images, camera_name, camera
-                        )
-                    )
-                for sequencer in self._device_manager.sequencers.values():
-                    g.create_task(asyncio.to_thread(wait_on_sequencer, sequencer))
-
-        for camera_name, camera_task in camera_tasks.items():
-            data |= camera_task.result()
-
-        self._device_manager.finish_shot()
-
-        return data
-
-    def fetch_and_analyze_images(
-        self, camera_name: DeviceName, camera: "Camera"
-    ) -> dict[DeviceName, dict[DataLabel, Data]]:
-        picture_names = camera.get_picture_names()
-
-        result: dict[DeviceName, dict[DataLabel, Data]] = {}
-        pictures = {}
-        for picture_name in picture_names:
-            with DurationTimerLog(
-                logger, f"Fetching picture '{picture_name}'", display_start=True
-            ):
-                picture = get_picture_from_camera(camera, picture_name)
-            pictures[picture_name] = picture
-            logger.debug(
-                f"Got picture '{picture_name}' from camera '{camera.get_name()}'"
-            )
-            if (camera_name, picture_name) in self._image_flow:
-                for detector, imaging_config in self._image_flow[
-                    (camera_name, picture_name)
-                ]:
-                    atoms = self._device_manager._devices[detector].are_atoms_present(
-                        picture, imaging_config
-                    )
-                    if detector not in result:
-                        result[detector] = {}
-                    result[detector][picture_name] = atoms
-                    if (detector, picture_name) in self._rearrange_flow:
-                        tweezer_arranger, step = self._rearrange_flow[
-                            (detector, picture_name)
-                        ]
-                        with DurationTimerLog(
-                            logger, "Preparing rearrangement", display_start=True
-                        ):
-                            self._device_manager.tweezer_arrangers[
-                                tweezer_arranger
-                            ].prepare_rearrangement(step=step, atom_present=atoms)
-        camera.stop_acquisition()
-        logger.debug(f"Stopped acquisition of camera '{camera.get_name()}'")
-
-        result[camera_name] = pictures
-        return result
 
     async def _consume_shot_data(self) -> None:
         while True:
@@ -552,19 +456,6 @@ class SequenceManager(AbstractContextManager):
 
 class SequenceInterruptedException(RuntimeError):
     pass
-
-
-def wait_on_sequencer(sequencer: Sequencer):
-    """Wait for a sequencer to finish."""
-
-    while not sequencer.has_sequence_finished():
-        time.sleep(10e-3)
-
-
-def get_picture_from_camera(camera: "Camera", picture_name: ImageLabel) -> Image:
-    while (image := camera.get_picture(picture_name)) is None:
-        time.sleep(1e-3)
-    return image
 
 
 def save_shot(
