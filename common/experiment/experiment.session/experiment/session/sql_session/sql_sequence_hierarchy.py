@@ -151,12 +151,12 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     ) -> Optional[ExperimentConfig]:
         sequence_model = self._query_sequence_model(sequence)
 
-        experience_config_model = sequence_model.get_experiment_config()
-        if experience_config_model is None:
+        if sequence_model.experiment_config is None:
             return None
-        return ExperimentConfig.from_yaml(
-            experience_config_model.experiment_config_yaml
-        )
+        else:
+            return self.parent_session.experiment_configs[
+                sequence_model.experiment_config_name
+            ]
 
     def set_sequence_experiment_config(
         self, sequence: Sequence, experiment_config: str
