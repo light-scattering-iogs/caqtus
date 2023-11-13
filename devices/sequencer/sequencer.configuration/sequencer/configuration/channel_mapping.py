@@ -96,7 +96,7 @@ class CalibratedAnalogMapping(AnalogMapping):
     """
 
     measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
-        converter=data_points_converter, on_setattr=attrs.setters.convert
+        factory=tuple, converter=data_points_converter, on_setattr=attrs.setters.convert
     )
     input_units: str = attrs.field(
         default="", converter=str, on_setattr=attrs.setters.convert
