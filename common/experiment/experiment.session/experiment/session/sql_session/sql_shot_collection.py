@@ -3,10 +3,10 @@ from typing import Any, TYPE_CHECKING
 
 import sqlalchemy.orm
 from attr import frozen
-from sqlalchemy import select
-
 from sequence.runtime import Sequence, Shot
 from sequence.runtime.shot import ShotNotFoundError
+from sqlalchemy import select
+
 from .model import SequenceModel, ShotModel
 from ..data_type import DataType
 from ..experiment_session import ShotCollection
@@ -19,9 +19,13 @@ if TYPE_CHECKING:
 class SQLShotCollection(ShotCollection):
     parent_session: "SQLExperimentSession"
 
-    def get_shot_data(self, shot: Shot, data_type: DataType) -> dict[str, Any]:
+    def get_shot_data(self, shot: Shot, data_label: str) -> Any:
         shot_sql = self._query_shot_model(shot)
-        return shot_sql.get_data(data_type, self._get_sql_session())
+        return shot_sql.get_data(data_label, self._get_sql_session())
+
+    def get_all_shot_data(self, shot: Shot, data_type: DataType) -> dict[str, Any]:
+        shot_sql = self._query_shot_model(shot)
+        return shot_sql.get_all_data(data_type, self._get_sql_session())
 
     def add_shot_data(
         self, shot: Shot, data: dict[str, Any], data_type: DataType

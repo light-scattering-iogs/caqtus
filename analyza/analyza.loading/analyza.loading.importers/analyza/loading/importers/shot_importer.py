@@ -1,11 +1,12 @@
+from abc import ABC
 from typing import Protocol, TypeVar, Mapping
 
 from attr import define
-
-from experiment.session import ExperimentSession
 from image_types import Image
 from parameter_types import Parameter
 from sequence.runtime import Shot
+
+from experiment.session import ExperimentSession
 
 T = TypeVar("T", covariant=True)
 
@@ -21,15 +22,15 @@ class ShotImporter(Protocol[T]):
         raise NotImplementedError()
 
 
-class ImageImporter(ShotImporter[Image]):
+class ImageImporter(ShotImporter[Image], ABC):
     """A shot importer returns an image from the shot."""
 
     pass
 
 
-class ParametersImporter(ShotImporter[Mapping[str, Parameter]]):
+class ParametersImporter(ShotImporter[Mapping[str, Parameter]], ABC):
     pass
 
 
-class AtomImporter2D(ShotImporter[dict[tuple[float, float], bool]]):
+class AtomImporter2D(ShotImporter[dict[tuple[float, float], bool]], ABC):
     pass

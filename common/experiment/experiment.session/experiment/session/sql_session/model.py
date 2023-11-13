@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional, Any
 
+from sequence.configuration import SequenceConfig
+from sequence.runtime.sequence_state import State
 from sqlalchemy import (
     select,
     ForeignKey,
@@ -22,8 +24,6 @@ from sqlalchemy.orm import (
 from sqlalchemy_utils import Ltree, LtreeType
 
 from experiment.session.data_type import DataType
-from sequence.configuration import SequenceConfig
-from sequence.runtime.sequence_state import State
 from .base import Base
 
 
@@ -353,11 +353,20 @@ class ShotModel(Base):
 
         session.flush()
 
-    def get_data(self, type_: "DataType", session: Session) -> dict[str, Any]:
+    def get_all_data(self, type_: "DataType", session: Session) -> dict[str, Any]:
         query = select(DataModel).filter(
             DataModel.shot == self, DataModel.type_ == type_
         )
         return {data.name: data.value for data in session.scalars(query).all()}
+
+    def get_data(self, label: str, session: Session) -> Any:
+        query = select(DataModel).filter(
+            DataModel.shot == self, DataModel.name == label
+        )
+        data = session.execute(query).one_or_none()
+        if data is None:
+            raise KeyError(f"No data with label {label} found")
+        return data[0].value
 
 
 class DataModel(Base):
