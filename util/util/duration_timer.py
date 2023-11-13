@@ -12,11 +12,11 @@ class DurationTimer(contextlib.AbstractContextManager):
         self._end_time = None
 
     def __enter__(self) -> Self:
-        self._start_time = datetime.datetime.now()
+        self._start_time = datetime.datetime.now(datetime.timezone.utc)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._end_time = datetime.datetime.now()
+        self._end_time = datetime.datetime.now(datetime.timezone.utc)
 
     @property
     def duration(self) -> datetime.timedelta:
