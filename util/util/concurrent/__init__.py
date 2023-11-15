@@ -1,3 +1,3 @@
-from ._gather_futures import gather_futures, TaskGroup
+from ._gather_futures import TaskGroup
 
-__all__ = ["gather_futures", "TaskGroup"]
+__all__ = ["TaskGroup"]

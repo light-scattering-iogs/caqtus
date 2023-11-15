@@ -98,7 +98,7 @@ class ShotRunner(contextlib.AbstractContextManager):
         return self
 
     def _initialize_devices(self) -> None:
-        with TaskGroup(self._thread_pool) as g:
+        with TaskGroup(self._thread_pool, name="initialize devices") as g:
             for device in self._devices.values():
                 g.create_task(self._initialize_device, device)
 
@@ -180,7 +180,7 @@ class ShotRunner(contextlib.AbstractContextManager):
     def _update_device_parameters(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ):
-        with TaskGroup(self._thread_pool) as g:
+        with TaskGroup(self._thread_pool, name="update devices") as g:
             for device_name, parameters in device_parameters.items():
                 g.create_task(update_device, self._devices[device_name], parameters)
 
@@ -191,7 +191,7 @@ class ShotRunner(contextlib.AbstractContextManager):
             self._launch_shot()
 
         with DurationTimerLog(logger, "Running shot", display_start=True), TaskGroup(
-            self._thread_pool
+            self._thread_pool, name="shot tasks"
         ) as g:
             camera_tasks = {}
             for camera_name, camera in self._cameras.items():
@@ -210,7 +210,7 @@ class ShotRunner(contextlib.AbstractContextManager):
 
     def _launch_shot(self):
         sequencers = list(self._sequencers.values())
-        with TaskGroup(self._thread_pool) as g:
+        with TaskGroup(self._thread_pool, name="launch shot") as g:
             for tweezer_arranger in self._tweezer_arrangers.values():
                 # Interface for tweezer arrangers is not fully defined yet, so some methods call are specific to
                 # AODTweezerArranger

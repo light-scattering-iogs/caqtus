@@ -1,17 +1,18 @@
 import concurrent.futures
 from collections.abc import Iterable, Callable
 from concurrent.futures import Future
-from typing import TypeVar, ParamSpec
+from typing import TypeVar, ParamSpec, Optional
 
 T = TypeVar("T")
 P = ParamSpec("P")
 
 
-def gather_futures(futures: Iterable[Future[T]]) -> list[T]:
+def _gather_futures(futures: Iterable[Future[T]], name: Optional[str]) -> list[T]:
     """Gather the result all futures into a list.
 
     Args:
         futures: An iterable of futures.
+        name: The name of the task group, used for error messages.
 
     Returns:
         A list of the results of the futures.
@@ -30,21 +31,24 @@ def gather_futures(futures: Iterable[Future[T]]) -> list[T]:
             results.append(future.result())
 
     if exceptions:
-        if not all(isinstance(exception, Exception) for exception in exceptions):
-            raise BaseExceptionGroup(
-                f"Unhandled exceptions ({len(exceptions)}) in futures", exceptions
-            )
+        if name is None:
+            msg = f"Unhandled exceptions ({len(exceptions)}) in task group"
         else:
-            raise ExceptionGroup(
-                f"Unhandled exceptions ({len(exceptions)}) in futures", exceptions  # type: ignore
-            )
+            msg = f"Unhandled exceptions ({len(exceptions)}) in task group {name}"
+        if not all(isinstance(exception, Exception) for exception in exceptions):
+            raise BaseExceptionGroup(msg, exceptions)
+        else:
+            raise ExceptionGroup(msg, exceptions)  # type: ignore
 
     return results
 
 
 class TaskGroup:
-    def __init__(self, executor: concurrent.futures.Executor):
+    def __init__(
+        self, executor: concurrent.futures.Executor, /, name: Optional[str] = None
+    ):
         self._executor = executor
+        self._name = name
         self._futures: list[Future] = []
 
     def __enter__(self):
@@ -61,5 +65,5 @@ class TaskGroup:
         return future
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        gather_futures(self._futures)
+        _gather_futures(self._futures, name=self._name)
         self._futures = []
