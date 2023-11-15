@@ -1,5 +1,5 @@
-import asyncio
 import collections
+import concurrent.futures
 import contextlib
 import datetime
 import itertools
@@ -21,6 +21,7 @@ from image_types import ImageLabel, Image
 from sequencer.runtime import Sequencer
 from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
 from util import DurationTimer, attrs, DurationTimerLog
+from util.concurrent import TaskGroup
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -78,16 +79,17 @@ class ShotRunner(contextlib.AbstractContextManager):
         self._image_flow, self._rearrange_flow = analysis_flow
 
         self._exit_stack = contextlib.ExitStack()
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor()
         self._lock = threading.Lock()
 
     def __enter__(self) -> Self:
         """Prepare to run shots.
 
         When entering the shot runner, all the devices will be initialized.
-        Cannot be used inside an already running asyncio event loop.
         """
 
         self._exit_stack.__enter__()
+        self._exit_stack.enter_context(self._thread_pool)
         try:
             self._initialize_devices()
         except Exception:
@@ -96,12 +98,9 @@ class ShotRunner(contextlib.AbstractContextManager):
         return self
 
     def _initialize_devices(self) -> None:
-        asyncio.run(self._initialize_devices_async())
-
-    async def _initialize_devices_async(self) -> None:
-        async with asyncio.TaskGroup() as g:
-            for device_name, device in self._devices.items():
-                g.create_task(asyncio.to_thread(self._initialize_device, device))
+        with TaskGroup(self._thread_pool) as g:
+            for device in self._devices.values():
+                g.create_task(self._initialize_device, device)
 
     def _initialize_device(self, device: RuntimeDevice) -> None:
         # We don't initialize the device inside the lock because we want to initialize all the devices in parallel in
@@ -130,11 +129,9 @@ class ShotRunner(contextlib.AbstractContextManager):
         method in a new thread.
         """
 
-        return asyncio.run(
-            self._do_shot_with_retry(device_parameters, number_of_attempts)
-        )
+        return self._do_shot_with_retry(device_parameters, number_of_attempts)
 
-    async def _do_shot_with_retry(
+    def _do_shot_with_retry(
         self,
         device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]],
         number_of_attempts: int,
@@ -148,7 +145,7 @@ class ShotRunner(contextlib.AbstractContextManager):
             errors: list[Exception] = []
             try:
                 with DurationTimer() as timer:
-                    data = await self._do_single_shot(device_parameters)
+                    data = self._do_single_shot(device_parameters)
             except* CameraTimeoutError as e:
                 errors.extend(e.exceptions)
                 logger.warning(
@@ -169,45 +166,40 @@ class ShotRunner(contextlib.AbstractContextManager):
             f"Could not execute shot after {number_of_attempts} attempts", errors
         )
 
-    async def _do_single_shot(
+    def _do_single_shot(
         self,
         device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]],
     ) -> dict[DeviceName, dict[DataLabel, Data]]:
         with DurationTimerLog(logger, "Updating devices", display_start=True):
-            await self._update_device_parameters(device_parameters)
+            self._update_device_parameters(device_parameters)
 
         with DurationTimerLog(logger, "Performing shot", display_start=True):
-            data = await self._perform_shot()
+            data = self._perform_shot()
         return data
 
-    async def _update_device_parameters(
+    def _update_device_parameters(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ):
-        async with asyncio.TaskGroup() as g:
+        with TaskGroup(self._thread_pool) as g:
             for device_name, parameters in device_parameters.items():
-                g.create_task(
-                    asyncio.to_thread(
-                        update_device, self._devices[device_name], parameters
-                    )
-                )
+                g.create_task(update_device, self._devices[device_name], parameters)
 
-    async def _perform_shot(self) -> dict[DeviceName, dict[DataLabel, Data]]:
+    def _perform_shot(self) -> dict[DeviceName, dict[DataLabel, Data]]:
         data: dict[DeviceName, dict[DataLabel, Data]] = {}
 
         with DurationTimerLog(logger, "Launching shot", display_start=True):
-            await self._launch_shot()
+            self._launch_shot()
 
-        with DurationTimerLog(logger, "Running shot", display_start=True):
+        with DurationTimerLog(logger, "Running shot", display_start=True), TaskGroup(
+            self._thread_pool
+        ) as g:
             camera_tasks = {}
-            async with asyncio.TaskGroup() as g:
-                for camera_name, camera in self._cameras.items():
-                    camera_tasks[camera_name] = g.create_task(
-                        asyncio.to_thread(
-                            self.fetch_and_analyze_images, camera_name, camera
-                        )
-                    )
-                for sequencer in self._sequencers.values():
-                    g.create_task(asyncio.to_thread(wait_on_sequencer, sequencer))
+            for camera_name, camera in self._cameras.items():
+                camera_tasks[camera_name] = g.create_task(
+                    self.fetch_and_analyze_images, camera_name, camera
+                )
+            for sequencer in self._sequencers.values():
+                g.create_task(wait_on_sequencer, sequencer)
 
         for camera_name, camera_task in camera_tasks.items():
             data |= camera_task.result()
@@ -216,17 +208,17 @@ class ShotRunner(contextlib.AbstractContextManager):
 
         return data
 
-    async def _launch_shot(self):
+    def _launch_shot(self):
         sequencers = list(self._sequencers.values())
-        async with asyncio.TaskGroup() as g:
+        with TaskGroup(self._thread_pool) as g:
             for tweezer_arranger in self._tweezer_arrangers.values():
                 # Interface for tweezer arrangers is not fully defined yet, so some methods call are specific to
                 # AODTweezerArranger
-                g.create_task(asyncio.to_thread(tweezer_arranger.start_sequence))
+                g.create_task(tweezer_arranger.start_sequence)
             for camera in self._cameras.values():
-                g.create_task(asyncio.to_thread(camera.start_acquisition))
+                g.create_task(camera.start_acquisition)
             for sequencer in sequencers[:-1]:
-                g.create_task(asyncio.to_thread(sequencer.start_sequence))
+                g.create_task(sequencer.start_sequence)
 
         # We start the sequencer with the lower priority last so that it can trigger the other sequencers.
         sequencers[-1].start_sequence()
@@ -276,7 +268,7 @@ def _check_name_unique(names: Iterable[DeviceName]):
             raise ValueError(f"Device name {name} is used more than once")
 
 
-def update_device(device: RuntimeDevice, parameters: Mapping[DeviceParameter, Any]):
+def update_device(device: RuntimeDevice, parameters: Mapping[str, Any]):
     try:
         if parameters:
             with DurationTimerLog(
