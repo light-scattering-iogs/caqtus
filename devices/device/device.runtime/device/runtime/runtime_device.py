@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+import abc
+from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
-from typing import ClassVar, Optional, TypeVar
+from typing import ClassVar, Optional, TypeVar, Protocol, runtime_checkable, Self
 
 from attr import define, field
 from attr.setters import frozen
@@ -10,29 +11,61 @@ from device.configuration import DeviceName
 _T = TypeVar("_T")
 
 
-@define(slots=False)
-class RuntimeDevice(AbstractContextManager, ABC):
-    """A class that is instantiated to directly control a physical device
+@runtime_checkable
+class Device(Protocol):
+    """Defines the interface that a device must satisfy.
 
-    All devices used in the experiment must inherit from this class.
-    Objects of this class can be used as context managers to automatically start and shutdown the device.
 
     Fields:
-        name: A unique name given to the device. It is used to identify the device in the experiment configuration.
+        name: A unique name given to the device. It is used to identify the device in the experiment.
+    """
 
-    Methods:
-        __init__: The constructor of the class. It is used to initialize the device parameters. No communication
-            to the device should be done here, it is only used to set the parameters.
-        initialize: This method must be called once before attempting any communication with the actual device. It is
-            used to initiate the communication to the device.
-        update_parameters: This method is used to change the values of some parameters of the device. It can be called
-            as many times as needed.
-        close: This method must be called once when use of the device is finished. It is used to close the
-            communication to the device and free the resources used by the device.
+    name: DeviceName
+
+    def __init__(self, **kwargs):
+        """The constructor of the class.
+
+        It is used to initialize the device parameters. No communication to the device should be done here, it is only
+        used to set the parameters."""
+
+        ...
+
+    def __enter__(self) -> Self:
+        """Initiate the communication to the device.
+
+        Starts the device and acquire the necessary resources.
+        """
+
+        ...
+
+    def update_parameters(self, *_, **kwargs) -> None:
+        """Apply new values for some parameters of the device.
+
+        This method is meant to be reimplemented for each specific device. It can be called as many times as needed. The
+        base class implementation updates the device attributes with the new values passed as keyword arguments.
+        """
+
+        ...
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Shutdown the device.
+
+        Used to terminate communication to the device and free the associated resources.
+        """
+
+        ...
+
+
+@define(slots=False)
+class RuntimeDevice(Device, abc.ABC):
+    """An implementation of the Device class that provides some useful operations.
+
+    Class inheriting from RuntimeDevice can use the methods `_add_closing_callback` and `_enter_context` to facilitate
+    gestion of resources.
 
     Warnings:
-        All device classes subclassed from this class should call parent_item class start and shutdown methods when
-        subclassing them.
+        All device classes subclassed from this class should call parent_item class initialize and close methods when
+        overwriting them.
     """
 
     name: DeviceName = field(on_setattr=frozen)
@@ -45,7 +78,7 @@ class RuntimeDevice(AbstractContextManager, ABC):
         if not isinstance(value, str):
             raise TypeError(f"Expected DeviceName, got {type(value)}")
 
-    @abstractmethod
+    @abc.abstractmethod
     def initialize(self) -> None:
         """Initiate the communication to the device.
 
@@ -123,7 +156,7 @@ class RuntimeDevice(AbstractContextManager, ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "initialize", "update_parameters", "close", "get_name"
+        return "__enter__", "__exit__", "update_parameters",  "get_name"
 
 
 class UninitializedDeviceError(Exception):
