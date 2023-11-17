@@ -3,22 +3,13 @@ import math
 from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 
 import numpy as np
-from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from attrs import define, field, frozen
 from attrs.setters import frozen as frozen_setter
 from attrs.validators import instance_of, deep_mapping, deep_iterable
-from device.name import DeviceName
-from tweezer_arranger.configuration import (
-    HoldTweezers,
-    MoveTweezers,
-    RearrangeTweezers,
-    ArrangerInstruction,
-)
-from tweezer_arranger.configuration import (
-    TweezerConfigurationName,
-)
-from util import log_exception, DurationTimerLog
 
+from aod_tweezer_arranger.configuration import AODTweezerConfiguration
+from device.name import DeviceName
+from device.runtime import RuntimeDevice
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -29,7 +20,21 @@ from spectum_awg_m4i66xx_x8.runtime import (
     StepConfiguration,
     SegmentData,
 )
-from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
+from tweezer_arranger.configuration import (
+    HoldTweezers,
+    MoveTweezers,
+    RearrangeTweezers,
+    ArrangerInstruction,
+)
+from tweezer_arranger.configuration import (
+    TweezerConfigurationName,
+)
+from tweezer_arranger.runtime import (
+    TweezerArranger,
+    RearrangementFailedError,
+    validate_tweezer_sequence,
+)
+from util import log_exception, DurationTimerLog
 from .signal_generator import SignalGenerator, NumberSamples, AWGSignalArray
 
 logger = logging.getLogger(__name__)
@@ -43,7 +48,7 @@ pattern_line = 0
 
 
 @define(slots=False)
-class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
+class AODTweezerArranger(RuntimeDevice, TweezerArranger[AODTweezerConfiguration]):
     """Device that uses an AWG/AOD to rearrange and move tweezers.
 
     Fields:
@@ -110,10 +115,10 @@ class AODTweezerArranger(TweezerArranger[AODTweezerConfiguration]):
                 )
 
     @tweezer_sequence.validator  # type: ignore
-    def validate_tweezer_sequence(
+    def validator_tweezer_sequence(
         self, attribute, sequence: tuple[ArrangerInstruction, ...]
     ):
-        super().validate_tweezer_sequence(attribute, sequence)
+        validate_tweezer_sequence(sequence)
 
         # Here we check if there is a phase mismatch between two tweezer configurations we are moving between.
         # There can be a mismatch if we 'move' the frequency of a tweezer with the same initial and target frequency.

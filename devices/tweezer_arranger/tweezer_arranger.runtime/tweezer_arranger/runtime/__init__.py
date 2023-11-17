@@ -5,6 +5,7 @@ from .tweezer_arranger import (
     MoveTweezers,
     RearrangeTweezers,
     RearrangementFailedError,
+    validate_tweezer_sequence,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "MoveTweezers",
     "RearrangeTweezers",
     "RearrangementFailedError",
+    "validate_tweezer_sequence",
 ]
