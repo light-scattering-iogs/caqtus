@@ -18,7 +18,9 @@ class RemoteDeviceServer:
         self, type_name: str, device_type: Type[RuntimeDevice], exposed: Iterable[str]
     ):
         self._remote_device_manager_class.register(
-            type_name, device_type, exposed=list(exposed)
+            type_name,
+            device_type,
+            # exposed=list(exposed),
         )
 
     def serve_forever(self):
