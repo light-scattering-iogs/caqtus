@@ -22,7 +22,7 @@ class DataTestError:
 
 
 @attrs.frozen
-class TestResultError(TestError):
+class TestErrorGroup(TestError):
     results: tuple[TestError, ...] = attrs.field(
         converter=tuple,
         validator=attrs.validators.deep_iterable(
