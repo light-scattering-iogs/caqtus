@@ -87,7 +87,8 @@ class RuntimeDevice(Device, abc.ABC):
         """Close the communication to the device and free the resources used by the device.
 
         This method must be called once when use of the device is finished. The base class implementation unwinds the
-        stack of closing callbacks.
+        stack of closing callbacks that where registered when it is called. If you only use `_enter_context` and
+        `_add_closing_callback`, there is no need to reimplement this method in subclasses.
         """
 
         if self._close_stack is None:
@@ -98,6 +99,14 @@ class RuntimeDevice(Device, abc.ABC):
         self._close_stack = None
 
     def __enter__(self) -> Self:
+        """Initialize the device.
+
+        When entering the device as a context manager, it will try to acquire necessary resources by calling
+        `initialize`. If an error occurs while calling initialization, the `close` method will be called. Typically,
+        subclasses only need to reimplement `initialize` using only  `_enter_context` and `_add_closing_callback`.
+        This will ensure proper cleanup.
+        """
+
         try:
             self.initialize()
         except Exception:
