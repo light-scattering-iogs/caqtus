@@ -3,7 +3,7 @@ import importlib.metadata
 from .device import Device
 
 
-def discover_installed_devices() -> dict[str, type[Device]]:
+def load_installed_devices() -> dict[str, type[Device]]:
     """Returns the device classes that are installed in the current environment.
 
     This function uses the entry point mechanism to find all the classes that are registered under the group
