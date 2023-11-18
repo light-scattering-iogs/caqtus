@@ -3,8 +3,8 @@ from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
 from typing import ClassVar, Optional, TypeVar, Self
 
-from util import attrs
 from device.configuration import DeviceName
+from util import attrs
 from .device import Device
 
 _T = TypeVar("_T")
@@ -25,9 +25,9 @@ class RuntimeDevice(Device, abc.ABC):
         overwriting them.
     """
 
-    name: DeviceName = field(on_setattr=attrs.setters.frozen)
+    name: DeviceName = attrs.field(on_setattr=attrs.setters.frozen)
 
-    _close_stack: Optional[ExitStack] = field(init=False, default=None)
+    _close_stack: Optional[ExitStack] = attrs.field(init=False, default=None)
     __devices_already_in_use: ClassVar[dict[DeviceName, "RuntimeDevice"]] = {}
 
     @name.validator  # type: ignore
@@ -113,7 +113,22 @@ class RuntimeDevice(Device, abc.ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "__enter__", "__exit__", "update_parameters", "get_name"
+        """Returns methods that should be exposed when running a device on a remote server.
+
+        When running this device on a server, not all methods can be called by default, ut only those that are returned
+        by this function.
+        """
+
+        # Here we add the methods required by the Device interface so that even a proxy to the device has the required
+        # methods.
+        return (
+            "__enter__",
+            "__exit__",
+            "initialize",
+            "close",
+            "update_parameters",
+            "get_name",
+        )
 
 
 class UninitializedDeviceError(Exception):

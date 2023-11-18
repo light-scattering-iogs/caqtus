@@ -1,3 +1,4 @@
-from .runtime_device import Device, RuntimeDevice
+from .device import Device
+from .runtime_device import RuntimeDevice
 
 __all__ = ["Device", "RuntimeDevice"]

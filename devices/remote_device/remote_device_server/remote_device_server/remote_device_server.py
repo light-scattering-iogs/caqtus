@@ -20,7 +20,7 @@ class RemoteDeviceServer:
         self._remote_device_manager_class.register(
             type_name,
             device_type,
-            # exposed=list(exposed),
+            exposed=list(exposed),
         )
 
     def serve_forever(self):
