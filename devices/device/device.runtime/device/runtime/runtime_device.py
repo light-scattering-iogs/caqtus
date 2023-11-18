@@ -1,80 +1,37 @@
 import abc
 from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
-from typing import ClassVar, Optional, TypeVar, Protocol, runtime_checkable, Self
+from typing import ClassVar, Optional, TypeVar, Self
 
-from attr import define, field
-from attr.setters import frozen
-
+from util import attrs
 from device.configuration import DeviceName
+from .device import Device
 
 _T = TypeVar("_T")
 
 
-@runtime_checkable
-class Device(Protocol):
-    """Defines the interface that a device must satisfy.
-
-
-    Fields:
-        name: A unique name given to the device. It is used to identify the device in the experiment.
-    """
-
-    name: DeviceName
-
-    def __init__(self, **kwargs):
-        """The constructor of the class.
-
-        It is used to initialize the device parameters. No communication to the device should be done here, it is only
-        used to set the parameters."""
-
-        ...
-
-    def __enter__(self) -> Self:
-        """Initiate the communication to the device.
-
-        Starts the device and acquire the necessary resources.
-        """
-
-        ...
-
-    def update_parameters(self, *_, **kwargs) -> None:
-        """Apply new values for some parameters of the device.
-
-        This method is meant to be reimplemented for each specific device. It can be called as many times as needed. The
-        base class implementation updates the device attributes with the new values passed as keyword arguments.
-        """
-
-        ...
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Shutdown the device.
-
-        Used to terminate communication to the device and free the associated resources.
-        """
-
-        ...
-
-
-@define(slots=False)
+@attrs.define(slots=False)
 class RuntimeDevice(Device, abc.ABC):
     """An implementation of the Device class that provides some useful operations.
 
     Class inheriting from RuntimeDevice can use the methods `_add_closing_callback` and `_enter_context` to facilitate
-    gestion of resources.
+    managing resources.
+
+    Fields:
+        name: A unique name given to the device. Cannot be changed during the lifetime of the device.
 
     Warnings:
         All device classes subclassed from this class should call parent_item class initialize and close methods when
         overwriting them.
     """
 
-    name: DeviceName = field(on_setattr=frozen)
+    name: DeviceName = field(on_setattr=attrs.setters.frozen)
 
     _close_stack: Optional[ExitStack] = field(init=False, default=None)
     __devices_already_in_use: ClassVar[dict[DeviceName, "RuntimeDevice"]] = {}
 
     @name.validator  # type: ignore
-    def _validate_name(self, attribute, value):
+    def _validate_name(self, _, value):
         if not isinstance(value, str):
             raise TypeError(f"Expected DeviceName, got {type(value)}")
 
@@ -140,7 +97,7 @@ class RuntimeDevice(Device, abc.ABC):
         self._close_stack.close()
         self._close_stack = None
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         try:
             self.initialize()
         except Exception:
@@ -156,7 +113,7 @@ class RuntimeDevice(Device, abc.ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return "__enter__", "__exit__", "update_parameters",  "get_name"
+        return "__enter__", "__exit__", "update_parameters", "get_name"
 
 
 class UninitializedDeviceError(Exception):

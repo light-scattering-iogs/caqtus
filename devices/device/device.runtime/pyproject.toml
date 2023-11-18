@@ -13,6 +13,7 @@ python = "^3.10"
 attrs = "^23.1.0"
 
 device-config = {path = "../device.configuration", develop = true}
+util = {path = "../../../util", develop = true}
 
 
 
