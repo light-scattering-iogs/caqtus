@@ -3,7 +3,7 @@ from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
 from typing import ClassVar, Optional, TypeVar, Self
 
-from device.configuration import DeviceName
+from device.name import DeviceName
 from util import attrs
 from .device import Device
 

@@ -1,6 +1,6 @@
 from typing import runtime_checkable, Protocol, Self
 
-from device.configuration import DeviceName
+from device.name import DeviceName
 
 
 @runtime_checkable
