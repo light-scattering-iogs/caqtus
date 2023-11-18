@@ -16,8 +16,6 @@ attrs = "^23.1.0"
 util = {path = "../../../util", develop = true}
 sequencer-instructions = {path = "../../sequencer/sequencer.instructions", develop = true}
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
-duration-timer = {path = "../../../common/duration_timer", develop = true}
-
 
 
 [tool.poetry.group.dev.dependencies]
