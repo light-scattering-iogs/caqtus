@@ -17,6 +17,9 @@ util = {path = "../../../util", develop = true}
 sequencer-instructions = {path = "../../sequencer/sequencer.instructions", develop = true}
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
 
+[tool.poetry.plugins."experiment_control.devices"]
+"NI6738AnalogCard" = "ni6738_analog_card.runtime:NI6738AnalogCard"
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"

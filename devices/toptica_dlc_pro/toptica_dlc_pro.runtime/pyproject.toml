@@ -8,9 +8,13 @@ packages = [{include = "toptica_dlc_pro"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.12"
+
 toptica-lasersdk = "^3.1.1"
 util = {path = "../../../util", develop = true}
 device-runtime = {path = "../../device/device.runtime", develop = true}
+
+[tool.poetry.plugins."experiment_control.devices"]
+"TopticaDLCPro" = "toptica_dlc_pro.runtime:TopticaDLCPro"
 
 
 [tool.poetry.group.dev.dependencies]
