@@ -13,12 +13,12 @@ class BackgroundScheduler:
     """Runs a task periodically in a separate thread."""
 
     def __init__(self, shutdown_on_error: bool = True):
-        """Initialize a new BackgroundRunner.
+        """Initialize a new instance.
 
         Args:
             shutdown_on_error: Indicates how the runner should behave when an error occurs in one the tasks. If True,
-            the runner will stop all other tasks. If False, the other tasks will continue to run. In both cases,
-            the error will be raised when leaving the context manager.
+            the runner will stop all other tasks if an error occurs in any of them. If False, the other tasks will
+            continue to run. In both cases, the error will be raised when leaving the context manager.
         """
 
         self._lock = threading.Lock()
