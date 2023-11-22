@@ -32,10 +32,14 @@ class BackgroundRunner:
         self._exit_stack.__enter__()
         self._exit_stack.enter_context(self._thread_pool)
         self._future = self._thread_pool.submit(asyncio.run, self._run())
-        self._exit_stack.callback(self._stop)
+        self._exit_stack.callback(self.stop)
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+
+    def is_running(self) -> bool:
+        return self._asyncio_loop.is_running()
 
     def check_error(self) -> None:
         """Can be used to check if an error occurred in the background thread.
@@ -52,9 +56,9 @@ class BackgroundRunner:
                     f"An error occurred while running background task {self._func}"
                 ) from e
 
-    def _stop(self):
+    def stop(self) -> None:
         with self._lock:
-            if self._asyncio_loop.is_running():
+            if self.is_running():
                 asyncio.run_coroutine_threadsafe(
                     self._cancel(), self._asyncio_loop
                 ).result()
