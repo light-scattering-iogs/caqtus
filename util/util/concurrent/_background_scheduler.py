@@ -10,7 +10,7 @@ T = TypeVar("T")
 
 
 class BackgroundScheduler:
-    """Runs a task periodically in a separate thread."""
+    """Runs tasks periodically in background threads."""
 
     def __init__(self, shutdown_on_error: bool = True):
         """Initialize a new instance.
@@ -20,8 +20,6 @@ class BackgroundScheduler:
             the runner will stop all other tasks if an error occurs in any of them. If False, the other tasks will
             continue to run. In both cases, the error will be raised when leaving the context manager.
         """
-
-        self._lock = threading.Lock()
 
         self._exit_stack = contextlib.ExitStack()
         self._shutdown_on_error = shutdown_on_error
@@ -91,9 +89,9 @@ class BackgroundScheduler:
         return self._must_stop.is_set()
 
     def shutdown(self) -> None:
-        """Indicates that the runner should stop as soon as possible.
+        """Indicates that the scheduler should stop as soon as possible.
 
-        This method is not blocking and does not wait for the runner to stop.
+        This method is not blocking and does not wait for the scheduler to stop.
         """
 
         self._must_stop.set()
