@@ -1,4 +1,4 @@
-from ._background_runner import BackgroundRunner
-from ._gather_futures import TaskGroup
+from ._background_scheduler import BackgroundScheduler
+from ._task_group import TaskGroup
 
-__all__ = ["TaskGroup", "BackgroundRunner"]
+__all__ = ["TaskGroup", "BackgroundScheduler"]

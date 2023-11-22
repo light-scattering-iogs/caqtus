@@ -78,6 +78,11 @@ class TaskGroup:
         self._gather_futures(self._futures)
         self._futures = []
 
+    def get_running_tasks(self) -> list[Future]:
+        """Get all the tasks that are still running."""
+
+        return [future for future in self._futures if not future.done()]
+
     def _gather_futures(self, futures: Iterable[Future[T]]) -> list[T]:
         """Gather the result all futures into a list.
 
@@ -102,9 +107,9 @@ class TaskGroup:
 
         if exceptions:
             if self._name is None:
-                msg = f"Unhandled exceptions ({len(exceptions)}) in task group"
+                msg = f"Unhandled exceptions in task group"
             else:
-                msg = f"Unhandled exceptions ({len(exceptions)}) in task group {self._name}"
+                msg = f"Unhandled exceptions in task group {self._name}"
             if not all(isinstance(exception, Exception) for exception in exceptions):
                 raise BaseExceptionGroup(msg, exceptions)
             else:
