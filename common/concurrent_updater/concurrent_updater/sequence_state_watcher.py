@@ -1,15 +1,15 @@
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Self
 
 from experiment.session import ExperimentSessionMaker
 from sequence.runtime import Sequence, State
-from .concurrent_updater import ConcurrentUpdater
+from util.concurrent import BackgroundScheduler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class SequenceStateWatcher(ConcurrentUpdater):
+class SequenceStateWatcher:
     """Watches the state of a sequence at regular intervals
 
     Args:
@@ -30,11 +30,16 @@ class SequenceStateWatcher(ConcurrentUpdater):
         self._on_state_changed = on_state_changed
         self._session = session_maker()
         self._sequence_state = None
-        super().__init__(target=self._update_state, watch_interval=watch_interval)
+        self._watch_interval = watch_interval
+        self._scheduler = BackgroundScheduler(max_workers=1)
 
-    def start(self):
+    def __enter__(self) -> Self:
         self._update_state()
-        super().start()
+        self._scheduler.schedule_task(self._update_state, self._watch_interval)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._scheduler.__exit__(exc_type, exc_value, traceback)
 
     def _read_state(self) -> State:
         with self._session as session:

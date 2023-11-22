@@ -68,9 +68,8 @@ class SwimLaneModel(QAbstractItemModel):
 
         self._state_updater = SequenceStateWatcher(
             sequence, session_maker, watch_interval=0.5
-        )
-        self._state_updater.start()
-        self.destroyed.connect(self._state_updater.stop)
+        ).__enter__()
+        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
 
     @property
     def sequence_state(self) -> State:

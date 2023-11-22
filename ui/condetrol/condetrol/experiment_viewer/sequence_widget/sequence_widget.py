@@ -74,9 +74,8 @@ class SequenceStepsModel(StepsModel):
 
         self._state_updater = SequenceStateWatcher(
             sequence, session_maker, watch_interval=0.5
-        )
-        self._state_updater.start()
-        self.destroyed.connect(self._state_updater.stop)
+        ).__enter__()
+        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
 
     @property
     def sequence_state(self) -> State:
@@ -373,9 +372,8 @@ class SequenceWidget(QDockWidget):
             session_maker,
             on_state_changed=self.update_title,
             watch_interval=0.5,
-        )
-        self._state_updater.start()
-        self.destroyed.connect(self._state_updater.stop)
+        ).__enter__()
+        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
 
     def update_title(self, state: State):
         self.setWindowTitle(f"{str(self._sequence.path)} [{state.name}]")
