@@ -1,7 +1,7 @@
 import concurrent.futures
 import contextlib
 import threading
-from typing import Callable, TypeVar, ParamSpec, SupportsFloat, Self
+from typing import Callable, TypeVar, ParamSpec, SupportsFloat, Self, Optional
 
 from ._task_group import TaskGroup
 
@@ -12,19 +12,25 @@ T = TypeVar("T")
 class BackgroundScheduler:
     """Runs tasks periodically in background threads."""
 
-    def __init__(self, shutdown_on_error: bool = True):
+    def __init__(
+        self, shutdown_on_error: bool = True, max_workers: Optional[int] = None
+    ):
         """Initialize a new instance.
 
         Args:
             shutdown_on_error: Indicates how the runner should behave when an error occurs in one the tasks. If True,
             the runner will stop all other tasks if an error occurs in any of them. If False, the other tasks will
             continue to run. In both cases, the error will be raised when leaving the context manager.
+            max_workers: The maximum number of threads to use to run the tasks. Refer to the documentation of
+            concurrent.futures.ThreadPoolExecutor for more information.
         """
 
         self._exit_stack = contextlib.ExitStack()
         self._shutdown_on_error = shutdown_on_error
 
-        self._thread_pool = concurrent.futures.ThreadPoolExecutor()
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max_workers
+        )
         self._task_group = TaskGroup(self._thread_pool)
         self._must_stop = threading.Event()
 
