@@ -4,13 +4,17 @@ from typing import Self
 from PyQt6.QtWidgets import QMainWindow, QWidget
 
 from analyza.loading.importers import ShotImporter
-from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Sequence
+from experiment.session import ExperimentSessionMaker, ExperimentSession
+from sequence.runtime import Sequence, Shot
 from ._data_loader_selector import DataLoaderSelector
 from ._sequence_analyzer import SequenceAnalyzer, DataImporter
 from ._sequence_hierarchy_widget import SequenceHierarchyWidget
 from ._watchlist_widget import WatchlistWidget
 from .main_window_ui import Ui_MainWindow
+
+
+def import_nothing(shot: Shot, session: ExperimentSession):
+    return {}
 
 
 class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
@@ -26,6 +30,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._sequences_analyzer = SequenceAnalyzer(session_maker)
         self._watchlist_widget = WatchlistWidget(self._sequences_analyzer)
         self._data_loader_selector = DataLoaderSelector(data_loaders)
+        self._data_loader: DataImporter = import_nothing
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
         self._setup_ui()
@@ -46,12 +51,12 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def _on_data_loader_selected(self, data_loader: DataImporter) -> None:
+        self._data_loader = data_loader
         for sequence in self._sequences_analyzer.sequences:
-            print(sequence)
-            self._sequences_analyzer.monitor_sequence(sequence, data_loader)
+            self._sequences_analyzer.monitor_sequence(sequence, self._data_loader)
 
     def _on_sequence_double_clicked(self, sequence: Sequence) -> None:
-        self._watchlist_widget.add_sequence(sequence)
+        self._watchlist_widget.add_sequence(sequence, self._data_loader)
 
     def __enter__(self) -> Self:
         self._sequences_analyzer.__enter__()

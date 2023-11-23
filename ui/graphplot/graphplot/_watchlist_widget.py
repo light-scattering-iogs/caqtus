@@ -4,7 +4,7 @@ from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget
 
 from sequence.runtime import Sequence
-from ._sequence_analyzer import SequenceAnalyzer
+from ._sequence_analyzer import SequenceAnalyzer, DataImporter
 from .watchlist_widget_ui import Ui_WatchlistWidget
 
 
@@ -19,8 +19,8 @@ class WatchlistWidget(QWidget, Ui_WatchlistWidget):
         self.setupUi(self)
         self._list_view.setModel(self._sequence_analyzer_model)
 
-    def add_sequence(self, sequence: Sequence) -> None:
-        self._sequence_analyzer_model.add_sequence(sequence)
+    def add_sequence(self, sequence: Sequence, data_loader: DataImporter) -> None:
+        self._sequence_analyzer_model.add_sequence(sequence, data_loader)
 
 
 class SequencesAnalyzerModel(QAbstractListModel):
@@ -33,14 +33,11 @@ class SequencesAnalyzerModel(QAbstractListModel):
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._sequence_analyzer.sequences)
 
-    def add_sequence(self, sequence: Sequence) -> None:
-        def loader(shot, session):
-            return {}
-
+    def add_sequence(self, sequence: Sequence, data_loader: DataImporter) -> None:
         # Here we do a full model reset and not just a row insertion, because if the sequence is already
         # in the sequence analyzer, it actually won't be added but just updated.
         self.beginResetModel()
-        self._sequence_analyzer.monitor_sequence(sequence, loader)
+        self._sequence_analyzer.monitor_sequence(sequence, data_loader)
         self.endResetModel()
 
     def data(
