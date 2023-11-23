@@ -56,7 +56,12 @@ class SequenceStepsModel(StepsModel):
     """
 
     def __init__(
-        self, sequence: Sequence, session_maker: ExperimentSessionMaker, *args, **kwargs
+        self,
+        sequence: Sequence,
+        sequence_state_watcher: SequenceStateWatcher,
+        session_maker: ExperimentSessionMaker,
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
 
@@ -72,10 +77,7 @@ class SequenceStepsModel(StepsModel):
         self.undo_stack = UndoStack()
         self.undo_stack.push(YAMLSerializable.dump(self._sequence_program))
 
-        self._state_updater = SequenceStateWatcher(
-            sequence, session_maker, watch_interval=0.5
-        ).__enter__()
-        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
+        self._state_updater = sequence_state_watcher
 
     @property
     def sequence_state(self) -> State:
@@ -358,6 +360,18 @@ class SequenceWidget(QDockWidget):
         self.tab_widget = QTabWidget()
         self.setWidget(self.tab_widget)
 
+        # Here we create on object that will watch the state of the sequence.
+        # We close it in the closeEvent method.
+        # This object is passed to child widgets, so they can update their state
+        # when the sequence state changes and there is only one object watching the
+        # state of the sequence.
+        self._state_updater = SequenceStateWatcher(
+            sequence,
+            session_maker,
+            on_state_changed=self.update_title,
+            watch_interval=0.5,
+        ).__enter__()
+
         self.program_tree = self.create_sequence_tree()
         self.tab_widget.addTab(self.program_tree, "Sequence")
 
@@ -367,13 +381,10 @@ class SequenceWidget(QDockWidget):
         self.undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self, self.undo)
         self.redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self, self.redo)
 
-        self._state_updater = SequenceStateWatcher(
-            sequence,
-            session_maker,
-            on_state_changed=self.update_title,
-            watch_interval=0.5,
-        ).__enter__()
-        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if event.isAccepted():
+            self._state_updater.__exit__(None, None, None)
 
     def update_title(self, state: State):
         self.setWindowTitle(f"{str(self._sequence.path)} [{state.name}]")
@@ -391,7 +402,7 @@ class SequenceWidget(QDockWidget):
     def create_sequence_tree(self):
         tree = SequenceTreeView()
         program_model = SequenceStepsModel(
-            self._sequence, self._session_maker, parent=tree
+            self._sequence, self._state_updater, self._session_maker, parent=tree
         )
         tree.setModel(program_model)
         program_model.modelReset.connect(lambda: self.program_tree.expandAll())
@@ -400,7 +411,10 @@ class SequenceWidget(QDockWidget):
 
     def create_shot_widget(self):
         w = ShotWidget(
-            self._sequence, deepcopy(self._experiment_config), self._session_maker
+            self._sequence,
+            self._state_updater,
+            deepcopy(self._experiment_config),
+            self._session_maker,
         )
         return w
 

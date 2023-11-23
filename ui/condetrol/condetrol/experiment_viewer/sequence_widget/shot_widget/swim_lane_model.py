@@ -43,6 +43,7 @@ class SwimLaneModel(QAbstractItemModel):
     def __init__(
         self,
         sequence: Sequence,
+        sequence_state_watcher: SequenceStateWatcher,
         shot_name: str,
         experiment_config: ExperimentConfig,
         session_maker: ExperimentSessionMaker,
@@ -66,10 +67,7 @@ class SwimLaneModel(QAbstractItemModel):
         self._lane_groups_model = LaneGroupModel(self.shot_config.lane_groups)
         self._lanes_model = LanesModel(self.shot_config.lanes, self._experiment_config)
 
-        self._state_updater = SequenceStateWatcher(
-            sequence, session_maker, watch_interval=0.5
-        ).__enter__()
-        self.destroyed.connect(lambda: self._state_updater.__exit__(None, None, None))
+        self._state_updater = sequence_state_watcher
 
     @property
     def sequence_state(self) -> State:
