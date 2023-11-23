@@ -4,7 +4,7 @@ import collections.abc
 import datetime
 import threading
 from collections.abc import Mapping
-from typing import Optional, Any, Self
+from typing import Optional, Any, Self, TypeAlias
 
 import pandas
 
@@ -15,6 +15,8 @@ from sequence.runtime.shot import ShotNotFoundError
 from util import attrs
 from util.concurrent import BackgroundScheduler
 from util.itertools import batched
+
+DataImporter: TypeAlias = ShotImporter[Mapping[str, Any]]
 
 
 class SequenceAnalyzer:
@@ -42,9 +44,7 @@ class SequenceAnalyzer:
     def is_running(self) -> bool:
         return self._background_scheduler.is_running()
 
-    def monitor_sequence(
-        self, sequence: Sequence, shot_importer: ShotImporter[Mapping[str, Any]]
-    ) -> None:
+    def monitor_sequence(self, sequence: Sequence, shot_importer: DataImporter) -> None:
         """Starts to load and analyze data a sequence.
 
         Args:
@@ -127,7 +127,6 @@ class SequenceAnalyzer:
                 # This will raise ShotNotFoundError, in which case we exit this task fast and let the next repetition
                 # manage this.
                 break
-
 
     def _append_shots_to_dataframe(
         self,
