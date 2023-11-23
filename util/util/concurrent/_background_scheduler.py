@@ -45,7 +45,9 @@ class BackgroundScheduler:
         """Stops repeating tasks.
 
         When the bottom of the with statement is reached, all periodically running tasks will be stopped. If errors
-        occurred in any of the tasks, they will be raised here, wrapped in an ExceptionGroup.
+        occurred in any of the tasks, they will be raised here, wrapped in an ExceptionGroup. When reaching the end of
+        the with statement, this will stop repeating tasks, but it will still need to wait for the previous ones to stop
+        before exiting.
         """
 
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
