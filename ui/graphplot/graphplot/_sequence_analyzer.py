@@ -35,6 +35,10 @@ class SequenceAnalyzer:
         self._must_interrupt.set()
         return self._background_scheduler.__exit__(exc_type, exc_val, exc_tb)
 
+    @property
+    def sequences(self) -> list[Sequence]:
+        return list(self._sequences)
+
     def is_running(self) -> bool:
         return self._background_scheduler.is_running()
 
@@ -80,7 +84,7 @@ class SequenceAnalyzer:
             return None
 
     def _update_sequences(self) -> None:
-        for sequence in self._sequences:
+        for sequence in list(self._sequences):
             if self._must_interrupt.is_set():
                 break
             self._update_sequence(sequence)

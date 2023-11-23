@@ -31,4 +31,5 @@ class SequenceHierarchyWidget(QTreeView):
         with self._session_maker() as session:
             if path.is_sequence(session):
                 sequence = Sequence(path)
+                print(sequence)
                 self.sequence_double_clicked.emit(sequence)  # type: ignore
