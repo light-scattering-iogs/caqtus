@@ -16,6 +16,7 @@ matplotlib = "^3.8.2"
 seaborn = "^0.13.0"
 numpy = "^1.26.2"
 pyqt6 = "^6.6.0"
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
