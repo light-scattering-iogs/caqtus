@@ -13,7 +13,9 @@
   <property name="windowTitle">
    <string>GraphPlot</string>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QWidget" name="_central_widget">
+   <layout class="QVBoxLayout" name="verticalLayout_2"/>
+  </widget>
   <widget class="QDockWidget" name="_sequences_dock">
    <property name="features">
     <set>QDockWidget::NoDockWidgetFeatures</set>
@@ -83,7 +85,7 @@
           <x>0</x>
           <y>0</y>
           <width>69</width>
-          <height>483</height>
+          <height>495</height>
          </rect>
         </property>
         <attribute name="label">
