@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-import numpy as np
-import pandas
+import polars
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -45,41 +44,29 @@ class ErrorbarVisualizer(Visualizer):
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self._canvas)
 
-    def update_data(self, dataframe: Optional[pandas.DataFrame]) -> None:
+    def update_data(self, dataframe: Optional[polars.DataFrame]) -> None:
         self._axis.clear()
         self._axis.set_ylabel(self._y)
         self._axis.set_xlabel(self._x)
         if dataframe is not None:
-            long = pandas.wide_to_long(
-                dataframe.reset_index(),
-                ["picture 1", "picture 2"],
-                i=["sequence", "shot"],
-                j="atom",
-            )
-
-            def survival(row):
-                if row["picture 1"] == 1:
-                    return row["picture 2"]
-                else:
-                    return np.nan
-
-            long["survival"] = long.apply(survival, axis=1)
-            self.plot_data(long)
-
+            self.plot_data(dataframe)
         self._canvas.draw()
 
-    def plot_data(self, dataframe: pandas.DataFrame) -> None:
-        if self.hue:
-            for sequence, hue_group in dataframe.groupby(self.hue):
-                variable_group = hue_group.groupby(self._x)
-                average = variable_group[self._y].mean()
-                error = variable_group[self._y].sem()
-                self._axis.errorbar(
-                    average.index, average, error, fmt="o", label=sequence
-                )
-            self._axis.legend(title=self.hue)
-        else:
-            variable_group = dataframe.groupby(self._x)
-            average = variable_group[self._y].mean()
-            error = variable_group[self._y].sem()
-            self._axis.errorbar(average.index, average, error, fmt="o")
+    def plot_data(self, dataframe: polars.DataFrame) -> None:
+        x_var = self._x
+        y_var = self._y
+        mean = polars.col(y_var).mean()
+        sem = polars.col(y_var).std() / polars.Expr.sqrt(polars.col(y_var).count())
+        stats = (
+            dataframe.lazy()
+            .group_by(x_var)
+            .agg(mean.alias(f"{y_var}.mean"), sem.alias(f"{y_var}.sem"))
+            .sort(by=x_var)
+            .collect()
+        )
+        self._axis.errorbar(
+            stats[x_var].to_numpy(),
+            stats[f"{y_var}.mean"].to_numpy(),
+            stats[f"{y_var}.sem"].to_numpy(),
+            fmt="o",
+        )
