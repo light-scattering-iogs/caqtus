@@ -9,16 +9,19 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
-from .visualizer_creator import VisualizerCreator, Visualizer
+from ..visualizer_creator import VisualizerCreator, Visualizer
 
 
-class ErrorBarVisualizerCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreator):
+class ErrorBarVisualizerCreator(
+    QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreator
+):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
+
     def create_visualizer(self) -> ErrorbarVisualizer:
         x = self._x_axis_line_edit.text()
         y = self._y_axis_line_edit.text()
@@ -71,11 +74,12 @@ class ErrorbarVisualizer(Visualizer):
                 variable_group = hue_group.groupby(self._x)
                 average = variable_group[self._y].mean()
                 error = variable_group[self._y].sem()
-                self._axis.errorbar(average.index, average, error, fmt="o", label=sequence)
+                self._axis.errorbar(
+                    average.index, average, error, fmt="o", label=sequence
+                )
             self._axis.legend(title=self.hue)
         else:
             variable_group = dataframe.groupby(self._x)
             average = variable_group[self._y].mean()
             error = variable_group[self._y].sem()
             self._axis.errorbar(average.index, average, error, fmt="o")
-

@@ -14,8 +14,7 @@ from .._sequence_hierarchy_widget import SequenceHierarchyWidget
 from .._watchlist_widget import WatchlistWidget
 from ..data_loading import DataLoaderSelector, DataImporter
 from ..sequence_analyzer import SequenceAnalyzer
-from ..visualizer_creator import VisualizerCreator, Visualizer
-from ..visualizer_creators_selector import VisualizerCreatorSelector
+from ..visualization import VisualizerCreator, Visualizer, VisualizerCreatorSelector
 
 
 def import_nothing(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
