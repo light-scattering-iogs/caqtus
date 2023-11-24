@@ -3,8 +3,7 @@ from __future__ import annotations
 import collections.abc
 import datetime
 import threading
-from collections.abc import Mapping
-from typing import Optional, Any, Self, TypeAlias
+from typing import Optional, Self
 
 import pandas
 
@@ -15,8 +14,7 @@ from sequence.runtime.shot import ShotNotFoundError
 from util import attrs
 from util.concurrent import BackgroundScheduler
 from util.itertools import batched
-
-DataImporter: TypeAlias = ShotImporter[Mapping[str, Any]]
+from .data_loading import DataImporter
 
 
 class SequenceAnalyzer:

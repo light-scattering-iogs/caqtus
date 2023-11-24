@@ -4,7 +4,8 @@ from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget
 
 from sequence.runtime import Sequence
-from ._sequence_analyzer import SequenceAnalyzer, DataImporter
+from .data_loading import DataImporter
+from .sequence_analyzer import SequenceAnalyzer
 from .watchlist_widget_ui import Ui_WatchlistWidget
 
 

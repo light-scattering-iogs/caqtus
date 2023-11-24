@@ -10,10 +10,10 @@ from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
 from util.concurrent import BackgroundScheduler
 from .main_window_ui import Ui_MainWindow
-from .._sequence_analyzer import SequenceAnalyzer, DataImporter
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
 from .._watchlist_widget import WatchlistWidget
-from ..data_loading import DataLoaderSelector
+from ..data_loading import DataLoaderSelector, DataImporter
+from ..sequence_analyzer import SequenceAnalyzer
 from ..visualizer_creator import VisualizerCreator, Visualizer
 from ..visualizer_creators_selector import VisualizerCreatorSelector
 

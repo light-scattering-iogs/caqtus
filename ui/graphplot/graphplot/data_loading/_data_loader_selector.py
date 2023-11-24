@@ -3,8 +3,8 @@ from typing import Mapping
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
+from ._data_importer import DataImporter
 from .data_loader_selector_ui import Ui_DataLoaderSelector
-from .._sequence_analyzer import DataImporter
 
 
 class DataLoaderSelector(QWidget, Ui_DataLoaderSelector):
