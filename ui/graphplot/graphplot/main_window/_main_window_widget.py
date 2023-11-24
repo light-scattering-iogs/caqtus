@@ -9,7 +9,7 @@ from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
 from util.concurrent import BackgroundScheduler
-from .main_window_ui import Ui_MainWindow
+from ._main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
 from ..data_loading import DataLoaderSelector, DataImporter
 from ..sequence_analyzer import SequenceAnalyzer
@@ -99,7 +99,9 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         # the old visualizer while it's being freed, we put all accesses to the current visualizer behind a lock.
         with self._current_visualizer_lock:
             self._visualizer = visualizer
-            self.setCentralWidget(self._visualizer)
+            while self._central_widget.layout().count() > 0:
+                self._central_widget.layout().itemAt(0).widget().setParent(None)
+            self._central_widget.layout().addWidget(self._visualizer)
 
     def __enter__(self) -> Self:
         self._exit_stack.__enter__()
