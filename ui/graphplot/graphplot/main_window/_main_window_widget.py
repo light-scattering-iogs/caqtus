@@ -11,10 +11,10 @@ from sequence.runtime import Sequence, Shot
 from util.concurrent import BackgroundScheduler
 from .main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
-from .._watchlist_widget import WatchlistWidget
 from ..data_loading import DataLoaderSelector, DataImporter
 from ..sequence_analyzer import SequenceAnalyzer
 from ..visualization import VisualizerCreator, Visualizer, VisualizerCreatorSelector
+from ..watchlist import WatchlistWidget
 
 
 def import_nothing(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
