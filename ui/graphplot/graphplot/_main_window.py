@@ -1,4 +1,5 @@
 import contextlib
+import threading
 from collections.abc import Mapping
 from typing import Self, Any, Optional
 
@@ -42,6 +43,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._visualizer: Optional[Visualizer] = None
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
+        self._current_visualizer_lock = threading.Lock()
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -60,7 +62,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         )
         self._tool_box.addItem(self._visualizer_selector, "Visualization")
         self._visualizer_selector.visualizer_selected.connect(
-            self._on_visualizer_selected
+            self.change_current_visualizer
         )
 
     def _on_data_loader_selected(self, data_loader: DataImporter) -> None:
@@ -71,9 +73,14 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
     def _on_sequence_double_clicked(self, sequence: Sequence) -> None:
         self._watchlist_widget.add_sequence(sequence, self._data_loader)
 
-    def _on_visualizer_selected(self, visualizer: Visualizer) -> None:
-        self._visualizer = visualizer
-        self.setCentralWidget(self._visualizer)
+    def change_current_visualizer(self, visualizer: Visualizer) -> None:
+        """Sets a new visualizer for the central widget."""
+
+        # Here we loose all references to the old visualizer, so it will be freed. To avoid having functions running on
+        # the old visualizer while it's being freed, we put all accesses to the current visualizer behind a lock.
+        with self._current_visualizer_lock:
+            self._visualizer = visualizer
+            self.setCentralWidget(self._visualizer)
 
     def __enter__(self) -> Self:
         self._exit_stack.__enter__()
@@ -83,9 +90,15 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         return self
 
     def _update_visualizer(self) -> None:
+        """Feed new data to the current visualizer."""
+
         if self._visualizer is not None:
             dataframe = self._sequences_analyzer.get_dataframe()
-            self._visualizer.update_data(dataframe)
+            # Here we put a lock to ensure that sel._visualize won't be reassigned while it is processing some
+            # data. The issue is that if we loose all references on the visualizer while it is processing data in
+            # another thread, the C++ parts of a widget will be freed while they are still being used.
+            with self._current_visualizer_lock:
+                self._visualizer.update_data(dataframe)
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
