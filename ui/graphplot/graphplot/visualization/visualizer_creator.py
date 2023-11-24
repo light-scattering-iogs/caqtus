@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 from typing import Optional
 
-import pandas
+import polars
 from PyQt6.QtWidgets import QWidget
 
 import qabc
@@ -17,5 +17,5 @@ class VisualizerCreator(qabc.QABC):
 
 class Visualizer(QWidget, qabc.QABC):
     @abc.abstractmethod
-    def update_data(self, dataframe: Optional[pandas.DataFrame]) -> None:
+    def update_data(self, dataframe: Optional[polars.DataFrame]) -> None:
         raise NotImplementedError()
