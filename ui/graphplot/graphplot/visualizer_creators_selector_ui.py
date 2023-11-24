@@ -25,6 +25,11 @@ class Ui_VisualizerCreatorSelector(object):
         self._visualizer_combo_box.setObjectName("_visualizer_combo_box")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.FieldRole, self._visualizer_combo_box)
         self.verticalLayout.addLayout(self.formLayout)
+        self._settings_group = QtWidgets.QGroupBox(parent=VisualizerCreatorSelector)
+        self._settings_group.setObjectName("_settings_group")
+        self.verticalLayout.addWidget(self._settings_group)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        self.verticalLayout.addItem(spacerItem)
         self._apply_button = QtWidgets.QPushButton(parent=VisualizerCreatorSelector)
         self._apply_button.setObjectName("_apply_button")
         self.verticalLayout.addWidget(self._apply_button)
@@ -36,4 +41,5 @@ class Ui_VisualizerCreatorSelector(object):
         _translate = QtCore.QCoreApplication.translate
         VisualizerCreatorSelector.setWindowTitle(_translate("VisualizerCreatorSelector", "Form"))
         self.dataLoaderLabel.setText(_translate("VisualizerCreatorSelector", "Visualizer"))
+        self._settings_group.setTitle(_translate("VisualizerCreatorSelector", "Settings"))
         self._apply_button.setText(_translate("VisualizerCreatorSelector", "Apply"))

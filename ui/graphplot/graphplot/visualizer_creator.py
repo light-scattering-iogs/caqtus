@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QWidget
 import qabc
 
 
-class VisualizerCreator(QWidget, qabc.QABC):
+class VisualizerCreator(qabc.QABC):
     @abc.abstractmethod
     def create_visualizer(self) -> Visualizer:
         raise NotImplementedError()
