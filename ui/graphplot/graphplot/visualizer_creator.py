@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from typing import Optional
 
 import pandas
 from PyQt6.QtWidgets import QWidget
@@ -16,5 +17,5 @@ class VisualizerCreator(QWidget, qabc.QABC):
 
 class Visualizer(QWidget, qabc.QABC):
     @abc.abstractmethod
-    def update_data(self, dataframe: pandas.DataFrame) -> None:
+    def update_data(self, dataframe: Optional[pandas.DataFrame]) -> None:
         raise NotImplementedError()

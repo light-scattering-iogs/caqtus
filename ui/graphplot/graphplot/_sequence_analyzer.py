@@ -117,7 +117,7 @@ class SequenceAnalyzer:
         # Here we process new shots in batch. This has two purposes: the dataframe will slowly increase if we load a
         # sequence with many shots, and it won't just happen once all shots are loaded.
         # We also check if we must exit fast between each batch, in which case we finish this task as soon as possible.
-        for shots in batched(new_shots, 10):
+        for shots in batched(new_shots, 20):
             if self._must_interrupt.is_set():
                 break
             try:

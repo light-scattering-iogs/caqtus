@@ -1,7 +1,7 @@
 import concurrent.futures
 import contextlib
 import threading
-from typing import Callable, TypeVar, ParamSpec, SupportsFloat, Self, Optional
+from typing import Callable, TypeVar, ParamSpec, SupportsFloat, Self, Optional, Literal
 
 from ._task_group import TaskGroup
 
@@ -13,20 +13,20 @@ class BackgroundScheduler:
     """Runs tasks periodically in background threads."""
 
     def __init__(
-        self, shutdown_on_error: bool = True, max_workers: Optional[int] = None
+        self,
+        on_error: Literal["stop_all", "stop_current", "ignore"] = "stop_all",
+        max_workers: Optional[int] = None,
     ):
         """Initialize a new instance.
 
         Args:
-            shutdown_on_error: Indicates how the runner should behave when an error occurs in one the tasks. If True,
-            the runner will stop all other tasks if an error occurs in any of them. If False, the other tasks will
-            continue to run. In both cases, the error will be raised when leaving the context manager.
+            on_error: Indicates how the runner should behave when an error occurs in one the tasks.
             max_workers: The maximum number of threads to use to run the tasks. Refer to the documentation of
             concurrent.futures.ThreadPoolExecutor for more information.
         """
 
         self._exit_stack = contextlib.ExitStack()
-        self._shutdown_on_error = shutdown_on_error
+        self._on_error = on_error
 
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=max_workers
@@ -83,9 +83,17 @@ class BackgroundScheduler:
             try:
                 func(*args, **kwargs)
             except Exception:
-                if self._shutdown_on_error:
+                if self._on_error == "stop_all":
                     self.shutdown()
-                raise
+                    raise
+                elif self._on_error == "stop_current":
+                    raise
+                elif self._on_error == "ignore":
+                    pass
+                else:
+                    raise AssertionError(
+                        f"on_error has an unexpected value {self._on_error}"
+                    )
             self._must_stop.wait(interval)
 
     def is_running(self) -> bool:

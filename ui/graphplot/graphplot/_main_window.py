@@ -1,11 +1,13 @@
+import contextlib
 from collections.abc import Mapping
-from typing import Self, Any
+from typing import Self, Any, Optional
 
 from PyQt6.QtWidgets import QMainWindow, QWidget
 
 from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
+from util.concurrent import BackgroundScheduler
 from ._data_loader_selector import DataLoaderSelector
 from ._sequence_analyzer import SequenceAnalyzer, DataImporter
 from ._sequence_hierarchy_widget import SequenceHierarchyWidget
@@ -30,11 +32,14 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
 
         self._session_maker = session_maker
 
+        self._exit_stack = contextlib.ExitStack()
         self._sequences_analyzer = SequenceAnalyzer(session_maker)
+        self._background_scheduler = BackgroundScheduler(max_workers=1)
         self._watchlist_widget = WatchlistWidget(self._sequences_analyzer)
         self._data_loader_selector = DataLoaderSelector(data_loaders)
         self._visualizer_selector = VisualizerCreatorSelector(visualizer_creators)
         self._data_loader: DataImporter = import_nothing
+        self._visualizer: Optional[Visualizer] = None
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
         self._setup_ui()
@@ -54,7 +59,9 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
             self._on_data_loader_selected
         )
         self._tool_box.addItem(self._visualizer_selector, "Visualization")
-        self._visualizer_selector.visualizer_selected.connect(self._on_visualizer_selected)
+        self._visualizer_selector.visualizer_selected.connect(
+            self._on_visualizer_selected
+        )
 
     def _on_data_loader_selected(self, data_loader: DataImporter) -> None:
         self._data_loader = data_loader
@@ -65,11 +72,21 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._watchlist_widget.add_sequence(sequence, self._data_loader)
 
     def _on_visualizer_selected(self, visualizer: Visualizer) -> None:
-        pass
+        self._visualizer = visualizer
+        self.setCentralWidget(self._visualizer)
 
     def __enter__(self) -> Self:
-        self._sequences_analyzer.__enter__()
+        self._exit_stack.__enter__()
+        self._exit_stack.enter_context(self._sequences_analyzer)
+        self._exit_stack.enter_context(self._background_scheduler)
+        self._background_scheduler.schedule_task(self._update_visualizer, 0.5)
         return self
 
+    def _update_visualizer(self) -> None:
+        if self._visualizer is not None:
+            dataframe = self._sequences_analyzer.get_dataframe()
+            self._visualizer.update_data(dataframe)
+
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
-        return self._sequences_analyzer.__exit__(exc_type, exc_val, exc_tb)
+        return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+
