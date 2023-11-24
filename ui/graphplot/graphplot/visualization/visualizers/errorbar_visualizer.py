@@ -48,11 +48,17 @@ class ErrorbarVisualizer(Visualizer):
         self._axis.clear()
         self._axis.set_ylabel(self._y)
         self._axis.set_xlabel(self._x)
-        if dataframe is not None:
+        if dataframe is not None and len(dataframe) > 0:
             self.plot_data(dataframe)
         self._canvas.draw()
 
     def plot_data(self, dataframe: polars.DataFrame) -> None:
+        if self.hue is None:
+            self.plot_without_hue(dataframe)
+        else:
+            self.plot_with_hue(dataframe)
+
+    def plot_without_hue(self, dataframe: polars.DataFrame) -> None:
         x_var = self._x
         y_var = self._y
         mean = polars.col(y_var).mean()
@@ -70,3 +76,26 @@ class ErrorbarVisualizer(Visualizer):
             stats[f"{y_var}.sem"].to_numpy(),
             fmt="o",
         )
+
+    def plot_with_hue(self, dataframe: polars.DataFrame) -> None:
+        x_var = self._x
+        y_var = self._y
+        hue = self.hue
+        mean = polars.col(y_var).mean()
+        sem = polars.col(y_var).std() / polars.Expr.sqrt(polars.col(y_var).count())
+        stats = (
+            dataframe.lazy()
+            .group_by(x_var, hue)
+            .agg(mean.alias(f"{y_var}.mean"), sem.alias(f"{y_var}.sem"))
+            .sort(hue, x_var)
+            .collect()
+        )
+        for hue_value, group in stats.group_by(hue, maintain_order=True):
+            self._axis.errorbar(
+                group[x_var].to_numpy(),
+                group[f"{y_var}.mean"].to_numpy(),
+                group[f"{y_var}.sem"].to_numpy(),
+                fmt="o",
+                label=hue_value,
+            )
+        self._axis.legend(title=hue)
