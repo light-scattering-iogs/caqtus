@@ -9,13 +9,13 @@ from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSessionMaker, ExperimentSession
 from sequence.runtime import Sequence, Shot
 from util.concurrent import BackgroundScheduler
-from ._data_loader_selector import DataLoaderSelector
-from ._sequence_analyzer import SequenceAnalyzer, DataImporter
-from ._sequence_hierarchy_widget import SequenceHierarchyWidget
-from ._watchlist_widget import WatchlistWidget
 from .main_window_ui import Ui_MainWindow
-from .visualizer_creator import VisualizerCreator, Visualizer
-from .visualizer_creators_selector import VisualizerCreatorSelector
+from .._data_loader_selector import DataLoaderSelector
+from .._sequence_analyzer import SequenceAnalyzer, DataImporter
+from .._sequence_hierarchy_widget import SequenceHierarchyWidget
+from .._watchlist_widget import WatchlistWidget
+from ..visualizer_creator import VisualizerCreator, Visualizer
+from ..visualizer_creators_selector import VisualizerCreatorSelector
 
 
 def import_nothing(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
@@ -102,4 +102,3 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
-
