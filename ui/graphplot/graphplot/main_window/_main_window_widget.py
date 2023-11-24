@@ -23,12 +23,32 @@ def import_nothing(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
 
 
 class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
+    """Main window of GraphPlot.
+
+    This is a main window widget used to plot graphs about a sequence (or collection of sequences). This widget has a
+    dock on the left showing the sequence hierarchy from which the user can choose which sequences to watch. It also
+    has a dock on the right with a tab for the sequence watchlist, another tab to choose how to import the data from a
+    shot and a last tab to choose how to visualize the data. The central widget contains the actual visualization for
+    the data of the sequences.
+    """
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
         data_loaders: Mapping[str, ShotImporter],
         visualizer_creators: Mapping[str, VisualizerCreator],
     ) -> None:
+        """Initialize a new GraphPlotMainWindow.
+
+        Args:
+            session_maker: An object that can create sessions containing access to the permanent storage of the
+                experiment. The sequence hierarchy and the data from the shots are pulled from sessions created by this
+                object.
+            data_loaders: A mapping of shot importers that can be chosen from to load data from the shots.
+            visualizer_creators: A mapping of objects that can create the central widget. User can choose from an
+                element of this mapping to display information about sequences.
+        """
+
         super().__init__()
 
         self._session_maker = session_maker
