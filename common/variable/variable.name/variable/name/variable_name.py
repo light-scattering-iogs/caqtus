@@ -1,25 +1,35 @@
+from __future__ import annotations
+
 import re
-from collections import UserString
 from collections.abc import Iterable
 from typing import Self, Any
 
 from settings_model import yaml, YAMLSerializable
+from util import attrs
 
 NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 
 
-class DottedVariableName(UserString, YAMLSerializable):
+@attrs.define
+class DottedVariableName(YAMLSerializable):
+    _dotted_name: str
+    _individual_names: tuple[VariableName, ...] = attrs.field(init=False, repr=False)
+
     def __init__(self, dotted_name: str):
         names = tuple(dotted_name.split("."))
         self._individual_names = tuple(VariableName(name) for name in names)
-        super().__init__(dotted_name)
+        self._dotted_name = dotted_name
 
     @property
-    def individual_names(self) -> tuple["VariableName", ...]:
+    def dotted_name(self) -> str:
+        return self._dotted_name
+
+    @property
+    def individual_names(self) -> tuple[VariableName, ...]:
         return self._individual_names
 
     @classmethod
-    def from_individual_names(cls, names: Iterable["VariableName"]) -> Self:
+    def from_individual_names(cls, names: Iterable[VariableName]) -> Self:
         return cls(".".join(str(name) for name in names))
 
     @classmethod
@@ -44,6 +54,15 @@ class DottedVariableName(UserString, YAMLSerializable):
             return cls(value)
         raise ValueError(f"Invalid variable name: {value}")
 
+    def __str__(self) -> str:
+        return self.dotted_name
+
+    def __repr__(self):
+        return f"{type(self).__name__}('{self._dotted_name}')"
+
+    def __hash__(self):
+        return hash(self._dotted_name)
+
 
 def dotted_variable_name_converter(name: Any) -> DottedVariableName:
     if isinstance(name, DottedVariableName):
@@ -54,9 +73,19 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
         raise ValueError(f"Invalid variable name: {name}")
 
 
+@attrs.define
 class VariableName(DottedVariableName):
     def __init__(self, name: str):
         if not NAME_REGEX.match(name):
             raise ValueError(f"Invalid variable name: {name}")
         self._individual_names = (self,)
-        UserString.__init__(self, name)
+        self._dotted_name = name
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __repr__(self):
+        return super().__repr__()
+
+    def __str__(self):
+        return super().__str__()
