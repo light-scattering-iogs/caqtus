@@ -1,9 +1,8 @@
-from collections.abc import Iterable
-from typing import Any
-from typing import TypeAlias, Mapping
+from typing import TypeAlias
+
+import polars
 
 from analyza.loading.importers import ShotImporter
 
-RowData: TypeAlias = Mapping[str, Any]
-ShotData: TypeAlias = Iterable[RowData]
+ShotData: TypeAlias = polars.DataFrame
 DataImporter: TypeAlias = ShotImporter[ShotData]

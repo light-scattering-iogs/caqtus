@@ -1,8 +1,9 @@
 import contextlib
 import threading
 from collections.abc import Mapping
-from typing import Self, Any, Optional
+from typing import Self, Optional
 
+import polars
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QMainWindow, QWidget, QProgressBar
 
@@ -12,14 +13,14 @@ from sequence.runtime import Sequence, Shot
 from util.concurrent import BackgroundScheduler
 from ._main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
-from ..data_loading import DataLoaderSelector, DataImporter
+from ..data_loading import DataLoaderSelector, DataImporter, ShotData
 from ..sequence_analyzer import SequenceAnalyzer
 from ..visualization import VisualizerCreator, Visualizer, VisualizerCreatorSelector
 from ..watchlist import WatchlistWidget
 
 
-def import_nothing(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
-    return {}
+def import_nothing(shot: Shot, session: ExperimentSession) -> ShotData:
+    return polars.DataFrame()
 
 
 class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):

@@ -4,7 +4,6 @@ import collections.abc
 import concurrent.futures
 import contextlib
 import datetime
-import itertools
 import threading
 import time
 from typing import Optional, Self
@@ -185,10 +184,7 @@ class SequenceAnalyzer:
     ):
         if shots:
             shot_importer = self._monitored_sequences[sequence].shot_importer
-            rows = itertools.chain.from_iterable(
-                shot_importer(shot, session) for shot in shots
-            )
-            dataframe_to_append = polars.DataFrame(rows)
+            dataframe_to_append = polars.concat(shot_importer(shot, session) for shot in shots)
         else:
             dataframe_to_append = None
 

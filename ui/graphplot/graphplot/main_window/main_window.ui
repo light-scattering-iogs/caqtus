@@ -72,7 +72,7 @@
           <x>0</x>
           <y>0</y>
           <width>69</width>
-          <height>495</height>
+          <height>475</height>
          </rect>
         </property>
         <attribute name="label">
@@ -97,6 +97,7 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QStatusBar" name="_status_bar"/>
  </widget>
  <resources/>
  <connections/>
