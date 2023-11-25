@@ -3,7 +3,8 @@ import threading
 from collections.abc import Mapping
 from typing import Self, Any, Optional
 
-from PyQt6.QtWidgets import QMainWindow, QWidget
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QMainWindow, QWidget, QProgressBar
 
 from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSessionMaker, ExperimentSession
@@ -63,6 +64,8 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
         self._current_visualizer_lock = threading.Lock()
+        self._loading_bar = QProgressBar()
+        self._timer = QTimer(self)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -83,6 +86,17 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._visualizer_selector.visualizer_selected.connect(
             self.change_current_visualizer
         )
+        self._status_bar.addPermanentWidget(self._loading_bar)
+        self._timer.timeout.connect(self._update_loading_bar)
+        self._timer.start(50)
+
+    def _update_loading_bar(self) -> None:
+        current, maximum = self._sequences_analyzer.get_progress()
+        if maximum == 0:
+            current = 0
+            maximum = 1
+        self._loading_bar.setValue(current)
+        self._loading_bar.setMaximum(maximum)
 
     def _on_data_loader_selected(self, data_loader: DataImporter) -> None:
         self._data_loader = data_loader
@@ -107,7 +121,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._exit_stack.__enter__()
         self._exit_stack.enter_context(self._sequences_analyzer)
         self._exit_stack.enter_context(self._background_scheduler)
-        self._background_scheduler.schedule_task(self._update_visualizer, 0.5)
+        self._background_scheduler.schedule_task(self._update_visualizer, 1)
         return self
 
     def _update_visualizer(self) -> None:

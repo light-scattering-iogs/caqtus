@@ -6,6 +6,7 @@ import contextlib
 import datetime
 import itertools
 import threading
+import time
 from typing import Optional, Self
 
 import polars
@@ -42,7 +43,6 @@ class SequenceAnalyzer:
         with self._lock:
             exceptions = []
             for sequence in self.sequences:
-
                 try:
                     self.stop_monitoring_sequence(sequence)
                 except Exception as error:
@@ -81,11 +81,18 @@ class SequenceAnalyzer:
                 shot_importer=data_importer,
                 dataframe=None,
                 number_shots_to_load=stats.number_completed_shots,
+                number_imported_shots=0,
                 must_interrupt=threading.Event(),
-                future=None
+                update_number_shots_future=None,
+                loading_future=None,
             )
             self._monitored_sequences[sequence] = sequence_infos
-            sequence_infos.future = self._thread_pool.submit(self._load_sequence_data, sequence)
+            sequence_infos.loading_future = self._thread_pool.submit(
+                self._load_sequence_data, sequence
+            )
+            sequence_infos.update_number_shots_future = self._thread_pool.submit(
+                self._update_number_shots, sequence
+            )
 
     def stop_monitoring_sequence(self, sequence: Sequence) -> None:
         """Stops monitoring a sequence.
@@ -100,7 +107,8 @@ class SequenceAnalyzer:
         with self._lock:
             if sequence in self._monitored_sequences:
                 self._monitored_sequences[sequence].must_interrupt.set()
-                self._monitored_sequences[sequence].future.result()
+                self._monitored_sequences[sequence].update_number_shots_future.result()
+                self._monitored_sequences[sequence].loading_future.result()
                 del self._monitored_sequences[sequence]
 
     def get_sequence_dataframes(self) -> dict[Sequence, Optional[polars.DataFrame]]:
@@ -128,6 +136,16 @@ class SequenceAnalyzer:
                 self._import_new_shots(sequence, session)
             self._monitored_sequences[sequence].must_interrupt.wait(0.5)
 
+    def _update_number_shots(self, sequence: Sequence) -> None:
+        while not self._monitored_sequences[sequence].must_interrupt.is_set():
+            with self._session_maker() as session:
+                stats = sequence.get_stats(session)
+                self._monitored_sequences[
+                    sequence
+                ].number_shots_to_load = stats.number_completed_shots
+
+            self._monitored_sequences[sequence].must_interrupt.wait(0.5)
+
     def _check_sequence_change(self, sequence: Sequence, session: ExperimentSession):
         start_date = sequence.get_stats(session).start_date
         previous_start_date = self._monitored_sequences[sequence].start_date
@@ -147,7 +165,7 @@ class SequenceAnalyzer:
         # Here we process new shots in batch. This has two purposes: the dataframe will slowly increase if we load a
         # sequence with many shots, and it won't just happen once all shots are loaded.
         # We also check if we must exit fast between each batch, in which case we finish this task as soon as possible.
-        for shots in batched(new_shots, 10):
+        for shots in batched(new_shots, 5):
             if self._monitored_sequences[sequence].must_interrupt.is_set():
                 break
             try:
@@ -157,6 +175,7 @@ class SequenceAnalyzer:
                 # This will raise ShotNotFoundError, in which case we exit this task fast and let the next repetition
                 # manage this.
                 break
+            time.sleep(1e-3)
 
     def _append_shots_to_dataframe(
         self,
@@ -180,6 +199,7 @@ class SequenceAnalyzer:
                 )
         else:
             self._monitored_sequences[sequence].dataframe = dataframe_to_append
+        self._monitored_sequences[sequence].number_imported_shots += len(shots)
 
     def _get_not_yet_imported_shots(
         self, sequence: Sequence, session: ExperimentSession
@@ -187,17 +207,29 @@ class SequenceAnalyzer:
         shots = sequence.get_shots(session)
         return shots[self._monitored_sequences[sequence].number_imported_shots :]
 
+    def get_progress(self) -> tuple[int, int]:
+        total_progress = 0
+        total_to_load = 0
+        with self._lock:
+            for sequence, info in self._monitored_sequences.items():
+                progress = (
+                    info.number_imported_shots
+                    if info.number_imported_shots <= info.number_shots_to_load
+                    else 0
+                )
+                total_progress += progress
+                total_to_load += info.number_shots_to_load
+        return total_progress, total_to_load
+
 
 @attrs.define
 class _SequenceInfo:
     number_shots_to_load: int
+    number_imported_shots: int
     start_date: Optional[datetime.datetime]
     shot_importer: ShotImporter
     dataframe: Optional[polars.DataFrame]
 
     must_interrupt: threading.Event
-    future: concurrent.futures.Future
-
-    @property
-    def number_imported_shots(self) -> int:
-        return len(self.dataframe) if (self.dataframe is not None) else 0
+    loading_future: concurrent.futures.Future
+    update_number_shots_future: concurrent.futures.Future
