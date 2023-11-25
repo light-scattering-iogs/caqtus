@@ -1,4 +1,8 @@
-from .load_parameters import get_parameters_importer, QuantityDType
+from .load_parameters import (
+    get_parameters_importer,
+    QuantityDType,
+    convert_to_single_unit,
+)
 from .load_shot_id import get_shot_id_importer
 from .load_shot_info import get_shot_info_importer
 from .shot_data import ShotData
@@ -9,4 +13,5 @@ __all__ = [
     "QuantityDType",
     "get_shot_id_importer",
     "get_shot_info_importer",
+    "convert_to_single_unit",
 ]
