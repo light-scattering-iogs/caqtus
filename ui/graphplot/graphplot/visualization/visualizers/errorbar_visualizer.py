@@ -6,9 +6,12 @@ from typing import Optional
 import numpy as np
 import polars
 import pyqtgraph
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 from pyqtgraph import PlotWidget
 
+from core.data_loading import convert_to_single_unit
+from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import VisualizerCreator, Visualizer
 
@@ -33,50 +36,80 @@ class ErrorBarVisualizerCreator(
 
 
 class ErrorBarVisualizer(PlotWidget, Visualizer):
+    data_updated = pyqtSignal()
+
     def __init__(self, x: str, y: str, *args, **kwargs):
-        PlotWidget.__init__(
-            self, *args, antialias=True, background=(0, 0, 0, 0), **kwargs
-        )
-        self._x = x
-        self._y = y
+        PlotWidget.__init__(self, *args, background=(0, 0, 0, 0), **kwargs)
+
+        self._x_var = x
+        self._y_var = y
+        self._x_unit: Optional[Unit] = None
+        self._y_unit: Optional[Unit] = None
+
+        self._x_values = np.array([])
+        self._y_values = np.array([])
+        self._error_values = np.array([])
+
         self._error_bar_plotter = FilledErrorBarPlotter()
-        # pyqtgraph.setConfigOption('background', (0, 0, 0, 100))
+
+        self._setup_ui()
+
+    def _setup_ui(self):
         for item in self._error_bar_plotter.get_items():
             self.addItem(item)
+        self.update_plot()
+        self.data_updated.connect(self.update_plot)  # type:ignore
+
+    def update_plot(self):
+        self.update_axis_labels()
+        self._error_bar_plotter.set_data(
+            x=self._x_values,
+            y=self._y_values,
+            error=self._error_values,
+        )
+
+    def update_axis_labels(self):
+        self.setLabel("left", format_label(self._y_var, self._y_unit))
+        self.setLabel("bottom", format_label(self._x_var, self._x_unit))
 
     def update_data(self, dataframe: Optional[polars.DataFrame]) -> None:
         if dataframe is not None and len(dataframe) > 0:
-            self.plot_data(dataframe)
+            self.process_data(dataframe)
         else:
-            self._error_bar_plotter.set_data(
-                x=np.array([]), y=np.array([]), error=np.array([])
-            )
+            self._x_values = np.array([])
+            self._y_values = np.array([])
+            self._error_values = np.array([])
 
-    def plot_data(self, dataframe: polars.DataFrame) -> None:
-        self.plot_without_hue(dataframe)
+        # We don't want to update the plot directly here because if this is not running in the same thread the plot
+        # items leave in, that would lead to a crash. Instead, we emit the signal and do the plot update in the slot.
+        self.data_updated.emit()  # type: ignore
 
-    def plot_without_hue(self, dataframe: polars.DataFrame) -> None:
-        x_var = self._x
-        y_var = self._y
+    def process_data(self, dataframe: polars.DataFrame) -> None:
+        x_var = self._x_var
+        y_var = self._y_var
+
+        x_magnitudes, self._x_unit = convert_to_single_unit(dataframe[x_var])
+        y_magnitudes, self._y_unit = convert_to_single_unit(dataframe[y_var])
+
+        data = polars.DataFrame([x_magnitudes, y_magnitudes])
+
         mean = polars.col(y_var).mean()
         sem = polars.col(y_var).std() / polars.Expr.sqrt(polars.col(y_var).count())
         stats = (
-            dataframe.lazy()
+            data.lazy()
             .group_by(x_var)
             .agg(mean.alias(f"{y_var}.mean"), sem.alias(f"{y_var}.sem"))
             .sort(by=x_var)
             .collect()
         )
 
-        self._error_bar_plotter.set_data(
-            x=stats[x_var].to_numpy(),
-            y=stats[f"{y_var}.mean"].to_numpy(),
-            error=stats[f"{y_var}.sem"].to_numpy(),
-        )
+        self._x_values = stats[x_var].to_numpy()
+        self._y_values = stats[f"{y_var}.mean"].to_numpy()
+        self._error_values = stats[f"{y_var}.sem"].to_numpy()
 
     def plot_with_hue(self, dataframe: polars.DataFrame) -> None:
-        x_var = self._x
-        y_var = self._y
+        x_var = self._x_var
+        y_var = self._y_var
         hue = self.hue
         mean = polars.col(y_var).mean()
         sem = polars.col(y_var).std() / polars.Expr.sqrt(polars.col(y_var).count())
@@ -95,6 +128,16 @@ class ErrorBarVisualizer(PlotWidget, Visualizer):
                 label=hue_value,
             )
         self._axis.legend(title=hue)
+
+
+def format_label(label: str, unit: Optional[Unit]) -> str:
+    if unit is None:
+        return label
+    else:
+        if unit == dimensionless:
+            return label
+        else:
+            return f"{label} [{unit:~}]"
 
 
 class ErrorBarPlotter:
