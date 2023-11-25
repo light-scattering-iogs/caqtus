@@ -1,8 +1,6 @@
 from typing import TypeAlias
 
-import polars
-
 from analyza.loading.importers import ShotImporter
+from core.data_loading import ShotData
 
-ShotData: TypeAlias = polars.DataFrame
 DataImporter: TypeAlias = ShotImporter[ShotData]
