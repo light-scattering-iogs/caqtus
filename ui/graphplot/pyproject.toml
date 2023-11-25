@@ -19,6 +19,9 @@ pyqt6 = "^6.6.0"
 sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 qabc = {path = "../widgets/qabc", develop = true}
 polars = "^0.19.15"
+pyqtgraph = "^0.13.3"
+core-data-loading = {path = "../../core/core.data_loading", develop = true}
+core-types = {path = "../../core/core.types", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

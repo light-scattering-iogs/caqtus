@@ -6,6 +6,8 @@ import polars
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QTableView
 
+from core.data_loading import QuantityDType
+from core.types.units import Quantity
 from ..visualizer_creator import VisualizerCreator, Visualizer
 
 
@@ -49,7 +51,13 @@ class DataFrameModel(QAbstractTableModel):
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         if role == Qt.ItemDataRole.DisplayRole:
             column_name = self._dataframe.columns[index.column()]
-            return str(self._dataframe[column_name][index.row()])
+            column = self._dataframe[column_name]
+            value = column[index.row()]
+            if column.dtype == QuantityDType:
+                quantity = Quantity(value["magnitude"], value["units"])
+                return format(quantity, "~")
+            else:
+                return str(value)
 
     def headerData(
         self,
