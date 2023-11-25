@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
+import numpy as np
 import polars
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
+import pyqtgraph
+from PyQt6.QtWidgets import QWidget
+from pyqtgraph import PlotWidget
 
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import VisualizerCreator, Visualizer
+
+pyqtgraph.setConfigOptions(antialias=True)
 
 
 class ErrorBarVisualizerCreator(
@@ -21,42 +25,35 @@ class ErrorBarVisualizerCreator(
     def _setup_ui(self) -> None:
         self.setupUi(self)
 
-    def create_visualizer(self) -> ErrorbarVisualizer:
+    def create_visualizer(self) -> ErrorBarVisualizer:
         x = self._x_axis_line_edit.text()
         y = self._y_axis_line_edit.text()
         hue = text if (text := self._hue_line_edit.text()) else None
-        return ErrorbarVisualizer(x, y, hue)
+        return ErrorBarVisualizer(x, y, hue)
 
 
-class ErrorbarVisualizer(Visualizer):
-    def __init__(self, x: str, y: str, hue: Optional[str], *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class ErrorBarVisualizer(PlotWidget, Visualizer):
+    def __init__(self, x: str, y: str, *args, **kwargs):
+        PlotWidget.__init__(
+            self, *args, antialias=True, background=(0, 0, 0, 0), **kwargs
+        )
         self._x = x
         self._y = y
-        self.hue = hue
-        self._setup_ui()
-
-    def _setup_ui(self) -> None:
-        self._figure = Figure()
-        self._axis = self._figure.add_subplot()
-        self._canvas = FigureCanvasQTAgg(self._figure)
-
-        self.setLayout(QVBoxLayout())
-        self.layout().addWidget(self._canvas)
+        self._error_bar_plotter = FilledErrorBarPlotter()
+        # pyqtgraph.setConfigOption('background', (0, 0, 0, 100))
+        for item in self._error_bar_plotter.get_items():
+            self.addItem(item)
 
     def update_data(self, dataframe: Optional[polars.DataFrame]) -> None:
-        self._axis.clear()
-        self._axis.set_ylabel(self._y)
-        self._axis.set_xlabel(self._x)
         if dataframe is not None and len(dataframe) > 0:
             self.plot_data(dataframe)
-        self._canvas.draw()
+        else:
+            self._error_bar_plotter.set_data(
+                x=np.array([]), y=np.array([]), error=np.array([])
+            )
 
     def plot_data(self, dataframe: polars.DataFrame) -> None:
-        if self.hue is None:
-            self.plot_without_hue(dataframe)
-        else:
-            self.plot_with_hue(dataframe)
+        self.plot_without_hue(dataframe)
 
     def plot_without_hue(self, dataframe: polars.DataFrame) -> None:
         x_var = self._x
@@ -70,11 +67,11 @@ class ErrorbarVisualizer(Visualizer):
             .sort(by=x_var)
             .collect()
         )
-        self._axis.errorbar(
-            stats[x_var].to_numpy(),
-            stats[f"{y_var}.mean"].to_numpy(),
-            stats[f"{y_var}.sem"].to_numpy(),
-            fmt="o",
+
+        self._error_bar_plotter.set_data(
+            x=stats[x_var].to_numpy(),
+            y=stats[f"{y_var}.mean"].to_numpy(),
+            error=stats[f"{y_var}.sem"].to_numpy(),
         )
 
     def plot_with_hue(self, dataframe: polars.DataFrame) -> None:
@@ -91,11 +88,43 @@ class ErrorbarVisualizer(Visualizer):
             .collect()
         )
         for hue_value, group in stats.group_by(hue, maintain_order=True):
-            self._axis.errorbar(
+            self.plot_curve(
                 group[x_var].to_numpy(),
                 group[f"{y_var}.mean"].to_numpy(),
                 group[f"{y_var}.sem"].to_numpy(),
-                fmt="o",
                 label=hue_value,
             )
         self._axis.legend(title=hue)
+
+
+class ErrorBarPlotter:
+    def __init__(self):
+        self._error_bar_item = pyqtgraph.ErrorBarItem(
+            x=np.array([]), y=np.array([]), height=np.array([])
+        )
+
+    def set_data(self, x, y, error) -> None:
+        self._error_bar_item.setData(x=x, y=y, height=error)
+
+    def get_items(self) -> Sequence[pyqtgraph.GraphicsObject]:
+        return [self._error_bar_item]
+
+
+class FilledErrorBarPlotter:
+    def __init__(self):
+        self._top_curve = pyqtgraph.PlotCurveItem(x=np.array([]), y=np.array([]))
+        self._bottom_curve = pyqtgraph.PlotCurveItem(x=np.array([]), y=np.array([]))
+        self._middle_curve = pyqtgraph.PlotCurveItem(
+            x=np.array([], dtype=float), y=np.array([], dtype=float)
+        )
+        self._fill = pyqtgraph.FillBetweenItem(
+            self._top_curve, self._bottom_curve, brush=0.2
+        )
+
+    def set_data(self, x, y, error) -> None:
+        self._top_curve.setData(x, y + error / 2)
+        self._bottom_curve.setData(x, y - error / 2)
+        self._middle_curve.setData(x, y)
+
+    def get_items(self) -> Sequence[pyqtgraph.GraphicsObject]:
+        return [self._fill, self._middle_curve]
