@@ -1,11 +1,11 @@
-from typing import TypeAlias, assert_never
+from typing import assert_never
 
 import polars
 
 from core.session import ExperimentSession, Shot
 from core.types import is_parameter, is_analog_value, is_quantity
+from .shot_data import ShotData
 
-ShotData: TypeAlias = polars.DataFrame
 QuantityDType = polars.Struct(
     [
         polars.Field("magnitude", polars.Float64),
