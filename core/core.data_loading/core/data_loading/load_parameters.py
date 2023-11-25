@@ -9,7 +9,7 @@ ShotData: TypeAlias = polars.DataFrame
 QuantityDType = polars.Struct(
     [
         polars.Field("magnitude", polars.Float64),
-        polars.Field("unit", polars.Categorical),
+        polars.Field("units", polars.Categorical),
     ]
 )
 

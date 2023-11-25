@@ -9,6 +9,7 @@ packages = [{include = "core"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 parameter-types = {path = "../../common/types/parameter_types", develop = true}
+units = {path = "../../common/units", develop = true}
 
 
 [build-system]
