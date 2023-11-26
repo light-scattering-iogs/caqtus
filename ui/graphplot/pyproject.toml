@@ -7,21 +7,23 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
-sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
-util = {path = "../../util", develop = true}
+
 pandas = "^2.1.3"
-analyza-loading-importers = {path = "../../analyza/analyza.loading/analyza.loading.importers", develop = true}
-experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
 matplotlib = "^3.8.2"
 seaborn = "^0.13.0"
 numpy = "^1.26.2"
 pyqt6 = "^6.6.0"
-sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
-qabc = {path = "../widgets/qabc", develop = true}
 polars = "^0.19.15"
 pyqtgraph = "^0.13.3"
+
+util = {path = "../../util", develop = true}
 core-data-loading = {path = "../../core/core.data_loading", develop = true}
 core-types = {path = "../../core/core.types", develop = true}
+core-session = {path = "../../core/core.session", develop = true}
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
+qabc = {path = "../widgets/qabc", develop = true}
+
+
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,6 +1,5 @@
 from typing import TypeAlias
 
-from analyza.loading.importers import ShotImporter
-from core.data_loading import ShotData
+from core.data_loading import ShotData, ShotImporter
 
 DataImporter: TypeAlias = ShotImporter[ShotData]
