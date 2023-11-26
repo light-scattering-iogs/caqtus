@@ -5,7 +5,8 @@ from typing import Self, Optional
 
 import polars
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QMainWindow, QWidget, QProgressBar
+from PyQt6.QtWidgets import QMainWindow, QProgressBar
+from pyqtgraph.dockarea import DockArea, Dock
 
 from analyza.loading.importers import ShotImporter
 from experiment.session import ExperimentSessionMaker, ExperimentSession
@@ -71,22 +72,47 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
-        self._sequences_dock.setWidget(self._sequence_hierarchy_widget)
+        self._dock_area = DockArea()
+
+        # Sets up a dock on the left containing the sequence hierarchy
+        self._sequence_hierarchy_dock = Dock("Sequences", closable=False)
+        self._sequence_hierarchy_dock.addWidget(self._sequence_hierarchy_widget)
         self._sequence_hierarchy_widget.sequence_double_clicked.connect(
             self._on_sequence_double_clicked
         )
-        self._toolbox_dock.setTitleBarWidget(QWidget())
-        while self._tool_box.count() > 0:
-            self._tool_box.removeItem(0)
-        self._tool_box.addItem(self._watchlist_widget, "Watchlist")
-        self._tool_box.addItem(self._data_loader_selector, "Data loading")
+        self._dock_area.addDock(self._sequence_hierarchy_dock, "left")
+
+        self._visualizer_dock = Dock("View", closable=False)
+        self._dock_area.addDock(
+            self._visualizer_dock, "right", relativeTo=self._sequence_hierarchy_dock
+        )
+
+        self._watchlist_dock = Dock("Watchlist", closable=False)
+        self._watchlist_dock.addWidget(self._watchlist_widget)
+        self._dock_area.addDock(
+            self._watchlist_dock, "right", relativeTo=self._visualizer_dock
+        )
+
+        self._data_lading_dock = Dock("Data loading", closable=False)
+        self._data_lading_dock.addWidget(self._data_loader_selector)
+        self._dock_area.addDock(
+            self._data_lading_dock, "bottom", relativeTo=self._watchlist_dock
+        )
         self._data_loader_selector.data_loader_selected.connect(
             self._on_data_loader_selected
         )
-        self._tool_box.addItem(self._visualizer_selector, "Visualization")
+
+        self._visualizer_creator_dock = Dock("View selection", closable=False)
+        self._visualizer_creator_dock.addWidget(self._visualizer_selector)
+        self._dock_area.addDock(
+            self._visualizer_creator_dock, "bottom", relativeTo=self._data_lading_dock
+        )
         self._visualizer_selector.visualizer_selected.connect(
             self.change_current_visualizer
         )
+
+        self.setCentralWidget(self._dock_area)
+
         self._status_bar.addPermanentWidget(self._loading_bar)
         self._timer.timeout.connect(self._update_loading_bar)
         self._timer.start(50)
@@ -114,9 +140,9 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         # the old visualizer while it's being freed, we put all accesses to the current visualizer behind a lock.
         with self._current_visualizer_lock:
             self._visualizer = visualizer
-            while self._central_widget.layout().count() > 0:
-                self._central_widget.layout().itemAt(0).widget().setParent(None)
-            self._central_widget.layout().addWidget(self._visualizer)
+            while self._visualizer_dock.layout.count() > 0:
+                self._visualizer_dock.layout.itemAt(0).widget().setParent(None)
+            self._visualizer_dock.addWidget(self._visualizer)
 
     def __enter__(self) -> Self:
         self._exit_stack.__enter__()
