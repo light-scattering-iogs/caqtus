@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional
+from typing import Optional, Literal, TypeAlias
 
 import numpy as np
 import polars
@@ -33,12 +33,21 @@ class ErrorBarViewCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreat
         hue = text if (text := self._hue_line_edit.text()) else None
         view = ErrorBarView(x, y, hue)
         font = QtGui.QFont()
-        font.setPixelSize(20)
+        font.setPixelSize(25)
         view.set_axis_tick_font("bottom", font)
         view.set_axis_tick_font("left", font)
         view.set_axis_label_font("bottom", font)
         view.set_axis_label_font("left", font)
+
+        pen = pyqtgraph.mkPen(color=(255, 255, 255), width=2)
+        view.set_axis_pen("bottom", pen)
+        view.set_axis_pen("left", pen)
+        view.getAxis("bottom").setTextPen(pen)
+        view.getAxis("left").setTextPen(pen)
         return view
+
+
+WhichAxis: TypeAlias = Literal["left", "right", "top", "bottom"]
 
 
 class ErrorBarView(PlotWidget, Visualizer):
@@ -66,11 +75,14 @@ class ErrorBarView(PlotWidget, Visualizer):
         self.update_plot()
         self.data_updated.connect(self.update_plot)  # type:ignore
 
-    def set_axis_tick_font(self, axis: str, font: QtGui.QFont) -> None:
+    def set_axis_tick_font(self, axis: WhichAxis, font: QtGui.QFont) -> None:
         self.getAxis(axis).setStyle(tickFont=font)
 
-    def set_axis_label_font(self, axis: str, font: QtGui.QFont) -> None:
+    def set_axis_label_font(self, axis: WhichAxis, font: QtGui.QFont) -> None:
         self.getAxis(axis).label.setFont(font)
+
+    def set_axis_pen(self, axis: WhichAxis, pen: pyqtgraph.mkPen) -> None:
+        self.plotItem.getAxis(axis).setPen(pen)
 
     def update_plot(self):
         self.update_axis_labels()
@@ -170,7 +182,8 @@ class FilledErrorBarPlotter:
         self._top_curve = pyqtgraph.PlotCurveItem(x=np.array([]), y=np.array([]))
         self._bottom_curve = pyqtgraph.PlotCurveItem(x=np.array([]), y=np.array([]))
         self._middle_curve = pyqtgraph.PlotCurveItem(
-            x=np.array([], dtype=float), y=np.array([], dtype=float)
+            x=np.array([], dtype=float), y=np.array([], dtype=float),
+            pen=pyqtgraph.mkPen("w", width=2)
         )
         self._fill = pyqtgraph.FillBetweenItem(
             self._top_curve, self._bottom_curve, brush=0.2
