@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import threading
 from collections.abc import Mapping
 from typing import Self, Optional
@@ -8,9 +9,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QMainWindow, QProgressBar
 from pyqtgraph.dockarea import DockArea, Dock
 
-from analyza.loading.importers import ShotImporter
-from experiment.session import ExperimentSessionMaker, ExperimentSession
-from sequence.runtime import Sequence, Shot
+from core.session import ExperimentSessionMaker, ExperimentSession, Sequence, Shot
 from util.concurrent import BackgroundScheduler
 from ._main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
@@ -18,6 +17,9 @@ from ..data_loading import DataLoaderSelector, DataImporter, ShotData
 from ..sequence_analyzer import SequenceAnalyzer
 from ..visualization import VisualizerCreator, Visualizer, VisualizerCreatorSelector
 from ..watchlist import WatchlistWidget
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def import_nothing(shot: Shot, session: ExperimentSession) -> ShotData:
@@ -37,7 +39,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        data_loaders: Mapping[str, ShotImporter],
+        data_loaders: Mapping[str, DataImporter],
         visualizer_creators: Mapping[str, VisualizerCreator],
     ) -> None:
         """Initialize a new GraphPlotMainWindow.
@@ -62,13 +64,16 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._data_loader_selector = DataLoaderSelector(data_loaders)
         self._visualizer_selector = VisualizerCreatorSelector(visualizer_creators)
         self._data_loader: DataImporter = import_nothing
-        self._visualizer: Optional[Visualizer] = None
+        self._view: Optional[Visualizer] = None
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
         self._current_visualizer_lock = threading.Lock()
         self._loading_bar = QProgressBar()
-        self._timer = QTimer(self)
+        self._loading_bar_timer = QTimer(self)
         self._setup_ui()
+
+        self._update_view_timer = QTimer(self)
+        self._update_view_timer.singleShot(500, self._update_view)
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
@@ -114,8 +119,8 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self.setCentralWidget(self._dock_area)
 
         self._status_bar.addPermanentWidget(self._loading_bar)
-        self._timer.timeout.connect(self._update_loading_bar)
-        self._timer.start(50)
+        self._loading_bar_timer.timeout.connect(self._update_loading_bar)  # type: ignore
+        self._loading_bar_timer.start(50)
 
     def _update_loading_bar(self) -> None:
         current, maximum = self._sequences_analyzer.get_progress()
@@ -139,28 +144,35 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         # Here we loose all references to the old visualizer, so it will be freed. To avoid having functions running on
         # the old visualizer while it's being freed, we put all accesses to the current visualizer behind a lock.
         with self._current_visualizer_lock:
-            self._visualizer = visualizer
+            self._view = visualizer
             while self._visualizer_dock.layout.count() > 0:
                 self._visualizer_dock.layout.itemAt(0).widget().setParent(None)
-            self._visualizer_dock.addWidget(self._visualizer)
+            self._visualizer_dock.addWidget(self._view)
 
     def __enter__(self) -> Self:
         self._exit_stack.__enter__()
         self._exit_stack.enter_context(self._sequences_analyzer)
         self._exit_stack.enter_context(self._background_scheduler)
-        self._background_scheduler.schedule_task(self._update_visualizer, 1)
+        # self._background_scheduler.schedule_task(self._update_visualizer, 1)
         return self
 
-    def _update_visualizer(self) -> None:
+    def _update_view(self) -> None:
         """Feed new data to the current visualizer."""
 
-        if self._visualizer is not None:
+        if self._view is not None:
             dataframe = self._sequences_analyzer.get_dataframe()
             # Here we put a lock to ensure that sel._visualize won't be reassigned while it is processing some
             # data. The issue is that if we loose all references on the visualizer while it is processing data in
             # another thread, the C++ parts of a widget will be freed while they are still being used.
             with self._current_visualizer_lock:
-                self._visualizer.update_data(dataframe)
+                # noinspection PyBroadException
+                try:
+                    # Here we call the view code, which is not in our control. If it crashes, we want to catch the
+                    # exception and log it, but we don't want to crash the whole program.
+                    self._view.update_data(dataframe)
+                except Exception:
+                    logger.error("Error while updating view", exc_info=True)
+        self._update_view_timer.singleShot(500, self._update_view)
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
