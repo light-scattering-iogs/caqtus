@@ -1,4 +1,4 @@
-from .dataframe_visualizer import DataFrameVisualizerCreator
+from .dataframe_visualizer import DataFrameViewCreator
 from .errorbar_visualizer import ErrorBarViewCreator
 
-__all__ = ["ErrorBarViewCreator", "DataFrameVisualizerCreator"]
+__all__ = ["ErrorBarViewCreator", "DataFrameViewCreator"]

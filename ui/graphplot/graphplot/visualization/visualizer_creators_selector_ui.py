@@ -40,6 +40,6 @@ class Ui_VisualizerCreatorSelector(object):
     def retranslateUi(self, VisualizerCreatorSelector):
         _translate = QtCore.QCoreApplication.translate
         VisualizerCreatorSelector.setWindowTitle(_translate("VisualizerCreatorSelector", "Form"))
-        self.dataLoaderLabel.setText(_translate("VisualizerCreatorSelector", "Visualizer"))
+        self.dataLoaderLabel.setText(_translate("VisualizerCreatorSelector", "DataView"))
         self._settings_group.setTitle(_translate("VisualizerCreatorSelector", "Settings"))
         self._apply_button.setText(_translate("VisualizerCreatorSelector", "Apply"))

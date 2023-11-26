@@ -15,7 +15,7 @@ from ._main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
 from ..data_loading import DataLoaderSelector, DataImporter, ShotData
 from ..sequence_analyzer import SequenceAnalyzer
-from ..visualization import VisualizerCreator, Visualizer, VisualizerCreatorSelector
+from ..visualization import ViewCreator, DataView, VisualizerCreatorSelector
 from ..watchlist import WatchlistWidget
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self,
         session_maker: ExperimentSessionMaker,
         data_loaders: Mapping[str, DataImporter],
-        visualizer_creators: Mapping[str, VisualizerCreator],
+        visualizer_creators: Mapping[str, ViewCreator],
     ) -> None:
         """Initialize a new GraphPlotMainWindow.
 
@@ -64,7 +64,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._data_loader_selector = DataLoaderSelector(data_loaders)
         self._visualizer_selector = VisualizerCreatorSelector(visualizer_creators)
         self._data_loader: DataImporter = import_nothing
-        self._view: Optional[Visualizer] = None
+        self._view: Optional[DataView] = None
 
         self._sequence_hierarchy_widget = SequenceHierarchyWidget(self._session_maker)
         self._current_visualizer_lock = threading.Lock()
@@ -138,7 +138,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
     def _on_sequence_double_clicked(self, sequence: Sequence) -> None:
         self._watchlist_widget.add_sequence(sequence, self._data_loader)
 
-    def change_current_visualizer(self, visualizer: Visualizer) -> None:
+    def change_current_visualizer(self, visualizer: DataView) -> None:
         """Sets a new visualizer for the central widget."""
 
         # Here we loose all references to the old visualizer, so it will be freed. To avoid having functions running on

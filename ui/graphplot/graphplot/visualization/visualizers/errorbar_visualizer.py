@@ -14,12 +14,12 @@ from pyqtgraph import PlotWidget
 from core.data_loading import convert_to_single_unit
 from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
-from ..visualizer_creator import VisualizerCreator, Visualizer
+from ..visualizer_creator import ViewCreator, DataView
 
 pyqtgraph.setConfigOptions(antialias=True)
 
 
-class ErrorBarViewCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreator):
+class ErrorBarViewCreator(QWidget, ViewCreator, Ui_ErrorBarVisualizerCreator):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._setup_ui()
@@ -27,7 +27,7 @@ class ErrorBarViewCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreat
     def _setup_ui(self) -> None:
         self.setupUi(self)
 
-    def create_visualizer(self) -> ErrorBarView:
+    def create_view(self) -> ErrorBarView:
         x = self._x_axis_line_edit.text()
         y = self._y_axis_line_edit.text()
         hue = text if (text := self._hue_line_edit.text()) else None
@@ -50,7 +50,7 @@ class ErrorBarViewCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreat
 WhichAxis: TypeAlias = Literal["left", "right", "top", "bottom"]
 
 
-class ErrorBarView(PlotWidget, Visualizer):
+class ErrorBarView(PlotWidget, DataView):
     data_updated = pyqtSignal()
 
     def __init__(self, x: str, y: str, *args, **kwargs):

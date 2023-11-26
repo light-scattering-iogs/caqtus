@@ -8,18 +8,18 @@ from PyQt6.QtWidgets import QTableView
 
 from core.data_loading import QuantityDType
 from core.types.units import Quantity
-from ..visualizer_creator import VisualizerCreator, Visualizer
+from ..visualizer_creator import ViewCreator, DataView
 
 
-class DataFrameVisualizerCreator(VisualizerCreator):
+class DataFrameViewCreator(ViewCreator):
     def __init__(self) -> None:
         super().__init__()
 
-    def create_visualizer(self) -> DataFrameVisualizer:
-        return DataFrameVisualizer()
+    def create_view(self) -> DataFrameView:
+        return DataFrameView()
 
 
-class DataFrameVisualizer(QTableView, Visualizer):
+class DataFrameView(QTableView, DataView):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 

@@ -1,8 +1,8 @@
 from .main_window import GraphPlotMainWindow
-from .visualization import Visualizer, VisualizerCreator
+from .visualization import DataView, ViewCreator
 
 __all__ = [
     "GraphPlotMainWindow",
-    "Visualizer",
-    "VisualizerCreator",
+    "DataView",
+    "ViewCreator",
 ]

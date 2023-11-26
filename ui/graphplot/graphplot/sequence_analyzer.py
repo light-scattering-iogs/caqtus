@@ -184,7 +184,9 @@ class SequenceAnalyzer:
     ):
         if shots:
             shot_importer = self._monitored_sequences[sequence].shot_importer
-            dataframe_to_append = polars.concat(shot_importer(shot, session) for shot in shots)
+            dataframe_to_append = polars.concat(
+                shot_importer(shot, session) for shot in shots
+            )
         else:
             dataframe_to_append = None
 
@@ -211,7 +213,7 @@ class SequenceAnalyzer:
                 progress = (
                     info.number_imported_shots
                     if info.number_imported_shots <= info.number_shots_to_load
-                    else 0
+                    else info.number_shots_to_load
                 )
                 total_progress += progress
                 total_to_load += info.number_shots_to_load

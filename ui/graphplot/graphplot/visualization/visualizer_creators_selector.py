@@ -4,20 +4,20 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
 from util.itertools import first
-from .visualizer_creator import Visualizer, VisualizerCreator
+from .visualizer_creator import DataView, ViewCreator
 from .visualizer_creators_selector_ui import Ui_VisualizerCreatorSelector
 
 
 class VisualizerCreatorSelector(QWidget, Ui_VisualizerCreatorSelector):
-    visualizer_selected = pyqtSignal(Visualizer)
+    visualizer_selected = pyqtSignal(DataView)
 
     def __init__(
-        self, visualizer_creators: Mapping[str, VisualizerCreator], *args, **kwargs
+        self, visualizer_creators: Mapping[str, ViewCreator], *args, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
 
         self._visualizer_creators = dict(visualizer_creators)
-        self._current_visualizer_creator: VisualizerCreator = first(
+        self._current_visualizer_creator: ViewCreator = first(
             visualizer_creators.values()
         )
         self._setup_ui()
@@ -47,4 +47,4 @@ class VisualizerCreatorSelector(QWidget, Ui_VisualizerCreatorSelector):
             self._settings_group.setHidden(True)
 
     def _on_apply_button_clicked(self) -> None:
-        self.visualizer_selected.emit(self._current_visualizer_creator.create_visualizer())  # type: ignore
+        self.visualizer_selected.emit(self._current_visualizer_creator.create_view())  # type: ignore
