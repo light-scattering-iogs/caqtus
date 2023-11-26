@@ -190,8 +190,9 @@ class FilledErrorBarPlotter:
         )
 
     def set_data(self, x, y, error) -> None:
-        self._top_curve.setData(x, y + error / 2)
-        self._bottom_curve.setData(x, y - error / 2)
+        # Here 1.96 refers to the 95% confidence interval
+        self._top_curve.setData(x, y + error * 1.96)
+        self._bottom_curve.setData(x, y - error * 1.96)
         self._middle_curve.setData(x, y)
 
     def get_items(self) -> Sequence[pyqtgraph.GraphicsObject]:
