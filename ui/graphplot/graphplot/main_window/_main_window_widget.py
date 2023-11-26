@@ -73,7 +73,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
         self._setup_ui()
 
         self._update_view_timer = QTimer(self)
-        self._update_view_timer.singleShot(500, self._update_view)
+        self._update_view_timer.singleShot(100, self._update_view)
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
@@ -172,7 +172,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_MainWindow):
                     self._view.update_data(dataframe)
                 except Exception:
                     logger.error("Error while updating view", exc_info=True)
-        self._update_view_timer.singleShot(500, self._update_view)
+        self._update_view_timer.singleShot(100, self._update_view)
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
         return self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
