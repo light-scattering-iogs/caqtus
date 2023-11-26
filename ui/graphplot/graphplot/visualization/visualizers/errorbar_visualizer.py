@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 import polars
 import pyqtgraph
+from PyQt6 import QtGui
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 from pyqtgraph import PlotWidget
@@ -18,9 +19,7 @@ from ..visualizer_creator import VisualizerCreator, Visualizer
 pyqtgraph.setConfigOptions(antialias=True)
 
 
-class ErrorBarVisualizerCreator(
-    QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreator
-):
+class ErrorBarViewCreator(QWidget, VisualizerCreator, Ui_ErrorBarVisualizerCreator):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._setup_ui()
@@ -28,14 +27,21 @@ class ErrorBarVisualizerCreator(
     def _setup_ui(self) -> None:
         self.setupUi(self)
 
-    def create_visualizer(self) -> ErrorBarVisualizer:
+    def create_visualizer(self) -> ErrorBarView:
         x = self._x_axis_line_edit.text()
         y = self._y_axis_line_edit.text()
         hue = text if (text := self._hue_line_edit.text()) else None
-        return ErrorBarVisualizer(x, y, hue)
+        view = ErrorBarView(x, y, hue)
+        font = QtGui.QFont()
+        font.setPixelSize(20)
+        view.set_axis_tick_font("bottom", font)
+        view.set_axis_tick_font("left", font)
+        view.set_axis_label_font("bottom", font)
+        view.set_axis_label_font("left", font)
+        return view
 
 
-class ErrorBarVisualizer(PlotWidget, Visualizer):
+class ErrorBarView(PlotWidget, Visualizer):
     data_updated = pyqtSignal()
 
     def __init__(self, x: str, y: str, *args, **kwargs):
@@ -59,6 +65,12 @@ class ErrorBarVisualizer(PlotWidget, Visualizer):
             self.addItem(item)
         self.update_plot()
         self.data_updated.connect(self.update_plot)  # type:ignore
+
+    def set_axis_tick_font(self, axis: str, font: QtGui.QFont) -> None:
+        self.getAxis(axis).setStyle(tickFont=font)
+
+    def set_axis_label_font(self, axis: str, font: QtGui.QFont) -> None:
+        self.getAxis(axis).label.setFont(font)
 
     def update_plot(self):
         self.update_axis_labels()
