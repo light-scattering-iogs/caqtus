@@ -1,18 +1,11 @@
-from typing import assert_never, overload, Literal, Optional
+from typing import assert_never, overload, Literal
 
 import polars
 
 from core.session import ExperimentSession, Shot
 from core.types import is_parameter, is_analog_value, is_quantity
-from core.types.units import Unit
 from .shot_data import DataImporter, LazyDataImporter
-
-QuantityDType = polars.Struct(
-    [
-        polars.Field("magnitude", polars.Float64),
-        polars.Field("units", polars.Categorical),
-    ]
-)
+from .units import QuantityDType
 
 
 @overload
@@ -67,27 +60,3 @@ def get_parameters_importer(lazy: bool = False) -> DataImporter | LazyDataImport
             return dataframe
 
     return importer
-
-
-def convert_to_single_unit(
-    series: polars.Series,
-) -> tuple[polars.Series, Optional[Unit]]:
-    """Break the series into a magnitude series and a unit.
-
-    If the series has dtype QuantityDType, this will attempt to convert all magnitudes to a given unit. It will then
-    return a series of magnitudes only and their unit. If the series is any other dtype, it will be returned unchanged.
-    """
-
-    if series.dtype == QuantityDType:
-        all_units = series.struct.field("units").unique().to_list()
-        if len(all_units) == 1:
-            unit = Unit(all_units[0])
-        else:
-            raise NotImplementedError(
-                f"Series {series.name} is expressed in several units: {all_units}"
-            )
-        magnitude = series.struct.field("magnitude").alias(series.name)
-    else:
-        unit = None
-        magnitude = series
-    return magnitude, unit
