@@ -63,6 +63,12 @@ class DottedVariableName(YAMLSerializable):
     def __hash__(self):
         return hash(self._dotted_name)
 
+    def __eq__(self, other):
+        if isinstance(other, DottedVariableName):
+            return self._dotted_name == other._dotted_name
+        else:
+            return NotImplemented
+
 
 def dotted_variable_name_converter(name: Any) -> DottedVariableName:
     if isinstance(name, DottedVariableName):
@@ -89,3 +95,9 @@ class VariableName(DottedVariableName):
 
     def __str__(self):
         return super().__str__()
+
+    def __eq__(self, other):
+        if isinstance(other, VariableName):
+            return self._dotted_name == other._dotted_name
+        else:
+            return NotImplemented
