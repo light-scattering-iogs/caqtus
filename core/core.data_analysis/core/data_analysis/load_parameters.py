@@ -5,7 +5,6 @@ import polars
 from core.session import ExperimentSession, Shot
 from core.types import is_parameter, is_analog_value, is_quantity
 from .shot_data import DataImporter, LazyDataImporter
-from .units import QuantityDType
 
 
 @overload
@@ -43,9 +42,14 @@ def get_parameters_importer(lazy: bool = False) -> DataImporter | LazyDataImport
             if is_parameter(value):
                 if is_analog_value(value) and is_quantity(value):
                     magnitude = float(value.magnitude)
-                    units = str(value.units)
+                    units = format(value.units, "~")
                     s = polars.Series(
-                        parameter_name, [(magnitude, units)], dtype=QuantityDType
+                        parameter_name,
+                        [
+                            polars.Series("magnitude", [magnitude]),
+                            polars.Series("units", [units], dtype=polars.Categorical),
+                        ],
+                        dtype=polars.Struct,
                     )
                 else:
                     s = polars.Series(parameter_name, [value])
