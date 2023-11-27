@@ -3,17 +3,17 @@ from typing import (
     Any,
     TypeVar,
     ParamSpec,
-    TypedDict, TypeGuard,
+    TypedDict,
+    TypeGuard,
 )
 
+from atom_detector.configuration import AtomLabel
 from data_types import Data
 from device.configuration import DeviceName
+from experiment.session import ExperimentSession
 from image_types import Image, is_image, ImageLabel
 from parameter_types import Parameter
 from sequence.runtime import Shot
-
-from atom_detector.configuration import AtomLabel
-from experiment.session import ExperimentSession
 from util import attrs, serialization
 from . import break_namespaces
 from .chainable_function import ChainableFunction
@@ -102,9 +102,9 @@ serialization.include_subclasses(
 
 
 def _import_parameters(shot: Shot, session: ExperimentSession) -> dict[str, Parameter]:
-    return {
-        str(name): parameter for name, parameter in shot.get_parameters(session).items()
-    }
+    parameters = list(shot.get_parameters(session).items())
+    parameters.sort(key=lambda item: str(item[0]))
+    return {str(name): value for name, value in parameters}
 
 
 def _import_scores(shot: Shot, session: ExperimentSession) -> dict[str, Any]:
