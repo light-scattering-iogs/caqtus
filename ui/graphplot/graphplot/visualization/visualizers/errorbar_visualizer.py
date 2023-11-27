@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Optional, Literal, TypeAlias
+from typing import Optional, Literal, TypeAlias, Any
 
 import attrs
 import numpy as np
@@ -31,17 +31,20 @@ class ErrorBarViewCreator(QWidget, ViewCreator, Ui_ErrorBarVisualizerCreator):
         x = self._x_axis_line_edit.text()
         y = self._y_axis_line_edit.text()
         hue = text if (text := self._hue_line_edit.text()) else None
-        view = ErrorBarView(x, y, hue)
+        if hue is None:
+            view = ErrorBarView(x, y)
+        else:
+            view = HueErrorBarView(x, y, hue)
         font = QtGui.QFont()
         font.setPixelSize(25)
-        view.set_axis_tick_font("bottom", font)
-        view.set_axis_tick_font("left", font)
-        view.set_axis_label_font("bottom", font)
-        view.set_axis_label_font("left", font)
+        view.getAxis("bottom").setStyle(tickFont=font)
+        view.getAxis("left").setStyle(tickFont=font)
+        view.getAxis("bottom").label.setFont(font)
+        view.getAxis("left").label.setFont(font)
 
         pen = pyqtgraph.mkPen(color=(255, 255, 255), width=2)
-        view.set_axis_pen("bottom", pen)
-        view.set_axis_pen("left", pen)
+        view.plotItem.getAxis("bottom").setPen(pen)
+        view.plotItem.getAxis("left").setPen(pen)
         view.getAxis("bottom").setTextPen(pen)
         view.getAxis("left").setTextPen(pen)
         return view
@@ -57,6 +60,68 @@ class Stats:
     error_values: np.ndarray
     x_unit: Optional[Unit]
     y_unit: Optional[Unit]
+
+
+class HueErrorBarView(PlotWidget, DataView):
+    def __init__(self, x: str, y: str, hue: str, *args, **kwargs):
+        PlotWidget.__init__(self, *args, background=(0, 0, 0, 0), **kwargs)
+
+        self._x_var = x
+        self._y_var = y
+        self._hue = hue
+
+        self._stats: Optional[polars.DataFrame] = None
+
+        self._error_bar_plotters: dict[Any, FilledErrorBarPlotter] = {}
+        self._compute_stats_thread: Optional[ComputeStatsThread] = None
+
+        self.update_plot()
+
+    def update_plot(self) -> None:
+        stats = self._stats
+        if stats is None or len(stats) == 0:
+            x_unit = None
+            y_unit = None
+            hue_unit = None
+        else:
+            for hue, group in stats.groupby(self._hue):
+                if hue not in self._error_bar_plotters:
+                    self._error_bar_plotters[hue] = FilledErrorBarPlotter()
+                    for item in self._error_bar_plotters[hue].get_items():
+                        self.addItem(item)
+                x_series, x_unit = convert_to_single_unit(group[self._x_var])
+                y_series, y_unit = convert_to_single_unit(group[f"{self._y_var}.mean"])
+                error_series, _ = convert_to_single_unit(group[f"{self._y_var}.sem"])
+                x_values = np.array(x_series.to_numpy())
+                y_values = np.array(y_series.to_numpy())
+                error_values = np.array(error_series.to_numpy())
+                self._error_bar_plotters[hue].set_data(
+                    x=x_values,
+                    y=y_values,
+                    error=error_values,
+                )
+
+        self.update_axis_labels(x_unit, y_unit)
+
+    def update_axis_labels(
+        self, x_unit: Optional[Unit], y_unit: Optional[Unit]
+    ) -> None:
+        self.setLabel("bottom", format_label(self._x_var, x_unit))
+        self.setLabel("left", format_label(self._y_var, y_unit))
+
+    def update_data(self, dataframe: Optional[polars.DataFrame]) -> None:
+        if self._compute_stats_thread is not None:
+            if self._compute_stats_thread.isRunning():
+                return
+        self._compute_stats_thread = ComputeStatsThread(
+            self,
+            dataframe,
+            self._x_var,
+            self._y_var,
+            hue=self._hue
+        )
+        self._compute_stats_thread.finished.connect(self.update_plot)  # type: ignore
+        self._compute_stats_thread.start()
 
 
 class ErrorBarView(PlotWidget, DataView):
@@ -77,15 +142,6 @@ class ErrorBarView(PlotWidget, DataView):
         for item in self._error_bar_plotter.get_items():
             self.addItem(item)
         self.update_plot()
-
-    def set_axis_tick_font(self, axis: WhichAxis, font: QtGui.QFont) -> None:
-        self.getAxis(axis).setStyle(tickFont=font)
-
-    def set_axis_label_font(self, axis: WhichAxis, font: QtGui.QFont) -> None:
-        self.getAxis(axis).label.setFont(font)
-
-    def set_axis_pen(self, axis: WhichAxis, pen: pyqtgraph.mkPen) -> None:
-        self.plotItem.getAxis(axis).setPen(pen)
 
     def update_plot(self) -> None:
         stats = self._stats
@@ -120,7 +176,7 @@ class ErrorBarView(PlotWidget, DataView):
         if self._compute_stats_thread is not None:
             if self._compute_stats_thread.isRunning():
                 return
-        self._compute_stats_thread = self.ComputeStatsThread(
+        self._compute_stats_thread = ComputeStatsThread(
             self,
             dataframe,
             self._x_var,
@@ -129,29 +185,31 @@ class ErrorBarView(PlotWidget, DataView):
         self._compute_stats_thread.finished.connect(self.update_plot)  # type: ignore
         self._compute_stats_thread.start()
 
-    class ComputeStatsThread(QtCore.QThread):
-        def __init__(
-            self,
-            parent: ErrorBarView,
-            dataframe: Optional[polars.DataFrame],
-            x_var: str,
-            y_var: str,
-            hue: Optional[str] = None,
-        ):
-            super().__init__(parent=parent)
-            self._parent = parent
-            self._dataframe = dataframe
-            self._x_var = x_var
-            self._y_var = y_var
-            self._hue = hue
 
-        def run(self) -> None:
-            if self._dataframe is not None and len(self._dataframe) > 0:
-                self._parent._stats = compute_stats_average(
-                    self._dataframe, self._y_var, [self._x_var]
-                )
-            else:
-                self._parent.stats = None
+class ComputeStatsThread(QtCore.QThread):
+    def __init__(
+        self,
+        parent: ErrorBarView,
+        dataframe: Optional[polars.DataFrame],
+        x_var: str,
+        y_var: str,
+        hue: Optional[str] = None,
+    ):
+        super().__init__(parent=parent)
+        self._parent = parent
+        self._dataframe = dataframe
+        self._x_var = x_var
+        self._y_var = y_var
+        self._hue = hue
+
+    def run(self) -> None:
+        if self._dataframe is not None and len(self._dataframe) > 0:
+            group_by = [self._x_var] if self._hue is None else [self._hue, self._x_var]
+            self._parent._stats = compute_stats_average(
+                self._dataframe, self._y_var, group_by
+            )
+        else:
+            self._parent.stats = None
 
 
 def format_label(label: str, unit: Optional[Unit]) -> str:
