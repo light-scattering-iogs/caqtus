@@ -11,7 +11,7 @@ from PyQt6 import QtGui, QtCore
 from PyQt6.QtWidgets import QWidget
 from pyqtgraph import PlotWidget
 
-from core.data_loading import compute_stats_average, convert_to_single_unit
+from core.data_analysis import compute_stats_average, convert_to_single_unit
 from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import ViewCreator, DataView

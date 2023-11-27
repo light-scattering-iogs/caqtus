@@ -17,7 +17,7 @@ polars = "^0.19.15"
 pyqtgraph = "^0.13.3"
 
 util = {path = "../../util", develop = true}
-core-data-loading = {path = "../../core/core.data_loading", develop = true}
+core-data-analysis = {path = "../../core/core.data_analysis", develop = true}
 core-types = {path = "../../core/core.types", develop = true}
 core-session = {path = "../../core/core.session", develop = true}
 sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}

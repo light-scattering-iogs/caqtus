@@ -1,5 +1,5 @@
 from typing import TypeAlias
 
-from core.data_loading import ShotData, ShotImporter
+from core.data_analysis import ShotData, ShotImporter
 
 DataImporter: TypeAlias = ShotImporter[ShotData]

@@ -6,7 +6,7 @@ import polars
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QTableView
 
-from core.data_loading import QuantityDType
+from core.data_analysis import QuantityDType
 from core.types.units import Quantity
 from ..visualizer_creator import ViewCreator, DataView
 
