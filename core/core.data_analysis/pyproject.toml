@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "core-data-loading"
+name = "core-data-analysis"
 version = "0.1.0"
 description = ""
 authors = ["Damien <damien.bloch@institutoptique.fr>"]
@@ -8,7 +8,9 @@ packages = [{include = "core"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
+
 polars = "^0.19.15"
+
 core-types = {path = "../core.types", develop = true}
 core-session = {path = "../core.session", develop = true}
 
