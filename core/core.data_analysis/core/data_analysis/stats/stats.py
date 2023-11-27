@@ -4,7 +4,7 @@ from typing import Optional, Literal, assert_never
 import polars
 
 from core.types.units import Unit
-from .units import extract_unit, with_units_added_to_columns
+from ..units import extract_unit, with_units_added_to_columns
 
 VALUE_FIELD = "value"
 ERROR_FIELD = "error"
@@ -28,6 +28,36 @@ def is_error_dtype(dtype: polars.DataType) -> bool:
             ):
                 return True
     return False
+
+
+def get_nominal_value(series: polars.Series) -> polars.Series:
+    """Extract the nominal value from a series containing a value and an error.
+
+    Args:
+        series: the series from which to extract the nominal value. Must have an error dtype.
+
+    Returns:
+        A series containing the nominal value.
+    """
+
+    if not is_error_dtype(series.dtype):
+        raise ValueError("The series must have an error dtype")
+    return series.struct.field(VALUE_FIELD)
+
+
+def get_error(series: polars.Series) -> polars.Series:
+    """Extract the error from a series containing a value and an error.
+
+    Args:
+        series: the series from which to extract the error. Must have an error dtype.
+
+    Returns:
+        A series containing the error.
+    """
+
+    if not is_error_dtype(series.dtype):
+        raise ValueError("The series must have an error dtype")
+    return series.struct.field(ERROR_FIELD)
 
 
 def compute_stats_average(

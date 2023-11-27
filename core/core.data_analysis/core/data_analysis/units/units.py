@@ -9,6 +9,9 @@ import polars
 
 from core.types.units import Unit, Quantity
 
+MAGNITUDE_FIELD = "magnitude"
+UNITS_FIELD = "units"
+
 
 def is_quantity_dtype(dtype: polars.DataType) -> bool:
     """Check if a dtype is a QuantityDType.
@@ -22,7 +25,10 @@ def is_quantity_dtype(dtype: polars.DataType) -> bool:
 
     if isinstance(dtype, polars.Struct):
         if len(dtype.fields) == 2:
-            if dtype.fields[0].name == "magnitude" and dtype.fields[1].name == "units":
+            if (
+                dtype.fields[0].name == MAGNITUDE_FIELD
+                and dtype.fields[1].name == UNITS_FIELD
+            ):
                 return True
     return False
 
@@ -46,9 +52,9 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
         return polars.Series(
             series.name,
             [
-                series.alias("magnitude"),
+                series.alias(MAGNITUDE_FIELD),
                 polars.Series(
-                    "units", (str(unit),) * len(series), dtype=polars.Categorical
+                    UNITS_FIELD, (str(unit),) * len(series), dtype=polars.Categorical
                 ),
             ],
             dtype=polars.Struct,
@@ -65,14 +71,14 @@ def extract_unit(
     """
 
     if is_quantity_dtype(series.dtype):
-        all_units = series.struct.field("units").unique().to_list()
+        all_units = series.struct.field(UNITS_FIELD).unique().to_list()
         if len(all_units) == 1:
             unit = Unit(all_units[0])
         else:
             raise NotImplementedError(
                 f"Series {series.name} is expressed in several units: {all_units}"
             )
-        magnitude = series.struct.field("magnitude").alias(series.name)
+        magnitude = series.struct.field(MAGNITUDE_FIELD).alias(series.name)
     else:
         unit = None
         magnitude = series
@@ -125,7 +131,9 @@ def magnitude_in_unit(series: polars.Series, unit: Unit) -> polars.Series:
         converted to the target unit.
     """
 
-    return convert_to_unit(series, unit).struct.field("magnitude").alias(series.name)
+    return (
+        convert_to_unit(series, unit).struct.field(MAGNITUDE_FIELD).alias(series.name)
+    )
 
 
 def with_columns_expressed_in_units(
