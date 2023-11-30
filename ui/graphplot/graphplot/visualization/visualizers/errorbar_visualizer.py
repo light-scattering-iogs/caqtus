@@ -11,7 +11,7 @@ from PyQt6 import QtGui, QtCore
 from PyQt6.QtWidgets import QWidget
 from pyqtgraph import PlotWidget
 
-from core.data_analysis import compute_stats_average, convert_to_single_unit
+from core.data_analysis import compute_stats_average, extract_unit
 from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import ViewCreator, DataView
@@ -89,9 +89,9 @@ class HueErrorBarView(PlotWidget, DataView):
                     self._error_bar_plotters[hue] = FilledErrorBarPlotter()
                     for item in self._error_bar_plotters[hue].get_items():
                         self.addItem(item)
-                x_series, x_unit = convert_to_single_unit(group[self._x_var])
-                y_series, y_unit = convert_to_single_unit(group[f"{self._y_var}.mean"])
-                error_series, _ = convert_to_single_unit(group[f"{self._y_var}.sem"])
+                x_series, x_unit = extract_unit(group[self._x_var])
+                y_series, y_unit = extract_unit(group[f"{self._y_var}.mean"])
+                error_series, _ = extract_unit(group[f"{self._y_var}.sem"])
                 x_values = np.array(x_series.to_numpy())
                 y_values = np.array(y_series.to_numpy())
                 error_values = np.array(error_series.to_numpy())
@@ -152,9 +152,9 @@ class ErrorBarView(PlotWidget, DataView):
             y_values = np.array([])
             error_values = np.array([])
         else:
-            x_series, x_unit = convert_to_single_unit(stats[self._x_var])
-            y_series, y_unit = convert_to_single_unit(stats[f"{self._y_var}.mean"])
-            error_series, _ = convert_to_single_unit(stats[f"{self._y_var}.sem"])
+            x_series, x_unit = extract_unit(stats[self._x_var])
+            y_series, y_unit = extract_unit(stats[f"{self._y_var}.mean"])
+            error_series, _ = extract_unit(stats[f"{self._y_var}.sem"])
             x_values = x_series.to_numpy()
             y_values = y_series.to_numpy()
             error_values = error_series.to_numpy()
