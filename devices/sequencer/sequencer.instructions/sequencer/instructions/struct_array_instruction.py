@@ -115,8 +115,9 @@ class Pattern(SequencerInstruction):
         return self._pattern.dtype
 
     def as_type(self, dtype: numpy.dtype) -> Self:
+        # Here we try to avoid copy if possible.
         new_pattern = object.__new__(type(self))
-        new_pattern._pattern = self._pattern.view(dtype=dtype)
+        new_pattern._pattern = self._pattern.astype(dtype, copy=False)
         return new_pattern
 
     def __len__(self) -> Length:
