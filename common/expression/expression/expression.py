@@ -71,21 +71,20 @@ class Expression:
             body: the expression body. This is a string expression that must follow the
             specifications of the python syntax.
             builtins: a dictionary of builtin functions and constants that can be used
-            in the expression. they will be available in the expression namespace, but
+            in the expression. They will be available in the expression namespace, but
             are not included in the upstream variables.
             implicit_multiplication: if True, the expression will be parsed to allow
-            implicit multiplication, even though it is not regular python. for example,
-            'a b' will be parsed as 'a * b'. if set to False, a syntax error will be
+            implicit multiplication, even though it is not regular python. For example,
+            'a b' will be parsed as 'a * b'. If set to False, a syntax error will be
             raised in such cases.
             allow_percentage: if True, the expression will be parsed to understand the
-            use of the % symbol as a multiplication by 0.01. if set to False, the %
+            use of the % symbol as a multiplication by 0.01. If set to False, the %
             symbol will be understood as a modulo operator.
         """
+
         if builtins is None:
             builtins = BUILTINS
         self.body = body
-        self._last_value = None
-        self._last_evaluation_variables = None
         self._builtins = builtins
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
@@ -134,25 +133,14 @@ class Expression:
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables"""
 
-        # Only keep the variables the expression actually depends on. This allows to
-        # cache the last evaluation if these variables don't change but some other do.
-        useful_variables = set(variables) & self.upstream_variables
-        return self._evaluate({str(expr): variables[expr] for expr in useful_variables})
+        return self._evaluate({str(expr): variables[expr] for expr in variables})
 
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
-        can_use_cached_value = self._cache_evaluation and (
-            variables == self._last_evaluation_variables
-        )
-        if can_use_cached_value:
-            return self._last_value
-        else:
-            try:
-                self._last_value = eval(
-                    self.code, {"__builtins__": self._builtins}, variables
-                )
-            except Exception as error:
-                raise EvaluationError(self.body, variables) from error
-            return self._last_value
+        try:
+            value = eval(self.code, {"__builtins__": self._builtins}, variables)
+        except Exception as error:
+            raise EvaluationError(self.body, variables) from error
+        return value
 
     @cached_property
     def upstream_variables(self) -> frozenset[VariableName]:
@@ -194,7 +182,7 @@ class Expression:
         if isinstance(other, Expression):
             return self.body == other.body
         else:
-            return False
+            return NotImplemented
 
     # This is a hack to use expressions as pydantic fields. The two methods below
     # can be removed once we remove pydantic dependency from the project.
@@ -221,7 +209,7 @@ def add_implicit_multiplication(source: str) -> str:
     being implicit by the normal way algebraic equations are written but would
     be a SyntaxError in Python. Thus we have::
 
-        2n  -> 2*n
+        2n -> 2*n
         n 2 -> n* 2
         2(a+b) -> 2*(a+b)
         (a+b)2 -> (a+b)*2
