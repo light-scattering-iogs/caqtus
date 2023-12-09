@@ -14,6 +14,9 @@ pulsestreamer = "^1.7.0"
 
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
 
+[tool.poetry.plugins."experiment_control.devices"]
+"SwabianPulseStreamer" = "swabian_pulse_streamer.runtime:SwabianPulseStreamer"
+
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 mypy = "^1.4.1"

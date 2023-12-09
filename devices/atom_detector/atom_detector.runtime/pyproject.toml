@@ -15,6 +15,9 @@ atom-detector-configuration = {path = "../atom_detector.configuration", develop 
 device-runtime = {path = "../../device/device.runtime", develop = true}
 single-atom-detector = {path = "../single_atom_detector", develop = true}
 
+[tool.poetry.plugins."experiment_control.devices"]
+"AtomDetector" = "atom_detector.runtime:AtomDetector"
+
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"
 

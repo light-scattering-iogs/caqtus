@@ -171,6 +171,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.logs_listener.start()
         self.worker = BlockingThread(self)
 
+    def __enter__(self):
+        self._experiment_config_watcher.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._experiment_config_watcher.__exit__(exc_type, exc_value, traceback)
+
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
             return

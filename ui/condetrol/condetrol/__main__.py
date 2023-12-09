@@ -40,9 +40,9 @@ if __name__ == "__main__":
     else:
         families = QFontDatabase.applicationFontFamilies(id)
     session_maker = get_standard_experiment_session_maker()
-    experiment_viewer = ExperimentViewer(session_maker)
-    experiment_viewer.show()
-    try:
-        app.exec()
-    except Exception:
-        logger.error("An exception occurred.", exc_info=True)
+    with ExperimentViewer(session_maker) as experiment_viewer:
+        experiment_viewer.show()
+        try:
+            app.exec()
+        except Exception:
+            logger.error("An exception occurred.", exc_info=True)

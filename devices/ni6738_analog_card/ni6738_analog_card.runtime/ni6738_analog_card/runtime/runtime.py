@@ -11,7 +11,6 @@ import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-
 from sequencer.instructions import (
     SequencerInstruction,
     SequencerPattern,
@@ -19,8 +18,9 @@ from sequencer.instructions import (
     Concatenate,
     Repeat,
 )
+
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
-from util import run_on_change_method, log_exception
+from util import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "core-data-analysis"
+version = "0.1.0"
+description = ""
+authors = ["Damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "core"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+polars = "^0.19.15"
+
+core-types = {path = "../core.types", develop = true}
+core-session = {path = "../core.session", develop = true}
+numpy = "^1.26.2"
+scipy = "^1.11.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

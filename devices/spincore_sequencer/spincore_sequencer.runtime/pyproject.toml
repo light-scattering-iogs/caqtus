@@ -16,6 +16,9 @@ util = {path = "../../../util", develop = true}
 sequencer-instructions = {path = "../../sequencer/sequencer.instructions", develop = true}
 sequencer-runtime = {path = "../../sequencer/sequencer.runtime", develop = true}
 
+[tool.poetry.plugins."experiment_control.devices"]
+"SpincorePulseBlaster" = "spincore_sequencer.runtime:SpincorePulseBlaster"
+
 
 [build-system]
 requires = ["poetry-core"]

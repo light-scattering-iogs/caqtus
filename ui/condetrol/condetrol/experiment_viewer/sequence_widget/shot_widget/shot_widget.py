@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
 )
 
+from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from sequence.runtime import Sequence, State
@@ -108,11 +109,13 @@ class ShotWidget(QWidget, YAMLClipboardMixin):
     def __init__(
         self,
         sequence: Sequence,
+        sequence_state_watcher: SequenceStateWatcher,
         experiment_config: ExperimentConfig,
         session_maker: ExperimentSessionMaker,
         *args,
     ):
         super().__init__(*args)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self._sequence = sequence
         self._session_maker = session_maker
 
@@ -125,11 +128,13 @@ class ShotWidget(QWidget, YAMLClipboardMixin):
 
         self.model = SwimLaneModel(
             self._sequence,
+            sequence_state_watcher,
             "shot",
             self.experiment_config,
             self._session_maker,
             parent=self.swim_lane_widget,
         )
+
         size = QtCore.QSize(20, 40)
         index = self.model.index(0, 0)
         self.model.setData(index, size, Qt.ItemDataRole.SizeHintRole)
