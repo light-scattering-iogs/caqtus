@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import datetime
 import re
 import typing
 
-from attr import frozen, field
+from util import attrs
 
 if typing.TYPE_CHECKING:
     from experiment.session import ExperimentSession
@@ -20,7 +22,7 @@ def _is_valid_path(path: str) -> bool:
     return _PATH_REGEX.match(path) is not None
 
 
-def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
+def convert_path_to_str(path: SequencePath | str) -> str:
     if isinstance(path, SequencePath):
         return path.path
     elif isinstance(path, str):
@@ -31,12 +33,23 @@ def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
         )
 
 
-@frozen(str=False)
+@attrs.frozen(str=False)
 class SequencePath:
-    path: str = field(converter=convert_path_to_str)
+    """A path in the sequence hierarchy.
 
-    @path.validator
-    def _validate_path(self, attribute, value):
+    A path is a string of names separated by dots. For example, "foo.bar" is a path
+    with two names, "foo" and "bar".
+    A given path can be a sequence or a folder. A folder can contain other folders and
+    sequences. A sequence can only contain shots and cannot have children.
+
+    Methods of this class that take an experiment session as an argument are the only
+    one that actually perform io operations. The other methods are pure functions.
+    """
+
+    path: str = attrs.field(converter=convert_path_to_str)
+
+    @path.validator  # type: ignore
+    def _validate_path(self, _, value):
         if not _is_valid_path(value):
             raise ValueError(f"Invalid path: {value}")
 
@@ -50,7 +63,7 @@ class SequencePath:
     def exists(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.sequence_hierarchy.does_path_exists(self)
 
-    def create(self, experiment_session: "ExperimentSession") -> list["SequencePath"]:
+    def create(self, experiment_session: "ExperimentSession") -> list[SequencePath]:
         """
         Create the path and all its ancestors if they don't exist
 
@@ -89,7 +102,7 @@ class SequencePath:
 
     def get_contained_sequences(
         self, experiment_session: "ExperimentSession"
-    ) -> list["SequencePath"]:
+    ) -> list[SequencePath]:
         """Return the children of this path that are sequences, including this path.
 
         Args:
@@ -124,7 +137,7 @@ class SequencePath:
 
     def get_children(
         self, experiment_session: "ExperimentSession"
-    ) -> set["SequencePath"]:
+    ) -> set[SequencePath]:
         """Return the direct descendants of this path."""
 
         return experiment_session.sequence_hierarchy.get_path_children(self)
@@ -134,7 +147,7 @@ class SequencePath:
     ) -> datetime.datetime:
         return experiment_session.sequence_hierarchy.get_path_creation_date(self)
 
-    def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
+    def get_ancestors(self, strict: bool = True) -> list[SequencePath]:
         """Return the ancestors of this path.
 
         Args:
@@ -170,7 +183,7 @@ class SequencePath:
         else:
             return self.path.count(_PATH_SEPARATOR)
 
-    def __truediv__(self, other) -> "SequencePath":
+    def __truediv__(self, other) -> SequencePath:
         if isinstance(other, str):
             if not re.match(_PATH_NAMES_REGEX, other):
                 raise ValueError("Invalid name format")

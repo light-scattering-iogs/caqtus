@@ -8,8 +8,15 @@ packages = [{include = "core"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
-experiment-session = {path = "../../common/experiment/experiment.session", develop = true}
-sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
+
+sqlalchemy = "^2.0.23"
+sqlalchemy-utils = "^0.41.1"
+psycopg2 = "^2.9.9"
+platformdirs = "^4.1.0"
+
+util = {path = "../../util", develop = true}
+core-types = {path = "../core.types", develop = true}
+
 
 
 [build-system]

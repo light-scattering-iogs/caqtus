@@ -1,13 +1,13 @@
 from abc import abstractmethod
 
 from PyQt6.QtWidgets import QWidget
-from attrs import define
 
+from core.session.sequence import Shot
 from qabc import QABC
-from sequence.runtime import Shot
+from util import attrs
 
 
-@define(slots=False)
+@attrs.define(slots=False)
 class SingleShotViewer(QWidget, QABC):
     def __attrs_pre_init__(self) -> None:
         super().__init__()

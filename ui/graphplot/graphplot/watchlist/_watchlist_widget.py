@@ -3,7 +3,7 @@ from typing import Optional
 from PyQt6.QtCore import QAbstractListModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget
 
-from sequence.runtime import Sequence
+from core.session.sequence import Sequence
 from .watchlist_widget_ui import Ui_WatchlistWidget
 from ..data_loading import DataImporter
 from ..sequence_analyzer import SequenceAnalyzer

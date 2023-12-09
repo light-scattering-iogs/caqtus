@@ -9,19 +9,23 @@ from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
 
-from data_types import Data, DataLabel, is_data_label, is_data
+from core.types import DataLabel, Data, is_data_label, is_data, Parameter, is_parameter
 from device.name import DeviceName, is_device_name
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter, is_parameter
 from sequence.configuration import SequenceConfig
-from sequence.runtime import Sequence, SequenceNotFoundError, SequencePath, Shot
-from sequence.runtime import State, InvalidSequenceStateError
-from sequence.runtime.path import PathNotFoundError
-from sequence.runtime.sequence import SequenceNotEditableError, SequenceStats
 from variable.name import DottedVariableName
 from .model import SequenceModel, SequencePathModel
 from .model import ShotModel
 from ..data_type import DataType
+from ..sequence import SequencePath, Sequence, Shot
+from ..sequence import (
+    State,
+    SequenceStats,
+    SequenceNotFoundError,
+    InvalidSequenceStateError,
+    PathNotFoundError,
+    SequenceNotEditableError,
+)
 from ..sequence_file_system import PathIsSequenceError, SequenceHierarchy
 
 if TYPE_CHECKING:
@@ -44,8 +48,8 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         )
 
     def is_sequence_path(self, path: SequencePath) -> bool:
-        path = self._query_path_model(path)
-        return bool(path.sequence)
+        path_model = self._query_path_model(path)
+        return bool(path_model.sequence)
 
     def create_path(self, path: SequencePath) -> list[SequencePath]:
         session = self._get_sql_session()
@@ -58,7 +62,8 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             if self.does_path_exists(ancestor):
                 if self.is_sequence_path(ancestor):
                     raise PathIsSequenceError(
-                        f"Cannot create path {path} because {ancestor} is already a sequence"
+                        f"Cannot create path {path} because {ancestor} is already a"
+                        " sequence"
                     )
             else:
                 paths_to_create.append(ancestor)

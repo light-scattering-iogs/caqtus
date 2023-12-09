@@ -8,12 +8,10 @@ from typing import (
 )
 
 from atom_detector.configuration import AtomLabel
-from data_types import Data
+from core.session import ExperimentSession
+from core.session.sequence import Shot
+from core.types import Parameter, Data, ImageLabel, Image, is_image
 from device.configuration import DeviceName
-from experiment.session import ExperimentSession
-from image_types import Image, is_image, ImageLabel
-from parameter_types import Parameter
-from sequence.runtime import Shot
 from util import attrs, serialization
 from . import break_namespaces
 from .chainable_function import ChainableFunction
@@ -76,7 +74,8 @@ class AtomsLoader(ShotImporter[dict[AtomLabel, bool]]):
         if self.check_return_type:
             if not self._check_return_type(value):
                 raise TypeError(
-                    f"Expected dict[AtomLabel, bool] for {self.detector_name}.{self.image}, got {type(value)}"
+                    "Expected dict[AtomLabel, bool] for"
+                    f" {self.detector_name}.{self.image}, got {type(value)}"
                 )
         return value
 

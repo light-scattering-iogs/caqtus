@@ -7,13 +7,11 @@ from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 
 from concurrent_updater import ConcurrentUpdater
-from experiment.session import (
-    ExperimentSessionMaker,
-    ExperimentSession,
-    PathIsSequenceError,
-)
+from core.session import ExperimentSessionMaker, ExperimentSession
+from core.session.sequence import SequencePath, Sequence, State
+from experiment.session import PathIsSequenceError
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
-from sequence.runtime import SequencePath, Sequence, SequenceStats, State
+from sequence.runtime import SequenceStats
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
@@ -27,7 +25,6 @@ class SequenceHierarchyModel(QAbstractItemModel):
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         self._session = session_maker()
         self._stats_update_session = session_maker()

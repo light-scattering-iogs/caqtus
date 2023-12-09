@@ -3,14 +3,13 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
 
-from data_types import DataLabel, Data
+from core.session import SequencePath, Sequence, Shot
+from core.types import DataLabel, Data, Parameter
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter
 from sequence.configuration import SequenceConfig
-from sequence.runtime import Sequence, Shot, SequencePath, SequenceStats
-from sequence.runtime import State
 from variable.name import DottedVariableName
+from .sequence import State, SequenceStats
 
 
 class SequenceHierarchy(Protocol):
