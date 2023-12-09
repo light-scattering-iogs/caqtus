@@ -5,6 +5,7 @@ from typing import Optional, TYPE_CHECKING
 
 import sqlalchemy.orm
 from attr import frozen
+from returns.io import IOResult, IOSuccess, IOFailure
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
@@ -47,9 +48,10 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             is not None
         )
 
-    def is_sequence_path(self, path: SequencePath) -> bool:
-        path_model = self._query_path_model(path)
-        return bool(path_model.sequence)
+    def is_sequence_path(self, path: SequencePath) -> IOResult[bool, PathNotFoundError]:
+        return self._query_path_model(path).map(
+            lambda path_model: bool(path_model.sequence)
+        )
 
     def create_path(self, path: SequencePath) -> list[SequencePath]:
         session = self._get_sql_session()
@@ -293,20 +295,22 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         else:
             raise SequenceNotFoundError(f"Path '{sequence}' is not a sequence")
 
-    def _query_path_model(self, path: SequencePath) -> SequencePathModel:
+    def _query_path_model(
+        self, path: SequencePath
+    ) -> IOResult[SequencePathModel, PathNotFoundError]:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path == Ltree(str(path))
         )
         result = self._get_sql_session().execute(stmt)
         if found := result.scalar():
-            return found
+            return IOSuccess(found)
         else:
             message = f"Could not find path {path} in database."
             names = self.get_all_path_names()
             closest_names = difflib.get_close_matches(str(path), names, n=1)
             if closest_names:
                 message += f"\nDid you mean {closest_names[0]}?"
-            raise PathNotFoundError(message)
+            return IOFailure(PathNotFoundError(message))
 
     def _query_path_models(
         self, paths: Iterable[SequencePath]

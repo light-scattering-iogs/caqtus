@@ -4,10 +4,13 @@ import datetime
 import re
 import typing
 
+from returns.io import IOSuccess, IOFailure
+from returns.unsafe import unsafe_perform_io
+
 from util import attrs
 
 if typing.TYPE_CHECKING:
-    from experiment.session import ExperimentSession
+    from ..experiment_session import ExperimentSession
 
 _PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
@@ -124,7 +127,24 @@ class SequencePath:
         return not self.is_sequence(experiment_session)
 
     def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
-        return experiment_session.sequence_hierarchy.is_sequence_path(self)
+        """Check if the path is a sequence.
+
+        Returns:
+            True if the path is a sequence path. False otherwise.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
+        result = experiment_session.sequence_hierarchy.is_sequence_path(self)
+
+        match result:
+            case IOSuccess(value):
+                return unsafe_perform_io(value)
+            case IOFailure(error):
+                raise unsafe_perform_io(error)
+            case _:
+                typing.assert_never(result)
 
     def is_root(self) -> bool:
         return self.path == ""
