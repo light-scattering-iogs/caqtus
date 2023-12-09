@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 
 import sqlalchemy.orm
 from attr import frozen
-from returns.io import IOResult, IOSuccess, IOFailure
+from returns.result import Success, Failure, Result
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
@@ -48,30 +48,34 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             is not None
         )
 
-    def is_sequence_path(self, path: SequencePath) -> IOResult[bool, PathNotFoundError]:
+    def is_sequence_path(self, path: SequencePath) -> Result[bool, PathNotFoundError]:
         return self._query_path_model(path).map(
             lambda path_model: bool(path_model.sequence)
         )
 
-    def create_path(self, path: SequencePath) -> list[SequencePath]:
-        session = self._get_sql_session()
-
-        created_paths: list[SequencePath] = []
+    def create_path(
+        self, path: SequencePath
+    ) -> Result[list[SequencePath], PathIsSequenceError]:
 
         paths_to_create: list[SequencePath] = []
-
         for ancestor in path.get_ancestors(strict=False):
-            if self.does_path_exists(ancestor):
-                if self.is_sequence_path(ancestor):
-                    raise PathIsSequenceError(
-                        f"Cannot create path {path} because {ancestor} is already a"
-                        " sequence"
+            match self.is_sequence_path(ancestor):
+                case Success(True):
+                    return Failure(
+                        PathIsSequenceError(
+                            f"Cannot create path {path} because {ancestor} is already a"
+                            " sequence"
+                        )
                     )
-            else:
-                paths_to_create.append(ancestor)
-                SequencePathModel.create_path(str(ancestor), session)
-                created_paths.append(ancestor)
-        return created_paths
+                case Success(False):
+                    pass
+                case Failure(PathNotFoundError()):
+                    paths_to_create.append(ancestor)
+
+        session = self._get_sql_session()
+        for path_to_create in paths_to_create:
+            SequencePathModel.create_path(str(path_to_create), session)
+        return Success(paths_to_create)
 
     def delete_path(self, path: SequencePath, delete_sequences: bool = False):
         session = self._get_sql_session()
@@ -297,20 +301,20 @@ class SQLSequenceHierarchy(SequenceHierarchy):
 
     def _query_path_model(
         self, path: SequencePath
-    ) -> IOResult[SequencePathModel, PathNotFoundError]:
+    ) -> Result[SequencePathModel, PathNotFoundError]:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path == Ltree(str(path))
         )
         result = self._get_sql_session().execute(stmt)
         if found := result.scalar():
-            return IOSuccess(found)
+            return Success(found)
         else:
             message = f"Could not find path {path} in database."
             names = self.get_all_path_names()
             closest_names = difflib.get_close_matches(str(path), names, n=1)
             if closest_names:
                 message += f"\nDid you mean {closest_names[0]}?"
-            return IOFailure(PathNotFoundError(message))
+            return Failure(PathNotFoundError(message))
 
     def _query_path_models(
         self, paths: Iterable[SequencePath]

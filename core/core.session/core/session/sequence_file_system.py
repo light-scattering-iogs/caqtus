@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
 
-from returns.io import IOResult
+from returns.result import Result
 
 from core.types import DataLabel, Data, Parameter
 from device.name import DeviceName
@@ -29,23 +31,24 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def is_sequence_path(self, path: SequencePath) -> IOResult[bool, PathNotFoundError]:
+    def is_sequence_path(self, path: SequencePath) -> Result[bool, PathNotFoundError]:
         """Check if the path is a sequence."""
 
         raise NotImplementedError
 
     @abstractmethod
-    def create_path(self, path: SequencePath) -> list[SequencePath]:
+    def create_path(
+        self, path: SequencePath
+    ) -> Result[list[SequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
         Args:
             path: the path to create.
 
         Returns:
-            A list of the paths that were created.
-
-        Raises:
-            PathIsSequenceError: If the path or one of its ancestors is a sequence.
+            A list of the paths that were created if the path was created successfully
+            or PathIsSequenceError if the path or one of its ancestors is a sequence.
+            No path is created if any of the ancestors is a sequence.
         """
 
         raise NotImplementedError

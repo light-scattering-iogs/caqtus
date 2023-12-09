@@ -4,8 +4,7 @@ import datetime
 import re
 import typing
 
-from returns.io import IOSuccess, IOFailure
-from returns.unsafe import unsafe_perform_io
+from returns.result import Success, Failure
 
 from util import attrs
 
@@ -77,10 +76,18 @@ class SequencePath:
             list of paths that were created when they didn't exist
 
         Raises:
-            PathIsSequenceError: If an ancestor exists and is a sequence
+            PathIsSequenceError: If an ancestor exists and is a sequence.
         """
 
-        return experiment_session.sequence_hierarchy.create_path(self)
+        result = experiment_session.sequence_hierarchy.create_path(self)
+
+        match result:
+            case Success(value):
+                return value
+            case Failure(error):
+                raise error
+            case _:
+                typing.assert_never(result)
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -139,10 +146,10 @@ class SequencePath:
         result = experiment_session.sequence_hierarchy.is_sequence_path(self)
 
         match result:
-            case IOSuccess(value):
-                return unsafe_perform_io(value)
-            case IOFailure(error):
-                raise unsafe_perform_io(error)
+            case Success(value):
+                return value
+            case Failure(error):
+                raise error
             case _:
                 typing.assert_never(result)
 
