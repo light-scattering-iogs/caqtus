@@ -3,12 +3,12 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
 
-from core.session import SequencePath, Sequence, Shot
 from core.types import DataLabel, Data, Parameter
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig
 from variable.name import DottedVariableName
+from .sequence import SequencePath, Sequence, Shot
 from .sequence import State, SequenceStats
 
 
