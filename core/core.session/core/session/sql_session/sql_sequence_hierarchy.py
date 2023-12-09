@@ -1,4 +1,3 @@
-import difflib
 from collections.abc import Mapping, Iterable
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING
@@ -56,7 +55,6 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     def create_path(
         self, path: SequencePath
     ) -> Result[list[SequencePath], PathIsSequenceError]:
-
         paths_to_create: list[SequencePath] = []
         for ancestor in path.get_ancestors(strict=False):
             match self.is_sequence_path(ancestor):
@@ -89,10 +87,11 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         session.delete(self._query_path_model(path))
         session.flush()
 
-    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
-        session = self._get_sql_session()
-
+    def get_path_children(
+        self, path: SequencePath
+    ) -> Result[set[SequencePath], PathNotFoundError | PathIsSequenceError]:
         if path.is_root():
+            session = self._get_sql_session()
             query_children = (
                 session.query(SequencePathModel)
                 .filter(func.nlevel(SequencePathModel.path) == 1)
@@ -100,12 +99,21 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             )
             children = session.scalars(query_children)
         else:
-            path = self._query_path_model(path)
-            if path.sequence:
-                raise RuntimeError("Cannot check children of a sequence")
-            # noinspection PyUnresolvedReferences
-            children = path.children
-        return set(SequencePath(str(child.path)) for child in children)
+            path_query_result = self._query_path_model(path)
+            match path_query_result:
+                case Success(path_sql):
+                    if path_sql.sequence:
+                        return Failure(
+                            PathIsSequenceError(
+                                f"Cannot check children of a sequence: {path}"
+                            )
+                        )
+                    else:
+                        children = path_sql.children
+                case Failure() as failure:
+                    return failure
+
+        return Success(set(SequencePath(str(child.path)) for child in children))
 
     def get_path_creation_date(self, path: SequencePath) -> datetime:
         return self._query_path_model(path).creation_date
@@ -309,12 +317,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         if found := result.scalar():
             return Success(found)
         else:
-            message = f"Could not find path {path} in database."
-            names = self.get_all_path_names()
-            closest_names = difflib.get_close_matches(str(path), names, n=1)
-            if closest_names:
-                message += f"\nDid you mean {closest_names[0]}?"
-            return Failure(PathNotFoundError(message))
+            return Failure(PathNotFoundError(path))
 
     def _query_path_models(
         self, paths: Iterable[SequencePath]

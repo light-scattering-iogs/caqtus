@@ -150,8 +150,8 @@ class SequencePath:
                 return value
             case Failure(error):
                 raise error
-            case _:
-                typing.assert_never(result)
+            case other:
+                typing.assert_never(other)
 
     def is_root(self) -> bool:
         return self.path == ""
@@ -165,9 +165,26 @@ class SequencePath:
     def get_children(
         self, experiment_session: "ExperimentSession"
     ) -> set[SequencePath]:
-        """Return the direct descendants of this path."""
+        """Return the direct descendants of this path.
 
-        return experiment_session.sequence_hierarchy.get_path_children(self)
+        Args:
+            experiment_session: The experiment session to look in.
+
+        Returns:
+            A set of the direct descendants of this path.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsSequenceError: If the path is a sequence.
+        """
+
+        match experiment_session.sequence_hierarchy.get_path_children(self):
+            case Success(value):
+                return value
+            case Failure(error):
+                raise error
+            case other:
+                typing.assert_never(other)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
@@ -224,4 +241,5 @@ class SequencePath:
 
 
 class PathNotFoundError(Exception):
-    pass
+    def __init__(self, path: SequencePath):
+        super().__init__(f"Path not found: {path}")

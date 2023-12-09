@@ -54,6 +54,14 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    def get_path_children(
+        self, path: SequencePath
+    ) -> Result[set[SequencePath], PathNotFoundError | PathIsSequenceError]:
+        """Get the children of the path."""
+
+        raise NotImplementedError
+
+    @abstractmethod
     def delete_path(self, path: SequencePath, delete_sequences: bool = False):
         """
         Delete the path and all its children if they exist
@@ -69,19 +77,6 @@ class SequenceHierarchy(Protocol):
         Raises:
             RuntimeError: If the path or one of its children is a sequence and
             delete_sequence is False
-        """
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
-        """Get the children of the path.
-
-        Args:
-            path: the path to get the children for.
-
-        Returns:
-            The children of the path.
         """
 
         raise NotImplementedError
