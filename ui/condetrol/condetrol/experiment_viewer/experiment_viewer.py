@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
+from experiment.configuration import ExperimentConfig
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
@@ -123,9 +124,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
 
-        self.action_edit_current_experiment_config.triggered.connect(self.edit_current_experiment_config)
+        self.action_edit_current_experiment_config.triggered.connect(
+            self.edit_current_experiment_config
+        )
         self.action_save_current_experiment_config.triggered.connect(
             self.save_current_experiment_config
+        )
+        self.action_load_current_experiment_config.triggered.connect(
+            self.load_current_experiment_config
         )
 
         self.model = EditableSequenceHierarchyModel(
@@ -182,6 +188,21 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def __exit__(self, exc_type, exc_value, traceback):
         return self._experiment_config_watcher.__exit__(exc_type, exc_value, traceback)
+
+    def show_info_message(self, message: str) -> None:
+        """Display a message in the info bar at the bottom of the window."""
+
+        logger.info(message)
+        self.status_bar.showMessage(message, 5000)
+
+    def show_error_message(self, message: str, exception: Optional[Exception]) -> None:
+        """Display an error message in the info bar at the bottom of the window."""
+
+        if exception is not None:
+            logger.error(message, exc_info=exception)
+        else:
+            logger.error(message)
+        self.status_bar.showMessage(message, 5000)
 
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
@@ -374,17 +395,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         editor.exec()
         new_experiment_config = editor.get_config()
         if current_config != new_experiment_config:
-            with self._experiment_session_maker() as session:
-                old_name = session.experiment_configs.get_current()
-                # Here we set the current config to the new one in the database. The experiment config watcher
-                # will detect the change and update the current config in the experiment manager, so we don't have to
-                # do it explicitly here.
-                new_name = session.experiment_configs.set_current_config(
-                    new_experiment_config
-                )
-            self.show_info_message(
-                f"Current experiment config was updated from {old_name} to {new_name}"
-            )
+            self.change_current_experiment_config(new_experiment_config)
         else:
             self.show_info_message("The current experiment config was not modified.")
 
@@ -408,13 +419,61 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             json_string = serialization.to_json(current_experiment_config)
             with open(file_name, "w") as f:
                 f.write(json_string)
-            self.show_info_message(f"Current experiment config was saved to {file_name}")
+            self.show_info_message(
+                f"Current experiment config was saved to {file_name}"
+            )
 
-    def show_info_message(self, message: str) -> None:
-        """Display a message in the info bar at the bottom of the window."""
+    def load_current_experiment_config(self) -> None:
+        """Load an experiment config from a file.
 
-        logger.info(message)
-        self.status_bar.showMessage(message, 5000)
+        Open a modal dialog to ask the user which file to load the experiment config from.
+        The content of the file must be a JSON string with a valid representation of an experiment config.
+        If the content of the file is not a valid experiment config, an error message is displayed, but no exception
+        is raised.
+        """
+
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load experiment config",
+            "",
+            "JSON (*.json)",
+        )
+
+        if not file_name:
+            return
+
+        try:
+            with open(file_name, "r") as f:
+                json_string = f.read()
+        except Exception as e:
+            self.show_error_message(f"Could not read the file {file_name}", e)
+            return
+
+        try:
+            new_experiment_config = serialization.from_json(
+                json_string, ExperimentConfig
+            )
+        except Exception as e:
+            self.show_error_message(
+                f"Could not construct the experiment config from {file_name}", e
+            )
+        else:
+            self.change_current_experiment_config(new_experiment_config)
+
+    def change_current_experiment_config(self, new_config: ExperimentConfig) -> None:
+        """Write a new experiment config to the database."""
+
+        with self._experiment_session_maker() as session:
+            old_name = session.experiment_configs.get_current()
+            # Here we set the current config to the new one in the database.
+            # The experiment config watcher will detect the change and update the current config in the experiment
+            # manager, so we don't have to do it explicitly here.
+            new_name = session.experiment_configs.set_current_config(new_config)
+        self.show_info_message(
+            f"Current experiment config was updated from {old_name} to {new_name}"
+        )
+
+
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
