@@ -44,7 +44,7 @@ class ExperimentProcessManager(BaseManager):
     pass
 
 
-ExperimentProcessManager.register("ExperimentManager")
+ExperimentProcessManager.register("connect_to_experiment_manager")
 ExperimentProcessManager.register("get_logs_queue")
 
 
@@ -170,17 +170,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             address=("localhost", 60000), authkey=b"Deardear"
         )
         self.experiment_process_manager.connect()
-        # noinspection PyUnresolvedReferences
-        self.experiment_manager: ExperimentManager = (
-            self.experiment_process_manager.ExperimentManager(
-                session_maker=self._experiment_session_maker
-            )
-        )
         self.logs_listener = QueueListener(
             self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
         )
         self.logs_listener.start()
         self.worker = BlockingThread(self)
+
+    def connect_to_experiment_manager(self) -> ExperimentManager:
+        return self.experiment_process_manager.connect_to_experiment_manager()
 
     def __enter__(self):
         self._experiment_config_watcher.__enter__()
@@ -189,11 +186,16 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
     def __exit__(self, exc_type, exc_value, traceback):
         return self._experiment_config_watcher.__exit__(exc_type, exc_value, traceback)
 
-    def show_info_message(self, message: str) -> None:
-        """Display a message in the info bar at the bottom of the window."""
+    def show_info_message(self, message: str, timeout: int = 5000) -> None:
+        """Display a message in the info bar at the bottom of the window.
+
+        Args:
+            message: the message to display.
+            timeout: the time in milliseconds after which the message will disappear.
+        """
 
         logger.info(message)
-        self.status_bar.showMessage(message, 5000)
+        self.status_bar.showMessage(message, timeout)
 
     def show_error_message(self, message: str, exception: Optional[Exception]) -> None:
         """Display an error message in the info bar at the bottom of the window."""
@@ -241,7 +243,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
                     interrupt_sequence_action.triggered.connect(
-                        lambda _: self.experiment_manager.interrupt_sequence()
+                        self.interrupt_currently_running_sequence
                     )
                 elif (
                     state == State.FINISHED
@@ -286,6 +288,19 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
+    def interrupt_currently_running_sequence(self) -> None:
+        """Interrupt the currently running sequence.
+
+        This method is not blocking. After calling this method, actual interruption of the sequence might take some time
+        as it finishes the current shots, saves the data and performs cleanup. After calling this method, you should
+        wait until `is_running` returns False.
+        """
+
+        if self.connect_to_experiment_manager().interrupt_sequence():
+            self.show_info_message("Interruption requested.")
+        else:
+            self.show_info_message("No sequence is currently running.")
+
     def duplicate_sequence(self, index: QModelIndex) -> bool:
         """Duplicate a sequence
 
@@ -328,7 +343,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                         "No experiment config is currently set. Please set one before starting a sequence."
                     )
                 else:
-                    started = self.experiment_manager.start_sequence(
+                    started = self.connect_to_experiment_manager().start_sequence(
                         current_experiment_config,
                         sequence_path,
                     )
@@ -473,18 +488,17 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             f"Current experiment config was updated from {old_name} to {new_name}"
         )
 
-
-
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.experiment_manager.is_running():
+        experiment_manager = self.connect_to_experiment_manager()
+        if experiment_manager.is_running():
             message_box = create_on_close_message_box(self)
             result = message_box.exec()
             if result == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return
             elif result == QMessageBox.StandardButton.Yes:
-                self.experiment_manager.interrupt_sequence()
-                while self.experiment_manager.is_running():
+                experiment_manager.interrupt_sequence()
+                while experiment_manager.is_running():
                     time.sleep(0.1)
             elif result == QMessageBox.StandardButton.No:
                 pass
