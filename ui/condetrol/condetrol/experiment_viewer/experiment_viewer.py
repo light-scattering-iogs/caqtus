@@ -21,12 +21,14 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
     QWidget,
     QApplication,
+    QFileDialog,
 )
 
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
+from util import serialization
 from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
 from .current_experiment_config_watcher import CurrentExperimentConfigWatcher
@@ -121,8 +123,10 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
 
-        self.action_edit_config.triggered.connect(self.edit_config)
-        self.action_edit_current_experiment_config.triggered.connect(self.edit_config)
+        self.action_edit_current_experiment_config.triggered.connect(self.edit_current_experiment_config)
+        self.action_save_current_experiment_config.triggered.connect(
+            self.save_current_experiment_config
+        )
 
         self.model = EditableSequenceHierarchyModel(
             session_maker=self._experiment_session_maker, parent=self.sequences_view
@@ -355,7 +359,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.model.delete(index)
                 self.sequences_view.update()
 
-    def edit_config(self):
+    def edit_current_experiment_config(self):
         """Edit the current experiment config.
 
         Open an editor displaying the current experiment config to allow the user to edit it.
@@ -383,6 +387,28 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             )
         else:
             self.show_info_message("The current experiment config was not modified.")
+
+    def save_current_experiment_config(self) -> None:
+        """Save the current experiment config to a file.
+
+        Open a modal dialog to ask the user where to save the current experiment config.
+        The config is saved as a JSON file.
+        """
+
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save current experiment config",
+            "",
+            "JSON (*.json)",
+        )
+        if file_name:
+            current_experiment_config = (
+                self._experiment_config_watcher.get_current_config()
+            )
+            json_string = serialization.to_json(current_experiment_config)
+            with open(file_name, "w") as f:
+                f.write(json_string)
+            self.show_info_message(f"Current experiment config was saved to {file_name}")
 
     def show_info_message(self, message: str) -> None:
         """Display a message in the info bar at the bottom of the window."""
