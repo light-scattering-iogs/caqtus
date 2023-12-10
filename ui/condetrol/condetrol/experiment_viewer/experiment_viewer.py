@@ -122,6 +122,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         )
 
         self.action_edit_config.triggered.connect(self.edit_config)
+        self.action_edit_current_experiment_config.triggered.connect(self.edit_config)
 
         self.model = EditableSequenceHierarchyModel(
             session_maker=self._experiment_session_maker, parent=self.sequences_view
@@ -355,7 +356,13 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.sequences_view.update()
 
     def edit_config(self):
-        """Open the experiment config editor then propagate the changes done"""
+        """Edit the current experiment config.
+
+        Open an editor displaying the current experiment config to allow the user to edit it.
+        The editor is a modal dialog, so the user cannot interact with the rest of the application while the editor is
+        open.
+        If the config is modified when the editor is closed, the current config is updated in the database.
+        """
 
         current_config = self._experiment_config_watcher.get_current_config()
 
@@ -365,10 +372,23 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         if current_config != new_experiment_config:
             with self._experiment_session_maker() as session:
                 old_name = session.experiment_configs.get_current()
+                # Here we set the current config to the new one in the database. The experiment config watcher
+                # will detect the change and update the current config in the experiment manager, so we don't have to
+                # do it explicitly here.
                 new_name = session.experiment_configs.set_current_config(
                     new_experiment_config
                 )
-            logger.info(f"Experiment config updated from {old_name} to {new_name}")
+            self.show_info_message(
+                f"Current experiment config was updated from {old_name} to {new_name}"
+            )
+        else:
+            self.show_info_message("The current experiment config was not modified.")
+
+    def show_info_message(self, message: str) -> None:
+        """Display a message in the info bar at the bottom of the window."""
+
+        logger.info(message)
+        self.status_bar.showMessage(message, 5000)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.experiment_manager.is_running():
