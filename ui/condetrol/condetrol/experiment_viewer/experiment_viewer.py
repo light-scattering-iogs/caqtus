@@ -197,7 +197,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         logger.info(message)
         self.status_bar.showMessage(message, timeout)
 
-    def show_error_message(self, message: str, exception: Optional[Exception]) -> None:
+    def show_error_message(
+        self, message: str, exception: Optional[Exception] = None
+    ) -> None:
         """Display an error message in the info bar at the bottom of the window."""
 
         if exception is not None:
@@ -339,7 +341,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             with self._experiment_session_maker() as session:
                 current_experiment_config = session.experiment_configs.get_current()
                 if current_experiment_config is None:
-                    logger.error(
+                    self.show_error_message(
                         "No experiment config is currently set. Please set one before starting a sequence."
                     )
                 else:
@@ -348,7 +350,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                         sequence_path,
                     )
                     if not started:
-                        logger.error(
+                        self.show_error_message(
                             "A sequence is already running. Please interrupt it before starting a new one."
                         )
 
