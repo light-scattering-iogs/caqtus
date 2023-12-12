@@ -5,7 +5,8 @@ from typing import assert_never
 
 import numpy as np
 
-from experiment.session import ExperimentSessionMaker
+from core.session import ExperimentSessionMaker
+from core.session.sequence import SequencePath
 from parameter_types import AnalogValue
 from sequence.configuration import (
     Step,
@@ -15,7 +16,6 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
 )
-from sequence.runtime import SequencePath
 from units import Quantity, units, DimensionalityError
 from .sequence_context import StepContext
 from .sequence_manager import SequenceManager, SequenceInterruptedException
@@ -173,8 +173,8 @@ class SequenceRunnerThread(Thread):
             stop = stop.to(unit)
         except DimensionalityError:
             raise ValueError(
-                f"Stop units of linspace loop '{linspace_loop.name}' ({stop.units}) is not"
-                f" compatible with start units ({unit})"
+                f"Stop units of linspace loop '{linspace_loop.name}' ({stop.units}) is"
+                f" not compatible with start units ({unit})"
             )
         num = int(linspace_loop.num)
 

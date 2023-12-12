@@ -16,9 +16,9 @@ from PyQt6.QtWidgets import (
 )
 
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
+from core.session import ExperimentSessionMaker
+from core.session.sequence import Sequence, State
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Sequence, State
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .swim_lane_model import SwimLaneModel
 

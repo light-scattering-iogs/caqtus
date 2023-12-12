@@ -6,9 +6,9 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QWidget, QTableView, QVBoxLayout
 
 from analyza.loading.importers import ParametersImporter
-from experiment.session import ExperimentSession, get_standard_experiment_session
-from parameter_types import Parameter
-from sequence.runtime import Shot
+from core.session import ExperimentSession, get_standard_experiment_session
+from core.session.sequence import Shot
+from core.types import Parameter
 from util import attrs, serialization
 from ..single_shot_viewer import SingleShotViewer
 

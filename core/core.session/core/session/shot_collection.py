@@ -3,9 +3,8 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, Any
 
-from sequence.runtime import Shot
-
-from experiment.session.data_type import DataType
+from .data_type import DataType
+from .sequence import Shot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

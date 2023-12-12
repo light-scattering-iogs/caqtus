@@ -25,8 +25,9 @@ from PyQt6.QtWidgets import (
 
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from condetrol.utils import UndoStack
+from core.session import ExperimentSession, ExperimentSessionMaker
+from core.session.sequence import Sequence, State
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker, ExperimentSession
 from expression import Expression
 from sequence.configuration import (
     Step,
@@ -37,7 +38,6 @@ from sequence.configuration import (
     OptimizationLoop,
     UserInputLoop,
 )
-from sequence.runtime import Sequence, State
 from settings_model import YAMLSerializable
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .shot_widget import ShotWidget

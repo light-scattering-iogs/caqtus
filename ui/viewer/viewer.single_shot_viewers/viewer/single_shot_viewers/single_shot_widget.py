@@ -12,12 +12,12 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QFileDialog,
 )
+from viewer.sequence_watcher import SequenceWatcher
 
-from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Shot, Sequence
+from core.session import ExperimentSessionMaker
+from core.session.sequence import Sequence, Shot
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
 from util import serialization
-from viewer.sequence_watcher import SequenceWatcher
 from .add_image_viewer import create_image_viewer
 from .atoms_viewer import create_atom_viewer
 from .parameters_viewer import create_parameters_viewer

@@ -2,20 +2,19 @@ from datetime import datetime
 from typing import Any, TYPE_CHECKING
 
 import sqlalchemy.orm
-from attr import frozen
-from sequence.runtime import Sequence, Shot
-from sequence.runtime.shot import ShotNotFoundError
 from sqlalchemy import select
 
+from util import attrs
 from .model import SequenceModel, ShotModel
 from ..data_type import DataType
 from ..experiment_session import ShotCollection
+from ..sequence import Sequence, Shot, ShotNotFoundError
 
 if TYPE_CHECKING:
     from .experiment_session_sql import SQLExperimentSession
 
 
-@frozen
+@attrs.frozen
 class SQLShotCollection(ShotCollection):
     parent_session: "SQLExperimentSession"
 

@@ -1,29 +1,25 @@
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, Self, Iterable, Mapping, TYPE_CHECKING
+from typing import Optional, Iterable, Mapping, TYPE_CHECKING
 
-from attrs import frozen, field
-
-from data_types import Data, DataLabel
+from core.types import Parameter, Data, DataLabel
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
-from .sequence_state import State
+from util import attrs
 from variable.name import DottedVariableName
+
 from .path import SequencePath
+from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
+from .._return_or_raise import return_or_raise
 
 if TYPE_CHECKING:
-    from experiment.session import ExperimentSession
-else:
-    ExperimentSession = "ExperimentSession"
+    from ..experiment_session import ExperimentSession
 
 
-class SequenceNotEditableError(Exception):
-    pass
-
-
-@frozen
+@attrs.frozen
 class Sequence:
     """Contains the runtime information and data of a sequence.
 
@@ -34,7 +30,7 @@ class Sequence:
     network.
     """
 
-    path: SequencePath = field(converter=SequencePath)
+    path: SequencePath = attrs.field(converter=SequencePath)
 
     def __str__(self) -> str:
         return str(self.path)
@@ -157,18 +153,19 @@ class Sequence:
         sequence_config: SequenceConfig,
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
-    ) -> Self:
+    ) -> Sequence:
         return experiment_session.sequence_hierarchy.create_sequence(
             path, sequence_config, experiment_config_name
         )
 
-    def get_stats(self, experiment_session: ExperimentSession) -> "SequenceStats":
-        return experiment_session.sequence_hierarchy.get_sequence_stats(self)
+    def get_stats(self, experiment_session: ExperimentSession) -> SequenceStats:
+        result = experiment_session.sequence_hierarchy.get_sequence_stats(self)
+        return return_or_raise(result)
 
     @classmethod
     def query_sequence_stats(
-        cls, sequences: Iterable["Sequence"], experiment_session: ExperimentSession
-    ) -> dict[SequencePath, "SequenceStats"]:
+        cls, sequences: Iterable[Sequence], experiment_session: ExperimentSession
+    ) -> dict[SequencePath, SequenceStats]:
         return experiment_session.sequence_hierarchy.query_sequence_stats(sequences)
 
     @classmethod
@@ -183,13 +180,21 @@ class Sequence:
         return experiment_session.sequence_hierarchy.get_all_sequence_names()
 
 
-@frozen
+@attrs.frozen
 class SequenceStats:
     state: State
     total_number_shots: Optional[int]
     number_completed_shots: int
     start_date: Optional[datetime]
     stop_date: Optional[datetime]
+
+
+class SequenceNotEditableError(InvalidSequenceStateError):
+    """
+    Raised when attempting to modify a sequence configuration that is not editable.
+    """
+
+    pass
 
 
 class SequenceNotFoundError(Exception):

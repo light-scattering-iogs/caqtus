@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from sequence.runtime import State
+from core.session.sequence import State
 from .model import SequenceStats
 
 

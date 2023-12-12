@@ -23,9 +23,9 @@ from PyQt6.QtWidgets import (
     QApplication,
 )
 
+from core.session.sequence import Sequence, State
 from experiment.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
-from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
 from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
@@ -299,7 +299,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 current_experiment_config = session.experiment_configs.get_current()
                 if current_experiment_config is None:
                     logger.error(
-                        "No experiment config is currently set. Please set one before starting a sequence."
+                        "No experiment config is currently set. Please set one before"
+                        " starting a sequence."
                     )
                 else:
                     started = self.experiment_manager.start_sequence(
@@ -308,7 +309,8 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     )
                     if not started:
                         logger.error(
-                            "A sequence is already running. Please interrupt it before starting a new one."
+                            "A sequence is already running. Please interrupt it before"
+                            " starting a new one."
                         )
 
     def create_new_folder(self, index: QModelIndex):

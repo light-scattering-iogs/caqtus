@@ -3,10 +3,10 @@ from pathlib import Path
 import platformdirs
 import sqlalchemy
 import sqlalchemy.orm
-from .sql_session import SQLExperimentSession
 import yaml
 
 from .experiment_session import ExperimentSession
+from .sql_session import SQLExperimentSession
 
 
 class ExperimentSessionMaker:

@@ -3,12 +3,12 @@ from typing import Any, Callable, Iterable, Optional
 
 import pandas
 
-from experiment.session import (
-    ExperimentSessionMaker,
+from core.session import (
     ExperimentSession,
+    ExperimentSessionMaker,
     get_standard_experiment_session_maker,
 )
-from sequence.runtime import Sequence, Shot
+from core.session.sequence import Sequence, Shot
 
 
 def build_dataframe_from_sequences(

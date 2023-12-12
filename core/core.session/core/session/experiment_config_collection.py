@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Optional
 
 from experiment.configuration import ExperimentConfig
-from settings_model import YAMLSerializable
 from util import serialization
 
 

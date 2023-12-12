@@ -4,9 +4,9 @@ from multiprocessing import Queue
 from threading import Lock, Event
 from typing import Optional
 
-from experiment.session import ExperimentSessionMaker
+from core.session import ExperimentSessionMaker
+from core.session.sequence import SequencePath, State
 from experiment_control.sequence_runner import SequenceRunnerThread
-from sequence.runtime import SequencePath, State
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

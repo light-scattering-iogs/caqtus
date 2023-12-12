@@ -7,6 +7,7 @@ from .units import (
     with_units_added_to_columns,
     MAGNITUDE_FIELD,
     UNITS_FIELD,
+    is_quantity_dtype,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "with_units_added_to_columns",
     "MAGNITUDE_FIELD",
     "UNITS_FIELD",
+    "is_quantity_dtype",
 ]

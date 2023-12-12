@@ -11,12 +11,13 @@ from attr import frozen, field
 
 from camera.configuration import CameraConfiguration
 from camera.runtime import Camera
+from core.session import ExperimentSessionMaker
+from core.session.sequence import SequencePath, Sequence, Shot, State
 from data_types import DataLabel, Data
 from device.configuration import DeviceParameter
 from device.name import DeviceName
 from device.runtime import RuntimeDevice
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker
 from experiment_control.compute_device_parameters import (
     get_devices_initialization_parameters,
     compute_parameters_on_variables_update,
@@ -26,7 +27,6 @@ from experiment_control.compute_device_parameters.image_analysis import (
     find_how_to_rearrange,
 )
 from sequence.configuration import SequenceConfig
-from sequence.runtime import SequencePath, Sequence, State, Shot
 from sequencer.configuration import SequencerConfiguration
 from sequencer.runtime import Sequencer
 from tweezer_arranger.configuration import TweezerArrangerConfiguration
@@ -223,7 +223,8 @@ class SequenceManager(AbstractContextManager):
                     raise exception
                 else:
                     raise RuntimeError(
-                        "Can't schedule new shots because the sequence has finished running"
+                        "Can't schedule new shots because the sequence has finished"
+                        " running"
                     )
 
         shot_params = ShotParameters(

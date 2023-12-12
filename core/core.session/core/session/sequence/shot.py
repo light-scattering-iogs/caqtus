@@ -1,22 +1,21 @@
+from __future__ import annotations
+
 import typing
 from datetime import datetime
 
-from data_types import Data, DataLabel
+from core.types import Parameter, Data, DataLabel
 from device.name import DeviceName
-from parameter_types import Parameter
 from variable.name import DottedVariableName
+from ..data_type import DataType
 
-from experiment.session.data_type import DataType
-
+# We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
-    from experiment.session import ExperimentSession
     from .sequence import Sequence
-else:
-    ExperimentSession = "ExperimentSession"
+    from ..experiment_session import ExperimentSession
 
 
 class Shot:
-    def __init__(self, sequence: "Sequence", name: str, index: int):
+    def __init__(self, sequence: Sequence, name: str, index: int):
         self._sequence = sequence
         self._name = name
         self._index = index
@@ -54,7 +53,9 @@ class Shot:
             shot=self, data_label=data_label
         )
 
-    def _get_data_by_type(self, data_type: DataType, experiment_session: ExperimentSession):
+    def _get_data_by_type(
+        self, data_type: DataType, experiment_session: ExperimentSession
+    ):
         return experiment_session.shot_collection.get_all_shot_data(
             shot=self, data_type=data_type
         )

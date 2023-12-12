@@ -4,11 +4,8 @@ from itertools import islice
 from typing import Optional, Callable, Iterable, TypeVar, ParamSpec, Concatenate
 
 from concurrent_updater import ConcurrentUpdater
-from experiment.session import (
-    ExperimentSession,
-    get_standard_experiment_session,
-)
-from sequence.runtime import Sequence, Shot
+from core.session import ExperimentSession, get_standard_experiment_session
+from core.session.sequence import Sequence, Shot
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
