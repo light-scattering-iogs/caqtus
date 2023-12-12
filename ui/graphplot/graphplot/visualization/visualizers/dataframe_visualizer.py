@@ -5,9 +5,9 @@ from typing import Optional, Any
 import polars
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QTableView
-
-from core.data_analysis import QuantityDType
+from core.data_analysis.units import is_quantity_dtype
 from core.types.units import Quantity
+
 from ..visualizer_creator import ViewCreator, DataView
 
 
@@ -53,7 +53,7 @@ class DataFrameModel(QAbstractTableModel):
             column_name = self._dataframe.columns[index.column()]
             column = self._dataframe[column_name]
             value = column[index.row()]
-            if column.dtype == QuantityDType:
+            if is_quantity_dtype(column.dtype):
                 quantity = Quantity(value["magnitude"], value["units"])
                 return format(quantity, "~")
             else:

@@ -9,10 +9,11 @@ import polars
 import pyqtgraph
 from PyQt6 import QtGui, QtCore
 from PyQt6.QtWidgets import QWidget
+from core.data_analysis.stats import compute_stats_average
+from core.data_analysis.units import extract_unit
+from core.types.units import dimensionless, Unit
 from pyqtgraph import PlotWidget
 
-from core.data_analysis import compute_stats_average, extract_unit
-from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import ViewCreator, DataView
 
@@ -114,11 +115,7 @@ class HueErrorBarView(PlotWidget, DataView):
             if self._compute_stats_thread.isRunning():
                 return
         self._compute_stats_thread = ComputeStatsThread(
-            self,
-            dataframe,
-            self._x_var,
-            self._y_var,
-            hue=self._hue
+            self, dataframe, self._x_var, self._y_var, hue=self._hue
         )
         self._compute_stats_thread.finished.connect(self.update_plot)  # type: ignore
         self._compute_stats_thread.start()

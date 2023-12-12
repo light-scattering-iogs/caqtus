@@ -19,7 +19,7 @@ core-types = {path = "../core.types", develop = true}
 experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
 sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
 variable-name = {path = "../../common/variable/variable.name", develop = true}
-returns = {extras = ["compatible-mypy"], version = "^0.22.0"}
+returns = "^0.22.0"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

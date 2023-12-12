@@ -9,13 +9,13 @@ import time
 from typing import Optional, Self
 
 import polars
-
-from analyza.loading.importers import ShotImporter
+from core.data_analysis.loading import ShotImporter
 from core.session import ExperimentSession, ExperimentSessionMaker
 from core.session.sequence import Sequence, Shot, ShotNotFoundError
 from util import attrs
 from util.concurrent import TaskGroup
 from util.itertools import batched
+
 from .data_loading import DataImporter
 
 
