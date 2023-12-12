@@ -7,11 +7,9 @@ from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 
 from concurrent_updater import ConcurrentUpdater
-from core.session import ExperimentSessionMaker, ExperimentSession
-from core.session.sequence import SequencePath, Sequence, State
-from experiment.session import PathIsSequenceError
+from core.session import ExperimentSessionMaker, ExperimentSession, PathIsSequenceError
+from core.session.sequence import SequencePath, Sequence, State, SequenceStats
 from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
-from sequence.runtime import SequenceStats
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
