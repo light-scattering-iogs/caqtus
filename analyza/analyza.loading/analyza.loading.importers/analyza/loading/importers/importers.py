@@ -4,7 +4,7 @@ from typing import (
     TypeVar,
     ParamSpec,
     TypedDict,
-    TypeGuard,
+    TypeGuard, Optional,
 )
 
 from atom_detector.configuration import AtomLabel
@@ -36,14 +36,24 @@ V = TypeVar("V")
 class ImageLoader(ImageImporter):
     camera_name: DeviceName = attrs.field()
     image: ImageLabel = attrs.field()
+    background: Optional[ImageLabel] = attrs.field(default=None)
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> Image:
-        value = shot.get_data_by_label(self.camera_name, session)[self.image]
-        if not is_image(value):
+        images = shot.get_data_by_label(self.camera_name, session)
+        image = images[self.image]
+        if not is_image(image):
             raise TypeError(
                 f"Expected image for {self.camera_name}.{self.image}, got {type(value)}"
             )
-        return value
+        if self.background is not None:
+            background = images[self.background]
+            if not is_image(background):
+                raise TypeError(
+                    f"Expected image for {self.camera_name}.{self.background}, got {type(value)}"
+                )
+            image = image.astype(float)
+            image -= background.astype(float)
+        return image
 
 
 serialization.include_subclasses(
