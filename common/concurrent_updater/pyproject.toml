@@ -8,9 +8,10 @@ packages = [{include = "concurrent_updater"}]
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"
+core-session = {path = "../../core/core.session", develop = true}
+util = {path = "../../util", develop = true}
 
-sequence-runtime = {path = "../sequence/sequence.runtime", develop = true}
-experiment-session = {path = "../experiment/experiment.session", develop = true}
+
 
 
 [build-system]
