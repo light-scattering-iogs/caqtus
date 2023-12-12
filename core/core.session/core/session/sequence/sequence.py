@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, Self, Iterable, Mapping, TYPE_CHECKING
+from typing import Optional, Iterable, Mapping, TYPE_CHECKING
 
 from core.types import Parameter, Data, DataLabel
 from device.name import DeviceName
@@ -9,9 +9,11 @@ from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from util import attrs
 from variable.name import DottedVariableName
+
 from .path import SequencePath
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
+from .._return_or_raise import return_or_raise
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -151,13 +153,14 @@ class Sequence:
         sequence_config: SequenceConfig,
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
-    ) -> Self:
+    ) -> Sequence:
         return experiment_session.sequence_hierarchy.create_sequence(
             path, sequence_config, experiment_config_name
         )
 
     def get_stats(self, experiment_session: ExperimentSession) -> SequenceStats:
-        return experiment_session.sequence_hierarchy.get_sequence_stats(self)
+        result = experiment_session.sequence_hierarchy.get_sequence_stats(self)
+        return return_or_raise(result)
 
     @classmethod
     def query_sequence_stats(

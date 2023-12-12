@@ -4,9 +4,9 @@ import datetime
 import re
 import typing
 
-from returns.result import Success, Failure
-
 from util import attrs
+
+from .._return_or_raise import return_or_raise
 
 if typing.TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -80,14 +80,7 @@ class SequencePath:
         """
 
         result = experiment_session.sequence_hierarchy.create_path(self)
-
-        match result:
-            case Success(value):
-                return value
-            case Failure(error):
-                raise error
-            case _:
-                typing.assert_never(result)
+        return return_or_raise(result)
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -145,13 +138,7 @@ class SequencePath:
 
         result = experiment_session.sequence_hierarchy.is_sequence_path(self)
 
-        match result:
-            case Success(value):
-                return value
-            case Failure(error):
-                raise error
-            case other:
-                typing.assert_never(other)
+        return return_or_raise(result)
 
     def is_root(self) -> bool:
         return self.path == ""
@@ -178,18 +165,26 @@ class SequencePath:
             PathIsSequenceError: If the path is a sequence.
         """
 
-        match experiment_session.sequence_hierarchy.get_path_children(self):
-            case Success(value):
-                return value
-            case Failure(error):
-                raise error
-            case other:
-                typing.assert_never(other)
+        result = experiment_session.sequence_hierarchy.get_path_children(self)
+        return return_or_raise(result)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
-        return experiment_session.sequence_hierarchy.get_path_creation_date(self)
+        """Get the creation date of the path.
+
+        Args:
+            experiment_session: The experiment session to look in.
+
+        Returns:
+            The date at which the path was created.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
+        result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
+        return return_or_raise(result)
 
     def get_ancestors(self, strict: bool = True) -> list[SequencePath]:
         """Return the ancestors of this path.

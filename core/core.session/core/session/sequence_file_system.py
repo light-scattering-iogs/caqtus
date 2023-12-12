@@ -5,13 +5,13 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
 
-from returns.result import Result
-
 from core.types import DataLabel, Data, Parameter
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
+from returns.result import Result
 from sequence.configuration import SequenceConfig
 from variable.name import DottedVariableName
+
 from .sequence import SequencePath, Sequence, Shot, PathNotFoundError
 from .sequence import State, SequenceStats
 
@@ -82,7 +82,9 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get_path_creation_date(self, path: SequencePath) -> datetime:
+    def get_path_creation_date(
+        self, path: SequencePath
+    ) -> Result[datetime, PathNotFoundError]:
         """Get the creation date of the path.
 
         Args:
@@ -237,7 +239,9 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
+    def get_sequence_stats(
+        self, sequence: Sequence
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         """Get the stats of the sequence.
 
         Args:
@@ -314,4 +318,8 @@ class SequenceHierarchy(Protocol):
 
 
 class PathIsSequenceError(Exception):
+    pass
+
+
+class PathIsNotSequenceError(Exception):
     pass
