@@ -177,7 +177,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.worker = BlockingThread(self)
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
-        return self.experiment_process_manager.connect_to_experiment_manager()
+        return self.experiment_process_manager.connect_to_experiment_manager()  # type: ignore
 
     def __enter__(self):
         self._experiment_config_watcher.__enter__()
