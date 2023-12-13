@@ -10,18 +10,20 @@ packages = [{include = "analyza"}]
 python = "^3.11, <3.13"
 
 numpy = "^1.24.3"
+python-benedict = "^0.32.0"
 
 util = {path = "../../../util", develop = true}
-experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
-sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
+
+core-session = {path = "../../../core/core.session", develop = true}
+core-types = {path = "../../../core/core.types", develop = true}
+
 device-config = {path = "../../../devices/device/device.configuration", develop = true}
-image-types = {path = "../../../common/types/image_types", develop = true}
 variable-name = {path = "../../../common/variable/variable.name", develop = true}
-data-types = {path = "../../../common/types/data_types", develop = true}
-parameter-types = {path = "../../../common/types/parameter_types", develop = true}
 device-name = {path = "../../../devices/device/device.name", develop = true}
 atom-detector-configuration = {path = "../../../devices/atom_detector/atom_detector.configuration", develop = true}
-python-benedict = "^0.32.0"
+
+
+
 
 
 [build-system]

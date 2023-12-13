@@ -10,9 +10,9 @@ packages = [{include = "analyza"}]
 python = "^3.11, <3.13"
 
 pandas = "^2.0.2"
+core-session = {path = "../../../core/core.session", develop = true}
 
-experiment-session = {path = "../../../common/experiment/experiment.session", develop = true}
-sequence-runtime = {path = "../../../common/sequence/sequence.runtime", develop = true}
+
 
 
 [build-system]

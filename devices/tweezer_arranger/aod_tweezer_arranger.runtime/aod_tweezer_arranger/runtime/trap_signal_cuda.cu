@@ -67,8 +67,8 @@ __device__ float phase_ramp_minimal_jolt(float s) {
 
 // Must be the integral of frequency_ramp over s from 0 to s
 __device__ float phase_ramp(float s) {
-    //return reach_constant_velocity_adiabatically(s);
-    return phase_ramp_sin(s);
+    return reach_constant_velocity_adiabatically(s);
+    //return phase_ramp_sin(s);
 }
 
 
