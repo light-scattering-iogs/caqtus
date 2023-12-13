@@ -1,28 +1,37 @@
-import difflib
 from collections.abc import Mapping, Iterable
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, assert_never
 
 import sqlalchemy.orm
 from attr import frozen
+from core.types import DataLabel, Data, is_data_label, is_data, Parameter, is_parameter
+from device.name import DeviceName, is_device_name
+from experiment.configuration import ExperimentConfig
+from returns.result import Success, Failure, Result
+from sequence.configuration import SequenceConfig
 from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy_utils import Ltree
-
-from data_types import Data, DataLabel, is_data_label, is_data
-from device.name import DeviceName, is_device_name
-from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter, is_parameter
-from sequence.configuration import SequenceConfig
-from sequence.runtime import Sequence, SequenceNotFoundError, SequencePath, Shot
-from sequence.runtime import State, InvalidSequenceStateError
-from sequence.runtime.path import PathNotFoundError
-from sequence.runtime.sequence import SequenceNotEditableError, SequenceStats
 from variable.name import DottedVariableName
+
 from .model import SequenceModel, SequencePathModel
 from .model import ShotModel
+from .._return_or_raise import return_or_raise
 from ..data_type import DataType
-from ..sequence_file_system import PathIsSequenceError, SequenceHierarchy
+from ..sequence import SequencePath, Sequence, Shot
+from ..sequence import (
+    State,
+    SequenceStats,
+    SequenceNotFoundError,
+    InvalidSequenceStateError,
+    PathNotFoundError,
+    SequenceNotEditableError,
+)
+from ..sequence_file_system import (
+    PathIsSequenceError,
+    SequenceHierarchy,
+    PathIsNotSequenceError,
+)
 
 if TYPE_CHECKING:
     from .experiment_session_sql import SQLExperimentSession
@@ -43,28 +52,33 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             is not None
         )
 
-    def is_sequence_path(self, path: SequencePath) -> bool:
-        path = self._query_path_model(path)
-        return bool(path.sequence)
+    def is_sequence_path(self, path: SequencePath) -> Result[bool, PathNotFoundError]:
+        return self._query_path_model(path).map(
+            lambda path_model: bool(path_model.sequence)
+        )
 
-    def create_path(self, path: SequencePath) -> list[SequencePath]:
-        session = self._get_sql_session()
-
-        created_paths: list[SequencePath] = []
-
+    def create_path(
+        self, path: SequencePath
+    ) -> Result[list[SequencePath], PathIsSequenceError]:
         paths_to_create: list[SequencePath] = []
-
         for ancestor in path.get_ancestors(strict=False):
-            if self.does_path_exists(ancestor):
-                if self.is_sequence_path(ancestor):
-                    raise PathIsSequenceError(
-                        f"Cannot create path {path} because {ancestor} is already a sequence"
+            match self.is_sequence_path(ancestor):
+                case Success(True):
+                    return Failure(
+                        PathIsSequenceError(
+                            f"Cannot create path {path} because {ancestor} is already a"
+                            " sequence"
+                        )
                     )
-            else:
-                paths_to_create.append(ancestor)
-                SequencePathModel.create_path(str(ancestor), session)
-                created_paths.append(ancestor)
-        return created_paths
+                case Success(False):
+                    pass
+                case Failure(PathNotFoundError()):
+                    paths_to_create.append(ancestor)
+
+        session = self._get_sql_session()
+        for path_to_create in paths_to_create:
+            SequencePathModel.create_path(str(path_to_create), session)
+        return Success(paths_to_create)
 
     def delete_path(self, path: SequencePath, delete_sequences: bool = False):
         session = self._get_sql_session()
@@ -75,13 +89,14 @@ class SQLSequenceHierarchy(SequenceHierarchy):
                     f"Cannot delete a path that contains sequences: {sub_sequences}"
                 )
 
-        session.delete(self._query_path_model(path))
+        session.delete(return_or_raise(self._query_path_model(path)))
         session.flush()
 
-    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
-        session = self._get_sql_session()
-
+    def get_path_children(
+        self, path: SequencePath
+    ) -> Result[set[SequencePath], PathNotFoundError | PathIsSequenceError]:
         if path.is_root():
+            session = self._get_sql_session()
             query_children = (
                 session.query(SequencePathModel)
                 .filter(func.nlevel(SequencePathModel.path) == 1)
@@ -89,15 +104,26 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             )
             children = session.scalars(query_children)
         else:
-            path = self._query_path_model(path)
-            if path.sequence:
-                raise RuntimeError("Cannot check children of a sequence")
-            # noinspection PyUnresolvedReferences
-            children = path.children
-        return set(SequencePath(str(child.path)) for child in children)
+            path_query_result = self._query_path_model(path)
+            match path_query_result:
+                case Success(path_sql):
+                    if path_sql.sequence:
+                        return Failure(
+                            PathIsSequenceError(
+                                f"Cannot check children of a sequence: {path}"
+                            )
+                        )
+                    else:
+                        children = path_sql.children
+                case Failure() as failure:
+                    return failure
 
-    def get_path_creation_date(self, path: SequencePath) -> datetime:
-        return self._query_path_model(path).creation_date
+        return Success(set(SequencePath(str(child.path)) for child in children))
+
+    def get_path_creation_date(
+        self, path: SequencePath
+    ) -> Result[datetime, PathNotFoundError]:
+        return self._query_path_model(path).map(lambda x: x.creation_date)
 
     # Sequence methods
     def does_sequence_exist(self, sequence: Sequence) -> bool:
@@ -184,15 +210,28 @@ class SQLSequenceHierarchy(SequenceHierarchy):
             Sequence(SequencePath(str(sequence.path))) for sequence in query
         )
 
-    def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
-        sequence_model = self._query_path_model(sequence.path).get_sequence()
-        return SequenceStats(
-            state=sequence_model.get_state(),
-            total_number_shots=sequence_model.total_number_shots,
-            number_completed_shots=sequence_model.get_number_completed_shots(),
-            start_date=sequence_model.start_date,
-            stop_date=sequence_model.stop_date,
-        )
+    def get_sequence_stats(
+        self, sequence: Sequence
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+        path_query = self._query_path_model(sequence.path)
+        match path_query:
+            case Success(path_model):
+                if path_model.is_sequence():
+                    sequence_model = path_model.get_sequence()
+                    stats = SequenceStats(
+                        state=sequence_model.get_state(),
+                        total_number_shots=sequence_model.total_number_shots,
+                        number_completed_shots=sequence_model.get_number_completed_shots(),
+                        start_date=sequence_model.start_date,
+                        stop_date=sequence_model.stop_date,
+                    )
+                    return Success(stats)
+                else:
+                    return Failure(PathIsNotSequenceError(str(sequence.path)))
+            case Failure() as failure:
+                return failure
+            case other:
+                assert_never(other)
 
     def get_all_sequence_names(self) -> set[str]:
         query = select(SequenceModel)
@@ -280,7 +319,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         return {Sequence(SequencePath(str(sequence.path))) for sequence in query}
 
     def _query_sequence_model(self, sequence: Sequence) -> SequenceModel:
-        path = self._query_path_model(sequence.path)
+        path = return_or_raise(self._query_path_model(sequence.path))
         query_sequence = select(SequenceModel).where(SequenceModel.path == path)
         result = self._get_sql_session().execute(query_sequence)
         if sequence := result.scalar():
@@ -288,20 +327,17 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         else:
             raise SequenceNotFoundError(f"Path '{sequence}' is not a sequence")
 
-    def _query_path_model(self, path: SequencePath) -> SequencePathModel:
+    def _query_path_model(
+        self, path: SequencePath
+    ) -> Result[SequencePathModel, PathNotFoundError]:
         stmt = select(SequencePathModel).where(
             SequencePathModel.path == Ltree(str(path))
         )
         result = self._get_sql_session().execute(stmt)
         if found := result.scalar():
-            return found
+            return Success(found)
         else:
-            message = f"Could not find path {path} in database."
-            names = self.get_all_path_names()
-            closest_names = difflib.get_close_matches(str(path), names, n=1)
-            if closest_names:
-                message += f"\nDid you mean {closest_names[0]}?"
-            raise PathNotFoundError(message)
+            return Failure(PathNotFoundError(path))
 
     def _query_path_models(
         self, paths: Iterable[SequencePath]

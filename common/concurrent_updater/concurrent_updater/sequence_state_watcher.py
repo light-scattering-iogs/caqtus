@@ -1,8 +1,8 @@
 import logging
 from typing import Callable, Optional, Self
 
-from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Sequence, State
+from core.session import ExperimentSessionMaker
+from core.session.sequence import Sequence, State
 from util.concurrent import BackgroundScheduler
 
 logger = logging.getLogger(__name__)

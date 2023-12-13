@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Optional, Iterable, Protocol
 
-from data_types import DataLabel, Data
+from core.types import DataLabel, Data, Parameter
 from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
-from parameter_types import Parameter
+from returns.result import Result
 from sequence.configuration import SequenceConfig
-from sequence.runtime import Sequence, Shot, SequencePath, SequenceStats
-from sequence.runtime import State
 from variable.name import DottedVariableName
+
+from .sequence import SequencePath, Sequence, Shot, PathNotFoundError
+from .sequence import State, SequenceStats
 
 
 class SequenceHierarchy(Protocol):
@@ -25,36 +28,38 @@ class SequenceHierarchy(Protocol):
             True if the path exists in the session. False otherwise.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
-    def is_sequence_path(self, path: SequencePath) -> bool:
-        """Check if the path is a sequence.
+    def is_sequence_path(self, path: SequencePath) -> Result[bool, PathNotFoundError]:
+        """Check if the path is a sequence."""
 
-        Args:
-            path: the path to check.
-
-        Returns:
-            True if the path is a sequence path. False otherwise.
-        """
-
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
-    def create_path(self, path: SequencePath) -> list[SequencePath]:
+    def create_path(
+        self, path: SequencePath
+    ) -> Result[list[SequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
         Args:
             path: the path to create.
 
         Returns:
-            A list of the paths that were created.
-
-        Raises:
-            PathIsSequenceError: If the path or one of its ancestors is a sequence.
+            A list of the paths that were created if the path was created successfully
+            or PathIsSequenceError if the path or one of its ancestors is a sequence.
+            No path is created if any of the ancestors is a sequence.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_path_children(
+        self, path: SequencePath
+    ) -> Result[set[SequencePath], PathNotFoundError | PathIsSequenceError]:
+        """Get the children of the path."""
+
+        raise NotImplementedError
 
     @abstractmethod
     def delete_path(self, path: SequencePath, delete_sequences: bool = False):
@@ -74,23 +79,12 @@ class SequenceHierarchy(Protocol):
             delete_sequence is False
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
-    def get_path_children(self, path: SequencePath) -> set[SequencePath]:
-        """Get the children of the path.
-
-        Args:
-            path: the path to get the children for.
-
-        Returns:
-            The children of the path.
-        """
-
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_path_creation_date(self, path: SequencePath) -> datetime:
+    def get_path_creation_date(
+        self, path: SequencePath
+    ) -> Result[datetime, PathNotFoundError]:
         """Get the creation date of the path.
 
         Args:
@@ -100,7 +94,7 @@ class SequenceHierarchy(Protocol):
             The creation date of the path.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     # Sequence methods
     @abstractmethod
@@ -114,7 +108,7 @@ class SequenceHierarchy(Protocol):
             True if the sequence exists in the session. False otherwise.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequence_state(self, sequence: Sequence) -> State:
@@ -127,7 +121,7 @@ class SequenceHierarchy(Protocol):
             The state of the sequence.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def set_sequence_state(self, sequence: Sequence, state: State):
@@ -140,7 +134,7 @@ class SequenceHierarchy(Protocol):
             state: the state to set.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequence_shots(self, sequence: Sequence) -> list[Shot]:
@@ -153,7 +147,7 @@ class SequenceHierarchy(Protocol):
             The shots of the sequence.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequence_creation_date(self, sequence: Sequence) -> datetime:
@@ -166,7 +160,7 @@ class SequenceHierarchy(Protocol):
             The creation date of the sequence.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequence_config_yaml(self, sequence: Sequence) -> str:
@@ -179,7 +173,7 @@ class SequenceHierarchy(Protocol):
             The configuration of the sequence as a yaml string.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def set_sequence_config_yaml(
@@ -194,7 +188,7 @@ class SequenceHierarchy(Protocol):
                 sequence. It is stored alongside the sequence configuration.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequence_experiment_config(
@@ -210,7 +204,7 @@ class SequenceHierarchy(Protocol):
             the sequence, None is returned.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def set_sequence_experiment_config(
@@ -224,7 +218,7 @@ class SequenceHierarchy(Protocol):
                 experiment config must exist in the session.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_bound_to_experiment_config(
@@ -242,10 +236,12 @@ class SequenceHierarchy(Protocol):
             The sequences that have the given experiment config set as their current experiment config.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
-    def get_sequence_stats(self, sequence: Sequence) -> SequenceStats:
+    def get_sequence_stats(
+        self, sequence: Sequence
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         """Get the stats of the sequence.
 
         Args:
@@ -255,7 +251,7 @@ class SequenceHierarchy(Protocol):
             The stats of the sequence.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_all_sequence_names(self) -> set[str]:
@@ -265,7 +261,7 @@ class SequenceHierarchy(Protocol):
             The names of all sequences in the session.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def query_sequence_stats(
@@ -280,7 +276,7 @@ class SequenceHierarchy(Protocol):
             The stats of the sequences.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def create_sequence(
@@ -291,7 +287,7 @@ class SequenceHierarchy(Protocol):
     ) -> Sequence:
         """Create a new sequence in the session."""
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def create_sequence_shot(
@@ -305,7 +301,7 @@ class SequenceHierarchy(Protocol):
     ):
         """Create a new shot for the sequence."""
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @abstractmethod
     def get_sequences_in_state(self, state: State) -> set[Sequence]:
@@ -318,8 +314,12 @@ class SequenceHierarchy(Protocol):
             The sequences in the given state.
         """
 
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class PathIsSequenceError(Exception):
+    pass
+
+
+class PathIsNotSequenceError(Exception):
     pass

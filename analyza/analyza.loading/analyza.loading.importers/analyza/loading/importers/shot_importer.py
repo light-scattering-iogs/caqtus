@@ -1,17 +1,15 @@
 from abc import ABC
 from typing import Protocol, TypeVar, Mapping
 
-from attr import define
-from image_types import Image
-from parameter_types import Parameter
-from sequence.runtime import Shot
-
-from experiment.session import ExperimentSession
+from core.session import ExperimentSession
+from core.session.sequence import Shot
+from core.types import Parameter, Image
+from util import attrs
 
 T = TypeVar("T", covariant=True)
 
 
-@define
+@attrs.define
 class ShotImporter(Protocol[T]):
     """Protocol for object that can import a value from a shot.
 

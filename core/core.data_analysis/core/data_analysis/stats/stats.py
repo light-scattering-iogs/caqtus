@@ -2,8 +2,8 @@ from collections.abc import Sequence
 from typing import Optional, Literal, assert_never
 
 import polars
-
 from core.types.units import Unit
+
 from ..units import extract_unit, with_units_added_to_columns
 
 VALUE_FIELD = "value"
@@ -79,8 +79,9 @@ def compute_stats_average(
             deviation). Defaults to "sem".
 
     Returns:
-        A dataframe with the columns specified in hues, plus two columns named after the column to average, with the
-        mean and standard error of the mean of the column to average.
+        A dataframe with the columns specified in hues, plus one column with the same name as the column to average
+        having an error dtype. The nominal value of this column is the mean of the column to average, and the error is
+        either the standard error of the mean or the standard deviation depending on the value of error_type.
     """
 
     if len(grouped_by) == 0:

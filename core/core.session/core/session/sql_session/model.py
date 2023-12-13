@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import Optional, Any
 
-from sequence.configuration import SequenceConfig
-from sequence.runtime.sequence_state import State
 from sqlalchemy import (
     select,
     ForeignKey,
@@ -23,8 +21,10 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy_utils import Ltree, LtreeType
 
-from experiment.session.data_type import DataType
+from sequence.configuration import SequenceConfig
 from .base import Base
+from ..data_type import DataType
+from ..sequence import State
 
 
 # Need to activate Ltree extension in Postgresql

@@ -1,8 +1,8 @@
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QModelIndex
 from PyQt6.QtWidgets import QTreeView
 
-from experiment.session import ExperimentSessionMaker
-from sequence.runtime import Sequence
+from core.session import ExperimentSessionMaker
+from core.session.sequence import Sequence
 from sequence_hierarchy import SequenceHierarchyModel, SequenceHierarchyDelegate
 
 

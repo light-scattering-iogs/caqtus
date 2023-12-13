@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import datetime
 import re
 import typing
 
-from attr import frozen, field
+from util import attrs
+
+from .._return_or_raise import return_or_raise
 
 if typing.TYPE_CHECKING:
-    from experiment.session import ExperimentSession
+    from ..experiment_session import ExperimentSession
 
 _PATH_SEPARATOR = "."
 _PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
@@ -20,7 +24,7 @@ def _is_valid_path(path: str) -> bool:
     return _PATH_REGEX.match(path) is not None
 
 
-def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
+def convert_path_to_str(path: SequencePath | str) -> str:
     if isinstance(path, SequencePath):
         return path.path
     elif isinstance(path, str):
@@ -31,12 +35,23 @@ def convert_path_to_str(path: typing.Union["SequencePath", str]) -> str:
         )
 
 
-@frozen(str=False)
+@attrs.frozen(str=False)
 class SequencePath:
-    path: str = field(converter=convert_path_to_str)
+    """A path in the sequence hierarchy.
 
-    @path.validator
-    def _validate_path(self, attribute, value):
+    A path is a string of names separated by dots. For example, "foo.bar" is a path
+    with two names, "foo" and "bar".
+    A given path can be a sequence or a folder. A folder can contain other folders and
+    sequences. A sequence can only contain shots and cannot have children.
+
+    Methods of this class that take an experiment session as an argument are the only
+    one that actually perform io operations. The other methods are pure functions.
+    """
+
+    path: str = attrs.field(converter=convert_path_to_str)
+
+    @path.validator  # type: ignore
+    def _validate_path(self, _, value):
         if not _is_valid_path(value):
             raise ValueError(f"Invalid path: {value}")
 
@@ -50,7 +65,7 @@ class SequencePath:
     def exists(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.sequence_hierarchy.does_path_exists(self)
 
-    def create(self, experiment_session: "ExperimentSession") -> list["SequencePath"]:
+    def create(self, experiment_session: "ExperimentSession") -> list[SequencePath]:
         """
         Create the path and all its ancestors if they don't exist
 
@@ -61,10 +76,11 @@ class SequencePath:
             list of paths that were created when they didn't exist
 
         Raises:
-            PathIsSequenceError: If an ancestor exists and is a sequence
+            PathIsSequenceError: If an ancestor exists and is a sequence.
         """
 
-        return experiment_session.sequence_hierarchy.create_path(self)
+        result = experiment_session.sequence_hierarchy.create_path(self)
+        return return_or_raise(result)
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -89,7 +105,7 @@ class SequencePath:
 
     def get_contained_sequences(
         self, experiment_session: "ExperimentSession"
-    ) -> list["SequencePath"]:
+    ) -> list[SequencePath]:
         """Return the children of this path that are sequences, including this path.
 
         Args:
@@ -111,7 +127,18 @@ class SequencePath:
         return not self.is_sequence(experiment_session)
 
     def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
-        return experiment_session.sequence_hierarchy.is_sequence_path(self)
+        """Check if the path is a sequence.
+
+        Returns:
+            True if the path is a sequence path. False otherwise.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
+        result = experiment_session.sequence_hierarchy.is_sequence_path(self)
+
+        return return_or_raise(result)
 
     def is_root(self) -> bool:
         return self.path == ""
@@ -124,17 +151,42 @@ class SequencePath:
 
     def get_children(
         self, experiment_session: "ExperimentSession"
-    ) -> set["SequencePath"]:
-        """Return the direct descendants of this path."""
+    ) -> set[SequencePath]:
+        """Return the direct descendants of this path.
 
-        return experiment_session.sequence_hierarchy.get_path_children(self)
+        Args:
+            experiment_session: The experiment session to look in.
+
+        Returns:
+            A set of the direct descendants of this path.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsSequenceError: If the path is a sequence.
+        """
+
+        result = experiment_session.sequence_hierarchy.get_path_children(self)
+        return return_or_raise(result)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
-        return experiment_session.sequence_hierarchy.get_path_creation_date(self)
+        """Get the creation date of the path.
 
-    def get_ancestors(self, strict: bool = True) -> list["SequencePath"]:
+        Args:
+            experiment_session: The experiment session to look in.
+
+        Returns:
+            The date at which the path was created.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
+        result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
+        return return_or_raise(result)
+
+    def get_ancestors(self, strict: bool = True) -> list[SequencePath]:
         """Return the ancestors of this path.
 
         Args:
@@ -170,7 +222,7 @@ class SequencePath:
         else:
             return self.path.count(_PATH_SEPARATOR)
 
-    def __truediv__(self, other) -> "SequencePath":
+    def __truediv__(self, other) -> SequencePath:
         if isinstance(other, str):
             if not re.match(_PATH_NAMES_REGEX, other):
                 raise ValueError("Invalid name format")
@@ -184,4 +236,5 @@ class SequencePath:
 
 
 class PathNotFoundError(Exception):
-    pass
+    def __init__(self, path: SequencePath):
+        super().__init__(f"Path not found: {path}")

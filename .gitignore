@@ -6,3 +6,4 @@
 .hypothesis
 *.yaml
 __pycache__
+build/

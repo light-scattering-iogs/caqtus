@@ -3,16 +3,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Optional, Literal, TypeAlias, Any
 
-import attrs
 import numpy as np
 import polars
 import pyqtgraph
 from PyQt6 import QtGui, QtCore
 from PyQt6.QtWidgets import QWidget
+from core.data_analysis.stats import compute_stats_average, get_nominal_value, get_error
+from core.data_analysis.units import extract_unit
+from core.types.units import dimensionless, Unit
 from pyqtgraph import PlotWidget
 
-from core.data_analysis import compute_stats_average, extract_unit
-from core.types.units import dimensionless, Unit
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator
 from ..visualizer_creator import ViewCreator, DataView
 
@@ -51,15 +51,6 @@ class ErrorBarViewCreator(QWidget, ViewCreator, Ui_ErrorBarVisualizerCreator):
 
 
 WhichAxis: TypeAlias = Literal["left", "right", "top", "bottom"]
-
-
-@attrs.define
-class Stats:
-    x_values: np.ndarray
-    y_values: np.ndarray
-    error_values: np.ndarray
-    x_unit: Optional[Unit]
-    y_unit: Optional[Unit]
 
 
 class HueErrorBarView(PlotWidget, DataView):
@@ -114,11 +105,7 @@ class HueErrorBarView(PlotWidget, DataView):
             if self._compute_stats_thread.isRunning():
                 return
         self._compute_stats_thread = ComputeStatsThread(
-            self,
-            dataframe,
-            self._x_var,
-            self._y_var,
-            hue=self._hue
+            self, dataframe, self._x_var, self._y_var, hue=self._hue
         )
         self._compute_stats_thread.finished.connect(self.update_plot)  # type: ignore
         self._compute_stats_thread.start()
@@ -153,10 +140,11 @@ class ErrorBarView(PlotWidget, DataView):
             error_values = np.array([])
         else:
             x_series, x_unit = extract_unit(stats[self._x_var])
-            y_series, y_unit = extract_unit(stats[f"{self._y_var}.mean"])
-            error_series, _ = extract_unit(stats[f"{self._y_var}.sem"])
+            y_series, y_unit = extract_unit(stats[self._y_var])
+            nominal_series = get_nominal_value(y_series)
+            error_series = get_error(y_series)
             x_values = x_series.to_numpy()
-            y_values = y_series.to_numpy()
+            y_values = nominal_series.to_numpy()
             error_values = error_series.to_numpy()
 
         self.update_axis_labels(x_unit, y_unit)
