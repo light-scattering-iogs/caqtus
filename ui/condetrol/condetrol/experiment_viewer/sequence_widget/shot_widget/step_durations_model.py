@@ -6,7 +6,7 @@ from PyQt6.QtCore import (
     QAbstractListModel,
 )
 
-from expression import Expression
+from core.configuration import Expression
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")

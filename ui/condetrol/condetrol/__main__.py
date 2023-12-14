@@ -2,7 +2,6 @@
 experiment viewer/sequences editor in the current process"""
 
 import logging
-import os
 import sys
 from pathlib import Path
 
@@ -12,7 +11,7 @@ from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
 from condetrol.experiment_viewer import ExperimentViewer
-from experiment.session import get_standard_experiment_session_maker
+from core.session import get_standard_experiment_session_maker
 
 
 def except_hook(cls, exception, traceback):

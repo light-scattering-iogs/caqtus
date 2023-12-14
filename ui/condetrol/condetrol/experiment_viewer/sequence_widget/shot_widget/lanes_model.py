@@ -12,8 +12,8 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QWidget, QMenu
 
-from experiment.configuration import ExperimentConfig
-from lane.configuration import Lane
+from core.configuration.lane import Lane
+from core.session import ExperimentConfig
 from lane.model import LaneModel
 from .lane_model import get_lane_model, create_new_lane
 
@@ -83,7 +83,9 @@ class LanesModel(QAbstractTableModel):
                 0, Qt.Orientation.Horizontal, role
             )
 
-    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
+    def setData(
+        self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole
+    ) -> bool:
         return self._lane_models[index.row()].setData(
             self.get_lane_model_index(index), value, role
         )

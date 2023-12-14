@@ -10,6 +10,7 @@ from .converters import (
     from_json,
 )
 from .customize import customize, AttributeOverride
+from .json import JSON
 from .strategies import include_subclasses, include_type
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "override",
     "include_subclasses",
     "include_type",
+    "JSON",
 ]

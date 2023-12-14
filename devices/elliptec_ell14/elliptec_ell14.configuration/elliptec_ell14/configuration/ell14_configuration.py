@@ -60,9 +60,8 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfigurationAttrs):
         return super().get_device_init_args() | extra
 
     @classmethod
-    def get_default_config(cls, device_name: str, remote_server: str) -> Self:
+    def get_default_config(cls, remote_server: str) -> Self:
         return cls(
-            device_name=device_name,
             remote_server=remote_server,
             serial_port="COM0",
             device_id=0,

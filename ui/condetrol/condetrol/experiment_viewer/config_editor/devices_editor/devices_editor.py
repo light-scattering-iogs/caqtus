@@ -4,9 +4,10 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from device.configuration import DeviceConfigurationAttrs, DeviceName
+from core.device import DeviceConfigurationAttrs, DeviceName
+from core.device.remote_server import DeviceServerName
+from core.session import ExperimentConfig
 from experiment.configuration import (
-    ExperimentConfig,
     ElliptecELL14RotationStageConfiguration,
     SwabianPulseStreamerConfiguration,
 )
@@ -38,28 +39,24 @@ class DevicesEditor(ConfigSettingsEditor, Ui_DevicesEditor):
 
     def add_device_config(self):
         device_type = self.device_type_combobox.currentText()
-        device_name = self.device_name_lineedit.text()
-        device_server = self.remote_server_combobox.currentText()
-        new_config = self.create_default_device_config(
-            device_type, device_name, device_server
-        )
+        device_name = DeviceName(self.device_name_lineedit.text())
+        device_server = DeviceServerName(self.remote_server_combobox.currentText())
+        new_config = self.create_default_device_config(device_type, device_server)
         self._experiment_config.add_device_config(device_name, new_config)
         # noinspection PyUnresolvedReferences
         self.device_added.emit(copy.deepcopy(new_config))
 
     @staticmethod
     def create_default_device_config(
-        device_type: str, device_name: DeviceName, remote_server: str
+        device_type: str, remote_server: DeviceServerName
     ) -> DeviceConfigurationAttrs:
         if device_type == "ElliptecELL14RotationStage":
             config = ElliptecELL14RotationStageConfiguration.get_default_config(
-                device_name, remote_server
+                remote_server
             )
             return config
         elif device_type == "SwabianPulseStreamer":
-            config = SwabianPulseStreamerConfiguration.get_default_config(
-                device_name, remote_server
-            )
+            config = SwabianPulseStreamerConfiguration.get_default_config(remote_server)
             return config
 
         raise ValueError(

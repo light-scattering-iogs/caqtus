@@ -1,18 +1,21 @@
 from functools import singledispatch
 
-from analog_lane.configuration import AnalogLane
 from analog_lane.model import AnalogLaneModel
-from atom_detector_lane.configuration import AtomDetectorLane
 from atom_detector_lane.model.atom_detector_lane_model import AtomDetectorLaneModel
-from camera_lane.configuration import CameraLane
 from camera_lane.model import CameraLaneModel
-from digital_lane.configuration import DigitalLane
+from core.configuration.lane import (
+    AnalogLane,
+    CameraLane,
+    DigitalLane,
+    Lane,
+    AtomDetectorLane,
+    TweezerArrangerLane,
+    HoldTweezers,
+)
 from digital_lane.model import DigitalLaneModel
 from experiment.configuration import ExperimentConfig
 from expression import Expression
-from lane.configuration import Lane
 from tweezer_arranger.configuration import TweezerConfigurationName
-from tweezer_arranger_lane.configuration import TweezerArrangerLane, HoldTweezers
 from tweezer_arranger_lane.model.tweezer_arranger_lane_model import (
     TweezerArrangerLaneModel,
 )

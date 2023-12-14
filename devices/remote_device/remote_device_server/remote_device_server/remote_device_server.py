@@ -8,6 +8,18 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def create_device_in_other_process(
+    type_name: str, device_type: Type[RuntimeDevice], exposed: Iterable[str]
+):
+    def inner(*args, **kwargs):
+        manager = BaseManager()
+        manager.register(type_name, device_type, exposed=list(exposed))
+        manager.start()
+        return getattr(manager, type_name)(*args, **kwargs)
+
+    return inner
+
+
 class RemoteDeviceServer:
     def __init__(self, address: tuple[str, int], authkey: bytes):
         self._address = address
@@ -19,8 +31,7 @@ class RemoteDeviceServer:
     ):
         self._remote_device_manager_class.register(
             type_name,
-            device_type,
-            exposed=list(exposed),
+            create_device_in_other_process(type_name, device_type, exposed),
         )
 
     def serve_forever(self):

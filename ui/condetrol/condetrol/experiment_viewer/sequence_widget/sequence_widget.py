@@ -25,19 +25,16 @@ from PyQt6.QtWidgets import (
 
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
 from condetrol.utils import UndoStack
-from core.session import ExperimentSession, ExperimentSessionMaker
-from core.session.sequence import Sequence, State
-from experiment.configuration import ExperimentConfig
-from expression import Expression
-from sequence.configuration import (
+from core.configuration import Expression
+from core.configuration.sequence import (
     Step,
     VariableDeclaration,
     ArangeLoop,
     LinspaceLoop,
     ExecuteShot,
-    OptimizationLoop,
-    UserInputLoop,
 )
+from core.session import ExperimentSession, ExperimentSessionMaker, ExperimentConfig
+from core.session.sequence import Sequence, State
 from settings_model import YAMLSerializable
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from .shot_widget import ShotWidget
@@ -302,28 +299,6 @@ class SequenceTreeView(QTreeView, YAMLClipboardMixin):
                     stop=Expression("..."),
                     step=Expression("..."),
                 ),
-                index,
-            )
-        )
-
-        optimization_menu = QMenu()
-        optimization_menu.setTitle("Optimization loop...")
-        add_menu.addMenu(optimization_menu)
-
-        create_bayesian_optimization_action = QAction("Bayesian")
-        optimization_menu.addAction(create_bayesian_optimization_action)
-        create_bayesian_optimization_action.triggered.connect(
-            lambda: model.insert_step(
-                OptimizationLoop.empty_loop(),
-                index,
-            )
-        )
-
-        create_human_optimization_action = QAction("Human")
-        optimization_menu.addAction(create_human_optimization_action)
-        create_human_optimization_action.triggered.connect(
-            lambda: model.insert_step(
-                UserInputLoop.empty_loop(),
                 index,
             )
         )

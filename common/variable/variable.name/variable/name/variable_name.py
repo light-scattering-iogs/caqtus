@@ -18,7 +18,7 @@ class DottedVariableName(YAMLSerializable):
     def __init__(self, dotted_name: str):
         names = tuple(dotted_name.split("."))
         self._individual_names = tuple(VariableName(name) for name in names)
-        self._dotted_name = dotted_name
+        self._dotted_name = str(dotted_name)
 
     @property
     def dotted_name(self) -> str:
@@ -55,7 +55,7 @@ class DottedVariableName(YAMLSerializable):
         raise ValueError(f"Invalid variable name: {value}")
 
     def __str__(self) -> str:
-        return self.dotted_name
+        return self._dotted_name
 
     def __repr__(self):
         return f"{type(self).__name__}('{self._dotted_name}')"
@@ -85,7 +85,7 @@ class VariableName(DottedVariableName):
         if not NAME_REGEX.match(name):
             raise ValueError(f"Invalid variable name: {name}")
         self._individual_names = (self,)
-        self._dotted_name = name
+        self._dotted_name = str(name)
 
     def __hash__(self):
         return super().__hash__()

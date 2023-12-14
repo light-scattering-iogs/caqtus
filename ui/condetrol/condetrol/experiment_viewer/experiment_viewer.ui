@@ -14,7 +14,7 @@
    <string>Caqtus</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset>
     <normaloff>:/icons/caqtus-logo</normaloff>:/icons/caqtus-logo</iconset>
   </property>
   <property name="dockOptions">
@@ -32,13 +32,21 @@
      <height>21</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuPreferences">
+   <widget class="QMenu" name="menuExperiment_config">
     <property name="title">
-     <string>Config</string>
+     <string>Experiment config</string>
     </property>
-    <addaction name="action_edit_config"/>
+    <widget class="QMenu" name="menuCurrent">
+     <property name="title">
+      <string>Current...</string>
+     </property>
+     <addaction name="action_edit_current_experiment_config"/>
+     <addaction name="action_save_current_experiment_config"/>
+     <addaction name="action_load_current_experiment_config"/>
+    </widget>
+    <addaction name="menuCurrent"/>
    </widget>
-   <addaction name="menuPreferences"/>
+   <addaction name="menuExperiment_config"/>
   </widget>
   <widget class="QDockWidget" name="sequences_widget">
    <property name="features">
@@ -91,9 +99,10 @@
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2"/>
   </widget>
+  <widget class="QStatusBar" name="status_bar"/>
   <action name="action_edit_config">
    <property name="icon">
-    <iconset resource="resources.qrc">
+    <iconset>
      <normaloff>:/icons/gear--pencil</normaloff>:/icons/gear--pencil</iconset>
    </property>
    <property name="text">
@@ -102,7 +111,7 @@
   </action>
   <action name="action_start">
    <property name="icon">
-    <iconset resource="resources.qrc">
+    <iconset>
      <normaloff>:/icons/control</normaloff>:/icons/control</iconset>
    </property>
    <property name="text">
@@ -111,11 +120,26 @@
   </action>
   <action name="action_stop">
    <property name="icon">
-    <iconset resource="resources.qrc">
+    <iconset>
      <normaloff>:/icons/control-stop</normaloff>:/icons/control-stop</iconset>
    </property>
    <property name="text">
     <string>Stop</string>
+   </property>
+  </action>
+  <action name="action_edit_current_experiment_config">
+   <property name="text">
+    <string>Edit...</string>
+   </property>
+  </action>
+  <action name="action_save_current_experiment_config">
+   <property name="text">
+    <string>Save As...</string>
+   </property>
+  </action>
+  <action name="action_load_current_experiment_config">
+   <property name="text">
+    <string>Load...</string>
    </property>
   </action>
  </widget>

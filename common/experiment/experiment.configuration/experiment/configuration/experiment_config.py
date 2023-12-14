@@ -44,7 +44,7 @@ class ExperimentConfig:
     """Holds static configuration of the experiment.
 
     This configuration is used to instantiate the devices and to run the experiment. It
-    contains information about the machine that should change rarely (not at each
+    contains information about the machine that should rarely change (not at each
     sequence).
 
     Fields:
@@ -57,8 +57,8 @@ class ExperimentConfig:
         optimization_configurations: Possible configurations to choose from when running
             an optimization loop.
         mock_experiment: If True, the experiment will not run the real hardware. It will
-         not connect to the device servers but will still compute all devices parameters
-         if possible. Parameters will be saved and random images will be generated, but
+         not connect to the device servers but will still compute all device parameters
+         if possible. Parameters will be saved, and random images will be generated, but
          there will be no actual data acquisition. This is meant to be used for testing.
     """
 
@@ -205,7 +205,7 @@ class ExperimentConfig:
         }
 
     def get_device_config(self, device_name: DeviceName) -> DeviceConfigurationAttrs:
-        """Return a copy of the configuration of a given device.
+        """Return a copy of a device configuration.
 
         Args:
             device_name: The name of the device to get the configuration for.

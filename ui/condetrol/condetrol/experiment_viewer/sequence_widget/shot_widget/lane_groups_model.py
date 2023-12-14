@@ -1,7 +1,6 @@
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
-from sequence.configuration import LaneGroup, LaneReference
-from sequence.configuration.shot import LaneGroupRoot
+from core.configuration.sequence import LaneGroup, LaneReference, LaneGroupRoot
 
 
 class LaneGroupModel(QAbstractItemModel):

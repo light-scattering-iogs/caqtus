@@ -1,8 +1,7 @@
 import copy
 import logging
 
-from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker
+from core.session import ExperimentConfig, ExperimentSessionMaker
 from util.concurrent import BackgroundScheduler
 
 logger = logging.getLogger(__name__)

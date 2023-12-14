@@ -41,9 +41,8 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
         return super().get_device_init_args(*args, **kwargs) | extra
 
     @classmethod
-    def get_default_config(cls, device_name: str, remote_server: str) -> Self:
+    def get_default_config(cls, remote_server: str) -> Self:
         return cls(
-            device_name=device_name,
             remote_server=remote_server,
             ip_address="",
             time_step=1,

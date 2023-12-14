@@ -7,23 +7,19 @@ from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QSize
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtWidgets import QWidget, QStyledItemDelegate, QStyleOptionViewItem, QStyle
 
-from expression import Expression
-from sequence.configuration import (
+from core.configuration import Expression
+from core.configuration.sequence import (
     Step,
     ArangeLoop,
     LinspaceLoop,
     VariableDeclaration,
     ExecuteShot,
-    OptimizationLoop,
-    UserInputLoop,
 )
 from .step_uis import (
     Ui_ArangeDeclaration,
     Ui_VariableDeclaration,
     Ui_LinspaceDeclaration,
     Ui_ExecuteShot,
-    Ui_OptimizationDeclaration,
-    Ui_UserInputLoop,
 )
 from .steps_model import QABCMeta
 
@@ -170,40 +166,6 @@ class ArangeIterationWidget(Ui_ArangeDeclaration, StepWidget):
         )
 
 
-class OptimizationIterationWidget(Ui_OptimizationDeclaration, StepWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setupUi(self)
-        self.variables_view.verticalHeader().setHidden(True)
-        self.variables_view.resizeColumnToContents(0)
-        self.optimizer_combobox.setEnabled(False)
-
-    def set_step_data(self, data: OptimizationLoop):
-        self.repetition_spin_box.setValue(data.repetitions)
-        self.variables_view.setModel(VariableRangeModel(data.variables))
-        self.optimizer_combobox.addItem(data.optimizer_name)
-
-    def get_step_data(self):
-        return dict(
-            repetitions=self.repetition_spin_box.value(),
-            variables=self.variables_view.model().variables,
-        )
-
-
-class UserInputLoopWidget(Ui_UserInputLoop, StepWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setupUi(self)
-
-    def set_step_data(self, data: UserInputLoop):
-        self.variable_range_widget.variable_ranges = data.iteration_variables
-
-    def get_step_data(self):
-        return dict(
-            iteration_variables=self.variable_range_widget.variable_ranges,
-        )
-
-
 @singledispatch
 def create_editor(step: Step, _: QWidget) -> StepWidget:
     """Create an editor for a step depending on its type"""
@@ -228,13 +190,3 @@ def _(_: LinspaceLoop, parent: QWidget):
 @create_editor.register
 def _(_: ArangeLoop, parent: QWidget):
     return ArangeIterationWidget(parent)
-
-
-@create_editor.register
-def _(_: OptimizationLoop, parent: QWidget):
-    return OptimizationIterationWidget(parent)
-
-
-@create_editor.register
-def _(_: UserInputLoop, parent: QWidget):
-    return UserInputLoopWidget(parent)

@@ -21,12 +21,14 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
     QWidget,
     QApplication,
+    QFileDialog,
 )
 
+from core.control.manager import ExperimentManager
+from core.session import ExperimentConfig, ExperimentSessionMaker
 from core.session.sequence import Sequence, State
-from experiment.session import ExperimentSessionMaker
-from experiment_control.manager import ExperimentManager
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
+from util import serialization
 from waiting_widget.spinner import WaitingSpinner
 from .config_editor import ConfigEditor
 from .current_experiment_config_watcher import CurrentExperimentConfigWatcher
@@ -41,7 +43,7 @@ class ExperimentProcessManager(BaseManager):
     pass
 
 
-ExperimentProcessManager.register("ExperimentManager")
+ExperimentProcessManager.register("connect_to_experiment_manager")
 ExperimentProcessManager.register("get_logs_queue")
 
 
@@ -121,7 +123,15 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             self.ui_settings.value(f"{__name__}/geometry", self.saveGeometry())
         )
 
-        self.action_edit_config.triggered.connect(self.edit_config)
+        self.action_edit_current_experiment_config.triggered.connect(
+            self.edit_current_experiment_config
+        )
+        self.action_save_current_experiment_config.triggered.connect(
+            self.save_current_experiment_config
+        )
+        self.action_load_current_experiment_config.triggered.connect(
+            self.load_current_experiment_config
+        )
 
         self.model = EditableSequenceHierarchyModel(
             session_maker=self._experiment_session_maker, parent=self.sequences_view
@@ -159,17 +169,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             address=("localhost", 60000), authkey=b"Deardear"
         )
         self.experiment_process_manager.connect()
-        # noinspection PyUnresolvedReferences
-        self.experiment_manager: ExperimentManager = (
-            self.experiment_process_manager.ExperimentManager(
-                session_maker=self._experiment_session_maker
-            )
-        )
         self.logs_listener = QueueListener(
             self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
         )
         self.logs_listener.start()
         self.worker = BlockingThread(self)
+
+    def connect_to_experiment_manager(self) -> ExperimentManager:
+        return self.experiment_process_manager.connect_to_experiment_manager()  # type: ignore
 
     def __enter__(self):
         self._experiment_config_watcher.__enter__()
@@ -177,6 +184,28 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
     def __exit__(self, exc_type, exc_value, traceback):
         return self._experiment_config_watcher.__exit__(exc_type, exc_value, traceback)
+
+    def show_info_message(self, message: str, timeout: int = 5000) -> None:
+        """Display a message in the info bar at the bottom of the window.
+
+        Args:
+            message: the message to display.
+            timeout: the time in milliseconds after which the message will disappear.
+        """
+
+        logger.info(message)
+        self.status_bar.showMessage(message, timeout)
+
+    def show_error_message(
+        self, message: str, exception: Optional[Exception] = None
+    ) -> None:
+        """Display an error message in the info bar at the bottom of the window."""
+
+        if exception is not None:
+            logger.error(message, exc_info=exception)
+        else:
+            logger.error(message)
+        self.status_bar.showMessage(message, 5000)
 
     def sequence_view_double_clicked(self, index: QModelIndex):
         if not index.isValid():
@@ -215,7 +244,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                     interrupt_sequence_action = QAction("Interrupt")
                     menu.addAction(interrupt_sequence_action)
                     interrupt_sequence_action.triggered.connect(
-                        lambda _: self.experiment_manager.interrupt_sequence()
+                        self.interrupt_currently_running_sequence
                     )
                 elif (
                     state == State.FINISHED
@@ -260,6 +289,19 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
 
         menu.exec(self.sequences_view.mapToGlobal(position))
 
+    def interrupt_currently_running_sequence(self) -> None:
+        """Interrupt the currently running sequence.
+
+        This method is not blocking. After calling this method, actual interruption of the sequence might take some time
+        as it finishes the current shots, saves the data and performs cleanup. After calling this method, you should
+        wait until `is_running` returns False.
+        """
+
+        if self.connect_to_experiment_manager().interrupt_sequence():
+            self.show_info_message("Interruption requested.")
+        else:
+            self.show_info_message("No sequence is currently running.")
+
     def duplicate_sequence(self, index: QModelIndex) -> bool:
         """Duplicate a sequence
 
@@ -298,19 +340,17 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
             with self._experiment_session_maker() as session:
                 current_experiment_config = session.experiment_configs.get_current()
                 if current_experiment_config is None:
-                    logger.error(
-                        "No experiment config is currently set. Please set one before"
-                        " starting a sequence."
+                    self.show_error_message(
+                        "No experiment config is currently set. Please set one before starting a sequence."
                     )
                 else:
-                    started = self.experiment_manager.start_sequence(
+                    started = self.connect_to_experiment_manager().start_sequence(
                         current_experiment_config,
                         sequence_path,
                     )
                     if not started:
-                        logger.error(
-                            "A sequence is already running. Please interrupt it before"
-                            " starting a new one."
+                        self.show_error_message(
+                            "A sequence is already running. Please interrupt it before starting a new one."
                         )
 
     def create_new_folder(self, index: QModelIndex):
@@ -356,8 +396,14 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
                 self.model.delete(index)
                 self.sequences_view.update()
 
-    def edit_config(self):
-        """Open the experiment config editor then propagate the changes done"""
+    def edit_current_experiment_config(self):
+        """Edit the current experiment config.
+
+        Open an editor displaying the current experiment config to allow the user to edit it.
+        The editor is a modal dialog, so the user cannot interact with the rest of the application while the editor is
+        open.
+        If the config is modified when the editor is closed, the current config is updated in the database.
+        """
 
         current_config = self._experiment_config_watcher.get_current_config()
 
@@ -365,23 +411,95 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         editor.exec()
         new_experiment_config = editor.get_config()
         if current_config != new_experiment_config:
-            with self._experiment_session_maker() as session:
-                old_name = session.experiment_configs.get_current()
-                new_name = session.experiment_configs.set_current_config(
-                    new_experiment_config
-                )
-            logger.info(f"Experiment config updated from {old_name} to {new_name}")
+            self.change_current_experiment_config(new_experiment_config)
+        else:
+            self.show_info_message("The current experiment config was not modified.")
+
+    def save_current_experiment_config(self) -> None:
+        """Save the current experiment config to a file.
+
+        Open a modal dialog to ask the user where to save the current experiment config.
+        The config is saved as a JSON file.
+        """
+
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save current experiment config",
+            "",
+            "JSON (*.json)",
+        )
+        if file_name:
+            current_experiment_config = (
+                self._experiment_config_watcher.get_current_config()
+            )
+            json_string = serialization.to_json(current_experiment_config)
+            with open(file_name, "w") as f:
+                f.write(json_string)
+            self.show_info_message(
+                f"Current experiment config was saved to {file_name}"
+            )
+
+    def load_current_experiment_config(self) -> None:
+        """Load an experiment config from a file.
+
+        Open a modal dialog to ask the user which file to load the experiment config from.
+        The content of the file must be a JSON string with a valid representation of an experiment config.
+        If the content of the file is not a valid experiment config, an error message is displayed, but no exception
+        is raised.
+        """
+
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Load experiment config",
+            "",
+            "JSON (*.json)",
+        )
+
+        if not file_name:
+            return
+
+        try:
+            with open(file_name, "r") as f:
+                json_string = f.read()
+        except Exception as e:
+            self.show_error_message(f"Could not read the file {file_name}", e)
+            return
+
+        try:
+            new_experiment_config = serialization.from_json(
+                json_string, ExperimentConfig
+            )
+        except Exception as e:
+            self.show_error_message(
+                f"Could not construct the experiment config from {file_name}", e
+            )
+        else:
+            self.change_current_experiment_config(new_experiment_config)
+
+    def change_current_experiment_config(self, new_config: ExperimentConfig) -> None:
+        """Write a new experiment config to the database."""
+
+        with self._experiment_session_maker() as session:
+            old_name = session.experiment_configs.get_current()
+            # Here we set the current config to the new one in the database.
+            # The experiment config watcher will detect the change and update the current config in the experiment
+            # manager, so we don't have to do it explicitly here.
+            new_name = session.experiment_configs.set_current_config(new_config)
+        self.show_info_message(
+            f"Current experiment config was updated from {old_name} to {new_name}"
+        )
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.experiment_manager.is_running():
+        experiment_manager = self.connect_to_experiment_manager()
+        if experiment_manager.is_running():
             message_box = create_on_close_message_box(self)
             result = message_box.exec()
             if result == QMessageBox.StandardButton.Cancel:
                 event.ignore()
                 return
             elif result == QMessageBox.StandardButton.Yes:
-                self.experiment_manager.interrupt_sequence()
-                while self.experiment_manager.is_running():
+                experiment_manager.interrupt_sequence()
+                while experiment_manager.is_running():
                     time.sleep(0.1)
             elif result == QMessageBox.StandardButton.No:
                 pass
