@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import NewType, Iterable
 
+import attrs
 import numpy as np
 
-from image_types import Width, Height
-from util import attrs
+Width = NewType("Width", int)
+Height = NewType("Height", int)
 
 
 @attrs.define(slots=False)
@@ -36,7 +38,14 @@ class ROI(ABC):
 
         True values indicate that the pixel is part of the region of interest."""
 
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
+        """Return the indices of the pixels in the original image that are part of the region of interest."""
+
+        raise NotImplementedError
 
     @property
     def original_width(self) -> int:

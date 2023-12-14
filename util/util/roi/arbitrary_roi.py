@@ -1,8 +1,8 @@
+from collections.abc import Iterable
 from typing import Self
 
+import attrs
 import numpy as np
-from settings_model import YAMLSerializable
-from util import attrs
 
 from .roi import ROI
 
@@ -32,8 +32,11 @@ class ArbitraryROI(ROI):
         True values indicate that the pixel is part of the region of interest."""
 
         mask = np.full(self.original_image_size, False)
-        mask[*np.array(self.indices).T] = True
+        mask[*self.get_indices()] = True
         return mask
+
+    def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
+        return np.array(self.indices).T
 
     @classmethod
     def from_mask(cls, mask: np.ndarray) -> Self:
@@ -49,7 +52,9 @@ class ArbitraryROI(ROI):
             raise ValueError("mask must be 2D")
         shape = shape[0], shape[1]
         indices = np.argwhere(mask).tolist()
-        return cls(original_image_size=shape, indices=tuple(tuple(index) for index in indices))
+        return cls(
+            original_image_size=shape, indices=tuple(tuple(index) for index in indices)
+        )
 
     @indices.validator
     def validate_indices(self, _, indices):
@@ -65,6 +70,3 @@ class ArbitraryROI(ROI):
             if not inside:
                 raise ValueError("indices must be inside the original image")
         return indices
-
-
-YAMLSerializable.register_attrs_class(ArbitraryROI)

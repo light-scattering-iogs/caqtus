@@ -1,7 +1,8 @@
-import numpy as np
-from settings_model import YAMLSerializable
-from util import attrs
+from collections.abc import Iterable
 
+import numpy as np
+
+from util import attrs
 from .roi import ROI
 
 
@@ -62,6 +63,11 @@ class RectangularROI(ROI):
         mask[self.y : self.y + self.height, self.x : self.x + self.width] = True
         return mask
 
+    def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
+        """Return the indices of the pixels in the original image that are part of the region of interest."""
+
+        raise NotImplementedError
+
     @property
     def left(self) -> int:
         """Return the left column (included) of the roi."""
@@ -85,6 +91,3 @@ class RectangularROI(ROI):
         """Return the top row (included) of the roi."""
 
         return self.y + self.height - 1
-
-
-YAMLSerializable.register_attrs_class(RectangularROI)
