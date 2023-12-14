@@ -4,11 +4,10 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
-from device.configuration import DeviceConfigurationAttrs
-from device.name import DeviceName
-from device_server.name import DeviceServerName
+from core.device import DeviceConfigurationAttrs, DeviceName
+from core.device.remote_server import DeviceServerName
+from core.session import ExperimentConfig
 from experiment.configuration import (
-    ExperimentConfig,
     ElliptecELL14RotationStageConfiguration,
     SwabianPulseStreamerConfiguration,
 )

@@ -3,7 +3,7 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget
 
-from experiment.configuration import ExperimentConfig
+from core.session import ExperimentConfig
 from .system_settings_editor_ui import Ui_SystemSettingsEditor
 from ..config_settings_editor import ConfigSettingsEditor
 
@@ -20,7 +20,6 @@ class SystemSettingsEditor(ConfigSettingsEditor, Ui_SystemSettingsEditor):
         tree_label: str,
         parent: Optional[QWidget] = None,
     ):
-
         super().__init__(experiment_config, tree_label, parent)
 
         self.setupUi(self)

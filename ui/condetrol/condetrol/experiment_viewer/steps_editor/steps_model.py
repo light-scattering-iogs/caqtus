@@ -17,7 +17,12 @@ from PyQt6.QtCore import (
     QObject,
 )
 
-from sequence.configuration import Step, VariableDeclaration, ExecuteShot, SequenceSteps
+from core.configuration.sequence import (
+    Step,
+    VariableDeclaration,
+    ExecuteShot,
+    SequenceSteps,
+)
 from settings_model import YAMLSerializable
 
 
@@ -194,7 +199,9 @@ class StepsModel(QAbstractItemModel, metaclass=QABCMeta):
     def set_steps(self, steps: list[Step]):
         steps = list(steps)
         if not isinstance(steps, list):
-            raise TypeError(f"Expected a list of {Step.__name__} instances, got {type(steps)}")
+            raise TypeError(
+                f"Expected a list of {Step.__name__} instances, got {type(steps)}"
+            )
         if not all(isinstance(step, Step) for step in steps):
             raise TypeError(f"Expected a list of {Step.__name__} instances")
         self.beginResetModel()

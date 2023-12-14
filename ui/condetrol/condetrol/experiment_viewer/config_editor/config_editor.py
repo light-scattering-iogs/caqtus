@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItem,
 )
 
-from experiment.configuration import ExperimentConfig
+from core.session import ExperimentConfig
 from .config_editor_ui import Ui_ConfigEditor
 from .config_settings_editor import ConfigSettingsEditor, WrapDeviceConfigEditor
 from .devices_editor import DevicesEditor
@@ -102,7 +102,6 @@ class ConfigEditor(QDialog, Ui_ConfigEditor):
         self,
         tree_label: str,
     ) -> ConfigSettingsEditor:
-
         config = deepcopy(self._config)
         if tree_label == "System":
             return SystemSettingsEditor(config, tree_label)

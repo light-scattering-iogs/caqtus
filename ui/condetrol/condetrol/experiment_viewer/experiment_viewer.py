@@ -24,10 +24,9 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
-from experiment.configuration import ExperimentConfig
-from core.session import ExperimentSessionMaker
-from experiment_control.manager import ExperimentManager
-from sequence.runtime import Sequence, State
+from core.control.manager import ExperimentManager
+from core.session import ExperimentConfig, ExperimentSessionMaker
+from core.session.sequence import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate
 from util import serialization
 from waiting_widget.spinner import WaitingSpinner

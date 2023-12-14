@@ -12,17 +12,18 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QWidget
 
-from analog_lane.configuration import AnalogLane
-from atom_detector_lane.configuration import AtomDetectorLane
-from camera_lane.configuration import CameraLane
 from concurrent_updater.sequence_state_watcher import SequenceStateWatcher
-from core.session import ExperimentSession, ExperimentSessionMaker
+from core.configuration.lane import (
+    Lane,
+    AnalogLane,
+    DigitalLane,
+    CameraLane,
+    TweezerArrangerLane,
+    AtomDetectorLane,
+)
+from core.configuration.sequence import ShotConfiguration, LaneReference
+from core.session import ExperimentSession, ExperimentSessionMaker, ExperimentConfig
 from core.session.sequence import Sequence, State
-from digital_lane.configuration import DigitalLane
-from experiment.configuration import ExperimentConfig
-from lane.configuration import Lane
-from sequence.configuration import ShotConfiguration, LaneReference
-from tweezer_arranger_lane.configuration import TweezerArrangerLane
 from .lane_groups_model import LaneGroupModel
 from .lanes_model import LanesModel
 from .step_durations_model import StepDurationsModel

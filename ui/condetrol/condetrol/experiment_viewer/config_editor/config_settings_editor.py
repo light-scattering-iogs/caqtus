@@ -4,15 +4,15 @@ from typing import Optional
 
 from PyQt6.QtWidgets import QWidget, QHBoxLayout
 
-from device.configuration import DeviceConfigurationAttrs
+from core.device import DeviceName, DeviceConfigurationAttrs
+from core.device.tweezer_arranger import TweezerArrangerConfiguration
+from core.session import ExperimentConfig
 from device.configuration_editor import (
     DeviceConfigEditor,
     NotImplementedDeviceDeviceConfigEditor,
 )
-from device.name import DeviceName
 from elliptec_ell14.configuration import ElliptecELL14RotationStageConfiguration
 from elliptec_ell14.configuration_editor import ElliptecELL14RotationStageConfigEditor
-from experiment.configuration import ExperimentConfig
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from ni6738_analog_card.configuration_editor import NI6738AnalogCardConfigEditor
 from orca_quest.configuration import OrcaQuestCameraConfiguration
@@ -22,15 +22,14 @@ from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from spincore_sequencer.configuration_editor import (
     SpincorePulseBlasterDeviceConfigEditor,
 )
-from tweezer_arranger.configuration import TweezerArrangerConfiguration
-from tweezer_arranger.configuration_editor.arranger_editor import (
-    TweezerArrangerConfigEditor,
-)
-from yaml_clipboard_mixin import YAMLClipboardMixin
 from swabian_pulse_streamer.configuration_editor import (
     SwabianPulseStreamerConfiguration,
     SwabianPulseStreamerConfigurationEditor,
 )
+from tweezer_arranger.configuration_editor.arranger_editor import (
+    TweezerArrangerConfigEditor,
+)
+from yaml_clipboard_mixin import YAMLClipboardMixin
 
 
 class ConfigSettingsEditor(QWidget, QABC):

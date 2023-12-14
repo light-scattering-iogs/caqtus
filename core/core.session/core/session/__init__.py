@@ -1,3 +1,4 @@
+from core.configuration.experiment import ExperimentConfig
 from .data_type import DataType
 from .experiment_session import ExperimentSession
 from .sequence import SequencePath, Sequence, Shot
@@ -9,6 +10,7 @@ from .session_maker import (
 )
 
 __all__ = [
+    "ExperimentConfig",
     "ExperimentSession",
     "ExperimentSessionMaker",
     "get_standard_experiment_session_maker",

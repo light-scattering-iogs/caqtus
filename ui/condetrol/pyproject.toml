@@ -11,6 +11,11 @@ pyqt6 = "^6.4.1"
 pyqt6-charts = "^6.5.0"
 QDarkStyle = "^3.1"
 
+core-configuration = {path = "../../core/core.configuration", develop = true}
+core-session = {path = "../../core/core.session", develop = true}
+core-control = {path = "../../core/core.control", develop = true}
+core-device = {path = "../../core/core.device", develop = true}
+
 qabc = {path = "../widgets/qabc", develop = true}
 yaml-clipboard-mixin = {path = "../widgets/yaml_clipboard_mixin", develop = true}
 remote-server-combobox = {path = "../widgets/remote_server_combobox", develop = true}
@@ -21,14 +26,7 @@ waiting-widget = {path = "../widgets/waiting_widget", develop = true}
 sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 
 settings_model = { path = "../../common/settings_model/", develop = true }
-experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
-sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
-sequence-runtime = {path = "../../common/sequence/sequence.runtime", develop = true}
 concurrent-updater = {path = "../../common/concurrent_updater", develop = true}
-experiment-control-manager = {path = "../../experiment_control/experiment_control.manager", develop = true}
-device-config = {path = "../../devices/device/device.configuration", develop = true}
-sequencer-configuration = {path = "../../devices/sequencer/sequencer.configuration", develop = true}
-device-name = {path = "../../devices/device/device.name", develop = true}
 device-configuration-editor = {path = "../../devices/device/device.configuration_editor", develop = true}
 
 elliptec-ell14-configuration-editor = {path = "../../devices/elliptec_ell14/elliptec_ell14.configuration_editor", develop = true}
@@ -37,12 +35,6 @@ ni6738-analog-card-configuration-editor = {path = "../../devices/ni6738_analog_c
 tweezer-arranger-configuration-editor = {path = "../../devices/tweezer_arranger/tweezer_arranger.configuration_editor", develop = true}
 orca-quest-configuration-editor = {path = "../../devices/cameras/orca_quest/orca_quest.configuration_editor", develop = true}
 swabian-pulse-streamer-configuration-editor = {path = "../../devices/swabian_pulse_streamer/swabian_pulse_streamer.configuration_editor", develop = true}
-
-lane-configuration = {path = "../../common/lane/lane.configuration", develop = true}
-digital-lane-configuration = {path = "../../devices/sequencer/digital_lane/digital_lane.configuration", develop = true}
-analog-lane-configuration = {path = "../../devices/sequencer/analog_lane/analog_lane.configuration", develop = true}
-camera-lane-configuration = {path = "../../devices/cameras/camera/camera_lane/camera_lane.configuration", develop = true}
-atom-detector-lane-configuration = {path = "../../devices/atom_detector/atom_detector_lane/atom_detector_lane.configuration", develop = true}
 
 digital-lane-model = {path = "../../devices/sequencer/digital_lane/digital_lane.model", develop = true}
 analog-lane-model = {path = "../../devices/sequencer/analog_lane/analog_lane.model", develop = true}

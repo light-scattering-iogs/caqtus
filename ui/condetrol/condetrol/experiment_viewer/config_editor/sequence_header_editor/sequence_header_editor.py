@@ -6,10 +6,9 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QTreeView, QWidget, QAbstractItemView, QMenu
 
-from experiment.configuration import ExperimentConfig
-from expression import Expression
-from sequence.configuration import Step, VariableDeclaration, ExecuteShot
-from variable.name import DottedVariableName
+from core.configuration import Expression, DottedVariableName
+from core.configuration.sequence import Step, VariableDeclaration, ExecuteShot
+from core.session import ExperimentConfig
 from yaml_clipboard_mixin import YAMLClipboardMixin
 from ..config_settings_editor import ConfigSettingsEditor
 from ...steps_editor import StepDelegate, StepsModel
@@ -83,7 +82,11 @@ class SequenceHeaderEditor(QTreeView, YAMLClipboardMixin, ConfigSettingsEditor):
         add_menu.addAction(create_variable_action)
         create_variable_action.triggered.connect(
             lambda: self.header_model.insert_step(
-                VariableDeclaration(name=DottedVariableName("new_variable"), expression=Expression(body="...")), index
+                VariableDeclaration(
+                    name=DottedVariableName("new_variable"),
+                    expression=Expression(body="..."),
+                ),
+                index,
             )
         )
         menu.exec(self.mapToGlobal(position))

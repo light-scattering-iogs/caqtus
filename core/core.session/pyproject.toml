@@ -20,6 +20,7 @@ experiment-configuration = {path = "../../common/experiment/experiment.configura
 sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
 variable-name = {path = "../../common/variable/variable.name", develop = true}
 returns = "^0.22.0"
+core-configuration = {path = "../core.configuration", develop = true}
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.0.0"

@@ -1,3 +1,4 @@
+from sequence.configuration import LaneGroup, LaneReference
 from sequence.configuration import (
     StepName,
     ShotConfiguration,
@@ -9,6 +10,7 @@ from sequence.configuration import (
     VariableDeclaration,
     ExecuteShot,
 )
+from sequence.configuration.shot import LaneGroupRoot
 
 __all__ = [
     "StepName",
@@ -20,4 +22,7 @@ __all__ = [
     "LinspaceLoop",
     "VariableDeclaration",
     "ExecuteShot",
+    "LaneGroup",
+    "LaneReference",
+    "LaneGroupRoot",
 ]

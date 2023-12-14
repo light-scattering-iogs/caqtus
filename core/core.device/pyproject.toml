@@ -8,6 +8,7 @@ packages = [{include = "core"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
+
 device-name = {path = "../../devices/device/device.name", develop = true}
 camera-configuration = {path = "../../devices/cameras/camera/camera.configuration", develop = true}
 device-runtime = {path = "../../devices/device/device.runtime", develop = true}
@@ -19,6 +20,7 @@ sequencer-configuration = {path = "../../devices/sequencer/sequencer.configurati
 sequencer-runtime = {path = "../../devices/sequencer/sequencer.runtime", develop = true}
 tweezer-arranger-configuration = {path = "../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
 tweezer-arranger-runtime = {path = "../../devices/tweezer_arranger/tweezer_arranger.runtime", develop = true}
+device-config = {path = "../../devices/device/device.configuration", develop = true}
 
 
 [build-system]
