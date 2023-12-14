@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from experiment.configuration import ExperimentConfig
-from experiment.session import ExperimentSessionMaker
+from core.session import ExperimentSessionMaker
 from experiment_control.manager import ExperimentManager
 from sequence.runtime import Sequence, State
 from sequence_hierarchy import EditableSequenceHierarchyModel, SequenceHierarchyDelegate

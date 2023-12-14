@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "core-device"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "core"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+device-name = {path = "../../devices/device/device.name", develop = true}
+camera-configuration = {path = "../../devices/cameras/camera/camera.configuration", develop = true}
+device-runtime = {path = "../../devices/device/device.runtime", develop = true}
+device-server-name = {path = "../../devices/remote_device/device_server/device_server.name", develop = true}
+remote-device-client = {path = "../../devices/remote_device/remote_device_client", develop = true}
+experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
+camera-runtime = {path = "../../devices/cameras/camera/camera.runtime", develop = true}
+sequencer-configuration = {path = "../../devices/sequencer/sequencer.configuration", develop = true}
+sequencer-runtime = {path = "../../devices/sequencer/sequencer.runtime", develop = true}
+tweezer-arranger-configuration = {path = "../../devices/tweezer_arranger/tweezer_arranger.configuration", develop = true}
+tweezer-arranger-runtime = {path = "../../devices/tweezer_arranger/tweezer_arranger.runtime", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
