@@ -40,6 +40,17 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self._stats_updater.start()
         self.destroyed.connect(self.on_destroy)
 
+    def refresh(self):
+        self.beginResetModel()
+        with self._session as session:
+            self._root = _SequenceHierarchyItem(
+                SequencePath.root(),
+                children=_build_children_items(SequencePath.root(), session),
+                row=0,
+                is_sequence=False,
+            )
+        self.endResetModel()
+
     def on_destroy(self):
         self._stats_updater.stop()
 
