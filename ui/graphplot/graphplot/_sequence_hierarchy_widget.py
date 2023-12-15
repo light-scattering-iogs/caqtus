@@ -1,3 +1,6 @@
+from typing import Optional
+
+from PyQt6 import QtGui
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt, QModelIndex
 from PyQt6.QtWidgets import QTreeView
 
@@ -33,3 +36,9 @@ class SequenceHierarchyWidget(QTreeView):
                 sequence = Sequence(path)
                 print(sequence)
                 self.sequence_double_clicked.emit(sequence)  # type: ignore
+
+    def keyPressEvent(self, event: Optional[QtGui.QKeyEvent]) -> None:
+        if event is not None and event.key() == Qt.Key.Key_F5:
+            self._sequence_hierarchy_model.refresh()
+
+
