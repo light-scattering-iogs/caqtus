@@ -16,7 +16,7 @@ from device.runtime import RuntimeDevice
 from image_types import ImageLabel, Image
 from sequencer.runtime import Sequencer
 from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
-from util import DurationTimer, attrs, DurationTimerLog
+from util import DurationTimer, attrs, DurationTimerLog, serialization
 from util.concurrent import TaskGroup
 from ..compute_device_parameters.image_analysis import (
     FromImageToDetector,
@@ -236,19 +236,22 @@ class ShotRunner(contextlib.AbstractContextManager):
                 for detector, imaging_config in self._image_flow[
                     (camera_name, picture_name)
                 ]:
-                    atoms = self._devices[detector].are_atoms_present(
+                    image_analysis_result = self._devices[detector].analyze_image(
                         picture, imaging_config
                     )
                     if detector not in result:
                         result[detector] = {}
-                    result[detector][picture_name] = atoms
                     if (detector, picture_name) in self._rearrange_flow:
                         tweezer_arranger, step = self._rearrange_flow[
                             (detector, picture_name)
                         ]
                         self._tweezer_arrangers[tweezer_arranger].prepare_rearrangement(
-                            step=step, atom_present=atoms
+                            step=step,
+                            atom_present=image_analysis_result.atoms_presences,
                         )
+                    result[detector][picture_name] = serialization.unstructure(
+                        image_analysis_result
+                    )
         camera.stop_acquisition()
         logger.debug(f"Stopped acquisition of camera '{camera.get_name()}'")
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
@@ -10,6 +12,7 @@ from atom_detector.configuration import (
 from device.runtime import RuntimeDevice
 from image_types import Image
 from single_atom_detector import SingleAtomDetector
+from util import attrs
 
 
 @define(slots=False)
@@ -70,6 +73,7 @@ class AtomDetector(RuntimeDevice):
 
         Args:
             image: The image to analyze.
+            imaging_config: The imaging configuration to use to detect the atoms.
 
         Returns:
             A dictionary of signals for each atom label.
@@ -81,6 +85,25 @@ class AtomDetector(RuntimeDevice):
             atom_label: single_atom_detector.compute_signal(image)
             for atom_label, single_atom_detector in single_atom_detectors.items()
         }
+
+    def analyze_image(
+        self, image: np.ndarray, imaging_config: ImagingConfigurationName
+    ) -> AtomAnalysisResult:
+        single_atom_detectors = self.imaging_configurations[imaging_config]
+
+        fluorescence_signals = {
+            atom_label: single_atom_detector.compute_signal(image)
+            for atom_label, single_atom_detector in single_atom_detectors.items()
+        }
+        atom_presences = {
+            atom_label: single_atom_detector.is_atom_present(image)
+            for atom_label, single_atom_detector in single_atom_detectors.items()
+        }
+        return AtomAnalysisResult(
+            imaging_config=imaging_config,
+            signals=fluorescence_signals,
+            atoms_presences=atom_presences,
+        )
 
     def get_traps_labels(
         self, imaging_configuration: ImagingConfigurationName
@@ -97,4 +120,20 @@ class AtomDetector(RuntimeDevice):
             "get_traps_labels",
             "compute_signals",
             "are_atoms_present",
+            "analyze_image",
         )
+
+
+@attrs.frozen
+class AtomAnalysisResult:
+    """Contains information obtained when looking for the presence of atoms in an image.
+
+    Fields:
+        imaging_config: The name of the imaging configuration that was used to analyze the image.
+        signals: A dictionary of fluorescence signals for each atom label.
+        atoms_presences: A dictionary of booleans indicating whether atoms are present in the image for each atom label.
+    """
+
+    imaging_config: ImagingConfigurationName
+    signals: dict[AtomLabel, float]
+    atoms_presences: dict[AtomLabel, bool]
