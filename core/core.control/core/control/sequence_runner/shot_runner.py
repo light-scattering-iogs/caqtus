@@ -239,8 +239,6 @@ class ShotRunner(contextlib.AbstractContextManager):
                     image_analysis_result = self._devices[detector].analyze_image(
                         picture, imaging_config
                     )
-                    if detector not in result:
-                        result[detector] = {}
                     if (detector, picture_name) in self._rearrange_flow:
                         tweezer_arranger, step = self._rearrange_flow[
                             (detector, picture_name)
@@ -249,6 +247,8 @@ class ShotRunner(contextlib.AbstractContextManager):
                             step=step,
                             atom_present=image_analysis_result.atoms_presences,
                         )
+                    if detector not in result:
+                        result[detector] = {}
                     result[detector][picture_name] = serialization.unstructure(
                         image_analysis_result
                     )

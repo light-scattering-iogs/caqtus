@@ -101,8 +101,8 @@ class AtomDetector(RuntimeDevice):
         }
         return AtomAnalysisResult(
             imaging_config=imaging_config,
-            signals=fluorescence_signals,
-            atoms_presences=atom_presences,
+            fluorescence_signals=fluorescence_signals,
+            atom_presences=atom_presences,
         )
 
     def get_traps_labels(
