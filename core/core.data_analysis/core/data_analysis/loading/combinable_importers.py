@@ -15,6 +15,12 @@ class CombinableLoader(abc.ABC):
         else:
             return NotImplemented
 
+    def __mul__(self, other):
+        if isinstance(other, CombinableLoader):
+            return CrossProductLoader(self, other)
+        else:
+            return NotImplemented
+
 
 class HorizontalConcatenateLoader(CombinableLoader):
     def __init__(self, *loaders: CombinableLoader):
@@ -29,3 +35,12 @@ class HorizontalConcatenateLoader(CombinableLoader):
         return polars.concat(
             [loader(shot, session) for loader in self.loaders], how="horizontal"
         )
+
+
+class CrossProductLoader(CombinableLoader):
+    def __init__(self, first: CombinableLoader, second: CombinableLoader):
+        self.first = first
+        self.second = second
+
+    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
+        return self.first(shot, session).join(self.second(shot, session), how="cross")

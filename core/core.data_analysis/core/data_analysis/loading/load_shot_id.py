@@ -4,7 +4,7 @@ from core.session import ExperimentSession, Shot
 from .combinable_importers import CombinableLoader
 
 
-class ShotIdLoader(CombinableLoader):
+class LoadShotId(CombinableLoader):
     """Loads the id of a shot.
 
     When it is evaluated on a shot, it returns a polars dataframe with a single row and three

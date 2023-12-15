@@ -7,7 +7,7 @@ from core.types import is_parameter, is_analog_value, is_quantity
 from .combinable_importers import CombinableLoader
 
 
-class ShotParametersLoader(CombinableLoader):
+class LoadShotParameters(CombinableLoader):
     """Loads the parameters of a shot.
 
     When it is evaluated on a shot, it returns a polars dataframe with a single row and with several

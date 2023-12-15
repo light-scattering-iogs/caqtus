@@ -40,7 +40,6 @@ class ROI(ABC):
 
         raise NotImplementedError
 
-    @property
     @abstractmethod
     def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
         """Return the indices of the pixels in the original image that are part of the region of interest."""
