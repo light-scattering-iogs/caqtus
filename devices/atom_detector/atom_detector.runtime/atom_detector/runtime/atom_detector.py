@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import numpy as np
-from attrs import define, field
-from attrs.setters import frozen
-
 from atom_detector.configuration import (
     AtomLabel,
     ImagingConfigurationName,
     ImagingConfiguration,
 )
+from attrs import define, field
+from attrs.setters import frozen
 from device.runtime import RuntimeDevice
 from image_types import Image
 from single_atom_detector import SingleAtomDetector
+
 from util import attrs
 
 
@@ -135,5 +135,5 @@ class AtomAnalysisResult:
     """
 
     imaging_config: ImagingConfigurationName
-    signals: dict[AtomLabel, float]
-    atoms_presences: dict[AtomLabel, bool]
+    fluorescence_signals: dict[AtomLabel, float]
+    atom_presences: dict[AtomLabel, bool]
