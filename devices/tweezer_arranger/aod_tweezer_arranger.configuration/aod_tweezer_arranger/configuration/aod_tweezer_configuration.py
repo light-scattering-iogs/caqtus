@@ -23,7 +23,7 @@ class AODTweezerConfiguration(TweezerConfiguration2D):
     Instances of this class are frozen and their attributes can't be changed once they are instantiated.
     If you want to create a copy of an instance with only some fields changed, use attrs.evolve.
 
-    Fields:
+    Attributes:
         frequencies_x: The frequencies of each tone in Hz.
         phases_x: The phases of each tone in radian.
         amplitudes_x: The amplitudes of each tone. They have no dimension.
@@ -34,7 +34,7 @@ class AODTweezerConfiguration(TweezerConfiguration2D):
         scale_y: The value to multiply the y-signal by to get the voltage to send to the AWG. Must be in V.
         sampling_rate: The sampling rate of the AWG to generate the signal, in Hz.
         number_samples: The number of samples of the waveform. To generate a signal for longer times than
-        number_samples / sampling_rate, the waveform is repeated.
+            `number_samples / sampling_rate`, the waveform is repeated.
     """
 
     frequencies_x: tuple[float, ...] = attrs.field(converter=to_tuple_of_float)
@@ -118,8 +118,8 @@ class AODTweezerConfiguration(TweezerConfiguration2D):
 
         It is recommended to use this method to create a new instance of this class.
         It will run the following checks to ensure that the parameters passed are consistent:
-            - ensure that the signals will never overflow above 1 or under -1.
-            - ensure that the frequencies are multiple of the signal frequency sampling_rate / number_samples.
+        - ensure that the signals will never overflow above 1 or under -1.
+        - ensure that the frequencies are multiple of the signal frequency sampling_rate / number_samples.
 
         The only reason to call the class constructor directly is if you know that the value you are passing are
         valid and the checks takes too long to run.
@@ -171,38 +171,38 @@ class AODTweezerConfiguration(TweezerConfiguration2D):
         return tweezer_configuration
 
     @frequencies_x.validator  # type: ignore
-    def validate_frequencies_x(self, _, frequencies_x):
+    def _validate_frequencies_x(self, _, frequencies_x):
         if not all(f >= 0 for f in frequencies_x):
             raise ValueError("Frequencies must be positive.")
 
     @frequencies_y.validator  # type: ignore
-    def validate_frequencies_y(self, _, frequencies_y):
+    def _validate_frequencies_y(self, _, frequencies_y):
         if not all(f >= 0 for f in frequencies_y):
             raise ValueError("Frequencies must be positive.")
 
     @phases_x.validator  # type: ignore
-    def validate_phases_x(self, _, phases_x):
+    def _validate_phases_x(self, _, phases_x):
         if not len(phases_x) == len(self.frequencies_x):
             raise ValueError(
                 "The number of phases must be equal to the number of frequencies."
             )
 
     @phases_y.validator  # type: ignore
-    def validate_phases_y(self, _, phases_y):
+    def _validate_phases_y(self, _, phases_y):
         if not len(phases_y) == len(self.frequencies_y):
             raise ValueError(
                 "The number of phases must be equal to the number of frequencies."
             )
 
     @amplitudes_x.validator  # type: ignore
-    def validate_amplitude_x(self, _, amplitude_x):
+    def _validate_amplitude_x(self, _, amplitude_x):
         if not len(amplitude_x) == len(self.frequencies_x):
             raise ValueError(
                 "The number of amplitudes must be equal to the number of frequencies."
             )
 
     @amplitudes_y.validator  # type: ignore
-    def validate_amplitude_y(self, _, amplitude_y):
+    def _validate_amplitude_y(self, _, amplitude_y):
         if not len(amplitude_y) == len(self.frequencies_y):
             raise ValueError(
                 "The number of amplitudes must be equal to the number of frequencies."
