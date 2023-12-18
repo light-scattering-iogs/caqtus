@@ -13,7 +13,7 @@ from attrs.validators import instance_of
 from camera.runtime import Camera, CameraTimeoutError
 from util import log_exception
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
-from .dcamapi4 import DCAM_IDPROP, DCAMPROP
+from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -23,7 +23,7 @@ if Dcamapi.init():
 else:
     # If this error occurs, check that the dcam-api from hamamatsu is installed
     # https://dcam-api.com/
-    raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr()}")
+    raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr().name}")
 
 
 @define(slots=False)
@@ -52,6 +52,9 @@ class OrcaQuestCamera(Camera):
     def exposed_remote_methods(cls) -> tuple[str, ...]:
         return super().exposed_remote_methods() + ("list_properties",)
 
+    def _read_last_error(self) -> str:
+        return DCAMERR(self._camera.lasterr()).name
+
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
@@ -65,14 +68,14 @@ class OrcaQuestCamera(Camera):
 
         if not self._camera.dev_open():
             raise RuntimeError(
-                f"Failed to open camera {self.name}: {str(self._camera.lasterr())}"
+                f"Failed to open camera {self.name}: {self._read_last_error()}"
             )
         self._add_closing_callback(self._camera.dev_close)
         logger.info(f"{self.name}: successfully opened camera {self.camera_number}")
 
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.OFF):
             raise RuntimeError(
-                f"can't set subarray mode off: {str(self._camera.lasterr())}"
+                f"can't set subarray mode off: {self._read_last_error()}"
             )
 
         properties = {
@@ -81,7 +84,7 @@ class OrcaQuestCamera(Camera):
             DCAM_IDPROP.SUBARRAYVPOS: self.roi.y,
             DCAM_IDPROP.SUBARRAYVSIZE: self.roi.height,
             DCAM_IDPROP.SENSORMODE: DCAMPROP.SENSORMODE.AREA,
-            DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.GLOBALRESET,
+            DCAM_IDPROP.TRIGGER_GLOBALEXPOSURE: DCAMPROP.TRIGGER_GLOBALEXPOSURE.DELAYED,
         }
 
         if self.external_trigger:
@@ -96,19 +99,19 @@ class OrcaQuestCamera(Camera):
                 raise RuntimeError(
                     f"Failed to set property {str(property_id)} to"
                     f" {str(property_value)} for {self.name}:"
-                    f" {str(self._camera.lasterr())}"
+                    f" {self._read_last_error()}"
                 )
 
-            self._camera.lasterr()
+            self._read_last_error()
 
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
             raise RuntimeError(
-                f"can't set subarray mode on: {str(self._camera.lasterr())}"
+                f"can't set subarray mode on: {self._read_last_error()}"
             )
 
         if not self._camera.buf_alloc(self.number_pictures_to_acquire):
             raise RuntimeError(
-                f"Failed to allocate buffer for images: {str(self._camera.lasterr())}"
+                f"Failed to allocate buffer for images: {self._read_last_error()}"
             )
         self._add_closing_callback(self._camera.buf_release)
         logger.debug(f"{self.name}: buffer successfully allocated")
@@ -131,12 +134,12 @@ class OrcaQuestCamera(Camera):
             if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
                 raise RuntimeError(
                     f"Can't set exposure of {self.name} to {new_exposure}:"
-                    f" {str(self._camera.lasterr())}"
+                    f" {self._read_last_error()}"
                 )
             self._current_exposure = new_exposure
         if not self._camera.cap_start(bSequence=True):
             raise RuntimeError(
-                f"Can't start acquisition on {self.name}: {str(self._camera.lasterr())}"
+                f"Can't start acquisition on {self.name}: {self._read_last_error()}"
             )
 
         @log_exception(logger)
@@ -149,7 +152,7 @@ class OrcaQuestCamera(Camera):
                         ):
                             raise RuntimeError(
                                 f"Can't set exposure of {self.name} to {exposure}:"
-                                f" {str(self._camera.lasterr())}"
+                                f" {self._read_last_error()}"
                             )
                         self._current_exposure = exposure
                     self._acquire_picture(picture_number, self.timeout)
