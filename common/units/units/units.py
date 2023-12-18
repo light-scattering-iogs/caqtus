@@ -40,6 +40,8 @@ CURRENT_UNITS = {"A", "mA"}
 
 VOLTAGE_UNITS = {"V", "mV"}
 
+DISTANCE_UNITS = {"m", "mm", "µm", "um", "nm"}
+
 UNITS = (
     TIME_UNITS
     | FREQUENCY_UNITS
@@ -47,6 +49,7 @@ UNITS = (
     | DIMENSIONLESS_UNITS
     | CURRENT_UNITS
     | VOLTAGE_UNITS
+    | DISTANCE_UNITS
 )
 
 
