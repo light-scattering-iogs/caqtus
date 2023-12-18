@@ -245,7 +245,7 @@ class ShotRunner(contextlib.AbstractContextManager):
                         ]
                         self._tweezer_arrangers[tweezer_arranger].prepare_rearrangement(
                             step=step,
-                            atom_present=image_analysis_result.atoms_presences,
+                            atom_present=image_analysis_result.atom_presences,
                         )
                     if detector not in result:
                         result[detector] = {}
