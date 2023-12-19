@@ -3,6 +3,7 @@ import math
 import threading
 from collections.abc import Sequence
 from contextlib import ExitStack
+from pathlib import Path
 from typing import (
     NewType,
     SupportsFloat,
@@ -14,7 +15,6 @@ from typing import (
 import numpy as np
 from cuda import nvrtc, cuda, cudart
 
-from .trap_signal_cuda import get_traps_cuda_program
 from .with_lock import with_lock
 
 logger = logging.getLogger(__name__)
@@ -24,6 +24,13 @@ NumberTones = NewType("NumberTones", int)
 NumberSamples = NewType("NumberSamples", int)
 
 NUMBER_THREADS_PER_BLOCK = 1024
+
+
+# Warning: the values of the move codes here must be kept in sync with the values in the function phase_ramp in the
+# cuda file trap_signal_cuda.cu
+MOVE_CODES = {"sin": 0, "minimal_jolt": 1, "throw": 2}
+
+CUDA_FILE = Path(__file__).parent / "trap_signal_cuda.cu"
 
 AWGSignalArray = np.ndarray[NumberSamples, np.dtype[np.int16]]
 
@@ -103,7 +110,8 @@ class SignalGenerator:
 
     @with_lock
     def _initialize(self):
-        source = get_traps_cuda_program(self._max_number_tones)
+        with open(CUDA_FILE) as file:
+            source = file.read()
         program = nvrtcCreateProgram(
             str.encode(source), b"generate_signal.cu", 0, [], []
         )
@@ -243,7 +251,7 @@ class SignalGenerator:
         number_samples: NumberSamples,
         previous_step_stop: int,
         next_step_start: int,
-        move_type: Literal["sin", "throw"],
+        move_type: Literal["sin", "minimal_jolt", "throw"],
     ) -> AWGSignalArray:
         number_tones = len(initial_amplitudes)
         if (
@@ -291,7 +299,7 @@ class SignalGenerator:
                 self._final_phases_gpu,
                 np.array(final_phases, dtype=np.float32),
             )
-            move_for_c = 0 if move_type == "sin" else 1
+            move_code = MOVE_CODES[move_type]
             arguments = [
                 np.array([int(output_gpu)], dtype=np.uint64),
                 np.array([number_samples], dtype=np.uint32),
@@ -299,7 +307,7 @@ class SignalGenerator:
                 np.array([self._time_step], dtype=np.float32),
                 np.array([previous_step_stop], dtype=np.uint32),
                 np.array([next_step_start], dtype=np.uint32),
-                np.array([move_for_c], dtype=np.uint32),
+                np.array([move_code], dtype=np.uint32),
             ]
             args = np.array([arg.ctypes.data for arg in arguments], dtype=np.uint64)
             number_blocks = math.ceil(number_samples / NUMBER_THREADS_PER_BLOCK)
