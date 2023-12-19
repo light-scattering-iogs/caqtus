@@ -4,6 +4,7 @@ from typing import Self, Literal
 from lane.configuration import Lane
 from settings_model import YAMLSerializable
 from tweezer_arranger.configuration_name import TweezerConfigurationName
+
 from util import attrs
 
 
@@ -52,6 +53,15 @@ class ThrowMove(MoveType):
 
 
 YAMLSerializable.register_attrs_class(ThrowMove)
+
+
+@attrs.define
+class MinimalJoltMove(MoveType):
+    def __str__(self):
+        return "minimal_jolt"
+
+
+YAMLSerializable.register_attrs_class(MinimalJoltMove)
 
 
 @attrs.define

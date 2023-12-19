@@ -3,13 +3,22 @@ import math
 from typing import Sequence, Mapping, Literal, TypeVar, Iterable, Optional
 
 import numpy as np
+from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from attrs import define, field, frozen
 from attrs.setters import frozen as frozen_setter
 from attrs.validators import instance_of, deep_mapping, deep_iterable
-
-from aod_tweezer_arranger.configuration import AODTweezerConfiguration
 from device.name import DeviceName
 from device.runtime import RuntimeDevice
+from tweezer_arranger.configuration import (
+    HoldTweezers,
+    MoveTweezers,
+    RearrangeTweezers,
+    ArrangerInstruction,
+)
+from tweezer_arranger.configuration import (
+    TweezerConfigurationName,
+)
+
 from spectum_awg_m4i66xx_x8.configuration import (
     ChannelSettings,
 )
@@ -19,15 +28,6 @@ from spectum_awg_m4i66xx_x8.runtime import (
     StepName,
     StepConfiguration,
     SegmentData,
-)
-from tweezer_arranger.configuration import (
-    HoldTweezers,
-    MoveTweezers,
-    RearrangeTweezers,
-    ArrangerInstruction,
-)
-from tweezer_arranger.configuration import (
-    TweezerConfigurationName,
 )
 from tweezer_arranger.runtime import (
     TweezerArranger,
@@ -440,7 +440,7 @@ class AODTweezerArranger(RuntimeDevice, TweezerArranger[AODTweezerConfiguration]
             moves = compute_moves_1d(
                 atoms_before,
                 final_config.number_tweezers_along_x,
-                max_number_atoms_to_keep=20,
+                max_number_atoms_to_keep=None,
                 shift_towards="low",
             )
 
