@@ -32,13 +32,14 @@ class ROI(ABC):
         if not all(x > 0 for x in value):
             raise ValueError("original_image_size must be a tuple of positive integers")
 
-    @abstractmethod
     def get_mask(self) -> np.ndarray:
         """A boolean array with the same shape as the original image.
 
         True values indicate that the pixel is part of the region of interest."""
 
-        raise NotImplementedError
+        mask = np.full(self.original_image_size, False)
+        mask[*self.get_indices()] = True
+        return mask
 
     @abstractmethod
     def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
