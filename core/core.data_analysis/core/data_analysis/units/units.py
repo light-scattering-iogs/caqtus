@@ -6,7 +6,6 @@ to add or remove units from series.
 from typing import Optional, Mapping
 
 import polars
-
 from core.types.units import Unit, Quantity
 
 MAGNITUDE_FIELD = "magnitude"
@@ -119,18 +118,29 @@ def convert_to_unit(
         return add_unit(polars.Series(series.name, quantity.magnitude), target_unit)
 
 
-def magnitude_in_unit(series: polars.Series, unit: Unit) -> polars.Series:
+def magnitude_in_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
     """Return the magnitude of a series in a given unit.
 
     Args:
         series: the series to convert. It should have dtype QuantityDType.
-        unit: the unit to convert to.
+        unit: the unit to convert to. If None and the series has a not a quantity dtype, the series is returned
+            unchanged.
+
+    Raises:
+        ValueError: if the series has a quantity dtype and unit is None.
 
     Returns:
         A new series with the same name as the original series, with dtype Float64 and all magnitudes
         converted to the target unit.
     """
 
+    if unit is None:
+        if is_quantity_dtype(series.dtype):
+            raise ValueError(
+                f"Series {series.name} is expressed in unit {extract_unit(series)[1]} and target_unit is None"
+            )
+        else:
+            return series
     return (
         convert_to_unit(series, unit).struct.field(MAGNITUDE_FIELD).alias(series.name)
     )

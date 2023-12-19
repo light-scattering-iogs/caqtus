@@ -26,15 +26,6 @@ class ArbitraryROI(ROI):
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    def get_mask(self) -> np.ndarray:
-        """A boolean array with the same shape as the original image.
-
-        True values indicate that the pixel is part of the region of interest."""
-
-        mask = np.full(self.original_image_size, False)
-        mask[*self.get_indices()] = True
-        return mask
-
     def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
         return np.array(self.indices).T
 
