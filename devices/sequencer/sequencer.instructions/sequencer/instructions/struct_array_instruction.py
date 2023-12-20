@@ -108,6 +108,22 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         else:
             return NotImplemented
 
+    def __mul__(self, other):
+        if isinstance(other, int):
+            if other < 0:
+                raise ValueError("Repetitions must be a positive integer")
+            elif other == 0:
+                return self.empty_like(self)
+            elif other == 1:
+                return self
+            else:
+                return Repeat(other, self)
+        else:
+            return NotImplemented
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
 
 class Pattern(SequencerInstruction):
     __slots__ = ("_pattern",)
