@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import given, settings, Verbosity
 from hypothesis.strategies import composite, integers
 
 from sequencer.instructions.struct_array_instruction import Pattern, Concatenate
@@ -26,6 +26,26 @@ def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
 def test_slicing(args):
     instr, (start, stop) = args
     assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
+
+
+@composite
+def two_concatenations(draw) -> tuple[Concatenate, Concatenate]:
+    length = draw(integers(min_value=2, max_value=100))
+    instr1 = draw(generate_concatenate(length))
+    instr2 = draw(generate_concatenate(length))
+    return instr1, instr2
+
+
+@given(two_concatenations())
+def test_merge(args):
+    instr1, instr2 = args
+    merged = instr1.merge_channels(instr2)
+    assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
+    assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
+    assert merged.depth == 1
+    print(instr1)
+    print(instr2)
+    print(merged)
 
 
 def test_slicing_1():

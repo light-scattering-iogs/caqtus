@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import bisect
+from heapq import merge
 from typing import (
     NewType,
     TypeVar,
@@ -17,6 +18,8 @@ import numpy
 import numpy as np
 from numpy.lib.recfunctions import merge_arrays
 from numpy.typing import DTypeLike
+
+from util.itertools import pairwise
 
 Length = NewType("Length", int)
 Width = NewType("Width", int)
@@ -361,6 +364,27 @@ class Concatenate(SequencerInstruction[_T]):
         return Concatenate(
             *(instruction.get_channel(channel) for instruction in self._instructions)
         )
+
+    # noinspection PyProtectedMember
+    def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        match other:
+            case Pattern() as pattern:
+                return pattern.merge_channels(self)
+            case Concatenate() as concatenate:
+                new_bounds = merge(
+                    self._instruction_bounds, concatenate._instruction_bounds
+                )
+                result = self.empty_like(self._instructions[0]).merge_channels(
+                    concatenate.empty_like(concatenate._instructions[0])
+                )
+                for start, stop in pairwise(new_bounds):
+                    result += self[start:stop].merge_channels(concatenate[start:stop])
+                return result
+
+            case _:
+                raise NotImplementedError
 
 
 class Repeat(SequencerInstruction[_T]):
