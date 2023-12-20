@@ -257,14 +257,6 @@ class Concatenate(SequencerInstruction[_T]):
         stop_step_index = (
             numpy.searchsorted(self._instruction_bounds, stop, side="left") - 1
         )
-        if start_step_index == stop_step_index:
-            instruction_start_index = self._instruction_bounds[start_step_index]
-            instruction_slice = slice(
-                start - instruction_start_index,
-                stop - instruction_start_index,
-                step,
-            )
-            return self._instructions[start_step_index][instruction_slice]
 
         result = self._instructions[0][0:0]
         for instruction_index in range(start_step_index, stop_step_index + 1):
