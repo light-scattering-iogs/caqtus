@@ -567,3 +567,12 @@ _T = TypeVar("_T")
 
 def first(iterable: Iterable[_T]) -> _T:
     return next(iter(iterable))
+
+
+def to_flat_dict(
+    instruction: SequencerInstruction,
+) -> dict[ChannelLabel, np.ndarray]:
+    """Return a dict containing the instruction for each channel."""
+
+    flattened = instruction.flatten()
+    return {label: pattern.values for label, pattern in flattened.values.items()}
