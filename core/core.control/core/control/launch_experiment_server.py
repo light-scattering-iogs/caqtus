@@ -17,8 +17,10 @@ queue_handler = QueueHandler(logs_queue)
 queue_handler.setLevel(logging.INFO)
 logging.getLogger().addHandler(queue_handler)
 
+MiB = 1024 * 1024
+
 file_handler = logging.handlers.RotatingFileHandler(
-    "experiment_server.log", maxBytes=1_000_000, backupCount=10, delay=True
+    "experiment_server.log", maxBytes=10 * MiB, backupCount=5, delay=True
 )
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(
