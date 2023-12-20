@@ -48,7 +48,8 @@ def draw_concatenation_and_repeat(
 
 @given(two_concatenations())
 def test_merge(args):
-    instr1, instr2 = args
+    instr1 = args[0].as_type(np.dtype([("f0", np.int64)]))
+    instr2 = args[1].as_type(np.dtype([("f1", np.int64)]))
     merged = instr1.merge_channels(instr2)
     assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
     assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
@@ -57,7 +58,8 @@ def test_merge(args):
 
 @given(draw_concatenation_and_repeat())
 def test_merge_2(args):
-    concatenation, repeat = args
+    concatenation = args[0].as_type(np.dtype([("f0", np.int64)]))
+    repeat = args[1].as_type(np.dtype([("f1", np.int64)]))
     merged = concatenation.merge_channels(repeat)
     assert merged.get_channel("f0").to_pattern() == concatenation.to_pattern()
     assert merged.get_channel("f1").to_pattern() == repeat.to_pattern()

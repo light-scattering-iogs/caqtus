@@ -207,6 +207,10 @@ class Pattern(SequencerInstruction[_T]):
     def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
+        if self.dtype.fields is None:
+            raise ValueError("Pattern must have at least one channel")
+        if other.dtype.fields is None:
+            raise ValueError("Pattern must have at least one channel")
         other_pattern = other.to_pattern()
         merged = merge_arrays(
             [self._pattern, other_pattern._pattern], flatten=True, fill_value=None
@@ -214,7 +218,10 @@ class Pattern(SequencerInstruction[_T]):
         return self._create_pattern_without_copy(merged)
 
     def get_channel(self, channel: str) -> SequencerInstruction:
-        return self._create_pattern_without_copy(self._pattern[channel])
+        channel_array = self._pattern[channel]
+        return self._create_pattern_without_copy(channel_array).as_type(
+            np.dtype([(channel, channel_array.dtype)])
+        )
 
 
 class Concatenate(SequencerInstruction[_T]):

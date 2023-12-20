@@ -1,3 +1,4 @@
+import numpy as np
 from hypothesis import given
 
 from sequencer.instructions.struct_array_instruction import Pattern
@@ -22,7 +23,8 @@ def draw_concatenation_and_pattern(draw, max_length: int):
 
 @given(draw_concatenation_and_pattern(max_length=100))
 def test_merge(args):
-    concatenation, pattern = args
+    concatenation = args[0].as_type(np.dtype([("f1", np.int64)]))
+    pattern = args[1].as_type(np.dtype([("f0", np.int64)]))
     merged = pattern.merge_channels(concatenation)
     assert merged.get_channel("f0").to_pattern() == pattern
     assert merged.get_channel("f1").to_pattern() == concatenation.to_pattern()
