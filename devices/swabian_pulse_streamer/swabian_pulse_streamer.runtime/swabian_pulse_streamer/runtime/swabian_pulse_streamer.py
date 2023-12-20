@@ -14,11 +14,11 @@ from pulsestreamer import (
 )
 
 from sequencer.instructions import (
-    SequencerInstruction,
+    SequencerInstructionOld,
     SequencerPattern,
     ChannelLabel,
-    Concatenate,
-    Repeat,
+    ConcatenateOld,
+    RepeatOld,
 )
 from sequencer.runtime import (
     Sequencer,
@@ -78,7 +78,9 @@ class SwabianPulseStreamer(Sequencer):
             raise ValueError("Only supports software trigger.")
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(
+        self, *_, sequence: SequencerInstructionOld, **kwargs
+    ) -> None:
         super().update_parameters(sequence=sequence, **kwargs)
         self._sequence = self._construct_pulse_streamer_sequence(sequence)
         last_values = sequence.get_last_values()
@@ -105,7 +107,7 @@ class SwabianPulseStreamer(Sequencer):
 
     @singledispatchmethod
     def _construct_pulse_streamer_sequence(
-        self, instruction: SequencerInstruction
+        self, instruction: SequencerInstructionOld
     ) -> PulseStreamerSequence:
         raise NotImplementedError(
             f"Not implemented for type of instruction {type(instruction)}."
@@ -121,7 +123,7 @@ class SwabianPulseStreamer(Sequencer):
         return sequence
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, concatenate: Concatenate) -> PulseStreamerSequence:
+    def _(self, concatenate: ConcatenateOld) -> PulseStreamerSequence:
         instructions = concatenate.instructions
         seq = self._construct_pulse_streamer_sequence(instructions[0])
         for instruction in instructions[1:]:
@@ -129,7 +131,7 @@ class SwabianPulseStreamer(Sequencer):
         return seq
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, repeat: Repeat) -> PulseStreamerSequence:
+    def _(self, repeat: RepeatOld) -> PulseStreamerSequence:
         if len(repeat.instruction) == 1:
             channel_values = repeat.instruction.flatten().get_first_values()
             seq = self._pulse_streamer.createSequence()

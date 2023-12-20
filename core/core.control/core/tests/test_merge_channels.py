@@ -5,7 +5,7 @@ from experiment_control.compute_device_parameters import (
     compile_lane,
 )
 from sequence.configuration import ShotConfiguration
-from sequencer.instructions import SequencerInstruction, ChannelLabel
+from sequencer.instructions import SequencerInstructionOld, ChannelLabel
 from variable.namespace import VariableNamespace
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def test_digital_merging(
         for label, lane in lanes.items()
     }
 
-    sequence = SequencerInstruction.from_channel_instruction(
+    sequence = SequencerInstructionOld.from_channel_instruction(
         ChannelLabel(0), channel_sequences.pop(ChannelLabel(0))
     )
     for label, channel_sequence in channel_sequences.items():
@@ -79,7 +79,7 @@ def test_analog_merging(
         for label, lane in lanes.items()
     }
 
-    sequence = SequencerInstruction.from_channel_instruction(
+    sequence = SequencerInstructionOld.from_channel_instruction(
         ChannelLabel(0), channel_sequences.pop(ChannelLabel(0))
     )
     for label, channel_sequence in channel_sequences.items():

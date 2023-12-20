@@ -19,7 +19,7 @@ ChannelLabel = NewType("ChannelLabel", int)
 
 
 @define(init=False, eq=False)
-class SequencerInstruction(
+class SequencerInstructionOld(
     Splittable["SequencerInstruction"],
     ABC,
 ):
@@ -60,13 +60,13 @@ class SequencerInstruction(
 
         raise NotImplementedError
 
-    def __add__(self, other) -> "SequencerInstruction":
-        if isinstance(other, SequencerInstruction):
+    def __add__(self, other) -> "SequencerInstructionOld":
+        if isinstance(other, SequencerInstructionOld):
             return self.join([self, other], self.channel_types)
         else:
             raise TypeError(f"Can't concatenate {type(self)} and {type(other)}.")
 
-    def __mul__(self, other: int) -> "SequencerInstruction":
+    def __mul__(self, other: int) -> "SequencerInstructionOld":
         multiplier = int(other)
         if multiplier < 0:
             raise ValueError("Multiplier must be positive integer.")
@@ -75,17 +75,17 @@ class SequencerInstruction(
         elif multiplier == 1:
             return self
         else:
-            return Repeat(self, multiplier)
+            return RepeatOld(self, multiplier)
 
-    def __rmul__(self, other) -> "SequencerInstruction":
+    def __rmul__(self, other) -> "SequencerInstructionOld":
         return self.__mul__(other)
 
     @classmethod
     def join(
         cls,
-        instructions: Iterable["SequencerInstruction"],
+        instructions: Iterable["SequencerInstructionOld"],
         channel_types: Mapping[ChannelLabel, ChannelType],
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         """Concatenate multiple instructions into a single instruction.
 
         This method removes empty instructions from the list and flattens nested concatenations.
@@ -94,9 +94,9 @@ class SequencerInstruction(
         instructions = [
             instruction for instruction in instructions if not instruction.is_empty()
         ]
-        flattened_instructions: list[SequencerInstruction] = []
+        flattened_instructions: list[SequencerInstructionOld] = []
         for instruction in instructions:
-            if isinstance(instruction, Concatenate):
+            if isinstance(instruction, ConcatenateOld):
                 flattened_instructions.extend(instruction.instructions)
             else:
                 flattened_instructions.append(instruction)
@@ -106,7 +106,7 @@ class SequencerInstruction(
         elif len(flattened_instructions) == 1:
             return flattened_instructions[0]
         else:
-            return Concatenate(flattened_instructions)
+            return ConcatenateOld(flattened_instructions)
 
     def is_empty(self) -> bool:
         return len(self) == 0
@@ -114,7 +114,7 @@ class SequencerInstruction(
     @classmethod
     def empty(
         cls, channel_types: Mapping[ChannelLabel, ChannelType]
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         """Return an empty instruction."""
 
         return SequencerPattern(
@@ -125,7 +125,7 @@ class SequencerInstruction(
         )
 
     @classmethod
-    def empty_like(cls, other: "SequencerInstruction") -> "SequencerInstruction":
+    def empty_like(cls, other: "SequencerInstructionOld") -> "SequencerInstructionOld":
         """Return an empty instruction with the same channel types as another instruction."""
 
         return cls.empty(other.channel_types)
@@ -133,7 +133,7 @@ class SequencerInstruction(
     @abstractmethod
     def add_channel_instruction(
         self, channel: ChannelLabel, instruction: ChannelInstruction
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         """Add an instruction for a single channel."""
 
         raise NotImplementedError
@@ -152,7 +152,7 @@ class SequencerInstruction(
     @classmethod
     def from_channel_instruction(
         cls, channel: ChannelLabel, instruction: ChannelInstruction
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         """Return an instruction that only contains a single channel instruction."""
 
         return _from_channel_instruction(instruction, channel)
@@ -167,36 +167,38 @@ class SequencerInstruction(
 @singledispatch
 def _from_channel_instruction(
     instruction: ChannelInstruction, channel: ChannelLabel
-) -> SequencerInstruction:
+) -> SequencerInstructionOld:
     """Return an instruction that only contains a single channel instruction."""
 
     raise NotImplementedError(f"Not implemented for {type(instruction)}.")
 
 
 @_from_channel_instruction.register
-def _(instruction: ChannelPattern, channel: ChannelLabel) -> SequencerInstruction:
+def _(instruction: ChannelPattern, channel: ChannelLabel) -> SequencerInstructionOld:
     return SequencerPattern({channel: instruction})
 
 
 @_from_channel_instruction.register
-def _(instruction: ChannelConcatenate, channel: ChannelLabel) -> SequencerInstruction:
+def _(
+    instruction: ChannelConcatenate, channel: ChannelLabel
+) -> SequencerInstructionOld:
     result = [
         _from_channel_instruction(channel_instruction, channel)
         for channel_instruction in instruction.instructions
     ]
-    return SequencerInstruction.join(result, {channel: instruction.dtype})
+    return SequencerInstructionOld.join(result, {channel: instruction.dtype})
 
 
 @_from_channel_instruction.register
-def _(instruction: ChannelRepeat, channel: ChannelLabel) -> SequencerInstruction:
-    return Repeat(
+def _(instruction: ChannelRepeat, channel: ChannelLabel) -> SequencerInstructionOld:
+    return RepeatOld(
         _from_channel_instruction(instruction.instruction, channel),
         instruction.number_repetitions,
     )
 
 
 @define(init=False, eq=False)
-class SequencerPattern(SequencerInstruction):
+class SequencerPattern(SequencerInstructionOld):
     """A sequence of output values for several channels."""
 
     _channel_values: dict[ChannelLabel, ChannelPattern]
@@ -259,7 +261,7 @@ class SequencerPattern(SequencerInstruction):
 
     def add_channel_instruction(
         self, channel: ChannelLabel, instruction: ChannelInstruction
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         self._check_can_add_channel(channel, instruction)
         flattened = instruction.flatten()
         result = self.values
@@ -290,19 +292,19 @@ class SequencerPattern(SequencerInstruction):
 
 
 @define(init=False, eq=False)
-class Concatenate(SequencerInstruction):
+class ConcatenateOld(SequencerInstructionOld):
     """A sequence of instructions to be executed consecutively.
 
     Attributes:
         instructions: The instructions to be executed
     """
 
-    _instructions: tuple[SequencerInstruction, ...]
+    _instructions: tuple[SequencerInstructionOld, ...]
     _instruction_starts: np.ndarray
 
     def __init__(
         self,
-        instructions: Iterable[SequencerInstruction],
+        instructions: Iterable[SequencerInstructionOld],
     ) -> None:
         self._instructions = tuple(
             instruction for instruction in instructions if not instruction.is_empty()
@@ -317,7 +319,7 @@ class Concatenate(SequencerInstruction):
         return hash(tuple(self._instructions))
 
     @property
-    def instructions(self) -> tuple[SequencerInstruction, ...]:
+    def instructions(self) -> tuple[SequencerInstructionOld, ...]:
         return self._instructions
 
     def __len__(self) -> int:
@@ -347,11 +349,11 @@ class Concatenate(SequencerInstruction):
             split_index - self._instruction_starts[instruction_index]
         )
 
-        before_instruction = SequencerInstruction.join(
+        before_instruction = SequencerInstructionOld.join(
             self.instructions[:instruction_index] + (before_part,),
             channel_types=self.channel_types,
         )
-        after_instruction = SequencerInstruction.join(
+        after_instruction = SequencerInstructionOld.join(
             (after_part,) + self.instructions[instruction_index + 1 :],
             channel_types=self.channel_types,
         )
@@ -382,7 +384,7 @@ class Concatenate(SequencerInstruction):
         return SequencerPattern(result)
 
     def __eq__(self, other):
-        if not isinstance(other, Concatenate):
+        if not isinstance(other, ConcatenateOld):
             return False
         return self._instructions == other._instructions
 
@@ -392,7 +394,7 @@ class Concatenate(SequencerInstruction):
 
     def add_channel_instruction(
         self, channel: ChannelLabel, channel_instruction: ChannelInstruction
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         self._check_can_add_channel(channel, channel_instruction)
 
         result = []
@@ -409,7 +411,7 @@ class Concatenate(SequencerInstruction):
 
 
 @define(init=False, eq=False)
-class Repeat(SequencerInstruction):
+class RepeatOld(SequencerInstructionOld):
     """Repeat a single instruction a given number of times.
 
     Attributes:
@@ -417,12 +419,12 @@ class Repeat(SequencerInstruction):
         number_repetitions: The number of times to repeat the instruction. Must be greater or equal to 2.
     """
 
-    _instruction: SequencerInstruction
+    _instruction: SequencerInstructionOld
     _number_repetitions: int
 
     def __init__(
         self,
-        instruction: SequencerInstruction,
+        instruction: SequencerInstructionOld,
         number_repetitions: int,
     ) -> None:
         self._instruction = instruction
@@ -434,7 +436,7 @@ class Repeat(SequencerInstruction):
         return hash((self._instruction, self._number_repetitions))
 
     @property
-    def instruction(self) -> SequencerInstruction:
+    def instruction(self) -> SequencerInstructionOld:
         return self._instruction
 
     def __getitem__(self, item):
@@ -471,7 +473,7 @@ class Repeat(SequencerInstruction):
 
         before_repetitions = split_index // instruction_length
         before_block = self.instruction * before_repetitions
-        before_instruction = SequencerInstruction.join(
+        before_instruction = SequencerInstructionOld.join(
             (before_block, before_part), channel_types=self.channel_types
         )
 
@@ -482,14 +484,14 @@ class Repeat(SequencerInstruction):
             after_repetitions = max(self.number_repetitions - before_repetitions - 1, 0)
 
         after_block = self.instruction * after_repetitions
-        after_instruction = SequencerInstruction.join(
+        after_instruction = SequencerInstructionOld.join(
             (after_part, after_block), channel_types=self.channel_types
         )
 
         return before_instruction, after_instruction
 
     def __eq__(self, other):
-        if not isinstance(other, Repeat):
+        if not isinstance(other, RepeatOld):
             return False
         return (
             self._instruction == other._instruction
@@ -501,7 +503,7 @@ class Repeat(SequencerInstruction):
         if multiplier == 0:
             return self.empty_like(self)
         else:
-            return Repeat(self.instruction, multiplier)
+            return RepeatOld(self.instruction, multiplier)
 
     @cached_property
     def channel_types(self) -> dict[ChannelLabel, ChannelType]:
@@ -509,7 +511,7 @@ class Repeat(SequencerInstruction):
 
     def add_channel_instruction(
         self, channel: ChannelLabel, instruction_to_add: ChannelInstruction
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         self._check_can_add_channel(channel, instruction_to_add)
 
         return self._add_channel_instruction(instruction_to_add, channel)
@@ -517,20 +519,20 @@ class Repeat(SequencerInstruction):
     @singledispatchmethod
     def _add_channel_instruction(
         self, instruction_to_add: ChannelInstruction, channel: ChannelLabel
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         raise NotImplementedError
 
     @_add_channel_instruction.register
     def _(
         self, instruction_to_add: ChannelPattern, channel: ChannelLabel
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         flattened = self.flatten()
         return flattened.add_channel_instruction(channel, instruction_to_add)
 
     @_add_channel_instruction.register
     def _(
         self, channel_instruction: ChannelConcatenate, channel: ChannelLabel
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         instruction = self
         result = []
         for part in channel_instruction.instructions:
@@ -541,7 +543,7 @@ class Repeat(SequencerInstruction):
     @_add_channel_instruction.register
     def _(
         self, instruction_to_add: ChannelRepeat, channel: ChannelLabel
-    ) -> "SequencerInstruction":
+    ) -> "SequencerInstructionOld":
         lcm = math.lcm(len(self.instruction), len(instruction_to_add.instruction))
 
         if lcm == len(self):
@@ -554,7 +556,7 @@ class Repeat(SequencerInstruction):
         macro_instruction = self_macro_instruction.add_channel_instruction(
             channel, channel_macro_instruction
         )
-        return Repeat(macro_instruction, len(self) // lcm)
+        return RepeatOld(macro_instruction, len(self) // lcm)
 
     def get_last_values(self) -> dict[ChannelLabel, ChannelType]:
         """Return the last value of each channel."""

@@ -12,11 +12,11 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 from sequencer.instructions import (
-    SequencerInstruction,
+    SequencerInstructionOld,
     SequencerPattern,
     ChannelLabel,
-    Concatenate,
-    Repeat,
+    ConcatenateOld,
+    RepeatOld,
 )
 
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
@@ -79,7 +79,9 @@ class NI6738AnalogCard(Sequencer):
             )
 
     @log_exception(logger)
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(
+        self, *_, sequence: SequencerInstructionOld, **kwargs
+    ) -> None:
         """Write a sequence of voltages to the analog card."""
 
         self._stop_task()
@@ -88,7 +90,7 @@ class NI6738AnalogCard(Sequencer):
 
         self._set_sequence_programmed()
 
-    def _program_sequence(self, sequence: SequencerInstruction) -> None:
+    def _program_sequence(self, sequence: SequencerInstructionOld) -> None:
         logger.debug("Programmed ni6738")
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
@@ -146,7 +148,7 @@ class NI6738AnalogCard(Sequencer):
 
     @singledispatchmethod
     def _values_from_instruction(
-        self, instruction: SequencerInstruction
+        self, instruction: SequencerInstructionOld
     ) -> list[np.ndarray]:
         raise NotImplementedError(f"Instruction {instruction} is not supported")
 
@@ -161,14 +163,14 @@ class NI6738AnalogCard(Sequencer):
         return [result]
 
     @_values_from_instruction.register
-    def _(self, concatenate: Concatenate) -> list[np.ndarray]:
+    def _(self, concatenate: ConcatenateOld) -> list[np.ndarray]:
         result = []
         for instruction in concatenate.instructions:
             result.extend(self._values_from_instruction(instruction))
         return result
 
     @_values_from_instruction.register
-    def _(self, repeat: Repeat) -> list[np.ndarray]:
+    def _(self, repeat: RepeatOld) -> list[np.ndarray]:
         if len(repeat.instruction) != 1:
             raise NotImplementedError(
                 "Only one instruction is supported in a repeat block at the moment"

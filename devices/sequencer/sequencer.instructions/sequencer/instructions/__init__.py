@@ -1,15 +1,15 @@
 from .instructions import (
-    SequencerInstruction,
+    SequencerInstructionOld,
     SequencerPattern,
-    Concatenate,
-    Repeat,
+    ConcatenateOld,
+    RepeatOld,
     ChannelLabel,
 )
 
 __all__ = [
-    "SequencerInstruction",
+    "SequencerInstructionOld",
     "SequencerPattern",
-    "Concatenate",
-    "Repeat",
+    "ConcatenateOld",
+    "RepeatOld",
     "ChannelLabel",
 ]

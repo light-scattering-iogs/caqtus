@@ -7,7 +7,11 @@ from experiment.configuration import ExperimentConfig
 from experiment_control.compute_device_parameters import compute_shot_parameters
 from sequence.configuration import SequenceConfig
 from sequencer.channel import ChannelPattern, Concatenate, Repeat
-from sequencer.instructions import SequencerInstruction, ChannelLabel, SequencerPattern
+from sequencer.instructions import (
+    SequencerInstructionOld,
+    ChannelLabel,
+    SequencerPattern,
+)
 from units import Quantity
 from variable.namespace import VariableNamespace
 
@@ -104,7 +108,7 @@ def test_compile_blink(
 
 @pytest.mark.skip
 def test_blink():
-    sequencer = SequencerInstruction.from_channel_instruction(
+    sequencer = SequencerInstructionOld.from_channel_instruction(
         ChannelLabel(0), ChannelPattern((True,)) * 166667
     )
 

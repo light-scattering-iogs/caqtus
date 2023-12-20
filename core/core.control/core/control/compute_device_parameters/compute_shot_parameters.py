@@ -31,10 +31,10 @@ from sequencer.configuration import (
 )
 from sequencer.instructions import (
     ChannelLabel,
-    SequencerInstruction,
+    SequencerInstructionOld,
     SequencerPattern,
-    Concatenate,
-    Repeat,
+    ConcatenateOld,
+    RepeatOld,
 )
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
@@ -109,7 +109,7 @@ class SequenceCompiler:
     def compile_sequencers_instructions(
         self, camera_instructions: Mapping[DeviceName, CameraInstruction]
     ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-        sequences = dict[DeviceName, SequencerInstruction]()
+        sequences = dict[DeviceName, SequencerInstructionOld]()
         for sequencer in get_sequencers_ordered_by_dependency():
             instructions = self.compile_sequencer_instructions(
                 self.sequencer_configs[sequencer],
@@ -131,7 +131,7 @@ class SequenceCompiler:
         self,
         sequencer_config: SequencerConfiguration,
         camera_instructions: Mapping[DeviceName, CameraInstruction],
-        sequences: Mapping[DeviceName, SequencerInstruction],
+        sequences: Mapping[DeviceName, SequencerInstructionOld],
     ) -> dict[ChannelLabel, ChannelInstruction]:
         instructions: dict[ChannelLabel, ChannelInstruction] = {}
 
@@ -212,7 +212,7 @@ class SequenceCompiler:
         channel: ChannelConfiguration,
         sequencer_config: SequencerConfiguration,
         camera_instructions: Mapping[DeviceName, CameraInstruction],
-        sequences: Mapping[DeviceName, SequencerInstruction],
+        sequences: Mapping[DeviceName, SequencerInstructionOld],
     ) -> ChannelInstruction:
         if channel.has_special_purpose():
             target = DeviceName(str(channel.description))
@@ -279,7 +279,7 @@ def round_to_ns(value: float) -> int:
 
 
 def compile_clock_instruction(
-    target_sequence: SequencerInstruction,
+    target_sequence: SequencerInstructionOld,
     target_time_step: int,
     base_time_step: int,
     sequence_length: int,
@@ -314,7 +314,7 @@ def compile_clock_instruction(
 
 @singledispatch
 def get_adaptive_clock(
-    target_sequence: SequencerInstruction, clock_pulse: ChannelInstruction
+    target_sequence: SequencerInstructionOld, clock_pulse: ChannelInstruction
 ) -> ChannelInstruction:
     raise NotImplementedError(f"Target sequence {target_sequence} not implemented")
 
@@ -328,7 +328,7 @@ def _(
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Concatenate, clock_pulse: ChannelInstruction
+    target_sequence: ConcatenateOld, clock_pulse: ChannelInstruction
 ) -> ChannelInstruction:
     return ChannelInstruction.join(
         (
@@ -340,7 +340,9 @@ def _(
 
 
 @get_adaptive_clock.register
-def _(target_sequence: Repeat, clock_pulse: ChannelInstruction) -> ChannelInstruction:
+def _(
+    target_sequence: RepeatOld, clock_pulse: ChannelInstruction
+) -> ChannelInstruction:
     if len(target_sequence.instruction) == 1:
         return clock_pulse + ChannelPattern([False]) * (
             (len(target_sequence) - 1) * len(clock_pulse)
@@ -374,9 +376,9 @@ def high_low_clicks(
 def convert_to_sequence(
     channel_instructions: dict[ChannelLabel, ChannelInstruction],
     sequencer_config: SequencerConfiguration,
-) -> SequencerInstruction:
+) -> SequencerInstructionOld:
     channel_label = ChannelLabel(0)
-    sequence = SequencerInstruction.from_channel_instruction(
+    sequence = SequencerInstructionOld.from_channel_instruction(
         channel_label, channel_instructions[channel_label]
     )
     for channel_index in range(1, sequencer_config.number_channels):

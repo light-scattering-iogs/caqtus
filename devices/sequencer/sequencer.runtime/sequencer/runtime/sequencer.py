@@ -7,7 +7,7 @@ from attr.validators import ge, instance_of
 
 from device.runtime import RuntimeDevice
 from sequencer.configuration.trigger import Trigger, SoftwareTrigger
-from sequencer.instructions import SequencerInstruction
+from sequencer.instructions import SequencerInstructionOld
 
 
 @define(slots=False)
@@ -30,7 +30,9 @@ class Sequencer(RuntimeDevice, ABC):
     _sequence_started: bool = field(default=False, init=False)
 
     @abstractmethod
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(
+        self, *_, sequence: SequencerInstructionOld, **kwargs
+    ) -> None:
         """Update the parameters of the sequencer.
 
         To be subclassed by the specific sequencer implementation. The base class implementation set

@@ -9,11 +9,11 @@ from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
 from sequencer.instructions import (
-    SequencerInstruction,
+    SequencerInstructionOld,
     SequencerPattern,
     ChannelLabel,
-    Repeat,
-    Concatenate,
+    RepeatOld,
+    ConcatenateOld,
 )
 from sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from util import log_exception
@@ -101,7 +101,7 @@ class SpincorePulseBlaster(Sequencer):
         spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
     @log_exception(logger)
-    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, /, sequence: SequencerInstructionOld, **kwargs) -> None:
         sequence_duration = len(sequence) * self.time_step * 1e-9
         logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
@@ -120,7 +120,7 @@ class SpincorePulseBlaster(Sequencer):
         self._set_sequence_programmed()
 
     @singledispatchmethod
-    def _program_instruction(self, instruction: SequencerInstruction) -> int:
+    def _program_instruction(self, instruction: SequencerInstructionOld) -> int:
         raise NotImplementedError(f"Not implemented for {type(instruction)}")
 
     @_program_instruction.register
@@ -176,7 +176,7 @@ class SpincorePulseBlaster(Sequencer):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, repeat: Repeat):
+    def _(self, repeat: RepeatOld):
         if len(repeat.instruction) == 1:
             channel_values = repeat.instruction.flatten().get_values_at(0)
             outputs = [
@@ -240,7 +240,7 @@ class SpincorePulseBlaster(Sequencer):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, concatenate: Concatenate):
+    def _(self, concatenate: ConcatenateOld):
         for instruction in concatenate.instructions:
             self._program_instruction(instruction)
 
