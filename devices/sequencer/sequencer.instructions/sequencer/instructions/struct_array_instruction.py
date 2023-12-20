@@ -13,6 +13,7 @@ from typing import (
 )
 
 import numpy
+import numpy as np
 from numpy.typing import DTypeLike
 
 Length = NewType("Length", int)
@@ -208,8 +209,11 @@ class Concatenate(SequencerInstruction[_T]):
                 )
         # self._instruction_bounds[i] is the first element index (included) the i-th instruction
         # self._instruction_bounds[i+1] is the last element index (excluded) of the i-th instruction
-        self._instruction_bounds = (0,) + tuple(
-            numpy.cumsum([len(instruction) for instruction in self._instructions])
+        self._instruction_bounds = np.concatenate(
+            [
+                np.array([0]),
+                numpy.cumsum([len(instruction) for instruction in self._instructions]),
+            ]
         )
 
     @property
@@ -247,8 +251,12 @@ class Concatenate(SequencerInstruction[_T]):
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
-        start_step_index = bisect.bisect_left(self._instruction_bounds, start)
-        stop_step_index = bisect.bisect_left(self._instruction_bounds, stop)
+        start_step_index = (
+            numpy.searchsorted(self._instruction_bounds, start, side="right") - 1
+        )
+        stop_step_index = (
+            numpy.searchsorted(self._instruction_bounds, stop, side="left") - 1
+        )
         if start_step_index == stop_step_index:
             instruction_start_index = self._instruction_bounds[start_step_index]
             instruction_slice = slice(
@@ -259,10 +267,12 @@ class Concatenate(SequencerInstruction[_T]):
             return self._instructions[start_step_index][instruction_slice]
 
         result = self._instructions[0][0:0]
-        for instruction_index in range(start_step_index, stop_step_index):
-            instruction_start_index = self._instruction_bounds[instruction_index]
+        for instruction_index in range(start_step_index, stop_step_index + 1):
+            instruction_start_index = int(self._instruction_bounds[instruction_index])
             instruction_slice_start = max(start, instruction_start_index)
-            instruction_stop_index = self._instruction_bounds[instruction_index + 1]
+            instruction_stop_index = int(
+                self._instruction_bounds[instruction_index + 1]
+            )
             instruction_slice_stop = min(stop, instruction_stop_index)
             instruction_slice = slice(
                 instruction_slice_start - instruction_start_index,
@@ -314,6 +324,13 @@ def _normalize_index(index: int, length: int) -> int:
     return normalized
 
 
+def _normalize_slice_index(index: int, length: int) -> int:
+    normalized = index if index >= 0 else length + index
+    if not 0 <= normalized <= length:
+        raise IndexError(f"Slice index {index} is out of bounds for length {length}")
+    return normalized
+
+
 def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
     step = slice_.step or 1
     if step == 0:
@@ -321,10 +338,10 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
     if slice_.start is None:
         start = 0 if step > 0 else length - 1
     else:
-        start = _normalize_index(slice_.start, length)
+        start = _normalize_slice_index(slice_.start, length)
     if slice_.stop is None:
         stop = length if step > 0 else -1
     else:
-        stop = _normalize_index(slice_.stop, length)
+        stop = _normalize_slice_index(slice_.stop, length)
 
     return start, stop, step
