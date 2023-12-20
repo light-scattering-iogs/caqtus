@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
+from core.configuration import VariableName, DottedVariableName
+from core.control.variable_namespace import VariableNamespace
 from experiment.configuration import ExperimentConfig
 from parameter_types import Parameter
 from sequence.configuration import SequenceConfig, ShotConfiguration
 from units import units, ureg, Quantity
-from variable.name import DottedVariableName, VariableName
-from variable.namespace import VariableNamespace
 
 
 @pytest.fixture
