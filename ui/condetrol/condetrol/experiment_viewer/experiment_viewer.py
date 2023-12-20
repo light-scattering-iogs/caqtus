@@ -54,10 +54,7 @@ class TextBrowser(QTextBrowser):
 
 
 class CustomFormatter(logging.Formatter):
-    header = (
-        "<b>%(levelname)s</b> %(asctime)s - <a"
-        " href=%(pathname)s:%(lineno)d>%(pathname)s:%(lineno)d</a>"
-    )
+    header = "<b>%(levelname)s: </b>"
 
     FORMATS = {
         logging.DEBUG: (
