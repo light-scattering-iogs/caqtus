@@ -325,7 +325,7 @@ class Concatenate(SequencerInstruction[_T]):
 
     def _get_index(self, index: int) -> _T:
         index = _normalize_index(index, len(self))
-        instruction_index = bisect.bisect_left(self._instruction_bounds, index)
+        instruction_index = bisect.bisect_right(self._instruction_bounds, index) - 1
         instruction = self._instructions[instruction_index]
         instruction_start_index = self._instruction_bounds[instruction_index]
         return instruction[index - instruction_start_index]
@@ -582,3 +582,9 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
 
 def empty_like(instruction: SequencerInstruction[_T]) -> Pattern[_T]:
     return Pattern([], dtype=instruction.dtype)
+
+
+def to_flat_dict(instruction: SequencerInstruction[_T]) -> dict[str, np.ndarray]:
+    array = instruction.to_pattern()._pattern
+    fields = array.dtype.fields
+    return {name: array[name] for name in fields}

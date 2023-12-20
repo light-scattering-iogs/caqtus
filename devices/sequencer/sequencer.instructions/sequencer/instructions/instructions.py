@@ -572,7 +572,7 @@ def first(iterable: Iterable[_T]) -> _T:
 
 
 def to_flat_dict(
-    instruction: SequencerInstruction,
+    instruction: SequencerInstructionOld,
 ) -> dict[ChannelLabel, np.ndarray]:
     """Return a dict containing the instruction for each channel."""
 

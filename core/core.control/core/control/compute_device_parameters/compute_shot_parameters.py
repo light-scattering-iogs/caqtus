@@ -385,10 +385,10 @@ def convert_to_sequence(
             raise NotImplementedError
 
     channel_label = ChannelLabel(0)
-    sequence = channel_instructions[channel_label]
+    sequence = converted_instructions[channel_label]
     for channel_index in range(1, sequencer_config.number_channels):
         channel_label = ChannelLabel(channel_index)
-        sequence = sequence.merge_channels(channel_instructions[channel_label])
+        sequence = sequence.merge_channels(converted_instructions[channel_label])
     return sequence
 
 
