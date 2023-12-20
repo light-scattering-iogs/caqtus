@@ -1,13 +1,23 @@
 import logging
+from logging.handlers import QueueHandler
+from multiprocessing import Queue
 from multiprocessing.managers import BaseManager
 from typing import Optional
 
-from core.control.manager import ExperimentManager, get_logs_queue
+from core.control.manager import ExperimentManager
 from core.session import get_standard_experiment_session_maker
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
+
+
+logs_queue = Queue()
+logging.getLogger().addHandler(QueueHandler(logs_queue))
+
+
+def get_logs_queue():
+    return logs_queue
 
 
 class ExperimentProcessManager(BaseManager):
