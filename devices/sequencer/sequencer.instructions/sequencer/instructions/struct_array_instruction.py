@@ -140,7 +140,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
 
-class Pattern(SequencerInstruction):
+class Pattern(SequencerInstruction[_T]):
     __slots__ = ("_pattern",)
     """An instruction to output a pattern on a sequencer."""
 
@@ -259,12 +259,11 @@ class Concatenate(SequencerInstruction[_T]):
                 )
         # self._instruction_bounds[i] is the first element index (included) the i-th instruction
         # self._instruction_bounds[i+1] is the last element index (excluded) of the i-th instruction
-        self._instruction_bounds = np.concatenate(
-            [
-                np.array([0]),
-                numpy.cumsum([len(instruction) for instruction in self._instructions]),
-            ]
-        )
+        self._instruction_bounds = [
+            0,
+        ] + numpy.cumsum(
+            [len(instruction) for instruction in self._instructions]
+        ).tolist()
 
     @property
     def instructions(self) -> tuple[SequencerInstruction[_T], ...]:
@@ -301,20 +300,14 @@ class Concatenate(SequencerInstruction[_T]):
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
-        start_step_index = (
-            numpy.searchsorted(self._instruction_bounds, start, side="right") - 1
-        )
-        stop_step_index = (
-            numpy.searchsorted(self._instruction_bounds, stop, side="left") - 1
-        )
+        start_step_index = bisect.bisect_right(self._instruction_bounds, start) - 1
+        stop_step_index = bisect.bisect_left(self._instruction_bounds, stop) - 1
 
         result = empty_like(self)
         for instruction_index in range(start_step_index, stop_step_index + 1):
-            instruction_start_index = int(self._instruction_bounds[instruction_index])
+            instruction_start_index = self._instruction_bounds[instruction_index]
             instruction_slice_start = max(start, instruction_start_index)
-            instruction_stop_index = int(
-                self._instruction_bounds[instruction_index + 1]
-            )
+            instruction_stop_index = self._instruction_bounds[instruction_index + 1]
             instruction_slice_stop = min(stop, instruction_stop_index)
             instruction_slice = slice(
                 instruction_slice_start - instruction_start_index,
