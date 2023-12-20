@@ -74,10 +74,6 @@ def compute_shot_parameters(
         variables=variables,
     ).compile()
 
-    # clock_requirements = compile_clock_requirements(
-    #     sequencer_configs, shot_config, variables
-    # )
-
 
 @define
 class SequenceCompiler:
@@ -289,7 +285,6 @@ def compile_clock_instruction(
     sequence_length: int,
     trigger: Trigger,
 ) -> ChannelInstruction:
-
     if isinstance(trigger, ExternalTriggerStart):
         clock_single_pulse = ChannelPattern([True]) * 10
         instruction = clock_single_pulse + ChannelPattern([False]) * (
