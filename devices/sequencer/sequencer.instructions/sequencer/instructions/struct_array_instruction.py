@@ -97,8 +97,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
             elif len(other) == 0:
                 return self
             else:
-                if isinstance(other, Concatenate):
-                    return other.__radd__(self)
                 return Concatenate([self, other])
         else:
             return NotImplemented
@@ -170,6 +168,7 @@ class Pattern(SequencerInstruction):
 
 class Concatenate(SequencerInstruction[_T]):
     __slots__ = ("_instructions", "_instruction_bounds")
+    __match_args__ = ("instructions",)
 
     def __init__(self, instructions: Iterable[SequencerInstruction[_T]]):
         """Creates a new instruction that is the concatenation of the given instructions.
@@ -181,7 +180,17 @@ class Concatenate(SequencerInstruction[_T]):
                 All instructions must have the same dtype.
         """
 
-        self._instructions = tuple(instructions)
+        instructions_list: list[SequencerInstruction[_T]] = []
+        for instruction in instructions:
+            match instruction:
+                case Concatenate(instructions):
+                    instructions_list.extend(instructions)
+                case SequencerInstruction():
+                    instructions_list.append(instruction)
+                case _:
+                    assert_never(instruction)
+
+        self._instructions = tuple(instructions_list)
         if len(self._instructions) < 2:
             raise ValueError(
                 "Concatenate instructions must have at least two instructions"
@@ -201,6 +210,10 @@ class Concatenate(SequencerInstruction[_T]):
         self._instruction_bounds = (0,) + tuple(
             numpy.cumsum([len(instruction) for instruction in self._instructions])
         )
+
+    @property
+    def instructions(self) -> tuple[SequencerInstruction[_T], ...]:
+        return self._instructions
 
     def __repr__(self):
         return f"Concatenate({self._instructions!r})"
@@ -281,30 +294,6 @@ class Concatenate(SequencerInstruction[_T]):
     def __eq__(self, other):
         if isinstance(other, Concatenate):
             return self._instructions == other._instructions
-        else:
-            return NotImplemented
-
-    def __add__(self, other):
-        # Here we overload the addition operator, because adding a single instruction to a Concatenate instruction can
-        # be done without increasing the depth of the instruction.
-        if isinstance(other, SequencerInstruction):
-            if len(other) == 0:
-                return self
-            if isinstance(other, Concatenate):
-                return Concatenate(self._instructions + other._instructions)
-            else:
-                return Concatenate(self._instructions + (other,))
-        else:
-            return NotImplemented
-
-    def __radd__(self, other):
-        if isinstance(other, SequencerInstruction):
-            if len(other) == 0:
-                return self
-            if isinstance(other, Concatenate):
-                return Concatenate(other._instructions + self._instructions)
-            else:
-                return Concatenate((other,) + self._instructions)
         else:
             return NotImplemented
 
