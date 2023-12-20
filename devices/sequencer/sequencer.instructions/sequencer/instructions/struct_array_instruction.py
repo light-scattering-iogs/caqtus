@@ -10,7 +10,6 @@ from typing import (
     Optional,
     assert_never,
     Self,
-    Iterable,
 )
 
 import numpy
@@ -97,7 +96,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
             elif len(other) == 0:
                 return self
             else:
-                return Concatenate([self, other])
+                return Concatenate(self, other)
         else:
             return NotImplemented
 
@@ -170,7 +169,7 @@ class Concatenate(SequencerInstruction[_T]):
     __slots__ = ("_instructions", "_instruction_bounds")
     __match_args__ = ("instructions",)
 
-    def __init__(self, instructions: Iterable[SequencerInstruction[_T]]):
+    def __init__(self, *instructions: SequencerInstruction[_T]):
         """Creates a new instruction that is the concatenation of the given instructions.
 
         Args:
@@ -184,6 +183,8 @@ class Concatenate(SequencerInstruction[_T]):
         for instruction in instructions:
             match instruction:
                 case Concatenate(instructions):
+                    # We treat concatenation of concatenations as a single concatenation to avoid nesting and increasing
+                    # the depth of the instruction tree.
                     instructions_list.extend(instructions)
                 case SequencerInstruction():
                     instructions_list.append(instruction)
@@ -216,7 +217,8 @@ class Concatenate(SequencerInstruction[_T]):
         return self._instructions
 
     def __repr__(self):
-        return f"Concatenate({self._instructions!r})"
+        inner = ", ".join(repr(instruction) for instruction in self._instructions)
+        return f"Concatenate({inner})"
 
     def __str__(self):
         sub_strings = [
@@ -269,7 +271,7 @@ class Concatenate(SequencerInstruction[_T]):
 
     def as_type(self, dtype: numpy.dtype) -> Self:
         return type(self)(
-            instruction.as_type(dtype) for instruction in self._instructions
+            *(instruction.as_type(dtype) for instruction in self._instructions)
         )
 
     def __len__(self) -> Length:
