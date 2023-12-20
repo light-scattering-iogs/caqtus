@@ -26,3 +26,4 @@ def test_merge(args):
     merged = pattern.merge_channels(concatenation)
     assert merged.get_channel("f0").to_pattern() == pattern
     assert merged.get_channel("f1").to_pattern() == concatenation.to_pattern()
+    assert merged.depth == 0
