@@ -309,7 +309,7 @@ class Concatenate(SequencerInstruction[_T]):
 
     def __str__(self):
         sub_strings = [
-            str(instruction) if instruction.depth == 0 else f"({instruction!s})"
+            str(instruction) if instruction.depth == 0 else f"{instruction!s}"
             for instruction in self._instructions
         ]
         return " + ".join(sub_strings)
@@ -456,7 +456,10 @@ class Repeat(SequencerInstruction[_T]):
         return f"Repeat(repetitions={self._repetitions!r}, instruction={self._instruction!r})"
 
     def __str__(self):
-        return f"{self._repetitions} * {self._instruction!s}"
+        if isinstance(self._instruction, Concatenate):
+            return f"{self._repetitions} * ({self._instruction!s})"
+        else:
+            return f"{self._repetitions} * {self._instruction!s}"
 
     def __len__(self) -> Length:
         return Length(len(self._instruction) * self._repetitions)
