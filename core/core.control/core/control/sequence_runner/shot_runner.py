@@ -16,7 +16,7 @@ from device.runtime import RuntimeDevice
 from image_types import ImageLabel, Image
 from sequencer.runtime import Sequencer
 from tweezer_arranger.runtime import TweezerArranger, RearrangementFailedError
-from util import DurationTimer, attrs, DurationTimerLog, serialization
+from util import attrs, DurationTimerLog, serialization
 from util.concurrent import TaskGroup
 from ..compute_device_parameters.image_analysis import (
     FromImageToDetector,
@@ -143,7 +143,9 @@ class ShotRunner(contextlib.AbstractContextManager):
         for attempt in range(number_of_attempts):
             errors: list[Exception] = []
             try:
-                with DurationTimer() as timer:
+                with DurationTimerLog(
+                    logger, "Doing shot", level=logging.INFO, display_start=True
+                ) as timer:
                     data = self._do_single_shot(device_parameters)
             except* CameraTimeoutError as e:
                 errors.extend(e.exceptions)
