@@ -10,8 +10,11 @@ from core.configuration import Expression, DottedVariableName
 from core.configuration.lane import Lane, AnalogLane, Ramp, DigitalLane, Blink
 from core.types import Parameter, is_analog_value
 from core.types.units import Quantity, ureg, units, dimensionless, magnitude_in_unit
-from sequencer.channel import ChannelInstruction, ChannelPattern
 from sequencer.channel.channel_instructions import ChannelType
+from sequencer.instructions.struct_array_instruction import (
+    SequencerInstruction,
+    Pattern,
+)
 from .camera_instruction import CameraInstruction
 from .evaluation_error import ShotEvaluationError
 from .timing import get_step_starts, start_tick, stop_tick, number_ticks
@@ -25,10 +28,10 @@ ns = 1e-9
 
 def empty_channel_instruction(
     default_value: ChannelType, step_durations: Sequence[float], time_step: int
-) -> ChannelInstruction[ChannelType]:
+) -> SequencerInstruction[ChannelType]:
     duration = sum(step_durations)
     length = number_ticks(0.0, duration, time_step * ns)
-    return ChannelPattern([default_value]) * length
+    return Pattern([default_value]) * length
 
 
 def compile_lane(
@@ -36,7 +39,7 @@ def compile_lane(
     step_durations: Sequence[float],
     time_step: int,
     variables: VariableNamespace,
-) -> ChannelInstruction:
+) -> SequencerInstruction:
     if isinstance(lane, DigitalLane):
         return compile_digital_lane(step_durations, lane, variables, time_step)
     elif isinstance(lane, AnalogLane):
@@ -50,13 +53,13 @@ def compile_digital_lane(
     lane: DigitalLane,
     variables: VariableNamespace,
     time_step: int,
-) -> ChannelInstruction[bool]:
+) -> SequencerInstruction[bool]:
     step_bounds = get_step_starts(step_durations)
     instructions = []
     for cell_value, start, stop in lane.get_value_spans():
         length = number_ticks(step_bounds[start], step_bounds[stop], time_step * ns)
         if isinstance(cell_value, bool):
-            instructions.append(ChannelPattern([cell_value]) * length)
+            instructions.append(Pattern([cell_value]) * length)
         elif isinstance(cell_value, Blink):
             period = cell_value.period.evaluate(variables | units).to("ns").magnitude
             duty_cycle = (
@@ -83,14 +86,11 @@ def compile_digital_lane(
                 )
             split_position = round(phase / (2 * math.pi) * num_ticks_per_period)
             clock_pattern = (
-                ChannelPattern([True]) * num_ticks_high
-                + ChannelPattern([False]) * num_ticks_low
+                Pattern([True]) * num_ticks_high + Pattern([False]) * num_ticks_low
             )
-            a, b = clock_pattern.split(split_position)
+            a, b = clock_pattern[:split_position], clock_pattern[split_position:]
             clock_pattern = b + a
-            pattern = (
-                clock_pattern * num_clock_pulses + ChannelPattern([False]) * remainder
-            )
+            pattern = clock_pattern * num_clock_pulses + Pattern([False]) * remainder
             if not len(pattern) == length:
                 raise RuntimeError(
                     f"Pattern length {len(pattern)} does not match expected length {length}"
@@ -99,7 +99,7 @@ def compile_digital_lane(
             instructions.append(pattern)
         else:
             raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
-    return ChannelInstruction.join(instructions, dtype=bool)
+    return SequencerInstruction.join(*instructions)
 
 
 def compile_analog_lane(
@@ -107,7 +107,7 @@ def compile_analog_lane(
     lane: AnalogLane,
     variables: VariableNamespace,
     time_step: int,
-) -> ChannelInstruction[float]:
+) -> SequencerInstruction[float]:
     return CompileAnalogLane(step_durations, lane, variables, time_step).compile()
 
 
@@ -118,7 +118,7 @@ class CompileAnalogLane:
     variables: VariableNamespace
     time_step: int
 
-    def compile(self) -> ChannelInstruction[float]:
+    def compile(self) -> SequencerInstruction[float]:
         step_starts = get_step_starts(self.step_durations)
         instructions = []
         for (
@@ -144,18 +144,20 @@ class CompileAnalogLane:
                 step_stop_tick = stop_tick(
                     step_starts[step_index + 1], self.time_step * ns
                 )
-                left, instruction = instruction.split(step_stop_tick - step_start_tick)
+                split_index = step_stop_tick - step_start_tick
+                left = instruction[:split_index]
                 instructions.append(left)
-        return ChannelInstruction.join(instructions, dtype=float)
+                instruction = instruction[split_index:]
+        return SequencerInstruction.join(*instructions)
 
     def _compile_expression_cell(
         self, expression: Expression, start: float, stop: float
-    ) -> ChannelInstruction[float]:
+    ) -> SequencerInstruction[float]:
         variables = self.variables | units
         length = number_ticks(start, stop, self.time_step * ns)
         if _is_constant(expression):
             value = self._evaluate_expression(expression, variables)
-            result = ChannelPattern([float(value)]) * length
+            result = Pattern([float(value)]) * length
         else:
             variables = variables | {
                 DottedVariableName("t"): (
@@ -163,7 +165,7 @@ class CompileAnalogLane:
                 )
                 * ureg.s
             }
-            result = ChannelPattern(self._evaluate_expression(expression, variables))
+            result = Pattern(self._evaluate_expression(expression, variables))
         if not len(result) == length:
             raise ShotEvaluationError(
                 f"Expression '{expression}' evaluates to an array of length"
@@ -171,7 +173,7 @@ class CompileAnalogLane:
             )
         return result
 
-    def _compile_ramp_cell(self, start_index: int) -> ChannelInstruction[float]:
+    def _compile_ramp_cell(self, start_index: int) -> SequencerInstruction[float]:
         stop_index = self.lane.end_index(start_index)
         step_bounds = get_step_starts(self.step_durations)
         t0 = step_bounds[start_index]
@@ -207,7 +209,7 @@ class CompileAnalogLane:
                     f"Ramp cell from {previous_value} to {next_value} contains NaNs"
                 )
             result = 10 * np.log10(result)
-        return ChannelPattern(result)
+        return Pattern(result)
 
     def _evaluate_expression(
         self, expression: Expression, variables: Mapping[DottedVariableName, Parameter]
@@ -245,9 +247,9 @@ def _compute_time_array(start: float, stop: float, time_step: int) -> np.ndarray
 def compile_camera_instruction(
     camera_instruction: CameraInstruction,
     time_step: int,
-) -> ChannelInstruction[bool]:
+) -> SequencerInstruction[bool]:
     instructions = []
     for value, start, stop, _ in camera_instruction.triggers:
         length = number_ticks(start, stop, time_step * ns)
-        instructions.append(ChannelPattern([value]) * length)
-    return ChannelInstruction.join(instructions, dtype=bool)
+        instructions.append(Pattern([value]) * length)
+    return SequencerInstruction.join(*instructions)

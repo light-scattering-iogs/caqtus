@@ -20,7 +20,7 @@ from core.configuration.lane import (
 )
 from core.configuration.sequence import ShotConfiguration
 from core.device import DeviceName, DeviceParameter
-from sequencer.channel import ChannelInstruction, ChannelPattern
+from sequencer.channel import ChannelInstruction
 from sequencer.configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -28,13 +28,15 @@ from sequencer.configuration import (
     ExternalClock,
     ExternalClockOnChange,
     Trigger,
+    DigitalChannelConfiguration,
+    AnalogChannelConfiguration,
 )
-from sequencer.instructions import (
-    ChannelLabel,
-    SequencerInstructionOld,
-    SequencerPattern,
-    ConcatenateOld,
-    RepeatOld,
+from sequencer.instructions import ChannelLabel
+from sequencer.instructions.struct_array_instruction import (
+    SequencerInstruction,
+    Pattern,
+    Concatenate,
+    Repeat,
 )
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
@@ -109,7 +111,7 @@ class SequenceCompiler:
     def compile_sequencers_instructions(
         self, camera_instructions: Mapping[DeviceName, CameraInstruction]
     ) -> dict[DeviceName, dict[DeviceParameter, Any]]:
-        sequences = dict[DeviceName, SequencerInstructionOld]()
+        sequences: dict[DeviceName, SequencerInstruction] = {}
         for sequencer in get_sequencers_ordered_by_dependency():
             instructions = self.compile_sequencer_instructions(
                 self.sequencer_configs[sequencer],
@@ -131,9 +133,9 @@ class SequenceCompiler:
         self,
         sequencer_config: SequencerConfiguration,
         camera_instructions: Mapping[DeviceName, CameraInstruction],
-        sequences: Mapping[DeviceName, SequencerInstructionOld],
-    ) -> dict[ChannelLabel, ChannelInstruction]:
-        instructions: dict[ChannelLabel, ChannelInstruction] = {}
+        sequences: Mapping[DeviceName, SequencerInstruction],
+    ) -> dict[ChannelLabel, SequencerInstruction]:
+        instructions: dict[ChannelLabel, SequencerInstruction] = {}
 
         for channel_number, channel in enumerate(sequencer_config.channels):
             instructions[
@@ -148,8 +150,8 @@ class SequenceCompiler:
         for channel_number, channel in enumerate(sequencer_config.channels):
             delay = round_to_ns(channel.delay)
             instruction = instructions[ChannelLabel(channel_number)]
-            pre_step = ChannelPattern([instruction.first_value()]) * delay
-            post_step = ChannelPattern([instruction.last_value()]) * (max_delay - delay)
+            pre_step = Pattern([instruction[0]]) * delay
+            post_step = Pattern([instruction[-1]]) * (max_delay - delay)
             instructions[ChannelLabel(channel_number)] = (
                 pre_step + instruction + post_step
             )
@@ -212,8 +214,8 @@ class SequenceCompiler:
         channel: ChannelConfiguration,
         sequencer_config: SequencerConfiguration,
         camera_instructions: Mapping[DeviceName, CameraInstruction],
-        sequences: Mapping[DeviceName, SequencerInstructionOld],
-    ) -> ChannelInstruction:
+        sequences: Mapping[DeviceName, SequencerInstruction],
+    ) -> SequencerInstruction:
         if channel.has_special_purpose():
             target = DeviceName(str(channel.description))
             if target in camera_instructions:
@@ -279,34 +281,30 @@ def round_to_ns(value: float) -> int:
 
 
 def compile_clock_instruction(
-    target_sequence: SequencerInstructionOld,
+    target_sequence: SequencerInstruction,
     target_time_step: int,
     base_time_step: int,
     sequence_length: int,
     trigger: Trigger,
-) -> ChannelInstruction:
+) -> SequencerInstruction:
     if isinstance(trigger, ExternalTriggerStart):
-        clock_single_pulse = ChannelPattern([True]) * 10
-        instruction = clock_single_pulse + ChannelPattern([False]) * (
+        clock_single_pulse = Pattern([True]) * 10
+        instruction = clock_single_pulse + Pattern([False]) * (
             sequence_length - len(clock_single_pulse)
         )
     elif isinstance(trigger, ExternalClock):
         multiplier, high, low = high_low_clicks(target_time_step, base_time_step)
-        clock_single_pulse = (
-            ChannelPattern([True]) * high + ChannelPattern([False]) * low
-        )
+        clock_single_pulse = Pattern([True]) * high + Pattern([False]) * low
         instruction = clock_single_pulse * (sequence_length // multiplier)
-        instruction = instruction + ChannelPattern([False]) * (
+        instruction = instruction + Pattern([False]) * (
             sequence_length - len(instruction)
         )
     elif isinstance(trigger, ExternalClockOnChange):
         multiplier, high, low = high_low_clicks(target_time_step, base_time_step)
-        clock_single_pulse = (
-            ChannelPattern([True]) * high + ChannelPattern([False]) * low
-        )
-        instruction, _ = get_adaptive_clock(target_sequence, clock_single_pulse).split(
-            sequence_length
-        )
+        clock_single_pulse = Pattern([True]) * high + Pattern([False]) * low
+        instruction, _ = get_adaptive_clock(target_sequence, clock_single_pulse)[
+            :sequence_length
+        ]
     else:
         raise NotImplementedError(f"Trigger {trigger} not implemented")
     return instruction
@@ -314,37 +312,32 @@ def compile_clock_instruction(
 
 @singledispatch
 def get_adaptive_clock(
-    target_sequence: SequencerInstructionOld, clock_pulse: ChannelInstruction
-) -> ChannelInstruction:
+    target_sequence: SequencerInstruction, clock_pulse: ChannelInstruction
+) -> SequencerInstruction:
     raise NotImplementedError(f"Target sequence {target_sequence} not implemented")
 
 
 @get_adaptive_clock.register
-def _(
-    target_sequence: SequencerPattern, clock_pulse: ChannelInstruction
-) -> ChannelInstruction:
+def _(target_sequence: Pattern, clock_pulse: ChannelInstruction) -> ChannelInstruction:
     return clock_pulse * len(target_sequence)
 
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: ConcatenateOld, clock_pulse: ChannelInstruction
-) -> ChannelInstruction:
-    return ChannelInstruction.join(
-        (
+    target_sequence: Concatenate, clock_pulse: ChannelInstruction
+) -> SequencerInstruction:
+    return SequencerInstruction.join(
+        *(
             get_adaptive_clock(sequence, clock_pulse)
             for sequence in target_sequence.instructions
-        ),
-        dtype=bool,
+        )
     )
 
 
 @get_adaptive_clock.register
-def _(
-    target_sequence: RepeatOld, clock_pulse: ChannelInstruction
-) -> ChannelInstruction:
+def _(target_sequence: Repeat, clock_pulse: ChannelInstruction) -> ChannelInstruction:
     if len(target_sequence.instruction) == 1:
-        return clock_pulse + ChannelPattern([False]) * (
+        return clock_pulse + Pattern([False]) * (
             (len(target_sequence) - 1) * len(clock_pulse)
         )
     else:
@@ -374,18 +367,28 @@ def high_low_clicks(
 
 
 def convert_to_sequence(
-    channel_instructions: dict[ChannelLabel, ChannelInstruction],
+    channel_instructions: dict[ChannelLabel, SequencerInstruction],
     sequencer_config: SequencerConfiguration,
-) -> SequencerInstructionOld:
+) -> SequencerInstruction:
+    converted_instructions = {}
+    channel_types = sequencer_config.channel_types()
+    for channel, channel_type in enumerate(channel_types):
+        if issubclass(channel_type, DigitalChannelConfiguration):
+            converted_instructions[ChannelLabel(channel)] = channel_instructions[
+                ChannelLabel(channel)
+            ].as_type(np.dtype([(f"ch {channel}", bool)]))
+        elif issubclass(channel_type, AnalogChannelConfiguration):
+            converted_instructions[ChannelLabel(channel)] = channel_instructions[
+                ChannelLabel(channel)
+            ].as_type(np.dtype([(f"ch {channel}", float)]))
+        else:
+            raise NotImplementedError
+
     channel_label = ChannelLabel(0)
-    sequence = SequencerInstructionOld.from_channel_instruction(
-        channel_label, channel_instructions[channel_label]
-    )
+    sequence = channel_instructions[channel_label]
     for channel_index in range(1, sequencer_config.number_channels):
         channel_label = ChannelLabel(channel_index)
-        sequence = sequence.add_channel_instruction(
-            channel_label, channel_instructions[channel_label]
-        )
+        sequence = sequence.merge_channels(channel_instructions[channel_label])
     return sequence
 
 

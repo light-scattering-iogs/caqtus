@@ -13,6 +13,7 @@ from typing import (
     assert_never,
     Self,
     SupportsInt,
+    Callable,
 )
 
 import numpy
@@ -140,6 +141,23 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def apply(
+        self, func: Callable[[numpy.ndarray], numpy.ndarray]
+    ) -> SequencerInstruction[_T]:
+        raise NotImplementedError
+
+    @classmethod
+    def join(cls, *instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+        """Joins the given instructions into a single instruction."""
+
+        if len(instructions) == 0:
+            raise ValueError("Must provide at least one instruction")
+        result = instructions[0]
+        for instruction in instructions[1:]:
+            result += instruction
+        return result
+
 
 class Pattern(SequencerInstruction[_T]):
     __slots__ = ("_pattern",)
@@ -222,6 +240,14 @@ class Pattern(SequencerInstruction[_T]):
         return self._create_pattern_without_copy(channel_array).as_type(
             np.dtype([(channel, channel_array.dtype)])
         )
+
+    def apply(
+        self, func: Callable[[numpy.ndarray], numpy.ndarray]
+    ) -> SequencerInstruction[_T]:
+        result = func(self._pattern)
+        if len(result) != len(self):
+            raise ValueError("Function must return an array of the same length")
+        return self._create_pattern_without_copy(result)
 
 
 class Concatenate(SequencerInstruction[_T]):
@@ -389,6 +415,13 @@ class Concatenate(SequencerInstruction[_T]):
             case _:
                 assert_never(other)
 
+    def apply(
+        self, func: Callable[[numpy.ndarray], numpy.ndarray]
+    ) -> SequencerInstruction[_T]:
+        return Concatenate(
+            *(instruction.apply(func) for instruction in self._instructions)
+        )
+
 
 class Repeat(SequencerInstruction[_T]):
     __slots__ = ("_repetitions", "_instruction")
@@ -510,6 +543,11 @@ class Repeat(SequencerInstruction[_T]):
                 return block * (len(self) // len(block))
             case _:
                 assert_never(other)
+
+    def apply(
+        self, func: Callable[[numpy.ndarray], numpy.ndarray]
+    ) -> SequencerInstruction[_T]:
+        return Repeat(self._repetitions, self._instruction.apply(func))
 
 
 def _normalize_index(index: int, length: int) -> int:
