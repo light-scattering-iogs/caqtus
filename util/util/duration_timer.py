@@ -47,22 +47,27 @@ class DurationTimer(contextlib.AbstractContextManager):
 
 class DurationTimerLog(DurationTimer):
     def __init__(
-        self, logger: logging.Logger, message: str, display_start: bool = False
+        self,
+        logger: logging.Logger,
+        message: str,
+        display_start: bool = False,
+        level=logging.DEBUG,
     ):
         super().__init__()
         self._logger = logger
         self._message = message
         self._display_start = display_start
+        self._level = level
 
     def __enter__(self) -> Self:
         super().__enter__()
         if self._display_start:
-            self._logger.info(f"Started:\t {self._message}")
+            self._logger.log(self._level, f"Started: {self._message}")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super().__exit__(exc_type, exc_val, exc_tb)
         if exc_type is None:
-            self._logger.info(
-                f"Finished:\t {self._message} in {self.duration_in_ms} ms"
+            self._logger.log(
+                self._level, f"Finished: {self._message} in {self.duration_in_ms} ms"
             )
