@@ -25,12 +25,12 @@ void compute_static_traps_signal(short *output, unsigned int number_samples, uns
  }
 }
 
-__constant__ float initial_frequencies[{max_number_tones}];
-__constant__ float final_frequencies[{max_number_tones}];
-__constant__ float initial_amplitudes[{max_number_tones}];
-__constant__ float final_amplitudes[{max_number_tones}];
-__constant__ float initial_phases[{max_number_tones}];
-__constant__ float final_phases[{max_number_tones}];
+__constant__ float initial_frequencies[MAX_NUMBER_TONES];
+__constant__ float final_frequencies[MAX_NUMBER_TONES];
+__constant__ float initial_amplitudes[MAX_NUMBER_TONES];
+__constant__ float final_amplitudes[MAX_NUMBER_TONES];
+__constant__ float initial_phases[MAX_NUMBER_TONES];
+__constant__ float final_phases[MAX_NUMBER_TONES];
 
 // Must be equal to -1 at s=0 and +1 at s=1
 __device__ float amplitude_ramp(float s)
@@ -80,7 +80,7 @@ __device__ float phase_ramp(float s, unsigned int move_type)
     else if (move_type == 1)
         return phase_ramp_minimal_jolt(s);
     else if (move_type == 2)
-        return reach_constant_velocity_adiabatically(s)
+        return reach_constant_velocity_adiabatically(s);
     else
         assert(0);
 }
