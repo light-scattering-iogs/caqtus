@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Optional, Self, Generic, TypeVar
+from typing import Optional, Generic, TypeVar
 
 from benedict import benedict  # type: ignore
 
@@ -9,11 +9,12 @@ T = TypeVar("T")
 
 
 class VariableNamespace(Generic[T]):
-    def __init__(self, initial_variables: Optional[Self] = None):
-        self._dict: benedict = benedict()
+    def __init__(self, initial_variables: Optional[dict] = None):
         if initial_variables is not None:
             # noinspection PyProtectedMember
-            self._dict = initial_variables._dict.clone()
+            self._dict = benedict(initial_variables)
+        else:
+            self._dict: benedict = benedict()
 
     def update(self, values: dict[DottedVariableName, T]):
         for key, value in values.items():
