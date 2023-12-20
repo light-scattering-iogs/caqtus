@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import bisect
+import math
 from heapq import merge
 from typing import (
     NewType,
@@ -481,7 +482,27 @@ class Repeat(SequencerInstruction[_T]):
         return Repeat(self._repetitions, self._instruction.get_channel(channel))
 
     def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
-        raise NotImplementedError
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        match other:
+            case Pattern() as pattern:
+                return pattern.merge_channels(self)
+            case Concatenate() as concatenate:
+                return concatenate.merge_channels(self)
+            case Repeat() as repeat:
+                lcm = math.lcm(len(self._instruction), len(repeat._instruction))
+                r_a = lcm // len(self._instruction)
+                b_a = self._instruction
+                for _ in range(r_a - 1):
+                    b_a += self._instruction
+                r_b = lcm // len(repeat._instruction)
+                b_b = repeat._instruction
+                for _ in range(r_b - 1):
+                    b_b += repeat._instruction
+                block = b_a.merge_channels(b_b)
+                return block * (len(self) // len(block))
+            case _:
+                assert_never(other)
 
 
 def _normalize_index(index: int, length: int) -> int:
