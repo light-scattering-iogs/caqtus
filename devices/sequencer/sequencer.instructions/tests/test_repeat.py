@@ -1,18 +1,8 @@
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from sequencer.instructions.struct_array_instruction import Pattern, Concatenate, Repeat
-
-
-@composite
-def flat_repeat(draw, max_repetitions: int, max_sub_instruction_length) -> Repeat:
-    repetitions = draw(integers(min_value=2, max_value=max_repetitions))
-    sub_instruction_length = draw(
-        integers(min_value=1, max_value=max_sub_instruction_length)
-    )
-
-    instr = Pattern([i for i in range(sub_instruction_length)])
-    return repetitions * instr
+from sequencer.instructions.struct_array_instruction import Repeat
+from .generate_repeat import generate_repeat
 
 
 @composite
@@ -24,7 +14,7 @@ def interval(draw, length: int) -> tuple[int, int]:
 
 @composite
 def repeat_and_interval(draw) -> tuple[Repeat, tuple[int, int]]:
-    instr = draw(flat_repeat(100, 100))
+    instr = draw(generate_repeat(100, 100))
     s = draw(interval(len(instr)))
     return instr, s
 

@@ -4,22 +4,7 @@ from hypothesis import given
 from hypothesis.strategies import composite, integers
 
 from sequencer.instructions.struct_array_instruction import Pattern, Concatenate
-
-
-@composite
-def flat_concatenation(draw, length: int) -> Concatenate:
-    if length <= 1:
-        raise ValueError("Length must be strictly greater than 1.")
-    else:
-        left_length = draw(integers(min_value=1, max_value=length - 1))
-        right_length = length - left_length
-
-        left = Pattern([i for i in range(left_length)])
-        if right_length == 1:
-            right = Pattern([left_length])
-        else:
-            right = draw(flat_concatenation(right_length))
-        return left + right
+from .generate_concatenate import generate_concatenate
 
 
 @composite
@@ -32,7 +17,7 @@ def interval(draw, length: int) -> tuple[int, int]:
 @composite
 def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
     length = draw(integers(min_value=2, max_value=100))
-    instr = draw(flat_concatenation(length))
+    instr = draw(generate_concatenate(length))
     s = draw(interval(length))
     return instr, s
 
