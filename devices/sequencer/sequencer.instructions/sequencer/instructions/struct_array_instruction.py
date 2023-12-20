@@ -10,6 +10,7 @@ from typing import (
     Optional,
     assert_never,
     Self,
+    SupportsInt,
 )
 
 import numpy
@@ -31,6 +32,12 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     it takes to output all the values. The width of the instruction is the number of channels that are output at each
     time step.
     """
+
+    @abc.abstractmethod
+    def __len__(self) -> Length:
+        """Returns the length of the instruction in clock cycles."""
+
+        raise NotImplementedError
 
     @overload
     def __getitem__(self, item: int) -> _T:
@@ -54,12 +61,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     @abc.abstractmethod
     def as_type(self, dtype: numpy.dtype) -> SequencerInstruction:
         """Returns a new instruction with the given dtype."""
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def __len__(self) -> Length:
-        """Returns the length of the instruction in clock cycles."""
 
         raise NotImplementedError
 
@@ -201,7 +202,7 @@ class Concatenate(SequencerInstruction[_T]):
         for index, instruction in enumerate(self._instructions):
             if len(instruction) == 0:
                 raise ValueError(
-                    "Cannot concatenate empty instruction at index {index}"
+                    f"Cannot concatenate empty instruction at index {index}"
                 )
             if instruction.dtype != dtype:
                 raise TypeError(
@@ -305,6 +306,78 @@ class Concatenate(SequencerInstruction[_T]):
     def __eq__(self, other):
         if isinstance(other, Concatenate):
             return self._instructions == other._instructions
+        else:
+            return NotImplemented
+
+
+class Repeat(SequencerInstruction[_T]):
+    __slots__ = ("_repetitions", "_instruction")
+
+    @property
+    def repetitions(self) -> int:
+        return self._repetitions
+
+    @property
+    def instruction(self) -> SequencerInstruction[_T]:
+        return self._instruction
+
+    def __init__(self, repetitions: SupportsInt, instruction: SequencerInstruction[_T]):
+        rep = int(repetitions)
+        if rep < 2:
+            raise ValueError("Repetitions must be greater than or equal to 2")
+        if len(instruction) < 1:
+            raise ValueError("Instruction must have a length greater than 0")
+        match instruction:
+            # We merge repetitions of repetitions into a single repetition to avoid nesting and increasing the depth of
+            # the instruction tree.
+            case Repeat(repetitions=inner_rep, instruction=inner_instruction):
+                self._repetitions = rep * inner_rep
+                self._instruction = inner_instruction
+            case SequencerInstruction():
+                self._repetitions = rep
+                self._instruction = instruction
+            case _:
+                assert_never(instruction)
+
+    def __repr__(self):
+        return f"Repeat(repetitions={self._repetitions!r}, instruction={self._instruction!r})"
+
+    def __str__(self):
+        return f"{self._repetitions} * {self._instruction!s}"
+
+    def __len__(self) -> Length:
+        return Length(len(self._instruction) * self._repetitions)
+
+    def __getitem__(self, item):
+        ...
+
+    @property
+    def dtype(self) -> numpy.dtype:
+        return self._instruction.dtype
+
+    def as_type(self, dtype: numpy.dtype) -> SequencerInstruction:
+        return type(self)(self._repetitions, self._instruction.as_type(dtype))
+
+    @property
+    def width(self) -> Width:
+        return self._instruction.width
+
+    @property
+    def depth(self) -> Depth:
+        return Depth(self._instruction.depth + 1)
+
+    def to_pattern(self) -> Pattern:
+        inner_pattern = self._instruction.to_pattern()
+        # noinspection PyProtectedMember
+        new_array = numpy.tile(inner_pattern._pattern, self._repetitions)
+        return Pattern(new_array, dtype=self.dtype)
+
+    def __eq__(self, other):
+        if isinstance(other, Repeat):
+            return (
+                self._repetitions == other._repetitions
+                and self._instruction == other._instruction
+            )
         else:
             return NotImplemented
 
