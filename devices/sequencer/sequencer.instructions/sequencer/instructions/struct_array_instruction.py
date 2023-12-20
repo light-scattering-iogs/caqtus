@@ -95,12 +95,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __eq__(self, other):
         raise NotImplementedError
 
-    @classmethod
-    def empty_like(
-        cls, instruction: SequencerInstruction[_T]
-    ) -> SequencerInstruction[_T]:
-        return Pattern([], dtype=instruction.dtype)
-
     def __add__(self, other) -> SequencerInstruction[_T]:
         if isinstance(other, SequencerInstruction):
             if len(self) == 0:
@@ -117,7 +111,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
             if other < 0:
                 raise ValueError("Repetitions must be a positive integer")
             elif other == 0:
-                return self.empty_like(self)
+                return empty_like(self)
             elif other == 1:
                 return self
             else:
@@ -140,6 +134,10 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         pattern = Pattern.__new__(Pattern)
         pattern._pattern = array
         return pattern
+
+    @abc.abstractmethod
+    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+        raise NotImplementedError
 
 
 class Pattern(SequencerInstruction):
@@ -310,7 +308,7 @@ class Concatenate(SequencerInstruction[_T]):
             numpy.searchsorted(self._instruction_bounds, stop, side="left") - 1
         )
 
-        result = self.empty_like(self._instructions[0])
+        result = empty_like(self)
         for instruction_index in range(start_step_index, stop_step_index + 1):
             instruction_start_index = int(self._instruction_bounds[instruction_index])
             instruction_slice_start = max(start, instruction_start_index)
@@ -376,15 +374,19 @@ class Concatenate(SequencerInstruction[_T]):
                 new_bounds = merge(
                     self._instruction_bounds, concatenate._instruction_bounds
                 )
-                result = self.empty_like(self._instructions[0]).merge_channels(
-                    concatenate.empty_like(concatenate._instructions[0])
-                )
+                result = empty_like(self).merge_channels(empty_like(concatenate))
                 for start, stop in pairwise(new_bounds):
                     result += self[start:stop].merge_channels(concatenate[start:stop])
                 return result
-
+            case Repeat() as repeat:
+                result = empty_like(self).merge_channels(empty_like(repeat))
+                for (start, stop), instruction in zip(
+                    pairwise(self._instruction_bounds), self._instructions
+                ):
+                    result += instruction.merge_channels(repeat[start:stop])
+                return result
             case _:
-                raise NotImplementedError
+                assert_never(other)
 
 
 class Repeat(SequencerInstruction[_T]):
@@ -485,6 +487,9 @@ class Repeat(SequencerInstruction[_T]):
     def get_channel(self, channel: str) -> SequencerInstruction:
         return Repeat(self._repetitions, self._instruction.get_channel(channel))
 
+    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+        raise NotImplementedError
+
 
 def _normalize_index(index: int, length: int) -> int:
     normalized = index if index >= 0 else length + index
@@ -514,3 +519,7 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
         stop = _normalize_slice_index(slice_.stop, length)
 
     return start, stop, step
+
+
+def empty_like(instruction: SequencerInstruction[_T]) -> Pattern[_T]:
+    return Pattern([], dtype=instruction.dtype)

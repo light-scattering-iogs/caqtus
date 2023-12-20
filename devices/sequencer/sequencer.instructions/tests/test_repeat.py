@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from sequencer.instructions.struct_array_instruction import Repeat
+from sequencer.instructions.struct_array_instruction import Repeat, Pattern
 from .generate_repeat import generate_repeat
 
 
@@ -23,3 +23,8 @@ def repeat_and_interval(draw) -> tuple[Repeat, tuple[int, int]]:
 def test_slicing(args):
     instr, (start, stop) = args
     assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
+
+
+def test_1():
+    b = 2 * Pattern([0])
+    assert b[0:1] == Pattern([0])

@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
-from hypothesis import given, settings, Verbosity
+from hypothesis import given
 from hypothesis.strategies import composite, integers
 
 from sequencer.instructions.struct_array_instruction import Pattern, Concatenate
 from .generate_concatenate import generate_concatenate
+from .generate_repeat import generate_repeat
 
 
 @composite
@@ -36,6 +37,15 @@ def two_concatenations(draw) -> tuple[Concatenate, Concatenate]:
     return instr1, instr2
 
 
+@composite
+def draw_concatenation_and_repeat(
+    draw,
+) -> tuple[Concatenate, Pattern]:
+    repeat = draw(generate_repeat(100, 100))
+    concatenation = draw(generate_concatenate(len(repeat)))
+    return concatenation, repeat
+
+
 @given(two_concatenations())
 def test_merge(args):
     instr1, instr2 = args
@@ -43,9 +53,15 @@ def test_merge(args):
     assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
     assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
     assert merged.depth == 1
-    print(instr1)
-    print(instr2)
-    print(merged)
+
+
+@given(draw_concatenation_and_repeat())
+def test_merge_2(args):
+    concatenation, repeat = args
+    merged = concatenation.merge_channels(repeat)
+    assert merged.get_channel("f0").to_pattern() == concatenation.to_pattern()
+    assert merged.get_channel("f1").to_pattern() == repeat.to_pattern()
+    assert merged.depth == 1
 
 
 def test_slicing_1():
