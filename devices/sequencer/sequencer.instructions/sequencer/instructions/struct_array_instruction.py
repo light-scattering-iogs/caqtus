@@ -371,7 +371,31 @@ class Repeat(SequencerInstruction[_T]):
         return Length(len(self._instruction) * self._repetitions)
 
     def __getitem__(self, item):
-        ...
+        if isinstance(item, int):
+            return self._get_index(item)
+        elif isinstance(item, slice):
+            return self._get_slice(item)
+        else:
+            assert_never(item)
+
+    def _get_index(self, index: int) -> _T:
+        index = _normalize_index(index, len(self))
+        _, r = divmod(index, len(self._instruction))
+        return self._instruction[r]
+
+    def _get_slice(self, slice_: slice) -> SequencerInstruction[_T]:
+        start, stop, step = _normalize_slice(slice_, len(self))
+        if step != 1:
+            raise NotImplementedError
+        q_start, r_start = divmod(start, len(self._instruction))
+        q_stop, r_stop = divmod(stop, len(self._instruction))
+        if q_start == q_stop:
+            return self._instruction[r_start:r_stop:step]
+        else:
+            prepend = self._instruction[r_start::step]
+            append = self._instruction[:r_stop:step]
+            middle = (q_stop - q_start - 1) * self._instruction
+            return prepend + middle + append
 
     @property
     def dtype(self) -> numpy.dtype:
