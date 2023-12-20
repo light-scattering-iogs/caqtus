@@ -188,5 +188,7 @@ class SequenceRunnerThread(Thread):
     def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
         """Compute the parameters of a shot and push them to the queue to be executed."""
 
+        logger.debug(context.variables)
+
         self._sequence_manager.schedule_shot(shot.name, context)
         return context.reset_history()
