@@ -228,42 +228,49 @@ class Concatenate(SequencerInstruction[_T]):
         return " + ".join(sub_strings)
 
     def __getitem__(self, item):
-        if isinstance(item, int):
-            item = _normalize_index(item, len(self))
-            instruction_index = bisect.bisect_left(self._instruction_bounds, item)
-            instruction = self._instructions[instruction_index]
-            instruction_start_index = self._instruction_bounds[instruction_index]
-            return instruction[item - instruction_start_index]
-        elif isinstance(item, slice):
-            start, stop, step = _normalize_slice(item, len(self))
-            if step != 1:
-                raise NotImplementedError
-            start_step_index = bisect.bisect_left(self._instruction_bounds, start)
-            stop_step_index = bisect.bisect_left(self._instruction_bounds, stop)
-            if start_step_index == stop_step_index:
-                instruction_start_index = self._instruction_bounds[start_step_index]
-                instruction_slice = slice(
-                    start - instruction_start_index,
-                    stop - instruction_start_index,
-                    step,
-                )
-                return self._instructions[start_step_index][instruction_slice]
+        match item:
+            case int() as index:
+                return self._get_index(index)
+            case slice() as slice_:
+                return self._get_slice(slice_)
+            case _:
+                assert_never(item)
 
-            result = self._instructions[0][0:0]
-            for instruction_index in range(start_step_index, stop_step_index):
-                instruction_start_index = self._instruction_bounds[instruction_index]
-                instruction_slice_start = max(start, instruction_start_index)
-                instruction_stop_index = self._instruction_bounds[instruction_index + 1]
-                instruction_slice_stop = min(stop, instruction_stop_index)
-                instruction_slice = slice(
-                    instruction_slice_start - instruction_start_index,
-                    instruction_slice_stop - instruction_start_index,
-                    step,
-                )
-                result += self._instructions[instruction_index][instruction_slice]
-            return result
-        else:
-            assert_never(item)
+    def _get_index(self, index: int) -> _T:
+        index = _normalize_index(index, len(self))
+        instruction_index = bisect.bisect_left(self._instruction_bounds, index)
+        instruction = self._instructions[instruction_index]
+        instruction_start_index = self._instruction_bounds[instruction_index]
+        return instruction[index - instruction_start_index]
+
+    def _get_slice(self, slice_: slice) -> SequencerInstruction[_T]:
+        start, stop, step = _normalize_slice(slice_, len(self))
+        if step != 1:
+            raise NotImplementedError
+        start_step_index = bisect.bisect_left(self._instruction_bounds, start)
+        stop_step_index = bisect.bisect_left(self._instruction_bounds, stop)
+        if start_step_index == stop_step_index:
+            instruction_start_index = self._instruction_bounds[start_step_index]
+            instruction_slice = slice(
+                start - instruction_start_index,
+                stop - instruction_start_index,
+                step,
+            )
+            return self._instructions[start_step_index][instruction_slice]
+
+        result = self._instructions[0][0:0]
+        for instruction_index in range(start_step_index, stop_step_index):
+            instruction_start_index = self._instruction_bounds[instruction_index]
+            instruction_slice_start = max(start, instruction_start_index)
+            instruction_stop_index = self._instruction_bounds[instruction_index + 1]
+            instruction_slice_stop = min(stop, instruction_stop_index)
+            instruction_slice = slice(
+                instruction_slice_start - instruction_start_index,
+                instruction_slice_stop - instruction_start_index,
+                step,
+            )
+            result += self._instructions[instruction_index][instruction_slice]
+        return result
 
     @property
     def dtype(self) -> numpy.dtype:
