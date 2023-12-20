@@ -91,6 +91,12 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __eq__(self, other):
         raise NotImplementedError
 
+    @classmethod
+    def empty_like(
+        cls, instruction: SequencerInstruction[_T]
+    ) -> SequencerInstruction[_T]:
+        return Pattern([], dtype=instruction.dtype)
+
     def __add__(self, other) -> SequencerInstruction[_T]:
         if isinstance(other, SequencerInstruction):
             if len(self) == 0:
@@ -259,7 +265,7 @@ class Concatenate(SequencerInstruction[_T]):
             numpy.searchsorted(self._instruction_bounds, stop, side="left") - 1
         )
 
-        result = self._instructions[0][0:0]
+        result = self.empty_like(self._instructions[0])
         for instruction_index in range(start_step_index, stop_step_index + 1):
             instruction_start_index = int(self._instruction_bounds[instruction_index])
             instruction_slice_start = max(start, instruction_start_index)
