@@ -15,6 +15,7 @@ from typing import (
 
 import numpy
 import numpy as np
+from numpy.lib.recfunctions import merge_arrays
 from numpy.typing import DTypeLike
 
 Length = NewType("Length", int)
@@ -124,6 +125,19 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+    @abc.abstractmethod
+    def get_channel(self, channel: str) -> SequencerInstruction:
+        """Returns the instruction for the given channel."""
+
+        raise NotImplementedError
+
+    @classmethod
+    def _create_pattern_without_copy(cls, array: np.array) -> Pattern:
+        array.setflags(write=False)
+        pattern = Pattern.__new__(Pattern)
+        pattern._pattern = array
+        return pattern
+
 
 class Pattern(SequencerInstruction):
     __slots__ = ("_pattern",)
@@ -187,6 +201,18 @@ class Pattern(SequencerInstruction):
             return numpy.array_equal(self._pattern, other._pattern)
         else:
             return NotImplemented
+
+    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        other_pattern = other.to_pattern()
+        merged = merge_arrays(
+            [self._pattern, other_pattern._pattern], flatten=True, fill_value=None
+        )
+        return self._create_pattern_without_copy(merged)
+
+    def get_channel(self, channel: str) -> SequencerInstruction:
+        return self._create_pattern_without_copy(self._pattern[channel])
 
 
 class Concatenate(SequencerInstruction[_T]):
@@ -323,13 +349,18 @@ class Concatenate(SequencerInstruction[_T]):
             [instruction.to_pattern()._pattern for instruction in self._instructions],
             casting="safe",
         )
-        return Pattern(new_array, dtype=self.dtype)
+        return self._create_pattern_without_copy(new_array)
 
     def __eq__(self, other):
         if isinstance(other, Concatenate):
             return self._instructions == other._instructions
         else:
             return NotImplemented
+
+    def get_channel(self, channel: str) -> SequencerInstruction:
+        return Concatenate(
+            *(instruction.get_channel(channel) for instruction in self._instructions)
+        )
 
 
 class Repeat(SequencerInstruction[_T]):
@@ -416,7 +447,7 @@ class Repeat(SequencerInstruction[_T]):
         inner_pattern = self._instruction.to_pattern()
         # noinspection PyProtectedMember
         new_array = numpy.tile(inner_pattern._pattern, self._repetitions)
-        return Pattern(new_array, dtype=self.dtype)
+        return self._create_pattern_without_copy(new_array)
 
     def __eq__(self, other):
         if isinstance(other, Repeat):
@@ -426,6 +457,9 @@ class Repeat(SequencerInstruction[_T]):
             )
         else:
             return NotImplemented
+
+    def get_channel(self, channel: str) -> SequencerInstruction:
+        return Repeat(self._repetitions, self._instruction.get_channel(channel))
 
 
 def _normalize_index(index: int, length: int) -> int:
