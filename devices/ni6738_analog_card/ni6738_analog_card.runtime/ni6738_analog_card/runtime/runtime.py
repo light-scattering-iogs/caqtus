@@ -11,20 +11,13 @@ import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-from sequencer.instructions import (
-    SequencerInstructionOld,
-    SequencerPattern,
-    ChannelLabel,
-    ConcatenateOld,
-    RepeatOld,
-)
+
 from sequencer.instructions.struct_array_instruction import (
     SequencerInstruction,
     Pattern,
     Concatenate,
     Repeat,
 )
-
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
 from util import log_exception
 
