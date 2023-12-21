@@ -343,7 +343,7 @@ class Concatenate(SequencerInstruction[_T]):
         start_step_index = bisect.bisect_right(self._instruction_bounds, start) - 1
         stop_step_index = bisect.bisect_left(self._instruction_bounds, stop) - 1
 
-        result = empty_like(self)
+        results = [empty_like(self)]
         for instruction_index in range(start_step_index, stop_step_index + 1):
             instruction_start_index = self._instruction_bounds[instruction_index]
             instruction_slice_start = max(start, instruction_start_index)
@@ -354,8 +354,8 @@ class Concatenate(SequencerInstruction[_T]):
                 instruction_slice_stop - instruction_start_index,
                 step,
             )
-            result += self._instructions[instruction_index][instruction_slice]
-        return result
+            results.append(self._instructions[instruction_index][instruction_slice])
+        return self.join(*results)
 
     @property
     def dtype(self) -> numpy.dtype:
@@ -407,17 +407,19 @@ class Concatenate(SequencerInstruction[_T]):
                 new_bounds = merge(
                     self._instruction_bounds, concatenate._instruction_bounds
                 )
-                result = empty_like(self).merge_channels(empty_like(concatenate))
+                results = [empty_like(self).merge_channels(empty_like(concatenate))]
                 for start, stop in pairwise(new_bounds):
-                    result += self[start:stop].merge_channels(concatenate[start:stop])
-                return result
+                    results.append(
+                        self[start:stop].merge_channels(concatenate[start:stop])
+                    )
+                return self.join(*results)
             case Repeat() as repeat:
-                result = empty_like(self).merge_channels(empty_like(repeat))
+                results = [empty_like(self).merge_channels(empty_like(repeat))]
                 for (start, stop), instruction in zip(
                     pairwise(self._instruction_bounds), self._instructions
                 ):
-                    result += instruction.merge_channels(repeat[start:stop])
-                return result
+                    results.append(instruction.merge_channels(repeat[start:stop]))
+                return self.join(*results)
             case _:
                 assert_never(other)
 
@@ -547,22 +549,18 @@ class Repeat(SequencerInstruction[_T]):
             case Pattern() as pattern:
                 return self.to_pattern().merge_channels(pattern)
             case Concatenate() as concatenate:
-                result = empty_like(self).merge_channels(empty_like(concatenate))
+                results = [empty_like(self).merge_channels(empty_like(concatenate))]
                 for (start, stop), instruction in zip(
                     pairwise(concatenate._instruction_bounds), concatenate._instructions
                 ):
-                    result += self[start:stop].merge_channels(instruction)
-                return result
+                    results.append(self[start:stop].merge_channels(instruction))
+                return self.join(*results)
             case Repeat() as repeat:
                 lcm = math.lcm(len(self._instruction), len(repeat._instruction))
                 r_a = lcm // len(self._instruction)
-                b_a = self._instruction
-                for _ in range(r_a - 1):
-                    b_a += self._instruction
+                b_a = tile(self._instruction, r_a)
                 r_b = lcm // len(repeat._instruction)
-                b_b = repeat._instruction
-                for _ in range(r_b - 1):
-                    b_b += repeat._instruction
+                b_b = tile(repeat._instruction, r_b)
                 block = b_a.merge_channels(b_b)
                 return block * (len(self) // len(block))
             case _:
@@ -612,3 +610,9 @@ def to_flat_dict(instruction: SequencerInstruction[_T]) -> dict[str, np.ndarray]
     array = instruction.to_pattern()._pattern
     fields = array.dtype.fields
     return {name: array[name] for name in fields}
+
+
+def tile(
+    instruction: SequencerInstruction[_T], repetitions: int
+) -> SequencerInstruction[_T]:
+    return instruction.join(*([instruction] * repetitions))
