@@ -135,6 +135,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         array.setflags(write=False)
         pattern = Pattern.__new__(Pattern)
         pattern._pattern = array
+        pattern._length = Length(len(array))
         return pattern
 
     @abc.abstractmethod
@@ -160,12 +161,13 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
 
 
 class Pattern(SequencerInstruction[_T]):
-    __slots__ = ("_pattern",)
+    __slots__ = ("_pattern", "_length")
     """An instruction to output a pattern on a sequencer."""
 
     def __init__(self, pattern, dtype: Optional[DTypeLike] = None):
         self._pattern = numpy.array(pattern, dtype=dtype)
         self._pattern.setflags(write=False)
+        self._length = Length(len(self._pattern))
 
     def __repr__(self):
         return f"Pattern({list(self._pattern)!r})"
@@ -177,29 +179,27 @@ class Pattern(SequencerInstruction[_T]):
         if isinstance(item, int):
             return self._pattern[item]
         elif isinstance(item, slice):
-            # Here we don't create a new pattern through the constructor, because we want to avoid copying the
-            # underlying numpy array. Instead, we create a new pattern and set its internal numpy array to a view of the
-            # original pattern's array.
-            new_pattern = object.__new__(type(self))
-            new_pattern._pattern = self._pattern[
-                item
-            ]  # in numpy, slicing creates a view, so we don't copy here
-            return new_pattern
+            return self.create_without_copy(self._pattern[item])
         else:
             assert_never(item)
+
+    @classmethod
+    def create_without_copy(cls, array: np.array) -> Pattern:
+        array.setflags(write=False)
+        pattern = cls.__new__(cls)
+        pattern._pattern = array
+        pattern._length = Length(len(array))
+        return pattern
 
     @property
     def dtype(self) -> numpy.dtype:
         return self._pattern.dtype
 
     def as_type(self, dtype: numpy.dtype) -> Self:
-        # Here we try to avoid copy if possible.
-        new_pattern = object.__new__(type(self))
-        new_pattern._pattern = self._pattern.astype(dtype, copy=False)
-        return new_pattern
+        return self.create_without_copy(self._pattern.astype(dtype, copy=False))
 
     def __len__(self) -> Length:
-        return Length(len(self._pattern))
+        return self._length
 
     @property
     def width(self) -> Width:
@@ -251,7 +251,7 @@ class Pattern(SequencerInstruction[_T]):
 
 
 class Concatenate(SequencerInstruction[_T]):
-    __slots__ = ("_instructions", "_instruction_bounds")
+    __slots__ = ("_instructions", "_instruction_bounds", "_length")
     __match_args__ = ("instructions",)
 
     def __init__(self, *instructions: SequencerInstruction[_T]):
@@ -298,6 +298,7 @@ class Concatenate(SequencerInstruction[_T]):
         ] + numpy.cumsum(
             [len(instruction) for instruction in self._instructions]
         ).tolist()
+        self._length = Length(self._instruction_bounds[-1])
 
     @property
     def instructions(self) -> tuple[SequencerInstruction[_T], ...]:
@@ -361,7 +362,7 @@ class Concatenate(SequencerInstruction[_T]):
         )
 
     def __len__(self) -> Length:
-        return Length(sum(len(instruction) for instruction in self._instructions))
+        return self._length
 
     @property
     def width(self) -> Width:
@@ -424,7 +425,7 @@ class Concatenate(SequencerInstruction[_T]):
 
 
 class Repeat(SequencerInstruction[_T]):
-    __slots__ = ("_repetitions", "_instruction")
+    __slots__ = ("_repetitions", "_instruction", "_length")
 
     @property
     def repetitions(self) -> int:
@@ -451,6 +452,7 @@ class Repeat(SequencerInstruction[_T]):
                 self._instruction = instruction
             case _:
                 assert_never(instruction)
+        self._length = Length(len(self._instruction) * self._repetitions)
 
     def __repr__(self):
         return f"Repeat(repetitions={self._repetitions!r}, instruction={self._instruction!r})"
@@ -462,7 +464,7 @@ class Repeat(SequencerInstruction[_T]):
             return f"{self._repetitions} * {self._instruction!s}"
 
     def __len__(self) -> Length:
-        return Length(len(self._instruction) * self._repetitions)
+        return self._length
 
     def __getitem__(self, item):
         if isinstance(item, int):
