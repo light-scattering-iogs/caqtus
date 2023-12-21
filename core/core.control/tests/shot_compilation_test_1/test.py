@@ -1,4 +1,3 @@
-import pickle
 from pathlib import Path
 
 from core.configuration import ExperimentConfig
@@ -23,5 +22,6 @@ def test():
         shot_config,
         variables,
     )
-    with open("swabian_result.pkl", "wb") as file:
-        pickle.dump(to_flat_dict(result["Swabian pulse streamer"]["sequence"]), file)
+    print(to_flat_dict(result["Spincore PulseBlaster sequencer"]["sequence"]))
+    # with open("swabian_result.pkl", "rb") as file:
+    #     pickle.dump(to_flat_dict(result["Swabian pulse streamer"]["sequence"]), file)
