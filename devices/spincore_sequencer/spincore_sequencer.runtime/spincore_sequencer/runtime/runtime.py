@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Sequence
+from collections.abc import Sequence, Mapping
 from enum import IntFlag
 from functools import singledispatchmethod
 from typing import ClassVar
@@ -8,12 +8,11 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
-from sequencer.instructions import (
-    SequencerInstructionOld,
-    SequencerPattern,
-    ChannelLabel,
-    RepeatOld,
-    ConcatenateOld,
+from sequencer.instructions.struct_array_instruction import (
+    SequencerInstruction,
+    Pattern,
+    Repeat,
+    Concatenate,
 )
 from sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from util import log_exception
@@ -101,7 +100,7 @@ class SpincorePulseBlaster(Sequencer):
         spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
     @log_exception(logger)
-    def update_parameters(self, /, sequence: SequencerInstructionOld, **kwargs) -> None:
+    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
         sequence_duration = len(sequence) * self.time_step * 1e-9
         logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
@@ -110,7 +109,7 @@ class SpincorePulseBlaster(Sequencer):
             )
 
         self._program_instruction(sequence)
-        self.program_stop(sequence.split(len(sequence) - 1)[1].flatten())
+        self.program_stop(sequence[-1])
 
         if spinapi.pb_stop_programming() != 0:
             raise RuntimeError(
@@ -120,16 +119,16 @@ class SpincorePulseBlaster(Sequencer):
         self._set_sequence_programmed()
 
     @singledispatchmethod
-    def _program_instruction(self, instruction: SequencerInstructionOld) -> int:
+    def _program_instruction(self, instruction: SequencerInstruction) -> int:
         raise NotImplementedError(f"Not implemented for {type(instruction)}")
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, pattern: SequencerPattern):
+    def _(self, pattern: Pattern):
         for i in range(len(pattern)):
-            values = pattern.get_values_at(i)
+            values = pattern[i]
             outputs = [
-                values[ChannelLabel(channel)] for channel in range(self.channel_number)
+                values[f"ch {channel}"] for channel in range(self.channel_number)
             ]
             self._program_continue(outputs, 1)
 
@@ -176,36 +175,25 @@ class SpincorePulseBlaster(Sequencer):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, repeat: RepeatOld):
+    def _(self, repeat: Repeat):
         if len(repeat.instruction) == 1:
-            channel_values = repeat.instruction.flatten().get_values_at(0)
+            channel_values = repeat.instruction.to_pattern()[0]
             outputs = [
-                channel_values[ChannelLabel(channel)]
+                channel_values[f"ch {channel}"]
                 for channel in range(self.channel_number)
             ]
-            self._program_continue(outputs, repeat.number_repetitions)
+            self._program_continue(outputs, repeat.repetitions)
             return
-        elif len(repeat.instruction) == 2:
-            for_part, end_for_part = repeat.instruction.split(1)
-            middle = None
-            rep = repeat.number_repetitions
         else:
-            for_part, right = repeat.instruction.split(1)
-            middle, end_for_part = right.split(len(right) - 1)
-            rep = repeat.number_repetitions
-        for_values = for_part.flatten().get_first_values()
+            for_part = repeat.instruction[0]
+            middle = repeat.instruction[2:-1]
+            end_for_part = repeat.instruction[-1]
+            rep = repeat.repetitions
         for_flag = self._output_to_flags(
-            [
-                for_values[ChannelLabel(channel)]
-                for channel in range(self.channel_number)
-            ]
+            [for_part[f"ch {channel}"] for channel in range(self.channel_number)]
         )
-        end_for_values = end_for_part.flatten().get_last_values()
         end_for_flag = self._output_to_flags(
-            [
-                end_for_values[ChannelLabel(channel)]
-                for channel in range(self.channel_number)
-            ]
+            [end_for_part[f"ch {channel}"] for channel in range(self.channel_number)]
         )
         logger.debug(f"for {rep=}")
         if rep > 2**20 - 1:
@@ -221,7 +209,7 @@ class SpincorePulseBlaster(Sequencer):
                 "An error occurred when programming the sequence."
                 f"{spinapi.pb_get_error()}"
             )
-        if middle is not None and len(middle) > 0:
+        if len(middle) > 0:
             self._program_instruction(middle)
 
         if (
@@ -240,18 +228,12 @@ class SpincorePulseBlaster(Sequencer):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, concatenate: ConcatenateOld):
+    def _(self, concatenate: Concatenate):
         for instruction in concatenate.instructions:
             self._program_instruction(instruction)
 
-    def program_stop(self, pattern: SequencerPattern):
-        values = pattern.values
-        channel_values = [
-            values[ChannelLabel(channel)].values
-            for channel in range(self.channel_number)
-        ]
-
-        outputs = [channel_values[channel][0] for channel in range(self.channel_number)]
+    def program_stop(self, pattern: Mapping[str, bool]):
+        outputs = [pattern[f"ch {channel}"] for channel in range(self.channel_number)]
         flags = self._output_to_flags(outputs)
         if spinapi.pb_inst_pbonly(flags, spinapi.Inst.STOP, 0, self.time_step * ns) < 0:
             raise RuntimeError(
