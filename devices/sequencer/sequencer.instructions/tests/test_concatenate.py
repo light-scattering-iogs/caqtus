@@ -23,12 +23,6 @@ def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
     return instr, s
 
 
-@given(concatenation_and_interval())
-def test_slicing_1(args):
-    instr, (start, stop) = args
-    assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
-
-
 @composite
 def two_concatenations(draw) -> tuple[Concatenate, Concatenate]:
     length = draw(integers(min_value=2, max_value=100))
@@ -75,6 +69,12 @@ def test_merge_3():
     assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
     assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
     assert merged.depth == 2
+
+
+@given(concatenation_and_interval())
+def test_slicing(args):
+    instr, (start, stop) = args
+    assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
 
 
 def test_slicing_1():
