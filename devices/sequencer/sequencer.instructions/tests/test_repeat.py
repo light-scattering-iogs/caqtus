@@ -46,9 +46,34 @@ def test_merge_2():
 
 
 @given(repeat_and_interval())
-def test_slicing(args):
+def test_slicing_1(args):
     instr, (start, stop) = args
     assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
+
+
+def test_slicing_2():
+    b = 3 * Pattern([0])
+    assert b[0:3] == b, str(b[0:3])
+
+
+def test_slicing_3():
+    b = 2 * Pattern([0, 1])
+    assert b[0:1] == Pattern([0]), str(b[0:1])
+
+
+def test_slicing_4():
+    b = 2 * Pattern([0, 1])
+    assert b[1:1] == Pattern([]), str(b[1:1])
+
+
+def test_slicing_5():
+    b = 2 * Pattern([0, 1, 2])
+    assert b[1:2] == Pattern([1]), str(b[1:2])
+
+
+def test_slicing_6():
+    b = 2 * Pattern([0, 1])
+    assert b[1:2] == Pattern([1]), str(b[1:2])
 
 
 def test_1():

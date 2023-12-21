@@ -481,14 +481,23 @@ class Repeat(SequencerInstruction[_T]):
         start, stop, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
-        q_start, r_start = divmod(start, len(self._instruction))
-        q_stop, r_stop = divmod(stop, len(self._instruction))
-        if q_start == q_stop:
-            return self._instruction[r_start:r_stop:step]
+        length = len(self._instruction)
+        first_repetition = math.ceil(start / length)
+        last_repetition = math.floor(stop / length)
+        if first_repetition > last_repetition:
+            return self._instruction[
+                start - first_repetition * length : stop - first_repetition * length
+            ]
         else:
-            prepend = self._instruction[r_start::step]
-            append = self._instruction[:r_stop:step]
-            middle = (q_stop - q_start - 1) * self._instruction
+            previous_repetition = math.floor(start / length)
+            prepend = self._instruction[
+                start
+                - previous_repetition
+                * length : (first_repetition - previous_repetition)
+                * length
+            ]
+            middle = self._instruction * (last_repetition - first_repetition)
+            append = self._instruction[: stop - last_repetition * length]
             return prepend + middle + append
 
     @property

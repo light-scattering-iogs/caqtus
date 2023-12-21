@@ -3,7 +3,7 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from sequencer.instructions.struct_array_instruction import Pattern, Concatenate
+from sequencer.instructions.struct_array_instruction import Pattern, Concatenate, Repeat
 from .generate_concatenate import generate_concatenate
 from .generate_repeat import generate_repeat
 
@@ -24,7 +24,7 @@ def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
 
 
 @given(concatenation_and_interval())
-def test_slicing(args):
+def test_slicing_1(args):
     instr, (start, stop) = args
     assert instr[start:stop].to_pattern() == instr.to_pattern()[start:stop]
 
@@ -66,6 +66,17 @@ def test_merge_2(args):
     assert merged.depth == 1
 
 
+def test_merge_3():
+    # We need a large number of repetitions to trigger the bug.
+    # Merging was hitting a recursion limit.
+    instr1 = (Pattern([0]) + 2000 * Pattern([1])).as_type(np.dtype([("f0", int)]))
+    instr2 = (Pattern([2]) + 2000 * Pattern([3])).as_type(np.dtype([("f1", int)]))
+    merged = instr1.merge_channels(instr2)
+    assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
+    assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
+    assert merged.depth == 2
+
+
 def test_slicing_1():
     instr = Pattern([0, 1]) + Pattern([0])
     assert instr[1:2].to_pattern() == Pattern([1])
@@ -79,6 +90,11 @@ def test_slicing_2():
 def test_slicing_3():
     instr = Pattern([0]) + Pattern([1])
     assert instr[2:2].to_pattern() == instr.to_pattern()[2:2]
+
+
+def test_slicing_4():
+    instr = Pattern([0]) + 3 * Pattern([1])
+    assert instr[1:] == Repeat(3, Pattern([1])), str(instr[1:])
 
 
 def test():
