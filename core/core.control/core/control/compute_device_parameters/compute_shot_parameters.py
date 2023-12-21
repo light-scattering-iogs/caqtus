@@ -1,6 +1,6 @@
 import logging
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import singledispatch
 from typing import Any, Optional
@@ -20,7 +20,6 @@ from core.configuration.lane import (
 )
 from core.configuration.sequence import ShotConfiguration
 from core.device import DeviceName, DeviceParameter
-from sequencer.channel import ChannelInstruction
 from sequencer.configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -374,7 +373,7 @@ def convert_to_sequence(
     channel_instructions: dict[ChannelLabel, SequencerInstruction],
     sequencer_config: SequencerConfiguration,
 ) -> SequencerInstruction:
-    converted_instructions = {}
+    converted_instructions: dict[ChannelLabel, SequencerInstruction] = {}
     channel_types = sequencer_config.channel_types()
     for channel, channel_type in enumerate(channel_types):
         if issubclass(channel_type, DigitalChannelConfiguration):
@@ -388,12 +387,19 @@ def convert_to_sequence(
         else:
             raise NotImplementedError
 
-    channel_label = ChannelLabel(0)
-    sequence = converted_instructions[channel_label]
-    for channel_index in range(1, sequencer_config.number_channels):
-        channel_label = ChannelLabel(channel_index)
-        sequence = sequence.merge_channels(converted_instructions[channel_label])
-    return sequence
+    return merge_channels(list(converted_instructions.values()))
+
+
+def merge_channels(channels: Sequence[SequencerInstruction]) -> SequencerInstruction:
+    if len(channels) == 1:
+        return channels[0]
+    elif len(channels) == 2:
+        return channels[0].merge_channels(channels[1])
+    else:
+        length = len(channels) // 2
+        sub_block_1 = merge_channels(channels[:length])
+        sub_block_2 = merge_channels(channels[length:])
+        return sub_block_1.merge_channels(sub_block_2)
 
 
 def get_camera_parameters(
