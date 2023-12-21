@@ -302,7 +302,7 @@ def compile_clock_instruction(
     elif isinstance(trigger, ExternalClockOnChange):
         multiplier, high, low = high_low_clicks(target_time_step, base_time_step)
         clock_single_pulse = Pattern([True]) * high + Pattern([False]) * low
-        instruction, _ = get_adaptive_clock(target_sequence, clock_single_pulse)[
+        instruction = get_adaptive_clock(target_sequence, clock_single_pulse)[
             :sequence_length
         ]
     else:
@@ -312,19 +312,21 @@ def compile_clock_instruction(
 
 @singledispatch
 def get_adaptive_clock(
-    target_sequence: SequencerInstruction, clock_pulse: ChannelInstruction
+    target_sequence: SequencerInstruction, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     raise NotImplementedError(f"Target sequence {target_sequence} not implemented")
 
 
 @get_adaptive_clock.register
-def _(target_sequence: Pattern, clock_pulse: ChannelInstruction) -> ChannelInstruction:
+def _(
+    target_sequence: Pattern, clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
     return clock_pulse * len(target_sequence)
 
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Concatenate, clock_pulse: ChannelInstruction
+    target_sequence: Concatenate, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     return SequencerInstruction.join(
         *(
@@ -335,7 +337,9 @@ def _(
 
 
 @get_adaptive_clock.register
-def _(target_sequence: Repeat, clock_pulse: ChannelInstruction) -> ChannelInstruction:
+def _(
+    target_sequence: Repeat, clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
     if len(target_sequence.instruction) == 1:
         return clock_pulse + Pattern([False]) * (
             (len(target_sequence) - 1) * len(clock_pulse)
