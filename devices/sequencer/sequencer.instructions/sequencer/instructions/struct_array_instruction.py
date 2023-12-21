@@ -18,7 +18,6 @@ from typing import (
 
 import numpy
 import numpy as np
-from numpy.lib.recfunctions import merge_arrays
 from numpy.typing import DTypeLike
 
 from util.itertools import pairwise
@@ -230,9 +229,15 @@ class Pattern(SequencerInstruction[_T]):
         if other.dtype.fields is None:
             raise ValueError("Pattern must have at least one channel")
         other_pattern = other.to_pattern()
-        merged = merge_arrays(
-            [self._pattern, other_pattern._pattern], flatten=True, fill_value=None
+        merged_dtype = numpy.dtype(
+            [(name, self.dtype[name]) for name in self.dtype.names]
+            + [(name, other_pattern.dtype[name]) for name in other_pattern.dtype.names]
         )
+        merged = numpy.empty(len(self), dtype=merged_dtype)
+        for name in self.dtype.names:
+            merged[name] = self._pattern[name]
+        for name in other_pattern.dtype.names:
+            merged[name] = other_pattern._pattern[name]
         return self._create_pattern_without_copy(merged)
 
     def get_channel(self, channel: str) -> SequencerInstruction:
