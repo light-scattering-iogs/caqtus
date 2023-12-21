@@ -26,11 +26,10 @@ def test():
     )
     t1 = time.time()
     print(f"Time: {t1-t0}")
-    print(
-        result["Spincore PulseBlaster sequencer"]["sequence"]
-        .get_channel("ch 20")
-        .as_type(bool)
-    )
     with open("result.pkl", "rb") as file:
         reference = pickle.load(file)
-        assert result == reference
+    for sequencer in ["Spincore PulseBlaster sequencer", "NI6738 card"]:
+        assert (
+            result[sequencer]["sequence"].to_pattern()
+            == reference[sequencer]["sequence"].to_pattern()
+        )
