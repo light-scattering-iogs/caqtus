@@ -396,7 +396,7 @@ class Concatenate(SequencerInstruction[_T]):
             raise ValueError("Instructions must have the same length")
         match other:
             case Pattern() as pattern:
-                return pattern.merge_channels(self)
+                return self.to_pattern().merge_channels(pattern)
             case Concatenate() as concatenate:
                 new_bounds = merge(
                     self._instruction_bounds, concatenate._instruction_bounds
@@ -538,9 +538,14 @@ class Repeat(SequencerInstruction[_T]):
             raise ValueError("Instructions must have the same length")
         match other:
             case Pattern() as pattern:
-                return pattern.merge_channels(self)
+                return self.to_pattern().merge_channels(pattern)
             case Concatenate() as concatenate:
-                return concatenate.merge_channels(self)
+                result = empty_like(self).merge_channels(empty_like(concatenate))
+                for (start, stop), instruction in zip(
+                    pairwise(concatenate._instruction_bounds), concatenate._instructions
+                ):
+                    result += self[start:stop].merge_channels(instruction)
+                return result
             case Repeat() as repeat:
                 lcm = math.lcm(len(self._instruction), len(repeat._instruction))
                 r_a = lcm // len(self._instruction)
