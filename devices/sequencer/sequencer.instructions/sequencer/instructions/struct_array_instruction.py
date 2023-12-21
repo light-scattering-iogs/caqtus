@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import bisect
+import itertools
 import math
 from heapq import merge
 from typing import (
@@ -305,11 +306,9 @@ class Concatenate(SequencerInstruction[_T]):
                 )
         # self._instruction_bounds[i] is the first element index (included) the i-th instruction
         # self._instruction_bounds[i+1] is the last element index (excluded) of the i-th instruction
-        self._instruction_bounds = [
-            0,
-        ] + numpy.cumsum(
-            [len(instruction) for instruction in self._instructions]
-        ).tolist()
+        self._instruction_bounds = (0,) + tuple(
+            itertools.accumulate(len(instruction) for instruction in self._instructions)
+        )
         self._length = Length(self._instruction_bounds[-1])
 
     @property
