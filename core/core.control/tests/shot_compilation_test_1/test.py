@@ -31,5 +31,6 @@ def test():
         .get_channel("ch 20")
         .as_type(bool)
     )
-    with open("result.pkl", "wb") as file:
-        pickle.dump(result["Spincore PulseBlaster sequencer"]["sequence"], file)
+    with open("result.pkl", "rb") as file:
+        reference = pickle.load(file)
+        assert result == reference
