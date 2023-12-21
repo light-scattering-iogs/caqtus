@@ -1,3 +1,5 @@
+import pickle
+import time
 from pathlib import Path
 
 from core.configuration import ExperimentConfig
@@ -16,12 +18,18 @@ def test():
     shot_config_file = Path(__file__).parent / "shot_config.yaml"
     with open(shot_config_file, "r") as file:
         shot_config = ShotConfiguration.from_yaml(file.read())
-
+    t0 = time.time()
     result = compute_shot_parameters(
         experiment_config,
         shot_config,
         variables,
     )
-    print(to_flat_dict(result["Spincore PulseBlaster sequencer"]["sequence"]))
-    # with open("swabian_result.pkl", "rb") as file:
-    #     pickle.dump(to_flat_dict(result["Swabian pulse streamer"]["sequence"]), file)
+    t1 = time.time()
+    print(f"Time: {t1-t0}")
+    print(
+        result["Spincore PulseBlaster sequencer"]["sequence"]
+        .get_channel("ch 20")
+        .as_type(bool)
+    )
+    with open("result.pkl", "wb") as file:
+        pickle.dump(result["Spincore PulseBlaster sequencer"]["sequence"], file)
