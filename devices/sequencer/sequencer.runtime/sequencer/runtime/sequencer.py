@@ -40,10 +40,10 @@ class Sequencer(RuntimeDevice, ABC):
             sequence: The sequence to be programmed into the sequencer.
         """
 
-        if sequence.number_channels != self.channel_number:
+        if sequence.width != self.channel_number:
             raise ValueError(
                 f"Invalid number of channels. Expected {self.channel_number}, got"
-                f" {sequence.number_channels}."
+                f" {sequence.width}."
             )
 
     def _set_sequence_programmed(self) -> None:
