@@ -1,4 +1,4 @@
-from .instructions import ChannelLabel
+from ._channel_label import ChannelLabel
 from .struct_array_instruction import SequencerInstruction, Concatenate, Repeat, Pattern
 
 __all__ = [
