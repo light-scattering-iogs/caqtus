@@ -13,12 +13,11 @@ from pulsestreamer import (
     OutputState,
 )
 
-from sequencer.instructions import (
-    SequencerInstructionOld,
-    SequencerPattern,
-    ChannelLabel,
-    ConcatenateOld,
-    RepeatOld,
+from sequencer.instructions.struct_array_instruction import (
+    SequencerInstruction,
+    Pattern,
+    Concatenate,
+    Repeat,
 )
 from sequencer.runtime import (
     Sequencer,
@@ -78,14 +77,14 @@ class SwabianPulseStreamer(Sequencer):
             raise ValueError("Only supports software trigger.")
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
-    def update_parameters(
-        self, *_, sequence: SequencerInstructionOld, **kwargs
-    ) -> None:
+    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         super().update_parameters(sequence=sequence, **kwargs)
         self._sequence = self._construct_pulse_streamer_sequence(sequence)
-        last_values = sequence.get_last_values()
+        last_values = sequence[-1]
         enabled_output = [
-            channel for channel, enabled in last_values.items() if enabled
+            channel
+            for channel in range(self.channel_number)
+            if last_values[f"ch {channel}"]
         ]
         logger.debug(last_values)
         self._final_state = OutputState(enabled_output, 0.0, 0.0)
@@ -107,23 +106,23 @@ class SwabianPulseStreamer(Sequencer):
 
     @singledispatchmethod
     def _construct_pulse_streamer_sequence(
-        self, instruction: SequencerInstructionOld
+        self, instruction: SequencerInstruction
     ) -> PulseStreamerSequence:
         raise NotImplementedError(
             f"Not implemented for type of instruction {type(instruction)}."
         )
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, pattern: SequencerPattern) -> PulseStreamerSequence:
+    def _(self, pattern: Pattern) -> PulseStreamerSequence:
         sequence = self._pulse_streamer.createSequence()
-        values = pattern.values
+        values = pattern.array
         for channel in range(self.channel_number):
-            channel_values = values[ChannelLabel(channel)].values
+            channel_values = values[f"ch {channel}"]
             sequence.setDigital(channel, [(1, v) for v in channel_values])
         return sequence
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, concatenate: ConcatenateOld) -> PulseStreamerSequence:
+    def _(self, concatenate: Concatenate) -> PulseStreamerSequence:
         instructions = concatenate.instructions
         seq = self._construct_pulse_streamer_sequence(instructions[0])
         for instruction in instructions[1:]:
@@ -131,17 +130,17 @@ class SwabianPulseStreamer(Sequencer):
         return seq
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, repeat: RepeatOld) -> PulseStreamerSequence:
+    def _(self, repeat: Repeat) -> PulseStreamerSequence:
         if len(repeat.instruction) == 1:
-            channel_values = repeat.instruction.flatten().get_first_values()
+            channel_values = repeat.instruction[0]
             seq = self._pulse_streamer.createSequence()
             for channel in range(self.channel_number):
                 seq.setDigital(
                     channel,
                     [
                         (
-                            repeat.number_repetitions,
-                            channel_values[ChannelLabel(channel)],
+                            repeat.repetitions,
+                            channel_values[f"ch {channel}"],
                         )
                     ],
                 )
@@ -149,5 +148,5 @@ class SwabianPulseStreamer(Sequencer):
         else:
             return (
                 self._construct_pulse_streamer_sequence(repeat.instruction)
-                * repeat.number_repetitions
+                * repeat.repetitions
             )
