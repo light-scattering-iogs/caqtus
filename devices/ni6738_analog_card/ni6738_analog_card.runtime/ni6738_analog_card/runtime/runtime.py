@@ -18,6 +18,12 @@ from sequencer.instructions import (
     ConcatenateOld,
     RepeatOld,
 )
+from sequencer.instructions.struct_array_instruction import (
+    SequencerInstruction,
+    Pattern,
+    Concatenate,
+    Repeat,
+)
 
 from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
 from util import log_exception
@@ -79,9 +85,7 @@ class NI6738AnalogCard(Sequencer):
             )
 
     @log_exception(logger)
-    def update_parameters(
-        self, *_, sequence: SequencerInstructionOld, **kwargs
-    ) -> None:
+    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         """Write a sequence of voltages to the analog card."""
 
         self._stop_task()
@@ -90,7 +94,7 @@ class NI6738AnalogCard(Sequencer):
 
         self._set_sequence_programmed()
 
-    def _program_sequence(self, sequence: SequencerInstructionOld) -> None:
+    def _program_sequence(self, sequence: SequencerInstruction) -> None:
         logger.debug("Programmed ni6738")
         values = np.concatenate(
             self._values_from_instruction(sequence), axis=1, dtype=np.float64
@@ -148,31 +152,29 @@ class NI6738AnalogCard(Sequencer):
 
     @singledispatchmethod
     def _values_from_instruction(
-        self, instruction: SequencerInstructionOld
+        self, instruction: SequencerInstruction
     ) -> list[np.ndarray]:
         raise NotImplementedError(f"Instruction {instruction} is not supported")
 
     @_values_from_instruction.register
-    def _(self, pattern: SequencerPattern) -> list[np.ndarray]:
-        values = pattern.values
-        result = np.array(
-            [values[ChannelLabel(ch)].values for ch in range(self.channel_number)]
-        )
+    def _(self, pattern: Pattern) -> list[np.ndarray]:
+        values = pattern.array
+        result = np.array([values[f"ch {ch}"] for ch in range(self.channel_number)])
         if np.any(np.isnan(result)):
             raise ValueError(f"Pattern {pattern} contains nan")
         return [result]
 
     @_values_from_instruction.register
-    def _(self, concatenate: ConcatenateOld) -> list[np.ndarray]:
+    def _(self, concatenate: Concatenate) -> list[np.ndarray]:
         result = []
         for instruction in concatenate.instructions:
             result.extend(self._values_from_instruction(instruction))
         return result
 
     @_values_from_instruction.register
-    def _(self, repeat: RepeatOld) -> list[np.ndarray]:
+    def _(self, repeat: Repeat) -> list[np.ndarray]:
         if len(repeat.instruction) != 1:
             raise NotImplementedError(
                 "Only one instruction is supported in a repeat block at the moment"
             )
-        return self._values_from_instruction(repeat.instruction.flatten())
+        return self._values_from_instruction(repeat.instruction.to_pattern())

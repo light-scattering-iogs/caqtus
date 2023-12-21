@@ -262,6 +262,10 @@ class Pattern(SequencerInstruction[_T]):
             raise ValueError("Function must return an array of the same length")
         return self._create_pattern_without_copy(result)
 
+    @property
+    def array(self) -> np.ndarray:
+        return self._pattern
+
 
 class Concatenate(SequencerInstruction[_T]):
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
