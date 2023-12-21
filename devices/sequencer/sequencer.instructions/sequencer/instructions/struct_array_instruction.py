@@ -153,10 +153,17 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
 
         if len(instructions) == 0:
             raise ValueError("Must provide at least one instruction")
-        result = instructions[0]
-        for instruction in instructions[1:]:
-            result += instruction
-        return result
+
+        useful_instructions = []
+        for instruction in instructions:
+            if len(instruction) > 0:
+                useful_instructions.append(instruction)
+        if len(useful_instructions) == 0:
+            return empty_like(instructions[0])
+        elif len(useful_instructions) == 1:
+            return useful_instructions[0]
+        else:
+            return Concatenate(*useful_instructions)
 
 
 class Pattern(SequencerInstruction[_T]):
