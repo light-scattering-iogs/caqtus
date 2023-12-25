@@ -53,6 +53,10 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __getitem__(self, item: slice) -> SequencerInstruction[_T]:
         ...
 
+    @overload
+    def __getitem__(self, item: str) -> SequencerInstruction:
+        ...
+
     @abc.abstractmethod
     def __getitem__(self, item: int | slice) -> _T | SequencerInstruction[_T]:
         raise NotImplementedError
@@ -168,6 +172,8 @@ class Pattern(SequencerInstruction[_T]):
         if isinstance(item, int):
             return self._pattern[item]
         elif isinstance(item, slice):
+            return self.create_without_copy(self._pattern[item])
+        elif isinstance(item, str):
             return self.create_without_copy(self._pattern[item])
         else:
             assert_never(item)
@@ -319,6 +325,8 @@ class Concatenate(SequencerInstruction[_T]):
                 return self._get_index(index)
             case slice() as slice_:
                 return self._get_slice(slice_)
+            case str() as field:
+                return self._get_field(field)
             case _:
                 assert_never(item)
 
@@ -349,6 +357,9 @@ class Concatenate(SequencerInstruction[_T]):
             )
             results.append(self._instructions[instruction_index][instruction_slice])
         return join(*results)
+
+    def _get_field(self, field: str) -> SequencerInstruction:
+        return Concatenate(*(instruction[field] for instruction in self._instructions))
 
     @property
     def dtype(self) -> numpy.dtype:
@@ -474,6 +485,8 @@ class Repeat(SequencerInstruction[_T]):
             return self._get_index(item)
         elif isinstance(item, slice):
             return self._get_slice(item)
+        elif isinstance(item, str):
+            return self._get_field(item)
         else:
             assert_never(item)
 
@@ -504,6 +517,9 @@ class Repeat(SequencerInstruction[_T]):
             middle = self._instruction * (last_repetition - first_repetition)
             append = self._instruction[: stop - last_repetition * length]
             return prepend + middle + append
+
+    def _get_field(self, field: str) -> SequencerInstruction:
+        return Repeat(self._repetitions, self._instruction[field])
 
     @property
     def dtype(self) -> numpy.dtype:
