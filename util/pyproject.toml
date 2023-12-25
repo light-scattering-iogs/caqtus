@@ -17,6 +17,7 @@ numpy = "^1.26.2"
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.6.1"
 black = "^23.10.1"
+sphinx = "^7.2.6"
 
 
 [tool.poetry.group.test.dependencies]
