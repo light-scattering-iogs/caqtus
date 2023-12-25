@@ -1,5 +1,11 @@
 from ._channel_label import ChannelLabel
-from .struct_array_instruction import SequencerInstruction, Concatenate, Repeat, Pattern
+from .struct_array_instruction import (
+    SequencerInstruction,
+    Concatenate,
+    Repeat,
+    Pattern,
+    join,
+)
 
 __all__ = [
     "SequencerInstruction",
@@ -7,4 +13,5 @@ __all__ = [
     "Repeat",
     "Pattern",
     "ChannelLabel",
+    "join",
 ]

@@ -27,6 +27,7 @@ from core.device.sequencer.instructions import (
     Repeat,
     stack_instructions,
     with_name,
+    join,
 )
 
 from sequencer.configuration import (
@@ -330,7 +331,7 @@ def _(
 def _(
     target_sequence: Concatenate, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
-    return SequencerInstruction.join(
+    return join(
         *(
             get_adaptive_clock(sequence, clock_pulse)
             for sequence in target_sequence.instructions

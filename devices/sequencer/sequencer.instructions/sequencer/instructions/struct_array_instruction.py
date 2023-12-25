@@ -148,36 +148,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     ) -> SequencerInstruction[_T]:
         raise NotImplementedError
 
-    @classmethod
-    def join(cls, *instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
-        """Joins the given instructions into a single instruction."""
-
-        if len(instructions) == 0:
-            raise ValueError("Must provide at least one instruction")
-
-        useful_instructions = []
-        for instruction in instructions:
-            if len(instruction) > 0:
-                useful_instructions.append(instruction)
-        match useful_instructions:
-            case []:
-                return empty_like(instructions[0])
-            case [instruction]:
-                return instruction
-            case [*patterns] if all(
-                isinstance(pattern, Pattern) for pattern in patterns
-            ):
-                return Pattern(
-                    numpy.concatenate(
-                        [pattern.array for pattern in patterns],
-                        casting="safe",
-                    )
-                )
-            case [*instructions]:
-                return Concatenate(*instructions)
-            case _:
-                assert_never(useful_instructions)
-
 
 class Pattern(SequencerInstruction[_T]):
     __slots__ = ("_pattern", "_length")
@@ -378,7 +348,7 @@ class Concatenate(SequencerInstruction[_T]):
                 step,
             )
             results.append(self._instructions[instruction_index][instruction_slice])
-        return self.join(*results)
+        return join(*results)
 
     @property
     def dtype(self) -> numpy.dtype:
@@ -435,14 +405,14 @@ class Concatenate(SequencerInstruction[_T]):
                     results.append(
                         self[start:stop].merge_channels(concatenate[start:stop])
                     )
-                return self.join(*results)
+                return join(*results)
             case Repeat() as repeat:
                 results = [empty_like(self).merge_channels(empty_like(repeat))]
                 for (start, stop), instruction in zip(
                     pairwise(self._instruction_bounds), self._instructions
                 ):
                     results.append(instruction.merge_channels(repeat[start:stop]))
-                return self.join(*results)
+                return join(*results)
             case _:
                 assert_never(other)
 
@@ -568,7 +538,7 @@ class Repeat(SequencerInstruction[_T]):
     def get_channel(self, channel: str) -> SequencerInstruction:
         return Repeat(self._repetitions, self._instruction.get_channel(channel))
 
-    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+    def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         match other:
@@ -580,7 +550,7 @@ class Repeat(SequencerInstruction[_T]):
                     pairwise(concatenate._instruction_bounds), concatenate._instructions
                 ):
                     results.append(self[start:stop].merge_channels(instruction))
-                return self.join(*results)
+                return join(*results)
             case Repeat() as repeat:
                 lcm = math.lcm(len(self._instruction), len(repeat._instruction))
                 r_a = lcm // len(self._instruction)
@@ -641,4 +611,32 @@ def to_flat_dict(instruction: SequencerInstruction[_T]) -> dict[str, np.ndarray]
 def tile(
     instruction: SequencerInstruction[_T], repetitions: int
 ) -> SequencerInstruction[_T]:
-    return instruction.join(*([instruction] * repetitions))
+    return join(*([instruction] * repetitions))
+
+
+def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+    """Joins the given instructions into a single instruction."""
+
+    if len(instructions) == 0:
+        raise ValueError("Must provide at least one instruction")
+
+    useful_instructions = []
+    for instruction in instructions:
+        if len(instruction) > 0:
+            useful_instructions.append(instruction)
+    match useful_instructions:
+        case []:
+            return empty_like(instructions[0])
+        case [instruction]:
+            return instruction
+        case [*patterns] if all(isinstance(pattern, Pattern) for pattern in patterns):
+            return Pattern(
+                numpy.concatenate(
+                    [pattern.array for pattern in patterns],
+                    casting="safe",
+                )
+            )
+        case [*instructions]:
+            return Concatenate(*instructions)
+        case _:
+            assert_never(useful_instructions)

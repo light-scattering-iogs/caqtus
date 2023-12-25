@@ -5,16 +5,13 @@ from dataclasses import dataclass
 from numbers import Real
 
 import numpy as np
-
 from core.configuration import Expression, DottedVariableName
 from core.configuration.lane import Lane, AnalogLane, Ramp, DigitalLane, Blink
+
+from core.device.sequencer.instructions import join, SequencerInstruction, Pattern
 from core.types import Parameter, is_analog_value
 from core.types.units import Quantity, ureg, units, dimensionless, magnitude_in_unit
 from sequencer.channel.channel_instructions import ChannelType
-from sequencer.instructions.struct_array_instruction import (
-    SequencerInstruction,
-    Pattern,
-)
 from .camera_instruction import CameraInstruction
 from .evaluation_error import ShotEvaluationError
 from .timing import get_step_starts, start_tick, stop_tick, number_ticks
@@ -69,7 +66,8 @@ def compile_digital_lane(
             )
             if not 0 <= duty_cycle <= 1:
                 raise ShotEvaluationError(
-                    f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and 1, not {duty_cycle}"
+                    f"Duty cycle '{cell_value.duty_cycle.body}' must be between 0 and"
+                    f" 1, not {duty_cycle}"
                 )
             num_ticks_per_period, _ = divmod(period, time_step)
             num_ticks_high = math.ceil(num_ticks_per_period * duty_cycle)
@@ -82,7 +80,8 @@ def compile_digital_lane(
             )
             if not 0 <= phase <= 2 * math.pi:
                 raise ShotEvaluationError(
-                    f"Phase '{cell_value.phase.body}' must be between 0 and 2*pi, not {phase}"
+                    f"Phase '{cell_value.phase.body}' must be between 0 and 2*pi, not"
+                    f" {phase}"
                 )
             split_position = round(phase / (2 * math.pi) * num_ticks_per_period)
             clock_pattern = (
@@ -93,13 +92,14 @@ def compile_digital_lane(
             pattern = clock_pattern * num_clock_pulses + Pattern([False]) * remainder
             if not len(pattern) == length:
                 raise RuntimeError(
-                    f"Pattern length {len(pattern)} does not match expected length {length}"
+                    f"Pattern length {len(pattern)} does not match expected length"
+                    f" {length}"
                 )
             print(f"{pattern=}")
             instructions.append(pattern)
         else:
             raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
-    return SequencerInstruction.join(*instructions)
+    return join(*instructions)
 
 
 def compile_analog_lane(
@@ -148,7 +148,7 @@ class CompileAnalogLane:
                 left = instruction[:split_index]
                 instructions.append(left)
                 instruction = instruction[split_index:]
-        return SequencerInstruction.join(*instructions)
+        return join(*instructions)
 
     def _compile_expression_cell(
         self, expression: Expression, start: float, stop: float
@@ -252,4 +252,4 @@ def compile_camera_instruction(
     for value, start, stop, _ in camera_instruction.triggers:
         length = number_ticks(start, stop, time_step * ns)
         instructions.append(Pattern([value]) * length)
-    return SequencerInstruction.join(*instructions)
+    return join(*instructions)
