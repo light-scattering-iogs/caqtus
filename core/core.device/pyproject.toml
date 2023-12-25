@@ -25,6 +25,11 @@ device-config = {path = "../../devices/device/device.configuration", develop = t
 
 [tool.poetry.group.dev.dependencies]
 sphinx = "^7.2.6"
+jupyter = "^1.0.0"
+black = "^23.12.1"
+matplotlib = "^3.8.2"
+nbsphinx = "^0.9.3"
+ipympl = "^0.9.3"
 
 [build-system]
 requires = ["poetry-core"]

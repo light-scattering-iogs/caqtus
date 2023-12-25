@@ -10,6 +10,9 @@ Welcome to code.device's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   Sequencer/sequencer
+
+
 
 
 Indices and tables
