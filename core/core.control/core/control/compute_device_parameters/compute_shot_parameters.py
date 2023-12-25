@@ -26,6 +26,7 @@ from core.device.sequencer.instructions import (
     Concatenate,
     Repeat,
     stack_instructions,
+    with_name,
 )
 
 from sequencer.configuration import (
@@ -379,15 +380,18 @@ def convert_to_sequence(
     channel_types = sequencer_config.channel_types()
     for channel, channel_type in enumerate(channel_types):
         if issubclass(channel_type, DigitalChannelConfiguration):
-            converted_instructions[ChannelLabel(channel)] = channel_instructions[
-                ChannelLabel(channel)
-            ].as_type(np.dtype([(f"ch {channel}", bool)]))
+            instruction = channel_instructions[ChannelLabel(channel)].as_type(
+                np.dtype(bool)
+            )
         elif issubclass(channel_type, AnalogChannelConfiguration):
-            converted_instructions[ChannelLabel(channel)] = channel_instructions[
-                ChannelLabel(channel)
-            ].as_type(np.dtype([(f"ch {channel}", float)]))
+            instruction = channel_instructions[ChannelLabel(channel)].as_type(
+                np.dtype(float)
+            )
         else:
             raise NotImplementedError
+        converted_instructions[ChannelLabel(channel)] = with_name(
+            instruction, f"ch {channel}"
+        )
 
     return stack_instructions(list(converted_instructions.values()))
 
