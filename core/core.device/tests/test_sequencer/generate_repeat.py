@@ -2,7 +2,7 @@ import numpy as np
 from hypothesis.strategies import composite, integers, permutations
 from sympy import factorint
 
-from sequencer.instructions.struct_array_instruction import Repeat
+from core.device.sequencer.instructions import Repeat
 from .generate_pattern import generate_pattern
 
 

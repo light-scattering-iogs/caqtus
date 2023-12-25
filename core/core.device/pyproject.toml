@@ -30,6 +30,14 @@ black = "^23.12.1"
 matplotlib = "^3.8.2"
 nbsphinx = "^0.9.3"
 ipympl = "^0.9.3"
+jupyterlab-code-formatter = "^2.2.1"
+isort = "^5.13.2"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.3"
+hypothesis = "^6.92.1"
+sympy = "^1.12"
 
 [build-system]
 requires = ["poetry-core"]

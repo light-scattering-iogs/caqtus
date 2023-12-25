@@ -3,7 +3,7 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from sequencer.instructions.struct_array_instruction import Pattern, Concatenate, Repeat
+from core.device.sequencer.instructions import Pattern, Concatenate, Repeat
 from .generate_concatenate import generate_concatenate
 from .generate_repeat import generate_repeat
 

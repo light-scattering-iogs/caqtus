@@ -1,6 +1,6 @@
 from hypothesis.strategies import composite, integers
+from core.device.sequencer.instructions import Concatenate
 
-from sequencer.instructions.struct_array_instruction import Concatenate
 from .generate_pattern import generate_pattern
 
 

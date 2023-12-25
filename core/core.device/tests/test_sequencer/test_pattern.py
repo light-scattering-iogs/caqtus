@@ -1,7 +1,7 @@
 import numpy as np
 from hypothesis import given
 
-from sequencer.instructions.struct_array_instruction import Pattern
+from core.device.sequencer.instructions import Pattern
 from hypothesis.strategies import composite, integers
 from .generate_concatenate import generate_concatenate
 from .generate_pattern import generate_pattern

@@ -2,7 +2,7 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from sequencer.instructions.struct_array_instruction import Repeat, Pattern
+from core.device.sequencer.instructions import Repeat, Pattern
 from .generate_repeat import generate_repeat, generate_repeat_fixed_length
 
 
