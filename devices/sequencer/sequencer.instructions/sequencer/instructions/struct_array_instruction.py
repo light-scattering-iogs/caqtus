@@ -159,10 +159,10 @@ class Pattern(SequencerInstruction[_T]):
         self._length = Length(len(self._pattern))
 
     def __repr__(self):
-        return f"Pattern({list(self._pattern)!r})"
+        return f"Pattern({self._pattern.tolist()!r})"
 
     def __str__(self):
-        return str(self._pattern)
+        return str(self._pattern.tolist())
 
     def __getitem__(self, item):
         if isinstance(item, int):
