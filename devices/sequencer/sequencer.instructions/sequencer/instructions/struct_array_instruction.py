@@ -123,7 +123,10 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
             elif other == 1:
                 return self
             else:
-                return Repeat(other, self)
+                if isinstance(self, Repeat):
+                    return Repeat(self._repetitions * other, self._instruction)
+                else:
+                    return Repeat(other, self)
         else:
             return NotImplemented
 
@@ -432,23 +435,25 @@ class Repeat(SequencerInstruction[_T]):
     def instruction(self) -> SequencerInstruction[_T]:
         return self._instruction
 
-    def __init__(self, repetitions: SupportsInt, instruction: SequencerInstruction[_T]):
-        rep = int(repetitions)
-        if rep < 2:
-            raise ValueError("Repetitions must be greater than or equal to 2")
-        if len(instruction) < 1:
-            raise ValueError("Instruction must have a length greater than 0")
-        match instruction:
-            # We merge repetitions of repetitions into a single repetition to avoid nesting and increasing the depth of
-            # the instruction tree.
-            case Repeat(repetitions=inner_rep, instruction=inner_instruction):
-                self._repetitions = rep * inner_rep
-                self._instruction = inner_instruction
-            case SequencerInstruction():
-                self._repetitions = rep
-                self._instruction = instruction
-            case _:
-                assert_never(instruction)
+    def __init__(self, repetitions: int, instruction: SequencerInstruction[_T]):
+        """
+        Creates a new instruction that is the repetition of the given instruction.
+
+        User code should not call this constructor directly. Instead, use the `*`
+        operator.
+
+        Args:
+            repetitions: The number of times to repeat the instruction.
+            instruction: The instruction to repeat.
+        """
+
+        assert isinstance(repetitions, int)
+        assert isinstance(instruction, SequencerInstruction)
+        assert repetitions >= 2
+        assert len(instruction) >= 1
+
+        self._repetitions = repetitions
+        self._instruction = instruction
         self._length = Length(len(self._instruction) * self._repetitions)
 
     def __repr__(self):
