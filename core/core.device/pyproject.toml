@@ -23,6 +23,9 @@ tweezer-arranger-runtime = {path = "../../devices/tweezer_arranger/tweezer_arran
 device-config = {path = "../../devices/device/device.configuration", develop = true}
 
 
+[tool.poetry.group.dev.dependencies]
+sphinx = "^7.2.6"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
