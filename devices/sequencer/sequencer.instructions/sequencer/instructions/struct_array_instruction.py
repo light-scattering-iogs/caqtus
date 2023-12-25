@@ -15,8 +15,8 @@ from typing import (
     Optional,
     assert_never,
     Self,
-    SupportsInt,
     Callable,
+    TypeAlias,
 )
 
 import numpy
@@ -32,7 +32,7 @@ Depth = NewType("Depth", int)
 _T = TypeVar("_T")
 
 
-class SequencerInstruction(abc.ABC, Generic[_T]):
+class _BaseInstruction(abc.ABC, Generic[_T]):
     """An immutable representation of instructions to output on a sequencer.
 
     This represents a high-level series of instructions to output on a sequencer. Each instruction is a compact
@@ -104,7 +104,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
     def __add__(self, other) -> SequencerInstruction[_T]:
-        if isinstance(other, SequencerInstruction):
+        if isinstance(other, _BaseInstruction):
             if len(self) == 0:
                 return other
             elif len(other) == 0:
@@ -152,7 +152,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
 
-class Pattern(SequencerInstruction[_T]):
+class Pattern(_BaseInstruction[_T]):
     __slots__ = ("_pattern", "_length")
     """An instruction to output a pattern on a sequencer."""
 
@@ -248,7 +248,7 @@ class Pattern(SequencerInstruction[_T]):
         return self._pattern
 
 
-class Concatenate(SequencerInstruction[_T]):
+class Concatenate(_BaseInstruction[_T]):
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
     __match_args__ = ("instructions",)
 
@@ -424,7 +424,7 @@ class Concatenate(SequencerInstruction[_T]):
         )
 
 
-class Repeat(SequencerInstruction[_T]):
+class Repeat(_BaseInstruction[_T]):
     __slots__ = ("_repetitions", "_instruction", "_length")
 
     @property
@@ -448,7 +448,7 @@ class Repeat(SequencerInstruction[_T]):
         """
 
         assert isinstance(repetitions, int)
-        assert isinstance(instruction, SequencerInstruction)
+        assert isinstance(instruction, (Pattern, Concatenate, Repeat))
         assert repetitions >= 2
         assert len(instruction) >= 1
 
@@ -670,3 +670,6 @@ def _break_concatenations(
         else:
             flat.append(instruction)
     return flat
+
+
+SequencerInstruction: TypeAlias = Pattern[_T] | Concatenate[_T] | Repeat[_T]
