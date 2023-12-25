@@ -110,4 +110,3 @@ def test():
     c = Pattern([7, 8, 9])
     with pytest.raises(TypeError):
         a + b
-    assert (b + c + b).depth == 1

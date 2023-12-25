@@ -108,7 +108,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
             elif len(other) == 0:
                 return self
             else:
-                return Concatenate(self, other)
+                return join(self, other)
         else:
             return NotImplemented
 
