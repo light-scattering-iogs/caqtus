@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import abc
 import bisect
+import collections
 import itertools
 import math
+from collections.abc import Sequence
 from heapq import merge
 from typing import (
     NewType,
@@ -616,23 +618,49 @@ def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
     if len(instructions) == 0:
         raise ValueError("Must provide at least one instruction")
 
+    instruction_deque = collections.deque(_break_concatenations(instructions))
+
     useful_instructions = []
-    for instruction in instructions:
-        if len(instruction) > 0:
+    while instruction_deque:
+        instruction = instruction_deque.popleft()
+        if len(instruction) == 0:
+            continue
+        if isinstance(instruction, Pattern):
+            concatenated_patterns = [instruction]
+            while instruction_deque and isinstance(instruction_deque[0], Pattern):
+                concatenated_patterns.append(instruction_deque.popleft())
+            if len(concatenated_patterns) == 1:
+                useful_instructions.append(concatenated_patterns[0])
+            else:
+                useful_instructions.append(
+                    Pattern(
+                        numpy.concatenate(
+                            [pattern.array for pattern in concatenated_patterns],
+                            casting="safe",
+                        )
+                    )
+                )
+        else:
             useful_instructions.append(instruction)
+
     match useful_instructions:
         case []:
             return empty_like(instructions[0])
         case [instruction]:
             return instruction
-        case [*patterns] if all(isinstance(pattern, Pattern) for pattern in patterns):
-            return Pattern(
-                numpy.concatenate(
-                    [pattern.array for pattern in patterns],
-                    casting="safe",
-                )
-            )
         case [*instructions]:
             return Concatenate(*instructions)
         case _:
             assert_never(useful_instructions)
+
+
+def _break_concatenations(
+    instructions: Sequence[SequencerInstruction[_T]],
+) -> list[SequencerInstruction[_T]]:
+    flat = []
+    for instruction in instructions:
+        if isinstance(instruction, Concatenate):
+            flat.extend(instruction.instructions)
+        else:
+            flat.append(instruction)
+    return flat
