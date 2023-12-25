@@ -306,7 +306,8 @@ class Concatenate(SequencerInstruction[_T]):
                 )
             if instruction.dtype != dtype:
                 raise TypeError(
-                    f"Instruction at index {index} has dtype {instruction.dtype}, expected {dtype}"
+                    f"Instruction at index {index} has dtype {instruction.dtype},"
+                    f" expected {dtype}"
                 )
         # self._instruction_bounds[i] is the first element index (included) the i-th instruction
         # self._instruction_bounds[i+1] is the last element index (excluded) of the i-th instruction
@@ -472,7 +473,10 @@ class Repeat(SequencerInstruction[_T]):
         self._length = Length(len(self._instruction) * self._repetitions)
 
     def __repr__(self):
-        return f"Repeat(repetitions={self._repetitions!r}, instruction={self._instruction!r})"
+        return (
+            f"Repeat(repetitions={self._repetitions!r},"
+            f" instruction={self._instruction!r})"
+        )
 
     def __str__(self):
         if isinstance(self._instruction, Concatenate):
