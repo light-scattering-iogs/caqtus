@@ -4,6 +4,7 @@ from pathlib import Path
 
 from core.configuration import ExperimentConfig
 from core.configuration.sequence import ShotConfiguration
+
 from core.control.compute_device_parameters import compute_shot_parameters
 from util import serialization
 from .variables import variables
@@ -25,7 +26,8 @@ def test():
     )
     t1 = time.time()
     print(f"Time: {t1-t0}")
-    with open("result.pkl", "rb") as file:
+    result_file = Path(__file__).parent / "result.pkl"
+    with open(result_file, "rb") as file:
         reference = pickle.load(file)
     for sequencer in ["Spincore PulseBlaster sequencer", "NI6738 card"]:
         assert (

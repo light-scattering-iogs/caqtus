@@ -1,13 +1,12 @@
 import logging
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import singledispatch
 from typing import Any, Optional
 
 import numpy as np
 from attrs import define, field
-
 from core.configuration import Expression
 from core.configuration.experiment import ExperimentConfig
 from core.configuration.lane import (
@@ -19,7 +18,16 @@ from core.configuration.lane import (
     TweezerArrangerLane,
 )
 from core.configuration.sequence import ShotConfiguration
+
 from core.device import DeviceName, DeviceParameter
+from core.device.sequencer.instructions import (
+    SequencerInstruction,
+    Pattern,
+    Concatenate,
+    Repeat,
+    stack_instructions,
+)
+
 from sequencer.configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -31,12 +39,6 @@ from sequencer.configuration import (
     AnalogChannelConfiguration,
 )
 from sequencer.instructions import ChannelLabel
-from sequencer.instructions.struct_array_instruction import (
-    SequencerInstruction,
-    Pattern,
-    Concatenate,
-    Repeat,
-)
 from .camera_instruction import CameraInstruction
 from .clock_instruction import ClockInstruction
 from .compile_lane import (
@@ -387,19 +389,7 @@ def convert_to_sequence(
         else:
             raise NotImplementedError
 
-    return merge_channels(list(converted_instructions.values()))
-
-
-def merge_channels(channels: Sequence[SequencerInstruction]) -> SequencerInstruction:
-    if len(channels) == 1:
-        return channels[0]
-    elif len(channels) == 2:
-        return channels[0].merge_channels(channels[1])
-    else:
-        length = len(channels) // 2
-        sub_block_1 = merge_channels(channels[:length])
-        sub_block_2 = merge_channels(channels[length:])
-        return sub_block_1.merge_channels(sub_block_2)
+    return stack_instructions(list(converted_instructions.values()))
 
 
 def get_camera_parameters(
