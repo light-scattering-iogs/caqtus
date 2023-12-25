@@ -47,7 +47,6 @@ def test_merge(args):
     merged = instr1.merge_channels(instr2)
     assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
     assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
-    assert merged.depth == 1
 
 
 @given(draw_concatenation_and_repeat())
@@ -57,7 +56,6 @@ def test_merge_2(args):
     merged = concatenation.merge_channels(repeat)
     assert merged.get_channel("f0").to_pattern() == concatenation.to_pattern()
     assert merged.get_channel("f1").to_pattern() == repeat.to_pattern()
-    assert merged.depth == 1
 
 
 def test_merge_3():

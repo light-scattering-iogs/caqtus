@@ -159,12 +159,24 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         for instruction in instructions:
             if len(instruction) > 0:
                 useful_instructions.append(instruction)
-        if len(useful_instructions) == 0:
-            return empty_like(instructions[0])
-        elif len(useful_instructions) == 1:
-            return useful_instructions[0]
-        else:
-            return Concatenate(*useful_instructions)
+        match useful_instructions:
+            case []:
+                return empty_like(instructions[0])
+            case [instruction]:
+                return instruction
+            case [*patterns] if all(
+                isinstance(pattern, Pattern) for pattern in patterns
+            ):
+                return Pattern(
+                    numpy.concatenate(
+                        [pattern.array for pattern in patterns],
+                        casting="safe",
+                    )
+                )
+            case [*instructions]:
+                return Concatenate(*instructions)
+            case _:
+                assert_never(useful_instructions)
 
 
 class Pattern(SequencerInstruction[_T]):

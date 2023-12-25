@@ -2,7 +2,12 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from core.device.sequencer.instructions import Repeat, Pattern
+from core.device.sequencer.instructions import (
+    Repeat,
+    Pattern,
+    stack_instructions,
+    with_name,
+)
 from .generate_repeat import generate_repeat, generate_repeat_fixed_length
 
 
@@ -45,6 +50,14 @@ def test_merge_2():
     assert merged.get_channel("f1").to_pattern() == repeat2.to_pattern()
 
 
+def test_merge_3():
+    repeat_1 = 6 * Pattern([0, 1])
+    repeat_2 = 4 * Pattern([0, 1, 2])
+    stacked = stack_instructions([with_name(repeat_1, "f0"), with_name(repeat_2, "f1")])
+    assert stacked.get_channel("f0").as_type(int) == Pattern([0, 1, 0, 1, 0, 1]) * 2
+    assert stacked.get_channel("f1").as_type(int) == Pattern([0, 1, 2, 0, 1, 2]) * 2
+
+
 @given(repeat_and_interval())
 def test_slicing_1(args):
     instr, (start, stop) = args
@@ -79,3 +92,7 @@ def test_slicing_6():
 def test_1():
     b = 2 * Pattern([0])
     assert b[0:1] == Pattern([0])
+
+
+if __name__ == "__main__":
+    test_merge_3()
