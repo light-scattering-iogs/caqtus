@@ -250,7 +250,11 @@ class Concatenate(SequencerInstruction[_T]):
     __match_args__ = ("instructions",)
 
     def __init__(self, *instructions: SequencerInstruction[_T]):
-        """Creates a new instruction that is the concatenation of the given instructions.
+        """
+        Creates a new instruction that is the concatenation of the given instructions.
+
+        This constructor is not expected to be called in user code. Instead, use the
+        `+` operator or the `join` function.
 
         Args:
             instructions: The instructions to concatenate.
@@ -259,23 +263,17 @@ class Concatenate(SequencerInstruction[_T]):
                 All instructions must have the same dtype.
         """
 
+        assert len(instructions) >= 2
+
+        assert not any(
+            isinstance(instruction, Concatenate) for instruction in instructions
+        )
+
         instructions_list: list[SequencerInstruction[_T]] = []
         for instruction in instructions:
-            match instruction:
-                case Concatenate(instructions):
-                    # We treat concatenation of concatenations as a single concatenation to avoid nesting and increasing
-                    # the depth of the instruction tree.
-                    instructions_list.extend(instructions)
-                case SequencerInstruction():
-                    instructions_list.append(instruction)
-                case _:
-                    assert_never(instruction)
+            instructions_list.append(instruction)
 
         self._instructions = tuple(instructions_list)
-        if len(self._instructions) < 2:
-            raise ValueError(
-                "Concatenate instructions must have at least two instructions"
-            )
         dtype = self._instructions[0].dtype
         for index, instruction in enumerate(self._instructions):
             if len(instruction) == 0:
@@ -287,8 +285,11 @@ class Concatenate(SequencerInstruction[_T]):
                     f"Instruction at index {index} has dtype {instruction.dtype},"
                     f" expected {dtype}"
                 )
-        # self._instruction_bounds[i] is the first element index (included) the i-th instruction
-        # self._instruction_bounds[i+1] is the last element index (excluded) of the i-th instruction
+        # self._instruction_bounds[i] is the first element index (included) the i-th
+        # instruction
+        #
+        # self._instruction_bounds[i+1] is the last element index (excluded) of the
+        # i-th instruction
         self._instruction_bounds = (0,) + tuple(
             itertools.accumulate(len(instruction) for instruction in self._instructions)
         )
