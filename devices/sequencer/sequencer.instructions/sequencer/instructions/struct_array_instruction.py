@@ -128,12 +128,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __rmul__(self, other):
         return self.__mul__(other)
 
-    @abc.abstractmethod
-    def get_channel(self, channel: str) -> SequencerInstruction:
-        """Returns the instruction for the given channel."""
-
-        raise NotImplementedError
-
     @classmethod
     def _create_pattern_without_copy(cls, array: np.array) -> Pattern:
         array.setflags(write=False)
@@ -235,12 +229,6 @@ class Pattern(SequencerInstruction[_T]):
         for name in other_pattern.dtype.names:
             merged[name] = other_pattern._pattern[name]
         return self._create_pattern_without_copy(merged)
-
-    def get_channel(self, channel: str) -> SequencerInstruction:
-        channel_array = self._pattern[channel]
-        return self._create_pattern_without_copy(channel_array).as_type(
-            np.dtype([(channel, channel_array.dtype)])
-        )
 
     def apply(
         self, func: Callable[[numpy.ndarray], numpy.ndarray]
@@ -395,11 +383,6 @@ class Concatenate(SequencerInstruction[_T]):
         else:
             return NotImplemented
 
-    def get_channel(self, channel: str) -> SequencerInstruction:
-        return Concatenate(
-            *(instruction.get_channel(channel) for instruction in self._instructions)
-        )
-
     # noinspection PyProtectedMember
     def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
         if len(self) != len(other):
@@ -550,9 +533,6 @@ class Repeat(SequencerInstruction[_T]):
             )
         else:
             return NotImplemented
-
-    def get_channel(self, channel: str) -> SequencerInstruction:
-        return Repeat(self._repetitions, self._instruction.get_channel(channel))
 
     def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
         if len(self) != len(other):

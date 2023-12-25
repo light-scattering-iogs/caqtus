@@ -3,7 +3,13 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from core.device.sequencer.instructions import Pattern, Concatenate, Repeat
+from core.device.sequencer.instructions import (
+    Pattern,
+    Concatenate,
+    Repeat,
+    with_name,
+    stack_instructions,
+)
 from .generate_concatenate import generate_concatenate
 from .generate_repeat import generate_repeat
 
@@ -44,28 +50,30 @@ def draw_concatenation_and_repeat(
 def test_merge(args):
     instr1 = args[0].as_type(np.dtype([("f0", np.int64)]))
     instr2 = args[1].as_type(np.dtype([("f1", np.int64)]))
-    merged = instr1.merge_channels(instr2)
-    assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
-    assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
+    merged = stack_instructions([with_name(instr1, "f0"), with_name(instr2, "f1")])
+    assert merged["f0"].to_pattern() == instr1.to_pattern()
+    assert merged["f1"].to_pattern() == instr2.to_pattern()
 
 
 @given(draw_concatenation_and_repeat())
 def test_merge_2(args):
-    concatenation = args[0].as_type(np.dtype([("f0", np.int64)]))
-    repeat = args[1].as_type(np.dtype([("f1", np.int64)]))
-    merged = concatenation.merge_channels(repeat)
-    assert merged.get_channel("f0").to_pattern() == concatenation.to_pattern()
-    assert merged.get_channel("f1").to_pattern() == repeat.to_pattern()
+    concatenation = args[0]
+    repeat = args[1]
+    merged = stack_instructions(
+        [with_name(concatenation, "f0"), with_name(repeat, "f1")]
+    )
+    assert merged["f0"].to_pattern() == concatenation.to_pattern()
+    assert merged["f1"].to_pattern() == repeat.to_pattern()
 
 
 def test_merge_3():
     # We need a large number of repetitions to trigger the bug.
     # Merging was hitting a recursion limit.
-    instr1 = (Pattern([0]) + 2000 * Pattern([1])).as_type(np.dtype([("f0", int)]))
-    instr2 = (Pattern([2]) + 2000 * Pattern([3])).as_type(np.dtype([("f1", int)]))
-    merged = instr1.merge_channels(instr2)
-    assert merged.get_channel("f0").to_pattern() == instr1.to_pattern()
-    assert merged.get_channel("f1").to_pattern() == instr2.to_pattern()
+    instr1 = Pattern([0]) + 2000 * Pattern([1])
+    instr2 = Pattern([2]) + 2000 * Pattern([3])
+    merged = stack_instructions([with_name(instr1, "f0"), with_name(instr2, "f1")])
+    assert merged["f0"].to_pattern() == instr1.to_pattern()
+    assert merged["f1"].to_pattern() == instr2.to_pattern()
     assert merged.depth == 2
 
 
