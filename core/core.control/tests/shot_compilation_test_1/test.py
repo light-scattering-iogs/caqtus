@@ -5,7 +5,6 @@ from pathlib import Path
 from core.configuration import ExperimentConfig
 from core.configuration.sequence import ShotConfiguration
 from core.control.compute_device_parameters import compute_shot_parameters
-from sequencer.instructions.instructions import to_flat_dict
 from util import serialization
 from .variables import variables
 
