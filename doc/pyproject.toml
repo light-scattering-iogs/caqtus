@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "doc"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <bloc.dam@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sphinx = "^7.2.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
