@@ -36,41 +36,32 @@ class Sequence:
         return str(self.path)
 
     def exists(self, experiment_session: ExperimentSession) -> bool:
-        """Check if the sequence exists.
-
-        Args:
-            experiment_session: The active experiment session in which to check for the
-            sequence.
-        """
+        """Check if the sequence exists in the session."""
 
         return experiment_session.sequence_hierarchy.does_sequence_exist(self)
 
     def get_creation_date(self, experiment_session: ExperimentSession) -> datetime:
-        """Get the creation date of the sequence.
-
-        Args:
-            experiment_session: The active experiment session from which to get the
-            creation date.
-        Raises:
-            SequenceNotFoundError: If the sequence does not exist in the session.
-        """
+        """Get the date at which the sequence was created."""
 
         return experiment_session.sequence_hierarchy.get_sequence_creation_date(self)
 
     def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
         """Return the configuration of the sequence.
 
-        Args:
-            experiment_session: The active experiment session from which to get the
-            configuration.
-        Raises:
-            SequenceNotFoundError: If the sequence does not exist in the session.
+        Whether or not the sequence has been run, it always has a configuration.
         """
 
         yaml = experiment_session.sequence_hierarchy.get_sequence_config_yaml(self)
         return SequenceConfig.from_yaml(yaml)
 
-    def set_config(self, config: SequenceConfig, experiment_session: ExperimentSession):
+    def set_config(
+        self, config: SequenceConfig, experiment_session: ExperimentSession
+    ) -> None:
+        """Set the configuration of the sequence.
+
+        If the sequence has already been run, this method will raise `:py:class:SequenceNotEditableError`.
+        """
+
         if not isinstance(config, SequenceConfig):
             raise TypeError(
                 f"Expected instance of <SequenceConfig>, got {type(config)}"
@@ -85,18 +76,29 @@ class Sequence:
             self, yaml, config.compute_total_number_of_shots()
         )
 
-    def set_experiment_config(
-        self, experiment_config: str, experiment_session: ExperimentSession
-    ):
-        experiment_session.sequence_hierarchy.set_sequence_experiment_config(
-            self, experiment_config
-        )
-
     def get_experiment_config(
         self, experiment_session: ExperimentSession
     ) -> Optional[ExperimentConfig]:
+        """Return the experiment config associated with the sequence.
+
+        If the sequence has not been run yet, this method will return None.
+        If the sequence has been run, this method will return the experiment config that was used to run it.
+        """
+
         return experiment_session.sequence_hierarchy.get_sequence_experiment_config(
             self
+        )
+
+    def set_experiment_config(
+        self, experiment_config: str, experiment_session: ExperimentSession
+    ) -> None:
+        """Set the experiment config the sequence is referring to.
+
+        This method should only be called when the sequence starts running.
+        """
+
+        experiment_session.sequence_hierarchy.set_sequence_experiment_config(
+            self, experiment_config
         )
 
     def set_shot_config(
@@ -104,7 +106,9 @@ class Sequence:
         shot_name: str,
         shot_config: ShotConfiguration,
         experiment_session: ExperimentSession,
-    ):
+    ) -> None:
+        """Set the configuration of a shot."""
+
         if not isinstance(shot_config, ShotConfiguration):
             raise TypeError(
                 f"Expected instance of <ShotConfiguration>, got {type(shot_config)}"
@@ -115,7 +119,7 @@ class Sequence:
 
     def set_steps_program(
         self, steps: SequenceSteps, experiment_session: ExperimentSession
-    ):
+    ) -> None:
         """Set the steps of the sequence."""
 
         if not isinstance(steps, SequenceSteps):
@@ -125,12 +129,21 @@ class Sequence:
         self.set_config(sequence_config, experiment_session)
 
     def get_state(self, experiment_session: ExperimentSession) -> State:
+        """Returns the state of the sequence."""
+
         return experiment_session.sequence_hierarchy.get_sequence_state(self)
 
     def set_state(self, new_state: State, experiment_session: ExperimentSession):
+        """Set the state of the sequence.
+
+        Users should not call this method directly, it should be handled by the program running the experiment.
+        """
+
         experiment_session.sequence_hierarchy.set_sequence_state(self, new_state)
 
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
+        """Returns the shots that have been run for the sequence."""
+
         return experiment_session.sequence_hierarchy.get_sequence_shots(self)
 
     def create_shot(
@@ -142,6 +155,11 @@ class Sequence:
         measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
         experiment_session: ExperimentSession,
     ) -> Shot:
+        """Create a new shot for this sequence.
+
+        Users should not call this method directly, it should be handled by the program running the experiment.
+        """
+
         return experiment_session.sequence_hierarchy.create_sequence_shot(
             self, name, start_time, end_time, parameters, measures
         )
@@ -154,6 +172,8 @@ class Sequence:
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
     ) -> Sequence:
+        """Create a new sequence in the session."""
+
         return experiment_session.sequence_hierarchy.create_sequence(
             path, sequence_config, experiment_config_name
         )
