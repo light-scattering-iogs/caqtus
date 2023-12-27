@@ -216,7 +216,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
     def is_sequence(self, index: QModelIndex) -> bool:
         item: "_SequenceHierarchyItem" = index.internalPointer()
-        with self._session.activate() as session:
+        with self._session as session:
             return item.sequence_path.is_sequence(session)
 
     @staticmethod
@@ -246,7 +246,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
         children.append(
             _SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
-        with self._session.activate() as session:
+        with self._session as session:
             number_created_paths = len(new_path.create(session))
             if number_created_paths == 1:
                 _logger.info(f'Created new folder "{str(new_path)}"')

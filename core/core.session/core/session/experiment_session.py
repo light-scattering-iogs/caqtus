@@ -43,23 +43,3 @@ class ExperimentSession(
     sequence_hierarchy: SequenceHierarchy
     shot_collection: ShotCollection
     experiment_configs: ExperimentConfigCollection
-
-    def activate(self):
-        """Activate the session
-
-        This method is meant to be used in a with statement.
-
-        Example:
-            # Ok
-            with session.activate():
-                config = session.get_current_experiment_config()
-
-            # Not ok
-            config = session.get_current_experiment_config()
-
-            # Not ok
-            session.activate()
-            config = session.get_current_experiment_config()
-        """
-
-        return self

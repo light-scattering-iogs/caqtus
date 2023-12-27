@@ -40,9 +40,7 @@ def build_dataframe_from_sequences(
     if session_maker is None:
         session_maker = get_standard_experiment_session_maker()
 
-    session = session_maker()
-
-    with session.activate():
+    with session_maker() as session:
         shots = []
         for sequence in sequences:
             shots.extend(sequence.get_shots(session))
@@ -79,9 +77,7 @@ def build_dataframe_from_sequence(
     if session_maker is None:
         session_maker = get_standard_experiment_session_maker()
 
-    session = session_maker()
-
-    with session.activate():
+    with session_maker() as session:
         shots = sequence.get_shots(session)
 
     return build_dataframe_from_shots(shots, importer, session_maker, iter_transform)

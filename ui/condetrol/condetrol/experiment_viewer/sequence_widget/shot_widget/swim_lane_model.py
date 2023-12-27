@@ -84,7 +84,7 @@ class SwimLaneModel(QAbstractItemModel):
         Returns:
             True if the sequence is editable and the shot config was saved. False otherwise.
         """
-        with self._session.activate():
+        with self._session:
             if self.get_sequence_state(self._session).is_editable():
                 self._save_config(self.shot_config, self._session)
                 return True
