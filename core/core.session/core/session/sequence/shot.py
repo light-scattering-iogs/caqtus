@@ -137,5 +137,5 @@ class Shot:
         return hash((self.sequence, self.name, self.index))
 
 
-class ShotNotFoundError(Exception):
+class ShotNotFoundError(RuntimeError):
     pass

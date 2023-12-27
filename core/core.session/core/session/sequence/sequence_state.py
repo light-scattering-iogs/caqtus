@@ -67,7 +67,7 @@ _ALLOWED_TRANSITIONS = {
 }
 
 
-class InvalidStateTransitionError(Exception):
+class InvalidStateTransitionError(RuntimeError):
     """Raised when an invalid state transition is attempted.
 
     This error is raised when trying to transition a sequence to an invalid state.
@@ -76,7 +76,7 @@ class InvalidStateTransitionError(Exception):
     pass
 
 
-class InvalidSequenceStateError(Exception):
+class InvalidSequenceStateError(RuntimeError):
     """Raised when an invalid sequence state is encountered.
 
     This error is raised when trying to perform an operation that is not allowed in the

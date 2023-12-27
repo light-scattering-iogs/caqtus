@@ -217,5 +217,5 @@ class SequenceNotEditableError(InvalidSequenceStateError):
     pass
 
 
-class SequenceNotFoundError(Exception):
+class SequenceNotFoundError(RuntimeError):
     pass

@@ -323,9 +323,9 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
 
-class PathIsSequenceError(Exception):
+class PathIsSequenceError(RuntimeError):
     pass
 
 
-class PathIsNotSequenceError(Exception):
+class PathIsNotSequenceError(RuntimeError):
     pass
