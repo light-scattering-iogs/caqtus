@@ -10,6 +10,11 @@ Welcome to experiment-control's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   tutorials/tutorials
+   explanations/explanations
+   reference/reference
+   how-to/how-to
+
 
 
 Indices and tables
