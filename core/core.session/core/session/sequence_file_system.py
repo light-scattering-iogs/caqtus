@@ -17,6 +17,12 @@ from .sequence import State, SequenceStats
 
 
 class SequenceHierarchy(Protocol):
+    """Interface that defines the sequence hierarchy of an experiment session.
+
+    This object provides a file-system-like methods that can be used to create, delete and check for the existence of
+    sequences.
+    """
+
     @abstractmethod
     def does_path_exists(self, path: SequencePath) -> bool:
         """Check if the path exists in the session.

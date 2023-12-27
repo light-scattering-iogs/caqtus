@@ -11,7 +11,8 @@ from util import serialization
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     """Interface for the set of experiment configurations in a session.
 
-    This defines the methods that are required to implement how to access the configurations of an experiment.
+    This defines the methods that are required to implement how to access the configuration of devices needed to run
+    the experiment.
     """
 
     def __getitem__(self, name: str) -> ExperimentConfig:

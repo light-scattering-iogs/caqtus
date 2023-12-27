@@ -11,6 +11,11 @@ logger.setLevel(logging.DEBUG)
 
 
 class ShotCollection(Protocol):
+    """Interface that defines the shot collection of an experiment session.
+
+    This is an object that provides method to get and set data for a given shot.
+    """
+
     @abstractmethod
     def get_shot_data(self, shot: Shot, data_label: str) -> Any:
         """Get data stored for a given shot specified by their label.
