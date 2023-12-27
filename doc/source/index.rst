@@ -11,9 +11,9 @@ Welcome to experiment-control's documentation!
    :caption: Contents:
 
    tutorials/tutorials
-   explanations/explanations
-   reference/reference
    how-to/how-to
+   reference/reference
+   explanations/explanations
 
 
 
