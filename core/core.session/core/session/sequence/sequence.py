@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional, Iterable, Mapping, TYPE_CHECKING
+from typing import Optional, Iterable, TYPE_CHECKING
 
-from core.types import Parameter, Data, DataLabel
-from device.name import DeviceName
 from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
-from util import attrs
-from variable.name import DottedVariableName
 
+from util import attrs
 from .path import SequencePath
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
@@ -133,36 +130,10 @@ class Sequence:
 
         return experiment_session.sequence_hierarchy.get_sequence_state(self)
 
-    def set_state(self, new_state: State, experiment_session: ExperimentSession):
-        """Set the state of the sequence.
-
-        Users should not call this method directly, it should be handled by the program running the experiment.
-        """
-
-        experiment_session.sequence_hierarchy.set_sequence_state(self, new_state)
-
     def get_shots(self, experiment_session: ExperimentSession) -> list[Shot]:
         """Returns the shots that have been run for the sequence."""
 
         return experiment_session.sequence_hierarchy.get_sequence_shots(self)
-
-    def create_shot(
-        self,
-        name: str,
-        start_time: datetime,
-        end_time: datetime,
-        parameters: Mapping[DottedVariableName, Parameter],
-        measures: Mapping[DeviceName, Mapping[DataLabel, Data]],
-        experiment_session: ExperimentSession,
-    ) -> Shot:
-        """Create a new shot for this sequence.
-
-        Users should not call this method directly, it should be handled by the program running the experiment.
-        """
-
-        return experiment_session.sequence_hierarchy.create_sequence_shot(
-            self, name, start_time, end_time, parameters, measures
-        )
 
     @classmethod
     def create_sequence(

@@ -245,7 +245,7 @@ class SequenceManager(AbstractContextManager):
     def __enter__(self) -> Self:
         with self._session_maker() as session:
             self._sequence.set_experiment_config(self._experiment_config_name, session)
-            self._sequence.set_state(State.PREPARING, session)
+            self._set_sequence_state(State.PREPARING)
         try:
             self._prepare()
             self._set_sequence_state(State.RUNNING)
@@ -445,7 +445,7 @@ class SequenceManager(AbstractContextManager):
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
-            self._sequence.set_state(state, session)
+            session.sequence_hierarchy.set_sequence_state(self._sequence, state)
 
 
 class SequenceInterruptedException(RuntimeError):
@@ -461,13 +461,13 @@ def save_shot(
         params = {
             name: value for name, value in shot_data.variables.to_flat_dict().items()
         }
-        return sequence.create_shot(
+        return session.sequence_hierarchy.create_sequence_shot(
+            sequence=sequence,
             name=shot_data.name,
             start_time=shot_data.start_time,
             end_time=shot_data.end_time,
             parameters=params,
             measures=shot_data.data,
-            experiment_session=session,
         )
 
 

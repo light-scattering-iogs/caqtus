@@ -52,7 +52,7 @@ class ExperimentManager:
                     session.sequence_hierarchy.get_sequences_in_state(state)
                 )
             for sequence in sequences:
-                sequence.set_state(State.CRASHED, session)
+                session.sequence_hierarchy.set_sequence_state(sequence, State.CRASHED)
 
     def start_sequence(
         self,

@@ -5,11 +5,11 @@ from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
-
 from concurrent_updater import ConcurrentUpdater
+from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
+
 from core.session import ExperimentSessionMaker, ExperimentSession, PathIsSequenceError
 from core.session.sequence import SequencePath, Sequence, State, SequenceStats
-from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
@@ -360,7 +360,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
         if item.is_sequence:
             sequence = Sequence(item.sequence_path)
             with self._session as session:
-                sequence.set_state(State.DRAFT, session)
+                session.sequence_hierarchy.set_sequence_state(sequence, State.DRAFT)
             self.dataChanged.emit(index, index)
 
 
