@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING, Iterator
 
 import sqlalchemy.orm
@@ -41,7 +41,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
                 )
             experiment_config_model = self._query_model(name)
             experiment_config_model.content = obj
-            experiment_config_model.modification_date = datetime.now()
+            experiment_config_model.modification_date = datetime.now(tz=timezone.utc)
             self._get_sql_session().flush()
         else:
             ExperimentConfig.add_config(
