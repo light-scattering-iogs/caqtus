@@ -165,6 +165,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         if current is None:
             new = self.add_experiment_config(config)
             self.set_current(new)
+            return new
         else:
             try:
                 self[current] = config

@@ -24,5 +24,8 @@ def test_set_current(empty_session: ExperimentSession):
     experiment_config = ExperimentConfig()
 
     with empty_session as session:
-        session.experiment_configs.set_current_config(experiment_config)
+        name = session.experiment_configs.set_current_config(experiment_config)
         assert session.experiment_configs.get_current_config() == experiment_config
+
+    with empty_session as session:
+        assert session.experiment_configs[name] == experiment_config
