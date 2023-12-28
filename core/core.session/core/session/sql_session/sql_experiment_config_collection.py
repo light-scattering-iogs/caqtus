@@ -5,6 +5,8 @@ import sqlalchemy.orm
 from attr import frozen
 from sqlalchemy import select
 
+from experiment.configuration import ExperimentConfig
+from util import serialization
 from .model import (
     ExperimentConfigModel,
     CurrentExperimentConfigModel,
@@ -22,8 +24,35 @@ if TYPE_CHECKING:
 class SQLExperimentConfigCollection(ExperimentConfigCollection):
     parent_session: "SQLExperimentSession"
 
+    def __getitem__(self, name: str) -> ExperimentConfig:
+        """Get an experiment configuration by name."""
+
+        try:
+            experiment_config = serialization.from_json(
+                self.get_experiment_config_json(name), ExperimentConfig
+            )
+        except Exception as e:
+            raise ValueError(f"Failed to load experiment config '{name}'") from e
+        if not isinstance(experiment_config, ExperimentConfig):
+            raise TypeError(
+                f"Expected an ExperimentConfig, got {type(experiment_config)}"
+            )
+        return experiment_config
+
     def get_experiment_config_json(self, name: str) -> str:
         return ExperimentConfigModel.get_config(name, self._get_sql_session())
+
+    def __setitem__(self, name: str, experiment_config: ExperimentConfig):
+        if not isinstance(name, str):
+            raise TypeError(f"Expected <str> for name, got {type(name)}")
+        if not isinstance(experiment_config, ExperimentConfig):
+            raise TypeError(
+                f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
+            )
+        json_config = serialization.to_json(experiment_config, ExperimentConfig)
+        if serialization.from_json(json_config, ExperimentConfig) != experiment_config:
+            raise AssertionError("The experiment config was not correctly serialized.")
+        self._set_experiment_config_json(name, json_config)
 
     def _set_experiment_config_json(self, name: str, json_config: str):
         if name in self:

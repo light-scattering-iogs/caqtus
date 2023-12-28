@@ -11,71 +11,9 @@ from util import serialization
 class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     """Interface for the set of experiment configurations in a session.
 
-    This defines the methods that are required to implement how to access the configuration of devices needed to run
-    the experiment.
+    This defines the methods that are required to implement how to access the
+    configuration of devices needed to run the experiment.
     """
-
-    def __getitem__(self, name: str) -> ExperimentConfig:
-        """Get an experiment configuration by name.
-
-        This method will read the serialized experiment configuration string from the session and deserialize it. If the
-        deserialization fails, an exception will be raised. It might then be necessary to call the method
-        `get_experiment_config_yaml` to check that the yaml string is valid.
-        """
-
-        try:
-            experiment_config = serialization.from_json(
-                self.get_experiment_config_json(name), ExperimentConfig
-            )
-        except Exception as e:
-            raise ValueError(f"Failed to load experiment config '{name}'") from e
-        if not isinstance(experiment_config, ExperimentConfig):
-            raise TypeError(
-                f"Expected an ExperimentConfig, got {type(experiment_config)}"
-            )
-        return experiment_config
-
-    @abstractmethod
-    def get_experiment_config_json(self, name: str) -> str:
-        """Get the experiment configuration json string.
-
-        Args:
-            name: The name of the experiment configuration.
-
-        Returns:
-            The json string representation of the experiment configuration.
-
-        Raises:
-            KeyError: If there is no experiment configuration with the given name.
-        """
-
-        raise NotImplementedError()
-
-    def __setitem__(self, name: str, experiment_config: ExperimentConfig):
-        if not isinstance(name, str):
-            raise TypeError(f"Expected <str> for name, got {type(name)}")
-        if not isinstance(experiment_config, ExperimentConfig):
-            raise TypeError(
-                f"Expected <ExperimentConfig> for value, got {type(experiment_config)}"
-            )
-        json_config = serialization.to_json(experiment_config, ExperimentConfig)
-        if serialization.from_json(json_config, ExperimentConfig) != experiment_config:
-            raise AssertionError("The experiment config was not correctly serialized.")
-        self._set_experiment_config_json(name, json_config)
-
-    @abstractmethod
-    def _set_experiment_config_json(self, name: str, json_config: str):
-        """Set the experiment configuration yaml string.
-
-        This is a private method that should not be called directly. Instead, the method
-         `__setitem__` should be used.
-
-        Args:
-            name: The name of the experiment configuration.
-            json_config: The yaml string representation of the experiment configuration.
-        """
-
-        raise NotImplementedError()
 
     def add_experiment_config(
         self,
@@ -174,21 +112,6 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
                 current = self.add_experiment_config(config)
                 self.set_current_by_name(current)
                 return current
-
-    def get_current_experiment_config_yaml(self) -> Optional[str]:
-        """Get the yaml representation of the current experiment configuration.
-
-        Returns:
-            The yaml representation of the current experiment configuration if one is
-            set, None otherwise. The yaml representation is not guaranteed to be valid
-            if the way the experiment configuration is represented changed.
-        """
-
-        name = self.get_current_by_name()
-        if name is None:
-            return None
-        experiment_config_yaml = self.get_experiment_config_json(name)
-        return experiment_config_yaml
 
     def get_modification_date(self, name: str) -> datetime:
         """Get the modification date of an experiment config.
