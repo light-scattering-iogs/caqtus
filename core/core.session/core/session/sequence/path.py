@@ -4,7 +4,7 @@ import datetime
 import re
 import typing
 
-from util import attrs
+import attrs
 
 from .._return_or_raise import return_or_raise
 

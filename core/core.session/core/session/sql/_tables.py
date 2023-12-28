@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
 
 import sqlalchemy
@@ -100,17 +100,15 @@ class Path(Base):
     )
 
     creation_date: Mapped[datetime] = mapped_column()
-    sequence: Mapped[Optional[Sequence]] = relationship(
-        cascade="all"
-    )  # this list will always contain either 0 or 1 element, because no two sequences can have the same path id
+    sequence: Mapped[Optional[Sequence]] = relationship(cascade="all")
 
     @classmethod
-    def create_path(
+    def create(
         cls,
         path: str,
         session: Session,
     ):
-        session.add(cls(path=Ltree(path), creation_date=datetime.now()))
+        session.add(cls(path=path, creation_date=datetime.now(tz=timezone.utc)))
         session.flush()
 
     def is_sequence(self) -> bool:
