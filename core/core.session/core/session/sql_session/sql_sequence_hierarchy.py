@@ -16,7 +16,7 @@ from variable.name import DottedVariableName
 
 from .model import SequenceModel, SequencePathModel
 from .model import ShotModel
-from .._return_or_raise import return_or_raise
+from .._return_or_raise import unwrap
 from ..data_type import DataType
 from ..sequence import SequencePath, Sequence, Shot
 from ..sequence import (
@@ -89,7 +89,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
                     f"Cannot delete a path that contains sequences: {sub_sequences}"
                 )
 
-        session.delete(return_or_raise(self._query_path_model(path)))
+        session.delete(unwrap(self._query_path_model(path)))
         session.flush()
 
     def get_path_children(
@@ -319,7 +319,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         return {Sequence(SequencePath(str(sequence.path))) for sequence in query}
 
     def _query_sequence_model(self, sequence: Sequence) -> SequenceModel:
-        path = return_or_raise(self._query_path_model(sequence.path))
+        path = unwrap(self._query_path_model(sequence.path))
         query_sequence = select(SequenceModel).where(SequenceModel.path == path)
         result = self._get_sql_session().execute(query_sequence)
         if sequence := result.scalar():

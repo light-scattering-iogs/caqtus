@@ -6,7 +6,7 @@ T = TypeVar("T")
 E = TypeVar("E", bound=Exception)
 
 
-def return_or_raise(result: Result[T, E]) -> T:
+def unwrap(result: Result[T, E]) -> T:
     match result:
         case Success(value):
             return value

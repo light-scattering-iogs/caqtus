@@ -6,7 +6,7 @@ import typing
 
 import attrs
 
-from .._return_or_raise import return_or_raise
+from .._return_or_raise import unwrap
 
 if typing.TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -80,7 +80,7 @@ class SequencePath:
         """
 
         result = experiment_session.sequence_hierarchy.create_path(self)
-        return return_or_raise(result)
+        return unwrap(result)
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -138,7 +138,7 @@ class SequencePath:
 
         result = experiment_session.sequence_hierarchy.is_sequence_path(self)
 
-        return return_or_raise(result)
+        return unwrap(result)
 
     def is_root(self) -> bool:
         return self.path == ""
@@ -166,7 +166,7 @@ class SequencePath:
         """
 
         result = experiment_session.sequence_hierarchy.get_path_children(self)
-        return return_or_raise(result)
+        return unwrap(result)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
@@ -184,7 +184,7 @@ class SequencePath:
         """
 
         result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
-        return return_or_raise(result)
+        return unwrap(result)
 
     def get_ancestors(self, strict: bool = True) -> list[SequencePath]:
         """Return the ancestors of this path.

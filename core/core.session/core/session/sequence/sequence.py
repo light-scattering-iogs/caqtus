@@ -10,7 +10,7 @@ from util import attrs
 from .path import SequencePath
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
-from .._return_or_raise import return_or_raise
+from .._return_or_raise import unwrap
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -151,7 +151,7 @@ class Sequence:
 
     def get_stats(self, experiment_session: ExperimentSession) -> SequenceStats:
         result = experiment_session.sequence_hierarchy.get_sequence_stats(self)
-        return return_or_raise(result)
+        return unwrap(result)
 
     @classmethod
     def query_sequence_stats(
