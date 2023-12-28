@@ -36,10 +36,12 @@ class ExperimentConfig(Base):
     modification_date: Mapped[datetime] = mapped_column(index=True)
 
     @classmethod
-    def add_config(cls, name: str, yaml: str, comment: Optional[str], session: Session):
+    def add_config(
+        cls, name: str, content: JSON, comment: Optional[str], session: Session
+    ):
         new_config = cls(
             name=name,
-            experiment_config_yaml=yaml,
+            content=content,
             comment=comment,
             modification_date=datetime.now(),
         )
@@ -47,34 +49,12 @@ class ExperimentConfig(Base):
         session.flush()
 
     @classmethod
-    def get_configs(
-        cls,
-        from_date: Optional[datetime],
-        to_date: Optional[datetime],
-        session: Session,
-    ) -> dict[datetime, str]:
-        if from_date is None:
-            from_date = datetime.min
-        if to_date is None:
-            to_date = datetime.max
-
-        query = (
-            select(cls)
-            .where(cls.modification_date.between(from_date, to_date))
-            .order_by(cls.modification_date)
-        )
-        return {
-            result.name: result.experiment_config_yaml
-            for result in session.scalars(query)
-        }
-
-    @classmethod
-    def get_config(cls, name: str, session: Session) -> str:
+    def get_config(cls, name: str, session: Session) -> JSON:
         query = select(cls).where(cls.name == name)
         result = session.scalar(query)
         if result is None:
             raise KeyError(f"Config {name} does not exist")
-        return result.experiment_config_yaml
+        return result.content
 
 
 class CurrentExperimentConfig:

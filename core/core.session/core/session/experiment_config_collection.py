@@ -37,13 +37,16 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
 
     @abstractmethod
     def get_experiment_config_json(self, name: str) -> str:
-        """Get the experiment configuration yaml string.
+        """Get the experiment configuration json string.
 
         Args:
             name: The name of the experiment configuration.
 
         Returns:
-            The yaml string representation of the experiment configuration.
+            The json string representation of the experiment configuration.
+
+        Raises:
+            KeyError: If there is no experiment configuration with the given name.
         """
 
         raise NotImplementedError()
@@ -64,7 +67,8 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     def _set_experiment_config_json(self, name: str, json_config: str):
         """Set the experiment configuration yaml string.
 
-        This is a private method that should not be called directly. Instead, the method `__setitem__` should be used.
+        This is a private method that should not be called directly. Instead, the method
+         `__setitem__` should be used.
 
         Args:
             name: The name of the experiment configuration.
@@ -110,8 +114,8 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         launched.
 
         Args:
-            name: The name of the experiment config to set as the current one. There must be an experiment config with
-                this name in the session.
+            name: The name of the experiment config to set as the current one. There
+            must be an experiment config with this name in the session.
         """
 
         raise NotImplementedError()
@@ -121,7 +125,8 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         """Get the name of the currently selected experiment config.
 
         Returns:
-            the name of the currently selected experiment config if one is set, None otherwise.
+            the name of the currently selected experiment config if one is set, None
+            otherwise.
         """
 
         raise NotImplementedError()
@@ -145,8 +150,9 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
     def set_current_config(self, config: ExperimentConfig) -> str:
         """Update the current experiment configuration.
 
-        If the current experiment configuration is attached to a sequence, a new one will be created and set as the
-        current one. If the current experiment configuration is not attached to a sequence, it will be updated.
+        If the current experiment configuration is attached to a sequence, a new one
+        will be created and set as the current one. If the current experiment
+        configuration is not attached to a sequence, it will be updated.
 
         Args:
             config: The new experiment configuration to set as the current one.
@@ -203,6 +209,10 @@ def _find_first_unused_number(numbers: list[int]) -> int:
 
 
 class ReadOnlyExperimentConfigError(RuntimeError):
-    """Raised when trying to modify an experiment config that is attached to one or more sequences."""
+    """Exception raised if the experiment config cannot be modified.
+
+    It is raised when trying to modify an experiment config that is attached to one or
+    more sequences.
+    """
 
     pass

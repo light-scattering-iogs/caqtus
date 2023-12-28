@@ -2,6 +2,7 @@ from ..session_maker import ExperimentSessionMaker
 import sqlalchemy
 import sqlalchemy.orm
 from ..experiment_session import ExperimentSession
+from ._experiment_session import SQLExperimentSession
 
 
 class SQLExperimentSessionMaker(ExperimentSessionMaker):
