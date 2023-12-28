@@ -107,7 +107,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         return f"config_{_find_first_unused_number(numbers)}"
 
     @abstractmethod
-    def set_current(self, name: str):
+    def set_current_by_name(self, name: str):
         """Set the current experiment config.
 
         The current experiment config is the one associated to a sequence when it is
@@ -164,7 +164,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         current = self.get_current()
         if current is None:
             new = self.add_experiment_config(config)
-            self.set_current(new)
+            self.set_current_by_name(new)
             return new
         else:
             try:
@@ -172,7 +172,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
                 return current
             except ReadOnlyExperimentConfigError:
                 current = self.add_experiment_config(config)
-                self.set_current(current)
+                self.set_current_by_name(current)
                 return current
 
     def get_current_experiment_config_yaml(self) -> Optional[str]:

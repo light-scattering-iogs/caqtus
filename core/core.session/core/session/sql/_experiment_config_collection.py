@@ -86,7 +86,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
         query = select(ExperimentConfig.name).where(ExperimentConfig.name == item)
         return self._get_sql_session().execute(query).one_or_none() is not None
 
-    def set_current(self, name: str):
+    def set_current_by_name(self, name: str):
         if not isinstance(name, str):
             raise TypeError(f"Expected <str> for name, got {type(name)}")
         CurrentExperimentConfig.set_current_experiment_config(
