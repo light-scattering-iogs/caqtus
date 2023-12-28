@@ -57,7 +57,7 @@ class ExperimentConfig(Base):
         return result.content
 
 
-class CurrentExperimentConfig:
+class CurrentExperimentConfig(Base):
     """Represent a table with a single row to store the current experiment config"""
 
     __tablename__ = "current_experiment_config"
@@ -158,7 +158,7 @@ class Sequence(Base):
     ] = mapped_column()  # None indicates that this number is unknown
     number_completed_shots: Mapped[int] = mapped_column()
 
-    shots: Mapped[list["ShotModel"]] = relationship(
+    shots: Mapped[list[Shot]] = relationship(
         cascade="all, delete, delete-orphan", passive_deletes=True
     )
 
