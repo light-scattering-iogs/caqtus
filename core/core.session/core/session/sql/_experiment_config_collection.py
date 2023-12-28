@@ -93,7 +93,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
             name=name, session=self._get_sql_session()
         )
 
-    def get_current(self) -> Optional[str]:
+    def get_current_by_name(self) -> Optional[str]:
         return CurrentExperimentConfig.get_current_experiment_config_name(
             session=self._get_sql_session()
         )

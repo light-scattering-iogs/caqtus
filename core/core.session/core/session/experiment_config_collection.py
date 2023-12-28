@@ -121,7 +121,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_current(self) -> Optional[str]:
+    def get_current_by_name(self) -> Optional[str]:
         """Get the name of the currently selected experiment config.
 
         Returns:
@@ -141,7 +141,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             configuration is invalid.
         """
 
-        current_config_name = self.get_current()
+        current_config_name = self.get_current_by_name()
         if current_config_name is None:
             return None
         else:
@@ -161,7 +161,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             The name given to the current experiment configuration after the update.
         """
 
-        current = self.get_current()
+        current = self.get_current_by_name()
         if current is None:
             new = self.add_experiment_config(config)
             self.set_current_by_name(new)
@@ -184,7 +184,7 @@ class ExperimentConfigCollection(MutableMapping[str, ExperimentConfig], ABC):
             if the way the experiment configuration is represented changed.
         """
 
-        name = self.get_current()
+        name = self.get_current_by_name()
         if name is None:
             return None
         experiment_config_yaml = self.get_experiment_config_json(name)

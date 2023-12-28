@@ -12,7 +12,7 @@ class CurrentExperimentConfigWatcher:
     def __init__(self, session_maker: ExperimentSessionMaker):
         self._session = session_maker()
         with self._session:
-            self._config_name = self._session.experiment_configs.get_current()
+            self._config_name = self._session.experiment_configs.get_current_by_name()
             if self._config_name is None:
                 raise RuntimeError("No current experiment config was previously set.")
             self._modification_date = (
@@ -34,7 +34,7 @@ class CurrentExperimentConfigWatcher:
 
     def update_config(self):
         with self._session:
-            new_config_name = self._session.experiment_configs.get_current()
+            new_config_name = self._session.experiment_configs.get_current_by_name()
             new_modification_date = (
                 self._session.experiment_configs.get_modification_date(new_config_name)
             )

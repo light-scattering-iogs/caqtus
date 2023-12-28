@@ -335,7 +335,9 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         sequence_path = self.model.get_path(index)
         if sequence_path:
             with self._experiment_session_maker() as session:
-                current_experiment_config = session.experiment_configs.get_current()
+                current_experiment_config = (
+                    session.experiment_configs.get_current_by_name()
+                )
                 if current_experiment_config is None:
                     self.show_error_message(
                         "No experiment config is currently set. Please set one before starting a sequence."
@@ -477,7 +479,7 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         """Write a new experiment config to the database."""
 
         with self._experiment_session_maker() as session:
-            old_name = session.experiment_configs.get_current()
+            old_name = session.experiment_configs.get_current_by_name()
             # Here we set the current config to the new one in the database.
             # The experiment config watcher will detect the change and update the current config in the experiment
             # manager, so we don't have to do it explicitly here.
