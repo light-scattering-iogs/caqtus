@@ -5,6 +5,15 @@ from ..experiment_session import ExperimentSession
 
 
 class SQLExperimentSessionMaker(ExperimentSessionMaker):
+    """Used to create a new experiment session with a predefined sqlalchemy engine.
+
+    This session maker can create session that connects to a database using sqlalchemy.
+
+    This object is pickleable and can be passed to other processes, assuming that the
+    database referenced by the engine is accessible from the other processes.
+    In particular, in-memory sqlite databases are not accessible from other processes.
+    """
+
     def __init__(self, engine: sqlalchemy.Engine) -> None:
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
@@ -21,6 +30,8 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
 
     # The following methods are required to make ExperimentSessionMaker pickleable since
     # sqlalchemy engine is not pickleable.
+    # Only the engine url is pickled so the engine created upon unpickling might not be
+    # exactly the same as the original one.
     def __getstate__(self) -> sqlalchemy.engine.url.URL:
         return self._engine.url
 
