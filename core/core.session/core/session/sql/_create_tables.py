@@ -1,4 +1,4 @@
-from .table_bases import Base
+from ._tables import Base
 
 import sqlalchemy
 
