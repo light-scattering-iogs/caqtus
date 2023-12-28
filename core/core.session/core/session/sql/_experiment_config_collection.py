@@ -70,7 +70,7 @@ class SQLExperimentConfigCollection(ExperimentConfigCollection):
 
     def __iter__(self) -> Iterator[str]:
         session = self._get_sql_session()
-        query_names = session.query(ExperimentConfig.name)
+        query_names = select(ExperimentConfig.name)
         names = {name for name in session.scalars(query_names)}
         return iter(names)
 

@@ -29,3 +29,5 @@ def test_set_current(empty_session: ExperimentSession):
 
     with empty_session as session:
         assert session.experiment_configs[name] == experiment_config
+        session.experiment_configs["123"] = ExperimentConfig()
+        assert list(session.experiment_configs) == [name, "123"]
