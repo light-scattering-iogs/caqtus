@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Protocol
 
 import platformdirs
 import sqlalchemy
@@ -9,7 +10,14 @@ from .experiment_session import ExperimentSession
 from .sql_session import SQLExperimentSession
 
 
-class ExperimentSessionMaker:
+class ExperimentSessionMaker(Protocol):
+    """Used to create a new experiment session with predefined parameters."""
+
+    def __call__(self) -> ExperimentSession:
+        ...
+
+
+class PostgreSQLExperimentSessionMaker(ExperimentSessionMaker):
     def __init__(
         self,
         user: str,
@@ -27,8 +35,8 @@ class ExperimentSessionMaker:
         self._engine = sqlalchemy.create_engine(database_url)
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
 
-    def __call__(self, async_session: bool = False) -> ExperimentSession:
-        """Create a new ExperimentSession"""
+    def __call__(self) -> ExperimentSession:
+        """Create a new ExperimentSession with the parameters given at initialization."""
 
         return SQLExperimentSession(self._session_maker())
 
@@ -67,7 +75,12 @@ def get_standard_experiment_session_maker() -> ExperimentSessionMaker:
     with open(path) as file:
         kwargs = yaml.safe_load(file)
 
-    return ExperimentSessionMaker(**kwargs)
+    return PostgreSQLExperimentSessionMaker(
+        user=kwargs["user"],
+        ip=kwargs["ip"],
+        password=kwargs["password"],
+        database=kwargs["database"],
+    )
 
 
 def get_standard_experiment_session() -> ExperimentSession:
