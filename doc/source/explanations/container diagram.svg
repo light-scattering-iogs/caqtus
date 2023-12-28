@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="container diagram.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.4485269"
+     inkscape:cx="408.34588"
+     inkscape:cy="399.37124"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#0086e6;fill-opacity:1;stroke:#005a9c;stroke-width:0.264999;stroke-opacity:1"
+       id="rect1"
+       width="72.099289"
+       height="58.815502"
+       x="38.723244"
+       y="54.066418" />
+    <ellipse
+       style="fill:#0086e6;stroke-width:0.264999;fill-opacity:1;stroke:#005a9c;stroke-opacity:1"
+       id="path1"
+       cx="74.706642"
+       cy="54.066418"
+       rx="35.983395"
+       ry="3.6531365" />
+    <path
+       style="fill:#0086e6;fill-opacity:1;stroke:#005a9c;stroke-width:0.264999;stroke-opacity:1"
+       id="ellipse1"
+       sodipodi:type="arc"
+       sodipodi:cx="74.839142"
+       sodipodi:cy="112.64911"
+       sodipodi:rx="35.983395"
+       sodipodi:ry="3.6531365"
+       sodipodi:start="0"
+       sodipodi:end="3.1415927"
+       sodipodi:arc-type="arc"
+       d="m 110.82254,112.64911 a 35.983395,3.6531365 0 0 1 -17.991701,3.16371 35.983395,3.6531365 0 0 1 -35.983395,0 35.983395,3.6531365 0 0 1 -17.991697,-3.16371"
+       sodipodi:open="true" />
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;fill:#0086e6;fill-opacity:1;stroke:none;stroke-width:0.264999;stroke-opacity:1"
+       x="41.356373"
+       y="68.130997"
+       id="text1"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.05556px;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.265"
+         x="41.356373"
+         y="68.130997">Experiment session</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;white-space:pre;inline-size:66.121;fill:#0086e6;fill-opacity:1;stroke:none;stroke-width:0.264999;stroke-opacity:1;text-anchor:middle;text-align:center"
+       x="74.005302"
+       y="85.303513"
+       id="text1-1"><tspan
+         x="74.005302"
+         y="85.303513"
+         id="tspan4"><tspan
+           style="font-size:4.93889px;font-family:Arial;-inkscape-font-specification:Arial"
+           id="tspan3">Stores configurations</tspan><tspan
+           y="85.303513"
+           id="tspan5"> </tspan></tspan><tspan
+         x="74.005302"
+         y="94.12296"
+         id="tspan7"><tspan
+           style="font-size:4.93889px;font-family:Arial;-inkscape-font-specification:Arial"
+           id="tspan6">necessary to run the</tspan><tspan
+           y="94.12296"
+           id="tspan8"> </tspan></tspan><tspan
+         x="74.005302"
+         y="102.94241"
+         id="tspan11"><tspan
+           style="font-size:4.93889px;font-family:Arial;-inkscape-font-specification:Arial"
+           id="tspan9">experiment and data acquired</tspan><tspan
+           style="font-weight:bold;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#ffffff;stroke-width:0.265"
+           id="tspan10"></tspan><tspan
+           y="102.94241"
+           id="tspan12"> </tspan></tspan></text>
+  </g>
+</svg>

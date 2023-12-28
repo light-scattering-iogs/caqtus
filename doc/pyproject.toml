@@ -6,8 +6,9 @@ authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
 sphinx = "^7.2.6"
+core-session = {path = "../core/core.session", develop = true}
 
 
 [build-system]
