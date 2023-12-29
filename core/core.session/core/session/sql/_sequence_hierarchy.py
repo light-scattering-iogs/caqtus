@@ -51,7 +51,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
 
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[BoundSequencePath], PathIsSequenceError]:
+    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
         paths_to_create: list[PureSequencePath] = []
         current = path
         sequence_collection = self.parent_session.sequence_collection
@@ -84,16 +84,42 @@ class SQLSequenceHierarchy(SequenceHierarchy):
                 creation_date=datetime.now(tz=timezone.utc),
             )
             session.add(new_path)
-            created_paths.append(BoundSequencePath(path_to_create, self.parent_session))
+            created_paths.append(path_to_create)
         return Success(created_paths)
 
-    def delete_path(self, path: BoundSequencePath, delete_sequences: bool = False):
+    def get_children(
+        self, path: PureSequencePath
+    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+        if path.is_root():
+            session = self._get_sql_session()
+            query_children = select(SQLSequencePath).where(
+                SQLSequencePath.parent_id.is_(None)
+            )
+            children = session.scalars(query_children)
+        else:
+            query_result = self._query_path_model(path)
+            match query_result:
+                case Success(path_sql):
+                    if path_sql.sequence:
+                        return Failure(
+                            PathIsSequenceError(
+                                f"Cannot check children of a sequence: {path}"
+                            )
+                        )
+                    else:
+                        children = path_sql.children
+                case Failure() as failure:
+                    return failure
+        return Success(set(PureSequencePath(str(child.path)) for child in children))
+
+    def delete_path(self, path: PureSequencePath, delete_sequences: bool = False):
         session = self._get_sql_session()
 
         if not delete_sequences:
-            if sub_sequences := path.get_contained_sequences(self.parent_session):
-                raise RuntimeError(
-                    f"Cannot delete a path that contains sequences: {sub_sequences}"
+            sequence_collection = self.parent_session.sequence_collection
+            if contained := sequence_collection.get_contained_sequences(path):
+                raise PathIsSequenceError(
+                    f"Cannot delete a path that contains sequences: {contained}"
                 )
 
         session.delete(unwrap(self._query_path_model(path)))

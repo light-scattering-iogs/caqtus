@@ -7,7 +7,8 @@ from returns.result import Success, Failure
 from sqlalchemy import select
 
 from ._path_table import SQLSequencePath
-from ..path import PathNotFoundError, BoundSequencePath, PureSequencePath
+from .._return_or_raise import unwrap
+from ..path import PathNotFoundError, PureSequencePath
 from ..sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
@@ -18,10 +19,20 @@ if TYPE_CHECKING:
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
 
-    def is_sequence(self, path: BoundSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         return self._query_path_model(path).map(
             lambda path_model: bool(path_model.sequence)
         )
+
+    def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
+        if unwrap(self.is_sequence(path)):
+            return [path]
+
+        path_hierarchy = self.parent_session.sequence_hierarchy
+        result = []
+        for child in unwrap(path_hierarchy.get_children(path)):
+            result += self.get_contained_sequences(child)
+        return result
 
     def _query_path_model(
         self, path: PureSequencePath

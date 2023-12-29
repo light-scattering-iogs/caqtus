@@ -164,7 +164,21 @@ class BoundSequencePath(PureSequencePath):
         """
 
         result = self._session.sequence_hierarchy.create_path(self)
-        return unwrap(result)
+        return [BoundSequencePath(path, self._session) for path in unwrap(result)]
+
+    def get_children(self) -> set[BoundSequencePath]:
+        """Return the direct descendants of this path.
+
+        Returns:
+            A set of the direct descendants of this path.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsSequenceError: If the path is a sequence.
+        """
+
+        result = self._session.sequence_hierarchy.get_children(self)
+        return {BoundSequencePath(path, self._session) for path in unwrap(result)}
 
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
@@ -180,23 +194,6 @@ class BoundSequencePath(PureSequencePath):
         """
 
         experiment_session.sequence_hierarchy.delete_path(self, delete_sequences)
-
-    def get_contained_sequences(
-        self, experiment_session: "ExperimentSession"
-    ) -> list[SequencePath]:
-        """Return the children of this path that are sequences, including this path.
-
-        Return:
-            A list of all sequences inside this path and all its descendants.
-        """
-
-        if self.is_sequence(experiment_session):
-            return [self]
-
-        result = []
-        for child in self.get_children(experiment_session):
-            result += child.get_contained_sequences(experiment_session)
-        return result
 
     def is_folder(self, experiment_session: "ExperimentSession") -> bool:
         """Check if the path is a folder.
@@ -229,22 +226,6 @@ class BoundSequencePath(PureSequencePath):
 
     def get_child_count(self, experiment_session: "ExperimentSession") -> int:
         return len(self.get_children(experiment_session))
-
-    def get_children(
-        self, experiment_session: "ExperimentSession"
-    ) -> set[BoundSequencePath]:
-        """Return the direct descendants of this path.
-
-        Returns:
-            A set of the direct descendants of this path.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-            PathIsSequenceError: If the path is a sequence.
-        """
-
-        result = experiment_session.sequence_hierarchy.get_path_children(self)
-        return unwrap(result)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"

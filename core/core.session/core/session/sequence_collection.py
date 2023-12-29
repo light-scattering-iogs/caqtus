@@ -1,10 +1,25 @@
 import abc
 from typing import Protocol
-from .path import BoundSequencePath, PathNotFoundError
+
 from returns.result import Result
+
+from .path import PathNotFoundError, PureSequencePath
 
 
 class SequenceCollection(Protocol):
     @abc.abstractmethod
-    def is_sequence(self, path: BoundSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
+        """Return the children of this path that are sequences, including this path.
+
+        Return:
+            A list of all sequences inside this path and all its descendants.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
         raise NotImplementedError

@@ -4,8 +4,6 @@ from hypothesis import given
 
 from core.session import BoundSequencePath
 from core.session import ExperimentSession
-from core.session._return_or_raise import unwrap
-from core.session.path import PathNotFoundError
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
@@ -14,8 +12,8 @@ from ..generate_path import path
 
 
 def create_empty_session() -> ExperimentSession:
-    # url = "sqlite:///:memory:"
-    url = "sqlite:///database.db"
+    url = "sqlite:///:memory:"
+    # url = "sqlite:///database.db"
     engine = sqlalchemy.create_engine(url)
 
     create_tables(engine)
@@ -38,13 +36,35 @@ def test_creation_2(empty_session):
     with empty_session as session:
         p = BoundSequencePath(r"\a\b\c", session)
         p.create()
-        p.parent.create()
         for ancestor in p.get_ancestors():
             assert session.sequence_hierarchy.does_path_exists(ancestor)
         p = BoundSequencePath(r"\a\b\d", session)
         p.create()
         for ancestor in p.get_ancestors():
             assert session.sequence_hierarchy.does_path_exists(ancestor)
+
+
+def test_children_1(empty_session):
+    with empty_session as session:
+        p = BoundSequencePath(r"\a\b\c", session)
+        p.create()
+        assert p.parent.get_children() == {p}
+        p1 = BoundSequencePath(r"\a\b\d", session)
+        p1.create()
+        assert p.parent.get_children() == {p, p1}
+        root_children = BoundSequencePath("\\", session).get_children()
+        print(root_children)
+        assert root_children == {p.parent.parent}, repr(root_children)
+
+
+def test_children_2(empty_session):
+    with empty_session as session:
+        p = BoundSequencePath(r"\a\b\c", session)
+        p.create()
+        p1 = BoundSequencePath(r"\u\v\w", session)
+        p1.create()
+        root_children = BoundSequencePath("\\", session).get_children()
+        assert root_children == {p.parent.parent, p1.parent.parent}, repr(root_children)
 
 
 @pytest.fixture(scope="function")

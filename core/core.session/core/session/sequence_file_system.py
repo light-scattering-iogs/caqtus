@@ -13,7 +13,7 @@ from sequence.configuration import SequenceConfig
 from variable.name import DottedVariableName
 
 from .sequence import Sequence, Shot
-from .path import PureSequencePath, BoundSequencePath
+from .path import PureSequencePath, BoundSequencePath, PathNotFoundError
 from .sequence import State, SequenceStats
 
 
@@ -40,7 +40,7 @@ class SequenceHierarchy(Protocol):
     @abstractmethod
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[BoundSequencePath], PathIsSequenceError]:
+    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
         Args:
@@ -56,37 +56,31 @@ class SequenceHierarchy(Protocol):
 
     @abstractmethod
     def delete_path(self, path: PureSequencePath, delete_sequences: bool = False):
-        """
-        Delete the path and all its children if they exist
+        """Delete the path and all its descendants.
 
         Warnings:
             If delete_sequences is True, all sequences in the path will be deleted.
 
         Args:
-            path: The path to delete. Children will be deleted recursively.
+            path: The path to delete. Descendants will be deleted recursively.
             delete_sequences: If False, raise an error if the path or one of its
             children is a sequence.
 
         Raises:
-            RuntimeError: If the path or one of its children is a sequence and
-            delete_sequence is False
+            PathNotFoundError: If the path does not exist.
+            PathIsSequenceError: If the path or one of its children is a sequence and
+            delete_sequence is False.
         """
 
         raise NotImplementedError
 
-    #
+    @abstractmethod
+    def get_children(
+        self, path: PureSequencePath
+    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+        """Get the children of the path."""
 
-    #
-
-    #
-    # @abstractmethod
-    # def get_path_children(
-    #     self, path: PureSequencePath
-    # ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
-    #     """Get the children of the path."""
-    #
-    #     raise NotImplementedError
-    #
+        raise NotImplementedError
 
     #
     # @abstractmethod
