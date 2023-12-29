@@ -117,14 +117,10 @@ class SequencePath(PureSequencePath):
         return experiment_session.sequence_hierarchy.does_path_exists(self)
 
     def create(self, experiment_session: "ExperimentSession") -> list[SequencePath]:
-        """
-        Create the path and all its ancestors if they don't exist
-
-        Args:
-            experiment_session: The experiment session to use
+        """Create the path and all its ancestors if they don't exist.
 
         Return:
-            list of paths that were created when they didn't exist
+            A list of paths that were created if they didn't exist.
 
         Raises:
             PathIsSequenceError: If an ancestor exists and is a sequence.
@@ -136,19 +132,13 @@ class SequencePath(PureSequencePath):
     def delete(
         self, experiment_session: "ExperimentSession", delete_sequences: bool = False
     ):
-        """
-        Delete the path and all its children if they exist
+        """Delete the path and all its children if they exist.
 
         Warnings:
             If delete_sequences is True, all sequences in the path will be deleted.
 
-        Args:
-            experiment_session: The experiment session to use
-            delete_sequences: If False, raise an error if the path or one of its
-            children is a sequence.
-
         Raises:
-            RuntimeError: If the path or one of its children is a sequence and
+            PathIsSequenceError: If the path or one of its children is a sequence and
             delete_sequence is False
         """
 
@@ -158,9 +148,6 @@ class SequencePath(PureSequencePath):
         self, experiment_session: "ExperimentSession"
     ) -> list[SequencePath]:
         """Return the children of this path that are sequences, including this path.
-
-        Args:
-            experiment_session: The experiment session to use.
 
         Return:
             A list of all sequences inside this path and all its descendants.
@@ -175,6 +162,15 @@ class SequencePath(PureSequencePath):
         return result
 
     def is_folder(self, experiment_session: "ExperimentSession") -> bool:
+        """Check if the path is a folder.
+
+        Returns:
+            True if the path is a folder path. False otherwise.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+        """
+
         return not self.is_sequence(experiment_session)
 
     def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
@@ -202,9 +198,6 @@ class SequencePath(PureSequencePath):
     ) -> set[SequencePath]:
         """Return the direct descendants of this path.
 
-        Args:
-            experiment_session: The experiment session to look in.
-
         Returns:
             A set of the direct descendants of this path.
 
@@ -220,9 +213,6 @@ class SequencePath(PureSequencePath):
         self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
         """Get the creation date of the path.
-
-        Args:
-            experiment_session: The experiment session to look in.
 
         Returns:
             The date at which the path was created.
