@@ -26,3 +26,7 @@ def test_whitespace_names():
     assert not PureSequencePath.is_valid_name("")
     assert not PureSequencePath.is_valid_name(" a")
     assert PureSequencePath.is_valid_name("a ")
+
+
+def test_special_characters():
+    assert PureSequencePath.is_valid_name(".")

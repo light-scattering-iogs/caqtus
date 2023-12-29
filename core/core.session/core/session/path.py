@@ -10,7 +10,15 @@ if TYPE_CHECKING:
     from .experiment_session import ExperimentSession
 
 _PATH_SEPARATOR = "\\"
-_CHARACTER_SET = "[\\w\\d\\-\\_]"
+_CHARACTER_SET = (
+    "["
+    "\\w\\d"
+    "\\_\\.\\,\\;\\*\\'\\\"\\`"
+    "\\(\\)\\[\\]\\{\\}"
+    "\\+\\-\\*\\/\\="
+    "\\!\\@\\#\\$\\%\\^\\&\\~\\<\\>\\?\\|"
+    "]"
+)
 _PATH_NAME = f"{_CHARACTER_SET}+(?:{_CHARACTER_SET}| )*"
 _PATH_NAME_REGEX = re.compile(f"^{_PATH_NAME}$")
 _PATH_REGEX = re.compile(f"^\\{_PATH_SEPARATOR}|(\\{_PATH_SEPARATOR}{_PATH_NAME})+$")
