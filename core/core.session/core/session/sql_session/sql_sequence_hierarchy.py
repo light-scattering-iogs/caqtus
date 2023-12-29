@@ -61,7 +61,7 @@ class SQLSequenceHierarchy(SequenceHierarchy):
         self, path: SequencePath
     ) -> Result[list[SequencePath], PathIsSequenceError]:
         paths_to_create: list[SequencePath] = []
-        for ancestor in path.get_ancestors(strict=False):
+        for ancestor in path.get_ancestors(strict=False)[1:]:
             match self.is_sequence_path(ancestor):
                 case Success(True):
                     return Failure(

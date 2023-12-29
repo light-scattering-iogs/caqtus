@@ -193,14 +193,21 @@ class SequencePath:
             strict: If True, the path itself will not be included in the result.
 
         Returns:
-            All the paths that are above this path in the hierarchy.
+            All the paths that are above this path in the hierarchy, ordered from the
+            root to the parent of this path.
         """
+
+        if self.is_root():
+            if strict:
+                return []
+            else:
+                return [self]
 
         ancestors = self.path.split(_PATH_SEPARATOR)
         if strict:
             *ancestors, _ = ancestors
 
-        result = []
+        result = [self.root()]
         ancestor = ""
         for name in ancestors:
             ancestor = f"{ancestor}{_PATH_SEPARATOR}{name}" if ancestor else name
@@ -235,6 +242,10 @@ class SequencePath:
             raise TypeError(f"Can only append str to SequencePath not {type(other)}")
 
 
-class PathNotFoundError(Exception):
+class PathNotFoundError(RuntimeError):
     def __init__(self, path: SequencePath):
         super().__init__(f"Path not found: {path}")
+
+
+class PathIsRootError(RuntimeError):
+    pass

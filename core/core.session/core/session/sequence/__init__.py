@@ -1,4 +1,4 @@
-from .path import SequencePath, PathNotFoundError
+from .path import SequencePath, PathNotFoundError, PathIsRootError
 from .sequence import (
     Sequence,
     SequenceNotFoundError,

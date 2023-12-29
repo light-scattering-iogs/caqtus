@@ -35,3 +35,13 @@ def test_path(empty_session: ExperimentSession):
         for parent in path.get_ancestors(strict=False):
             assert session.sequence_hierarchy.does_path_exists(parent)
             assert not session.sequence_hierarchy.is_sequence_path(parent).unwrap()
+
+
+def test_deletion(empty_session: ExperimentSession):
+    session = empty_session
+
+    with session:
+        path = SequencePath("a.b.c")
+        path.create(session)
+        session.sequence_hierarchy.delete_path(SequencePath("a.b"))
+        assert not session.sequence_hierarchy.does_path_exists(path)

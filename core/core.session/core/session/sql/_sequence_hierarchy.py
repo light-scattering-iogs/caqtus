@@ -42,10 +42,14 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     parent_session: "SQLExperimentSession"
 
     def does_path_exists(self, path: SequencePath) -> bool:
+        if path.is_root():
+            return True
         session = self._get_sql_session()
         return session.scalar(select(Path).filter(Path.path == str(path))) is not None
 
     def is_sequence_path(self, path: SequencePath) -> Result[bool, PathNotFoundError]:
+        if path.is_root():
+            return Success(False)
         return self._query_path_model(path).map(
             lambda path_model: bool(path_model.sequence)
         )
@@ -53,8 +57,12 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     def create_path(
         self, path: SequencePath
     ) -> Result[list[SequencePath], PathIsSequenceError]:
+        if path.is_root():
+            raise PathIsRootError("Cannot create the root path")
         paths_to_create: list[SequencePath] = []
-        for ancestor in path.get_ancestors(strict=False):
+        # A path will always have at least one ancestor, the root, that we don't need to
+        # create
+        for ancestor in path.get_ancestors(strict=False)[1:]:
             match self.is_sequence_path(ancestor):
                 case Success(True):
                     return Failure(
