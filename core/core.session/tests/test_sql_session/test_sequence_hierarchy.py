@@ -67,6 +67,16 @@ def test_children_2(empty_session):
         assert root_children == {p.parent.parent, p1.parent.parent}, repr(root_children)
 
 
+def test_deletion_1(empty_session):
+    with empty_session as session:
+        p = BoundSequencePath(r"\a\b\c", session)
+        p.create()
+    with empty_session as session:
+        p.delete()
+        assert not session.sequence_hierarchy.does_path_exists(p)
+        assert session.sequence_hierarchy.does_path_exists(p.parent)
+
+
 @pytest.fixture(scope="function")
 def empty_session():
     return create_empty_session()

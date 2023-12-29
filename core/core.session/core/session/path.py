@@ -180,9 +180,7 @@ class BoundSequencePath(PureSequencePath):
         result = self._session.sequence_hierarchy.get_children(self)
         return {BoundSequencePath(path, self._session) for path in unwrap(result)}
 
-    def delete(
-        self, experiment_session: "ExperimentSession", delete_sequences: bool = False
-    ):
+    def delete(self, delete_sequences: bool = False):
         """Delete the path and all its children if they exist.
 
         Warnings:
@@ -193,7 +191,7 @@ class BoundSequencePath(PureSequencePath):
             delete_sequence is False
         """
 
-        experiment_session.sequence_hierarchy.delete_path(self, delete_sequences)
+        self._session.sequence_hierarchy.delete_path(self, delete_sequences)
 
     def is_folder(self, experiment_session: "ExperimentSession") -> bool:
         """Check if the path is a folder.
