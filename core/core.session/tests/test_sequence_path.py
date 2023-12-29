@@ -17,6 +17,9 @@ def test_name(name):
 def test_path(p):
     assert PureSequencePath(str(p)) == p
 
+    if not p.is_root():
+        assert p.parent / p.name == p
+
 
 def test_whitespace_names():
     assert not PureSequencePath.is_valid_name(" ")

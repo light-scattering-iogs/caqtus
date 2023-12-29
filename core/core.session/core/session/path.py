@@ -45,6 +45,13 @@ class PureSequencePath:
         else:
             return type(self).from_parts(self._parts[:-1])
 
+    @property
+    def name(self) -> Optional[str]:
+        if self.is_root():
+            return None
+        else:
+            return self._parts[-1]
+
     @classmethod
     def is_valid_path(cls, path: str) -> bool:
         return bool(_PATH_REGEX.match(path))
@@ -87,7 +94,7 @@ class PureSequencePath:
             if not re.match(_PATH_NAME, other):
                 raise ValueError("Invalid name format")
             if self.is_root():
-                return type(self)(other)
+                return type(self)(f"{self._str}{other}")
             else:
                 return type(self)(f"{self._str}{_PATH_SEPARATOR}{other}")
         else:
