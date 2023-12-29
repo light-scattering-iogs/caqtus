@@ -193,38 +193,6 @@ class BoundSequencePath(PureSequencePath):
 
         self._session.sequence_hierarchy.delete_path(self, delete_sequences)
 
-    def is_folder(self, experiment_session: "ExperimentSession") -> bool:
-        """Check if the path is a folder.
-
-        Returns:
-            True if the path is a folder path. False otherwise.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-        """
-
-        return not self.is_sequence(experiment_session)
-
-    def is_sequence(self, experiment_session: "ExperimentSession") -> bool:
-        """Check if the path is a sequence.
-
-        Returns:
-            True if the path is a sequence path. False otherwise.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-        """
-
-        result = experiment_session.sequence_hierarchy.is_sequence_path(self)
-
-        return unwrap(result)
-
-    def has_children(self, experiment_session: "ExperimentSession") -> int:
-        return bool(self.get_child_count(experiment_session))
-
-    def get_child_count(self, experiment_session: "ExperimentSession") -> int:
-        return len(self.get_children(experiment_session))
-
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
     ) -> datetime.datetime:
