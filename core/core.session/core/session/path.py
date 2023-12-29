@@ -32,11 +32,13 @@ class PureSequencePath:
     The root path is the single backslash "\".
     """
 
-    def __init__(self, path: Self | str):
+    __slots__ = ("_parts", "_str")
+
+    def __init__(self, path: PureSequencePath | str):
         if isinstance(path, str):
             self._parts = self.convert_to_parts(path)
             self._str = path
-        elif isinstance(path, type(self)):
+        elif isinstance(path, PureSequencePath):
             self._parts = path.parts
             self._str = path._str
         else:
@@ -51,7 +53,21 @@ class PureSequencePath:
         if self.is_root():
             return None
         else:
-            return type(self).from_parts(self._parts[:-1])
+            return PureSequencePath.from_parts(self._parts[:-1])
+
+    def get_ancestors(self) -> Iterable[Self]:
+        """Return the ancestors of this path.
+
+        Returns:
+            All the paths that are above this path in the hierarchy, ordered from the
+            current path to the root, both included.
+        """
+
+        current = self
+        yield current
+        while parent := current.parent:
+            current = parent
+            yield current
 
     @property
     def name(self) -> Optional[str]:
@@ -79,8 +95,8 @@ class PureSequencePath:
             raise ValueError(f"Invalid path: {path}")
 
     @classmethod
-    def from_parts(cls, parts: Iterable[str]) -> Self:
-        return cls(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
+    def from_parts(cls, parts: Iterable[str]) -> PureSequencePath:
+        return PureSequencePath(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
 
     def __str__(self) -> str:
         return self._str
@@ -112,11 +128,32 @@ class PureSequencePath:
         return hash(self._str)
 
 
-class SequencePath(PureSequencePath):
-    def exists(self, experiment_session: "ExperimentSession") -> bool:
-        return experiment_session.sequence_hierarchy.does_path_exists(self)
+class BoundSequencePath(PureSequencePath):
+    __slots__ = ("_session",)
 
-    def create(self, experiment_session: "ExperimentSession") -> list[SequencePath]:
+    def __init__(self, path: PureSequencePath | str, session: "ExperimentSession"):
+        super().__init__(path)
+        self._session = session
+
+    @property
+    def parent(self) -> Optional[Self]:
+        p = super().parent
+        if p is None:
+            return None
+        else:
+            return BoundSequencePath(p, self._session)
+
+    def get_ancestors(self) -> Iterable[Self]:
+        ancestors = super().get_ancestors()
+        return (BoundSequencePath(a, self._session) for a in ancestors)
+
+    def rebind(self, new_session: "ExperimentSession"):
+        self._session = new_session
+
+    def exists(self) -> bool:
+        return self._session.sequence_hierarchy.does_path_exists(self)
+
+    def create(self) -> list[BoundSequencePath]:
         """Create the path and all its ancestors if they don't exist.
 
         Return:
@@ -126,7 +163,7 @@ class SequencePath(PureSequencePath):
             PathIsSequenceError: If an ancestor exists and is a sequence.
         """
 
-        result = experiment_session.sequence_hierarchy.create_path(self)
+        result = self._session.sequence_hierarchy.create_path(self)
         return unwrap(result)
 
     def delete(
@@ -195,7 +232,7 @@ class SequencePath(PureSequencePath):
 
     def get_children(
         self, experiment_session: "ExperimentSession"
-    ) -> set[SequencePath]:
+    ) -> set[BoundSequencePath]:
         """Return the direct descendants of this path.
 
         Returns:
@@ -223,34 +260,6 @@ class SequencePath(PureSequencePath):
 
         result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
         return unwrap(result)
-
-    def get_ancestors(self, strict: bool = True) -> list[SequencePath]:
-        """Return the ancestors of this path.
-
-        Args:
-            strict: If True, the path itself will not be included in the result.
-
-        Returns:
-            All the paths that are above this path in the hierarchy, ordered from the
-            root to the parent of this path.
-        """
-
-        if self.is_root():
-            if strict:
-                return []
-            else:
-                return [self]
-
-        ancestors = self.path.split(_PATH_SEPARATOR)
-        if strict:
-            *ancestors, _ = ancestors
-
-        result = [self.root()]
-        ancestor = ""
-        for name in ancestors:
-            ancestor = f"{ancestor}{_PATH_SEPARATOR}{name}" if ancestor else name
-            result.append(SequencePath(ancestor))
-        return result
 
 
 class PathError(RuntimeError):

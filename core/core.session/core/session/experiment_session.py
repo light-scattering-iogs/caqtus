@@ -7,6 +7,7 @@ from typing import Protocol
 from .experiment_config_collection import ExperimentConfigCollection
 from .sequence_file_system import SequenceHierarchy
 from .shot_collection import ShotCollection
+from .sequence_collection import SequenceCollection
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -53,6 +54,7 @@ class ExperimentSession(
         experiment.
     """
 
-    experiment_configs: ExperimentConfigCollection
+    # experiment_configs: ExperimentConfigCollection
     sequence_hierarchy: SequenceHierarchy
-    shot_collection: ShotCollection
+    # shot_collection: ShotCollection
+    sequence_collection: SequenceCollection

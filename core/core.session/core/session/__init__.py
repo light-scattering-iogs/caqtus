@@ -8,7 +8,7 @@ from .session_maker import (
     get_standard_experiment_session_maker,
     get_standard_experiment_session,
 )
-from .path import SequencePath
+from .path import BoundSequencePath
 
 __all__ = [
     "ExperimentConfig",
@@ -16,7 +16,7 @@ __all__ = [
     "ExperimentSessionMaker",
     "get_standard_experiment_session_maker",
     "get_standard_experiment_session",
-    "SequencePath",
+    "BoundSequencePath",
     "Sequence",
     "Shot",
     "DataType",

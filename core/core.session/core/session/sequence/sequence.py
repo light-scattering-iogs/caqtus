@@ -7,7 +7,7 @@ from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 
 from util import attrs
-from ..path import SequencePath
+from ..path import BoundSequencePath
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
 from .._return_or_raise import unwrap
@@ -27,7 +27,7 @@ class Sequence:
     network.
     """
 
-    path: SequencePath = attrs.field(converter=SequencePath)
+    path: BoundSequencePath = attrs.field(converter=BoundSequencePath)
 
     def __str__(self) -> str:
         return str(self.path)
@@ -138,7 +138,7 @@ class Sequence:
     @classmethod
     def create_sequence(
         cls,
-        path: SequencePath,
+        path: BoundSequencePath,
         sequence_config: SequenceConfig,
         experiment_config_name: Optional[str],
         experiment_session: ExperimentSession,
@@ -156,7 +156,7 @@ class Sequence:
     @classmethod
     def query_sequence_stats(
         cls, sequences: Iterable[Sequence], experiment_session: ExperimentSession
-    ) -> dict[SequencePath, SequenceStats]:
+    ) -> dict[BoundSequencePath, SequenceStats]:
         return experiment_session.sequence_hierarchy.query_sequence_stats(sequences)
 
     @classmethod

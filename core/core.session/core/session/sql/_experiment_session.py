@@ -7,8 +7,9 @@ from ..experiment_session import (
 )
 
 
-from ._experiment_config_collection import SQLExperimentConfigCollection
+# from ._experiment_config_collection import SQLExperimentConfigCollection
 from ._sequence_hierarchy import SQLSequenceHierarchy
+from ._sequence_collection import SQLSequenceCollection
 
 # from .sql_sequence_hierarchy import SQLSequenceHierarchy
 # from .sql_shot_collection import SQLShotCollection
@@ -18,7 +19,8 @@ from ._sequence_hierarchy import SQLSequenceHierarchy
 class SQLExperimentSession(ExperimentSession):
     # shot_collection: SQLShotCollection
     sequence_hierarchy: SQLSequenceHierarchy
-    experiment_configs: SQLExperimentConfigCollection
+    sequence_collection: SQLSequenceCollection
+    # experiment_configs: SQLExperimentConfigCollection
 
     _sql_session: sqlalchemy.orm.Session
     _is_active: bool
@@ -35,7 +37,8 @@ class SQLExperimentSession(ExperimentSession):
         self._is_active = False
         # self.shot_collection = SQLShotCollection(parent_session=self)
         self.sequence_hierarchy = SQLSequenceHierarchy(parent_session=self)
-        self.experiment_configs = SQLExperimentConfigCollection(parent_session=self)
+        self.sequence_collection = SQLSequenceCollection(parent_session=self)
+        # self.experiment_configs = SQLExperimentConfigCollection(parent_session=self)
 
     def __enter__(self):
         if self._is_active:

@@ -18,13 +18,14 @@ from .model import SequenceModel, SequencePathModel
 from .model import ShotModel
 from .._return_or_raise import unwrap
 from ..data_type import DataType
-from ..sequence import SequencePath, Sequence, Shot
+from ..sequence import Sequence, Shot
+from ..path import PureSequencePath as SequencePath
+from ..path import PathNotFoundError
 from ..sequence import (
     State,
     SequenceStats,
     SequenceNotFoundError,
     InvalidSequenceStateError,
-    PathNotFoundError,
     SequenceNotEditableError,
 )
 from ..sequence_file_system import (
