@@ -7,7 +7,7 @@ from experiment.configuration import ExperimentConfig
 from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 
 from util import attrs
-from .path import SequencePath
+from ..path import SequencePath
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot
 from .._return_or_raise import unwrap

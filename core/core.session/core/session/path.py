@@ -2,66 +2,102 @@ from __future__ import annotations
 
 import datetime
 import re
-import typing
+from typing import Self, Optional, TYPE_CHECKING, Iterable
 
-import attrs
+from ._return_or_raise import unwrap
 
-from .._return_or_raise import unwrap
+if TYPE_CHECKING:
+    from .experiment_session import ExperimentSession
 
-if typing.TYPE_CHECKING:
-    from ..experiment_session import ExperimentSession
-
-_PATH_SEPARATOR = "."
-_PATH_NAMES_REGEX = "[a-zA-Z0-9_]+"
-_PATH_REGEX = re.compile(
-    f"^{_PATH_NAMES_REGEX}(\\{_PATH_SEPARATOR}{_PATH_NAMES_REGEX})*$"
-)
+_PATH_SEPARATOR = "\\"
+_CHARACTER_SET = "[\\w\\d\\-\\_]"
+_PATH_NAME = f"{_CHARACTER_SET}+(?:{_CHARACTER_SET}| )*"
+_PATH_NAME_REGEX = re.compile(f"^{_PATH_NAME}$")
+_PATH_REGEX = re.compile(f"^\\{_PATH_SEPARATOR}|(\\{_PATH_SEPARATOR}{_PATH_NAME})+$")
 
 
-def _is_valid_path(path: str) -> bool:
-    if path == "":
-        return True
-    return _PATH_REGEX.match(path) is not None
-
-
-def convert_path_to_str(path: SequencePath | str) -> str:
-    if isinstance(path, SequencePath):
-        return path.path
-    elif isinstance(path, str):
-        return path
-    else:
-        raise TypeError(
-            f"Expected instance of <SequencePath> or <str>, got {type(path)}"
-        )
-
-
-@attrs.frozen(str=False)
-class SequencePath:
+class PureSequencePath:
     """A path in the sequence hierarchy.
 
-    A path is a string of names separated by dots. For example, "foo.bar" is a path
-    with two names, "foo" and "bar".
-    A given path can be a sequence or a folder. A folder can contain other folders and
-    sequences. A sequence can only contain shots and cannot have children.
-
-    Methods of this class that take an experiment session as an argument are the only
-    one that actually perform io operations. The other methods are pure functions.
+    A path is a string of names separated by backslashes "\"
+    For example, "\foo\bar" is a path with two names, "foo" and "bar".
+    The root path is the single backslash "\".
     """
 
-    path: str = attrs.field(converter=convert_path_to_str)
+    def __init__(self, path: Self | str):
+        if isinstance(path, str):
+            self._parts = self.convert_to_parts(path)
+            self._str = path
+        elif isinstance(path, type(self)):
+            self._parts = path.parts
+            self._str = path._str
+        else:
+            raise TypeError(f"Invalid type for path: {type(path)}")
 
-    @path.validator  # type: ignore
-    def _validate_path(self, _, value):
-        if not _is_valid_path(value):
-            raise ValueError(f"Invalid path: {value}")
+    @property
+    def parts(self) -> tuple[str, ...]:
+        return self._parts
 
-    def __str__(self) -> str:
-        return self.path
+    @property
+    def parent(self) -> Optional[Self]:
+        if self.is_root():
+            return None
+        else:
+            return type(self).from_parts(self._parts[:-1])
 
     @classmethod
     def is_valid_path(cls, path: str) -> bool:
-        return _is_valid_path(path)
+        return bool(_PATH_REGEX.match(path))
 
+    @classmethod
+    def is_valid_name(cls, name: str) -> bool:
+        return bool(_PATH_NAME_REGEX.match(name))
+
+    @classmethod
+    def convert_to_parts(cls, path: str) -> tuple[str, ...]:
+        if cls.is_valid_path(path):
+            if path == _PATH_SEPARATOR:
+                return tuple()
+            else:
+                return tuple(path.split(_PATH_SEPARATOR)[1:])
+        else:
+            raise ValueError(f"Invalid path: {path}")
+
+    @classmethod
+    def from_parts(cls, parts: Iterable[str]) -> Self:
+        return cls(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
+
+    def __str__(self) -> str:
+        return self._str
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._str!r})"
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)):
+            return self._str == other._str
+        else:
+            return NotImplemented
+
+    def is_root(self) -> bool:
+        return len(self._parts) == 0
+
+    def __truediv__(self, other) -> Self:
+        if isinstance(other, str):
+            if not re.match(_PATH_NAME, other):
+                raise ValueError("Invalid name format")
+            if self.is_root():
+                return type(self)(other)
+            else:
+                return type(self)(f"{self._str}{_PATH_SEPARATOR}{other}")
+        else:
+            return NotImplemented
+
+    def __hash__(self):
+        return hash(self._str)
+
+
+class SequencePath(PureSequencePath):
     def exists(self, experiment_session: "ExperimentSession") -> bool:
         return experiment_session.sequence_hierarchy.does_path_exists(self)
 
@@ -140,9 +176,6 @@ class SequencePath:
 
         return unwrap(result)
 
-    def is_root(self) -> bool:
-        return self.path == ""
-
     def has_children(self, experiment_session: "ExperimentSession") -> int:
         return bool(self.get_child_count(experiment_session))
 
@@ -213,33 +246,6 @@ class SequencePath:
             ancestor = f"{ancestor}{_PATH_SEPARATOR}{name}" if ancestor else name
             result.append(SequencePath(ancestor))
         return result
-
-    @classmethod
-    def root(cls):
-        return cls("")
-
-    @property
-    def name(self):
-        return self.path.split(_PATH_SEPARATOR)[-1]
-
-    @property
-    def depth(self):
-        if self.path == "":
-            return -1
-        else:
-            return self.path.count(_PATH_SEPARATOR)
-
-    def __truediv__(self, other) -> SequencePath:
-        if isinstance(other, str):
-            if not re.match(_PATH_NAMES_REGEX, other):
-                raise ValueError("Invalid name format")
-            if self.is_root():
-                return SequencePath(other)
-            else:
-                return SequencePath(f"{self.path}{_PATH_SEPARATOR}{other}")
-
-        else:
-            raise TypeError(f"Can only append str to SequencePath not {type(other)}")
 
 
 class PathNotFoundError(RuntimeError):

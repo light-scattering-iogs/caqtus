@@ -1,4 +1,3 @@
-from .path import SequencePath, PathNotFoundError, PathIsRootError
 from .sequence import (
     Sequence,
     SequenceNotFoundError,
@@ -7,6 +6,7 @@ from .sequence import (
 )
 from .sequence_state import State, InvalidSequenceStateError
 from .shot import Shot, ShotNotFoundError
+from ..path import SequencePath, PathNotFoundError
 
 __all__ = [
     "SequencePath",

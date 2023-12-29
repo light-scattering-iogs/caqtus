@@ -29,6 +29,7 @@ black = "^23.11.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.3"
+hypothesis = "^6.92.2"
 
 [build-system]
 requires = ["poetry-core"]
