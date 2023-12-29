@@ -253,10 +253,13 @@ class SequencePath(PureSequencePath):
         return result
 
 
-class PathNotFoundError(RuntimeError):
-    def __init__(self, path: SequencePath):
-        super().__init__(f"Path not found: {path}")
+class PathError(RuntimeError):
+    pass
 
 
-class PathIsRootError(RuntimeError):
+class PathNotFoundError(PathError):
+    pass
+
+
+class PathIsRootError(PathError):
     pass
