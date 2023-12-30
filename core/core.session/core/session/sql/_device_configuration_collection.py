@@ -63,6 +63,7 @@ class SQLDeviceConfigurationCollection(
     def set_in_use(self, id_: uuid.UUID) -> None:
         new = SQLCurrentDeviceConfiguration(
             in_use=id_,
+            device_name=self.get_device_name(id_),
         )
         self._get_sql_session().add(new)
 

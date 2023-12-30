@@ -30,4 +30,5 @@ class SQLCurrentDeviceConfiguration(Base):
     in_use: Mapped[uuid.UUID] = mapped_column(
         sqlalchemy.ForeignKey(SQLDeviceConfiguration.uuid)
     )
+    device_name: Mapped[str] = mapped_column(unique=True, index=True)
     configuration: Mapped[SQLDeviceConfiguration] = relationship()

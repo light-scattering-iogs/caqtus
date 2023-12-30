@@ -27,6 +27,10 @@ class DeviceConfigurationCollection(
 
     def __setitem__(self, key, value):
         id_ = self.add_device_configuration(key, value)
+        in_use_uuids = self.get_in_use_uuids()
+        configurations_uuids = {self.get_device_name(id_): id_ for id_ in in_use_uuids}
+        if key in configurations_uuids:
+            self.remove_from_use(configurations_uuids[key])
         self.set_in_use(id_)
 
     def __delitem__(self, key):

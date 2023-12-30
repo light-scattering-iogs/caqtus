@@ -43,6 +43,8 @@ def test_1(empty_session):
         config_1 = session.device_configurations["test"]
         assert config_1 == config
 
+        session.device_configurations["test"] = config
+
         del session.device_configurations["test"]
         with pytest.raises(KeyError):
             session.device_configurations["test"]
