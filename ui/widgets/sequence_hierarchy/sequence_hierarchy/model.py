@@ -6,10 +6,21 @@ from typing import Optional
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
 from concurrent_updater import ConcurrentUpdater
-from sequence.configuration import SequenceConfig, SequenceSteps, ShotConfiguration
 
-from core.session import ExperimentSessionMaker, ExperimentSession, PathIsSequenceError
-from core.session.sequence import SequencePath, Sequence, State, SequenceStats
+from core.session import (
+    ExperimentSessionMaker,
+    ExperimentSession,
+    PathIsSequenceError,
+    PureSequencePath,
+)
+from core.session.sequence import (
+    Sequence,
+    State,
+    SequenceStats,
+    SequenceConfig,
+    SequenceSteps,
+    ShotConfiguration,
+)
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
@@ -18,8 +29,10 @@ _logger.setLevel(logging.DEBUG)
 class SequenceHierarchyModel(QAbstractItemModel):
     """Tree model used to display the sequences contained in a session.
 
-    This model keep an in memory representation of the sequences hierarchy and update it in a background thread. It
-    does not provide any method to create, edit or delete sequences (see EditableSequenceHierarchyModel for that).
+    This model keep an in memory representation of the sequences hierarchy and update it
+    in a background thread.
+    It does not provide any method to create, edit or delete sequences (see
+    EditableSequenceHierarchyModel for that).
     """
 
     def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs):
@@ -29,8 +42,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
 
         with self._session as session:
             self._root = _SequenceHierarchyItem(
-                SequencePath.root(),
-                children=_build_children_items(SequencePath.root(), session),
+                PureSequencePath.root(),
+                children=_build_children_items(PureSequencePath.root(), session),
                 row=0,
                 is_sequence=False,
             )
@@ -44,8 +57,8 @@ class SequenceHierarchyModel(QAbstractItemModel):
         self.beginResetModel()
         with self._session as session:
             self._root = _SequenceHierarchyItem(
-                SequencePath.root(),
-                children=_build_children_items(SequencePath.root(), session),
+                PureSequencePath.root(),
+                children=_build_children_items(PureSequencePath.root(), session),
                 row=0,
                 is_sequence=False,
             )
@@ -220,7 +233,7 @@ class SequenceHierarchyModel(QAbstractItemModel):
             return item.sequence_path.is_sequence(session)
 
     @staticmethod
-    def get_path(index: QModelIndex) -> Optional[SequencePath]:
+    def get_path(index: QModelIndex) -> Optional[PureSequencePath]:
         if not index.isValid():
             return None
         else:
@@ -264,7 +277,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
 
     def create_new_sequence(
         self, parent_index: QModelIndex, name: str
-    ) -> Optional[SequencePath]:
+    ) -> Optional[PureSequencePath]:
         """Attempt to create a new sequence with the given name under the given parent."""
 
         if parent_index.isValid():
@@ -372,7 +385,7 @@ class _SequenceHierarchyItem(NodeMixin):
 
     def __init__(
         self,
-        path: SequencePath,
+        path: PureSequencePath,
         is_sequence: bool,
         row: int,
         parent=None,
@@ -413,7 +426,7 @@ class _SequenceHierarchyItem(NodeMixin):
 
 
 def _build_children_items(
-    parent: SequencePath, experiment_session: ExperimentSession
+    parent: PureSequencePath, experiment_session: ExperimentSession
 ) -> list[_SequenceHierarchyItem]:
     """Build children items for a parent path.
 
@@ -472,7 +485,7 @@ def _update_stats(item: _SequenceHierarchyItem, session: ExperimentSession):
 
 
 def _apply_stats(
-    item: _SequenceHierarchyItem, stats: dict[SequencePath, SequenceStats]
+    item: _SequenceHierarchyItem, stats: dict[PureSequencePath, SequenceStats]
 ):
     """Apply stats to a sequence hierarchy item."""
 

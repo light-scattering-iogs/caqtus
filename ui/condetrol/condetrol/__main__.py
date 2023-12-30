@@ -6,12 +6,13 @@ import sys
 from pathlib import Path
 
 import qdarkstyle
+import sqlalchemy
 from PyQt6 import QtCore
 from PyQt6.QtGui import QFontDatabase
 from PyQt6.QtWidgets import QApplication
 
 from condetrol.experiment_viewer import ExperimentViewer
-from core.session import get_standard_experiment_session_maker
+from core.session.sql import SQLExperimentSessionMaker
 
 
 def except_hook(cls, exception, traceback):
@@ -38,7 +39,8 @@ if __name__ == "__main__":
         logger.error("Could not load font jetbrains-mono")
     else:
         families = QFontDatabase.applicationFontFamilies(id)
-    session_maker = get_standard_experiment_session_maker()
+    engine = sqlalchemy.create_engine("sqlite:///database.db")
+    session_maker = SQLExperimentSessionMaker(engine)
     with ExperimentViewer(session_maker) as experiment_viewer:
         experiment_viewer.show()
         try:

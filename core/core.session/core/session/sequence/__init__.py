@@ -1,3 +1,4 @@
+from sequence.configuration import SequenceConfig, ShotConfiguration, SequenceSteps
 from .sequence import (
     Sequence,
     SequenceNotFoundError,
@@ -9,6 +10,9 @@ from .shot import Shot, ShotNotFoundError
 
 __all__ = [
     "Sequence",
+    "SequenceConfig",
+    "ShotConfiguration",
+    "SequenceSteps",
     "SequenceStats",
     "State",
     "Shot",

@@ -13,8 +13,7 @@ from core.configuration.sequence import (
     VariableDeclaration,
     ExecuteShot,
 )
-from core.session import ExperimentSessionMaker
-from core.session.sequence import SequencePath
+from core.session import ExperimentSessionMaker, PureSequencePath
 from core.types import AnalogValue
 from core.types.units import Quantity, units, DimensionalityError
 from .sequence_context import StepContext
@@ -28,7 +27,7 @@ class SequenceRunnerThread(Thread):
     def __init__(
         self,
         experiment_config_name: str,
-        sequence_path: SequencePath,
+        sequence_path: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         must_interrupt: Event,
     ):

@@ -127,6 +127,10 @@ class PureSequencePath:
     def __hash__(self):
         return hash(self._str)
 
+    @classmethod
+    def root(cls) -> PureSequencePath:
+        return cls(_PATH_SEPARATOR)
+
 
 class BoundSequencePath(PureSequencePath):
     __slots__ = ("_session",)

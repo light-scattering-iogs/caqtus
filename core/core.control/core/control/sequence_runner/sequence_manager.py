@@ -15,8 +15,8 @@ from core.device import DeviceParameter, DeviceName, RuntimeDevice
 from core.device.camera import CameraConfiguration, Camera
 from core.device.sequencer import SequencerConfiguration, Sequencer
 from core.device.tweezer_arranger import TweezerArrangerConfiguration, TweezerArranger
-from core.session import ExperimentSessionMaker
-from core.session.sequence import SequencePath, Sequence, Shot, State
+from core.session import ExperimentSessionMaker, PureSequencePath
+from core.session.sequence import Sequence, Shot, State
 from core.types import Data, DataLabel
 from util import DurationTimerLog
 from .device_servers import (
@@ -131,7 +131,7 @@ class SequenceManager(AbstractContextManager):
     def __init__(
         self,
         experiment_config_name: str,
-        sequence_path: SequencePath,
+        sequence_path: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         interrupt_event: threading.Event,
         max_schedulable_shots: Optional[int] = 1,
