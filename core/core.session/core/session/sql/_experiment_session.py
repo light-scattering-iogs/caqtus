@@ -1,10 +1,12 @@
+from typing import Mapping
+
 import sqlalchemy.orm
 from attrs import define
-
-from ._device_configuration_collection import SQLDeviceConfigurationCollection
+from ._device_configuration_collection import (
+    SQLDeviceConfigurationCollection,
+    DeviceConfigurationSerializer,
+)
 from ._sequence_collection import SQLSequenceCollection
-
-# from ._experiment_config_collection import SQLExperimentConfigCollection
 from ._sequence_hierarchy import SQLSequenceHierarchy
 from ..experiment_session import (
     ExperimentSession,
@@ -12,22 +14,22 @@ from ..experiment_session import (
 )
 
 
-# from .sql_sequence_hierarchy import SQLSequenceHierarchy
-# from .sql_shot_collection import SQLShotCollection
-
-
 @define(init=False)
 class SQLExperimentSession(ExperimentSession):
-    # shot_collection: SQLShotCollection
     sequence_hierarchy: SQLSequenceHierarchy
     sequence_collection: SQLSequenceCollection
     device_configurations: SQLDeviceConfigurationCollection
-    # experiment_configs: SQLExperimentConfigCollection
 
     _sql_session: sqlalchemy.orm.Session
     _is_active: bool
 
-    def __init__(self, session: sqlalchemy.orm.Session, *args, **kwargs):
+    def __init__(
+        self,
+        session: sqlalchemy.orm.Session,
+        device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
+        *args,
+        **kwargs,
+    ):
         """Create a new experiment session.
 
         This constructor is not meant to be called directly.
@@ -40,7 +42,8 @@ class SQLExperimentSession(ExperimentSession):
         self.sequence_hierarchy = SQLSequenceHierarchy(parent_session=self)
         self.sequence_collection = SQLSequenceCollection(parent_session=self)
         self.device_configurations = SQLDeviceConfigurationCollection(
-            parent_session=self
+            parent_session=self,
+            device_configuration_serializers=device_configuration_serializers,
         )
 
     def __enter__(self):

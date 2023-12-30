@@ -18,8 +18,7 @@ class SQLDeviceConfiguration(Base):
 
     uuid = mapped_column(sqlalchemy.types.Uuid, primary_key=True)
     device_name: Mapped[str] = mapped_column()
-    module: Mapped[str] = mapped_column()
-    type: Mapped[str] = mapped_column()
+    device_type: Mapped[str] = mapped_column()
     content = mapped_column(sqlalchemy.types.JSON)
     creation_date: Mapped[datetime.datetime] = mapped_column()
 

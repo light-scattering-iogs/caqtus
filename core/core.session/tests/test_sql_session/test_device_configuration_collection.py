@@ -1,24 +1,28 @@
 import pytest
 import sqlalchemy
-
+from core.configuration import Expression
 from core.session import ExperimentSession
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
 )
-from experiment.configuration import ElliptecELL14RotationStageConfiguration
-from core.configuration import Expression
+from elliptec_ell14.configuration import (
+    ElliptecELL14RotationStageConfiguration,
+    dump,
+    load,
+)
 
 
 def create_empty_session() -> ExperimentSession:
-    # url = "sqlite:///:memory:"
-    url = "sqlite:///database.db"
+    url = "sqlite:///:memory:"
     engine = sqlalchemy.create_engine(url)
 
     create_tables(engine)
 
-    session_maker = SQLExperimentSessionMaker(engine)
-
+    session_maker = SQLExperimentSessionMaker(
+        engine,
+        {"ElliptecELL14RotationStageConfiguration": {"dumper": dump, "loader": load}},
+    )
     return session_maker()
 
 

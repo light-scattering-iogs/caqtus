@@ -132,6 +132,10 @@ class PureSequencePath:
         return cls(_PATH_SEPARATOR)
 
 
+def bind(path: PureSequencePath, session: "ExperimentSession") -> BoundSequencePath:
+    return BoundSequencePath(path, session)
+
+
 class BoundSequencePath(PureSequencePath):
     __slots__ = ("_session",)
 

@@ -13,12 +13,11 @@ from ..generate_path import path
 
 def create_empty_session() -> ExperimentSession:
     url = "sqlite:///:memory:"
-    # url = "sqlite:///database.db"
     engine = sqlalchemy.create_engine(url)
 
     create_tables(engine)
 
-    session_maker = SQLExperimentSessionMaker(engine)
+    session_maker = SQLExperimentSessionMaker(engine, {})
 
     return session_maker()
 

@@ -1,16 +1,15 @@
 import datetime
-import importlib
 import uuid
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, TypedDict
 
 import attrs
 import sqlalchemy
-
 from core.device import (
     DeviceName,
     DeviceConfigurationAttrs,
-    device_configurations_converter,
 )
+from util.serialization import JSON
 from ._device_configuration_tables import (
     SQLDeviceConfiguration,
     SQLCurrentDeviceConfiguration,
@@ -21,11 +20,18 @@ if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
 
 
+class DeviceConfigurationSerializer[T: DeviceConfigurationAttrs](TypedDict):
+    dumper: Callable[[T], JSON]
+    loader: Callable[[JSON], T]
+
+
 @attrs.frozen
 class SQLDeviceConfigurationCollection(
     DeviceConfigurationCollection,
 ):
     parent_session: "SQLExperimentSession"
+
+    _device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
 
     def add_device_configuration(
         self,
@@ -34,13 +40,13 @@ class SQLDeviceConfigurationCollection(
     ) -> uuid.UUID:
         creation_date = datetime.datetime.now(tz=datetime.timezone.utc)
         id_ = self._create_uuid(device_name, creation_date)
-        cls = device_configuration.__class__
+        type_name = type(device_configuration).__qualname__
+        serializer = self._device_configuration_serializers[type_name]
         new = SQLDeviceConfiguration(
             uuid=id_,
             device_name=device_name,
-            module=cls.__module__,
-            type=cls.__qualname__,
-            content=device_configurations_converter.unstructure(device_configuration),
+            device_type=type_name,
+            content=serializer["dumper"](device_configuration),
             creation_date=creation_date,
         )
         self._get_sql_session().add(new)
@@ -51,9 +57,8 @@ class SQLDeviceConfigurationCollection(
 
     def get_configuration(self, id_: uuid.UUID) -> DeviceConfigurationAttrs:
         configuration = self._get_configuration(id_)
-        module = importlib.import_module(configuration.module)
-        cls = getattr(module, configuration.type)
-        return device_configurations_converter.structure(configuration.content, cls)
+        serializer = self._device_configuration_serializers[configuration.device_type]
+        return serializer["loader"](configuration.content)
 
     def set_in_use(self, id_: uuid.UUID) -> None:
         new = SQLCurrentDeviceConfiguration(
