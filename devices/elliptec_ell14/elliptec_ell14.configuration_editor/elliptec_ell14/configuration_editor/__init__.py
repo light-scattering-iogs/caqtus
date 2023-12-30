@@ -1,3 +1,3 @@
-from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigEditor
+from .elliptec_ell14_config_editor import ElliptecELL14RotationStageConfigurationEditor
 
-__all__ = ["ElliptecELL14RotationStageConfigEditor"]
+__all__ = ["ElliptecELL14RotationStageConfigurationEditor"]

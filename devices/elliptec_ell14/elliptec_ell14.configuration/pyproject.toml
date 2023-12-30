@@ -7,14 +7,12 @@ readme = "README.md"
 packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
-python = "^3.10, <3.13"
-
-pydantic = "^1.10.7"
-
-device-config = {path = "../../device/device.configuration", develop = true}
-expression = {path = "../../../common/expression", develop = true}
-units = {path = "../../../common/units", develop = true}
+python = "^3.11, <3.13"
 util = {path = "../../../util", develop = true}
+core-configuration = {path = "../../../core/core.configuration", develop = true}
+core-device = {path = "../../../core/core.device", develop = true}
+core-types = {path = "../../../core/core.types", develop = true}
+
 
 
 [build-system]

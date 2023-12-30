@@ -1,12 +1,10 @@
 import logging
-from typing import Any, Self
+from typing import Any
 
 import attrs
-
-from device.configuration import DeviceConfigurationAttrs, DeviceParameter
-from expression import Expression
-from settings_model import YAMLSerializable
-from units import units
+from core.configuration import Expression
+from core.device import DeviceConfigurationAttrs, DeviceParameter
+from core.types.units import units
 from util import serialization
 from util.serialization import JSON
 
@@ -14,7 +12,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@attrs.define(slots=False)
+@attrs.define
 class ElliptecELL14RotationStageConfiguration(DeviceConfigurationAttrs):
     """Holds static configuration to control an ELL14 rotation stage device
 
@@ -62,15 +60,6 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfigurationAttrs):
             extra[DeviceParameter("initial_position")] = self.position.evaluate(units)
         return super().get_device_init_args() | extra
 
-    @classmethod
-    def get_default_config(cls, remote_server: str) -> Self:
-        return cls(
-            remote_server=remote_server,
-            serial_port="COM0",
-            device_id=0,
-            position=Expression("0"),
-        )
-
 
 def dump(configuration: ElliptecELL14RotationStageConfiguration) -> JSON:
     return serialization.unstructure(
@@ -82,6 +71,3 @@ def load(configuration: JSON):
     return serialization.structure(
         configuration, ElliptecELL14RotationStageConfiguration
     )
-
-
-YAMLSerializable.register_attrs_class(ElliptecELL14RotationStageConfiguration)
