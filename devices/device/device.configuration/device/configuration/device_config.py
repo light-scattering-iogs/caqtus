@@ -43,7 +43,7 @@ class DeviceConfiguration(SettingsModel, ABC):
         return {}
 
 
-@attrs.define(slots=False)
+@attrs.define
 class DeviceConfigurationAttrs(ABC):
     """Handle the static experiment wide configuration of a device.
 
@@ -52,12 +52,7 @@ class DeviceConfigurationAttrs(ABC):
     change often between sequences. Subclasses of this class are associated with a
     given subclass of RuntimeDevice. Subclasses of this class typically should hold
     information to connect to the device, such as the IP address, port, etc.
-
-    Attributes:
-        remote_server: The name of the server that will actually instantiate the device.
     """
-
-    remote_server: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
 
     @abstractmethod
     def get_device_type(self) -> str:
