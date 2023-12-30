@@ -1,6 +1,8 @@
 from collections.abc import Mapping, Iterable
 from typing import TypedDict, Optional
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QValidator
 from PyQt6.QtWidgets import QDialog, QPushButton
 
 from core.device import DeviceConfigurationAttrs, DeviceName
@@ -48,7 +50,13 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
         self._add_button.clicked.connect(self.add_configuration)
 
     def add_configuration(self):
-        add_device_dialog = AddDeviceDialog(self.device_configuration_edit_info.keys())
+        validator = NewNameValidator(
+            self.tab_widget.tabText(i) for i in range(self.tab_widget.count())
+        )
+        add_device_dialog = AddDeviceDialog(
+            self.device_configuration_edit_info.keys(),
+            validator,
+        )
         result = add_device_dialog.exec()
         if result is not None:
             device_name, device_type = result
@@ -56,6 +64,14 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
                 device_type
             ]["editor_type"]()
             self.tab_widget.addTab(device_configuration_editor, device_name)
+
+    def is_valid_new_device_name(self, device_name: DeviceName) -> bool:
+        if not device_name:
+            return False
+        return not any(
+            device_name == self.tab_widget.tabText(i)
+            for i in range(self.tab_widget.count())
+        )
 
     def exec(self):
         result = super().exec()
@@ -70,9 +86,12 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
 
 
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
-    def __init__(self, device_types: Iterable[str], *args, **kwargs):
+    def __init__(
+        self, device_types: Iterable[str], validator: QValidator, *args, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.setup_ui(device_types)
+        self.device_name_line_edit.setValidator(validator)
 
     def setup_ui(self, device_types: Iterable[str]):
         self.setupUi(self)
@@ -82,7 +101,21 @@ class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
     def exec(self) -> Optional[tuple[DeviceName, str]]:
         result = super().exec()
         if result == QDialog.DialogCode.Accepted:
+            if not self.device_name_line_edit.hasAcceptableInput():
+                return None
             device_name = self.device_name_line_edit.text()
             device_type = self.device_type_combo_box.currentText()
             return device_name, device_type
         return None
+
+
+class NewNameValidator(QValidator):
+    def __init__(self, already_used_names: Iterable[str]):
+        super().__init__()
+        self.already_used_names = set(already_used_names)
+
+    def validate(self, a0, a1):
+        if a0 in self.already_used_names or a0 == "":
+            return QValidator.State.Intermediate, a0, a1
+        else:
+            return QValidator.State.Acceptable, a0, a1
