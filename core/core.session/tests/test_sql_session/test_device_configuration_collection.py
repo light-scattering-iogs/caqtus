@@ -33,7 +33,6 @@ def empty_session():
 
 def test_1(empty_session):
     config = ElliptecELL14RotationStageConfiguration(
-        remote_server="server",
         serial_port="COM0",
         device_id=0,
         position=Expression("1"),
