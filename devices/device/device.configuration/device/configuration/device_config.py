@@ -1,8 +1,9 @@
 from abc import abstractmethod, ABC
 from typing import TypeVar, Any
 
+import attrs
+
 from settings_model import SettingsModel
-from util import attrs
 from .device_parameter import DeviceParameter
 
 

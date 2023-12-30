@@ -66,7 +66,7 @@ class DeviceConfigurationCollection(
         ...
 
     @abc.abstractmethod
-    def set_in_use(self, id_: uuid.UUID):
+    def set_in_use(self, id_: uuid.UUID) -> None:
         """Set the device configuration to be in use.
 
         If another device configuration with the same device name is already in use, it
@@ -76,7 +76,7 @@ class DeviceConfigurationCollection(
         ...
 
     @abc.abstractmethod
-    def remove_from_use(self, id_: uuid.UUID):
+    def remove_from_use(self, id_: uuid.UUID) -> None:
         """Remove the device configuration from the in use configurations."""
 
         ...

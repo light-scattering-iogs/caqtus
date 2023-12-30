@@ -1,11 +1,12 @@
 import logging
 from typing import Any, Self
 
+import attrs
+
 from device.configuration import DeviceConfigurationAttrs, DeviceParameter
 from expression import Expression
 from settings_model import YAMLSerializable
 from units import units
-from util import attrs
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

@@ -8,6 +8,7 @@ from .experiment_config_collection import ExperimentConfigCollection
 from .sequence_file_system import SequenceHierarchy
 from .shot_collection import ShotCollection
 from .sequence_collection import SequenceCollection
+from .device_configuration_collection import DeviceConfigurationCollection
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -58,3 +59,4 @@ class ExperimentSession(
     sequence_hierarchy: SequenceHierarchy
     # shot_collection: ShotCollection
     sequence_collection: SequenceCollection
+    device_configurations: DeviceConfigurationCollection

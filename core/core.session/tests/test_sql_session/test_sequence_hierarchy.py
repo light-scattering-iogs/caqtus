@@ -23,6 +23,11 @@ def create_empty_session() -> ExperimentSession:
     return session_maker()
 
 
+@pytest.fixture(scope="function")
+def empty_session():
+    return create_empty_session()
+
+
 @given(path)
 def test_creation_1(p):
     with create_empty_session() as session:
@@ -75,11 +80,6 @@ def test_deletion_1(empty_session):
         p.delete()
         assert not session.sequence_hierarchy.does_path_exists(p)
         assert session.sequence_hierarchy.does_path_exists(p.parent)
-
-
-@pytest.fixture(scope="function")
-def empty_session():
-    return create_empty_session()
 
 
 #

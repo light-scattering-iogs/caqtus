@@ -1,15 +1,16 @@
 import sqlalchemy.orm
 from attrs import define
 
+from ._device_configuration_collection import SQLDeviceConfigurationCollection
+from ._sequence_collection import SQLSequenceCollection
+
+# from ._experiment_config_collection import SQLExperimentConfigCollection
+from ._sequence_hierarchy import SQLSequenceHierarchy
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )
 
-
-# from ._experiment_config_collection import SQLExperimentConfigCollection
-from ._sequence_hierarchy import SQLSequenceHierarchy
-from ._sequence_collection import SQLSequenceCollection
 
 # from .sql_sequence_hierarchy import SQLSequenceHierarchy
 # from .sql_shot_collection import SQLShotCollection
@@ -20,6 +21,7 @@ class SQLExperimentSession(ExperimentSession):
     # shot_collection: SQLShotCollection
     sequence_hierarchy: SQLSequenceHierarchy
     sequence_collection: SQLSequenceCollection
+    device_configurations: SQLDeviceConfigurationCollection
     # experiment_configs: SQLExperimentConfigCollection
 
     _sql_session: sqlalchemy.orm.Session
@@ -35,10 +37,11 @@ class SQLExperimentSession(ExperimentSession):
         super().__init__(*args, **kwargs)
         self._sql_session = session
         self._is_active = False
-        # self.shot_collection = SQLShotCollection(parent_session=self)
         self.sequence_hierarchy = SQLSequenceHierarchy(parent_session=self)
         self.sequence_collection = SQLSequenceCollection(parent_session=self)
-        # self.experiment_configs = SQLExperimentConfigCollection(parent_session=self)
+        self.device_configurations = SQLDeviceConfigurationCollection(
+            parent_session=self
+        )
 
     def __enter__(self):
         if self._is_active:
