@@ -16,6 +16,8 @@ class Ui_ConfigurationsEditor(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(ConfigurationsEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.tab_widget = QtWidgets.QTabWidget(parent=ConfigurationsEditor)
+        self.tab_widget.setTabsClosable(True)
+        self.tab_widget.setMovable(False)
         self.tab_widget.setObjectName("tab_widget")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
@@ -31,6 +33,7 @@ class Ui_ConfigurationsEditor(object):
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.retranslateUi(ConfigurationsEditor)
+        self.tab_widget.setCurrentIndex(0)
         self.buttonBox.accepted.connect(ConfigurationsEditor.accept) # type: ignore
         self.buttonBox.rejected.connect(ConfigurationsEditor.reject) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(ConfigurationsEditor)
