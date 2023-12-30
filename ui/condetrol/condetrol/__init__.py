@@ -1,2 +1,3 @@
-__version__ = '0.1.0'
+from .main_window import CondetrolMainWindow
 
+__all__ = ["CondetrolMainWindow"]

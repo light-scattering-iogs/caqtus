@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CondetrolMainWindow</class>
+ <widget class="QMainWindow" name="CondetrolMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Condetrol</string>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="device_configurations_menu">
+    <property name="title">
+     <string>Device configurations</string>
+    </property>
+    <addaction name="action_edit_device_configurations"/>
+    <addaction name="actionExport"/>
+    <addaction name="actionLoad"/>
+   </widget>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>Device servers</string>
+    </property>
+   </widget>
+   <addaction name="device_configurations_menu"/>
+   <addaction name="menu"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_edit_device_configurations">
+   <property name="text">
+    <string>Edit...</string>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>Export...</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
