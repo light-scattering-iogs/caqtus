@@ -4,14 +4,13 @@ import re
 from collections.abc import Iterable
 from typing import Self, Any
 
-from settings_model import yaml, YAMLSerializable
 from util import attrs
 
 NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 
 
 @attrs.define
-class DottedVariableName(YAMLSerializable):
+class DottedVariableName:
     _dotted_name: str
     _individual_names: tuple[VariableName, ...] = attrs.field(init=False, repr=False)
 
@@ -31,28 +30,6 @@ class DottedVariableName(YAMLSerializable):
     @classmethod
     def from_individual_names(cls, names: Iterable[VariableName]) -> Self:
         return cls(".".join(str(name) for name in names))
-
-    @classmethod
-    def representer(cls, dumper: yaml.Dumper, obj: Self) -> yaml.Node:
-        return dumper.represent_scalar(f"!{cls.__name__}", str(obj))
-
-    @classmethod
-    def constructor(cls, loader: yaml.Loader, node: yaml.Node) -> Self:
-        if not isinstance(node, yaml.ScalarNode):
-            raise ValueError(f"Expected a scalar node, got {type(node)}")
-        return cls(loader.construct_scalar(node))
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, value) -> Self:
-        if isinstance(value, cls):
-            return value
-        if isinstance(value, str):
-            return cls(value)
-        raise ValueError(f"Invalid variable name: {value}")
 
     def __str__(self) -> str:
         return self._dotted_name

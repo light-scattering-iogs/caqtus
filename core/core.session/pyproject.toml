@@ -13,13 +13,10 @@ sqlalchemy = "^2.0.23"
 sqlalchemy-utils = "^0.41.1"
 psycopg2 = "^2.9.9"
 platformdirs = "^4.1.0"
+returns = "^0.22.0"
 
 util = {path = "../../util", develop = true}
 core-types = {path = "../core.types", develop = true}
-experiment-configuration = {path = "../../common/experiment/experiment.configuration", develop = true}
-sequence-configuration = {path = "../../common/sequence/sequence.configuration", develop = true}
-variable-name = {path = "../../common/variable/variable.name", develop = true}
-returns = "^0.22.0"
 core-configuration = {path = "../core.configuration", develop = true}
 core-device = {path = "../core.device", develop = true}
 
