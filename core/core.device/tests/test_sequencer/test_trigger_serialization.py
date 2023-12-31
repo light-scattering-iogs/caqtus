@@ -1,11 +1,10 @@
-from sequencer.configuration.trigger import (
+from core.device.sequencer.configuration.trigger import (
     SoftwareTrigger,
     ExternalTriggerStart,
     TriggerEdge,
     Trigger,
     ExternalClock,
 )
-from settings_model import YAMLSerializable
 from util import serialization
 
 
@@ -17,6 +16,3 @@ def test_trigger_serialization():
     ]
     for t in triggers:
         assert t == serialization.structure(serialization.unstructure(t), Trigger)
-
-    for t in triggers:
-        assert t == YAMLSerializable.load(YAMLSerializable.dump(t))

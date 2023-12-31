@@ -1,14 +1,13 @@
 from abc import ABC, abstractmethod
 from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar, Generic
 
-import attr.setters
+import attrs
 from pydantic.color import Color
 
-from device.configuration import DeviceConfigurationAttrs, DeviceParameter
-from settings_model import yaml, YAMLSerializable
-from util import attrs, serialization
+from util import serialization
 from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 from .trigger import Trigger
+from ...configuration import DeviceConfigurationAttrs, DeviceParameter
 
 ChannelName = NewType("ChannelName", str)
 
@@ -38,41 +37,11 @@ class ChannelSpecialPurpose:
         return self.purpose == "Unused"
 
 
-def channel_purpose_representer(
-    dumper: yaml.Dumper, channel_purpose: ChannelSpecialPurpose
-):
-    return dumper.represent_scalar(f"!ChannelSpecialPurpose", channel_purpose.purpose)
-
-
-YAMLSerializable.get_dumper().add_representer(
-    ChannelSpecialPurpose, channel_purpose_representer
-)
-
-
-def channel_purpose_constructor(loader: yaml.Loader, node: yaml.Node):
-    if not isinstance(node, yaml.ScalarNode):
-        raise ValueError(
-            f"Cannot construct ChannelSpecialPurpose from {node}. Expected a scalar"
-            " node"
-        )
-    purpose = loader.construct_scalar(node)
-    if not isinstance(purpose, str):
-        raise ValueError(
-            f"Cannot construct ChannelSpecialPurpose from {node}. Expected a string"
-        )
-    return ChannelSpecialPurpose(purpose=purpose)
-
-
-YAMLSerializable.get_loader().add_constructor(
-    "!ChannelSpecialPurpose", channel_purpose_constructor
-)
-
-
 LogicalType = TypeVar("LogicalType")
 OutputType = TypeVar("OutputType")
 
 
-@attrs.define(slots=False)
+@attrs.define
 class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     """Contains information to configure the output of a channel.
 
@@ -109,10 +78,10 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     color: Optional[Color] = attrs.field(
         default=None,
         converter=attrs.converters.optional(Color),
-        on_setattr=attr.setters.convert,
+        on_setattr=attrs.setters.convert,
     )
     delay: float = attrs.field(
-        default=0.0, converter=float, on_setattr=attr.setters.convert
+        default=0.0, converter=float, on_setattr=attrs.setters.convert
     )
 
     def has_special_purpose(self) -> bool:
@@ -150,7 +119,7 @@ def color_structure(color: Any, _) -> Color:
 serialization.register_structure_hook(Color, color_structure)
 
 
-@attrs.define(slots=False)
+@attrs.define
 class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
     output_mapping: DigitalMapping = attrs.field(
         validator=attrs.validators.instance_of(DigitalMapping),
@@ -164,17 +133,14 @@ class DigitalChannelConfiguration(ChannelConfiguration[bool, bool]):
     color: Optional[Color] = attrs.field(
         default=None,
         converter=attrs.converters.optional(Color),
-        on_setattr=attr.setters.convert,
+        on_setattr=attrs.setters.convert,
     )
     delay: float = attrs.field(
-        default=0.0, converter=float, on_setattr=attr.setters.convert
+        default=0.0, converter=float, on_setattr=attrs.setters.convert
     )
 
 
-YAMLSerializable.register_attrs_class(DigitalChannelConfiguration)
-
-
-@attrs.define(slots=False)
+@attrs.define
 class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
     output_mapping: AnalogMapping = attrs.field(
         validator=attrs.validators.instance_of(AnalogMapping),
@@ -188,17 +154,14 @@ class AnalogChannelConfiguration(ChannelConfiguration[float, float]):
     color: Optional[Color] = attrs.field(
         default=None,
         converter=attrs.converters.optional(Color),
-        on_setattr=attr.setters.convert,
+        on_setattr=attrs.setters.convert,
     )
     delay: float = attrs.field(
-        default=0.0, converter=float, on_setattr=attr.setters.convert
+        default=0.0, converter=float, on_setattr=attrs.setters.convert
     )
 
 
-YAMLSerializable.register_attrs_class(AnalogChannelConfiguration)
-
-
-@attrs.define(slots=False)
+@attrs.define
 class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
     """Holds the static configuration of a sequencer device.
 

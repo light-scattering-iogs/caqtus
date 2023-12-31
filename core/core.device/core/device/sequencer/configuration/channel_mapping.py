@@ -1,17 +1,17 @@
 from abc import abstractmethod, ABC
 from typing import Generic, TypeVar, Iterable
 
+import attrs
 import numpy
 
-from settings_model import YAMLSerializable
-from units import Quantity, UndefinedUnitError
-from util import attrs, serialization
+from core.types.units import Quantity, UndefinedUnitError
+from util import serialization
 
 InputType = TypeVar("InputType")
 OutputType = TypeVar("OutputType")
 
 
-@attrs.define(slots=False)
+@attrs.define
 class OutputMapping(Generic[InputType, OutputType], ABC):
     @abstractmethod
     def convert(self, input_: InputType) -> OutputType:
@@ -20,7 +20,7 @@ class OutputMapping(Generic[InputType, OutputType], ABC):
         )
 
 
-@attrs.define(slots=False)
+@attrs.define
 class DigitalMapping(OutputMapping[bool, bool]):
     invert: bool = attrs.field(
         default=False, converter=bool, on_setattr=attrs.setters.convert
@@ -33,10 +33,7 @@ class DigitalMapping(OutputMapping[bool, bool]):
             return input_
 
 
-YAMLSerializable.register_attrs_class(DigitalMapping)
-
-
-@attrs.define(slots=False)
+@attrs.define
 class AnalogMapping(OutputMapping[float, float], ABC):
     """Abstract class for a mapping between some input quantity to an output quantity
 
@@ -80,19 +77,23 @@ def data_points_converter(data_points: Iterable[tuple[float, float]]):
     return tuple(sorted(point_to_tuple))
 
 
-@attrs.define(slots=False)
+@attrs.define
 class CalibratedAnalogMapping(AnalogMapping):
-    """Convert between input and output quantities by interpolating a set of measured points
+    """Convert between input and output quantities by interpolating a set of points.
 
-    This mapping is for example useful when one needs to convert an experimentally measurable quantity (e.g. the
-    transmission of an AOM) as a function of a control parameter (e.g. a modulation voltage). Note that in this case the
-    measured quantity is the input and the control quantity is the output. This is because we will need to convert from
-    the measured quantity to the control quantity which is what is actually outputted by a device.
+    This mapping is for example useful when one needs to convert an experimentally
+    measurable quantity (e.g. the transmission of an AOM) as a function of a control
+    parameter (e.g. a modulation voltage).
+    Note that in this case the measured quantity is the input and the control quantity
+    is the output.
+    This is because we will need to convert from the measured quantity to the control
+    quantity which is what is actually outputted by a device.
 
     Fields:
         input_units: The units of the input quantity
         output_units: The units of the output quantity
-        measured_data_points: tuple of (input, output) tuples. The points will be rearranged to have the inputs sorted.
+        measured_data_points: tuple of (input, output) tuples.
+        The points will be rearranged to have the inputs sorted.
     """
 
     measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
@@ -105,7 +106,7 @@ class CalibratedAnalogMapping(AnalogMapping):
         default="", converter=str, on_setattr=attrs.setters.convert
     )
 
-    @input_units.validator
+    @input_units.validator  # type: ignore
     def validate_input_units(self, _, input_units):
         try:
             Quantity(1, units=input_units)
@@ -113,7 +114,7 @@ class CalibratedAnalogMapping(AnalogMapping):
             raise ValueError(f"Unknown input units: {input_units}")
         return input_units
 
-    @output_units.validator
+    @output_units.validator  # type: ignore
     def validate_output_units(self, _, output_units):
         try:
             Quantity(1, units=output_units)
@@ -177,7 +178,6 @@ class CalibratedAnalogMapping(AnalogMapping):
         self.measured_data_points = tuple(new_data_points)
 
 
-YAMLSerializable.register_attrs_class(CalibratedAnalogMapping)
 serialization.include_subclasses(
     AnalogMapping, union_strategy=serialization.include_type(tag_name="mapping_type")
 )

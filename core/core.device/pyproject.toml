@@ -9,8 +9,11 @@ packages = [{include = "core"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-util = {path = "../../util", develop = true}
 numpy = "^1.26.2"
+
+util = {path = "../../util", develop = true}
+core-types = {path = "../core.types", develop = true}
+pydantic = "^2.5.3"
 
 
 [tool.poetry.group.dev.dependencies]

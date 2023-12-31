@@ -5,12 +5,12 @@ from attr import define, field
 from attr.setters import frozen
 from attr.validators import ge, instance_of
 
-from device.runtime import RuntimeDevice
-from sequencer.configuration.trigger import Trigger, SoftwareTrigger
+from ..runtime import RuntimeDevice
+from .trigger import Trigger, SoftwareTrigger
 from sequencer.instructions.struct_array_instruction import SequencerInstruction
 
 
-@define(slots=False)
+@define
 class Sequencer(RuntimeDevice, ABC):
     """Base class for all sequencers.
 

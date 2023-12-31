@@ -1,4 +1,4 @@
-from sequencer.configuration import SequencerConfiguration
-from sequencer.runtime import Sequencer
+from .configuration import SequencerConfiguration
+from .runtime import Sequencer
 
 __all__ = ["SequencerConfiguration", "Sequencer"]
