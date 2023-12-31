@@ -2,8 +2,6 @@ from pathlib import Path
 
 import pint
 
-from variable.name import VariableName
-
 ureg = pint.UnitRegistry(
     Path(__file__).parent / "units_definition.txt",
     autoconvert_offset_to_baseunit=True,
@@ -53,6 +51,6 @@ UNITS = (
 )
 
 
-units: dict[VariableName, Unit] = {
-    VariableName(unit): getattr(ureg, unit) for unit in UNITS
-}
+# units: dict[VariableName, Unit] = {
+#     VariableName(unit): getattr(ureg, unit) for unit in UNITS
+# }
