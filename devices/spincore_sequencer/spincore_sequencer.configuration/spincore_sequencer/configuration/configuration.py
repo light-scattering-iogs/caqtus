@@ -1,13 +1,13 @@
 from typing import Any, ClassVar, Type
 
-from device.configuration import DeviceParameter
-from sequencer.configuration import (
+import attrs
+
+from core.device import DeviceParameter
+from core.device.sequencer.configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
 )
-from settings_model import YAMLSerializable
-from util import attrs
 
 
 @attrs.define(slots=False)
@@ -54,6 +54,3 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
             DeviceParameter("time_step"): self.time_step,
         }
         return super().get_device_init_args() | extra
-
-
-YAMLSerializable.register_attrs_class(SpincoreSequencerConfiguration)
