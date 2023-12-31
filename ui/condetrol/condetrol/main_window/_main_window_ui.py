@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\condetrol\main_window\main_window.ui'
+# Form implementation generated from reading ui file '.\main_window\main_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -45,8 +45,8 @@ class Ui_CondetrolMainWindow(object):
     def retranslateUi(self, CondetrolMainWindow):
         _translate = QtCore.QCoreApplication.translate
         CondetrolMainWindow.setWindowTitle(_translate("CondetrolMainWindow", "Condetrol"))
-        self.device_configurations_menu.setTitle(_translate("CondetrolMainWindow", "Device configurations"))
-        self.menu.setTitle(_translate("CondetrolMainWindow", "Device servers"))
+        self.device_configurations_menu.setTitle(_translate("CondetrolMainWindow", "Devices"))
+        self.menu.setTitle(_translate("CondetrolMainWindow", "Remote servers"))
         self.action_edit_device_configurations.setText(_translate("CondetrolMainWindow", "Edit..."))
         self.actionExport.setText(_translate("CondetrolMainWindow", "Export..."))
         self.actionLoad.setText(_translate("CondetrolMainWindow", "Load..."))
