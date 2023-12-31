@@ -1,4 +1,4 @@
-from sequencer.configuration import (
+from ..configuration import (
     Trigger,
     SoftwareTrigger,
     ExternalTriggerStart,

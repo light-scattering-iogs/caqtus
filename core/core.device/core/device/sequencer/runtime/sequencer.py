@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
-from attr import define, field
-from attr.setters import frozen
-from attr.validators import ge, instance_of
-
-from ..runtime import RuntimeDevice
-from .trigger import Trigger, SoftwareTrigger
-from sequencer.instructions.struct_array_instruction import SequencerInstruction
+import attrs
 
 
-@define
+from ..configuration import Trigger, SoftwareTrigger
+from ..instructions import SequencerInstruction
+from ...runtime import RuntimeDevice
+
+
+@attrs.define
 class Sequencer(RuntimeDevice, ABC):
     """Base class for all sequencers.
 
@@ -21,20 +20,24 @@ class Sequencer(RuntimeDevice, ABC):
 
     channel_number: ClassVar[int]
 
-    time_step: int = field(on_setattr=frozen, converter=int, validator=ge(1))
-    trigger: Trigger = field(
-        factory=SoftwareTrigger, on_setattr=frozen, validator=instance_of(Trigger)
+    time_step: int = attrs.field(
+        on_setattr=attrs.setters.frozen, converter=int, validator=attrs.validators.ge(1)
+    )
+    trigger: Trigger = attrs.field(
+        factory=SoftwareTrigger,
+        on_setattr=attrs.setters.frozen,
+        validator=attrs.validators.instance_of(Trigger),
     )
 
-    _sequence_programmed: bool = field(default=False, init=False)
-    _sequence_started: bool = field(default=False, init=False)
+    _sequence_programmed: bool = attrs.field(default=False, init=False)
+    _sequence_started: bool = attrs.field(default=False, init=False)
 
     @abstractmethod
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         """Update the parameters of the sequencer.
 
-        To be subclassed by the specific sequencer implementation. The base class implementation set
-        _sequence_programmed to True.
+        To be subclassed by the specific sequencer implementation.
+        The base class implementation sets _sequence_programmed to True.
 
         Args:
             sequence: The sequence to be programmed into the sequencer.
@@ -56,8 +59,10 @@ class Sequencer(RuntimeDevice, ABC):
     def start_sequence(self) -> None:
         """Start the sequence.
 
-        To be subclassed by the specific sequencer implementation. The base class implementation checks if the sequence
-        has been programmed and sets _sequence_started to True.
+        To be subclassed by the specific sequencer implementation.
+        The base class implementation checks if the sequence has been programmed and
+        sets _sequence_started to True.
+
         Raises:
             SequenceNotConfiguredError: If the sequence has not been configured yet.
         """
@@ -113,17 +118,17 @@ class Sequencer(RuntimeDevice, ABC):
             super().close()
 
 
-class SequenceNotStartedError(RuntimeError):
-    """Raised when the sequencer is asked to do something that requires it to have been started, but it has not been
-    started yet.
-    """
+class SequencerProgrammingError(RuntimeError):
+    pass
+
+
+class SequenceNotStartedError(SequencerProgrammingError):
+    """Raised when the sequence as been configured, but has not been started yet."""
 
     pass
 
 
-class SequenceNotConfiguredError(RuntimeError):
-    """Raised when the sequencer is asked to do something that requires it to have been configured, but it has not been
-    configured yet.
-    """
+class SequenceNotConfiguredError(SequencerProgrammingError):
+    """Raised when the sequence has not been configured yet."""
 
     pass
