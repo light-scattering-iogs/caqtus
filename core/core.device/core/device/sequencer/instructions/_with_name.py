@@ -2,7 +2,7 @@ from typing import TypeVar
 
 import numpy as np
 
-from sequencer.instructions import SequencerInstruction
+from ._instructions import SequencerInstruction
 
 _T = TypeVar("_T")
 

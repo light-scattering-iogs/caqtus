@@ -2,7 +2,7 @@ import functools
 
 import numpy as np
 
-from sequencer.instructions import SequencerInstruction, Pattern, Concatenate, Repeat
+from ._instructions import SequencerInstruction, Pattern, Concatenate, Repeat
 
 
 def convert_to_change_arrays(

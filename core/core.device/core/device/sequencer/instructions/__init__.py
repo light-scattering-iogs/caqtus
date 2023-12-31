@@ -1,14 +1,13 @@
-from sequencer.instructions import (
+from ._instructions import (
     SequencerInstruction,
     Concatenate,
     Repeat,
     Pattern,
     join,
 )
-
+from ._stack import stack_instructions
 from ._to_time_array import convert_to_change_arrays
 from ._with_name import with_name
-from ._stack import stack_instructions
 
 __all__ = [
     "SequencerInstruction",

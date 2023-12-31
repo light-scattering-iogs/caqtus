@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from sequencer.instructions import SequencerInstruction
+from ._instructions import SequencerInstruction
 
 
 def stack_instructions(
