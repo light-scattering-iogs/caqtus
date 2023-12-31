@@ -2,8 +2,9 @@ import logging
 from typing import Any
 
 import attrs
-from core.configuration import Expression
+
 from core.device import DeviceConfigurationAttrs, DeviceParameter
+from core.types.expression import Expression
 from core.types.units import units
 from util import serialization
 from util.serialization import JSON

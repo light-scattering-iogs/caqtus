@@ -10,10 +10,8 @@ packages = [{include = "elliptec_ell14"}]
 python = "^3.11"
 
 util = {path = "../../../util", develop = true}
-
 core-device = {path = "../../../core/core.device", develop = true}
 core-types = {path = "../../../core/core.types", develop = true}
-
 
 
 [build-system]
