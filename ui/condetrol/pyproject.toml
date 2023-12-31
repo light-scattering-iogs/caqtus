@@ -5,11 +5,13 @@ description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
 
 [tool.poetry.dependencies]
-python = "^3.12, <3.13"
+python = "^3.12"
 
 pyqt6 = "^6.6.1"
+
 core-session = {path = "../../core/core.session", develop = true}
 core-device = {path = "../../core/core.device", develop = true}
+
 qabc = {path = "../widgets/qabc", develop = true}
 
 
