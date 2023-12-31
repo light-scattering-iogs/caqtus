@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Any
 
@@ -61,14 +63,14 @@ class ElliptecELL14RotationStageConfiguration(DeviceConfigurationAttrs):
             extra[DeviceParameter("initial_position")] = self.position.evaluate(units)
         return super().get_device_init_args() | extra
 
+    @classmethod
+    def dump(cls, configuration: ElliptecELL14RotationStageConfiguration) -> JSON:
+        return serialization.unstructure(
+            configuration, ElliptecELL14RotationStageConfiguration
+        )
 
-def dump(configuration: ElliptecELL14RotationStageConfiguration) -> JSON:
-    return serialization.unstructure(
-        configuration, ElliptecELL14RotationStageConfiguration
-    )
-
-
-def load(configuration: JSON):
-    return serialization.structure(
-        configuration, ElliptecELL14RotationStageConfiguration
-    )
+    @classmethod
+    def load(cls, configuration: JSON):
+        return serialization.structure(
+            configuration, ElliptecELL14RotationStageConfiguration
+        )

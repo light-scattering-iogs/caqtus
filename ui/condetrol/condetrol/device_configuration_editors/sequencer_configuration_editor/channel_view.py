@@ -32,3 +32,8 @@ class SequencerChannelView(QTableView):
     def channel_model(self, model: SequencerChannelsModel):
         self._channel_model = model
         self.setModel(self._channel_model)
+
+    def set_channels(self, channels: Sequence[ChannelConfiguration]):
+        self.channel_model.channels = channels
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()

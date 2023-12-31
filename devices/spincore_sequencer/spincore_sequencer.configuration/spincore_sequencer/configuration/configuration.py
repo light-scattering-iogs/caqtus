@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, ClassVar, Type
 
 import attrs
@@ -8,9 +10,10 @@ from core.device.sequencer.configuration import (
     ChannelConfiguration,
     DigitalChannelConfiguration,
 )
+from util import serialization
 
 
-@attrs.define(slots=False)
+@attrs.define
 class SpincoreSequencerConfiguration(SequencerConfiguration):
     """Holds the static configuration of a spincore sequencer device.
 
@@ -54,3 +57,11 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
             DeviceParameter("time_step"): self.time_step,
         }
         return super().get_device_init_args() | extra
+
+    @classmethod
+    def dump(cls, configuration: SpincoreSequencerConfiguration) -> serialization.JSON:
+        return serialization.unstructure(configuration, SpincoreSequencerConfiguration)
+
+    @classmethod
+    def load(cls, data) -> SpincoreSequencerConfiguration:
+        return serialization.structure(data, SpincoreSequencerConfiguration)
