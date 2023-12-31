@@ -5,14 +5,15 @@ from typing import Optional
 
 from PyQt6.QtCore import QAbstractItemModel, QModelIndex, Qt
 from anytree import NodeMixin
-from concurrent_updater import ConcurrentUpdater
 
+from concurrent_updater import ConcurrentUpdater
 from core.session import (
     ExperimentSessionMaker,
     ExperimentSession,
     PathIsSequenceError,
     PureSequencePath,
 )
+from core.session.path import bind
 from core.session.sequence import (
     Sequence,
     State,
@@ -260,7 +261,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
             _SequenceHierarchyItem(path=new_path, is_sequence=False, row=new_row)
         )
         with self._session as session:
-            number_created_paths = len(new_path.create(session))
+            number_created_paths = len(bind(new_path, session).create())
             if number_created_paths == 1:
                 _logger.info(f'Created new folder "{str(new_path)}"')
                 self.beginInsertRows(parent, new_row, new_row)
@@ -435,7 +436,7 @@ def _build_children_items(
         experiment_session: Activated experiment session in which to query.
     """
 
-    children = parent.get_children(experiment_session)
+    children = bind(parent, experiment_session).get_children()
     sorted_children = sorted(
         children, key=lambda x: x.get_creation_date(experiment_session)
     )
@@ -443,7 +444,7 @@ def _build_children_items(
         _SequenceHierarchyItem(
             child,
             row=row,
-            is_sequence=child.is_sequence(experiment_session),
+            is_sequence=experiment_session.sequence_collection.is_sequence(child),
         )
         for row, child in enumerate(sorted_children)
     ]
@@ -479,6 +480,8 @@ def _format_seconds(seconds: float) -> str:
 
 def _update_stats(item: _SequenceHierarchyItem, session: ExperimentSession):
     """Update the stats for a sequence hierarchy item."""
+
+    return
 
     stats = Sequence.query_sequence_stats(item.list_sequences(), session)
     _apply_stats(item, stats)

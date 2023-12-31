@@ -165,11 +165,11 @@ class ExperimentViewer(QMainWindow, Ui_MainWindow):
         self.experiment_process_manager = ExperimentProcessManager(
             address=("localhost", 60000), authkey=b"Deardear"
         )
-        self.experiment_process_manager.connect()
-        self.logs_listener = QueueListener(
-            self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
-        )
-        self.logs_listener.start()
+        # self.experiment_process_manager.connect()
+        # self.logs_listener = QueueListener(
+        #     self.experiment_process_manager.get_logs_queue(), self.logs_handler  # type: ignore
+        # )
+        # self.logs_listener.start()
         self.worker = BlockingThread(self)
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
