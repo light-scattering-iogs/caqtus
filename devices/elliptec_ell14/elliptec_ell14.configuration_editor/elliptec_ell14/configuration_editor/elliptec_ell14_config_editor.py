@@ -1,5 +1,5 @@
 from condetrol.device_configuration_editor import DeviceConfigurationEditor
-from core.configuration import Expression
+from core.types.expression import Expression
 from elliptec_ell14.configuration import ElliptecELL14RotationStageConfiguration
 from .elliptec_ell14_config_editor_ui import Ui_ElliptecELL14RotationStageConfigEditor
 

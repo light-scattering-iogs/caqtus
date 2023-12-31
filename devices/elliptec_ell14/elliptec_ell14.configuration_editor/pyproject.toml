@@ -7,12 +7,11 @@ readme = "README.md"
 packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
-python = "^3.12, <3.13"
+python = "^3.12"
 
 pyqt6 = "^6.5.1"
 
 condetrol = {path = "../../../ui/condetrol", develop = true}
-core-configuration = {path = "../../../core/core.configuration", develop = true}
 elliptec-ell14-configuration = {path = "../elliptec_ell14.configuration", develop = true}
 serial-port-widget = {path = "../../../ui/widgets/serial_port_widget", develop = true}
 
