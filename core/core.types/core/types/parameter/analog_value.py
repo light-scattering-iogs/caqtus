@@ -3,7 +3,7 @@ from typing import Any, Optional, TypeGuard
 
 import numpy as np
 
-from units import Quantity, Unit, DimensionalityError, dimensionless
+from ..units import Quantity, Unit, DimensionalityError, dimensionless
 
 AnalogValue = Real | Quantity
 

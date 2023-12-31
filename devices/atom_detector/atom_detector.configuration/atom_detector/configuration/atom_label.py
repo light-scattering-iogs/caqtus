@@ -44,5 +44,5 @@ def structure_atom_label(serialized: str, _) -> AtomLabel:
     return label
 
 
-serialization.register_unstructure_hook(AtomLabel, unstructure_atom_label)
-serialization.register_structure_hook(AtomLabel, structure_atom_label)
+# serialization.register_unstructure_hook(AtomLabel, unstructure_atom_label)
+# serialization.register_structure_hook(AtomLabel, structure_atom_label)

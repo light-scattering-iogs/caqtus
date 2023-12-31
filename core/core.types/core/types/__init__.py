@@ -1,5 +1,5 @@
 from image_types import ImageLabel, Image, is_image
-from parameter_types import (
+from parameter import (
     Parameter,
     is_parameter,
     is_analog_value,
