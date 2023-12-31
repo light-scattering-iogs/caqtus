@@ -9,8 +9,8 @@ ureg = pint.UnitRegistry(
 )
 unit_registry = ureg
 pint.set_application_registry(unit_registry)
-Quantity = pint.quantity.Quantity
-Unit = pint.unit.Unit
+Quantity = pint.Quantity
+Unit = pint.Unit
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
