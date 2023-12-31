@@ -4,7 +4,7 @@ import re
 from collections.abc import Iterable
 from typing import Self, Any
 
-from util import attrs
+import attrs
 
 NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 
