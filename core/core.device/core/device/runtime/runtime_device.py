@@ -3,26 +3,28 @@ from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
 from typing import ClassVar, Optional, TypeVar, Self
 
-from device.name import DeviceName
-from util import attrs
+import attrs
+
 from .device import Device
+from ..name import DeviceName
 
 _T = TypeVar("_T")
 
 
-@attrs.define(slots=False)
+@attrs.define
 class RuntimeDevice(Device, abc.ABC):
     """An implementation of the Device class that provides some useful operations.
 
-    Class inheriting from RuntimeDevice can use the methods `_add_closing_callback` and `_enter_context` to facilitate
-    managing resources.
+    Class inheriting from RuntimeDevice can use the methods `_add_closing_callback` and
+    `_enter_context` to facilitate managing resources.
 
     Fields:
-        name: A unique name given to the device. Cannot be changed during the lifetime of the device.
+        name: A unique name given to the device. Cannot be changed during the lifetime
+        of the device.
 
     Warnings:
-        All device classes subclassed from this class should call parent_item class initialize and close methods when
-        overwriting them.
+        All device classes subclassed from this class should call parent_item class
+        initialize and close methods when overwriting them.
     """
 
     name: DeviceName = attrs.field(on_setattr=attrs.setters.frozen)
@@ -39,8 +41,10 @@ class RuntimeDevice(Device, abc.ABC):
     def initialize(self) -> None:
         """Initiate the communication to the device.
 
-        This method is meant to be reimplemented for each specific device. The base class implementation registers the
-        device in the list of devices already in use. It must be called when subclassing this class.
+        This method is meant to be reimplemented for each specific device.
+        The base class implementation registers the device in the list of devices
+        already in use.
+        It must be called when subclassing this class.
         """
 
         self._close_stack = ExitStack()
@@ -53,13 +57,14 @@ class RuntimeDevice(Device, abc.ABC):
     def _add_closing_callback(self, callback, /, *args, **kwargs):
         """Add a callback function to be called when the device is closed.
 
-        Callbacks will be called in the reverse order they were added. The callback is called with the same arguments as
-        passed to this method.
+        Callbacks will be called in the reverse order they were added.
+        The callback is called with the same arguments as passed to this method.
         """
 
         if self._close_stack is None:
             raise UninitializedDeviceError(
-                f"Method RuntimeDevice.initialize must be called on the instance before adding shutdown callbacks."
+                f"Method RuntimeDevice.initialize must be called on the instance "
+                f"before adding shutdown callbacks."
             )
         self._close_stack.callback(callback, *args, **kwargs)
 
@@ -68,7 +73,8 @@ class RuntimeDevice(Device, abc.ABC):
 
         if self._close_stack is None:
             raise UninitializedDeviceError(
-                f"Method RuntimeDevice.initialize must be called on the instance before entering context managers."
+                f"Method RuntimeDevice.initialize must be called on the instance "
+                f"before entering context managers."
             )
         return self._close_stack.enter_context(cm)
 
@@ -76,24 +82,29 @@ class RuntimeDevice(Device, abc.ABC):
     def update_parameters(self, *_, **kwargs) -> None:
         """Apply new values for some parameters of the device.
 
-        This method is meant to be reimplemented for each specific device. It can be called as many times as needed. The
-        base class implementation updates the device attributes with the new values passed as keyword arguments.
+        This method is meant to be reimplemented for each specific device.
+        It can be called as many times as needed.
+        The base class implementation updates the device attributes with the new values
+        passed as keyword arguments.
         """
 
         for name, value in kwargs.items():
             setattr(self, name, value)
 
     def close(self) -> None:
-        """Close the communication to the device and free the resources used by the device.
+        """Close the communication to the device and free the resources used.
 
-        This method must be called once when use of the device is finished. The base class implementation unwinds the
-        stack of closing callbacks that where registered when it is called. If you only use `_enter_context` and
-        `_add_closing_callback`, there is no need to reimplement this method in subclasses.
+        This method must be called once when use of the device is finished.
+        The base class implementation unwinds the stack of closing callbacks that where
+        registered when it is called.
+        If you only use `_enter_context` and `_add_closing_callback`, there is no need
+        to reimplement this method in subclasses.
         """
 
         if self._close_stack is None:
             raise UninitializedDeviceError(
-                f"method initialize of RuntimeDevice must be called before calling close."
+                f"method initialize of RuntimeDevice must be called before calling "
+                f"close."
             )
         self._close_stack.close()
         self._close_stack = None
@@ -101,9 +112,12 @@ class RuntimeDevice(Device, abc.ABC):
     def __enter__(self) -> Self:
         """Initialize the device.
 
-        When entering the device as a context manager, it will try to acquire necessary resources by calling
-        `initialize`. If an error occurs while calling initialization, the `close` method will be called. Typically,
-        subclasses only need to reimplement `initialize` using only  `_enter_context` and `_add_closing_callback`.
+        When entering the device as a context manager, it will try to acquire necessary
+        resources by calling `initialize`.
+        If an error occurs while calling initialization, the `close` method will be
+        called.
+        Typically, subclasses only need to reimplement `initialize` using only
+        `_enter_context` and `_add_closing_callback`.
         This will ensure proper cleanup.
         """
 
@@ -122,14 +136,14 @@ class RuntimeDevice(Device, abc.ABC):
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
-        """Returns methods that should be exposed when running a device on a remote server.
+        """Returns methods usable when running a device on a remote server.
 
-        When running this device on a server, not all methods can be called by default, ut only those that are returned
-        by this function.
+        When running this device on a server, not all methods can be called by default,
+        but only those that are returned by this function.
         """
 
-        # Here we add the methods required by the Device interface so that even a proxy to the device has the required
-        # methods.
+        # Here we add the methods required by the Device interface so that even a proxy
+        # to the device has the required methods.
         return (
             "__enter__",
             "__exit__",

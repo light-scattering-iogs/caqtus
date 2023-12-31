@@ -1,7 +1,8 @@
 from collections.abc import Mapping
 from typing import Protocol, runtime_checkable, Optional
 
-from util import attrs
+import attrs
+
 from .device import Device
 
 
@@ -71,4 +72,3 @@ class RecalibratingDevice(TestableDevice, Protocol):
         """
 
         ...
-

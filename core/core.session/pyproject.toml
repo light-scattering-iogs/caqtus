@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "core"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.11"
 
 sqlalchemy = "^2.0.23"
 sqlalchemy-utils = "^0.41.1"
@@ -17,7 +17,6 @@ returns = "^0.22.0"
 
 util = {path = "../../util", develop = true}
 core-types = {path = "../core.types", develop = true}
-core-configuration = {path = "../core.configuration", develop = true}
 core-device = {path = "../core.device", develop = true}
 
 [tool.poetry.group.dev.dependencies]
