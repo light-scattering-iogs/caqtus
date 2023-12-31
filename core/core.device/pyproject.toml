@@ -10,6 +10,7 @@ packages = [{include = "core"}]
 python = "^3.11"
 
 util = {path = "../../util", develop = true}
+numpy = "^1.26.2"
 
 
 [tool.poetry.group.dev.dependencies]

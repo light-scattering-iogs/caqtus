@@ -9,10 +9,10 @@ from attrs import define, field
 from attrs.setters import frozen, validate, convert, pipe
 from attrs.validators import instance_of, deep_iterable
 
-from camera.configuration import RectangularROI
-from device.runtime import RuntimeDevice
-from image_types import ImageLabel, Image
+from core.types.image import Image, ImageLabel
 from util import log_exception
+from .configuration import RectangularROI
+from ..runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -22,7 +22,7 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-@define(slots=False)
+@define
 class Camera(RuntimeDevice, ABC):
     """Define the interface for a camera.
 
