@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
 )
 
-from sequencer.configuration import CalibratedAnalogMapping
+from core.device.sequencer.configuration import CalibratedAnalogMapping
 
 
 class CalibratedMappingEditor(QDialog):
@@ -177,7 +177,6 @@ class CalibratedMappingEditor(QDialog):
 
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
-
     mapping_changed = pyqtSignal(CalibratedAnalogMapping)
 
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):

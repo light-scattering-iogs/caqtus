@@ -11,8 +11,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
 )
 
-from sequencer.configuration import ChannelSpecialPurpose
-from settings_model import SettingsModel
+from core.device.sequencer.configuration import ChannelSpecialPurpose
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

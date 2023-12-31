@@ -8,11 +8,15 @@ authors = ["Damien Bloch <damien.bloch@institutoptique.fr>"]
 python = "^3.12"
 
 pyqt6 = "^6.6.1"
+pyqtgraph = "^0.13.3"
+pyqtchart = "^5.15.6"
+pydantic = "^2.5.3"
 
 core-session = {path = "../../core/core.session", develop = true}
 core-device = {path = "../../core/core.device", develop = true}
 
 qabc = {path = "../widgets/qabc", develop = true}
+
 
 
 [tool.poetry.group.dev.dependencies]

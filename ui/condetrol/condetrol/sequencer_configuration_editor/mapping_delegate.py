@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
 )
 
-from sequencer.configuration.channel_mapping import (
+from core.device.sequencer.configuration import (
     OutputMapping,
     DigitalMapping,
     CalibratedAnalogMapping,

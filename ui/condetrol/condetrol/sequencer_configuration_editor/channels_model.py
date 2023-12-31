@@ -4,7 +4,7 @@ from typing import Any
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex
 from PyQt6.QtCore import Qt
 
-from sequencer.configuration import ChannelConfiguration
+from core.device.sequencer.configuration import ChannelConfiguration
 
 delay_multiplier = 1e-6
 

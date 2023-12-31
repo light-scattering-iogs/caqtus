@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from PyQt6.QtWidgets import QTableView
 
-from sequencer.configuration import ChannelConfiguration
+from core.device.sequencer.configuration import ChannelConfiguration
 from .channels_model import SequencerChannelsModel
 from .color_delegate import ColorDelegate
 from .description_delegate import ChannelDescriptionDelegate
@@ -32,4 +32,3 @@ class SequencerChannelView(QTableView):
     def channel_model(self, model: SequencerChannelsModel):
         self._channel_model = model
         self.setModel(self._channel_model)
-
