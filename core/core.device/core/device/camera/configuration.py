@@ -1,12 +1,12 @@
 from abc import ABC
 from typing import Any
 
-from device.configuration import DeviceConfigurationAttrs, DeviceParameter
-from roi import RectangularROI
 from util import attrs
+from util.roi import RectangularROI
+from ..configuration import DeviceConfigurationAttrs, DeviceParameter
 
 
-@attrs.define(slots=False)
+@attrs.define
 class CameraConfiguration(DeviceConfigurationAttrs, ABC):
     """Contains static information to initialize a camera.
 
