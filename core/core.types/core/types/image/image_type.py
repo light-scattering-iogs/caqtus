@@ -2,7 +2,7 @@ from numbers import Real
 from typing import TypeVar, NewType, Any, TypeGuard
 
 import numpy as np
-from data_types import DataLabel, is_data_label
+from ..data import DataLabel, is_data_label
 
 from util.roi import Width, Height
 

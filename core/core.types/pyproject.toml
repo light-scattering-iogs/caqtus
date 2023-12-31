@@ -12,6 +12,8 @@ python = "^3.11"
 pint = "^0.23"
 numpy = "^1.26.2"
 
+util = {path = "../../util", develop = true}
+
 
 
 [build-system]
