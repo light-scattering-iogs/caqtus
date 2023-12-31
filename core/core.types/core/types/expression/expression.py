@@ -6,12 +6,9 @@ from typing import Optional, Any
 
 import numpy
 import token_utils
-import yaml
-from scipy.signal import sawtooth
 
-from settings_model import YAMLSerializable
 from util import serialization
-from variable.name import VariableName, DottedVariableName
+from ..variable_name import DottedVariableName, VariableName
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
@@ -45,7 +42,6 @@ BUILTINS = {
     "sqrt": numpy.sqrt,
     "tan": numpy.tan,
     "tanh": numpy.tanh,
-    "sawtooth": sawtooth,
     "square_wave": square_wave,
     "max": max,
     "min": min,
@@ -253,36 +249,3 @@ class EvaluationError(Exception):
         self._variables = deepcopy(variables)
         message = f"Error while evaluating expression '{body}'"
         super().__init__(message)
-
-
-# YAMLSerializable will be removed in the future, the lines below are here for
-# legacy until we remove it.
-def expression_representer(dumper: yaml.Dumper, expr: Expression):
-    cls = type(expr)
-    return dumper.represent_scalar(
-        f"!{cls.__name__}",
-        expr.body,
-    )
-
-
-def expression_constructor(loader: yaml.Loader, node: yaml.Node):
-    if not isinstance(node, yaml.ScalarNode):
-        raise yaml.constructor.ConstructorError(
-            None,
-            None,
-            f"Expected a scalar node but got {type(node)}",
-            node.start_mark,
-        )
-    value = loader.construct_scalar(node)
-    if not isinstance(value, str):
-        raise yaml.constructor.ConstructorError(
-            None,
-            None,
-            "Expected a string",
-            node.start_mark,
-        )
-    return Expression(body=value)
-
-
-YAMLSerializable.get_dumper().add_representer(Expression, expression_representer)
-YAMLSerializable.get_loader().add_constructor(f"!Expression", expression_constructor)

@@ -7,9 +7,10 @@ readme = "README.md"
 packages = [{include = "elliptec_ell14"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.11"
+
 util = {path = "../../../util", develop = true}
-core-configuration = {path = "../../../core/core.configuration", develop = true}
+
 core-device = {path = "../../../core/core.device", develop = true}
 core-types = {path = "../../../core/core.types", develop = true}
 

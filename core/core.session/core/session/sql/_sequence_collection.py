@@ -7,6 +7,7 @@ from returns.result import Success, Failure
 from sqlalchemy import select
 
 from ._path_table import SQLSequencePath
+from ._sequence_table import SQLSequence  # noqa: F401
 from .._return_or_raise import unwrap
 from ..path import PathNotFoundError, PureSequencePath
 from ..sequence_collection import SequenceCollection

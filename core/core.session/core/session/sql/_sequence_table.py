@@ -3,7 +3,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
 from ._table_base import Base
-from ..sequence.sequence_state import State
 
 
 class SQLSequence(Base):
@@ -14,7 +13,7 @@ class SQLSequence(Base):
         ForeignKey(SQLSequencePath.id_), unique=True, index=True
     )
     path: Mapped[SQLSequencePath] = relationship(back_populates="sequence")
-    state: Mapped[State]
+    # state: Mapped[State]
     #
     # config_id: Mapped[int] = mapped_column(
     #     ForeignKey("sequence_config.id"), unique=True

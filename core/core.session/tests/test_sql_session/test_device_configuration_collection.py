@@ -1,16 +1,42 @@
+from typing import Any
+
+import attrs
 import pytest
 import sqlalchemy
-from core.configuration import Expression
+
+from core.device import DeviceConfigurationAttrs, DeviceParameter
 from core.session import ExperimentSession
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
 )
-from elliptec_ell14.configuration import (
-    ElliptecELL14RotationStageConfiguration,
-    dump,
-    load,
-)
+from util import serialization
+from util.serialization import JSON
+
+
+@attrs.define
+class DummyConfiguration(DeviceConfigurationAttrs):
+    """Dummy configuration to test the device configuration collection."""
+
+    a: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
+    b: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+
+    def get_device_type(self) -> str:
+        return "Dummy"
+
+    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
+        return super().get_device_init_args() | {
+            DeviceParameter("a"): self.a,
+            DeviceParameter("b"): self.b,
+        }
+
+
+def dump(configuration: DummyConfiguration) -> JSON:
+    return serialization.unstructure(configuration)
+
+
+def load(configuration: JSON) -> DummyConfiguration:
+    return serialization.structure(configuration, DummyConfiguration)
 
 
 def create_empty_session() -> ExperimentSession:
@@ -21,7 +47,7 @@ def create_empty_session() -> ExperimentSession:
 
     session_maker = SQLExperimentSessionMaker(
         engine,
-        {"ElliptecELL14RotationStageConfiguration": {"dumper": dump, "loader": load}},
+        {"DummyConfiguration": {"dumper": dump, "loader": load}},
     )
     return session_maker()
 
@@ -32,10 +58,9 @@ def empty_session():
 
 
 def test_1(empty_session):
-    config = ElliptecELL14RotationStageConfiguration(
-        serial_port="COM0",
-        device_id=0,
-        position=Expression("1"),
+    config = DummyConfiguration(
+        a=1,
+        b="test",
     )
     with empty_session as session:
         session.device_configurations["test"] = config
