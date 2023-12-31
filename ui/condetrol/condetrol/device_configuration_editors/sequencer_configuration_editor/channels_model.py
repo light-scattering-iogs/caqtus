@@ -3,6 +3,7 @@ from typing import Any
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 
 from core.device.sequencer.configuration import ChannelConfiguration
 
@@ -33,9 +34,21 @@ class SequencerChannelsModel(QAbstractTableModel):
         return 5
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.FontRole and index.column() == 0:
+            if self._channels[index.row()].description is None:
+                font = QFont()
+                font.setItalic(True)
+                return font
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
-                return self._channels[index.row()].description
+                description = self._channels[index.row()].description
+                if description is None:
+                    if role == Qt.ItemDataRole.DisplayRole:
+                        return "unused"
+                    else:
+                        return ""
+                else:
+                    return description
             elif index.column() == 1:
                 return self._channels[index.row()].color
             elif index.column() == 2:
@@ -51,7 +64,10 @@ class SequencerChannelsModel(QAbstractTableModel):
         channel = index.row()
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
-                self._channels[channel].description = value
+                if str(value) == "":
+                    self._channels[channel].description = None
+                else:
+                    self._channels[channel].description = str(value)
                 return True
             elif index.column() == 1:
                 self._channels[channel].color = value
