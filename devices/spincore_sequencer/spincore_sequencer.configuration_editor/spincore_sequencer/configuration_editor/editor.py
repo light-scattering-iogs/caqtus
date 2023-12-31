@@ -4,13 +4,12 @@ from condetrol.device_configuration_editors import DeviceConfigurationEditor
 from condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
-from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from core.device.sequencer.configuration import (
     DigitalChannelConfiguration,
-    ChannelSpecialPurpose,
     DigitalMapping,
     SoftwareTrigger,
 )
+from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 
 
 def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
@@ -20,7 +19,7 @@ def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
         channels=tuple(
             [
                 DigitalChannelConfiguration(
-                    description=ChannelSpecialPurpose.unused(),
+                    description=None,
                     output_mapping=DigitalMapping(invert=False),
                     default_value=False,
                     color=None,

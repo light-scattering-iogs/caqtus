@@ -6,8 +6,6 @@ from .channel_mapping import (
 )
 from .configuration import (
     SequencerConfiguration,
-    ChannelSpecialPurpose,
-    ChannelName,
     ChannelConfiguration,
     AnalogChannelConfiguration,
     DigitalChannelConfiguration,
@@ -24,8 +22,6 @@ from .trigger import (
 
 __all__ = [
     "SequencerConfiguration",
-    "ChannelSpecialPurpose",
-    "ChannelName",
     "ChannelConfiguration",
     "AnalogChannelConfiguration",
     "AnalogMapping",

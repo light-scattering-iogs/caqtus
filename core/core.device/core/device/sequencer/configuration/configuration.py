@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, NewType, TypeVar, Type, TypeGuard, Any, ClassVar, Generic
+from typing import Optional, TypeVar, Type, Any, ClassVar, Generic
 
 import attrs
 from pydantic.color import Color
@@ -9,32 +9,7 @@ from .channel_mapping import OutputMapping, DigitalMapping, AnalogMapping
 from .trigger import Trigger
 from ...configuration import DeviceConfigurationAttrs, DeviceParameter
 
-ChannelName = NewType("ChannelName", str)
-
-
-def is_channel_name(name: Any) -> TypeGuard[ChannelName]:
-    return isinstance(name, str)
-
-
 MappingType = TypeVar("MappingType", bound=OutputMapping)
-
-
-@attrs.define
-class ChannelSpecialPurpose:
-    purpose: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-
-    def __hash__(self):
-        return hash(self.purpose)
-
-    def __str__(self):
-        return self.purpose
-
-    @classmethod
-    def unused(cls):
-        return cls(purpose="Unused")
-
-    def is_unused(self) -> bool:
-        return self.purpose == "Unused"
 
 
 LogicalType = TypeVar("LogicalType")
@@ -50,9 +25,8 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
     that are actually output on the channel.
 
     Fields:
-        description: The name of the lane that should be output on this channel or a
-            special purpose if the channel is used for something else, like triggering a
-            camera or another sequencer.
+        description: The name of what will be output on the channel.
+        If None, the channel is unused.
         output_mapping: A mapping from the logical values of the channel to the output
             values. This is used to translate human-readable values to the actual values
             that are output on the channel.
@@ -69,9 +43,9 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
             change after the logical time.
     """
 
-    description: ChannelName | ChannelSpecialPurpose = attrs.field(
-        validator=attrs.validators.instance_of((str, ChannelSpecialPurpose)),
-        on_setattr=attrs.setters.validate,
+    description: Optional[str] = attrs.field(
+        converter=attrs.converters.optional(str),
+        on_setattr=attrs.setters.convert,
     )
     output_mapping: OutputMapping[LogicalType, OutputType]
     default_value: LogicalType
@@ -84,25 +58,8 @@ class ChannelConfiguration(Generic[LogicalType, OutputType], ABC):
         default=0.0, converter=float, on_setattr=attrs.setters.convert
     )
 
-    def has_special_purpose(self) -> bool:
-        return isinstance(self.description, ChannelSpecialPurpose)
-
     def is_unused(self) -> bool:
-        return self.has_special_purpose() and self.description.is_unused()
-
-
-def description_structure(description: Any, _) -> str | ChannelSpecialPurpose:
-    if isinstance(description, str):
-        return description
-    elif isinstance(description, dict):
-        return ChannelSpecialPurpose(purpose=description["purpose"])
-    else:
-        raise TypeError(f"Can't construct description from {description}")
-
-
-serialization.register_structure_hook(
-    ChannelName | ChannelSpecialPurpose, description_structure
-)
+        return self.description is None
 
 
 def color_unstructure(color: Color):
@@ -206,16 +163,10 @@ class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
                     f"Channel {channel} is not of the expected type {channel_type}"
                 )
 
-    def get_lane_channels(self) -> list[ChannelConfiguration]:
-        """Get the channels associated to a lane, i.e. those without special purpose"""
-        return [
-            channel for channel in self.channels if not channel.has_special_purpose()
-        ]
-
     def __getitem__(self, item):
         return self.channels[item]
 
-    def get_channel_index(self, name: ChannelName) -> int:
+    def get_channel_index(self, name: str) -> int:
         for i, channel in enumerate(self.channels):
             if channel.description == name:
                 return i
