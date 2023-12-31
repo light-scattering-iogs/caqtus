@@ -8,7 +8,7 @@ Width = NewType("Width", int)
 Height = NewType("Height", int)
 
 
-@attrs.define(slots=False)
+@attrs.define
 class ROI(ABC):
     """Base class for regions of interest inside an image.
 

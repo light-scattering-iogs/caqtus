@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 from typing import Any
 
-from camera.configuration import CameraConfiguration
-from device.configuration import DeviceParameter
-from settings_model import YAMLSerializable
-from util import attrs
+import attrs
+
+from core.device import DeviceParameter
+from core.device.camera.configuration import CameraConfiguration
+from util import serialization
 
 
-@attrs.define(slots=False)
+@attrs.define
 class OrcaQuestCameraConfiguration(CameraConfiguration):
     """Holds the configuration for an OrcaQuest camera.
 
@@ -27,5 +30,10 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
         }
         return super().get_device_init_args() | extra
 
+    @classmethod
+    def dump(cls, config: OrcaQuestCameraConfiguration) -> serialization.JSON:
+        return serialization.unstructure(config)
 
-YAMLSerializable.register_attrs_class(OrcaQuestCameraConfiguration)
+    @classmethod
+    def load(cls, data: serialization.JSON) -> OrcaQuestCameraConfiguration:
+        return serialization.structure(data, OrcaQuestCameraConfiguration)

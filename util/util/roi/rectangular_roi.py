@@ -1,12 +1,12 @@
 from collections.abc import Iterable
 
+import attrs
 import numpy as np
 
-from util import attrs
 from .roi import ROI
 
 
-@attrs.define(slots=False)
+@attrs.define
 class RectangularROI(ROI):
     """Rectangular region of interest inside an image.
 

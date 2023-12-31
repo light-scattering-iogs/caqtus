@@ -16,7 +16,7 @@ from elliptec_ell14.configuration_editor import ElliptecELL14RotationStageConfig
 from ni6738_analog_card.configuration import NI6738SequencerConfiguration
 from ni6738_analog_card.configuration_editor import NI6738AnalogCardConfigEditor
 from orca_quest.configuration import OrcaQuestCameraConfiguration
-from orca_quest.configuration_editor import OrcaQuestConfigEditor
+from orca_quest.configuration_editor import OrcaQuestConfigurationEditor
 from qabc import QABC
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 from spincore_sequencer.configuration_editor import (
@@ -130,7 +130,7 @@ class WrapDeviceConfigEditor(ConfigSettingsEditor, YAMLClipboardMixin, QABC):
                     device_config, remote_servers
                 )
             case OrcaQuestCameraConfiguration():
-                return OrcaQuestConfigEditor(device_config, remote_servers)
+                return OrcaQuestConfigurationEditor(device_config, remote_servers)
             case TweezerArrangerConfiguration():
                 return TweezerArrangerConfigEditor(device_config, remote_servers)
             case _:
