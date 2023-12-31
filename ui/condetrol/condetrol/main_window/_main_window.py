@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QMainWindow
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..device_configuration_editor import (
+from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
 )
