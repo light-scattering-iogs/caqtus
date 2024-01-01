@@ -107,9 +107,9 @@ class PathHierarchyModel(QAbstractItemModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
-                    return "Sequence"
+                    return "Name"
                 elif section == 1:
-                    return "Created"
+                    return "Date created"
             else:
                 return section
         return None
