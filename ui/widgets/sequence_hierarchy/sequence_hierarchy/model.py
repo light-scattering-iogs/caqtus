@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import Optional
 
 from PyQt6.QtCore import (
@@ -14,7 +15,7 @@ from PyQt6.QtCore import (
 from anytree import NodeMixin
 
 from core.session import PureSequencePath, ExperimentSessionMaker
-from core.session.result import unwrap
+from core.session.result import unwrap, Success, Failure
 
 
 class PathHierarchyItem(NodeMixin):
@@ -85,9 +86,11 @@ class PathHierarchyModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        item = index.internalPointer()
+        item: PathHierarchyItem = index.internalPointer()
         if role == Qt.ItemDataRole.DisplayRole:
-            return str(item.hierarchy_path)
+            if item is self._root:
+                return "\\"
+            return item.hierarchy_path.name
         return None
 
     def process_item_change(self, parent: QModelIndex):
@@ -96,14 +99,14 @@ class PathHierarchyModel(QAbstractItemModel):
 
         with self._tree_structure_lock, self._session_maker() as session:
             parent_item = parent.internalPointer()
-            self.beginRemoveRows(parent, 0, len(parent_item.children))
+            self.beginRemoveRows(parent, 0, len(parent_item.children) - 1)
             parent_item.children = []
             self.endRemoveRows()
             fetched_child_paths = unwrap(
                 session.sequence_hierarchy.get_children(parent_item.hierarchy_path)
             )
             parent_item.children_in_session = set(fetched_child_paths)
-            self.beginInsertRows(parent, 0, len(fetched_child_paths))
+            self.beginInsertRows(parent, 0, len(fetched_child_paths) - 1)
             parent_item.children = [
                 PathHierarchyItem(path, None) for path in fetched_child_paths
             ]
@@ -123,13 +126,13 @@ class PathHierarchyModel(QAbstractItemModel):
             self._parent = parent
             self.lock = parent._tree_structure_lock
             self.root = root
-            self.session_maker = session_maker
+            self.session = session_maker()
 
         def run(self):
             timer = QTimer()
 
             def update():
-                with self.lock:
+                with self.lock, self.session:
                     self.check_item_change(self._parent.index(0, 0, QModelIndex()))
 
             timer.timeout.connect(update)  # type: ignore
@@ -138,25 +141,25 @@ class PathHierarchyModel(QAbstractItemModel):
 
         def check_item_change(self, index: QModelIndex) -> bool:
             path_item = index.internalPointer()
-            with self.session_maker() as session:
-                path = path_item.hierarchy_path
-                fetched_child_paths = unwrap(
-                    session.sequence_hierarchy.get_children(path)
-                )
-                present_child_paths = {
-                    child.hierarchy_path for child in path_item.children
-                }
-                if fetched_child_paths != present_child_paths:
-                    # We don't want to emit new signals until the changes are processed,
-                    # so we emit the signal and quit the thread.
-                    # The thread will be restarted by the parent when the changes are
-                    # processed.
-                    self.item_content_changed.emit(index)  # type: ignore
-                    self.quit()
+            path = path_item.hierarchy_path
+            match self.session.sequence_hierarchy.get_children(path):
+                case Failure():
                     return True
-                else:
-                    for child in path_item.children:
-                        child_index = index.model().index(child.row(), 0, index)
-                        if self.check_item_change(child_index):
-                            return True
-                    return False
+                case Success(fetched_child_paths):
+                    present_child_paths = {
+                        child.hierarchy_path for child in path_item.children
+                    }
+                    if fetched_child_paths != present_child_paths:
+                        # We don't want to emit new signals until the changes are processed,
+                        # so we emit the signal and quit the thread.
+                        # The thread will be restarted by the parent when the changes are
+                        # processed.
+                        self.item_content_changed.emit(index)  # type: ignore
+                        self.quit()
+                        return True
+                    else:
+                        for child in path_item.children:
+                            child_index = index.model().index(child.row(), 0, index)
+                            if self.check_item_change(child_index):
+                                return True
+                        return False
