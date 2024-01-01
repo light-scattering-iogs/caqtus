@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 import threading
-import time
 from typing import Optional
 
 from PyQt6.QtCore import (
@@ -12,6 +11,7 @@ from PyQt6.QtCore import (
     Qt,
     QTimer,
     pyqtSignal,
+    QDateTime,
 )
 from anytree import NodeMixin
 
@@ -100,7 +100,7 @@ class PathHierarchyModel(QAbstractItemModel):
             if index.column() == 0:
                 return item.hierarchy_path.name
             elif index.column() == 1:
-                return item.creation_date
+                return QDateTime(item.creation_date)
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
