@@ -14,7 +14,7 @@ from PyQt6.QtCore import (
 from anytree import NodeMixin
 
 from core.session import PureSequencePath, ExperimentSessionMaker
-from core.session.result import Failure, Success, unwrap
+from core.session.result import unwrap
 
 
 class PathHierarchyItem(NodeMixin):
@@ -93,9 +93,9 @@ class PathHierarchyModel(QAbstractItemModel):
     def process_item_change(self, parent: QModelIndex):
         if not parent.isValid():
             return
-        parent_item = parent.internalPointer()
 
         with self._tree_structure_lock, self._session_maker() as session:
+            parent_item = parent.internalPointer()
             self.beginRemoveRows(parent, 0, len(parent_item.children))
             parent_item.children = []
             self.endRemoveRows()
@@ -108,6 +108,7 @@ class PathHierarchyModel(QAbstractItemModel):
                 PathHierarchyItem(path, None) for path in fetched_child_paths
             ]
             self.endInsertRows()
+        self._thread.start()
 
     class TreeUpdateThread(QThread):
         item_content_changed = pyqtSignal(QModelIndex)
@@ -129,29 +130,33 @@ class PathHierarchyModel(QAbstractItemModel):
 
             def update():
                 with self.lock:
-                    self.update_tree_data(self._parent.index(0, 0, QModelIndex()))
+                    self.check_item_change(self._parent.index(0, 0, QModelIndex()))
 
             timer.timeout.connect(update)  # type: ignore
             timer.start(0)
             self.exec()
 
-        def update_tree_data(self, index: QModelIndex):
+        def check_item_change(self, index: QModelIndex) -> bool:
             path_item = index.internalPointer()
-            path = path_item.hierarchy_path
-            present_child_paths = {child.hierarchy_path for child in path_item.children}
             with self.session_maker() as session:
-                result = session.sequence_hierarchy.get_children(path)
-            match result:
-                case Failure():
-                    # The path was changed in the session by another application,
-                    # so we return ASAP to retry walking the tree and find the
-                    # path closest to the root that changed.
-                    return
-                case Success(fetched_child_paths):
-                    if fetched_child_paths != present_child_paths:
-                        self.item_content_changed.emit(index)  # type: ignore
-                        return
-                    else:
-                        for child in path_item.children:
-                            child_index = index.model().index(child.row(), 0, index)
-                            self.update_tree_data(child_index)
+                path = path_item.hierarchy_path
+                fetched_child_paths = unwrap(
+                    session.sequence_hierarchy.get_children(path)
+                )
+                present_child_paths = {
+                    child.hierarchy_path for child in path_item.children
+                }
+                if fetched_child_paths != present_child_paths:
+                    # We don't want to emit new signals until the changes are processed,
+                    # so we emit the signal and quit the thread.
+                    # The thread will be restarted by the parent when the changes are
+                    # processed.
+                    self.item_content_changed.emit(index)  # type: ignore
+                    self.quit()
+                    return True
+                else:
+                    for child in path_item.children:
+                        child_index = index.model().index(child.row(), 0, index)
+                        if self.check_item_change(child_index):
+                            return True
+                    return False
