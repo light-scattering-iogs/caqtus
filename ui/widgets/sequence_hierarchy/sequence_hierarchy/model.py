@@ -54,7 +54,7 @@ class PathHierarchyModel(QAbstractItemModel):
             return QModelIndex()
 
         if not parent.isValid():
-            return self.createIndex(0, column, self._root)
+            parent_item = self._root
         else:
             parent_item = parent.internalPointer()
 
@@ -67,15 +67,17 @@ class PathHierarchyModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
 
-        child_item = index.internalPointer()
+        child_item: PathHierarchyItem = index.internalPointer()
         parent_item = child_item.parent
         if not parent_item:
+            return QModelIndex()
+        if parent_item is self._root:
             return QModelIndex()
         return self.createIndex(parent_item.row(), index.column(), parent_item)
 
     def rowCount(self, parent=QModelIndex()):
         if not parent.isValid():
-            return 1
+            return len(self._root.children)
         item = parent.internalPointer()
         return len(item.children)
 
@@ -88,17 +90,16 @@ class PathHierarchyModel(QAbstractItemModel):
 
         item: PathHierarchyItem = index.internalPointer()
         if role == Qt.ItemDataRole.DisplayRole:
-            if item is self._root:
-                return "\\"
             return item.hierarchy_path.name
         return None
 
     def process_item_change(self, parent: QModelIndex):
         if not parent.isValid():
-            return
+            parent_item = self._root
+        else:
+            parent_item: PathHierarchyItem = parent.internalPointer()
 
         with self._tree_structure_lock, self._session_maker() as session:
-            parent_item = parent.internalPointer()
             self.beginRemoveRows(parent, 0, len(parent_item.children) - 1)
             parent_item.children = []
             self.endRemoveRows()
@@ -133,14 +134,17 @@ class PathHierarchyModel(QAbstractItemModel):
 
             def update():
                 with self.lock, self.session:
-                    self.check_item_change(self._parent.index(0, 0, QModelIndex()))
+                    self.check_item_change(QModelIndex())
 
             timer.timeout.connect(update)  # type: ignore
             timer.start(0)
             self.exec()
 
         def check_item_change(self, index: QModelIndex) -> bool:
-            path_item = index.internalPointer()
+            if not index.isValid():
+                path_item = self.root
+            else:
+                path_item = index.internalPointer()
             path = path_item.hierarchy_path
             match self.session.sequence_hierarchy.get_children(path):
                 case Failure():
@@ -150,16 +154,16 @@ class PathHierarchyModel(QAbstractItemModel):
                         child.hierarchy_path for child in path_item.children
                     }
                     if fetched_child_paths != present_child_paths:
-                        # We don't want to emit new signals until the changes are processed,
-                        # so we emit the signal and quit the thread.
-                        # The thread will be restarted by the parent when the changes are
-                        # processed.
+                        # We don't want to emit new signals until the changes are
+                        # processed, so we emit the signal and quit the thread.
+                        # The thread will be restarted by the parent when the changes
+                        # are processed.
                         self.item_content_changed.emit(index)  # type: ignore
                         self.quit()
                         return True
                     else:
                         for child in path_item.children:
-                            child_index = index.model().index(child.row(), 0, index)
+                            child_index = self._parent.index(child.row(), 0, index)
                             if self.check_item_change(child_index):
                                 return True
                         return False
