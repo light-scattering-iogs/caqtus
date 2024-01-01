@@ -16,6 +16,7 @@ core-device = {path = "../../core/core.device", develop = true}
 
 qabc = {path = "../widgets/qabc", develop = true}
 pyqt6-charts = "^6.6.0"
+sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 
 
 
