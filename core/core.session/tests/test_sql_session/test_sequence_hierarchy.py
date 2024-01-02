@@ -2,8 +2,9 @@ import pytest
 import sqlalchemy
 from hypothesis import given
 
-from core.session import BoundSequencePath
+from core.session import BoundSequencePath, PureSequencePath, PathIsSequenceError
 from core.session import ExperimentSession
+from core.session.result import unwrap
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
@@ -81,27 +82,13 @@ def test_deletion_1(empty_session):
         assert session.sequence_hierarchy.does_path_exists(p.parent)
 
 
-#
-# def test_path(empty_session: ExperimentSession):
-#     session = empty_session
-#
-#     with session:
-#         path = SequencePath("a.b.c")
-#         assert not session.sequence_hierarchy.does_path_exists(path)
-#
-#         with pytest.raises(PathNotFoundError):
-#             unwrap(session.sequence_hierarchy.is_sequence_path(path))
-#         path.create(session)
-#         for parent in path.get_ancestors(strict=False):
-#             assert session.sequence_hierarchy.does_path_exists(parent)
-#             assert not session.sequence_hierarchy.is_sequence_path(parent).unwrap()
-#
-#
-# def test_deletion(empty_session: ExperimentSession):
-#     session = empty_session
-#
-#     with session:
-#         path = SequencePath("a.b.c")
-#         path.create(session)
-#         session.sequence_hierarchy.delete_path(SequencePath("a.b"))
-#         assert not session.sequence_hierarchy.does_path_exists(path)
+def test_sequence(empty_session):
+    with empty_session as session:
+        p = PureSequencePath(r"\a\b\c")
+        sequence = session.sequence_collection.create(p)
+        assert sequence.exists()
+        assert session.sequence_collection.is_sequence(p)
+        with pytest.raises(PathIsSequenceError):
+            session.sequence_collection.create(p)
+
+        assert not unwrap(session.sequence_collection.is_sequence(p.parent))

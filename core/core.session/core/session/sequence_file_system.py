@@ -106,3 +106,7 @@ class PathIsSequenceError(RuntimeError):
 
 class PathIsNotSequenceError(RuntimeError):
     pass
+
+
+class PathHasChildrenError(RuntimeError):
+    pass

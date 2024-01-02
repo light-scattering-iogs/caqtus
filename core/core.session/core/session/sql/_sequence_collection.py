@@ -9,7 +9,10 @@ from sqlalchemy import select
 from ._path_table import SQLSequencePath
 from ._sequence_table import SQLSequence  # noqa: F401
 from .._return_or_raise import unwrap
-from ..path import PathNotFoundError, PureSequencePath
+from ..path import PathNotFoundError, PureSequencePath, BoundSequencePath
+from ..sequence_file_system import PathIsSequenceError, PathHasChildrenError
+from ..sequence import Sequence
+
 from ..sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
@@ -36,6 +39,16 @@ class SQLSequenceCollection(SequenceCollection):
         for child in unwrap(path_hierarchy.get_children(path)):
             result += self.get_contained_sequences(child)
         return result
+
+    def create(self, path: PureSequencePath) -> Sequence:
+        self.parent_session.sequence_hierarchy.create_path(path)
+        if unwrap(self.is_sequence(path)):
+            raise PathIsSequenceError(path)
+        if unwrap(self.parent_session.sequence_hierarchy.get_children(path)):
+            raise PathHasChildrenError(path)
+        new_sequence = SQLSequence(path=unwrap(self._query_path_model(path)))
+        self._get_sql_session().add(new_sequence)
+        return Sequence(BoundSequencePath(path, self.parent_session))
 
     def _query_path_model(
         self, path: PureSequencePath

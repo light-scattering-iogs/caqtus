@@ -4,6 +4,7 @@ from typing import Protocol
 from returns.result import Result
 
 from .path import PathNotFoundError, PureSequencePath
+from .sequence import Sequence
 
 
 class SequenceCollection(Protocol):
@@ -22,4 +23,8 @@ class SequenceCollection(Protocol):
             PathNotFoundError: If the path does not exist in the session.
         """
 
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def create(self, path: PureSequencePath) -> Sequence:
         raise NotImplementedError

@@ -216,6 +216,10 @@ class BoundSequencePath(PureSequencePath):
         result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
         return unwrap(result)
 
+    @property
+    def session(self) -> "ExperimentSession":
+        return self._session
+
 
 class PathError(RuntimeError):
     pass
