@@ -92,3 +92,12 @@ def test_sequence(empty_session):
             session.sequence_collection.create(p)
 
         assert not unwrap(session.sequence_collection.is_sequence(p.parent))
+
+
+def test_sequence_deletion(empty_session):
+    with empty_session as session:
+        p = PureSequencePath(r"\test\test")
+        sequence = session.sequence_collection.create(p)
+        with pytest.raises(PathIsSequenceError):
+            session.paths.delete_path(p.parent)
+        assert sequence.exists()

@@ -18,6 +18,7 @@ from anytree import NodeMixin
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
+from core.session.sequence_collection import PathIsSequenceError
 
 
 class PathHierarchyItem(NodeMixin):
@@ -193,6 +194,7 @@ class PathHierarchyModel(QAbstractItemModel):
             timer.timeout.connect(update)  # type: ignore
             timer.start(0)
             self.exec()
+            timer.stop()
 
         def check_item_change(self, index: QModelIndex) -> None:
             self.check_creation_date_changed(index)
@@ -201,7 +203,10 @@ class PathHierarchyModel(QAbstractItemModel):
             else:
                 path_item = index.internalPointer()
             path = path_item.hierarchy_path
-            fetched_child_paths = unwrap(self.session.paths.get_children(path))
+            try:
+                fetched_child_paths = unwrap(self.session.paths.get_children(path))
+            except PathIsSequenceError:
+                return
             present_child_paths = {child.hierarchy_path for child in path_item.children}
             if fetched_child_paths != present_child_paths:
                 raise FoundChange(index)

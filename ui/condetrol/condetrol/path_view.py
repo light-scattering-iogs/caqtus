@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
+from core.session.sequence_collection import PathIsSequenceError
 from sequence_hierarchy import PathHierarchyView
 from .app_name import APPLICATION_NAME
 
@@ -35,10 +36,16 @@ class EditablePathHierarchyView(PathHierarchyView):
                 functools.partial(self.create_new_folder, path)
             )
 
-            if not path.is_root():
-                delete_action = QAction("Delete")
-                menu.addAction(delete_action)
-                delete_action.triggered.connect(functools.partial(self.delete, path))
+            create_sequence_action = QAction("sequence")
+            new_menu.addAction(create_sequence_action)
+            create_sequence_action.triggered.connect(
+                functools.partial(self.create_new_sequence, path)
+            )
+
+        if not path.is_root():
+            delete_action = QAction("Delete")
+            menu.addAction(delete_action)
+            delete_action.triggered.connect(functools.partial(self.delete, path))
 
         menu.exec(self.mapToGlobal(pos))
 
@@ -48,12 +55,25 @@ class EditablePathHierarchyView(PathHierarchyView):
             f"New folder in {path}...",
             "Folder name:",
             QLineEdit.EchoMode.Normal,
-            "new_folder",
+            "new folder",
         )
         if ok and text:
             new_path = path / text
             with self.session_maker() as session:
                 session.paths.create_path(new_path)
+
+    def create_new_sequence(self, path: PureSequencePath):
+        text, ok = QInputDialog().getText(
+            self,
+            f"New sequence in {path}...",
+            "Sequence name:",
+            QLineEdit.EchoMode.Normal,
+            "new sequence",
+        )
+        if ok and text:
+            new_path = path / text
+            with self.session_maker() as session:
+                session.sequence_collection.create(new_path)
 
     def delete(self, path: PureSequencePath):
         message = (
@@ -62,12 +82,20 @@ class EditablePathHierarchyView(PathHierarchyView):
         )
         if self.exec_confirmation_message_box(message):
             with self.session_maker() as session:
-                if session.sequence_collection.is_sequence(path):
+                if unwrap(session.sequence_collection.is_sequence(path)):
                     session.paths.delete_path(path, delete_sequences=True)
                 else:
                     # An error will be raised if someone tries to delete a folder that
                     # contains sequences.
-                    session.paths.delete_path(path, delete_sequences=False)
+                    try:
+                        session.paths.delete_path(path, delete_sequences=False)
+                    except PathIsSequenceError:
+                        QMessageBox.critical(
+                            self,
+                            APPLICATION_NAME,
+                            f"The path '{path}' contains sequences and therefore "
+                            f"cannot be deleted",
+                        )
 
     def exec_confirmation_message_box(self, message: str) -> bool:
         """Show a popup box to ask  a question."""
