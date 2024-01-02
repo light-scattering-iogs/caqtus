@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
 from sequence_hierarchy import PathHierarchyView
+from .app_name import APPLICATION_NAME
 
 
 class EditablePathHierarchyView(PathHierarchyView):
@@ -72,7 +73,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         """Show a popup box to ask  a question."""
 
         message_box = QMessageBox(self)
-        message_box.setWindowTitle("Caqtus")
+        message_box.setWindowTitle(APPLICATION_NAME)
         message_box.setText(message)
         message_box.setInformativeText("Are you really sure you want to continue?")
         message_box.setStandardButtons(

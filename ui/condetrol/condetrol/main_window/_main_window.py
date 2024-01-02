@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMainWindow
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker
 from ._main_window_ui import Ui_CondetrolMainWindow
+from ..app_name import APPLICATION_NAME
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
@@ -43,6 +44,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         dock = pyqtgraph.dockarea.Dock("Sequences")
         dock.addWidget(self._path_view)
         self.dock_area.addDock(dock, "left")
+        self.setWindowTitle(APPLICATION_NAME)
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
