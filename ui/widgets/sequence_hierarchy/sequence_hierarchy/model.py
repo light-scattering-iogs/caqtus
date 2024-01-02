@@ -16,7 +16,8 @@ from PyQt6.QtCore import (
 from anytree import NodeMixin
 
 from core.session import PureSequencePath, ExperimentSessionMaker
-from core.session.result import unwrap, Success, Failure
+from core.session.path import PathNotFoundError
+from core.session.result import unwrap, Failure
 
 
 class PathHierarchyItem(NodeMixin):
@@ -45,7 +46,10 @@ class PathHierarchyModel(QAbstractItemModel):
         self._root = PathHierarchyItem(PureSequencePath.root(), None, None)
         self._session_maker = session_maker
         self._thread = self.TreeUpdateThread(self, self._root, self._session_maker)
-        self._thread.item_content_changed.connect(self.process_item_change)
+        self._thread.item_structure_changed.connect(self.process_structure_change)
+        self._thread.creation_date_changed.connect(
+            lambda index: self.dataChanged.emit(index, index)
+        )
 
     def __enter__(self):
         self._thread.start()
@@ -119,7 +123,7 @@ class PathHierarchyModel(QAbstractItemModel):
                 return section
         return None
 
-    def process_item_change(self, parent: QModelIndex):
+    def process_structure_change(self, parent: QModelIndex):
         if not parent.isValid():
             parent_item = self._root
         else:
@@ -161,7 +165,8 @@ class PathHierarchyModel(QAbstractItemModel):
         self._thread.start()
 
     class TreeUpdateThread(QThread):
-        item_content_changed = pyqtSignal(QModelIndex)
+        item_structure_changed = pyqtSignal(QModelIndex)
+        creation_date_changed = pyqtSignal(QModelIndex)
 
         def __init__(
             self,
@@ -180,36 +185,49 @@ class PathHierarchyModel(QAbstractItemModel):
 
             def update():
                 with self.lock, self.session:
-                    self.check_item_change(QModelIndex())
+                    try:
+                        self.check_item_change(QModelIndex())
+                    except PathNotFoundError:
+                        pass
+                    except FoundChange as e:
+                        self.item_structure_changed.emit(e.index)
 
             timer.timeout.connect(update)  # type: ignore
             timer.start(0)
             self.exec()
 
-        def check_item_change(self, index: QModelIndex) -> bool:
+        def check_item_change(self, index: QModelIndex) -> None:
+            self.check_creation_date_changed(index)
             if not index.isValid():
                 path_item = self.root
             else:
                 path_item = index.internalPointer()
             path = path_item.hierarchy_path
-            match self.session.sequence_hierarchy.get_children(path):
-                case Failure():
-                    return True
-                case Success(fetched_child_paths):
-                    present_child_paths = {
-                        child.hierarchy_path for child in path_item.children
-                    }
-                    if fetched_child_paths != present_child_paths:
-                        # We don't want to emit new signals until the changes are
-                        # processed, so we emit the signal and quit the thread.
-                        # The thread will be restarted by the parent when the changes
-                        # are processed.
-                        self.item_content_changed.emit(index)  # type: ignore
-                        self.quit()
-                        return True
-                    else:
-                        for child in path_item.children:
-                            child_index = self._parent.index(child.row(), 0, index)
-                            if self.check_item_change(child_index):
-                                return True
-                        return False
+            fetched_child_paths = unwrap(
+                self.session.sequence_hierarchy.get_children(path)
+            )
+            present_child_paths = {child.hierarchy_path for child in path_item.children}
+            if fetched_child_paths != present_child_paths:
+                raise FoundChange(index)
+            else:
+                for child in path_item.children:
+                    child_index = self._parent.index(child.row(), 0, index)
+                    self.check_item_change(child_index)
+
+        def check_creation_date_changed(self, index: QModelIndex) -> bool:
+            if not index.isValid():
+                return False
+            else:
+                path_item = index.internalPointer()
+                path = path_item.hierarchy_path
+                creation_date = unwrap(
+                    self.session.sequence_hierarchy.get_path_creation_date(path)
+                )
+                if creation_date != path_item.creation_date:
+                    path_item.creation_date = creation_date
+                    self.creation_date_changed.emit(index.sibling(index.row(), 1))
+
+
+class FoundChange(Exception):
+    def __init__(self, index: QModelIndex):
+        self.index = index

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from ._path_table import SQLSequencePath
 from .._return_or_raise import unwrap, is_success
 from ..path import PathNotFoundError
-from ..path import PureSequencePath
+from ..path import PureSequencePath, PathIsRootError
 from ..sequence_file_system import (
     PathIsSequenceError,
     SequenceHierarchy,
@@ -129,4 +129,6 @@ class SQLSequenceHierarchy(SequenceHierarchy):
     def get_path_creation_date(
         self, path: PureSequencePath
     ) -> Result[datetime, PathNotFoundError]:
+        if path.is_root():
+            return Failure(PathIsRootError(path))
         return self._query_path_model(path).map(lambda x: x.creation_date)

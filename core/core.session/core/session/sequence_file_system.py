@@ -6,7 +6,7 @@ from typing import Protocol
 
 from returns.result import Result
 
-from .path import PureSequencePath, PathNotFoundError
+from .path import PureSequencePath, PathNotFoundError, PathIsRootError
 
 
 class SequenceHierarchy(Protocol):
@@ -77,7 +77,7 @@ class SequenceHierarchy(Protocol):
     @abstractmethod
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError]:
+    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         """Get the creation date of the path.
 
         Args:
