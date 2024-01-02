@@ -21,12 +21,12 @@ class PathHierarchyView(QTreeView):
             QtCore.Qt.ContextMenuPolicy.CustomContextMenu
         )
         self.header().customContextMenuRequested.connect(self.show_header_menu)
-        self.setAlternatingRowColors(True)
 
     def show_header_menu(self, pos):
         menu = QMenu(self)
         visibility_menu = menu.addMenu("Visible")
-        for column in range(self.model().columnCount()):
+        # The first column is the name and should not be hidden.
+        for column in range(1, self.model().columnCount()):
             action = QAction(
                 self.model().headerData(column, QtCore.Qt.Orientation.Horizontal), self
             )

@@ -1,8 +1,7 @@
-# from .delegate import SequenceHierarchyDelegate
-# from .model import SequenceHierarchyModel, EditableSequenceHierarchyModel
+from .model import PathHierarchyModel
+from .view import PathHierarchyView
 
-# __all__ = [
-#     "SequenceHierarchyDelegate",
-#     "SequenceHierarchyModel",
-#     "EditableSequenceHierarchyModel",
-# ]
+__all__ = [
+    "PathHierarchyModel",
+    "PathHierarchyView",
+]

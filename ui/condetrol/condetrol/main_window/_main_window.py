@@ -1,10 +1,12 @@
 import copy
 from collections.abc import Mapping
 
+import pyqtgraph.dockarea
 from PyQt6.QtWidgets import QMainWindow
 
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker
+from sequence_hierarchy import PathHierarchyView
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -21,10 +23,26 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.setupUi(self)
+        self._path_view = PathHierarchyView(session_maker)
+        self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
         self.device_configuration_edit_infos = device_configuration_editors
+        self.setup_ui()
         self.setup_connections()
+
+    def __enter__(self):
+        self._path_view.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self._path_view.__exit__(exc_type, exc_value, traceback)
+
+    def setup_ui(self):
+        self.setupUi(self)
+        self.setCentralWidget(self.dock_area)
+        dock = pyqtgraph.dockarea.Dock("Sequences")
+        dock.addWidget(self._path_view)
+        self.dock_area.addDock(dock, "left")
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
@@ -64,9 +82,3 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 session.device_configurations[device_name] = new_device_configurations[
                     device_name
                 ]
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return False
