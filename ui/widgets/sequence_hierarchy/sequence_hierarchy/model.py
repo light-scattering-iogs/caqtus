@@ -30,7 +30,6 @@ class PathHierarchyItem(NodeMixin):
         self.hierarchy_path = path
         self.parent = parent
         self.children = []
-        self.children_in_session: set[PureSequencePath] = set()
         self.creation_date = creation_date
 
     def row(self):
@@ -135,20 +134,29 @@ class PathHierarchyModel(QAbstractItemModel):
                 return
             else:
                 fetched_child_paths = children_query.unwrap()
-            self.beginRemoveRows(parent, 0, len(parent_item.children) - 1)
-            parent_item.children = []
-            self.endRemoveRows()
-            parent_item.children_in_session = set(fetched_child_paths)
+            present_paths = {child.hierarchy_path for child in parent_item.children}
+            for row in range(len(parent_item.children) - 1, -1, -1):
+                child = parent_item.children[row]
+                if child.hierarchy_path not in fetched_child_paths:
+                    self.beginRemoveRows(parent, row, row)
+                    child.parent = None
+                    self.endRemoveRows()
+            new_paths = fetched_child_paths - present_paths
             new_children = [
                 PathHierarchyItem(
                     path,
                     None,
                     unwrap(session.sequence_hierarchy.get_path_creation_date(path)),
                 )
-                for path in fetched_child_paths
+                for path in new_paths
             ]
-            self.beginInsertRows(parent, 0, len(fetched_child_paths) - 1)
-            parent_item.children = new_children
+            self.beginInsertRows(
+                parent,
+                len(parent_item.children),
+                len(parent_item.children) + len(new_children) - 1,
+            )
+            for child in new_children:
+                child.parent = parent_item
             self.endInsertRows()
         self._thread.start()
 
