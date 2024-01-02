@@ -3,8 +3,9 @@ from typing import Protocol
 
 from returns.result import Result
 
-from .path import PathNotFoundError, PureSequencePath
+from .path import PureSequencePath
 from .sequence import Sequence
+from .sequence_file_system import PathError, PathNotFoundError
 
 
 class SequenceCollection(Protocol):
@@ -28,3 +29,11 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def create(self, path: PureSequencePath) -> Sequence:
         raise NotImplementedError
+
+
+class PathIsSequenceError(PathError):
+    pass
+
+
+class PathIsNotSequenceError(PathError):
+    pass

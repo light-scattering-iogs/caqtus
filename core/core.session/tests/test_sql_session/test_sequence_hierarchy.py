@@ -2,9 +2,9 @@ import pytest
 import sqlalchemy
 from hypothesis import given
 
-from core.session import BoundSequencePath, PureSequencePath, PathIsSequenceError
-from core.session import ExperimentSession
+from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
+from core.session.sequence_collection import PathIsSequenceError
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,

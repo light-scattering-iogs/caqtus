@@ -6,7 +6,7 @@ from typing import Protocol
 
 from returns.result import Result
 
-from .path import PureSequencePath, PathNotFoundError, PathIsRootError
+from .path import PureSequencePath
 
 
 class SequenceHierarchy(Protocol):
@@ -100,11 +100,15 @@ class SequenceHierarchy(Protocol):
         raise NotImplementedError
 
 
-class PathIsSequenceError(RuntimeError):
+class PathError(RuntimeError):
     pass
 
 
-class PathIsNotSequenceError(RuntimeError):
+class PathNotFoundError(PathError):
+    pass
+
+
+class PathIsRootError(PathError):
     pass
 
 

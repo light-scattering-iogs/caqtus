@@ -219,15 +219,3 @@ class BoundSequencePath(PureSequencePath):
     @property
     def session(self) -> "ExperimentSession":
         return self._session
-
-
-class PathError(RuntimeError):
-    pass
-
-
-class PathNotFoundError(PathError):
-    pass
-
-
-class PathIsRootError(PathError):
-    pass

@@ -9,11 +9,11 @@ from sqlalchemy import select
 from ._path_table import SQLSequencePath
 from ._sequence_table import SQLSequence  # noqa: F401
 from .._return_or_raise import unwrap
-from ..path import PathNotFoundError, PureSequencePath, BoundSequencePath
-from ..sequence_file_system import PathIsSequenceError, PathHasChildrenError
+from ..path import PureSequencePath, BoundSequencePath
 from ..sequence import Sequence
-
+from ..sequence_collection import PathIsSequenceError
 from ..sequence_collection import SequenceCollection
+from ..sequence_file_system import PathNotFoundError, PathHasChildrenError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

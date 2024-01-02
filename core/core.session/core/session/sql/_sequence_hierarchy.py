@@ -9,10 +9,11 @@ from sqlalchemy import select
 
 from ._path_table import SQLSequencePath
 from .._return_or_raise import unwrap, is_success
-from ..path import PathNotFoundError
-from ..path import PureSequencePath, PathIsRootError
+from ..path import PureSequencePath
+from ..sequence_collection import PathIsSequenceError
 from ..sequence_file_system import (
-    PathIsSequenceError,
+    PathNotFoundError,
+    PathIsRootError,
     SequenceHierarchy,
 )
 
