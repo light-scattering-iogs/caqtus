@@ -2,7 +2,7 @@ from .data_type import DataType
 from .experiment_session import ExperimentSession
 from .path import BoundSequencePath, PureSequencePath
 
-from .sequence_file_system import SequenceHierarchy
+from .path_hierarchy import PathHierarchy
 from .session_maker import (
     ExperimentSessionMaker,
     get_standard_experiment_session_maker,
@@ -17,5 +17,5 @@ __all__ = [
     "PureSequencePath",
     "BoundSequencePath",
     "DataType",
-    "SequenceHierarchy",
+    "PathHierarchy",
 ]

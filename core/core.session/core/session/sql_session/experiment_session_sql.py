@@ -15,7 +15,7 @@ from .sql_shot_collection import SQLShotCollection
 @define(init=False)
 class SQLExperimentSession(ExperimentSession):
     shot_collection: SQLShotCollection
-    sequence_hierarchy: SQLSequenceHierarchy
+    paths: SQLSequenceHierarchy
     experiment_configs: SQLExperimentConfigCollection
 
     _sql_session: sqlalchemy.orm.Session

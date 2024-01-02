@@ -33,7 +33,7 @@ class Sequence:
     def exists(self) -> bool:
         """Check if the sequence exists in the session."""
 
-        if self.session.sequence_hierarchy.does_path_exists(self.path):
+        if self.session.paths.does_path_exists(self.path):
             return self.session.sequence_collection.is_sequence(self.path)
         else:
             return False

@@ -374,7 +374,7 @@ class EditableSequenceHierarchyModel(SequenceHierarchyModel):
         if item.is_sequence:
             sequence = Sequence(item.sequence_path)
             with self._session as session:
-                session.sequence_hierarchy.set_sequence_state(sequence, State.DRAFT)
+                session.paths.set_sequence_state(sequence, State.DRAFT)
             self.dataChanged.emit(index, index)
 
 

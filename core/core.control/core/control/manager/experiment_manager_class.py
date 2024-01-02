@@ -52,11 +52,9 @@ class ExperimentManager:
             sequences = set()
             states_to_crash = {State.PREPARING, State.RUNNING}
             for state in states_to_crash:
-                sequences.update(
-                    session.sequence_hierarchy.get_sequences_in_state(state)
-                )
+                sequences.update(session.paths.get_sequences_in_state(state))
             for sequence in sequences:
-                session.sequence_hierarchy.set_sequence_state(sequence, State.CRASHED)
+                session.paths.set_sequence_state(sequence, State.CRASHED)
 
     def start_sequence(
         self,

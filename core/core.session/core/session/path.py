@@ -159,7 +159,7 @@ class BoundSequencePath(PureSequencePath):
         self._session = new_session
 
     def exists(self) -> bool:
-        return self._session.sequence_hierarchy.does_path_exists(self)
+        return self._session.paths.does_path_exists(self)
 
     def create(self) -> list[BoundSequencePath]:
         """Create the path and all its ancestors if they don't exist.
@@ -171,7 +171,7 @@ class BoundSequencePath(PureSequencePath):
             PathIsSequenceError: If an ancestor exists and is a sequence.
         """
 
-        result = self._session.sequence_hierarchy.create_path(self)
+        result = self._session.paths.create_path(self)
         return [BoundSequencePath(path, self._session) for path in unwrap(result)]
 
     def get_children(self) -> set[BoundSequencePath]:
@@ -185,7 +185,7 @@ class BoundSequencePath(PureSequencePath):
             PathIsSequenceError: If the path is a sequence.
         """
 
-        result = self._session.sequence_hierarchy.get_children(self)
+        result = self._session.paths.get_children(self)
         return {BoundSequencePath(path, self._session) for path in unwrap(result)}
 
     def delete(self, delete_sequences: bool = False):
@@ -199,7 +199,7 @@ class BoundSequencePath(PureSequencePath):
             delete_sequence is False
         """
 
-        self._session.sequence_hierarchy.delete_path(self, delete_sequences)
+        self._session.paths.delete_path(self, delete_sequences)
 
     def get_creation_date(
         self, experiment_session: "ExperimentSession"
@@ -213,7 +213,7 @@ class BoundSequencePath(PureSequencePath):
             PathNotFoundError: If the path does not exist in the session.
         """
 
-        result = experiment_session.sequence_hierarchy.get_path_creation_date(self)
+        result = experiment_session.paths.get_path_creation_date(self)
         return unwrap(result)
 
     @property

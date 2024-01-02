@@ -5,7 +5,7 @@ from returns.result import Result
 
 from .path import PureSequencePath
 from .sequence import Sequence
-from .sequence_file_system import PathError, PathNotFoundError
+from .path_hierarchy import PathError, PathNotFoundError
 
 
 class SequenceCollection(Protocol):

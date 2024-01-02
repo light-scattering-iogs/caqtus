@@ -7,7 +7,7 @@ from ._device_configuration_collection import (
     DeviceConfigurationSerializer,
 )
 from ._sequence_collection import SQLSequenceCollection
-from ._sequence_hierarchy import SQLSequenceHierarchy
+from ._path_hierarchy import SQLPathHierarchy
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
@@ -16,7 +16,7 @@ from ..experiment_session import (
 
 @define(init=False)
 class SQLExperimentSession(ExperimentSession):
-    sequence_hierarchy: SQLSequenceHierarchy
+    paths: SQLPathHierarchy
     sequence_collection: SQLSequenceCollection
     device_configurations: SQLDeviceConfigurationCollection
 
@@ -39,7 +39,7 @@ class SQLExperimentSession(ExperimentSession):
         super().__init__(*args, **kwargs)
         self._sql_session = session
         self._is_active = False
-        self.sequence_hierarchy = SQLSequenceHierarchy(parent_session=self)
+        self.paths = SQLPathHierarchy(parent_session=self)
         self.sequence_collection = SQLSequenceCollection(parent_session=self)
         self.device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self,

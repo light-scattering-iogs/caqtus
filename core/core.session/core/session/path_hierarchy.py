@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, TYPE_CHECKING
 
 from returns.result import Result
 
 from .path import PureSequencePath
 
+if TYPE_CHECKING:
+    from .sequence_collection import PathIsSequenceError
 
-class SequenceHierarchy(Protocol):
+
+class PathHierarchy(Protocol):
     """Interface that defines the sequence hierarchy of an experiment session.
 
     This object provides a file-system-like methods that can be used to create, delete

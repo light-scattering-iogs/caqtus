@@ -11,10 +11,10 @@ from ._path_table import SQLSequencePath
 from .._return_or_raise import unwrap, is_success
 from ..path import PureSequencePath
 from ..sequence_collection import PathIsSequenceError
-from ..sequence_file_system import (
+from ..path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
-    SequenceHierarchy,
+    PathHierarchy,
 )
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @frozen
-class SQLSequenceHierarchy(SequenceHierarchy):
+class SQLPathHierarchy(PathHierarchy):
     parent_session: "SQLExperimentSession"
 
     def does_path_exists(self, path: PureSequencePath) -> bool:

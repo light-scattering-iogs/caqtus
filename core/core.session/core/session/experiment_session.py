@@ -6,7 +6,7 @@ from typing import Protocol
 
 from .device_configuration_collection import DeviceConfigurationCollection
 from .sequence_collection import SequenceCollection
-from .sequence_file_system import SequenceHierarchy
+from .path_hierarchy import PathHierarchy
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -48,13 +48,11 @@ class ExperimentSession(
 
     Attributes:
         experiment_configs: Gives access to the history of the device configurations.
-        sequence_hierarchy: Gives access to all sequences stored in the session.
+        paths: Gives access to all sequences stored in the session.
         shot_collection: Gives access to the data acquired while running shots on the
         experiment.
     """
 
-    # experiment_configs: ExperimentConfigCollection
-    sequence_hierarchy: SequenceHierarchy
-    # shot_collection: ShotCollection
+    paths: PathHierarchy
     sequence_collection: SequenceCollection
     device_configurations: DeviceConfigurationCollection

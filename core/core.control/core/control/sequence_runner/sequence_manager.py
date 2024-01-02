@@ -445,7 +445,7 @@ class SequenceManager(AbstractContextManager):
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
-            session.sequence_hierarchy.set_sequence_state(self._sequence, state)
+            session.paths.set_sequence_state(self._sequence, state)
 
 
 class SequenceInterruptedException(RuntimeError):
@@ -461,7 +461,7 @@ def save_shot(
         params = {
             name: value for name, value in shot_data.variables.to_flat_dict().items()
         }
-        return session.sequence_hierarchy.create_sequence_shot(
+        return session.paths.create_sequence_shot(
             sequence=sequence,
             name=shot_data.name,
             start_time=shot_data.start_time,

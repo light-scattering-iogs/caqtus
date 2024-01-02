@@ -7,13 +7,13 @@ from returns.result import Success, Failure
 from sqlalchemy import select
 
 from ._path_table import SQLSequencePath
-from ._sequence_table import SQLSequence  # noqa: F401
+from ._sequence_table import SQLSequence
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
+from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence
 from ..sequence_collection import PathIsSequenceError
 from ..sequence_collection import SequenceCollection
-from ..sequence_file_system import PathNotFoundError, PathHasChildrenError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -34,17 +34,17 @@ class SQLSequenceCollection(SequenceCollection):
         if unwrap(self.is_sequence(path)):
             return [path]
 
-        path_hierarchy = self.parent_session.sequence_hierarchy
+        path_hierarchy = self.parent_session.paths
         result = []
         for child in unwrap(path_hierarchy.get_children(path)):
             result += self.get_contained_sequences(child)
         return result
 
     def create(self, path: PureSequencePath) -> Sequence:
-        self.parent_session.sequence_hierarchy.create_path(path)
+        self.parent_session.paths.create_path(path)
         if unwrap(self.is_sequence(path)):
             raise PathIsSequenceError(path)
-        if unwrap(self.parent_session.sequence_hierarchy.get_children(path)):
+        if unwrap(self.parent_session.paths.get_children(path)):
             raise PathHasChildrenError(path)
         new_sequence = SQLSequence(path=unwrap(self._query_path_model(path)))
         self._get_sql_session().add(new_sequence)

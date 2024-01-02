@@ -53,7 +53,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         if ok and text:
             new_path = path / text
             with self.session_maker() as session:
-                session.sequence_hierarchy.create_path(new_path)
+                session.paths.create_path(new_path)
 
     def delete(self, path: PureSequencePath):
         message = (
@@ -63,11 +63,11 @@ class EditablePathHierarchyView(PathHierarchyView):
         if self.exec_confirmation_message_box(message):
             with self.session_maker() as session:
                 if session.sequence_collection.is_sequence(path):
-                    session.sequence_hierarchy.delete_path(path, delete_sequences=True)
+                    session.paths.delete_path(path, delete_sequences=True)
                 else:
                     # An error will be raised if someone tries to delete a folder that
                     # contains sequences.
-                    session.sequence_hierarchy.delete_path(path, delete_sequences=False)
+                    session.paths.delete_path(path, delete_sequences=False)
 
     def exec_confirmation_message_box(self, message: str) -> bool:
         """Show a popup box to ask  a question."""

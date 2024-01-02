@@ -34,7 +34,7 @@ def test_creation_1(p):
         bound_path = BoundSequencePath(p, session)
         bound_path.create()
         for ancestor in bound_path.get_ancestors():
-            assert session.sequence_hierarchy.does_path_exists(ancestor)
+            assert session.paths.does_path_exists(ancestor)
 
 
 def test_creation_2(empty_session):
@@ -42,11 +42,11 @@ def test_creation_2(empty_session):
         p = BoundSequencePath(r"\a\b\c", session)
         p.create()
         for ancestor in p.get_ancestors():
-            assert session.sequence_hierarchy.does_path_exists(ancestor)
+            assert session.paths.does_path_exists(ancestor)
         p = BoundSequencePath(r"\a\b\d", session)
         p.create()
         for ancestor in p.get_ancestors():
-            assert session.sequence_hierarchy.does_path_exists(ancestor)
+            assert session.paths.does_path_exists(ancestor)
 
 
 def test_children_1(empty_session):
@@ -78,8 +78,8 @@ def test_deletion_1(empty_session):
         p.create()
     with empty_session as session:
         p.delete()
-        assert not session.sequence_hierarchy.does_path_exists(p)
-        assert session.sequence_hierarchy.does_path_exists(p.parent)
+        assert not session.paths.does_path_exists(p)
+        assert session.paths.does_path_exists(p.parent)
 
 
 def test_sequence(empty_session):

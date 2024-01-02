@@ -16,7 +16,7 @@ from PyQt6.QtCore import (
 from anytree import NodeMixin
 
 from core.session import PureSequencePath, ExperimentSessionMaker
-from core.session.path import PathNotFoundError
+from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
 
 
@@ -130,9 +130,7 @@ class PathHierarchyModel(QAbstractItemModel):
             parent_item: PathHierarchyItem = parent.internalPointer()
 
         with self._tree_structure_lock, self._session_maker() as session:
-            children_query = session.sequence_hierarchy.get_children(
-                parent_item.hierarchy_path
-            )
+            children_query = session.paths.get_children(parent_item.hierarchy_path)
             if isinstance(children_query, Failure):
                 self._thread.start()
                 return
@@ -150,7 +148,7 @@ class PathHierarchyModel(QAbstractItemModel):
                 PathHierarchyItem(
                     path,
                     None,
-                    unwrap(session.sequence_hierarchy.get_path_creation_date(path)),
+                    unwrap(session.paths.get_path_creation_date(path)),
                 )
                 for path in new_paths
             ]
@@ -203,9 +201,7 @@ class PathHierarchyModel(QAbstractItemModel):
             else:
                 path_item = index.internalPointer()
             path = path_item.hierarchy_path
-            fetched_child_paths = unwrap(
-                self.session.sequence_hierarchy.get_children(path)
-            )
+            fetched_child_paths = unwrap(self.session.paths.get_children(path))
             present_child_paths = {child.hierarchy_path for child in path_item.children}
             if fetched_child_paths != present_child_paths:
                 raise FoundChange(index)
@@ -220,9 +216,7 @@ class PathHierarchyModel(QAbstractItemModel):
             else:
                 path_item = index.internalPointer()
                 path = path_item.hierarchy_path
-                creation_date = unwrap(
-                    self.session.sequence_hierarchy.get_path_creation_date(path)
-                )
+                creation_date = unwrap(self.session.paths.get_path_creation_date(path))
                 if creation_date != path_item.creation_date:
                     path_item.creation_date = creation_date
                     self.creation_date_changed.emit(index.sibling(index.row(), 1))
