@@ -21,6 +21,8 @@ class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+        if path.is_root():
+            return Success(False)
         return self._query_path_model(path).map(
             lambda path_model: bool(path_model.sequence)
         )

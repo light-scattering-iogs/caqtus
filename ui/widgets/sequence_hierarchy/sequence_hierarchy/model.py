@@ -56,6 +56,12 @@ class PathHierarchyModel(QAbstractItemModel):
         self._thread.quit()
         self._thread.wait()
 
+    def get_path(self, index: QModelIndex) -> PureSequencePath:
+        if not index.isValid():
+            return self._root.hierarchy_path
+        item: PathHierarchyItem = index.internalPointer()
+        return item.hierarchy_path
+
     def index(self, row, column, parent=QModelIndex()):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
@@ -121,12 +127,17 @@ class PathHierarchyModel(QAbstractItemModel):
             parent_item: PathHierarchyItem = parent.internalPointer()
 
         with self._tree_structure_lock, self._session_maker() as session:
+            children_query = session.sequence_hierarchy.get_children(
+                parent_item.hierarchy_path
+            )
+            if isinstance(children_query, Failure):
+                self._thread.start()
+                return
+            else:
+                fetched_child_paths = children_query.unwrap()
             self.beginRemoveRows(parent, 0, len(parent_item.children) - 1)
             parent_item.children = []
             self.endRemoveRows()
-            fetched_child_paths = unwrap(
-                session.sequence_hierarchy.get_children(parent_item.hierarchy_path)
-            )
             parent_item.children_in_session = set(fetched_child_paths)
             new_children = [
                 PathHierarchyItem(

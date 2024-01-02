@@ -6,12 +6,12 @@ from PyQt6.QtWidgets import QMainWindow
 
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker
-from sequence_hierarchy import PathHierarchyView
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
 )
+from ..path_view import EditablePathHierarchyView
 
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
@@ -23,7 +23,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self._path_view = PathHierarchyView(session_maker)
+        self._path_view = EditablePathHierarchyView(session_maker)
         self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
         self.device_configuration_edit_infos = device_configuration_editors
