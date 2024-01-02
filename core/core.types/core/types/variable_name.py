@@ -6,6 +6,8 @@ from typing import Self, Any
 
 import attrs
 
+from util import serialization
+
 NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
 
 
@@ -78,3 +80,17 @@ class VariableName(DottedVariableName):
             return self._dotted_name == other._dotted_name
         else:
             return NotImplemented
+
+
+def unstructure_hook(dotted_variable_name: DottedVariableName) -> str:
+    return dotted_variable_name.dotted_name
+
+
+serialization.register_unstructure_hook(DottedVariableName, unstructure_hook)
+
+
+def structure_hook(data: str, cls: type[DottedVariableName]) -> DottedVariableName:
+    return DottedVariableName(data)
+
+
+serialization.register_structure_hook(DottedVariableName, structure_hook)
