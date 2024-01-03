@@ -7,7 +7,7 @@ from ..sequence_iteration_editor import SequenceIterationEditor
 from .steps_model import StepsModel
 
 
-class StepsIterationEditor(SequenceIterationEditor[StepsConfiguration], QTreeView):
+class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
     def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.iteration = iteration
@@ -15,6 +15,7 @@ class StepsIterationEditor(SequenceIterationEditor[StepsConfiguration], QTreeVie
         self._model = StepsModel(iteration)
         self.setModel(self._model)
         self.expandAll()
+        self.header().hide()
 
     def get_iteration(self) -> StepsConfiguration:
         return self.iteration

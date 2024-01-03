@@ -28,6 +28,9 @@ class VariableDeclaration:
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return f"{self.variable} = {self.value}"
+
 
 @attrs.define
 class LinspaceLoop:
@@ -56,6 +59,11 @@ class LinspaceLoop:
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return (
+            f"for {self.variable} in linspace({self.start}, {self.stop}, {self.num}):"
+        )
+
 
 @attrs.define
 class ArangeLoop:
@@ -83,10 +91,14 @@ class ArangeLoop:
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return f"for {self.variable} in arange({self.start}, {self.stop}, {self.step}):"
+
 
 @attrs.define
 class ExecuteShot:
-    pass
+    def __str__(self):
+        return "do shot"
 
 
 def unstructure_hook(execute_shot: ExecuteShot) -> str:

@@ -45,29 +45,32 @@ class StepsItem(NodeMixin):
         self.parent = parent
         self.children = children
 
+    def __str__(self):
+        return str(self.step)
+
     @functools.singledispatchmethod
     @classmethod
-    def construct(cls, step: Step) -> StepsItem:
+    def construct(cls, step: Step) -> "StepsItem":
         raise NotImplementedError
 
     @construct.register
     @classmethod
-    def _(cls, step: ExecuteShot) -> StepsItem:
+    def _(cls, step: ExecuteShot):
         return cls(step)
 
     @construct.register
     @classmethod
-    def _(cls, step: ArangeLoop) -> StepsItem:
+    def _(cls, step: ArangeLoop):
         return cls(step, children=[cls.construct(step) for step in step.sub_steps])
 
     @construct.register
     @classmethod
-    def _(cls, step: VariableDeclaration) -> StepsItem:
+    def _(cls, step: VariableDeclaration):
         return cls(step)
 
     @construct.register
     @classmethod
-    def _(cls, step: LinspaceLoop) -> StepsItem:
+    def _(cls, step: LinspaceLoop):
         return cls(step, children=[cls.construct(step) for step in step.sub_steps])
 
 

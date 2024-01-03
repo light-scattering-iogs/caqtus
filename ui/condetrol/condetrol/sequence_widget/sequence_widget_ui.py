@@ -20,9 +20,9 @@ class Ui_SequenceWidget(object):
         self.Constants = QtWidgets.QWidget()
         self.Constants.setObjectName("Constants")
         self.tabWidget.addTab(self.Constants, "")
-        self.Iteration = QtWidgets.QWidget()
-        self.Iteration.setObjectName("Iteration")
-        self.tabWidget.addTab(self.Iteration, "")
+        self.iteration_tab = QtWidgets.QWidget()
+        self.iteration_tab.setObjectName("iteration_tab")
+        self.tabWidget.addTab(self.iteration_tab, "")
         self.Shot = QtWidgets.QWidget()
         self.Shot.setObjectName("Shot")
         self.tabWidget.addTab(self.Shot, "")
@@ -45,14 +45,14 @@ class Ui_SequenceWidget(object):
         self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.retranslateUi(SequenceWidget)
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(SequenceWidget)
 
     def retranslateUi(self, SequenceWidget):
         _translate = QtCore.QCoreApplication.translate
         SequenceWidget.setWindowTitle(_translate("SequenceWidget", "Form"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.Constants), _translate("SequenceWidget", "Constants"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Iteration), _translate("SequenceWidget", "Iteration"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.iteration_tab), _translate("SequenceWidget", "Iteration"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.Shot), _translate("SequenceWidget", "Shot"))
         self.start_button.setText(_translate("SequenceWidget", "Start"))
         self.interrupt_button.setText(_translate("SequenceWidget", "Interrupt"))

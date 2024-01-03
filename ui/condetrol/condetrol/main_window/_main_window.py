@@ -54,7 +54,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._path_view.sequence_double_clicked.connect(self.open_sequence_editor)
 
     def open_sequence_editor(self, path: PureSequencePath):
-        editor = SequenceWidget()
+        editor = SequenceWidget(path, self.session_maker)
         dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
         self.dock_area.addDock(dock, "right")
 

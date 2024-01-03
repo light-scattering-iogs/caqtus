@@ -1,14 +1,33 @@
+from typing import Optional
+
 from PyQt6.QtWidgets import QWidget
-from core.session.sequence import State
+
+from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
+from core.session.sequence import State, Sequence
 
 from .sequence_widget_ui import Ui_SequenceWidget
+from ..sequence_iteration_editors import create_default_editor
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        sequence: PureSequencePath,
+        session_maker: ExperimentSessionMaker,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
         self.setupUi(self)
+        self.session_maker = session_maker
+        self.sequence_path = sequence
         self.apply_state(State.DRAFT)
+
+        with self.session_maker() as session:
+            iteration_config = session.sequence_collection.get_iteration_configuration(
+                Sequence(BoundSequencePath(self.sequence_path, session))
+            )
+        self.iteration_editor = create_default_editor(iteration_config)
+        self.tabWidget.addTab(self.iteration_editor, "Iteration")
 
     def apply_state(self, state: State):
         if state == State.DRAFT:
