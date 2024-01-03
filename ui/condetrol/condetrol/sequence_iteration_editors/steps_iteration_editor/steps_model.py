@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 from abc import ABCMeta
-from typing import Iterable, Optional
+from typing import Iterable, Optional, assert_never
 
 from PyQt6.QtCore import (
     QAbstractItemModel,
@@ -42,7 +42,17 @@ class StepsItem(NodeMixin):
         self.children = children
 
     def __str__(self):
-        return str(self.step)
+        match self.step:
+            case ExecuteShot():
+                return "do shot"
+            case VariableDeclaration(variable, value):
+                return f"{variable} = {value}"
+            case ArangeLoop(variable, start, stop, step, sub_steps):
+                return f"for {variable} = {start} to {stop} with {step} spacing:"
+            case LinspaceLoop(variable, start, stop, num, sub_steps):
+                return f"for {variable} = {start} to {stop} with {num} steps:"
+            case _:
+                assert_never(self.step)
 
     def remove_child(self, row: int):
         if isinstance(self.step, ContainsSubSteps):
@@ -166,6 +176,14 @@ class StepsModel(QAbstractItemModel):
         mime_data.setText(serialized)
         return mime_data
 
+    def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
+        can_drop = super().canDropMimeData(data, action, row, column, parent)
+        if can_drop and row == -1:
+            if parent.isValid():
+                parent_item: StepsItem = parent.internalPointer()
+                return isinstance(parent_item.step, ContainsSubSteps)
+        return can_drop
+
     def dropMimeData(
         self,
         data: QMimeData,
@@ -182,15 +200,17 @@ class StepsModel(QAbstractItemModel):
 
         new_items = [StepsItem.construct(step) for step in steps]
         if row == -1:
-            index = parent
-            parent = parent.parent()
-            self.removeRow(index.row(), parent)
-            self.beginInsertRows(parent, index.row(), index.row() + len(steps) - 1)
             if not parent.isValid():
-                self._steps[index.row() : index.row()] = new_items
-            else:
-                parent_item: StepsItem = parent.internalPointer()
-                parent_item.insert(index.row(), new_items)
+                return False
+            parent_item: StepsItem = parent.internalPointer()
+            if not isinstance(parent_item.step, ContainsSubSteps):
+                return False
+            self.beginInsertRows(
+                parent,
+                len(parent_item.children),
+                len(parent_item.children) + len(new_items) - 1,
+            )
+            parent_item.insert(len(parent_item.children), new_items)
             self.endInsertRows()
             return True
 
@@ -230,3 +250,17 @@ class StepsModel(QAbstractItemModel):
                 parent_item.remove_child(row)
         self.endRemoveRows()
         return True
+
+    def insert_above(self, step: Step, index: QModelIndex):
+        if not index.isValid():
+            return
+        else:
+            parent = index.parent()
+            new_item = StepsItem.construct(step)
+            self.beginInsertRows(parent, index.row(), index.row())
+            if not parent.isValid():
+                self._steps.insert(index.row(), new_item)
+            else:
+                parent_item: StepsItem = parent.internalPointer()
+                parent_item.insert(index.row(), [new_item])
+            self.endInsertRows()
