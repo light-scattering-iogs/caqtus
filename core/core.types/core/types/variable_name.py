@@ -8,7 +8,10 @@ import attrs
 
 from util import serialization
 
-NAME_REGEX = re.compile(r"^[^\W\d]\w*$")
+NAME = r"[^\W\d]\w*"
+VARIABLE_NAME_REGEX = re.compile(NAME)
+DOTTED_VARIABLE_NAME = rf"{NAME}(\.{NAME})*"
+DOTTED_VARIABLE_NAME_REGEX = re.compile(DOTTED_VARIABLE_NAME)
 
 
 @attrs.define
@@ -61,7 +64,7 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
 @attrs.define
 class VariableName(DottedVariableName):
     def __init__(self, name: str):
-        if not NAME_REGEX.match(name):
+        if not VARIABLE_NAME_REGEX.match(name):
             raise ValueError(f"Invalid variable name: {name}")
         self._individual_names = (self,)
         self._dotted_name = str(name)

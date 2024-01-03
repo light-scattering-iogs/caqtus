@@ -154,6 +154,18 @@ class StepsModel(QAbstractItemModel):
         elif role == Qt.ItemDataRole.EditRole:
             return index.internalPointer().step
 
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if not index.isValid():
+            return False
+        if role == Qt.ItemDataRole.EditRole:
+            step = index.internalPointer().step
+            for attribute, new_value in value.items():
+                setattr(step, attribute, new_value)
+            self.dataChanged.emit(index, index)
+            return True
+        else:
+            return False
+
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = (
             Qt.ItemFlag.ItemIsSelectable
@@ -161,6 +173,10 @@ class StepsModel(QAbstractItemModel):
             | Qt.ItemFlag.ItemIsDropEnabled
             | Qt.ItemFlag.ItemIsEnabled
         )
+        if index.isValid():
+            step = index.internalPointer().step
+            if not isinstance(step, ExecuteShot):
+                flags |= Qt.ItemFlag.ItemIsEditable
         return flags
 
     def supportedDropActions(self) -> Qt.DropAction:

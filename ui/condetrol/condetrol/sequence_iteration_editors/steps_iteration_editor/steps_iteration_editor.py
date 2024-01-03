@@ -15,6 +15,7 @@ from core.session.sequence.iteration_configuration import (
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from .steps_model import StepsModel
+from .delegate import StepDelegate
 from ..sequence_iteration_editor import SequenceIterationEditor
 
 
@@ -53,6 +54,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setModel(self._model)
         self.expandAll()
         self.header().hide()
+        self.setItemDelegate(StepDelegate(self))
 
         self.setDragEnabled(True)
         self.setAcceptDrops(True)

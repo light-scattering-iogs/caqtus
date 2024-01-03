@@ -1,4 +1,5 @@
 import ast
+import re
 from collections.abc import Mapping
 from copy import deepcopy
 from functools import cached_property
@@ -9,6 +10,8 @@ import token_utils
 
 from util import serialization
 from ..variable_name import DottedVariableName, VariableName
+
+EXPRESSION_REGEX = re.compile(".*")
 
 
 def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
@@ -94,7 +97,7 @@ class Expression:
     @body.setter
     def body(self, value):
         if not isinstance(value, str):
-            raise TypeError("Expression body must be a string")
+            raise TypeError(f"Expression body must be a string, got {value}")
         self._body = value
         if hasattr(self, "ast"):
             del self.ast
