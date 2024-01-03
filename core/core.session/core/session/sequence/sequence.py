@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import attrs
 
+from .iteration_configuration import IterationConfiguration
 from ..path import BoundSequencePath
 
 if TYPE_CHECKING:
@@ -37,6 +38,20 @@ class Sequence:
             return self.session.sequence_collection.is_sequence(self.path)
         else:
             return False
+
+    def set_iteration_configuration(
+        self, iteration_configuration: IterationConfiguration
+    ) -> None:
+        """Set the iteration configuration of the sequence."""
+
+        self.session.sequence_collection.set_iteration_configuration(
+            self, iteration_configuration
+        )
+
+    def get_iteration_configuration(self) -> IterationConfiguration:
+        """Return the iteration configuration of the sequence."""
+
+        return self.session.sequence_collection.get_iteration_configuration(self)
 
     # def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
     #     """Return the configuration of the sequence.

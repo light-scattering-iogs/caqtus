@@ -11,6 +11,7 @@ from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
     IterationConfigurationJSONSerializer,
+    IterationConfigurationJSONConstructor,
 )
 from ..experiment_session import (
     ExperimentSession,
@@ -31,7 +32,8 @@ class SQLExperimentSession(ExperimentSession):
         self,
         session: sqlalchemy.orm.Session,
         device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
-        iteration_configuration_serializer: IterationConfigurationJSONSerializer,
+        iteration_config_serializer: IterationConfigurationJSONSerializer,
+        iteration_config_constructor: IterationConfigurationJSONConstructor,
         *args,
         **kwargs,
     ):
@@ -47,7 +49,8 @@ class SQLExperimentSession(ExperimentSession):
         self.paths = SQLPathHierarchy(parent_session=self)
         self.sequence_collection = SQLSequenceCollection(
             parent_session=self,
-            iteration_configuration_serializer=iteration_configuration_serializer,
+            iteration_config_serializer=iteration_config_serializer,
+            iteration_config_constructor=iteration_config_constructor,
         )
         self.device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self,

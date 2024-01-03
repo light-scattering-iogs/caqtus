@@ -15,7 +15,7 @@ from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence
-from ..sequence_collection import PathIsSequenceError
+from ..sequence_collection import PathIsSequenceError, PathIsNotSequenceError
 from ..sequence_collection import SequenceCollection
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
@@ -29,6 +29,9 @@ T = TypeVar("T", bound=IterationConfiguration)
 
 IterationConfigurationJSONSerializer: TypeAlias = Callable[
     [IterationConfiguration], tuple[str, serialization.JSON]
+]
+IterationConfigurationJSONConstructor: TypeAlias = Callable[
+    [str, serialization.JSON], IterationConfiguration
 ]
 
 
@@ -52,10 +55,20 @@ def _(
     )
 
 
+def default_iteration_configuration_constructor(
+    iteration_type: str, iteration_content: serialization.JSON
+) -> IterationConfiguration:
+    if iteration_type == "steps":
+        return serialization.from_json(iteration_content, StepsConfiguration)
+    else:
+        raise ValueError(f"Unknown iteration type {iteration_type}")
+
+
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
-    iteration_configuration_serializer: IterationConfigurationJSONSerializer
+    iteration_config_serializer: IterationConfigurationJSONSerializer
+    iteration_config_constructor: IterationConfigurationJSONConstructor
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         if path.is_root():
@@ -74,6 +87,23 @@ class SQLSequenceCollection(SequenceCollection):
             result += self.get_contained_sequences(child)
         return result
 
+    def get_iteration_configuration(self, sequence: Sequence) -> IterationConfiguration:
+        sequence_model = unwrap(self._query_sequence_model(sequence))
+        return self.iteration_config_constructor(
+            sequence_model.iteration_config.iteration_type,
+            sequence_model.iteration_config.content,
+        )
+
+    def set_iteration_configuration(
+        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+    ) -> None:
+        sequence_model = unwrap(self._query_sequence_model(sequence))
+        iteration_type, iteration_content = self.iteration_config_serializer(
+            iteration_configuration
+        )
+        sequence_model.iteration_config.iteration_type = iteration_type
+        sequence_model.iteration_config.content = iteration_content
+
     def create(
         self, path: PureSequencePath, iteration_configuration: IterationConfiguration
     ) -> Sequence:
@@ -82,7 +112,7 @@ class SQLSequenceCollection(SequenceCollection):
             raise PathIsSequenceError(path)
         if unwrap(self.parent_session.paths.get_children(path)):
             raise PathHasChildrenError(path)
-        iteration_type, iteration_content = self.iteration_configuration_serializer(
+        iteration_type, iteration_content = self.iteration_config_serializer(
             iteration_configuration
         )
         new_sequence = SQLSequence(
@@ -103,6 +133,21 @@ class SQLSequenceCollection(SequenceCollection):
             return Success(found)
         else:
             return Failure(PathNotFoundError(path))
+
+    def _query_sequence_model(
+        self, sequence: Sequence
+    ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+        path_result = self._query_path_model(sequence.path)
+        match path_result:
+            case Success(path_model):
+                stmt = select(SQLSequence).where(SQLSequence.path == path_model)
+                result = self._get_sql_session().execute(stmt)
+                if found := result.scalar():
+                    return Success(found)
+                else:
+                    return Failure(PathIsNotSequenceError(sequence.path))
+            case Failure() as failure:
+                return failure
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember

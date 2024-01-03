@@ -28,6 +28,16 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def get_iteration_configuration(self, sequence: Sequence) -> IterationConfiguration:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_iteration_configuration(
+        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+    ) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def create(
         self, path: PureSequencePath, iteration_configuration: IterationConfiguration
     ) -> Sequence:

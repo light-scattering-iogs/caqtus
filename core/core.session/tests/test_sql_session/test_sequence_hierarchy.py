@@ -92,3 +92,19 @@ def test_sequence_deletion(empty_session, steps_configuration: StepsConfiguratio
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert sequence.exists()
+
+
+def test_iteration_save(empty_session, steps_configuration: StepsConfiguration):
+    with empty_session as session:
+        p = PureSequencePath(r"\test\test")
+        sequence = session.sequence_collection.create(p, steps_configuration)
+        assert sequence.get_iteration_configuration() == steps_configuration
+        new_steps_configuration = StepsConfiguration(
+            steps=steps_configuration.steps + [steps_configuration.steps[0]]
+        )
+        sequence.set_iteration_configuration(new_steps_configuration)
+        assert sequence.get_iteration_configuration() == new_steps_configuration
+        assert (
+            session.sequence_collection.get_iteration_configuration(sequence)
+            == new_steps_configuration
+        )
