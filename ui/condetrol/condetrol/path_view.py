@@ -26,7 +26,7 @@ DEFAULT_ITERATION_CONFIG = StepsConfiguration(
             stop=Expression("10"),
             step=Expression("1"),
             sub_steps=[ExecuteShot()],
-        )
+        ),
     ]
 )
 
