@@ -18,6 +18,17 @@ def validate_step(instance, attribute, step):
 
 
 @attrs.define
+class ContainsSubSteps:
+    sub_steps: list[Step] = attrs.field(
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=validate_step,
+        ),
+        on_setattr=attrs.setters.validate,
+    )
+
+
+@attrs.define
 class VariableDeclaration:
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
@@ -28,12 +39,9 @@ class VariableDeclaration:
         on_setattr=attrs.setters.validate,
     )
 
-    def __str__(self):
-        return f"{self.variable} = {self.value}"
-
 
 @attrs.define
-class LinspaceLoop:
+class LinspaceLoop(ContainsSubSteps):
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -51,22 +59,10 @@ class LinspaceLoop:
         validator=attrs.validators.ge(0),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
-    sub_steps: list[Step] = attrs.field(
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=validate_step,
-        ),
-        on_setattr=attrs.setters.validate,
-    )
-
-    def __str__(self):
-        return (
-            f"for {self.variable} in linspace({self.start}, {self.stop}, {self.num}):"
-        )
 
 
 @attrs.define
-class ArangeLoop:
+class ArangeLoop(ContainsSubSteps):
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -91,14 +87,10 @@ class ArangeLoop:
         on_setattr=attrs.setters.validate,
     )
 
-    def __str__(self):
-        return f"for {self.variable} in arange({self.start}, {self.stop}, {self.step}):"
-
 
 @attrs.define
 class ExecuteShot:
-    def __str__(self):
-        return "do shot"
+    pass
 
 
 def unstructure_hook(execute_shot: ExecuteShot) -> str:

@@ -5,6 +5,7 @@ from .steps_configurations import (
     VariableDeclaration,
     LinspaceLoop,
     ArangeLoop,
+    ContainsSubSteps,
 )
 from .iteration_configuration import IterationConfiguration
 
@@ -16,4 +17,5 @@ __all__ = [
     "VariableDeclaration",
     "LinspaceLoop",
     "ArangeLoop",
+    "ContainsSubSteps",
 ]

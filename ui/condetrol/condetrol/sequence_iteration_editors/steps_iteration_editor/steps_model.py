@@ -1,8 +1,3 @@
-"""This module provides a model to interact with a tree of sequence steps.
-
-It is meant to provide data for a view within the Qt model/view architecture. This model is used to show and interact
-with the steps that a sequence execute.
-"""
 from __future__ import annotations
 
 import functools
@@ -14,7 +9,6 @@ from PyQt6.QtCore import (
     QModelIndex,
     Qt,
     QMimeData,
-    QByteArray,
     QObject,
 )
 from anytree import NodeMixin
@@ -26,7 +20,9 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
+    ContainsSubSteps,
 )
+from util import serialization
 
 
 class QABCMeta(type(QObject), ABCMeta):
@@ -47,6 +43,22 @@ class StepsItem(NodeMixin):
 
     def __str__(self):
         return str(self.step)
+
+    def remove_child(self, row: int):
+        if isinstance(self.step, ContainsSubSteps):
+            self.children[row].parent = None
+            del self.step.sub_steps[row]
+        else:
+            raise TypeError(f"Cannot remove child from {self.step}")
+
+    def insert(self, row: int, items: list[StepsItem]):
+        if isinstance(self.step, ContainsSubSteps):
+            children = list(self.children)
+            children[row:row] = items
+            self.children = children
+            self.step.sub_steps[row:row] = [item.step for item in items]
+        else:
+            raise TypeError(f"Cannot insert child into {self.step}")
 
     @functools.singledispatchmethod
     @classmethod
@@ -125,129 +137,96 @@ class StepsModel(QAbstractItemModel):
         return 1
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
-        if index.isValid():
-            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-                return str(index.internalPointer())
-
-    # def setData(self, index: QModelIndex, values: dict[str], role: int = ...) -> bool:
-    #     if index.isValid() and role == Qt.ItemDataRole.EditRole:
-    #         node: Step = index.internalPointer()
-    #         for attr, value in values.items():
-    #             setattr(node, attr, value)
-    #         return True
-    #     else:
-    #         return False
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            return str(index.internalPointer())
+        elif role == Qt.ItemDataRole.EditRole:
+            return index.internalPointer().step
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        if index.isValid() and index.column() == 0:
-            flags = (
-                Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsDragEnabled
-                | Qt.ItemFlag.ItemIsEnabled
-            )
-        else:
-            flags = Qt.ItemFlag.NoItemFlags
+        flags = (
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsDragEnabled
+            | Qt.ItemFlag.ItemIsDropEnabled
+            | Qt.ItemFlag.ItemIsEnabled
+        )
         return flags
 
-    # # noinspection PyTypeChecker
-    # def supportedDropActions(self) -> Qt.DropAction:
-    #     return Qt.DropAction.MoveAction | Qt.DropAction.CopyAction
-    #
-    # def mimeTypes(self) -> list[str]:
-    #     return ["application/x-sequence_steps"]
-    #
-    # def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
-    #     data = [self.data(index, Qt.ItemDataRole.DisplayRole) for index in indexes]
-    #     serialized = YAMLSerializable.dump(data).encode("utf-8")
-    #     mime_data = QMimeData()
-    #     mime_data.setData("application/x-sequence_steps", QByteArray(serialized))
-    #     return mime_data
-    #
-    # def dropMimeData(
-    #     self,
-    #     data: QMimeData,
-    #     action: Qt.DropAction,
-    #     row: int,
-    #     column: int,
-    #     parent: QModelIndex,
-    # ) -> bool:
-    #     yaml_string = data.data("application/x-sequence_steps").data().decode("utf-8")
-    #     steps: list[Step] = YAMLSerializable.load(yaml_string)
-    #     if not parent.isValid():
-    #         node = self.root
-    #     else:
-    #         node: Step = parent.internalPointer()
-    #     if row == -1:
-    #         position = len(node.children)
-    #     else:
-    #         position = row
-    #     self.beginInsertRows(parent, position, position + len(steps) - 1)
-    #     new_children = list(node.children)
-    #     for step in steps[::-1]:
-    #         new_children.insert(position, step)
-    #     node.children = new_children
-    #     self.endInsertRows()
-    #     return True
-    #
-    # def insert_step(self, new_step: Step, index: QModelIndex):
-    #     # insert at the end of all steps if clicked at invalid index
-    #     if not index.isValid():
-    #         position = len(self.root.children)
-    #         self.beginInsertRows(QModelIndex(), position, position)
-    #         self.root.children += (new_step,)
-    #         self.endInsertRows()
-    #     else:
-    #         node: Step = index.internalPointer()
-    #         # if the selected step can't have children, the new step is added below it
-    #         if isinstance(node, (VariableDeclaration, ExecuteShot)):
-    #             position = index.row() + 1
-    #             self.beginInsertRows(QModelIndex(), position, position)
-    #             new_children = list(node.parent.children)
-    #             new_children.insert(position, new_step)
-    #             node.parent.children = new_children
-    #             self.endInsertRows()
-    #         # otherwise it's added as the last child of the selected step
-    #         else:
-    #             position = len(node.children)
-    #             self.beginInsertRows(index, position, position)
-    #             new_children = list(node.children)
-    #             new_children.insert(position, new_step)
-    #             node.children = new_children
-    #             self.endInsertRows()
-    #
-    # def removeRow(self, row: int, parent: QModelIndex = ...) -> bool:
-    #     self.beginRemoveRows(parent, row, row)
-    #     if not parent.isValid():
-    #         parent = self.root
-    #     else:
-    #         parent: Step = parent.internalPointer()
-    #     new_children = list(parent.children)
-    #     new_children.pop(row)
-    #     parent.children = new_children
-    #     self.endRemoveRows()
-    #     return True
-    #
-    # def removeRows(self, row: int, count: int, parent: QModelIndex = ...) -> bool:
-    #     self.beginRemoveRows(parent, row, row + count - 1)
-    #     if not parent.isValid():
-    #         parent = self.root
-    #     else:
-    #         parent: Step = parent.internalPointer()
-    #     new_children = list(parent.children)
-    #     for _ in range(count):
-    #         new_children.pop(row)
-    #     parent.children = new_children
-    #     self.endRemoveRows()
-    #     return True
-    #
-    # def set_steps(self, steps: list[Step]):
-    #     steps = list(steps)
-    #     if not isinstance(steps, list):
-    #         raise TypeError(
-    #             f"Expected a list of {Step.__name__} instances, got {type(steps)}"
-    #         )
-    #     if not all(isinstance(step, Step) for step in steps):
-    #         raise TypeError(f"Expected a list of {Step.__name__} instances")
-    #     self.beginResetModel()
-    #     self.root.children = steps
-    #     self.endResetModel()
+    def supportedDropActions(self) -> Qt.DropAction:
+        return Qt.DropAction.MoveAction
+
+    def mimeTypes(self) -> list[str]:
+        return ["text/plain"]
+
+    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+        data = [self.data(index, Qt.ItemDataRole.EditRole) for index in indexes]
+        serialized = serialization.to_json(data)
+        mime_data = QMimeData()
+        mime_data.setText(serialized)
+        return mime_data
+
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        json_string = data.text()
+        try:
+            steps = serialization.from_json(json_string, list[Step])
+        except ValueError:
+            return False
+
+        new_items = [StepsItem.construct(step) for step in steps]
+        if row == -1:
+            index = parent
+            parent = parent.parent()
+            self.removeRow(index.row(), parent)
+            self.beginInsertRows(parent, index.row(), index.row() + len(steps) - 1)
+            if not parent.isValid():
+                self._steps[index.row() : index.row()] = new_items
+            else:
+                parent_item: StepsItem = parent.internalPointer()
+                parent_item.insert(index.row(), new_items)
+            self.endInsertRows()
+            return True
+
+        if not parent.isValid():
+            self.beginInsertRows(parent, row, row + len(new_items) - 1)
+            self._steps[row:row] = new_items
+            self.endInsertRows()
+            return True
+        else:
+            parent_item: StepsItem = parent.internalPointer()
+            self.beginInsertRows(parent, row, row + len(new_items) - 1)
+            parent_item.insert(row, new_items)
+            self.endInsertRows()
+            return True
+
+    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if not parent.isValid():
+            self.beginRemoveRows(parent, row, row)
+            del self._steps[row]
+            self.endRemoveRows()
+        else:
+            self.beginRemoveRows(parent, row, row)
+            parent_item: StepsItem = parent.internalPointer()
+            parent_item.remove_child(row)
+            self.endRemoveRows()
+        return True
+
+    def removeRows(
+        self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    ) -> bool:
+        self.beginRemoveRows(parent, row, row + count - 1)
+        if not parent.isValid():
+            del self._steps[row : row + count]
+        else:
+            parent_item: StepsItem = parent.internalPointer()
+            for _ in range(count):
+                parent_item.remove_child(row)
+        self.endRemoveRows()
+        return True
