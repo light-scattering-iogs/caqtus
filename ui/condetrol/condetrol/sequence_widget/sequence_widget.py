@@ -27,7 +27,17 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 Sequence(BoundSequencePath(self.sequence_path, session))
             )
         self.iteration_editor = create_default_editor(iteration_config)
+        self.iteration_editor.iteration_changed.connect(
+            self.on_sequence_iteration_changed
+        )
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
+
+    def on_sequence_iteration_changed(self):
+        iterations = self.iteration_editor.get_iteration()
+        with self.session_maker() as session:
+            session.sequence_collection.set_iteration_configuration(
+                Sequence(BoundSequencePath(self.sequence_path, session)), iterations
+            )
 
     def apply_state(self, state: State):
         if state == State.DRAFT:

@@ -1,6 +1,7 @@
 import functools
 from typing import Optional
 
+from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PyQt6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
@@ -46,6 +47,8 @@ def create_arange_loop():
 
 
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
+    iteration_changed = QtCore.pyqtSignal()
+
     def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.iteration = iteration
@@ -72,6 +75,14 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         font = QFont()
         font.setPixelSize(15)
         self.setFont(font)
+
+        self._model.dataChanged.connect(self.emit_iteration_changed)
+        self._model.rowsInserted.connect(self.emit_iteration_changed)
+        self._model.rowsRemoved.connect(self.emit_iteration_changed)
+        self._model.modelReset.connect(self.emit_iteration_changed)
+
+    def emit_iteration_changed(self, *args, **kwargs):
+        self.iteration_changed.emit()
 
     def get_iteration(self) -> StepsConfiguration:
         return self.iteration
