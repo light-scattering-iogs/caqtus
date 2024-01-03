@@ -2,7 +2,8 @@ import copy
 from collections.abc import Mapping
 
 import pyqtgraph.dockarea
-from PyQt6.QtWidgets import QMainWindow, QWidget
+from PyQt6.QtCore import QSettings
+from PyQt6.QtWidgets import QMainWindow
 
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker, PureSequencePath
@@ -22,7 +23,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         session_maker: ExperimentSessionMaker,
         device_configuration_editors: Mapping[str, DeviceConfigurationEditInfo],
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker)
@@ -30,6 +31,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.session_maker = session_maker
         self.device_configuration_edit_infos = device_configuration_editors
         self.setup_ui()
+        self.restore_window_state()
         self.setup_connections()
 
     def __enter__(self):
@@ -91,3 +93,21 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 session.device_configurations[device_name] = new_device_configurations[
                     device_name
                 ]
+
+    def closeEvent(self, a0):
+        self.save_window_state()
+        super().closeEvent(a0)
+
+    def restore_window_state(self):
+        ui_settings = QSettings()
+        state = ui_settings.value(f"{__name__}/state")
+        if state is not None:
+            self.restoreState(state)
+        geometry = ui_settings.value(f"{__name__}/geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+
+    def save_window_state(self):
+        ui_settings = QSettings()
+        ui_settings.setValue(f"{__name__}/state", self.saveState())
+        ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
