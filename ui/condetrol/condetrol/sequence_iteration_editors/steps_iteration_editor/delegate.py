@@ -1,8 +1,9 @@
 import re
 from typing import Optional
 
-from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from PyQt6.QtGui import QValidator, QFont
+from PyQt6 import QtWidgets, QtCore
+from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QRectF
+from PyQt6.QtGui import QValidator, QFont, QTextDocument, QAbstractTextDocumentLayout
 from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QLineEdit,
@@ -40,8 +41,35 @@ ARANGE_LOOP_REGEX = re.compile(
 
 
 class StepDelegate(QStyledItemDelegate):
-    def __iter__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: Optional[QWidget] = None):
+        self.doc = QTextDocument()
         super().__init__(parent)
+
+    def paint(self, painter, option, index):
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
+        painter.save()
+        self.doc.setTextWidth(options.rect.width())
+        self.doc.setHtml(options.text)
+        self.doc.setDefaultFont(options.font)
+        options.text = ""
+        options.widget.style().drawControl(
+            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, options, painter
+        )
+        painter.translate(options.rect.left(), options.rect.top())
+        clip = QRectF(0, 0, options.rect.width(), options.rect.height())
+        painter.setClipRect(clip)
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+        ctx.clip = clip
+        self.doc.documentLayout().draw(painter, ctx)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        options = QtWidgets.QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        self.doc.setHtml(option.text)
+        self.doc.setTextWidth(option.rect.width())
+        return QtCore.QSize(int(self.doc.idealWidth()), int(self.doc.size().height()))
 
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex

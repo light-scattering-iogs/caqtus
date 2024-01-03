@@ -42,15 +42,41 @@ class StepsItem(NodeMixin):
         self.children = children
 
     def __str__(self):
+        hl = "#cc7832"
+        var_col = "#AA4926"
+        val_col = "#6897BB"
         match self.step:
             case ExecuteShot():
-                return "do shot"
+                return f"<span style='color:{hl}'>do shot</span>"
             case VariableDeclaration(variable, value):
-                return f"{variable} = {value}"
+                return (
+                    f"<span style='color:{var_col}'>{variable}</span> "
+                    f"= <span style='color:{val_col}'>{value}</span>"
+                )
             case ArangeLoop(variable, start, stop, step, sub_steps):
-                return f"for {variable} = {start} to {stop} with {step} spacing:"
+                return (
+                    f"<span style='color:{hl}'>for</span> "
+                    f"<span style='color:{var_col}'>{variable}</span> "
+                    f"= "
+                    f"<span style='color:{val_col}'>{start}</span> "
+                    f"<span style='color:{hl}'>to </span> "
+                    f"<span style='color:{val_col}'>{stop}</span> "
+                    f"<span style='color:{hl}'>with </span> "
+                    f"<span style='color:{val_col}'>{step}</span> "
+                    f"<span style='color:{hl}'>spacing:</span>"
+                )
             case LinspaceLoop(variable, start, stop, num, sub_steps):
-                return f"for {variable} = {start} to {stop} with {num} steps:"
+                return (
+                    f"<span style='color:{hl}'>for</span> "
+                    f"<span style='color:{var_col}'>{variable}</span> "
+                    f"= "
+                    f"<span style='color:{val_col}'>{start}</span> "
+                    f"<span style='color:{hl}'>to </span> "
+                    f"<span style='color:{val_col}'>{stop}</span> "
+                    f"<span style='color:{hl}'>with </span> "
+                    f"<span style='color:{val_col}'>{num}</span> "
+                    f"<span style='color:{hl}'>steps:</span>"
+                )
             case _:
                 assert_never(self.step)
 
@@ -100,6 +126,11 @@ class StepsModel(QAbstractItemModel):
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._steps = [StepsItem.construct(step) for step in steps.steps]
+
+    def get_steps(self) -> StepsConfiguration:
+        return StepsConfiguration(
+            steps=[item.step for item in self._steps],
+        )
 
     def row(self, item: StepsItem) -> int:
         if item.parent is None:
