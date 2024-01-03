@@ -1,8 +1,17 @@
+import sqlalchemy
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
 from ._table_base import Base
+
+
+class SQLIterationConfiguration(Base):
+    __tablename__ = "iteration_configurations"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    iteration_type: Mapped[str] = mapped_column()
+    content = mapped_column(sqlalchemy.types.JSON)
 
 
 class SQLSequence(Base):
@@ -13,6 +22,11 @@ class SQLSequence(Base):
         ForeignKey(SQLSequencePath.id_), unique=True, index=True
     )
     path: Mapped[SQLSequencePath] = relationship(back_populates="sequence")
+
+    iteration_config_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLIterationConfiguration.id_), unique=True
+    )
+    iteration_config: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
     # state: Mapped[State]
     #
     # config_id: Mapped[int] = mapped_column(

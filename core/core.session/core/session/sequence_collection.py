@@ -6,6 +6,7 @@ from returns.result import Result
 from .path import PureSequencePath
 from .sequence import Sequence
 from .path_hierarchy import PathError, PathNotFoundError
+from .sequence.iteration_configuration import IterationConfiguration
 
 
 class SequenceCollection(Protocol):
@@ -27,7 +28,9 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def create(self, path: PureSequencePath) -> Sequence:
+    def create(
+        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+    ) -> Sequence:
         raise NotImplementedError
 
 

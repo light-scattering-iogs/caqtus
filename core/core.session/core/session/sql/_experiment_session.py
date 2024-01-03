@@ -2,12 +2,16 @@ from typing import Mapping
 
 import sqlalchemy.orm
 from attrs import define
+
 from ._device_configuration_collection import (
     SQLDeviceConfigurationCollection,
     DeviceConfigurationSerializer,
 )
-from ._sequence_collection import SQLSequenceCollection
 from ._path_hierarchy import SQLPathHierarchy
+from ._sequence_collection import (
+    SQLSequenceCollection,
+    IterationConfigurationJSONSerializer,
+)
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
@@ -27,6 +31,7 @@ class SQLExperimentSession(ExperimentSession):
         self,
         session: sqlalchemy.orm.Session,
         device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
+        iteration_configuration_serializer: IterationConfigurationJSONSerializer,
         *args,
         **kwargs,
     ):
@@ -40,7 +45,10 @@ class SQLExperimentSession(ExperimentSession):
         self._sql_session = session
         self._is_active = False
         self.paths = SQLPathHierarchy(parent_session=self)
-        self.sequence_collection = SQLSequenceCollection(parent_session=self)
+        self.sequence_collection = SQLSequenceCollection(
+            parent_session=self,
+            iteration_configuration_serializer=iteration_configuration_serializer,
+        )
         self.device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self,
             device_configuration_serializers=device_configuration_serializers,

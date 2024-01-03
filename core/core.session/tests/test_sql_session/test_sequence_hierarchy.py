@@ -1,26 +1,17 @@
 import pytest
-import sqlalchemy
 from hypothesis import given
 
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
+from core.session.sequence.iteration_configuration import StepsConfiguration
 from core.session.sequence_collection import PathIsSequenceError
-from core.session.sql import (
-    SQLExperimentSessionMaker,
-    create_tables,
-)
+from .session_maker import get_session_maker
 from ..generate_path import path
+from ..steps_iteration import steps_configuration
 
 
 def create_empty_session() -> ExperimentSession:
-    url = "sqlite:///:memory:"
-    engine = sqlalchemy.create_engine(url)
-
-    create_tables(engine)
-
-    session_maker = SQLExperimentSessionMaker(engine, {})
-
-    return session_maker()
+    return get_session_maker()()
 
 
 @pytest.fixture(scope="function")
@@ -82,22 +73,22 @@ def test_deletion_1(empty_session):
         assert session.paths.does_path_exists(p.parent)
 
 
-def test_sequence(empty_session):
+def test_sequence(empty_session, steps_configuration: StepsConfiguration):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequence_collection.create(p)
+        sequence = session.sequence_collection.create(p, steps_configuration)
         assert sequence.exists()
         assert session.sequence_collection.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
-            session.sequence_collection.create(p)
+            session.sequence_collection.create(p, steps_configuration)
 
         assert not unwrap(session.sequence_collection.is_sequence(p.parent))
 
 
-def test_sequence_deletion(empty_session):
+def test_sequence_deletion(empty_session, steps_configuration: StepsConfiguration):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequence_collection.create(p)
+        sequence = session.sequence_collection.create(p, steps_configuration)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert sequence.exists()

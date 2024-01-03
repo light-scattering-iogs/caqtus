@@ -1,10 +1,14 @@
-from typing import Mapping
+from typing import Mapping, Optional
 
 import sqlalchemy
 import sqlalchemy.orm
 from ._experiment_session import (
     SQLExperimentSession,
     DeviceConfigurationSerializer,
+)
+from ._sequence_collection import (
+    IterationConfigurationJSONSerializer,
+    default_iteration_configuration_serializer,
 )
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
@@ -24,16 +28,24 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         self,
         engine: sqlalchemy.Engine,
         device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
+        iteration_config_serializer: Optional[
+            IterationConfigurationJSONSerializer
+        ] = None,
     ) -> None:
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._device_configuration_serializers = dict(device_configuration_serializers)
+        if iteration_config_serializer is None:
+            iteration_config_serializer = default_iteration_configuration_serializer
+        self._iteration_config_serializer = iteration_config_serializer
 
     def __call__(self) -> ExperimentSession:
         """Create a new ExperimentSession with the engine used at initialization."""
 
         return SQLExperimentSession(
-            self._session_maker(), self._device_configuration_serializers
+            self._session_maker(),
+            self._device_configuration_serializers,
+            self._iteration_config_serializer,
         )
 
     # The following methods are required to make ExperimentSessionMaker pickleable since
@@ -44,9 +56,11 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         return {
             "url": self._engine.url,
             "device_configuration_serializers": self._device_configuration_serializers,
+            "iteration_config_serializer": self._iteration_config_serializer,
         }
 
     def __setstate__(self, state):
         engine = sqlalchemy.create_engine(state["url"])
         serializers = state["device_configuration_serializers"]
-        self.__init__(engine, serializers)
+        iteration_config_serializer = state["iteration_config_serializer"]
+        self.__init__(engine, serializers, iteration_config_serializer)
