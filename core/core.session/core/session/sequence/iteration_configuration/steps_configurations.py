@@ -42,6 +42,7 @@ class VariableDeclaration:
 
 @attrs.define
 class LinspaceLoop(ContainsSubSteps):
+    __match_args__ = ("variable", "start", "stop", "num", "sub_steps")
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -63,6 +64,7 @@ class LinspaceLoop(ContainsSubSteps):
 
 @attrs.define
 class ArangeLoop(ContainsSubSteps):
+    __match_args__ = ("variable", "start", "stop", "step", "sub_steps")
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -77,13 +79,6 @@ class ArangeLoop(ContainsSubSteps):
     )
     step: Expression = attrs.field(
         validator=attrs.validators.instance_of(Expression),
-        on_setattr=attrs.setters.validate,
-    )
-    sub_steps: list[Step] = attrs.field(
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=validate_step,
-        ),
         on_setattr=attrs.setters.validate,
     )
 
