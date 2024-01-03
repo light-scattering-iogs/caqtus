@@ -1,3 +1,4 @@
+import copy
 import functools
 
 from PyQt6 import QtCore
@@ -6,13 +7,36 @@ from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
+from core.session.sequence.iteration_configuration import (
+    StepsConfiguration,
+    ArangeLoop,
+    ExecuteShot,
+)
 from core.session.sequence_collection import PathIsSequenceError
+from core.types.expression import Expression
+from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
 from .app_name import APPLICATION_NAME
 
+DEFAULT_ITERATION_CONFIG = StepsConfiguration(
+    steps=[
+        ArangeLoop(
+            variable=DottedVariableName("rep"),
+            start=Expression("0"),
+            stop=Expression("10"),
+            step=Expression("1"),
+            sub_steps=[ExecuteShot()],
+        )
+    ]
+)
+
 
 class EditablePathHierarchyView(PathHierarchyView):
-    def __init__(self, session_maker: ExperimentSessionMaker, parent=None):
+    def __init__(
+        self,
+        session_maker: ExperimentSessionMaker,
+        parent=None,
+    ):
         super().__init__(session_maker, parent)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
@@ -73,7 +97,9 @@ class EditablePathHierarchyView(PathHierarchyView):
         if ok and text:
             new_path = path / text
             with self.session_maker() as session:
-                session.sequence_collection.create(new_path)
+                session.sequence_collection.create(
+                    new_path, copy.deepcopy(DEFAULT_ITERATION_CONFIG)
+                )
 
     def delete(self, path: PureSequencePath):
         message = (
