@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Edit constants...</string>
+   <string>Edit constant tables...</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -42,7 +42,7 @@
      <item>
       <widget class="QPushButton" name="add_button">
        <property name="text">
-        <string>Add...</string>
+        <string>Add table...</string>
        </property>
       </widget>
      </item>

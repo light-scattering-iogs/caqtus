@@ -48,7 +48,7 @@ class Ui_ConstantTablesEditor(object):
 
     def retranslateUi(self, ConstantTablesEditor):
         _translate = QtCore.QCoreApplication.translate
-        ConstantTablesEditor.setWindowTitle(_translate("ConstantTablesEditor", "Edit constants..."))
+        ConstantTablesEditor.setWindowTitle(_translate("ConstantTablesEditor", "Edit constant tables..."))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab), _translate("ConstantTablesEditor", "Tab 1"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_2), _translate("ConstantTablesEditor", "Tab 2"))
-        self.add_button.setText(_translate("ConstantTablesEditor", "Add..."))
+        self.add_button.setText(_translate("ConstantTablesEditor", "Add table..."))
