@@ -34,8 +34,8 @@ class SQLConstantTableCollection(
         uuid_ = self._create_uuid(table_name, creation_date)
         declarations = [
             SQLConstantDeclaration(
-                variable=declaration.variable,
-                expression=declaration.value,
+                variable=str(declaration.variable),
+                expression=str(declaration.value),
             )
             for declaration in table
         ]
