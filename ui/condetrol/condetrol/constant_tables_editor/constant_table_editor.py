@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QListView, QMenu
 
 from core.session import ConstantTable
@@ -16,10 +16,6 @@ class ConstantTableEditor(QListView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         self.setItemDelegate(StepDelegate(self))
-
-        font = QFont()
-        font.setPixelSize(15)
-        self.setFont(font)
 
     def set_table(self, table: ConstantTable):
         self.model.set_table(table)

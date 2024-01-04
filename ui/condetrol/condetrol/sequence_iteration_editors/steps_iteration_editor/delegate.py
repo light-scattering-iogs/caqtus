@@ -118,9 +118,6 @@ class StepDelegate(QStyledItemDelegate):
     ) -> QLineEdit:
         editor = QLineEdit()
         editor.setParent(parent)
-        font = QFont()
-        font.setPixelSize(15)
-        editor.setFont(font)
         return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):

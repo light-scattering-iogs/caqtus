@@ -3,7 +3,7 @@ from typing import Optional
 
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut, QAction, QFont
+from PyQt6.QtGui import QKeySequence, QShortcut, QAction
 from PyQt6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from core.session.sequence.iteration_configuration import (
@@ -15,8 +15,8 @@ from core.session.sequence.iteration_configuration import (
 )
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
-from .steps_model import StepsModel
 from .delegate import StepDelegate
+from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
 
 
@@ -71,10 +71,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
-
-        font = QFont()
-        font.setPixelSize(15)
-        self.setFont(font)
 
         self._model.dataChanged.connect(self.emit_iteration_changed)
         self._model.rowsInserted.connect(self.emit_iteration_changed)
