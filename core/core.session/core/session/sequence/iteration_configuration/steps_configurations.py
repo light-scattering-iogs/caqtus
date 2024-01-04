@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, TypeAlias, TypeGuard
+from typing import Optional, TypeAlias, TypeGuard, assert_never
 
 import attrs
 
@@ -84,6 +84,12 @@ class ArangeLoop(ContainsSubSteps):
 
 
 @attrs.define
+class ImportConstantTable:
+    table: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+    alias: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+
+
+@attrs.define
 class ExecuteShot:
     pass
 
@@ -101,12 +107,21 @@ serialization.register_unstructure_hook(ExecuteShot, unstructure_hook)
 serialization.register_structure_hook(ExecuteShot, structure_hook)
 
 
-Step: TypeAlias = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
+Step: TypeAlias = (
+    ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop | ImportConstantTable
+)
 
 
 def is_step(step) -> TypeGuard[Step]:
     return isinstance(
-        step, (ExecuteShot, VariableDeclaration, LinspaceLoop, ArangeLoop)
+        step,
+        (
+            ExecuteShot,
+            VariableDeclaration,
+            LinspaceLoop,
+            ArangeLoop,
+            ImportConstantTable,
+        ),
     )
 
 
@@ -145,3 +160,7 @@ def expected_number_shots(step: Step) -> Optional[int]:
             return None
         case ArangeLoop(_, _, _, _, sub_steps):
             return None
+        case ImportConstantTable():
+            return 0
+        case _:
+            assert_never(step)
