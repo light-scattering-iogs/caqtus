@@ -1,20 +1,22 @@
 from collections.abc import Mapping, Iterable
 from typing import TypedDict, Optional
 
+from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QValidator
-from PyQt6.QtWidgets import QDialog, QPushButton
+from PyQt6.QtWidgets import QDialog
 
 from core.device import DeviceConfigurationAttrs, DeviceName
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .configurations_editor_ui import Ui_ConfigurationsEditor
 from .device_configuration_editor import DeviceConfigurationEditor
+from ..save_geometry_dialog import SaveGeometryDialog
 
 
 class DeviceConfigurationEditInfo[T: DeviceConfigurationAttrs](TypedDict):
     editor_type: type[DeviceConfigurationEditor[T]]
 
 
-class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
+class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
     def __init__(
         self,
         device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],

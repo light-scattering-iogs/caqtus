@@ -8,9 +8,10 @@ from core.session import ConstantTable
 from .add_constant_table_ui import Ui_AddTableDialog
 from .constant_table_editor import ConstantTableEditor
 from .constant_tables_editor_ui import Ui_ConstantTablesEditor
+from ..save_geometry_dialog import SaveGeometryDialog
 
 
-class ConstantTablesEditor(QDialog, Ui_ConstantTablesEditor):
+class ConstantTablesEditor(SaveGeometryDialog, Ui_ConstantTablesEditor):
     def __init__(
         self,
         constant_tables: Mapping[str, ConstantTable],
