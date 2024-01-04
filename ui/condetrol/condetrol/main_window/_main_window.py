@@ -6,7 +6,7 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QMainWindow
 
 from core.device import DeviceName, DeviceConfigurationAttrs
-from core.session import ExperimentSessionMaker, PureSequencePath
+from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..app_name import APPLICATION_NAME
 from ..constant_tables_editor import ConstantTablesEditor
@@ -67,6 +67,26 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             previous_constants = dict(session.constants)
         constants_editor = ConstantTablesEditor(copy.deepcopy(previous_constants))
         constants_editor.exec()
+        self.update_constant_tables(previous_constants, constants_editor.tables)
+
+    def update_constant_tables(
+        self,
+        previous_tables: Mapping[str, ConstantTable],
+        new_tables: Mapping[str, ConstantTable],
+    ):
+        to_remove = set(previous_tables) - set(new_tables)
+        to_add = set(new_tables) - set(previous_tables)
+        in_both = set(previous_tables) & set(new_tables)
+        to_update = {
+            table_name
+            for table_name in in_both
+            if new_tables[table_name] != previous_tables[table_name]
+        }
+        with self.session_maker() as session:
+            for table_name in to_remove:
+                del session.constants[table_name]
+            for table_name in to_add | to_update:
+                session.constants[table_name] = new_tables[table_name]
 
     def open_device_configurations_editor(self):
         with self.session_maker() as session:
