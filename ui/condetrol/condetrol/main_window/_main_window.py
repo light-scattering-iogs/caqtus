@@ -9,6 +9,7 @@ from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker, PureSequencePath
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..app_name import APPLICATION_NAME
+from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
@@ -53,12 +54,19 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.action_edit_device_configurations.triggered.connect(
             self.open_device_configurations_editor
         )
+        self.action_edit_constants.triggered.connect(self.open_constants_editor)
         self._path_view.sequence_double_clicked.connect(self.open_sequence_editor)
 
     def open_sequence_editor(self, path: PureSequencePath):
         editor = SequenceWidget(path, self.session_maker)
         dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
         self.dock_area.addDock(dock, "right")
+
+    def open_constants_editor(self):
+        with self.session_maker() as session:
+            previous_constants = dict(session.constants)
+        constants_editor = ConstantTablesEditor(copy.deepcopy(previous_constants))
+        constants_editor.exec()
 
     def open_device_configurations_editor(self):
         with self.session_maker() as session:

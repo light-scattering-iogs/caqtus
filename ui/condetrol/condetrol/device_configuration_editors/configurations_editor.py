@@ -1,14 +1,13 @@
 from collections.abc import Mapping, Iterable
 from typing import TypedDict, Optional
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QValidator
 from PyQt6.QtWidgets import QDialog, QPushButton
 
 from core.device import DeviceConfigurationAttrs, DeviceName
+from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .configurations_editor_ui import Ui_ConfigurationsEditor
 from .device_configuration_editor import DeviceConfigurationEditor
-from .add_device_dialog_ui import Ui_AddDeviceDialog
 
 
 class DeviceConfigurationEditInfo[T: DeviceConfigurationAttrs](TypedDict):
@@ -64,14 +63,6 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
                 device_type
             ]["editor_type"]()
             self.tab_widget.addTab(device_configuration_editor, device_name)
-
-    def is_valid_new_device_name(self, device_name: DeviceName) -> bool:
-        if not device_name:
-            return False
-        return not any(
-            device_name == self.tab_widget.tabText(i)
-            for i in range(self.tab_widget.count())
-        )
 
     def exec(self):
         result = super().exec()

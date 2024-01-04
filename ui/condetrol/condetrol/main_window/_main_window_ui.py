@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\main_window\main_window.ui'
+# Form implementation generated from reading ui file '.\main_window.ui'
 #
 # Created by: PyQt6 UI code generator 6.6.1
 #
@@ -23,6 +23,8 @@ class Ui_CondetrolMainWindow(object):
         self.device_configurations_menu.setObjectName("device_configurations_menu")
         self.menu = QtWidgets.QMenu(parent=self.menubar)
         self.menu.setObjectName("menu")
+        self.menuConstants = QtWidgets.QMenu(parent=self.menubar)
+        self.menuConstants.setObjectName("menuConstants")
         CondetrolMainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(parent=CondetrolMainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -33,9 +35,11 @@ class Ui_CondetrolMainWindow(object):
         self.actionExport.setObjectName("actionExport")
         self.actionLoad = QtGui.QAction(parent=CondetrolMainWindow)
         self.actionLoad.setObjectName("actionLoad")
+        self.action_edit_constants = QtGui.QAction(parent=CondetrolMainWindow)
+        self.action_edit_constants.setObjectName("action_edit_constants")
         self.device_configurations_menu.addAction(self.action_edit_device_configurations)
-        self.device_configurations_menu.addAction(self.actionExport)
-        self.device_configurations_menu.addAction(self.actionLoad)
+        self.menuConstants.addAction(self.action_edit_constants)
+        self.menubar.addAction(self.menuConstants.menuAction())
         self.menubar.addAction(self.device_configurations_menu.menuAction())
         self.menubar.addAction(self.menu.menuAction())
 
@@ -47,6 +51,8 @@ class Ui_CondetrolMainWindow(object):
         CondetrolMainWindow.setWindowTitle(_translate("CondetrolMainWindow", "Condetrol"))
         self.device_configurations_menu.setTitle(_translate("CondetrolMainWindow", "Devices"))
         self.menu.setTitle(_translate("CondetrolMainWindow", "Remote servers"))
+        self.menuConstants.setTitle(_translate("CondetrolMainWindow", "Constants"))
         self.action_edit_device_configurations.setText(_translate("CondetrolMainWindow", "Edit..."))
         self.actionExport.setText(_translate("CondetrolMainWindow", "Export..."))
         self.actionLoad.setText(_translate("CondetrolMainWindow", "Load..."))
+        self.action_edit_constants.setText(_translate("CondetrolMainWindow", "Edit..."))

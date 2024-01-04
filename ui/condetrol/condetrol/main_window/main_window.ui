@@ -28,14 +28,19 @@
      <string>Devices</string>
     </property>
     <addaction name="action_edit_device_configurations"/>
-    <addaction name="actionExport"/>
-    <addaction name="actionLoad"/>
    </widget>
    <widget class="QMenu" name="menu">
     <property name="title">
      <string>Remote servers</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuConstants">
+    <property name="title">
+     <string>Constants</string>
+    </property>
+    <addaction name="action_edit_constants"/>
+   </widget>
+   <addaction name="menuConstants"/>
    <addaction name="device_configurations_menu"/>
    <addaction name="menu"/>
   </widget>
@@ -53,6 +58,11 @@
   <action name="actionLoad">
    <property name="text">
     <string>Load...</string>
+   </property>
+  </action>
+  <action name="action_edit_constants">
+   <property name="text">
+    <string>Edit...</string>
    </property>
   </action>
  </widget>
