@@ -18,10 +18,16 @@ class ConstantTableModel(QAbstractListModel):
         return len(self.table)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole:
-            return str(self.table[index.row()])
-        elif role == Qt.ItemDataRole.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self.table[index.row()]
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if role == Qt.ItemDataRole.EditRole:
+            for attribute, new_value in value.items():
+                setattr(self.table[index.row()], attribute, new_value)
+            self.dataChanged.emit(index, index)
+            return True
+        return False
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = (
@@ -29,6 +35,7 @@ class ConstantTableModel(QAbstractListModel):
             | Qt.ItemFlag.ItemIsDragEnabled
             | Qt.ItemFlag.ItemIsDropEnabled
             | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
         )
         return flags
 
