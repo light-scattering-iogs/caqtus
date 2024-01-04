@@ -4,17 +4,19 @@ from typing import TypeVar
 
 import attrs
 
+from core.types.expression import Expression
+
 T = TypeVar("T")
 
 
 @attrs.define
-class TimeLane(MutableSequence[T]):
+class TimeLane(MutableSequence[T], abc.ABC):
     values: list[T] = attrs.field(factory=list)
 
     def __len__(self):
         return len(self.values)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> T:
         if isinstance(item, int):
             return self.get_index(item)
         else:
@@ -43,3 +45,31 @@ class TimeLane(MutableSequence[T]):
 
     def insert(self, index: int, value: T):
         self.values.insert(index, value)
+
+
+@attrs.define
+class TimeLanes:
+    step_names: list[str] = attrs.field(
+        factory=list,
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.instance_of(str),
+        ),
+        on_setattr=attrs.setters.validate,
+    )
+    step_durations: list[Expression] = attrs.field(
+        factory=list,
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.instance_of(Expression),
+        ),
+        on_setattr=attrs.setters.validate,
+    )
+    lanes: dict[str, TimeLane] = attrs.field(
+        factory=dict,
+        validator=attrs.validators.deep_mapping(
+            key_validator=attrs.validators.instance_of(str),
+            value_validator=attrs.validators.instance_of(TimeLane),
+        ),
+        on_setattr=attrs.setters.validate,
+    )
