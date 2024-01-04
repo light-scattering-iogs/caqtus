@@ -13,6 +13,7 @@ from ._sequence_collection import (
     IterationConfigurationJSONSerializer,
     IterationConfigurationJSONConstructor,
 )
+from ._constant_table_collection import SQLConstantTableCollection
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
@@ -24,6 +25,7 @@ class SQLExperimentSession(ExperimentSession):
     paths: SQLPathHierarchy
     sequence_collection: SQLSequenceCollection
     device_configurations: SQLDeviceConfigurationCollection
+    constants: SQLConstantTableCollection
 
     _sql_session: sqlalchemy.orm.Session
     _is_active: bool
@@ -56,6 +58,7 @@ class SQLExperimentSession(ExperimentSession):
             parent_session=self,
             device_configuration_serializers=device_configuration_serializers,
         )
+        self.constants = SQLConstantTableCollection(parent_session=self)
 
     def __enter__(self):
         if self._is_active:

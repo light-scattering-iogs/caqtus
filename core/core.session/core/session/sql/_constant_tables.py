@@ -16,7 +16,9 @@ class SQLConstantDeclaration(Base):
     table_uuid: Mapped[uuid.UUID] = mapped_column(
         sqlalchemy.ForeignKey("constant_tables.uuid")
     )
-    table: Mapped["SQLConstantTable"] = relationship()
+    table: Mapped["SQLConstantTable"] = relationship(
+        back_populates="constant_declarations"
+    )
 
 
 class SQLConstantTable(Base):
@@ -29,7 +31,9 @@ class SQLConstantTable(Base):
     uuid = mapped_column(sqlalchemy.types.Uuid, primary_key=True)
     name: Mapped[str] = mapped_column()
     creation_date: Mapped[datetime.datetime] = mapped_column()
-    constant_declarations: Mapped[list[SQLConstantDeclaration]] = relationship()
+    constant_declarations: Mapped[list[SQLConstantDeclaration]] = relationship(
+        back_populates="table"
+    )
 
 
 class SQLCurrentConstantTables(Base):
