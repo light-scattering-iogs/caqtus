@@ -31,8 +31,6 @@ class Ui_ConstantTablesEditor(object):
         self.add_button = QtWidgets.QPushButton(parent=ConstantTablesEditor)
         self.add_button.setObjectName("add_button")
         self.horizontalLayout.addWidget(self.add_button)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
         self.buttonBox = QtWidgets.QDialogButtonBox(parent=ConstantTablesEditor)
         self.buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Cancel|QtWidgets.QDialogButtonBox.StandardButton.Ok)
