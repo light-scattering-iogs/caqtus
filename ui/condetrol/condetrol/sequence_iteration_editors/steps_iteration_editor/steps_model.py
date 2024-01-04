@@ -41,45 +41,6 @@ class StepsItem(NodeMixin):
         self.parent = parent
         self.children = children
 
-    def __str__(self):
-        hl = "#cc7832"
-        var_col = "#AA4926"
-        val_col = "#6897BB"
-        match self.step:
-            case ExecuteShot():
-                return f"<span style='color:{hl}'>do shot</span>"
-            case VariableDeclaration(variable, value):
-                return (
-                    f"<span style='color:{var_col}'>{variable}</span> "
-                    f"= <span style='color:{val_col}'>{value}</span>"
-                )
-            case ArangeLoop(variable, start, stop, step, sub_steps):
-                return (
-                    f"<span style='color:{hl}'>for</span> "
-                    f"<span style='color:{var_col}'>{variable}</span> "
-                    f"= "
-                    f"<span style='color:{val_col}'>{start}</span> "
-                    f"<span style='color:{hl}'>to </span> "
-                    f"<span style='color:{val_col}'>{stop}</span> "
-                    f"<span style='color:{hl}'>with </span> "
-                    f"<span style='color:{val_col}'>{step}</span> "
-                    f"<span style='color:{hl}'>spacing:</span>"
-                )
-            case LinspaceLoop(variable, start, stop, num, sub_steps):
-                return (
-                    f"<span style='color:{hl}'>for</span> "
-                    f"<span style='color:{var_col}'>{variable}</span> "
-                    f"= "
-                    f"<span style='color:{val_col}'>{start}</span> "
-                    f"<span style='color:{hl}'>to </span> "
-                    f"<span style='color:{val_col}'>{stop}</span> "
-                    f"<span style='color:{hl}'>with </span> "
-                    f"<span style='color:{val_col}'>{num}</span> "
-                    f"<span style='color:{hl}'>steps:</span>"
-                )
-            case _:
-                assert_never(self.step)
-
     def remove_child(self, row: int):
         if isinstance(self.step, ContainsSubSteps):
             self.children[row].parent = None
@@ -180,9 +141,7 @@ class StepsModel(QAbstractItemModel):
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        if role == Qt.ItemDataRole.DisplayRole:
-            return str(index.internalPointer())
-        elif role == Qt.ItemDataRole.EditRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return index.internalPointer().step
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
