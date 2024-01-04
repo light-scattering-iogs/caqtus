@@ -86,7 +86,9 @@ class ArangeLoop(ContainsSubSteps):
 @attrs.define
 class ImportConstantTable:
     table: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-    alias: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+    alias: Optional[str] = attrs.field(
+        converter=attrs.converters.optional(str), on_setattr=attrs.setters.convert
+    )
 
 
 @attrs.define

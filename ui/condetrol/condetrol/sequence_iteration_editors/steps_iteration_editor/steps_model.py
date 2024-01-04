@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 from abc import ABCMeta
-from typing import Iterable, Optional, assert_never
+from typing import Iterable, Optional
 
 from PyQt6.QtCore import (
     QAbstractItemModel,
@@ -20,6 +20,7 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
+    ImportConstantTable,
     ContainsSubSteps,
 )
 from util import serialization
@@ -81,6 +82,11 @@ class StepsItem(NodeMixin):
     @classmethod
     def _(cls, step: LinspaceLoop):
         return cls(step, children=[cls.construct(step) for step in step.sub_steps])
+
+    @construct.register
+    @classmethod
+    def _(cls, step: ImportConstantTable):
+        return cls(step)
 
 
 class StepsModel(QAbstractItemModel):

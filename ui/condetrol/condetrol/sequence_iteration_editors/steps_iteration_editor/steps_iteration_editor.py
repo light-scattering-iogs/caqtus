@@ -12,6 +12,7 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
     LinspaceLoop,
     ArangeLoop,
+    ImportConstantTable,
 )
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
@@ -104,6 +105,14 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         add_menu.setTitle("Insert above...")
         menu.addMenu(add_menu)
 
+        create_constant_table_import_action = QAction("Constant table import")
+        add_menu.addAction(create_constant_table_import_action)
+        new_constant_table_import = ImportConstantTable(table="table", alias=None)
+        create_constant_table_import_action.triggered.connect(
+            functools.partial(
+                self._model.insert_above, new_constant_table_import, index
+            )
+        )
         create_variable_action = QAction("variable")
         add_menu.addAction(create_variable_action)
         new_variable = create_variable_declaration()

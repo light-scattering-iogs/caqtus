@@ -3,7 +3,7 @@ from typing import Optional, assert_never
 
 from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QRectF
-from PyQt6.QtGui import QValidator, QFont, QTextDocument, QAbstractTextDocumentLayout
+from PyQt6.QtGui import QValidator, QTextDocument, QAbstractTextDocumentLayout
 from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QLineEdit,
@@ -16,6 +16,7 @@ from core.session.sequence.iteration_configuration import (
     VariableDeclaration,
     LinspaceLoop,
     ArangeLoop,
+    ImportConstantTable,
     ExecuteShot,
 )
 from core.types.expression import EXPRESSION_REGEX
@@ -38,6 +39,11 @@ ARANGE_LOOP_REGEX = re.compile(
     f"= (?P<start>{EXPRESSION_REGEX.pattern}) "
     f"to (?P<stop>{EXPRESSION_REGEX.pattern}) "
     f"with (?P<step>{EXPRESSION_REGEX.pattern}) spacing:"
+)
+
+IMPORT_CONSTANT_TABLE_REGEX = re.compile(
+    f"import (?P<table>{DOTTED_VARIABLE_NAME_REGEX.pattern})"
+    f"( as (?P<alias>{DOTTED_VARIABLE_NAME_REGEX.pattern}))?"
 )
 
 
@@ -77,6 +83,15 @@ def to_str(step: Step) -> str:
                 f"<span style='color:{val_col}'>{num}</span> "
                 f"<span style='color:{hl}'>steps:</span>"
             )
+        case ImportConstantTable(table, alias):
+            if alias is None:
+                return f"<span style='color:{hl}'>import</span> {table}"
+            else:
+                return (
+                    f"<span style='color:{hl}'>import</span> {table} "
+                    f"<span style='color:{hl}'>as</span> {alias}"
+                )
+
         case _:
             assert_never(step)
 
@@ -133,6 +148,14 @@ class StepDelegate(QStyledItemDelegate):
             case ArangeLoop(variable, start, stop, step, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {step} spacing:"
                 editor.setValidator(ArangeLoopValidator())
+            case ImportConstantTable(table, alias):
+                if alias is None:
+                    text = f"import {table}"
+                else:
+                    text = f"import {table} as {alias}"
+                editor.setValidator(ImportConstantTableValidator())
+            case _:
+                raise ValueError(f"Can't set editor data for {data}")
         editor.setText(text)
 
     def setModelData(
@@ -142,6 +165,16 @@ class StepDelegate(QStyledItemDelegate):
         previous_data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         text = editor.text()
         match previous_data:
+            case ImportConstantTable():
+                match = IMPORT_CONSTANT_TABLE_REGEX.fullmatch(text)
+                if match:
+                    new_attributes = {
+                        "table": DottedVariableName(match.group("table")),
+                        "alias": DottedVariableName(match.group("alias"))
+                        if match.group("alias")
+                        else None,
+                    }
+                    model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case VariableDeclaration():
                 match = VARIABLE_DECLARATION_REGEX.fullmatch(text)
                 if match:
@@ -206,6 +239,17 @@ class ArangeLoopValidator(QValidator):
 
     def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
         if ARANGE_LOOP_REGEX.fullmatch(input):
+            return QValidator.State.Acceptable, input, pos
+        else:
+            return QValidator.State.Invalid, input, pos
+
+
+class ImportConstantTableValidator(QValidator):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+
+    def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
+        if IMPORT_CONSTANT_TABLE_REGEX.fullmatch(input):
             return QValidator.State.Acceptable, input, pos
         else:
             return QValidator.State.Invalid, input, pos
