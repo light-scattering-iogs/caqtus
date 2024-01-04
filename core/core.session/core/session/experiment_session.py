@@ -4,9 +4,10 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Protocol
 
+from .constant_table_collection import ConstantTableCollection
 from .device_configuration_collection import DeviceConfigurationCollection
-from .sequence_collection import SequenceCollection
 from .path_hierarchy import PathHierarchy
+from .sequence_collection import SequenceCollection
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -45,14 +46,9 @@ class ExperimentSession(
 
     It is possible to create multiple sessions connecting to the same storage using an
     :py:class:`core.session.ExperimentSessionMaker`.
-
-    Attributes:
-        experiment_configs: Gives access to the history of the device configurations.
-        paths: Gives access to all sequences stored in the session.
-        shot_collection: Gives access to the data acquired while running shots on the
-        experiment.
     """
 
     paths: PathHierarchy
     sequence_collection: SequenceCollection
     device_configurations: DeviceConfigurationCollection
+    constants: ConstantTableCollection
