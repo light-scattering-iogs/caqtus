@@ -25,7 +25,6 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
         super().__init__(*args, **kwargs)
         self.device_configurations = device_configurations
         self.device_configuration_edit_info = device_configuration_edit_info
-        self._add_button = QPushButton("Add...")
 
         self.setup_ui()
         self.setup_connections()
@@ -33,7 +32,6 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
     def setup_ui(self):
         self.setupUi(self)
         self.tab_widget.clear()
-        self.tab_widget.setCornerWidget(self._add_button)
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(self.tab_widget.removeTab)
         self.tab_widget.setMovable(True)
@@ -46,7 +44,7 @@ class ConfigurationsEditor(QDialog, Ui_ConfigurationsEditor):
 
     def setup_connections(self):
         # noinspection PyUnresolvedReferences
-        self._add_button.clicked.connect(self.add_configuration)
+        self.add_device_button.clicked.connect(self.add_configuration)
 
     def add_configuration(self):
         validator = NewNameValidator(

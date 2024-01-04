@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_ConfigurationsEditor(object):
     def setupUi(self, ConfigurationsEditor):
         ConfigurationsEditor.setObjectName("ConfigurationsEditor")
-        ConfigurationsEditor.resize(400, 300)
+        ConfigurationsEditor.resize(414, 300)
         self.verticalLayout = QtWidgets.QVBoxLayout(ConfigurationsEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.tab_widget = QtWidgets.QTabWidget(parent=ConfigurationsEditor)
@@ -26,11 +26,18 @@ class Ui_ConfigurationsEditor(object):
         self.tab_2.setObjectName("tab_2")
         self.tab_widget.addTab(self.tab_2, "")
         self.verticalLayout.addWidget(self.tab_widget)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setSpacing(6)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.add_device_button = QtWidgets.QPushButton(parent=ConfigurationsEditor)
+        self.add_device_button.setObjectName("add_device_button")
+        self.horizontalLayout.addWidget(self.add_device_button)
         self.buttonBox = QtWidgets.QDialogButtonBox(parent=ConfigurationsEditor)
         self.buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Cancel|QtWidgets.QDialogButtonBox.StandardButton.Ok)
         self.buttonBox.setObjectName("buttonBox")
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.horizontalLayout.addWidget(self.buttonBox)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.retranslateUi(ConfigurationsEditor)
         self.tab_widget.setCurrentIndex(0)
@@ -43,3 +50,4 @@ class Ui_ConfigurationsEditor(object):
         ConfigurationsEditor.setWindowTitle(_translate("ConfigurationsEditor", "Edit device configurations..."))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab), _translate("ConfigurationsEditor", "Tab 1"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_2), _translate("ConfigurationsEditor", "Tab 2"))
+        self.add_device_button.setText(_translate("ConfigurationsEditor", "Add device..."))
