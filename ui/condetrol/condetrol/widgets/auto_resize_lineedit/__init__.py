@@ -1,1 +1,0 @@
-from .auto_resize_lineedit import AutoResizeLineEdit
