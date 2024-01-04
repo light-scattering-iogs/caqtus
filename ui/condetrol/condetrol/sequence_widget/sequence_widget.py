@@ -30,7 +30,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_changed
         )
+        self.tabWidget.clear()
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
+        self.tabWidget.addTab(QWidget(), "Shot")
 
     def on_sequence_iteration_changed(self):
         iterations = self.iteration_editor.get_iteration()
