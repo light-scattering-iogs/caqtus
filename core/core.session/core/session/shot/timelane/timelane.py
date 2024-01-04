@@ -73,3 +73,11 @@ class TimeLanes:
         ),
         on_setattr=attrs.setters.validate,
     )
+
+    @property
+    def number_steps(self) -> int:
+        return len(self.step_names)
+
+    @property
+    def number_lanes(self) -> int:
+        return len(self.lanes)
