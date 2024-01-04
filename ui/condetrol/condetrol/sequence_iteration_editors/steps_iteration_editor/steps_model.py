@@ -99,6 +99,11 @@ class StepsModel(QAbstractItemModel):
             steps=[item.step for item in self._steps],
         )
 
+    def set_steps(self, steps: StepsConfiguration):
+        self.beginResetModel()
+        self._steps = [StepsItem.construct(step) for step in steps.steps]
+        self.endResetModel()
+
     def row(self, item: StepsItem) -> int:
         if item.parent is None:
             return self._steps.index(item)
