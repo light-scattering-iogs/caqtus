@@ -6,9 +6,10 @@ from condetrol.device_configuration_editors.sequencer_configuration_editor impor
 )
 from core.device.sequencer.configuration import (
     DigitalChannelConfiguration,
-    DigitalMapping,
     SoftwareTrigger,
+    Constant,
 )
+from core.types.expression import Expression
 from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 
 
@@ -19,13 +20,10 @@ def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
         channels=tuple(
             [
                 DigitalChannelConfiguration(
-                    description=None,
-                    output_mapping=DigitalMapping(invert=False),
-                    default_value=False,
-                    color=None,
-                    delay=0.0,
+                    description=f"Channel {channel}",
+                    output=Constant(Expression("False")),
                 )
-                for _ in range(SpincoreSequencerConfiguration.number_channels)
+                for channel in range(SpincoreSequencerConfiguration.number_channels)
             ]
         ),
         trigger=SoftwareTrigger(),
