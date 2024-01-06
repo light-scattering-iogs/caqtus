@@ -9,17 +9,17 @@ from core.session import ExperimentSessionMaker, PureSequencePath
 
 class ExperimentManager(abc.ABC):
     @abc.abstractmethod
-    def create_procedure(self, procedure_name: str) -> BaseProcedure:
+    def create_procedure(self, procedure_name: str) -> Procedure:
         raise NotImplementedError
 
 
-class BaseProcedure(AbstractContextManager, abc.ABC):
+class Procedure(AbstractContextManager, abc.ABC):
     @abc.abstractmethod
     def run_sequence(self, sequence_path: PureSequencePath) -> None:
         raise NotImplementedError
 
 
-class ConcreteExperimentManager(ExperimentManager):
+class BoundExperimentManager(ExperimentManager):
     def __init__(self, session_maker: ExperimentSessionMaker):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
@@ -31,13 +31,13 @@ class ConcreteExperimentManager(ExperimentManager):
         with self._procedure_running:
             return
 
-    def create_procedure(self, procedure_name: str) -> ConcreteProcedure:
-        return ConcreteProcedure(
+    def create_procedure(self, procedure_name: str) -> BoundProcedure:
+        return BoundProcedure(
             procedure_name, self._session_maker, self._procedure_running
         )
 
 
-class ConcreteProcedure(BaseProcedure):
+class BoundProcedure(Procedure):
     def __init__(
         self, name: str, session_maker: ExperimentSessionMaker, lock: threading.Lock
     ):

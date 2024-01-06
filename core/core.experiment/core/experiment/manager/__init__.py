@@ -1,6 +1,6 @@
 from .manager import (
-    ConcreteExperimentManager,
-    ConcreteProcedure,
+    BoundExperimentManager,
+    BoundProcedure,
     ProcedureNotRunningError,
 )
 from .remote_manager import (
@@ -11,8 +11,8 @@ from .remote_manager import (
 )
 
 __all__ = [
-    "ConcreteExperimentManager",
-    "ConcreteProcedure",
+    "BoundExperimentManager",
+    "BoundProcedure",
     "ProcedureNotRunningError",
     "RemoteExperimentManagerServer",
     "RemoteExperimentManagerClient",

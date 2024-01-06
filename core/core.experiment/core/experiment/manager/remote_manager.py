@@ -6,9 +6,9 @@ from typing import Optional
 
 from core.session import ExperimentSessionMaker
 from core.session import PureSequencePath
-from .manager import ExperimentManager, BaseProcedure, ConcreteExperimentManager
+from .manager import ExperimentManager, Procedure, BoundExperimentManager
 
-experiment_manager: Optional[ConcreteExperimentManager] = None
+experiment_manager: Optional[BoundExperimentManager] = None
 
 
 class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BaseProxy):
@@ -21,7 +21,7 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
         return self._callmethod("create_procedure", (procedure_name,))  # type: ignore
 
 
-class ProcedureProxy(BaseProcedure, multiprocessing.managers.BaseProxy):
+class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     _exposed_ = ("run_sequence", "__enter__", "__exit__")
     _method_to_typeid_ = {"__enter__": "ProcedureProxy"}
 
@@ -39,7 +39,7 @@ class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):
     pass
 
 
-def _get_experiment_manager() -> ConcreteExperimentManager:
+def _get_experiment_manager() -> BoundExperimentManager:
     if experiment_manager is None:
         raise RuntimeError("Experiment manager not initialized")
     return experiment_manager
@@ -57,7 +57,7 @@ def _create_experiment_manager(
     session_maker: ExperimentSessionMaker,
 ) -> None:
     global experiment_manager
-    experiment_manager = ConcreteExperimentManager(session_maker)
+    experiment_manager = BoundExperimentManager(session_maker)
 
 
 _MultiprocessingServerManager.register(
