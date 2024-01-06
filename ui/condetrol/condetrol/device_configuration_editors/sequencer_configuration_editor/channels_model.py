@@ -11,6 +11,7 @@ from core.device.sequencer.configuration import (
     DeviceTrigger,
     Constant,
 )
+from core.device.sequencer.configuration.channel_output import Advance, Delay
 from core.types.expression import Expression
 
 delay_multiplier = 1e-6
@@ -67,6 +68,8 @@ class SequencerChannelsModel(QAbstractTableModel):
                         LaneValues=LaneValues,
                         DeviceTrigger=DeviceTrigger,
                         Constant=Constant,
+                        Advance=Advance,
+                        Delay=Delay,
                     ),
                     {},
                 )
