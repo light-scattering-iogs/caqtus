@@ -33,6 +33,9 @@ class SQLDeviceConfigurationCollection(
 
     _device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
 
+    def __str__(self):
+        return f"{self.parent_session}.device_configurations"
+
     def add_device_configuration(
         self,
         device_name: DeviceName,

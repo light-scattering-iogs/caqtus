@@ -22,6 +22,10 @@ class DeviceConfigurationCollection(
     def __getitem__(self, key):
         in_use_uuids = self.get_in_use_uuids()
         configurations_uuids = {self.get_device_name(id_): id_ for id_ in in_use_uuids}
+        if key not in configurations_uuids:
+            raise KeyError(
+                f"{self} doesn't contain a device configuration with name '{key}'"
+            )
         configuration_uuid = configurations_uuids[key]
         return self.get_configuration(configuration_uuid)
 

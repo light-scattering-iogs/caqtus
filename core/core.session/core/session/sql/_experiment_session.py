@@ -60,6 +60,9 @@ class SQLExperimentSession(ExperimentSession):
         )
         self.constants = SQLConstantTableCollection(parent_session=self)
 
+    def __str__(self):
+        return f"<{self.__class__.__name__} @ {self._sql_session.get_bind()}>"
+
     def __enter__(self):
         if self._is_active:
             raise RuntimeError("Session is already active")
