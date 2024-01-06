@@ -2,6 +2,7 @@ from typing import TypeGuard
 
 import attrs
 
+from core.types.expression import Expression
 from ...name import DeviceName
 
 
@@ -27,8 +28,16 @@ class DeviceTrigger:
         return f"trig({self.device_name})"
 
 
-ChannelOutput = LaneValues | DeviceTrigger
+@attrs.define
+class Constant:
+    value: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+
+
+ChannelOutput = LaneValues | DeviceTrigger | Constant
 
 
 def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
-    return isinstance(obj, (LaneValues, DeviceTrigger))
+    return isinstance(obj, (LaneValues, DeviceTrigger, Constant))

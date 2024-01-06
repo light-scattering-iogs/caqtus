@@ -1,10 +1,10 @@
-from .channel_mapping import (
-    OutputMapping,
-    DigitalMapping,
-    AnalogMapping,
-    CalibratedAnalogMapping,
+from .channel_output import (
+    ChannelOutput,
+    is_channel_output,
+    LaneValues,
+    DeviceTrigger,
+    Constant,
 )
-from .channel_output import ChannelOutput, is_channel_output, LaneValues, DeviceTrigger
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -28,6 +28,7 @@ __all__ = [
     "is_channel_output",
     "LaneValues",
     "DeviceTrigger",
+    "Constant",
     "AnalogChannelConfiguration",
     "AnalogMapping",
     "DigitalChannelConfiguration",
