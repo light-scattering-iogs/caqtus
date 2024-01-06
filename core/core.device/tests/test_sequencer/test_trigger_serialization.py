@@ -4,6 +4,7 @@ from core.device.sequencer.configuration.trigger import (
     TriggerEdge,
     Trigger,
     ExternalClock,
+    ExternalClockOnChange,
 )
 from util import serialization
 
@@ -13,6 +14,8 @@ def test_trigger_serialization():
         SoftwareTrigger(),
         ExternalTriggerStart(edge=TriggerEdge.RISING),
         ExternalClock(edge=TriggerEdge.BOTH),
+        ExternalClockOnChange(edge=TriggerEdge.FALLING),
     ]
-    for t in triggers:
-        assert t == serialization.structure(serialization.unstructure(t), Trigger)
+    s = serialization.unstructure(triggers, unstructure_as=list[Trigger])
+    t = serialization.structure(s, list[Trigger])
+    assert triggers == t

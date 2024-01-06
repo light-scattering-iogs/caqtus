@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 from enum import Enum
+from typing import TypeAlias
 
 import attrs
 
@@ -16,64 +16,28 @@ serialization.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)
 
 
 @attrs.define
-class Trigger(ABC):
-    def is_software_trigger(self) -> bool:
-        return isinstance(self, SoftwareTrigger)
-
-    def is_external_trigger_start(self) -> bool:
-        return isinstance(self, ExternalTriggerStart)
-
-    def is_external_clock(self) -> bool:
-        return isinstance(self, ExternalClock)
-
-    @property
-    @abstractmethod
-    def priority(self) -> int:
-        """The priority of the trigger.
-
-        Triggers with higher priority should be started before triggers with lower
-        priority.
-        This is used to determine the order in which the devices are started if a device
-        should be triggered by another.
-        """
-
-        raise NotImplementedError
+class SoftwareTrigger:
+    pass
 
 
 @attrs.define
-class SoftwareTrigger(Trigger):
-    @property
-    def priority(self) -> int:
-        return 0
-
-
-@attrs.define
-class ExternalTriggerStart(Trigger):
+class ExternalTriggerStart:
     edge: TriggerEdge = TriggerEdge.RISING
 
-    @property
-    def priority(self) -> int:
-        return 1
+
+@attrs.define
+class ExternalClock:
+    edge: TriggerEdge = TriggerEdge.RISING
 
 
 @attrs.define
-class ExternalClock(Trigger):
+class ExternalClockOnChange:
     edge: TriggerEdge = TriggerEdge.RISING
 
-    @property
-    def priority(self) -> int:
-        return 1
 
-
-@attrs.define
-class ExternalClockOnChange(Trigger):
-    edge: TriggerEdge = TriggerEdge.RISING
-
-    @property
-    def priority(self) -> int:
-        return 1
-
-
-serialization.include_subclasses(
-    Trigger, union_strategy=serialization.include_type(tag_name="trigger_type")
+Trigger: TypeAlias = (
+    SoftwareTrigger | ExternalTriggerStart | ExternalClock | ExternalClockOnChange
 )
+
+
+serialization.configure_tagged_union(Trigger, tag_name="trigger type")

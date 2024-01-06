@@ -5,8 +5,8 @@ from attr import AttrsInstance
 from cattrs import BaseConverter
 from cattrs.strategies import (
     include_subclasses as _include_subclasses,
-    configure_tagged_union,
 )
+import cattrs.strategies
 
 from .converters import converters
 
@@ -14,7 +14,7 @@ _C = TypeVar("_C", bound=AttrsInstance)
 
 
 def include_type(tag_name: str = "class") -> Callable[[Any, BaseConverter], Any]:
-    return partial(configure_tagged_union, tag_name=tag_name)
+    return partial(cattrs.strategies.configure_tagged_union, tag_name=tag_name)
 
 
 def include_subclasses(
@@ -29,3 +29,8 @@ def include_subclasses(
             subclasses=subclasses,
             union_strategy=union_strategy,
         )
+
+
+def configure_tagged_union(union: Any, tag_name: str = "type") -> None:
+    for converter in converters.values():
+        cattrs.strategies.configure_tagged_union(union, converter, tag_name=tag_name)

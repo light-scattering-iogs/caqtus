@@ -11,7 +11,7 @@ from .converters import (
 )
 from .customize import customize, AttributeOverride
 from .json import JSON
-from .strategies import include_subclasses, include_type
+from .strategies import include_subclasses, include_type, configure_tagged_union
 
 __all__ = [
     "converters",
@@ -25,6 +25,7 @@ __all__ = [
     "AttributeOverride",
     "override",
     "include_subclasses",
+    "configure_tagged_union",
     "include_type",
     "JSON",
 ]
