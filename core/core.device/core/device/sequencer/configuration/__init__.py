@@ -4,6 +4,7 @@ from .channel_mapping import (
     AnalogMapping,
     CalibratedAnalogMapping,
 )
+from .channel_output import ChannelOutput, is_channel_output, LaneValues, DeviceTrigger
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -23,6 +24,10 @@ from .trigger import (
 __all__ = [
     "SequencerConfiguration",
     "ChannelConfiguration",
+    "ChannelOutput",
+    "is_channel_output",
+    "LaneValues",
+    "DeviceTrigger",
     "AnalogChannelConfiguration",
     "AnalogMapping",
     "DigitalChannelConfiguration",

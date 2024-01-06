@@ -9,7 +9,7 @@ from ...name import DeviceName
 class LaneValues:
     lane: str = attrs.field(
         converter=str,
-        validator=attrs.validators.instance_of(str),
+        on_setattr=attrs.setters.convert,
     )
 
     def __str__(self):
@@ -19,8 +19,8 @@ class LaneValues:
 @attrs.define
 class DeviceTrigger:
     device_name: DeviceName = attrs.field(
-        converter=str,
-        validator=attrs.validators.instance_of(str),
+        converter=lambda x: DeviceName(str(x)),
+        on_setattr=attrs.setters.convert,
     )
 
     def __str__(self):
