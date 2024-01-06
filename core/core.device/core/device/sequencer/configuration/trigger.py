@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TypeAlias
+from typing import TypeAlias, TypeGuard
 
 import attrs
 
@@ -38,6 +38,13 @@ class ExternalClockOnChange:
 Trigger: TypeAlias = (
     SoftwareTrigger | ExternalTriggerStart | ExternalClock | ExternalClockOnChange
 )
+
+
+def is_trigger(value) -> TypeGuard[Trigger]:
+    return isinstance(
+        value,
+        (SoftwareTrigger, ExternalTriggerStart, ExternalClock, ExternalClockOnChange),
+    )
 
 
 serialization.configure_tagged_union(Trigger, tag_name="trigger type")

@@ -4,7 +4,7 @@ from typing import Type, Any, ClassVar
 import attrs
 
 from .channel_output import ChannelOutput, is_channel_output
-from .trigger import Trigger
+from .trigger import Trigger, is_trigger
 from ...configuration import DeviceConfigurationAttrs, DeviceParameter
 
 
@@ -51,6 +51,11 @@ class AnalogChannelConfiguration(ChannelConfiguration):
     pass
 
 
+def validate_trigger(instance, attribute, value):
+    if not is_trigger(value):
+        raise TypeError(f"Trigger {value} is not of type Trigger")
+
+
 @attrs.define
 class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
     """Holds the static configuration of a sequencer device.
@@ -76,7 +81,7 @@ class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
         ),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
-    trigger: Trigger = attrs.field(validator=attrs.validators.instance_of(Trigger))
+    trigger: Trigger = attrs.field(validator=validate_trigger)
 
     @classmethod
     @abstractmethod
