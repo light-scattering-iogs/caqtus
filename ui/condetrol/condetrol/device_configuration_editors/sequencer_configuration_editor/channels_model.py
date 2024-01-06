@@ -3,9 +3,15 @@ from typing import Any
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
-from core.device.sequencer.configuration import ChannelConfiguration
+from core.device.sequencer.configuration import (
+    ChannelConfiguration,
+    is_channel_output,
+    LaneValues,
+    DeviceTrigger,
+    Constant,
+)
+from core.types.expression import Expression
 
 delay_multiplier = 1e-6
 
@@ -31,32 +37,17 @@ class SequencerChannelsModel(QAbstractTableModel):
         return len(self._channels)
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return 5
+        return 2
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.FontRole and index.column() == 0:
-            if self._channels[index.row()].description is None:
-                font = QFont()
-                font.setItalic(True)
-                return font
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
-                description = self._channels[index.row()].description
-                if description is None:
-                    if role == Qt.ItemDataRole.DisplayRole:
-                        return "unused"
-                    else:
-                        return ""
-                else:
-                    return description
+                return self._channels[index.row()].description
             elif index.column() == 1:
-                return self._channels[index.row()].color
-            elif index.column() == 2:
-                return self._channels[index.row()].default_value
-            elif index.column() == 3:
-                return self._channels[index.row()].output_mapping
-            elif index.column() == 4:
-                return self._channels[index.row()].delay / delay_multiplier
+                if role == Qt.ItemDataRole.DisplayRole:
+                    return str(self._channels[index.row()].output)
+                elif role == Qt.ItemDataRole.EditRole:
+                    return repr(self._channels[index.row()].output)
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
@@ -64,23 +55,25 @@ class SequencerChannelsModel(QAbstractTableModel):
         channel = index.row()
         if role == Qt.ItemDataRole.EditRole:
             if index.column() == 0:
-                if str(value) == "":
-                    self._channels[channel].description = None
-                else:
-                    self._channels[channel].description = str(value)
+                self._channels[channel].description = str(value)
+                self.dataChanged.emit(index, index)
                 return True
             elif index.column() == 1:
-                self._channels[channel].color = value
-                return True
-            elif index.column() == 2:
-                self._channels[channel].default_value = value
-                return True
-            elif index.column() == 3:
-                self._channels[channel].output_mapping = value
-                return True
-            elif index.column() == 4:
-                self._channels[channel].delay = value * delay_multiplier
-                return True
+                # TODO: Implement a secure way to evaluate the channel output
+                result = eval(
+                    str(value),
+                    dict(
+                        Expression=Expression,
+                        LaneValues=LaneValues,
+                        DeviceTrigger=DeviceTrigger,
+                        Constant=Constant,
+                    ),
+                    {},
+                )
+                if is_channel_output(result):
+                    self._channels[channel].output = result
+                    self.dataChanged.emit(index, index)
+                    return True
         return super().setData(index, value, role)
 
     def headerData(
@@ -94,13 +87,7 @@ class SequencerChannelsModel(QAbstractTableModel):
                 if section == 0:
                     return "Description"
                 elif section == 1:
-                    return "Color"
-                elif section == 2:
-                    return "Default"
-                elif section == 3:
                     return "Output"
-                elif section == 4:
-                    return "Delay [µs]"
         elif orientation == Qt.Orientation.Vertical:
             if role == Qt.ItemDataRole.DisplayRole:
                 return str(section)

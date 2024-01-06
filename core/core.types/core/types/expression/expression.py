@@ -107,7 +107,7 @@ class Expression:
             del self.upstream_variables
 
     def __repr__(self) -> str:
-        return f"Expression({self.body})"
+        return f"Expression('{self.body}')"
 
     def __str__(self) -> str:
         return self.body

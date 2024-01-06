@@ -35,6 +35,9 @@ class Constant:
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return str(self.value)
+
 
 ChannelOutput = LaneValues | DeviceTrigger | Constant
 

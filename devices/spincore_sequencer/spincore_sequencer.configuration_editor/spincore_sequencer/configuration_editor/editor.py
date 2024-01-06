@@ -21,7 +21,7 @@ def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
             [
                 DigitalChannelConfiguration(
                     description=f"Channel {channel}",
-                    output=Constant(Expression("False")),
+                    output=Constant(Expression("Disabled")),
                 )
                 for channel in range(SpincoreSequencerConfiguration.number_channels)
             ]
