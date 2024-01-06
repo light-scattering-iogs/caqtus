@@ -32,7 +32,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         return self._callmethod("__enter__", ())
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
+        return self._callmethod("__exit__", (None, exc_val, None))
 
 
 class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):
