@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "core-experiment"
+version = "0.1.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "core"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+core-session = {path = "../core.session", develop = true}
+core-types = {path = "../core.types", develop = true}
+core-device = {path = "../core.device", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
