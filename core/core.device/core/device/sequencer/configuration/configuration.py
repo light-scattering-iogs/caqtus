@@ -8,9 +8,9 @@ from .trigger import Trigger, is_trigger
 from ...configuration import DeviceConfigurationAttrs, DeviceParameter
 
 
-def validate_channel_output(_, output):
-    if not is_channel_output(output):
-        raise TypeError(f"Output {output} is not of type ChannelOutput")
+def validate_channel_output(instance, attribute, value):
+    if not is_channel_output(value):
+        raise TypeError(f"Output {value} is not of type ChannelOutput")
 
 
 @attrs.define
