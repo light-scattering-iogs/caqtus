@@ -65,7 +65,9 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_iteration_configuration(self, sequence: Sequence) -> IterationConfiguration:
+    def get_iteration_configuration(
+        self, sequence: PureSequencePath
+    ) -> IterationConfiguration:
         raise NotImplementedError
 
     @abc.abstractmethod

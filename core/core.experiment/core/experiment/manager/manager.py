@@ -10,7 +10,7 @@ from typing import Optional
 
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
-from ..sequence_runner import SequenceManager
+from ..sequence_runner import SequenceManager, StepSequenceRunner
 
 
 class ExperimentManager(abc.ABC):
@@ -228,12 +228,15 @@ class BoundProcedure(Procedure):
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
+        with self._session_maker() as session:
+            session.sequence_collection.get_iteration_configuration(sequence_path)
         with SequenceManager(
             sequence_path,
             self._session_maker,
             device_configurations_uuids,
             constant_tables_uuids,
         ) as sequence_manager:
+            sequence_runner = StepSequenceRunner(sequence_manager)
             raise NotImplementedError
 
     def _get_device_configurations_to_use(

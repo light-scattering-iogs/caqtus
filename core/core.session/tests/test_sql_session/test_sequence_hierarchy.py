@@ -104,7 +104,3 @@ def test_iteration_save(empty_session, steps_configuration: StepsConfiguration):
         )
         sequence.set_iteration_configuration(new_steps_configuration)
         assert sequence.get_iteration_configuration() == new_steps_configuration
-        assert (
-            session.sequence_collection.get_iteration_configuration(sequence)
-            == new_steps_configuration
-        )

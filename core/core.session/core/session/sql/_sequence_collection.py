@@ -100,8 +100,10 @@ class SQLSequenceCollection(SequenceCollection):
             result += self.get_contained_sequences(child)
         return result
 
-    def get_iteration_configuration(self, sequence: Sequence) -> IterationConfiguration:
-        sequence_model = unwrap(self._query_sequence_model(sequence.path))
+    def get_iteration_configuration(
+        self, sequence: PureSequencePath
+    ) -> IterationConfiguration:
+        sequence_model = unwrap(self._query_sequence_model(sequence))
         return self.iteration_config_constructor(
             sequence_model.iteration_config.iteration_type,
             sequence_model.iteration_config.content,

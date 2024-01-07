@@ -26,9 +26,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.apply_state(State.DRAFT)
 
         with self.session_maker() as session:
-            iteration_config = session.sequence_collection.get_iteration_configuration(
-                Sequence(BoundSequencePath(self.sequence_path, session))
-            )
+            sequence = Sequence(BoundSequencePath(self.sequence_path, session))
+            iteration_config = sequence.get_iteration_configuration()
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_changed

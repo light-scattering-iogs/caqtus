@@ -51,7 +51,7 @@ class Sequence:
     def get_iteration_configuration(self) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""
 
-        return self.session.sequence_collection.get_iteration_configuration(self)
+        return self.session.sequence_collection.get_iteration_configuration(self.path)
 
     # def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
     #     """Return the configuration of the sequence.
