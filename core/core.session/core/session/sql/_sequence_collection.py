@@ -1,5 +1,6 @@
 import functools
-from collections.abc import Callable
+import uuid
+from collections.abc import Callable, Set
 from typing import TYPE_CHECKING, TypeAlias, TypeVar
 
 import attrs
@@ -10,7 +11,12 @@ from sqlalchemy import select
 
 from util import serialization
 from ._path_table import SQLSequencePath
-from ._sequence_table import SQLSequence, SQLIterationConfiguration
+from ._sequence_table import (
+    SQLSequence,
+    SQLIterationConfiguration,
+    SQLSequenceDeviceUUID,
+    SQLSequenceConstantTableUUID,
+)
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
@@ -25,6 +31,7 @@ from ..sequence_collection import (
     PathIsNotSequenceError,
     InvalidStateTransitionError,
     SequenceNotEditableError,
+    SequenceStats,
 )
 from ..sequence_collection import SequenceCollection
 
@@ -129,6 +136,8 @@ class SQLSequenceCollection(SequenceCollection):
                 iteration_type=iteration_type, content=iteration_content
             ),
             state=State.DRAFT,
+            device_uuids=set(),
+            constant_table_uuids=set(),
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(BoundSequencePath(path, self.parent_session))
@@ -146,6 +155,45 @@ class SQLSequenceCollection(SequenceCollection):
                 f"Sequence at {path} can't transition from {sequence.state} to {state}"
             )
         sequence.state = state
+        if state == State.DRAFT:
+            self.set_device_configuration_uuids(path, set())
+            self.set_constant_table_uuids(path, set())
+
+    def set_device_configuration_uuids(
+        self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
+    ) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        if sequence.state != State.PREPARING:
+            raise SequenceNotEditableError(path)
+        sql_device_uuids = {
+            SQLSequenceDeviceUUID(device_configuration_uuid=uuid_)
+            for uuid_ in device_configuration_uuids
+        }
+        sequence.device_configuration_uuids = sql_device_uuids
+
+    def set_constant_table_uuids(
+        self, path: PureSequencePath, constant_table_uuids: Set[uuid.UUID]
+    ) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        if sequence.state != State.PREPARING:
+            raise SequenceNotEditableError(path)
+        sql_constant_table_uuids = {
+            SQLSequenceConstantTableUUID(constant_table_uuid=uuid_)
+            for uuid_ in constant_table_uuids
+        }
+        sequence.constant_table_uuids = sql_constant_table_uuids
+
+    def get_stats(
+        self, path: PureSequencePath
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+        result = self._query_sequence_model(path)
+
+        def extract_stats(sequence: SQLSequence) -> SequenceStats:
+            return SequenceStats(
+                state=sequence.state,
+            )
+
+        return result.map(extract_stats)
 
     def _query_path_model(
         self, path: PureSequencePath

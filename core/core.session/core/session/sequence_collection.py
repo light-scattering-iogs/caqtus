@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 import abc
+import uuid
+from collections.abc import Set
 from typing import Protocol
 
+import attrs
 from returns.result import Result
 
 from .path import PureSequencePath
@@ -84,3 +89,26 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def set_state(self, path: PureSequencePath, state: State) -> None:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_device_configuration_uuids(
+        self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
+    ) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_constant_table_uuids(
+        self, path: PureSequencePath, constant_table_uuids: Set[uuid.UUID]
+    ) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_stats(
+        self, path: PureSequencePath
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+        raise NotImplementedError
+
+
+@attrs.frozen
+class SequenceStats:
+    state: State

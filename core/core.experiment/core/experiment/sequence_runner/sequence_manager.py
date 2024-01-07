@@ -18,9 +18,19 @@ class SequenceManager(AbstractContextManager):
         self._session_maker = session_maker
         self._sequence_path = sequence_path
 
+        with self._session_maker() as session:
+            if device_configurations_uuid is None:
+                device_configurations_uuid = (
+                    session.device_configurations.get_in_use_uuids()
+                )
+            self._device_configurations_uuid = device_configurations_uuid
+            if constant_tables_uuid is None:
+                constant_tables_uuid = session.constants.get_in_use_uuids()
+            self._constant_tables_uuid = constant_tables_uuid
+
     def __enter__(self):
+        self._prepare_sequence()
         try:
-            self._set_sequence_state(State.PREPARING)
             self._prepare()
             self._set_sequence_state(State.RUNNING)
         except Exception:
@@ -35,6 +45,16 @@ class SequenceManager(AbstractContextManager):
             self._set_sequence_state(State.CRASHED)
         else:
             self._set_sequence_state(State.FINISHED)
+
+    def _prepare_sequence(self):
+        with self._session_maker() as session:
+            session.sequence_collection.set_state(self._sequence_path, State.PREPARING)
+            session.sequence_collection.set_device_configuration_uuids(
+                self._sequence_path, self._device_configurations_uuid
+            )
+            session.sequence_collection.set_constant_table_uuids(
+                self._sequence_path, self._constant_tables_uuid
+            )
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:

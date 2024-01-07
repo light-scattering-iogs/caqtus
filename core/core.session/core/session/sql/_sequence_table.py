@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlalchemy
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,6 +31,13 @@ class SQLSequence(Base):
     )
     iteration_config: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
     state: Mapped[State]
+    device_uuids: Mapped[set[SQLSequenceDeviceUUID]] = relationship(
+        cascade="all, delete, delete-orphan"
+    )
+    constant_table_uuids: Mapped[set[SQLSequenceConstantTableUUID]] = relationship(
+        cascade="all, delete, delete-orphan"
+    )
+
     #
     # config_id: Mapped[int] = mapped_column(
     #     ForeignKey("sequence_config.id"), unique=True
@@ -152,3 +161,31 @@ class SQLSequence(Base):
     #                 "of shots"
     #             )
     #     self.number_completed_shots += 1
+
+
+class SQLSequenceDeviceUUID(Base):
+    __tablename__ = "sequence_device_configurations"
+
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "sequence_id", "device_configuration_uuid", name="device_configuration"
+        ),
+    )
+
+    id_: Mapped[int] = mapped_column(primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(ForeignKey(SQLSequence.id_))
+    device_configuration_uuid = mapped_column(ForeignKey("device_configurations.uuid"))
+
+
+class SQLSequenceConstantTableUUID(Base):
+    __tablename__ = "sequence_constant_tables"
+
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(
+            "sequence_id", "constant_table_uuid", name="constant_table"
+        ),
+    )
+
+    id_: Mapped[int] = mapped_column(primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(ForeignKey(SQLSequence.id_))
+    constant_table_uuid = mapped_column(ForeignKey("constant_tables.uuid"))
