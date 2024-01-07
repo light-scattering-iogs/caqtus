@@ -219,8 +219,9 @@ class ProcedureWatcherThread(QThread):
             assert self._procedure is not None
             if self._procedure.is_active():
                 return
-            elif self._procedure.exception() is not None:
-                self.exception_occurred.emit(self._procedure)
+            else:
+                if self._procedure.exception() is not None:
+                    self.exception_occurred.emit(self._procedure)
                 self._procedure = None
                 self.quit()
 
