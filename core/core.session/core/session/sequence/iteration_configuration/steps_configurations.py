@@ -64,6 +64,11 @@ class LinspaceLoop(ContainsSubSteps):
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
+    def __str__(self):
+        return (
+            f"for {self.variable} = {self.start} to {self.stop} with {self.num} steps"
+        )
+
 
 @attrs.define
 class ArangeLoop(ContainsSubSteps):
@@ -85,6 +90,12 @@ class ArangeLoop(ContainsSubSteps):
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return (
+            f"for {self.variable} = {self.start} to {self.stop} with {self.step} "
+            f"spacing"
+        )
+
 
 @attrs.define
 class ImportConstantTable:
@@ -92,6 +103,12 @@ class ImportConstantTable:
     alias: Optional[str] = attrs.field(
         converter=attrs.converters.optional(str), on_setattr=attrs.setters.convert
     )
+
+    def __str__(self):
+        if self.alias is None:
+            return f"import {self.table}"
+        else:
+            return f"import {self.table} as {self.alias}"
 
 
 @attrs.define

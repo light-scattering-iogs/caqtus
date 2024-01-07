@@ -1,9 +1,9 @@
 import uuid
-from collections.abc import Set
+from collections.abc import Set, Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from core.session import PureSequencePath, ExperimentSessionMaker
+from core.session import PureSequencePath, ExperimentSessionMaker, ConstantTable
 from core.session.sequence import State
 
 
@@ -17,6 +17,8 @@ class SequenceManager(AbstractContextManager):
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence_path
+
+        self.constant_tables: Mapping[str, ConstantTable]
 
         with self._session_maker() as session:
             if device_configurations_uuid is None:
@@ -55,6 +57,12 @@ class SequenceManager(AbstractContextManager):
             session.sequence_collection.set_constant_table_uuids(
                 self._sequence_path, self._constant_tables_uuid
             )
+            self.constant_tables = {
+                session.constants.get_table_name(uuid_): session.constants.get_table(
+                    uuid_
+                )
+                for uuid_ in self._constant_tables_uuid
+            }
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:

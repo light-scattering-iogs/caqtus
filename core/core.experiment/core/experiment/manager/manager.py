@@ -242,7 +242,9 @@ class BoundProcedure(Procedure):
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
-            sequence_runner = StepSequenceRunner(sequence_manager)
+            sequence_runner = StepSequenceRunner(
+                sequence_manager, sequence_manager.constant_tables
+            )
             sequence_runner.execute_steps(iteration.steps)
 
     def _get_device_configurations_to_use(
@@ -284,4 +286,8 @@ class SequenceAlreadyRunningError(RuntimeError):
 
 
 class ProcedureNotActiveError(RuntimeError):
+    pass
+
+
+class ErrorWhileRunningSequence(RuntimeError):
     pass
