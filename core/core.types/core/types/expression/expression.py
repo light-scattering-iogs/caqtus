@@ -138,7 +138,7 @@ class Expression:
         try:
             value = eval(self.code, {"__builtins__": self._builtins}, variables)
         except Exception as error:
-            raise EvaluationError(self.body, variables) from error
+            raise EvaluationError(f"Could not evaluate <{self.body}>") from error
         return value
 
     @cached_property
@@ -247,8 +247,4 @@ def add_implicit_multiplication(source: str) -> str:
 
 
 class EvaluationError(Exception):
-    def __init__(self, body: str, variables: Mapping[str, Any]):
-        self._body = body
-        self._variables = deepcopy(variables)
-        message = f"Error while evaluating expression '{body}'"
-        super().__init__(message)
+    pass
