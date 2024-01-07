@@ -76,6 +76,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         editor.sequence_start_requested.connect(self.start_sequence)
 
         dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
+        dock.sigClosed.connect(editor.close)
+        editor.destroyed.connect(dock.close)
         self.dock_area.addDock(dock, "right")
 
     def start_sequence(self, path: PureSequencePath):
