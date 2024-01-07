@@ -1,5 +1,4 @@
 import copy
-import functools
 import logging
 import traceback
 from collections.abc import Mapping, Callable
@@ -7,14 +6,13 @@ from typing import Optional
 
 import pyqtgraph.dockarea
 from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QMessageBox, QApplication
 
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment.manager import ExperimentManager, Procedure
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..app_name import APPLICATION_NAME
 from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -57,10 +55,11 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def setup_ui(self):
         self.setupUi(self)
         self.setCentralWidget(self.dock_area)
+        app = QApplication.instance()
+        self.setWindowTitle(app.applicationName())
         dock = pyqtgraph.dockarea.Dock("Sequences")
         dock.addWidget(self._path_view)
         self.dock_area.addDock(dock, "left")
-        self.setWindowTitle(APPLICATION_NAME)
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
