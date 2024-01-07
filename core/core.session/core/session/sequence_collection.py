@@ -4,9 +4,41 @@ from typing import Protocol
 from returns.result import Result
 
 from .path import PureSequencePath
-from .sequence import Sequence
 from .path_hierarchy import PathError, PathNotFoundError
+from .sequence import Sequence
 from .sequence.iteration_configuration import IterationConfiguration
+from .sequence.state import State
+
+
+class PathIsSequenceError(PathError):
+    pass
+
+
+class PathIsNotSequenceError(PathError):
+    pass
+
+
+class SequenceStateError(RuntimeError):
+    """Raised when an invalid sequence state is encountered.
+
+    This error is raised when trying to perform an operation that is not allowed in the
+    current state, such as adding data to a sequence that is not in the RUNNING state.
+    """
+
+    pass
+
+
+class InvalidStateTransitionError(SequenceStateError):
+    """Raised when an invalid state transition is attempted.
+
+    This error is raised when trying to transition a sequence to an invalid state.
+    """
+
+    pass
+
+
+class SequenceNotEditableError(SequenceStateError):
+    pass
 
 
 class SequenceCollection(Protocol):
@@ -43,10 +75,12 @@ class SequenceCollection(Protocol):
     ) -> Sequence:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_state(
+        self, path: PureSequencePath
+    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+        raise NotImplementedError
 
-class PathIsSequenceError(PathError):
-    pass
-
-
-class PathIsNotSequenceError(PathError):
-    pass
+    @abc.abstractmethod
+    def set_state(self, path: PureSequencePath, state: State) -> None:
+        raise NotImplementedError

@@ -65,22 +65,3 @@ _ALLOWED_TRANSITIONS = {
     State.INTERRUPTED: {State.DRAFT},
     State.CRASHED: {State.DRAFT},
 }
-
-
-class InvalidStateTransitionError(RuntimeError):
-    """Raised when an invalid state transition is attempted.
-
-    This error is raised when trying to transition a sequence to an invalid state.
-    """
-
-    pass
-
-
-class InvalidSequenceStateError(RuntimeError):
-    """Raised when an invalid sequence state is encountered.
-
-    This error is raised when trying to perform an operation that is not allowed in the
-    current state, such as adding data to a sequence that is not in the RUNNING state.
-    """
-
-    pass

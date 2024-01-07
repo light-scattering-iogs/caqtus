@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeAlias, TypeVar, Generic
+from typing import TYPE_CHECKING, TypeAlias, TypeVar
 
 import attrs
 import sqlalchemy.orm
@@ -15,12 +15,18 @@ from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence
-from ..sequence_collection import PathIsSequenceError, PathIsNotSequenceError
-from ..sequence_collection import SequenceCollection
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )
+from ..sequence.state import State
+from ..sequence_collection import (
+    PathIsSequenceError,
+    PathIsNotSequenceError,
+    InvalidStateTransitionError,
+    SequenceNotEditableError,
+)
+from ..sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -88,7 +94,7 @@ class SQLSequenceCollection(SequenceCollection):
         return result
 
     def get_iteration_configuration(self, sequence: Sequence) -> IterationConfiguration:
-        sequence_model = unwrap(self._query_sequence_model(sequence))
+        sequence_model = unwrap(self._query_sequence_model(sequence.path))
         return self.iteration_config_constructor(
             sequence_model.iteration_config.iteration_type,
             sequence_model.iteration_config.content,
@@ -97,7 +103,9 @@ class SQLSequenceCollection(SequenceCollection):
     def set_iteration_configuration(
         self, sequence: Sequence, iteration_configuration: IterationConfiguration
     ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence))
+        sequence_model = unwrap(self._query_sequence_model(sequence.path))
+        if not sequence_model.state.is_editable():
+            raise SequenceNotEditableError(sequence.path)
         iteration_type, iteration_content = self.iteration_config_serializer(
             iteration_configuration
         )
@@ -120,9 +128,24 @@ class SQLSequenceCollection(SequenceCollection):
             iteration_config=SQLIterationConfiguration(
                 iteration_type=iteration_type, content=iteration_content
             ),
+            state=State.DRAFT,
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(BoundSequencePath(path, self.parent_session))
+
+    def get_state(
+        self, path: PureSequencePath
+    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+        result = self._query_sequence_model(path)
+        return result.map(lambda sequence: sequence.state)
+
+    def set_state(self, path: PureSequencePath, state: State) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        if not State.is_transition_allowed(sequence.state, state):
+            raise InvalidStateTransitionError(
+                f"Sequence at {path} can't transition from {sequence.state} to {state}"
+            )
+        sequence.state = state
 
     def _query_path_model(
         self, path: PureSequencePath
@@ -135,9 +158,9 @@ class SQLSequenceCollection(SequenceCollection):
             return Failure(PathNotFoundError(path))
 
     def _query_sequence_model(
-        self, sequence: Sequence
+        self, path: PureSequencePath
     ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
-        path_result = self._query_path_model(sequence.path)
+        path_result = self._query_path_model(path)
         match path_result:
             case Success(path_model):
                 stmt = select(SQLSequence).where(SQLSequence.path == path_model)
@@ -145,7 +168,7 @@ class SQLSequenceCollection(SequenceCollection):
                 if found := result.scalar():
                     return Success(found)
                 else:
-                    return Failure(PathIsNotSequenceError(sequence.path))
+                    return Failure(PathIsNotSequenceError(path))
             case Failure() as failure:
                 return failure
 

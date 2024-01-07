@@ -4,6 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
 from ._table_base import Base
+from ..sequence.state import State
 
 
 class SQLIterationConfiguration(Base):
@@ -27,7 +28,7 @@ class SQLSequence(Base):
         ForeignKey(SQLIterationConfiguration.id_), unique=True
     )
     iteration_config: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
-    # state: Mapped[State]
+    state: Mapped[State]
     #
     # config_id: Mapped[int] = mapped_column(
     #     ForeignKey("sequence_config.id"), unique=True
