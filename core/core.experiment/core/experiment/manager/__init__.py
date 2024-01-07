@@ -3,7 +3,7 @@ from .manager import (
     Procedure,
     BoundExperimentManager,
     BoundProcedure,
-    ProcedureNotRunningError,
+    ProcedureNotActiveError,
 )
 from .remote_manager import (
     RemoteExperimentManagerServer,
@@ -17,7 +17,7 @@ __all__ = [
     "Procedure",
     "BoundExperimentManager",
     "BoundProcedure",
-    "ProcedureNotRunningError",
+    "ProcedureNotActiveError",
     "RemoteExperimentManagerServer",
     "RemoteExperimentManagerClient",
     "ExperimentManagerProxy",
