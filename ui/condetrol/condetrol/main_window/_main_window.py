@@ -99,6 +99,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                     f"An error occurred while starting the sequence {path}.", e
                 )
             self._procedure_watcher_thread.set_procedure(procedure)
+            assert not self._procedure_watcher_thread.isRunning()
             self._procedure_watcher_thread.start()
 
     def on_procedure_exception(self, procedure: Procedure):
