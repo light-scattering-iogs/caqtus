@@ -18,7 +18,11 @@ from anytree import NodeMixin
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
-from core.session.sequence_collection import PathIsSequenceError
+from core.session.sequence_collection import (
+    PathIsSequenceError,
+    SequenceStats,
+    PathIsNotSequenceError,
+)
 
 
 class PathHierarchyItem(NodeMixin):
@@ -33,6 +37,7 @@ class PathHierarchyItem(NodeMixin):
         self.parent = parent
         self.children = []
         self.creation_date = creation_date
+        self.sequence_stats: Optional[SequenceStats] = None
 
     def row(self):
         if self.parent:
@@ -48,8 +53,13 @@ class PathHierarchyModel(QAbstractItemModel):
         self._session_maker = session_maker
         self._thread = self.TreeUpdateThread(self, self._root, self._session_maker)
         self._thread.item_structure_changed.connect(self.process_structure_change)
-        self._thread.creation_date_changed.connect(
-            lambda index: self.dataChanged.emit(index, index)
+        self._thread.creation_date_changed.connect(self.on_data_changed)
+        self._thread.sequence_stats_changed.connect(self.on_data_changed)
+
+    def on_data_changed(self, index: QModelIndex):
+        self.dataChanged.emit(
+            self.index(index.row(), 0, index.parent()),
+            self.index(index.row(), self.columnCount(index)),
         )
 
     def __enter__(self):
@@ -99,7 +109,7 @@ class PathHierarchyModel(QAbstractItemModel):
         return len(item.children)
 
     def columnCount(self, parent=QModelIndex()):
-        return 2
+        return 3
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -110,6 +120,11 @@ class PathHierarchyModel(QAbstractItemModel):
             if index.column() == 0:
                 return item.hierarchy_path.name
             elif index.column() == 1:
+                if item.sequence_stats is None:
+                    return None
+                else:
+                    return item.sequence_stats.state.value
+            elif index.column() == 2:
                 return QDateTime(item.creation_date)
         return None
 
@@ -119,6 +134,8 @@ class PathHierarchyModel(QAbstractItemModel):
                 if section == 0:
                     return "Name"
                 elif section == 1:
+                    return "State"
+                elif section == 2:
                     return "Date created"
             else:
                 return section
@@ -166,6 +183,7 @@ class PathHierarchyModel(QAbstractItemModel):
     class TreeUpdateThread(QThread):
         item_structure_changed = pyqtSignal(QModelIndex)
         creation_date_changed = pyqtSignal(QModelIndex)
+        sequence_stats_changed = pyqtSignal(QModelIndex)
 
         def __init__(
             self,
@@ -198,6 +216,7 @@ class PathHierarchyModel(QAbstractItemModel):
 
         def check_item_change(self, index: QModelIndex) -> None:
             self.check_creation_date_changed(index)
+            self.check_sequence_stats_changed(index)
             if not index.isValid():
                 path_item = self.root
             else:
@@ -225,6 +244,22 @@ class PathHierarchyModel(QAbstractItemModel):
                 if creation_date != path_item.creation_date:
                     path_item.creation_date = creation_date
                     self.creation_date_changed.emit(index.sibling(index.row(), 1))
+
+        def check_sequence_stats_changed(self, index: QModelIndex) -> bool:
+            if not index.isValid():
+                return False
+            else:
+                path_item = index.internalPointer()
+                path = path_item.hierarchy_path
+                try:
+                    sequence_stats = unwrap(
+                        self.session.sequence_collection.get_stats(path)
+                    )
+                except PathIsNotSequenceError:
+                    sequence_stats = None
+                if sequence_stats != path_item.sequence_stats:
+                    path_item.sequence_stats = sequence_stats
+                    self.sequence_stats_changed.emit(index)
 
 
 class FoundChange(Exception):
