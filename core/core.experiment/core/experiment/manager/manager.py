@@ -11,6 +11,7 @@ from typing import Optional
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from ..sequence_runner import SequenceManager, StepSequenceRunner
+from ...session.sequence.iteration_configuration import StepsConfiguration
 
 
 class ExperimentManager(abc.ABC):
@@ -229,15 +230,20 @@ class BoundProcedure(Procedure):
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         with self._session_maker() as session:
-            session.sequence_collection.get_iteration_configuration(sequence_path)
+            iteration = session.sequence_collection.get_iteration_configuration(
+                sequence_path
+            )
+
         with SequenceManager(
             sequence_path,
             self._session_maker,
             device_configurations_uuids,
             constant_tables_uuids,
         ) as sequence_manager:
+            if not isinstance(iteration, StepsConfiguration):
+                raise NotImplementedError("Only steps iteration is supported.")
             sequence_runner = StepSequenceRunner(sequence_manager)
-            raise NotImplementedError
+            sequence_runner.execute_steps(iteration.steps)
 
     def _get_device_configurations_to_use(
         self, device_configurations_uuids: Optional[Set[uuid.UUID]] = None
