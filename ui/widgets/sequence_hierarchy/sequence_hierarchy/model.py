@@ -210,7 +210,7 @@ class PathHierarchyModel(QAbstractItemModel):
                         self.item_structure_changed.emit(e.index)
 
             timer.timeout.connect(update)  # type: ignore
-            timer.start(0)
+            timer.start(10)
             self.exec()
             timer.stop()
 
