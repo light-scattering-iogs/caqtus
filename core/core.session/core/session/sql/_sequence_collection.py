@@ -156,8 +156,8 @@ class SQLSequenceCollection(SequenceCollection):
             )
         sequence.state = state
         if state == State.DRAFT:
-            self.set_device_configuration_uuids(path, set())
-            self.set_constant_table_uuids(path, set())
+            sequence.device_uuids = set()
+            sequence.constant_table_uuids = set()
 
     def set_device_configuration_uuids(
         self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
