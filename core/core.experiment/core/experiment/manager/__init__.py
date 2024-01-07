@@ -1,4 +1,6 @@
 from .manager import (
+    ExperimentManager,
+    Procedure,
     BoundExperimentManager,
     BoundProcedure,
     ProcedureNotRunningError,
@@ -11,6 +13,8 @@ from .remote_manager import (
 )
 
 __all__ = [
+    "ExperimentManager",
+    "Procedure",
     "BoundExperimentManager",
     "BoundProcedure",
     "ProcedureNotRunningError",

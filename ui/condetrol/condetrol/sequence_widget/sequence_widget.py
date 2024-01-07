@@ -1,5 +1,6 @@
 from typing import Optional
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget
 
 from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
@@ -10,6 +11,8 @@ from ..sequence_iteration_editors import create_default_editor
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
+    sequence_start_requested = pyqtSignal(PureSequencePath)
+
     def __init__(
         self,
         sequence: PureSequencePath,
@@ -33,6 +36,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.clear()
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
         self.tabWidget.addTab(QWidget(), "Shot")
+
+        self.setup_connections()
+
+    def setup_connections(self):
+        self.start_button.clicked.connect(
+            lambda _: self.sequence_start_requested.emit(self.sequence_path)
+        )
 
     def on_sequence_iteration_changed(self):
         iterations = self.iteration_editor.get_iteration()

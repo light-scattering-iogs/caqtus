@@ -52,6 +52,7 @@ class BoundProcedure(Procedure):
     def run_sequence(self, sequence_path: PureSequencePath) -> None:
         if not self._running.locked():
             raise ProcedureNotRunningError(f"Procedure {self._name} is not running")
+        raise NotImplementedError
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._running.release()

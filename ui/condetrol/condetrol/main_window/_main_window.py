@@ -1,12 +1,16 @@
 import copy
-from collections.abc import Mapping
+import logging
+import traceback
+from collections.abc import Mapping, Callable
 
 import pyqtgraph.dockarea
 from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
 from core.device import DeviceName, DeviceConfigurationAttrs
+from core.experiment.manager import ExperimentManager
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
+from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..app_name import APPLICATION_NAME
 from ..constant_tables_editor import ConstantTablesEditor
@@ -17,17 +21,22 @@ from ..device_configuration_editors import (
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
         device_configuration_editors: Mapping[str, DeviceConfigurationEditInfo],
+        connect_to_experiment_manager: Callable[[], ExperimentManager],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker)
+        self._connect_to_experiment_manager = connect_to_experiment_manager
         self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
         self.device_configuration_edit_infos = device_configuration_editors
@@ -59,8 +68,30 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def open_sequence_editor(self, path: PureSequencePath):
         editor = SequenceWidget(path, self.session_maker)
+        editor.sequence_start_requested.connect(self.start_sequence)
+
         dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
         self.dock_area.addDock(dock, "right")
+
+    def start_sequence(self, path: PureSequencePath):
+        try:
+            experiment_manager = run_with_wip_widget(
+                self,
+                "Connecting to experiment manager...",
+                self._connect_to_experiment_manager,
+            )
+        except Exception as e:
+            self.display_error("Failed to connect to experiment manager.", e)
+            return
+        with experiment_manager.create_procedure(
+            "sequence launched from GUI"
+        ) as procedure:
+            try:
+                procedure.run_sequence(path)
+            except Exception as e:
+                self.display_error(
+                    f"An error occurred while running the sequence {path}.", e
+                )
 
     def open_constants_editor(self):
         with self.session_maker() as session:
@@ -139,3 +170,13 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         ui_settings = QSettings()
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
+
+    def display_error(self, message: str, exception: Exception):
+        logger.error(message, exc_info=exception)
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Critical)
+        message_box.setText(f"{message}\n\n{exception}")
+        detail = traceback.format_exception(exception)
+        message_box.setDetailedText("".join(detail))
+        message_box.setWindowTitle("Error")
+        message_box.exec()

@@ -17,6 +17,8 @@ core-device = {path = "../../core/core.device", develop = true}
 qabc = {path = "../widgets/qabc", develop = true}
 pyqt6-charts = "^6.6.0"
 sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
+core-experiment = {path = "../../core/core.experiment", develop = true}
+waiting-widget = {path = "../widgets/waiting_widget", develop = true}
 
 
 
