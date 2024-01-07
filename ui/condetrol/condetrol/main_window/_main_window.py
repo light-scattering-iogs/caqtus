@@ -1,14 +1,16 @@
 import copy
+import functools
 import logging
 import traceback
 from collections.abc import Mapping, Callable
+from typing import Optional
 
 import pyqtgraph.dockarea
-from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QMessageBox
 
 from core.device import DeviceName, DeviceConfigurationAttrs
-from core.experiment.manager import ExperimentManager
+from core.experiment.manager import ExperimentManager, Procedure
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
@@ -40,6 +42,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
         self.device_configuration_edit_infos = device_configuration_editors
+        self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.setup_ui()
         self.restore_window_state()
         self.setup_connections()
@@ -48,8 +51,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._path_view.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        return self._path_view.__exit__(exc_type, exc_value, traceback)
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        return self._path_view.__exit__(exc_type, exc_value, exc_tb)
 
     def setup_ui(self):
         self.setupUi(self)
@@ -65,6 +68,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
         self.action_edit_constants.triggered.connect(self.open_constants_editor)
         self._path_view.sequence_double_clicked.connect(self.open_sequence_editor)
+        self._procedure_watcher_thread.exception_occurred.connect(
+            self.on_procedure_exception
+        )
 
     def open_sequence_editor(self, path: PureSequencePath):
         editor = SequenceWidget(path, self.session_maker)
@@ -87,11 +93,24 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             "sequence launched from GUI"
         ) as procedure:
             try:
-                procedure.run_sequence(path)
+                procedure.start_sequence(path)
             except Exception as e:
                 self.display_error(
-                    f"An error occurred while running the sequence {path}.", e
+                    f"An error occurred while starting the sequence {path}.", e
                 )
+            self._procedure_watcher_thread.set_procedure(procedure)
+            self._procedure_watcher_thread.start()
+
+    def on_procedure_exception(self, procedure: Procedure):
+        exception = procedure.exception()
+        assert exception is not None
+        sequences = procedure.sequences()
+        assert sequences
+        last_sequence = sequences[-1]
+        self.display_error(
+            f"An error occurred while running the sequence '{last_sequence}'.",
+            exception,
+        )
 
     def open_constants_editor(self):
         with self.session_maker() as session:
@@ -180,3 +199,31 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         message_box.setDetailedText("".join(detail))
         message_box.setWindowTitle("Error")
         message_box.exec()
+
+
+class ProcedureWatcherThread(QThread):
+    exception_occurred = pyqtSignal(Procedure)
+
+    def __init__(self, parent: QObject):
+        super().__init__(parent)
+        self._procedure: Optional[Procedure] = None
+
+    def set_procedure(self, procedure: Procedure):
+        self._procedure = procedure
+
+    def run(self):
+        timer = QTimer()
+
+        def watch():
+            assert self._procedure is not None
+            if self._procedure.is_active():
+                return
+            elif self._procedure.exception() is not None:
+                self.exception_occurred.emit(self._procedure)
+                self._procedure = None
+                self.quit()
+
+        timer.timeout.connect(watch)  # type: ignore
+        timer.start(50)
+        self.exec()
+        timer.stop()
