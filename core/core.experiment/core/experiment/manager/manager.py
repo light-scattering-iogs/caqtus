@@ -41,7 +41,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             experiment_manager: ExperimentManager = ...
             with experiment_manager.create_procedure("my procedure") as procedure:
                 procedure.run_sequence(PureSequencePath("my sequence"))
-                # do some analysis
+                # do analysis, overwrite parameters, etc...
                 procedure.run_sequence(PureSequencePath("another sequence"))
     """
 
@@ -137,6 +137,14 @@ class BoundExperimentManager(ExperimentManager):
 
 
 class BoundProcedure(Procedure):
+    """Implementation of :class:`Procedure`.
+
+    See :class:`Procedure` for documentation.
+
+    This class is not meant to be instantiated directly, but is returned by
+    :meth:`BoundExperimentManager.create_procedure`.
+    """
+
     def __init__(
         self,
         name: str,

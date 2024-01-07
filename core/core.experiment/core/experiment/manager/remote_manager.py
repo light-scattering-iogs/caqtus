@@ -22,6 +22,13 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
 
 
 class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
+    """Proxy for a procedure running in a different process.
+
+    This object behaves like a :class:`Procedure` object and should be used like it, but
+    it forwards all method calls to an actual procedure object running in a different
+    process.
+    """
+
     _exposed_ = (
         "__enter__",
         "__exit__",
