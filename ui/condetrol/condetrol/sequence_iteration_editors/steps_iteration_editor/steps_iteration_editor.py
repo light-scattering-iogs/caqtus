@@ -52,7 +52,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
     def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.read_only = False
         self._model = StepsModel(iteration)
         self.setModel(self._model)
         self.expandAll()
@@ -87,7 +86,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.set_steps(iteration)
 
     def set_read_only(self, read_only: bool):
-        self.read_only = read_only
+        self._model.set_read_only(read_only)
 
     def delete_selected(self):
         selected = self.selectedIndexes()

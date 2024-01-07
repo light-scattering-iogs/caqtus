@@ -93,6 +93,10 @@ class StepsModel(QAbstractItemModel):
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._steps = [StepsItem.construct(step) for step in steps.steps]
+        self._read_only = True
+
+    def set_read_only(self, read_only: bool):
+        self._read_only = read_only
 
     def get_steps(self) -> StepsConfiguration:
         return StepsConfiguration(
@@ -100,6 +104,8 @@ class StepsModel(QAbstractItemModel):
         )
 
     def set_steps(self, steps: StepsConfiguration):
+        if self._read_only:
+            return
         self.beginResetModel()
         self._steps = [StepsItem.construct(step) for step in steps.steps]
         self.endResetModel()
@@ -156,6 +162,8 @@ class StepsModel(QAbstractItemModel):
             return index.internalPointer().step
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if self._read_only:
+            return False
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
@@ -178,6 +186,10 @@ class StepsModel(QAbstractItemModel):
             step = index.internalPointer().step
             if not isinstance(step, ExecuteShot):
                 flags |= Qt.ItemFlag.ItemIsEditable
+
+        if self._read_only:
+            flags &= ~Qt.ItemFlag.ItemIsEditable
+            flags &= ~Qt.ItemFlag.ItemIsDropEnabled
         return flags
 
     def supportedDropActions(self) -> Qt.DropAction:
@@ -209,6 +221,8 @@ class StepsModel(QAbstractItemModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
+        if self._read_only:
+            return False
         json_string = data.text()
         try:
             steps = serialization.from_json(json_string, list[Step])
@@ -244,6 +258,8 @@ class StepsModel(QAbstractItemModel):
             return True
 
     def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+        if self._read_only:
+            return False
         if not parent.isValid():
             self.beginRemoveRows(parent, row, row)
             del self._steps[row]
@@ -258,6 +274,8 @@ class StepsModel(QAbstractItemModel):
     def removeRows(
         self, row: int, count: int, parent: QModelIndex = QModelIndex()
     ) -> bool:
+        if self._read_only:
+            return False
         self.beginRemoveRows(parent, row, row + count - 1)
         if not parent.isValid():
             del self._steps[row : row + count]
@@ -269,6 +287,8 @@ class StepsModel(QAbstractItemModel):
         return True
 
     def insert_above(self, step: Step, index: QModelIndex):
+        if self._read_only:
+            return
         if not index.isValid():
             return
         else:
