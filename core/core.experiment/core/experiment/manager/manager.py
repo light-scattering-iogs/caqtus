@@ -3,7 +3,6 @@ from __future__ import annotations
 import abc
 import concurrent.futures
 import threading
-import time
 import uuid
 from collections.abc import Set
 from contextlib import AbstractContextManager
@@ -11,6 +10,7 @@ from typing import Optional
 
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
+from ..sequence_runner import SequenceManager
 
 
 class ExperimentManager(abc.ABC):
@@ -228,15 +228,13 @@ class BoundProcedure(Procedure):
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
-        device_configurations = self._get_device_configurations_to_use(
-            device_configurations_uuids
-        )
-        constant_tables = self._get_constant_tables_to_use(constant_tables_uuids)
-        print(device_configurations)
-        print(constant_tables)
-
-        time.sleep(5)
-        raise NotImplementedError
+        with SequenceManager(
+            sequence_path,
+            self._session_maker,
+            device_configurations_uuids,
+            constant_tables_uuids,
+        ) as sequence_manager:
+            raise NotImplementedError
 
     def _get_device_configurations_to_use(
         self, device_configurations_uuids: Optional[Set[uuid.UUID]] = None

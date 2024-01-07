@@ -9,6 +9,8 @@ packages = [{include = "core"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
+python-benedict = "^0.33.1"
+
 core-session = {path = "../core.session", develop = true}
 core-types = {path = "../core.types", develop = true}
 core-device = {path = "../core.device", develop = true}
