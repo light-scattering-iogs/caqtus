@@ -55,6 +55,4 @@ def run_with_wip_widget[
     message_box.exec()
     if worker.exception is not None:
         raise worker.exception
-    if worker.result is None:
-        raise RuntimeError("Worker thread finished without returning a result")
     return worker.result

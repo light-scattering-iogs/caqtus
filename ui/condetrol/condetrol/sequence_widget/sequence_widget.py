@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import contextlib
 from typing import Optional
 
-from PyQt6.QtCore import pyqtSignal, QThread, QTimer, Qt
+from PyQt6.QtCore import pyqtSignal, QThread, QTimer, QObject
 from PyQt6.QtWidgets import QWidget
 
 from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.sequence import State, Sequence
-from core.session.sequence_collection import PathIsNotSequenceError, SequenceStats
-
+from core.session.sequence_collection import (
+    PathIsNotSequenceError,
+    SequenceStats,
+    SequenceNotEditableError,
+)
+from waiting_widget import run_with_wip_widget
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..sequence_iteration_editors import create_default_editor
 
@@ -28,15 +33,16 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.setupUi(self)
         self.session_maker = session_maker
         self.sequence_path = sequence
-        self.apply_state(State.DRAFT)
 
         with self.session_maker() as session:
             sequence = Sequence(BoundSequencePath(self.sequence_path, session))
             iteration_config = sequence.get_iteration_configuration()
+            stats = unwrap(session.sequence_collection.get_stats(self.sequence_path))
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_changed
         )
+        self.apply_state(stats.state)
         self.tabWidget.clear()
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
         self.tabWidget.addTab(QWidget(), "Shot")
@@ -50,15 +56,29 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.start_button.clicked.connect(
             lambda _: self.sequence_start_requested.emit(self.sequence_path)
         )
+        self.clear_button.clicked.connect(self.clear_sequence)
         self.state_watcher_thread.sequence_not_found.connect(self.deleteLater)
         self.state_watcher_thread.stats_changed.connect(self.apply_stats)
+
+    def clear_sequence(self):
+        def clear():
+            with self.session_maker() as session:
+                session.sequence_collection.set_state(self.sequence_path, State.DRAFT)
+
+        run_with_wip_widget(self, "Clearing sequence", clear)
 
     def on_sequence_iteration_changed(self):
         iterations = self.iteration_editor.get_iteration()
         with self.session_maker() as session:
-            session.sequence_collection.set_iteration_configuration(
-                Sequence(BoundSequencePath(self.sequence_path, session)), iterations
-            )
+            try:
+                session.sequence_collection.set_iteration_configuration(
+                    Sequence(BoundSequencePath(self.sequence_path, session)), iterations
+                )
+            except SequenceNotEditableError:
+                iterations = session.sequence_collection.get_iteration_configuration(
+                    self.sequence_path
+                )
+                self.iteration_editor.set_iteration(iterations)
 
     def apply_stats(self, stats: SequenceStats):
         self.apply_state(stats.state)
@@ -69,6 +89,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         super().closeEvent(event)
 
     def apply_state(self, state: State):
+        self.iteration_editor.set_read_only(not state.is_editable())
         if state == State.DRAFT:
             self.start_button.setEnabled(True)
         else:
