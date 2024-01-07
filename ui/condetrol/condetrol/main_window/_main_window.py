@@ -196,11 +196,19 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         logger.error(message, exc_info=exception)
         message_box = QMessageBox(self)
         message_box.setIcon(QMessageBox.Icon.Critical)
-        message_box.setText(f"{message}\n\n{exception}")
+        message_box.setText(f"{message}\n\n{self.format_error(exception)}")
         detail = traceback.format_exception(exception)
         message_box.setDetailedText("".join(detail))
         message_box.setWindowTitle("Error")
         message_box.exec()
+
+    def format_error(self, exception: Exception):
+        result = []
+        while exception.__cause__ is not None:
+            result.append(str(exception))
+            exception = exception.__cause__
+        result.append(str(exception))
+        return "\nbecause: ".join(result)
 
 
 class ProcedureWatcherThread(QThread):
