@@ -14,6 +14,7 @@ python-benedict = "^0.33.1"
 core-session = {path = "../core.session", develop = true}
 core-types = {path = "../core.types", develop = true}
 core-device = {path = "../core.device", develop = true}
+numpy = "^1.26.3"
 
 
 [build-system]

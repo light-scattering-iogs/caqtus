@@ -2,9 +2,25 @@ import functools
 from collections.abc import Iterable
 from typing import assert_never
 
-from core.session.sequence.iteration_configuration import Step
+import numpy
+
+from core.session.sequence.iteration_configuration import (
+    Step,
+    ArangeLoop,
+    ExecuteShot,
+    VariableDeclaration,
+)
+from core.types.parameter import (
+    is_analog_value,
+    AnalogValue,
+    get_unit,
+    magnitude_in_unit,
+    is_parameter,
+)
+from core.types.parameter.analog_value import add_unit
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
+from ..unit_namespace import units
 
 
 class StepSequenceRunner:
@@ -24,8 +40,7 @@ class StepSequenceRunner:
     def run_step(self, step: Step, context: StepContext) -> StepContext:
         """Execute a given step of the sequence
 
-        This function should be implemented for each Step type that can be run on the
-        experiment.
+        This function should be implemented for each Step type.
 
         Args:
             step: the step of the sequence currently executed
@@ -39,73 +54,49 @@ class StepSequenceRunner:
 
         return assert_never(step)
 
-    #
-    # @run_step.register
-    # def _(
-    #     self,
-    #     steps: SequenceSteps,
-    #     context: StepContext,
-    # ) -> StepContext:
-    #     """Execute the steps of a SequenceSteps.
-    #
-    #     This function executes the child steps of a SequenceSteps in order. The context is updated after each step and
-    #     the updated context is passed to the next step.
-    #     """
-    #
-    #     for step in steps.children:
-    #         context = self.run_step(step, context)
-    #     return context
-    #
-    # @run_step.register
-    # def _(
-    #     self,
-    #     declaration: VariableDeclaration,
-    #     context: StepContext,
-    # ) -> StepContext:
-    #     """Execute a VariableDeclaration step.
-    #
-    #     This function evaluates the expression of the declaration and updates the value of the variable in the context.
-    #     """
-    #
-    #     value = Quantity(declaration.expression.evaluate(context.variables | units))
-    #     return context.update_variable(declaration.name, value)
-    #
-    # @run_step.register
-    # def _(
-    #     self,
-    #     arange_loop: ArangeLoop,
-    #     context: StepContext,
-    # ):
-    #     """Loop over a variable in a numpy arange like loop"""
-    #
-    #     variables = context.variables | units
-    #
-    #     start = Quantity(arange_loop.start.evaluate(variables))
-    #     stop = Quantity(arange_loop.stop.evaluate(variables))
-    #     step = Quantity(arange_loop.step.evaluate(variables))
-    #     unit = start.units
-    #
-    #     start = start.to(unit)
-    #     try:
-    #         stop = stop.to(unit)
-    #     except DimensionalityError:
-    #         raise ValueError(
-    #             f"Stop units of arange loop '{arange_loop.name}' ({stop.units}) is not"
-    #             f" compatible with start units ({unit})"
-    #         )
-    #     try:
-    #         step = step.to(unit)
-    #     except DimensionalityError:
-    #         raise ValueError(
-    #             f"Step units of arange loop '{arange_loop.name}' ({step.units}) are not"
-    #             f" compatible with start units ({unit})"
-    #         )
-    #
-    #     for value in np.arange(start.magnitude, stop.magnitude, step.magnitude):
-    #         context = context.update_variable(arange_loop.name, value * unit)
-    #         for step in arange_loop.children:
-    #             context = self.run_step(step, context)
-    #     return context
+    @run_step.register
+    def _(
+        self,
+        declaration: VariableDeclaration,
+        context: StepContext,
+    ) -> StepContext:
+        """Execute a VariableDeclaration step.
+
+        This function evaluates the expression of the declaration and updates the value
+        of the variable in the context.
+        """
+
+        value = declaration.value.evaluate(context.variables | units)
+        if not is_parameter(value):
+            raise TypeError(
+                f"Value of variable declaration <{declaration}> has type "
+                f"{type(value)}, which is not a valid parameter type."
+            )
+        return context.update_variable(declaration.variable, value)
+
+    @run_step.register
+    def _(
+        self,
+        arange_loop: ArangeLoop,
+        context: StepContext,
+    ):
+        """Loop over a variable in a numpy arange like loop."""
+
+        start, stop, step = evaluate_arange_loop_parameters(arange_loop, context)
+
+        unit = get_unit(start)
+        start_magnitude = magnitude_in_unit(start, unit)
+        stop_magnitude = magnitude_in_unit(stop, unit)
+        step_magnitude = magnitude_in_unit(step, unit)
+
+        variable_name = arange_loop.variable
+        for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
+            value_with_unit = add_unit(value, unit)
+            context = context.update_variable(variable_name, value_with_unit)
+            for step in arange_loop.sub_steps:
+                context = self.run_step(step, context)
+        return context
+
     #
     # @run_step.register
     # def _(
@@ -145,11 +136,29 @@ class StepSequenceRunner:
     #             context = self.run_step(step, context)
     #     return context
     #
-    # @run_step.register
-    # def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
-    #     """Compute the parameters of a shot and push them to the queue to be executed."""
-    #
-    #     logger.debug(context.variables)
-    #
-    #     self._sequence_manager.schedule_shot(shot.name, context)
-    #     return context.reset_history()
+    @run_step.register
+    def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
+        print(context.variables)
+
+        return context
+
+        # self._sequence_manager.schedule_shot(shot.name, context)
+        # return context.reset_history()
+
+
+def evaluate_arange_loop_parameters(
+    arange_loop: ArangeLoop,
+    context: StepContext,
+) -> tuple[AnalogValue, AnalogValue, AnalogValue]:
+    variables = context.variables | units
+
+    start = arange_loop.start.evaluate(variables)
+    if not is_analog_value(start):
+        raise TypeError(f"Start of loop '{arange_loop}' is not an analog value.")
+    stop = arange_loop.stop.evaluate(variables)
+    if not is_analog_value(stop):
+        raise TypeError(f"Stop of loop '{arange_loop}' is not an analog value.")
+    step = arange_loop.step.evaluate(variables)
+    if not is_analog_value(step):
+        raise TypeError(f"Step of loop '{arange_loop}' is not an analog value.")
+    return start, stop, step

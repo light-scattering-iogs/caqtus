@@ -49,8 +49,3 @@ UNITS = (
     | VOLTAGE_UNITS
     | DISTANCE_UNITS
 )
-
-
-# units: dict[VariableName, Unit] = {
-#     VariableName(unit): getattr(ureg, unit) for unit in UNITS
-# }

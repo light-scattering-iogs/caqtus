@@ -39,6 +39,9 @@ class VariableDeclaration:
         on_setattr=attrs.setters.validate,
     )
 
+    def __str__(self):
+        return f"{self.variable} = {self.value}"
+
 
 @attrs.define
 class LinspaceLoop(ContainsSubSteps):
