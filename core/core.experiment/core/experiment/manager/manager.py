@@ -9,7 +9,8 @@ from collections.abc import Set
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from core.session import ExperimentSessionMaker, PureSequencePath
+from core.device import DeviceConfigurationAttrs, DeviceName
+from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 
 
 class ExperimentManager(abc.ABC):
@@ -73,8 +74,8 @@ class Procedure(AbstractContextManager, abc.ABC):
     def start_sequence(
         self,
         sequence_path: PureSequencePath,
-        device_configurations: Optional[Set[uuid.UUID]] = None,
-        constant_tables: Optional[Set[uuid.UUID]] = None,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         """Start running the sequence on the setup.
 
@@ -86,11 +87,11 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         Args:
             sequence_path: the path of the sequence to run.
-            device_configurations: the uuids of the device configurations to use for
+            device_configurations_uuids: the uuids of the device configurations to use for
             running this sequence.
             If None, this will default to the device configurations that are currently
             in use.
-            constant_tables: the uuids of the constant tables to use for running this
+            constant_tables_uuids: the uuids of the constant tables to use for running this
             sequence.
             If None, this will default to the constant tables that are currently in use.
         Raises:
@@ -103,8 +104,8 @@ class Procedure(AbstractContextManager, abc.ABC):
     def run_sequence(
         self,
         sequence_path: PureSequencePath,
-        device_configurations: Optional[Set[uuid.UUID]] = None,
-        constant_tables: Optional[Set[uuid.UUID]] = None,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         """Run a sequence on the setup.
 
@@ -118,7 +119,9 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(sequence_path, device_configurations, constant_tables)
+        self.start_sequence(
+            sequence_path, device_configurations_uuids, constant_tables_uuids
+        )
         if exception := self.exception():
             raise exception
 
@@ -204,21 +207,66 @@ class BoundProcedure(Procedure):
     def start_sequence(
         self,
         sequence_path: PureSequencePath,
-        device_configurations: Optional[Set[uuid.UUID]] = None,
-        constant_tables: Optional[Set[uuid.UUID]] = None,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         if not self.is_active():
             raise ProcedureNotActiveError("The procedure is not active.")
         if self.is_running_sequence():
             raise SequenceAlreadyRunningError("A sequence is already running.")
         self._sequence_future = self._thread_pool.submit(
-            self._run_sequence, sequence_path
+            self._run_sequence,
+            sequence_path,
+            device_configurations_uuids,
+            constant_tables_uuids,
         )
         self._sequences.append(sequence_path)
 
-    def _run_sequence(self, sequence_path: PureSequencePath) -> None:
+    def _run_sequence(
+        self,
+        sequence_path: PureSequencePath,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
+        device_configurations = self._get_device_configurations_to_use(
+            device_configurations_uuids
+        )
+        constant_tables = self._get_constant_tables_to_use(constant_tables_uuids)
+        print(device_configurations)
+        print(constant_tables)
+
         time.sleep(5)
         raise NotImplementedError
+
+    def _get_device_configurations_to_use(
+        self, device_configurations_uuids: Optional[Set[uuid.UUID]] = None
+    ) -> dict[DeviceName, DeviceConfigurationAttrs]:
+        with self._session_maker() as session:
+            if device_configurations_uuids is None:
+                device_configurations_uuids = (
+                    session.device_configurations.get_in_use_uuids()
+                )
+            device_configurations = {
+                session.device_configurations.get_device_name(
+                    uuid_
+                ): session.device_configurations.get_configuration(uuid_)
+                for uuid_ in device_configurations_uuids
+            }
+        return device_configurations
+
+    def _get_constant_tables_to_use(
+        self, constant_tables_uuids: Optional[Set[uuid.UUID]] = None
+    ) -> dict[str, ConstantTable]:
+        with self._session_maker() as session:
+            if constant_tables_uuids is None:
+                constant_tables_uuids = session.constants.get_in_use_uuids()
+            constant_tables = {
+                session.constants.get_table_name(uuid_): session.constants.get_table(
+                    uuid_
+                )
+                for uuid_ in constant_tables_uuids
+            }
+        return constant_tables
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._running.release()

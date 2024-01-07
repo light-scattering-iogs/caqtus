@@ -64,8 +64,8 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     def start_sequence(
         self,
         sequence_path: PureSequencePath,
-        device_configurations: Optional[Set[uuid.UUID]] = None,
-        constant_tables: Optional[Set[uuid.UUID]] = None,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         return self._callmethod("start_sequence", (sequence_path,))
 
