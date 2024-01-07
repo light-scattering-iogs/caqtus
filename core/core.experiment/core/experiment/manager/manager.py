@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import abc
+import concurrent.futures
 import threading
+import time
 from contextlib import AbstractContextManager
+from typing import Optional
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 
@@ -14,8 +17,99 @@ class ExperimentManager(abc.ABC):
 
 
 class Procedure(AbstractContextManager, abc.ABC):
+    """Used to perform a procedure on the experiment.
+
+    A procedure is anything more complex than a single sequence.
+    It can be a sequence with some analysis performed afterward, a sequence that is run
+    multiple times with different parameters, multiple sequences that must be run
+    cohesively, etc...
+
+    Procedures are created with :meth:`ExperimentManager.create_procedure`.
+
+    The procedure must be active to start running sequences.
+    A procedure is activated by using it as a context manager.
+    No two procedures can be active at the same time.
+    If a previous procedure is active, entering another procedure will block until the
+    first procedure is exited.
+
+    To run a sequence once a procedure is active, use :meth:`run_sequence`.
+
+    Examples:
+
+    .. code-block:: python
+
+            experiment_manager: ExperimentManager = ...
+            with experiment_manager.create_procedure("my procedure") as procedure:
+                procedure.run_sequence(PureSequencePath("my sequence"))
+                # do some analysis
+                procedure.run_sequence(PureSequencePath("another sequence"))
+    """
+
     @abc.abstractmethod
+    def is_active(self) -> bool:
+        """Indicates if the procedure is currently active and can run sequences."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def is_running_sequence(self) -> bool:
+        """Indicates if the procedure is currently running a sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def exception(self) -> Optional[Exception]:
+        """Retrieve the exception that occurred while running the last sequence.
+
+        If a sequence is currently running, this method will block until the sequence
+        is finished.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+        """Start running the sequence on the setup.
+
+        This method returns immediately, and the sequence is launched in a separate
+        thread.
+
+        Exceptions that occur while running the sequence are not raised by this method,
+        but can be retrieved with the `exception` method.
+
+        Raises:
+            ProcedureNotActiveError: if the procedure is not active.
+            SequenceAlreadyRunningError: if a sequence is already running.
+        """
+
+        raise NotImplementedError
+
     def run_sequence(self, sequence_path: PureSequencePath) -> None:
+        """Run a sequence on the setup.
+
+        This method blocks until the sequence is finished.
+
+        Raises:
+            ProcedureNotActiveError: if the procedure is not active.
+            SequenceAlreadyRunningError: if a sequence is already running.
+            Exception: if an exception occurs while running the sequence.
+        """
+
+        self.start_sequence(sequence_path)
+        if exception := self.exception():
+            raise exception
+
+    @abc.abstractmethod
+    def sequences(self) -> list[PureSequencePath]:
+        """Retrieve the list of sequences that were started by the procedure.
+
+        Returns:
+            A list of sequences that were started by the procedure since it was started,
+            ordered by execution order.
+            If the procedure is currently running a sequence, the sequence will be the
+            last element of the list.
+        """
+
         raise NotImplementedError
 
 
@@ -23,40 +117,80 @@ class BoundExperimentManager(ExperimentManager):
     def __init__(self, session_maker: ExperimentSessionMaker):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
+        self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
     def __enter__(self):
+        self._thread_pool.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         with self._procedure_running:
-            return
+            return self._thread_pool.__exit__(exc_type, exc_value, traceback)
 
     def create_procedure(self, procedure_name: str) -> BoundProcedure:
         return BoundProcedure(
-            procedure_name, self._session_maker, self._procedure_running
+            procedure_name,
+            self._session_maker,
+            self._procedure_running,
+            self._thread_pool,
         )
 
 
 class BoundProcedure(Procedure):
     def __init__(
-        self, name: str, session_maker: ExperimentSessionMaker, lock: threading.Lock
+        self,
+        name: str,
+        session_maker: ExperimentSessionMaker,
+        lock: threading.Lock,
+        thread_pool: concurrent.futures.ThreadPoolExecutor,
     ):
         self._name = name
         self._session_maker = session_maker
         self._running = lock
+        self._thread_pool = thread_pool
+        self._sequence_future: Optional[concurrent.futures.Future] = None
+        self._sequences: list[PureSequencePath] = []
 
     def __enter__(self):
         self._running.acquire()
+        self._sequences.clear()
         return self
 
-    def run_sequence(self, sequence_path: PureSequencePath) -> None:
-        if not self._running.locked():
-            raise ProcedureNotRunningError(f"Procedure {self._name} is not running")
+    def is_active(self) -> bool:
+        return self._running.locked()
+
+    def is_running_sequence(self) -> bool:
+        return self._sequence_future is not None and not self._sequence_future.done()
+
+    def sequences(self) -> list[PureSequencePath]:
+        return self._sequences.copy()
+
+    def exception(self) -> Optional[Exception]:
+        if self._sequence_future is None:
+            return None
+        return self._sequence_future.exception()
+
+    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+        if not self.is_active():
+            raise ProcedureNotActiveError("The procedure is not active.")
+        if self.is_running_sequence():
+            raise SequenceAlreadyRunningError("A sequence is already running.")
+        self._sequence_future = self._thread_pool.submit(
+            self._run_sequence, sequence_path
+        )
+        self._sequences.append(sequence_path)
+
+    def _run_sequence(self, sequence_path: PureSequencePath) -> None:
+        time.sleep(5)
         raise NotImplementedError
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._running.release()
 
 
-class ProcedureNotRunningError(RuntimeError):
+class SequenceAlreadyRunningError(RuntimeError):
+    pass
+
+
+class ProcedureNotActiveError(RuntimeError):
     pass

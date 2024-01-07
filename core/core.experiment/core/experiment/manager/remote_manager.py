@@ -22,17 +22,41 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
 
 
 class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
-    _exposed_ = ("run_sequence", "__enter__", "__exit__")
+    _exposed_ = (
+        "__enter__",
+        "__exit__",
+        "is_active",
+        "is_running_sequence",
+        "sequences",
+        "exception",
+        "start_sequence",
+        "run_sequence",
+    )
     _method_to_typeid_ = {"__enter__": "ProcedureProxy"}
-
-    def run_sequence(self, sequence_path: PureSequencePath) -> None:
-        return self._callmethod("run_sequence", (sequence_path,))
 
     def __enter__(self):
         return self._callmethod("__enter__", ())
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._callmethod("__exit__", (None, exc_val, None))
+
+    def is_active(self) -> bool:
+        return self._callmethod("is_active", ())
+
+    def is_running_sequence(self) -> bool:
+        return self._callmethod("is_running_sequence", ())
+
+    def sequences(self) -> list[PureSequencePath]:
+        return self._callmethod("sequences", ())
+
+    def exception(self) -> Optional[Exception]:
+        return self._callmethod("exception", ())
+
+    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+        return self._callmethod("start_sequence", (sequence_path,))
+
+    def run_sequence(self, sequence_path: PureSequencePath) -> None:
+        return self._callmethod("run_sequence", (sequence_path,))
 
 
 class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):
