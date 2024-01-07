@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import multiprocessing.managers
 import time
+import uuid
+from collections.abc import Set
 from typing import Optional
 
 from core.session import ExperimentSessionMaker
@@ -59,11 +61,13 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     def exception(self) -> Optional[Exception]:
         return self._callmethod("exception", ())
 
-    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+    def start_sequence(
+        self,
+        sequence_path: PureSequencePath,
+        device_configurations: Optional[Set[uuid.UUID]] = None,
+        constant_tables: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
         return self._callmethod("start_sequence", (sequence_path,))
-
-    def run_sequence(self, sequence_path: PureSequencePath) -> None:
-        return self._callmethod("run_sequence", (sequence_path,))
 
 
 class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):

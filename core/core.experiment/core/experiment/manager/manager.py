@@ -4,6 +4,8 @@ import abc
 import concurrent.futures
 import threading
 import time
+import uuid
+from collections.abc import Set
 from contextlib import AbstractContextManager
 from typing import Optional
 
@@ -68,7 +70,12 @@ class Procedure(AbstractContextManager, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+    def start_sequence(
+        self,
+        sequence_path: PureSequencePath,
+        device_configurations: Optional[Set[uuid.UUID]] = None,
+        constant_tables: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
         """Start running the sequence on the setup.
 
         This method returns immediately, and the sequence is launched in a separate
@@ -77,6 +84,15 @@ class Procedure(AbstractContextManager, abc.ABC):
         Exceptions that occur while running the sequence are not raised by this method,
         but can be retrieved with the `exception` method.
 
+        Args:
+            sequence_path: the path of the sequence to run.
+            device_configurations: the uuids of the device configurations to use for
+            running this sequence.
+            If None, this will default to the device configurations that are currently
+            in use.
+            constant_tables: the uuids of the constant tables to use for running this
+            sequence.
+            If None, this will default to the constant tables that are currently in use.
         Raises:
             ProcedureNotActiveError: if the procedure is not active.
             SequenceAlreadyRunningError: if a sequence is already running.
@@ -84,10 +100,17 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         raise NotImplementedError
 
-    def run_sequence(self, sequence_path: PureSequencePath) -> None:
+    def run_sequence(
+        self,
+        sequence_path: PureSequencePath,
+        device_configurations: Optional[Set[uuid.UUID]] = None,
+        constant_tables: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
         """Run a sequence on the setup.
 
         This method blocks until the sequence is finished.
+
+        Arguments are the same as :meth:`start_sequence`.
 
         Raises:
             ProcedureNotActiveError: if the procedure is not active.
@@ -95,7 +118,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(sequence_path)
+        self.start_sequence(sequence_path, device_configurations, constant_tables)
         if exception := self.exception():
             raise exception
 
@@ -178,7 +201,12 @@ class BoundProcedure(Procedure):
             return None
         return self._sequence_future.exception()
 
-    def start_sequence(self, sequence_path: PureSequencePath) -> None:
+    def start_sequence(
+        self,
+        sequence_path: PureSequencePath,
+        device_configurations: Optional[Set[uuid.UUID]] = None,
+        constant_tables: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
         if not self.is_active():
             raise ProcedureNotActiveError("The procedure is not active.")
         if self.is_running_sequence():
