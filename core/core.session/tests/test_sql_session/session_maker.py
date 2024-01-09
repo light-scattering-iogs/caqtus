@@ -4,6 +4,7 @@ from core.session import ExperimentSessionMaker
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
+    default_serializer,
 )
 
 
@@ -13,6 +14,6 @@ def get_session_maker() -> ExperimentSessionMaker:
 
     create_tables(engine)
 
-    session_maker = SQLExperimentSessionMaker(engine, {})
+    session_maker = SQLExperimentSessionMaker(engine, {}, default_serializer)
 
     return session_maker

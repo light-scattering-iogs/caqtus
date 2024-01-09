@@ -1,3 +1,3 @@
-from .timelane import TimeLane, TimeLanes
+from .timelane import TimeLane, TimeLanes, DigitalTimeLane
 
-__all__ = ["TimeLane", "TimeLanes"]
+__all__ = ["TimeLane", "TimeLanes", "DigitalTimeLane"]

@@ -13,7 +13,13 @@ class SQLIterationConfiguration(Base):
     __tablename__ = "iteration_configurations"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    iteration_type: Mapped[str] = mapped_column()
+    content = mapped_column(sqlalchemy.types.JSON)
+
+
+class SQLTimelanes(Base):
+    __tablename__ = "timelanes"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     content = mapped_column(sqlalchemy.types.JSON)
 
 
@@ -25,12 +31,16 @@ class SQLSequence(Base):
         ForeignKey(SQLSequencePath.id_), unique=True, index=True
     )
     path: Mapped[SQLSequencePath] = relationship(back_populates="sequence")
+    state: Mapped[State]
 
     iteration_config_id: Mapped[int] = mapped_column(
         ForeignKey(SQLIterationConfiguration.id_), unique=True
     )
     iteration_config: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
-    state: Mapped[State]
+    time_lanes_config_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLTimelanes.id_), unique=True
+    )
+    time_lanes_config: Mapped[SQLTimelanes] = relationship(cascade="all")
     device_uuids: Mapped[set[SQLSequenceDeviceUUID]] = relationship(
         cascade="all, delete, delete-orphan"
     )

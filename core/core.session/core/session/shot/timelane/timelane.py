@@ -48,6 +48,11 @@ class TimeLane(MutableSequence[T], abc.ABC):
 
 
 @attrs.define
+class DigitalTimeLane(TimeLane[bool]):
+    pass
+
+
+@attrs.define
 class TimeLanes:
     step_names: list[str] = attrs.field(
         factory=list,

@@ -1,7 +1,7 @@
 import functools
 import uuid
 from collections.abc import Callable, Set
-from typing import TYPE_CHECKING, TypeAlias, TypeVar
+from typing import TYPE_CHECKING
 
 import attrs
 import sqlalchemy.orm
@@ -16,6 +16,7 @@ from ._sequence_table import (
     SQLIterationConfiguration,
     SQLSequenceDeviceUUID,
     SQLSequenceConstantTableUUID,
+    SQLTimelanes,
 )
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
@@ -34,24 +35,25 @@ from ..sequence_collection import (
     SequenceStats,
 )
 from ..sequence_collection import SequenceCollection
+from ..shot import TimeLane, DigitalTimeLane, TimeLanes
+from ...types.expression import Expression
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
 
-T = TypeVar("T", bound=IterationConfiguration)
 
-IterationConfigurationJSONSerializer: TypeAlias = Callable[
-    [IterationConfiguration], tuple[str, serialization.JSON]
-]
-IterationConfigurationJSONConstructor: TypeAlias = Callable[
-    [str, serialization.JSON], IterationConfiguration
-]
+@attrs.define
+class SequenceSerializer:
+    iteration_serializer: Callable[[IterationConfiguration], serialization.JSON]
+    iteration_constructor: Callable[[serialization.JSON], IterationConfiguration]
+    time_lane_serializer: Callable[[TimeLane], serialization.JSON]
+    time_lane_constructor: Callable[[serialization.JSON], TimeLane]
 
 
 @functools.singledispatch
 def default_iteration_configuration_serializer(
     iteration_configuration: IterationConfiguration,
-) -> tuple[str, serialization.JSON]:
+) -> serialization.JSON:
     raise TypeError(
         f"Cannot serialize iteration configuration of type "
         f"{type(iteration_configuration)}"
@@ -62,26 +64,59 @@ def default_iteration_configuration_serializer(
 def _(
     iteration_configuration: StepsConfiguration,
 ):
-    return (
-        "steps",
-        serialization.to_json(iteration_configuration, StepsConfiguration),
-    )
+    content = serialization.converters["json"].unstructure(iteration_configuration)
+    content["type"] = "steps"
+    return content
 
 
 def default_iteration_configuration_constructor(
-    iteration_type: str, iteration_content: serialization.JSON
+    iteration_content: serialization.JSON,
 ) -> IterationConfiguration:
+    iteration_type = iteration_content.pop("type")
     if iteration_type == "steps":
-        return serialization.from_json(iteration_content, StepsConfiguration)
+        return serialization.converters["json"].structure(
+            iteration_content, StepsConfiguration
+        )
     else:
         raise ValueError(f"Unknown iteration type {iteration_type}")
+
+
+@functools.singledispatch
+def default_time_lane_serializer(time_lane: TimeLane) -> serialization.JSON:
+    raise TypeError(f"Cannot serialize time lane of type {type(time_lane)}")
+
+
+@default_time_lane_serializer.register
+def _(time_lane: DigitalTimeLane):
+    content = serialization.converters["json"].unstructure(time_lane, TimeLane)
+    content["type"] = "digital"
+    return content
+
+
+def default_time_lane_constructor(
+    time_lane_content: serialization.JSON,
+) -> TimeLane:
+    time_lane_type = time_lane_content.pop("type")
+    if time_lane_type == "digital":
+        return serialization.converters["json"].structure(
+            time_lane_content, DigitalTimeLane
+        )
+    else:
+        raise ValueError(f"Unknown time lane type {time_lane_type}")
+
+
+default_sequence_serializer = SequenceSerializer(
+    iteration_serializer=default_iteration_configuration_serializer,
+    iteration_constructor=default_iteration_configuration_constructor,
+    time_lane_serializer=default_time_lane_serializer,
+    time_lane_constructor=default_time_lane_constructor,
+)
 
 
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
-    iteration_config_serializer: IterationConfigurationJSONSerializer
-    iteration_config_constructor: IterationConfigurationJSONConstructor
+    serializer: SequenceSerializer
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         if path.is_root():
@@ -104,8 +139,7 @@ class SQLSequenceCollection(SequenceCollection):
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
         sequence_model = unwrap(self._query_sequence_model(sequence))
-        return self.iteration_config_constructor(
-            sequence_model.iteration_config.iteration_type,
+        return self.serializer.iteration_constructor(
             sequence_model.iteration_config.content,
         )
 
@@ -115,27 +149,30 @@ class SQLSequenceCollection(SequenceCollection):
         sequence_model = unwrap(self._query_sequence_model(sequence.path))
         if not sequence_model.state.is_editable():
             raise SequenceNotEditableError(sequence.path)
-        iteration_type, iteration_content = self.iteration_config_serializer(
+        iteration_content = self.serializer.iteration_serializer(
             iteration_configuration
         )
-        sequence_model.iteration_config.iteration_type = iteration_type
         sequence_model.iteration_config.content = iteration_content
 
     def create(
-        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+        self,
+        path: PureSequencePath,
+        iteration_configuration: IterationConfiguration,
+        time_lanes: TimeLanes,
     ) -> Sequence:
         self.parent_session.paths.create_path(path)
         if unwrap(self.is_sequence(path)):
             raise PathIsSequenceError(path)
         if unwrap(self.parent_session.paths.get_children(path)):
             raise PathHasChildrenError(path)
-        iteration_type, iteration_content = self.iteration_config_serializer(
+        iteration_content = self.serializer.iteration_serializer(
             iteration_configuration
         )
         new_sequence = SQLSequence(
             path=unwrap(self._query_path_model(path)),
-            iteration_config=SQLIterationConfiguration(
-                iteration_type=iteration_type, content=iteration_content
+            iteration_config=SQLIterationConfiguration(content=iteration_content),
+            time_lanes_config=SQLTimelanes(
+                content=self.serialize_time_lanes(time_lanes)
             ),
             state=State.DRAFT,
             device_uuids=set(),
@@ -143,6 +180,20 @@ class SQLSequenceCollection(SequenceCollection):
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(BoundSequencePath(path, self.parent_session))
+
+    def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        return dict(
+            step_names=serialization.converters["json"].unstructure(
+                time_lanes.step_names, list[str]
+            ),
+            step_durations=serialization.converters["json"].unstructure(
+                time_lanes.step_durations, list[Expression]
+            ),
+            lanes={
+                lane: self.serializer.time_lane_serializer(time_lane)
+                for lane, time_lane in time_lanes.lanes.items()
+            },
+        )
 
     def get_state(
         self, path: PureSequencePath

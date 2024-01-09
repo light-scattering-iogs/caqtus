@@ -1,27 +1,14 @@
 import pytest
-import sqlalchemy
 
 from core.session import ExperimentSession
 from core.session.sequence.iteration_configuration import VariableDeclaration
-from core.session.sql import (
-    SQLExperimentSessionMaker,
-    create_tables,
-)
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
+from .session_maker import get_session_maker
 
 
 def create_empty_session() -> ExperimentSession:
-    url = "sqlite:///:memory:"
-    engine = sqlalchemy.create_engine(url)
-
-    create_tables(engine)
-
-    session_maker = SQLExperimentSessionMaker(
-        engine,
-        {},
-    )
-    return session_maker()
+    return get_session_maker()()
 
 
 @pytest.fixture(scope="function")

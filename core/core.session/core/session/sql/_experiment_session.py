@@ -1,8 +1,9 @@
 from typing import Mapping
 
+import attrs
 import sqlalchemy.orm
-from attrs import define
 
+from ._constant_table_collection import SQLConstantTableCollection
 from ._device_configuration_collection import (
     SQLDeviceConfigurationCollection,
     DeviceConfigurationSerializer,
@@ -10,17 +11,26 @@ from ._device_configuration_collection import (
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
-    IterationConfigurationJSONSerializer,
-    IterationConfigurationJSONConstructor,
+    SequenceSerializer,
+    default_sequence_serializer,
 )
-from ._constant_table_collection import SQLConstantTableCollection
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )
 
 
-@define(init=False)
+@attrs.define
+class Serializer:
+    sequence_serializer: SequenceSerializer
+
+
+default_serializer = Serializer(
+    sequence_serializer=default_sequence_serializer,
+)
+
+
+@attrs.define(init=False)
 class SQLExperimentSession(ExperimentSession):
     paths: SQLPathHierarchy
     sequence_collection: SQLSequenceCollection
@@ -34,8 +44,7 @@ class SQLExperimentSession(ExperimentSession):
         self,
         session: sqlalchemy.orm.Session,
         device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
-        iteration_config_serializer: IterationConfigurationJSONSerializer,
-        iteration_config_constructor: IterationConfigurationJSONConstructor,
+        serializer: Serializer,
         *args,
         **kwargs,
     ):
@@ -51,8 +60,7 @@ class SQLExperimentSession(ExperimentSession):
         self.paths = SQLPathHierarchy(parent_session=self)
         self.sequence_collection = SQLSequenceCollection(
             parent_session=self,
-            iteration_config_serializer=iteration_config_serializer,
-            iteration_config_constructor=iteration_config_constructor,
+            serializer=serializer.sequence_serializer,
         )
         self.device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self,

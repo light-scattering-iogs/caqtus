@@ -13,6 +13,7 @@ from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence
 from .sequence.iteration_configuration import IterationConfiguration
 from .sequence.state import State
+from .shot import TimeLanes
 
 
 class PathIsSequenceError(PathError):
@@ -78,7 +79,10 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def create(
-        self, path: PureSequencePath, iteration_configuration: IterationConfiguration
+        self,
+        path: PureSequencePath,
+        iteration_configuration: IterationConfiguration,
+        time_lanes: TimeLanes,
     ) -> Sequence:
         raise NotImplementedError
 
