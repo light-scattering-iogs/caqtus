@@ -39,15 +39,6 @@ class Sequence:
         else:
             return False
 
-    def set_iteration_configuration(
-        self, iteration_configuration: IterationConfiguration
-    ) -> None:
-        """Set the iteration configuration of the sequence."""
-
-        self.session.sequence_collection.set_iteration_configuration(
-            self, iteration_configuration
-        )
-
     def get_iteration_configuration(self) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""
 
