@@ -13,6 +13,7 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
 )
 from core.session.sequence_collection import PathIsSequenceError
+from core.session.shot import TimeLanes
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
@@ -28,6 +29,12 @@ DEFAULT_ITERATION_CONFIG = StepsConfiguration(
             sub_steps=[ExecuteShot()],
         ),
     ]
+)
+
+DEFAULT_TIME_LANES = TimeLanes(
+    step_names=["step 0"],
+    step_durations=[Expression("...")],
+    lanes={},
 )
 
 
@@ -98,7 +105,9 @@ class EditablePathHierarchyView(PathHierarchyView):
             new_path = path / text
             with self.session_maker() as session:
                 session.sequence_collection.create(
-                    new_path, copy.deepcopy(DEFAULT_ITERATION_CONFIG)
+                    new_path,
+                    copy.deepcopy(DEFAULT_ITERATION_CONFIG),
+                    copy.deepcopy(DEFAULT_TIME_LANES),
                 )
 
     def delete(self, path: PureSequencePath):
