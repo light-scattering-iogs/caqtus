@@ -6,6 +6,7 @@ import attrs
 
 from .iteration_configuration import IterationConfiguration
 from ..path import BoundSequencePath
+from ..shot import TimeLanes
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -43,6 +44,11 @@ class Sequence:
         """Return the iteration configuration of the sequence."""
 
         return self.session.sequence_collection.get_iteration_configuration(self.path)
+
+    def get_time_lanes(self) -> TimeLanes:
+        """Return the time lanes that define how a shot is run for this sequence."""
+
+        return self.session.sequence_collection.get_time_lanes(self.path)
 
     # def get_config(self, experiment_session: ExperimentSession) -> SequenceConfig:
     #     """Return the configuration of the sequence.

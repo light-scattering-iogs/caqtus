@@ -195,6 +195,24 @@ class SQLSequenceCollection(SequenceCollection):
             },
         )
 
+    def construct_time_lanes(self, time_lanes_content: serialization.JSON) -> TimeLanes:
+        return TimeLanes(
+            step_names=serialization.converters["json"].structure(
+                time_lanes_content["step_names"], list[str]
+            ),
+            step_durations=serialization.converters["json"].structure(
+                time_lanes_content["step_durations"], list[Expression]
+            ),
+            lanes={
+                lane: self.serializer.time_lane_constructor(time_lane_content)
+                for lane, time_lane_content in time_lanes_content["lanes"].items()
+            },
+        )
+
+    def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
+        sequence_model = unwrap(self._query_sequence_model(sequence_path))
+        return self.construct_time_lanes(sequence_model.time_lanes_config.content)
+
     def get_state(
         self, path: PureSequencePath
     ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:

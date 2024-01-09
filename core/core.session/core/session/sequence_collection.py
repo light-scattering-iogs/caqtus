@@ -72,6 +72,12 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
+        """Return the time lanes that define how a shot is run for this sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def set_iteration_configuration(
         self, sequence: Sequence, iteration_configuration: IterationConfiguration
     ) -> None:

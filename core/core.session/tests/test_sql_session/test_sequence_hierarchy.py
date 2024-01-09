@@ -130,3 +130,4 @@ def test_iteration_save(
             sequence, new_steps_configuration
         )
         assert sequence.get_iteration_configuration() == new_steps_configuration
+        assert sequence.get_time_lanes() == time_lanes
