@@ -100,10 +100,11 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
+        print(self.columnCount())
 
-    @abc.abstractmethod
-    def get_lane_model_type[L](self, lane: L) -> type[TimeLaneModel[L]]:
-        raise NotImplementedError
+    # @abc.abstractmethod
+    # def get_lane_model_type[L](self, lane: L) -> type[TimeLaneModel[L]]:
+    #     raise NotImplementedError
 
     def get_timelanes(self) -> TimeLanes:
         return TimeLanes(

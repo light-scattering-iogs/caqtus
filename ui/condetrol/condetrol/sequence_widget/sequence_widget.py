@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import contextlib
 from typing import Optional
 
-from PyQt6.QtCore import pyqtSignal, QThread, QTimer, QObject
+from PyQt6.QtCore import pyqtSignal, QThread, QTimer
 from PyQt6.QtWidgets import QWidget
 
 from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
@@ -18,6 +17,7 @@ from core.session.sequence_collection import (
 from waiting_widget import run_with_wip_widget
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..sequence_iteration_editors import create_default_editor
+from ..timelanes_editor import TimeLanesEditor
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
@@ -37,6 +37,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         with self.session_maker() as session:
             sequence = Sequence(BoundSequencePath(self.sequence_path, session))
             iteration_config = sequence.get_iteration_configuration()
+            time_lanes = sequence.get_time_lanes()
             stats = unwrap(session.sequence_collection.get_stats(self.sequence_path))
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(
@@ -45,7 +46,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.apply_state(stats.state)
         self.tabWidget.clear()
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
-        self.tabWidget.addTab(QWidget(), "Shot")
+        self.time_lanes_editor = TimeLanesEditor(self)
+        self.time_lanes_editor.set_time_lanes(time_lanes)
+        self.tabWidget.addTab(self.time_lanes_editor, "Shot")
 
         self.state_watcher_thread = self.StateWatcherThread(self)
 
