@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Optional
+from typing import Optional, Protocol, Any
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -66,10 +66,22 @@ class TimeStepDurationModel(QAbstractListModel):
             return self._durations[index.row()].body
 
 
-class TimeLaneModel[L: TimeLane](QAbstractListModel, qabc.QABC):
+class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     @abc.abstractmethod
     def __init__(self, name: str, parent: Optional[QObject] = None):
         super().__init__(parent)
+        self._name = name
+
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+    ):
+        if orientation == Qt.Orientation.Horizontal:
+            return self._name
+        elif orientation == Qt.Orientation.Vertical:
+            return section
 
     @abc.abstractmethod
     def set_lane(self, lane: L) -> None:
@@ -79,18 +91,30 @@ class TimeLaneModel[L: TimeLane](QAbstractListModel, qabc.QABC):
     def get_lane(self) -> L:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def set_display_options(self, options: O) -> None:
+        raise NotImplementedError
+
+
+class LaneModelFactory(Protocol):
+    def __call__[L: TimeLane](self, lane: L) -> type[TimeLaneModel[L, Any]]:
+        ...
+
 
 class TimeLanesModel(QAbstractTableModel, qabc.QABC):
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(
+        self, lane_model_factory: LaneModelFactory, parent: Optional[QObject] = None
+    ):
         super().__init__(parent)
         self._step_names_model = TimeStepNameModel(self)
         self._step_durations_model = TimeStepDurationModel(self)
         self._lane_models: list[TimeLaneModel] = []
+        self._lane_model_factory = lane_model_factory
 
     def set_timelanes(self, timelanes: TimeLanes):
         new_models = []
         for name, lane in timelanes.lanes.items():
-            lane_model = self.get_lane_model_type(lane)(name, self)
+            lane_model = self._lane_model_factory(lane)(name, self)
             lane_model.set_lane(lane)
             new_models.append(lane_model)
 
@@ -100,7 +124,6 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
-        print(self.columnCount())
 
     # @abc.abstractmethod
     # def get_lane_model_type[L](self, lane: L) -> type[TimeLaneModel[L]]:
