@@ -1,0 +1,35 @@
+import copy
+from typing import Optional
+
+from PyQt6.QtCore import QObject, QModelIndex, Qt
+
+from core.session.shot import DigitalTimeLane
+from .model import TimeLaneModel
+
+
+class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
+    def __init__(self, name: str, parent: Optional[QObject] = None):
+        super().__init__(name, parent)
+        self._lane = DigitalTimeLane()
+
+    def set_lane(self, lane: DigitalTimeLane) -> None:
+        self.beginResetModel()
+        self._lane = copy.deepcopy(lane)
+        self.endResetModel()
+
+    def get_lane(self) -> DigitalTimeLane:
+        return copy.deepcopy(self._lane)
+
+    def set_display_options(self, options) -> None:
+        pass
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()):
+        return len(self._lane)
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            return self._lane[index.row()]
+        else:
+            return None

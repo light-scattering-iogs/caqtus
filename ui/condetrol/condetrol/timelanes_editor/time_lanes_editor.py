@@ -3,8 +3,9 @@ from typing import Optional
 from PyQt6.QtCore import pyqtSignal, QObject
 from PyQt6.QtWidgets import QTableView
 
-from condetrol.timelanes_editor.model import TimeLanesModel
 from core.session.shot import TimeLanes
+from .default_lane_model_factory import default_lane_model_factory
+from .model import TimeLanesModel
 
 
 class TimeLanesEditor(QTableView):
@@ -13,7 +14,7 @@ class TimeLanesEditor(QTableView):
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._read_only: bool = False
-        self._model = TimeLanesModel(self)
+        self._model = TimeLanesModel(default_lane_model_factory, self)
         self.setModel(self._model)
 
     def get_time_lanes(self) -> TimeLanes:

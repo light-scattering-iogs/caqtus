@@ -1,6 +1,7 @@
 import abc
 import copy
-from typing import Optional, Protocol, Any
+from collections.abc import Callable
+from typing import Optional, Any
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -46,7 +47,7 @@ class TimeStepDurationModel(QAbstractListModel):
         super().__init__(parent)
         self._durations: list[Expression] = []
 
-    def set_duration(self, durations: list[Expression]):
+    def set_durations(self, durations: list[Expression]):
         self.beginResetModel()
         self._durations = copy.deepcopy(durations)
         self.endResetModel()
@@ -84,6 +85,16 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
             return section
 
     @abc.abstractmethod
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def data(
+        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+    ):
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def set_lane(self, lane: L) -> None:
         raise NotImplementedError
 
@@ -96,9 +107,7 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         raise NotImplementedError
 
 
-class LaneModelFactory(Protocol):
-    def __call__[L: TimeLane](self, lane: L) -> type[TimeLaneModel[L, Any]]:
-        ...
+type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
 class TimeLanesModel(QAbstractTableModel, qabc.QABC):
@@ -120,20 +129,39 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
 
         self.beginResetModel()
         self._step_names_model.set_names(timelanes.step_names)
-        self._step_durations_model.set_duration(timelanes.step_durations)
+        self._step_durations_model.set_durations(timelanes.step_durations)
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
 
-    # @abc.abstractmethod
-    # def get_lane_model_type[L](self, lane: L) -> type[TimeLaneModel[L]]:
-    #     raise NotImplementedError
+    def insert_timelane(self, index: int, name: str, timelane: TimeLane):
+        if not (0 <= index <= len(self._lane_models)):
+            raise IndexError(f"Index {index} is out of range")
+        if len(timelane) != self.columnCount():
+            raise ValueError(
+                f"Length of timelane ({len(timelane)}) does not match "
+                f"number of columns ({self.columnCount()})"
+            )
+        already_used_names = {
+            model.headerData(0, Qt.Orientation.Horizontal)
+            for model in self._lane_models
+        }
+        if name in already_used_names:
+            raise ValueError(f"Name {name} is already used")
+        lane_model = self._lane_model_factory(timelane)(name, self)
+        lane_model.set_lane(timelane)
+        self.beginInsertRows(QModelIndex(), index, index)
+        self._lane_models.insert(index, lane_model)
+        self.endInsertRows()
 
     def get_timelanes(self) -> TimeLanes:
         return TimeLanes(
             step_names=self._step_names_model.get_names(),
             step_durations=self._step_durations_model.get_duration(),
-            lanes={name: lane.get_lane() for name, lane in self._lane_models.items()},
+            lanes={
+                model.headerData(0, Qt.Orientation.Horizontal): model.get_lane()
+                for model in self._lane_models
+            },
         )
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
