@@ -41,6 +41,22 @@ class TimeStepNameModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._names[index.row()]
 
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        if not index.isValid():
+            return False
+        if role == Qt.ItemDataRole.EditRole:
+            if not isinstance(value, str):
+                raise TypeError(f"Expected str, got {type(value)}")
+            self._names[index.row()] = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
 
 class TimeStepDurationModel(QAbstractListModel):
     def __init__(self, parent: Optional[QObject] = None):
@@ -65,6 +81,22 @@ class TimeStepDurationModel(QAbstractListModel):
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._durations[index.row()].body
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        if not index.isValid():
+            return False
+        if role == Qt.ItemDataRole.EditRole:
+            if not isinstance(value, str):
+                raise TypeError(f"Expected str, got {type(value)}")
+            self._durations[index.row()].body = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
 
 class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
@@ -178,6 +210,20 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         if not index.isValid():
             return None
         return self._map_to_source(index).data(role)
+
+    def setData(self, index, value, role: Qt.ItemDataRole = Qt.ItemDataRole.EditRole):
+        if not index.isValid():
+            return False
+        mapped_index = self._map_to_source(index)
+        if mapped_index.model().setData(mapped_index, value, role):
+            self.dataChanged.emit(index, index)
+            return True
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        mapped_index = self._map_to_source(index)
+        return mapped_index.model().flags(mapped_index)
 
     def headerData(
         self,
