@@ -175,11 +175,6 @@ def normalize_index(index: int, length: int) -> int:
     return index
 
 
-@attrs.define(eq=False, repr=False)
-class DigitalTimeLane(TimeLane[bool | Expression]):
-    pass
-
-
 @attrs.define
 class TimeLanes:
     step_names: list[str] = attrs.field(
