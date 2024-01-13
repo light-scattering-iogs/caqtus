@@ -59,11 +59,14 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         before_length = index - start
         after_length = stop - index - 1
         previous_value = self.get_value(step)
-        self._spanned_values[step] = (value, 1)
+        insert_index = step
         if before_length > 0:
-            self._spanned_values.insert(step, (previous_value, before_length))
+            self._spanned_values.insert(insert_index, (previous_value, before_length))
+            insert_index += 1
+        self._spanned_values[insert_index] = (value, 1)
+        insert_index += 1
         if after_length > 0:
-            self._spanned_values.insert(step + 2, (previous_value, after_length))
+            self._spanned_values.insert(insert_index, (previous_value, after_length))
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def __delitem__(self, key):
@@ -76,7 +79,21 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         del self.values[index]
 
     def insert(self, index: int, value: T):
-        self.values.insert(index, value)
+        index = normalize_index(index, len(self))
+        step = find_containing_step(self._bounds, index)
+        start, stop = self.get_bounds(step)
+        before_length = index - start
+        after_length = stop - index
+        previous_value = self.get_value(step)
+        insert_index = step
+        if before_length > 0:
+            self._spanned_values.insert(insert_index, (previous_value, before_length))
+            insert_index += 1
+        self._spanned_values[insert_index] = (value, 1)
+        insert_index += 1
+        if after_length > 0:
+            self._spanned_values.insert(insert_index, (previous_value, after_length))
+        self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def __repr__(self):
         return f"{type(self).__name__}({self._spanned_values!r})"
