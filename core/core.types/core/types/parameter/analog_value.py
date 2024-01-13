@@ -1,17 +1,14 @@
-from numbers import Real
 from typing import Any, Optional, TypeGuard
 
-import numpy as np
+from ..units import Quantity, Unit, DimensionalityError
 
-from ..units import Quantity, Unit, DimensionalityError, dimensionless
-
-AnalogValue = Real | Quantity
+AnalogValue = float | Quantity
 
 
 def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
     """Returns True if the value is an analog value, False otherwise."""
 
-    return isinstance(value, (Real, Quantity))
+    return isinstance(value, (float, Quantity))
 
 
 def is_quantity(value: Any) -> TypeGuard[Quantity]:
@@ -28,24 +25,7 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     return None
 
 
-def get_magnitude(value: Quantity) -> Real | np.ndarray:
-    """Returns the magnitude of the value."""
-
-    return value.magnitude
-
-
-def convert_to_unit(value: Quantity, unit: Unit | str) -> Quantity:
-    """Convert a value to the given unit."""
-
-    try:
-        return value.to(unit)
-    except DimensionalityError as error:
-        raise ValueError(
-            f"Cannot convert {value} to unit {unit} because of dimensionality"
-        ) from error
-
-
-def magnitude_in_unit(value: AnalogValue, unit: Optional[Unit]) -> Real:
+def magnitude_in_unit(value: AnalogValue, unit: Optional[Unit | str]) -> float:
     """Return the magnitude of a value in the given unit."""
 
     if is_quantity(value):
@@ -58,7 +38,7 @@ def magnitude_in_unit(value: AnalogValue, unit: Optional[Unit]) -> Real:
         return value
 
 
-def add_unit(magnitude: Real, unit: Optional[Unit]) -> AnalogValue:
+def add_unit(magnitude: float, unit: Optional[Unit]) -> AnalogValue:
     """Add a unit to a magnitude."""
 
     if unit is None:

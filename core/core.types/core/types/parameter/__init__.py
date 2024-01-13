@@ -2,8 +2,6 @@ from .analog_value import (
     AnalogValue,
     is_analog_value,
     is_quantity,
-    get_magnitude,
-    convert_to_unit,
     add_unit,
     get_unit,
     magnitude_in_unit,
@@ -17,8 +15,6 @@ __all__ = [
     "Parameter",
     "is_parameter",
     "is_quantity",
-    "get_magnitude",
-    "convert_to_unit",
     "get_unit",
     "magnitude_in_unit",
 ]
