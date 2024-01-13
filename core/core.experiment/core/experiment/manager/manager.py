@@ -10,8 +10,8 @@ from typing import Optional
 
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
+from core.session.sequence.iteration_configuration import StepsConfiguration
 from ..sequence_runner import SequenceManager, StepSequenceRunner
-from ...session.sequence.iteration_configuration import StepsConfiguration
 
 
 class ExperimentManager(abc.ABC):
@@ -223,6 +223,10 @@ class BoundProcedure(Procedure):
         )
         self._sequences.append(sequence_path)
 
+    def wait_until_sequence_finished(self):
+        if self.is_running_sequence():
+            self._sequence_future.result()
+
     def _run_sequence(
         self,
         sequence_path: PureSequencePath,
@@ -278,6 +282,7 @@ class BoundProcedure(Procedure):
         return constant_tables
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.wait_until_sequence_finished()
         self._running.release()
 
 
