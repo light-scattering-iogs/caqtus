@@ -30,6 +30,8 @@ class TimeLanesEditor(QTableView):
         self.verticalHeader().customContextMenuRequested.connect(
             self.show_lanes_context_menu
         )
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_cell_context_menu)
 
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
@@ -85,3 +87,16 @@ class TimeLanesEditor(QTableView):
         else:
             return
         menu.exec(self.verticalHeader().mapToGlobal(pos))
+
+    def show_cell_context_menu(self, pos):
+        index = self.indexAt(pos)
+        cell_actions = self._model.get_cell_context_actions(index)
+        if not cell_actions:
+            return
+        menu = QMenu(self)
+        for action in cell_actions:
+            if isinstance(action, QAction):
+                menu.addAction(action)
+            elif isinstance(action, QMenu):
+                menu.addMenu(action)
+        menu.exec(self.mapToGlobal(pos))

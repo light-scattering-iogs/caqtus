@@ -48,7 +48,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
 
 @attrs.define
-class DigitalTimeLane(TimeLane[bool]):
+class DigitalTimeLane(TimeLane[bool | Expression]):
     pass
 
 

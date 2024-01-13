@@ -1,9 +1,12 @@
 import copy
-from typing import Optional, Any
+from typing import Optional, Any, assert_never
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMenu, QWidget
 
 from core.session.shot import DigitalTimeLane
+from core.types.expression import Expression
 from .model import TimeLaneModel
 
 
@@ -30,7 +33,13 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            return self._lane[index.row()]
+            value = self._lane[index.row()]
+            if isinstance(value, bool):
+                return value
+            elif isinstance(value, Expression):
+                return str(value)
+            else:
+                assert_never(value)
         else:
             return None
 
@@ -40,11 +49,16 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
-            if not isinstance(value, bool):
-                raise TypeError(f"Expected bool, got {type(value)}")
-            self._lane[index.row()] = value
-            self.dataChanged.emit(index, index)
-            return True
+            if isinstance(value, bool):
+                self._lane[index.row()] = value
+                self.dataChanged.emit(index, index)
+                return True
+            elif isinstance(value, str):
+                self._lane[index.row()] = Expression(value)
+                self.dataChanged.emit(index, index)
+                return True
+            else:
+                raise TypeError(f"Invalid type for value: {type(value)}")
         return False
 
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
@@ -62,3 +76,29 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
         del self._lane[row]
         self.endRemoveRows()
         return True
+
+    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
+        if not index.isValid():
+            return []
+        cell_type_menu = QMenu("Cell type")
+        value = self._lane[index.row()]
+        bool_action = cell_type_menu.addAction("on/off")
+        if isinstance(value, bool):
+            bool_action.setCheckable(True)
+            bool_action.setChecked(True)
+        else:
+            bool_action.triggered.connect(
+                lambda: self.setData(index, False, Qt.ItemDataRole.EditRole)
+            )
+        expr_action = cell_type_menu.addAction("expression")
+        if isinstance(value, Expression):
+            expr_action.setCheckable(True)
+            expr_action.setChecked(True)
+        else:
+            expr_action.triggered.connect(
+                lambda: self.setData(
+                    index, str(Expression("...")), Qt.ItemDataRole.EditRole
+                )
+            )
+
+        return [cell_type_menu]

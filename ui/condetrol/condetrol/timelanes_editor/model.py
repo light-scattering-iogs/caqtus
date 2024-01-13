@@ -10,6 +10,8 @@ from PyQt6.QtCore import (
     QAbstractListModel,
     Qt,
 )
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMenu, QWidget
 
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
@@ -188,6 +190,9 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         raise NotImplementedError
 
+    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
+        return []
+
 
 type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
 
@@ -323,6 +328,14 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self.beginRemoveRows(parent, row, row)
         del self._lane_models[row - 2]
         self.endRemoveRows()
+
+    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
+        if not index.isValid():
+            return []
+        if index.row() >= 2:
+            return self._lane_models[index.row() - 2].get_cell_context_actions(
+                self._map_to_source(index)
+            )
 
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()
