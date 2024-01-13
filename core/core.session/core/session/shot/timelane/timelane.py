@@ -30,6 +30,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             raise IndexError(f"Index out of bounds: {index}")
         return self._get_bounds(find_containing_step(self._bounds, index))
 
+    def values(self) -> Iterable[T]:
+        return (value for value, _ in self._spanned_values)
+
+    def bounds(self) -> Iterable[tuple[int, int]]:
+        return zip(self._bounds[:-1], self._bounds[1:])
+
     def _get_step(self, index: int) -> int:
         return find_containing_step(self._bounds, index)
 
