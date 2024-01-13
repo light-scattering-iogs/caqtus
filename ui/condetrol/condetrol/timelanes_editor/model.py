@@ -317,6 +317,13 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self.endRemoveColumns()
         return True
 
+    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (2 <= row < self.rowCount()):
+            return False
+        self.beginRemoveRows(parent, row, row)
+        del self._lane_models[row - 2]
+        self.endRemoveRows()
+
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()
         assert self.hasIndex(index.row(), index.column())

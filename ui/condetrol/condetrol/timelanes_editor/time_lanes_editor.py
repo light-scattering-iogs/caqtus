@@ -24,6 +24,12 @@ class TimeLanesEditor(QTableView):
         self.horizontalHeader().customContextMenuRequested.connect(
             self.show_steps_context_menu
         )
+        self.verticalHeader().setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.verticalHeader().customContextMenuRequested.connect(
+            self.show_lanes_context_menu
+        )
 
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
@@ -58,10 +64,24 @@ class TimeLanesEditor(QTableView):
             add_step_after_action.triggered.connect(
                 lambda: self._model.insertColumn(index + 1, QModelIndex())
             )
-
-            remove_step_action = QAction("Remove")
-            menu.addAction(remove_step_action)
-            remove_step_action.triggered.connect(
-                lambda: self._model.removeColumn(index, QModelIndex())
-            )
+            if self.model().columnCount() > 1:
+                remove_step_action = QAction("Remove")
+                menu.addAction(remove_step_action)
+                remove_step_action.triggered.connect(
+                    lambda: self._model.removeColumn(index, QModelIndex())
+                )
         menu.exec(self.horizontalHeader().mapToGlobal(pos))
+
+    def show_lanes_context_menu(self, pos):
+        menu = QMenu(self.verticalHeader())
+
+        index = self.verticalHeader().logicalIndexAt(pos.y())
+        if 2 <= index < self.model().rowCount():
+            remove_lane_action = QAction("Remove")
+            menu.addAction(remove_lane_action)
+            remove_lane_action.triggered.connect(
+                lambda: self._model.removeRow(index, QModelIndex())
+            )
+        else:
+            return
+        menu.exec(self.verticalHeader().mapToGlobal(pos))
