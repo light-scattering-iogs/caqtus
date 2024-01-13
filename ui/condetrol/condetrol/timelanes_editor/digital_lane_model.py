@@ -3,7 +3,7 @@ from typing import Optional, Any, assert_never
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu, QWidget
+from PyQt6.QtWidgets import QMenu
 
 from core.session.shot import DigitalTimeLane
 from core.types.expression import Expression
@@ -13,7 +13,7 @@ from .model import TimeLaneModel
 class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         super().__init__(name, parent)
-        self._lane = DigitalTimeLane()
+        self._lane = DigitalTimeLane([(False, 1)])
 
     def set_lane(self, lane: DigitalTimeLane) -> None:
         self.beginResetModel()

@@ -44,6 +44,8 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     def get_value_at_index(self, index: int) -> T:
         index = normalize_index(index, len(self))
+        if not (0 <= index < len(self)):
+            raise IndexError(f"Index out of bounds: {index}")
         return self.get_value(find_containing_step(self._bounds, index))
 
     def __setitem__(self, key, value):
@@ -54,6 +56,8 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     def set_value_at_index(self, index: int, value: T):
         index = normalize_index(index, len(self))
+        if not (0 <= index < len(self)):
+            raise IndexError(f"Index out of bounds: {index}")
         step = find_containing_step(self._bounds, index)
         start, stop = self.get_bounds(step)
         before_length = index - start
@@ -80,6 +84,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     def insert(self, index: int, value: T):
         index = normalize_index(index, len(self))
+        if index == len(self):
+            self._spanned_values.append((value, 1))
+            self._bounds.append(self._bounds[-1] + 1)
+            return
+        if not (0 <= index < len(self)):
+            raise IndexError(f"Index out of bounds: {index}")
         step = find_containing_step(self._bounds, index)
         start, stop = self.get_bounds(step)
         before_length = index - start
@@ -118,8 +128,6 @@ def find_containing_step(bounds: Sequence[int], index: int) -> int:
 def normalize_index(index: int, length: int) -> int:
     if index < 0:
         index = length + index
-    if not (0 <= index < length):
-        raise IndexError(f"Index {index} out of bounds for length {length}")
     return index
 
 
