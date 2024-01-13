@@ -38,9 +38,6 @@ class DigitalLaneCompiler:
         Args:
             variables: The variables to use for evaluating expressions.
             time_step: The time step in nanoseconds to discretize the lane.
-
-        Returns:
-
         """
 
         step_durations = evaluate_step_durations(self.steps, variables)
