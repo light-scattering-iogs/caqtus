@@ -34,7 +34,7 @@ class VariableNamespace(Generic[T]):
 
     def __or__(
         self, other: Mapping[DottedVariableName, T]
-    ) -> Mapping[DottedVariableName, T]:
+    ) -> dict[DottedVariableName, T]:
         if isinstance(other, Mapping):
             new = self._dict.clone()
             for key, value in other.items():

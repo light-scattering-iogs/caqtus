@@ -1,5 +1,5 @@
-from .analog_time_lane import AnalogTimeLane
+from .analog_time_lane import AnalogTimeLane, Ramp
 from .digital_time_lane import DigitalTimeLane
 from .timelane import TimeLane, TimeLanes
 
-__all__ = ["TimeLane", "TimeLanes", "DigitalTimeLane", "AnalogTimeLane"]
+__all__ = ["TimeLane", "TimeLanes", "DigitalTimeLane", "AnalogTimeLane", "Ramp"]
