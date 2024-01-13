@@ -241,7 +241,8 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
     ):
         if orientation == Qt.Orientation.Horizontal:
-            return f"Step {section}"
+            if role == Qt.ItemDataRole.DisplayRole:
+                return f"Step {section}"
         elif orientation == Qt.Orientation.Vertical:
             if section == 0:
                 if role == Qt.ItemDataRole.DisplayRole:
