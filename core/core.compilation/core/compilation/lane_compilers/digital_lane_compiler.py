@@ -3,31 +3,48 @@ from collections.abc import Sequence
 from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from core.session.shot.timelane import DigitalTimeLane
 from core.types.expression import Expression
-from ..timing import number_ticks, ns
+from .evaluate_step_durations import evaluate_step_durations
+from .timing import get_step_bounds
+from .timing import number_ticks, ns
 from ..unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 
 class DigitalLaneCompiler:
-    def __init__(self, lane: DigitalTimeLane):
+    def __init__(
+        self,
+        lane: DigitalTimeLane,
+        step_names: Sequence[str],
+        step_durations: Sequence[Expression],
+    ):
+        if len(lane) != len(step_names):
+            raise ValueError(
+                f"Number of steps in lane ({len(lane)}) does not match number of"
+                f" step names ({len(step_names)})"
+            )
+        if len(lane) != len(step_durations):
+            raise ValueError(
+                f"Number of steps in lane ({len(lane)}) does not match number of"
+                f" step durations ({len(step_durations)})"
+            )
         self.lane = lane
+        self.steps = list(zip(step_names, step_durations))
 
     def compile(
-        self, step_bounds: Sequence[float], variables: VariableNamespace, time_step: int
+        self, variables: VariableNamespace, time_step: int
     ) -> SequencerInstruction[bool]:
         """Compiles the lane into a sequencer instruction.
 
         Args:
-            step_bounds: Contains the start time and stop time of each step.
-            It must have one more element than the number of steps in the lane.
-            step_bounds[i] is the start time of step i and step_bounds[i+1] is the stop
-            time of step i.
             variables: The variables to use for evaluating expressions.
             time_step: The time step in nanoseconds to discretize the lane.
 
         Returns:
 
         """
+
+        step_durations = evaluate_step_durations(self.steps, variables)
+        step_bounds = get_step_bounds(step_durations)
 
         instructions = []
         for cell_value, (start, stop) in zip(self.lane.values(), self.lane.bounds()):

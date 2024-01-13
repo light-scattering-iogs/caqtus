@@ -35,7 +35,7 @@ def number_ticks(
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
 
 
-def get_step_starts(step_durations: Iterable[float]) -> list[float]:
+def get_step_bounds(step_durations: Iterable[float]) -> list[float]:
     """Returns the time at which each step starts from their durations.
 
     For an iterable of step durations [d_0, d_1, ..., d_n], the step starts are
