@@ -128,6 +128,15 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        raise NotImplementedError
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
+    @abc.abstractmethod
     def set_lane(self, lane: L) -> None:
         raise NotImplementedError
 

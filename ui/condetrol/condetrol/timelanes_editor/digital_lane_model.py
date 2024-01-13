@@ -1,5 +1,5 @@
 import copy
-from typing import Optional
+from typing import Optional, Any
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt
 
@@ -33,3 +33,16 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
             return self._lane[index.row()]
         else:
             return None
+
+    def setData(
+        self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
+    ):
+        if not index.isValid():
+            return False
+        if role == Qt.ItemDataRole.EditRole:
+            if not isinstance(value, bool):
+                raise TypeError(f"Expected bool, got {type(value)}")
+            self._lane[index.row()] = value
+            self.dataChanged.emit(index, index)
+            return True
+        return False
