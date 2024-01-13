@@ -46,3 +46,19 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
             self.dataChanged.emit(index, index)
             return True
         return False
+
+    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row <= len(self._lane)):
+            return False
+        self.beginInsertRows(parent, row, row)
+        self._lane.insert(row, False)
+        self.endInsertRows()
+        return True
+
+    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row < len(self._lane)):
+            return False
+        self.beginRemoveRows(parent, row, row)
+        del self._lane[row]
+        self.endRemoveRows()
+        return True

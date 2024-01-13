@@ -57,6 +57,22 @@ class TimeStepNameModel(QAbstractListModel):
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
+    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row <= self.rowCount()):
+            return False
+        self.beginInsertRows(parent, row, row)
+        self._names.insert(row, f"Step {row}")
+        self.endInsertRows()
+        return True
+
+    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row < self.rowCount()):
+            return False
+        self.beginRemoveRows(parent, row, row)
+        del self._names[row]
+        self.endRemoveRows()
+        return True
+
 
 class TimeStepDurationModel(QAbstractListModel):
     def __init__(self, parent: Optional[QObject] = None):
@@ -97,6 +113,22 @@ class TimeStepDurationModel(QAbstractListModel):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+
+    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row <= self.rowCount()):
+            return False
+        self.beginInsertRows(parent, row, row)
+        self._durations.insert(row, Expression("..."))
+        self.endInsertRows()
+        return True
+
+    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= row < self.rowCount()):
+            return False
+        self.beginRemoveRows(parent, row, row)
+        del self._durations[row]
+        self.endRemoveRows()
+        return True
 
 
 class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
@@ -146,6 +178,14 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
 
     @abc.abstractmethod
     def set_display_options(self, options: O) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         raise NotImplementedError
 
 
@@ -254,6 +294,28 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
                 return self._lane_models[section - 2].headerData(
                     0, Qt.Orientation.Horizontal, role
                 )
+
+    def insertColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= column <= self.columnCount()):
+            return False
+        self.beginInsertColumns(parent, column, column)
+        self._step_names_model.insertRow(column)
+        self._step_durations_model.insertRow(column)
+        for lane_model in self._lane_models:
+            lane_model.insertRow(column)
+        self.endInsertColumns()
+        return True
+
+    def removeColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
+        if not (0 <= column < self.columnCount()):
+            return False
+        self.beginRemoveColumns(parent, column, column)
+        self._step_names_model.removeRow(column)
+        self._step_durations_model.removeRow(column)
+        for lane_model in self._lane_models:
+            lane_model.removeRow(column)
+        self.endRemoveColumns()
+        return True
 
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()
