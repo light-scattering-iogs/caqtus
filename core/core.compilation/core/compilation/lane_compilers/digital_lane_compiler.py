@@ -3,9 +3,9 @@ from collections.abc import Sequence
 from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from core.session.shot.timelane import DigitalTimeLane
 from core.types.expression import Expression
-from .timing import number_ticks, ns
-from .unit_namespace import units
-from .variable_namespace import VariableNamespace
+from ..timing import number_ticks, ns
+from ..unit_namespace import units
+from ..variable_namespace import VariableNamespace
 
 
 class DigitalLaneCompiler:

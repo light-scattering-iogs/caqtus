@@ -1,4 +1,5 @@
-from core.compilation import DigitalLaneCompiler, VariableNamespace
+from core.compilation.lane_compilers import DigitalLaneCompiler
+from core.compilation import VariableNamespace
 from core.device.sequencer.instructions import Pattern
 from core.session.shot import DigitalTimeLane
 from core.types.expression import Expression
