@@ -9,9 +9,10 @@ from PyQt6.QtCore import (
     QModelIndex,
     QAbstractListModel,
     Qt,
+    QSize,
 )
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu, QWidget
+from PyQt6.QtWidgets import QMenu
 
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
@@ -193,6 +194,10 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         return []
 
+    @abc.abstractmethod
+    def span(self, index) -> QSize:
+        raise NotImplementedError
+
 
 type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
 
@@ -336,6 +341,15 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             return self._lane_models[index.row() - 2].get_cell_context_actions(
                 self._map_to_source(index)
             )
+
+    def span(self, index):
+        if not index.isValid():
+            return QSize(1, 1)
+        if index.row() >= 2:
+            mapped_index = self._map_to_source(index)
+            span = self._lane_models[index.row() - 2].span(mapped_index)
+            return QSize(span.height(), span.width())
+        return QSize(1, 1)
 
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()

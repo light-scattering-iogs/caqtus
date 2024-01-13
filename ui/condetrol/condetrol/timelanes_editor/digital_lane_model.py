@@ -1,7 +1,7 @@
 import copy
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt
+from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 
@@ -49,12 +49,13 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
+            start, stop = self._lane.get_bounds(index.row())
             if isinstance(value, bool):
-                self._lane[index.row()] = value
+                self._lane[start:stop] = value
                 self.dataChanged.emit(index, index)
                 return True
             elif isinstance(value, str):
-                self._lane[index.row()] = Expression(value)
+                self._lane[start:stop] = Expression(value)
                 self.dataChanged.emit(index, index)
                 return True
             else:
@@ -102,3 +103,10 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
             )
 
         return [cell_type_menu]
+
+    def span(self, index) -> QSize:
+        start, stop = self._lane.get_bounds(index.row())
+        if index.row() == start:
+            return QSize(1, stop - start)
+        else:
+            return QSize(1, 0)

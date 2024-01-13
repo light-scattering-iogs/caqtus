@@ -42,3 +42,29 @@ def test_4():
 
     lane.insert(1, False)
     assert lane == [True, False], repr(lane)
+
+
+def test_5():
+    lane = DigitalTimeLane([(True, 5)])
+
+    lane[0:2] = False
+    assert lane == [False, False, True, True, True], repr(lane)
+
+    lane = DigitalTimeLane([(True, 5)])
+
+    lane[3:5] = False
+    assert lane == [True, True, True, False, False], repr(lane)
+
+
+def test_6():
+    lane = DigitalTimeLane([(True, 5)])
+
+    lane[1:3] = False
+    assert lane == [True, False, False, True, True], repr(lane)
+
+
+def test_7():
+    lane = DigitalTimeLane([(True, 3), (False, 2)])
+
+    lane[1:4] = False
+    assert lane == [True, False, False, False, False], repr(lane)

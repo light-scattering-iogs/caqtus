@@ -21,23 +21,36 @@ class TimeLanesEditor(QTableView):
         self.horizontalHeader().setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
-        self.horizontalHeader().customContextMenuRequested.connect(
-            self.show_steps_context_menu
-        )
         self.verticalHeader().setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.setup_connections()
+
+    def setup_connections(self):
+        self.horizontalHeader().customContextMenuRequested.connect(
+            self.show_steps_context_menu
         )
         self.verticalHeader().customContextMenuRequested.connect(
             self.show_lanes_context_menu
         )
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_cell_context_menu)
+        self._model.modelReset.connect(self.update_spans)
 
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
 
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         self._model.set_timelanes(time_lanes)
+
+    def update_spans(self):
+        self.clearSpans()
+        for row in range(self._model.rowCount()):
+            for column in range(self._model.columnCount()):
+                index = self._model.index(row, column, QModelIndex())
+                span = self._model.span(index)
+                if span.width() > 1 or span.height() > 1:
+                    self.setSpan(row, column, span.height(), span.width())
 
     def set_read_only(self, read_only: bool) -> None:
         raise NotImplementedError
