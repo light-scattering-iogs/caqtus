@@ -1,6 +1,6 @@
 import abc
 from collections.abc import MutableSequence
-from typing import TypeVar
+from typing import TypeVar, Generic
 
 import attrs
 
@@ -10,7 +10,7 @@ T = TypeVar("T")
 
 
 @attrs.define
-class TimeLane(MutableSequence[T], abc.ABC):
+class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     values: list[T] = attrs.field(factory=list)
 
     def __len__(self):

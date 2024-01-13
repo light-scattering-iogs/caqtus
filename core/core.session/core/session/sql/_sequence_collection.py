@@ -213,6 +213,14 @@ class SQLSequenceCollection(SequenceCollection):
         sequence_model = unwrap(self._query_sequence_model(sequence_path))
         return self.construct_time_lanes(sequence_model.time_lanes_config.content)
 
+    def set_time_lanes(
+        self, sequence_path: PureSequencePath, time_lanes: TimeLanes
+    ) -> None:
+        sequence_model = unwrap(self._query_sequence_model(sequence_path))
+        if not sequence_model.state.is_editable():
+            raise SequenceNotEditableError(sequence_path)
+        sequence_model.time_lanes_config.content = self.serialize_time_lanes(time_lanes)
+
     def get_state(
         self, path: PureSequencePath
     ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
