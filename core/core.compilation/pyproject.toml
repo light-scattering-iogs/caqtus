@@ -7,10 +7,16 @@ readme = "README.md"
 packages = [{include = "core"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
+
+python-benedict = "^0.33.1"
+
 core-device = {path = "../core.device", develop = true}
 core-session = {path = "../core.session", develop = true}
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.4"
 
 [build-system]
 requires = ["poetry-core"]
