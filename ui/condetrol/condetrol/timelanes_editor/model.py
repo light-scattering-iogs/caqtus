@@ -79,10 +79,11 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         orientation: Qt.Orientation,
         role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
     ):
-        if orientation == Qt.Orientation.Horizontal:
-            return self._name
-        elif orientation == Qt.Orientation.Vertical:
-            return section
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return self._name
+            elif orientation == Qt.Orientation.Vertical:
+                return section
 
     @abc.abstractmethod
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
