@@ -1,12 +1,17 @@
 from collections.abc import Sequence
-from typing import assert_never
+from typing import assert_never, Optional
 
 import numpy as np
 
 from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from core.session.shot.timelane import AnalogTimeLane, Ramp
 from core.types.expression import Expression
-from core.types.parameter import AnalogValue, is_analog_value, is_quantity
+from core.types.parameter import (
+    AnalogValue,
+    is_analog_value,
+    is_quantity,
+    magnitude_in_unit,
+)
 from core.types.units import ureg
 from core.types.variable_name import DottedVariableName
 from .evaluate_step_durations import evaluate_step_durations
@@ -21,6 +26,7 @@ class AnalogLaneCompiler:
         lane: AnalogTimeLane,
         step_names: Sequence[str],
         step_durations: Sequence[Expression],
+        unit: Optional[str],
     ):
         if len(lane) != len(step_names):
             raise ValueError(
@@ -34,6 +40,7 @@ class AnalogLaneCompiler:
             )
         self.lane = lane
         self.steps = list(zip(step_names, step_durations))
+        self.unit = unit
 
     def compile(
         self, variables: VariableNamespace, time_step: int
@@ -55,7 +62,9 @@ class AnalogLaneCompiler:
                     time_step,
                 )
             elif isinstance(cell_value, Ramp):
-                instruction = self._compile_ramp_cell(cell_start_index, cell_stop_index)
+                instruction = self._compile_ramp_cell(
+                    cell_start_index, cell_stop_index, step_bounds, variables, time_step
+                )
             else:
                 assert_never(cell_value)
             instructions.append(instruction)
@@ -71,7 +80,8 @@ class AnalogLaneCompiler:
     ) -> SequencerInstruction[float]:
         length = number_ticks(start, stop, time_step * ns)
         if is_constant(expression):
-            value = self._evaluate_expression(expression, variables)
+            evaluated = self._evaluate_expression(expression, variables)
+            value = magnitude_in_unit(evaluated, self.unit)
             result = Pattern([float(value)]) * length
         else:
             variables = variables | {
@@ -80,7 +90,8 @@ class AnalogLaneCompiler:
                 )
                 * ureg.s
             }
-            result = Pattern(self._evaluate_expression(expression, variables))
+            evaluated = self._evaluate_expression(expression, variables)
+            result = Pattern(magnitude_in_unit(evaluated, self.unit))
         if not len(result) == length:
             raise ValueError(
                 f"Expression <{expression}> evaluates to an array of length"
@@ -119,7 +130,7 @@ class AnalogLaneCompiler:
         t = get_time_array(t0, t1, time_step)
         result = (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
 
-        return Pattern(result)
+        return Pattern(magnitude_in_unit(result, self.unit))
 
     @staticmethod
     def _evaluate_expression(expression: Expression, variables) -> AnalogValue:
