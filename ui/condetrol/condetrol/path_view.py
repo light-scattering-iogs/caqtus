@@ -3,7 +3,7 @@ import functools
 
 from PyQt6 import QtCore
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit
+from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit, QApplication
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
@@ -17,7 +17,6 @@ from core.session.shot import TimeLanes
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
-from .app_name import APPLICATION_NAME
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[
@@ -127,7 +126,7 @@ class EditablePathHierarchyView(PathHierarchyView):
                     except PathIsSequenceError:
                         QMessageBox.critical(
                             self,
-                            APPLICATION_NAME,
+                            QApplication.instance().applicationName(),
                             f"The path '{path}' contains sequences and therefore "
                             f"cannot be deleted",
                         )
@@ -136,7 +135,8 @@ class EditablePathHierarchyView(PathHierarchyView):
         """Show a popup box to ask  a question."""
 
         message_box = QMessageBox(self)
-        message_box.setWindowTitle(APPLICATION_NAME)
+        app = QApplication.instance()
+        message_box.setWindowTitle(app.applicationName())
         message_box.setText(message)
         message_box.setInformativeText("Are you really sure you want to continue?")
         message_box.setStandardButtons(
