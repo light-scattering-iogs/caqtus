@@ -1,11 +1,12 @@
-from typing import Any, Optional, TypeGuard, overload
+from numbers import Real
+from typing import Any, Optional, TypeGuard, overload, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ..units import Quantity, Unit, dimensionless
 
-AnalogValue = float | NDArray[np.floating] | Quantity
+AnalogValue = Real | NDArray[np.floating] | Quantity
 
 
 def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
@@ -13,7 +14,7 @@ def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
 
     if isinstance(value, np.ndarray):
         return issubclass(value.dtype.type, np.floating)
-    elif isinstance(value, (float, Quantity)):
+    elif isinstance(value, (Real, Quantity)):
         return True
     return False
 
@@ -32,8 +33,11 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     return None
 
 
+_R = TypeVar("_R", bound=Real)
+
+
 @overload
-def magnitude_in_unit(value: float, unit: None) -> float:
+def magnitude_in_unit(value: _R, unit: None) -> _R:
     ...
 
 
@@ -43,9 +47,7 @@ def magnitude_in_unit(value: NDArray[np.floating], unit: None) -> NDArray[np.flo
 
 
 @overload
-def magnitude_in_unit(
-    value: Quantity, unit: Unit | str
-) -> float | NDArray[np.floating]:
+def magnitude_in_unit(value: Quantity, unit: Unit | str) -> Real | NDArray[np.floating]:
     ...
 
 
@@ -65,7 +67,7 @@ def magnitude_in_unit(value, unit):
 
 
 def add_unit(
-    magnitude: float | NDArray[np.floating], unit: Optional[Unit]
+    magnitude: Real | NDArray[np.floating], unit: Optional[Unit]
 ) -> AnalogValue:
     """Add a unit to a magnitude."""
 
