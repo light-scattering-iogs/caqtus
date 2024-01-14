@@ -141,17 +141,18 @@ class AnalogLaneCompiler:
             | units
             | {DottedVariableName("t"): previous_step_duration * ureg.s}
         )
-        previous_value = self._evaluate_expression(self.lane[start_index - 1], v)
-        if is_quantity(previous_value):
-            previous_value = previous_value.to_base_units()
+        ramp_start = self._evaluate_expression(self.lane[start_index - 1], v)
+        if is_quantity(ramp_start):
+            ramp_start = ramp_start.to_base_units()
 
         v = variables | units | {DottedVariableName("t"): 0.0 * ureg.s}
-        next_value = self._evaluate_expression(self.lane[stop_index], v)
-        if is_quantity(next_value):
-            next_value = next_value.to_base_units()
+        ramp_end = self._evaluate_expression(self.lane[stop_index], v)
+        if is_quantity(ramp_end):
+            ramp_end = ramp_end.to_base_units()
 
+        # Don't need to give units to t, because we'll be dividing by t1 - t0 anyway
         t = get_time_array(t0, t1, time_step)
-        result = (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
+        result = (t - t0) / (t1 - t0) * (ramp_end - ramp_start) + ramp_start
 
         return Pattern(magnitude_in_unit(result, self.unit), dtype=np.float64)
 
