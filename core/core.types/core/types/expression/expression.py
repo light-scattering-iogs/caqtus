@@ -1,7 +1,6 @@
 import ast
 import re
 from collections.abc import Mapping
-from copy import deepcopy
 from functools import cached_property
 from typing import Optional, Any
 
