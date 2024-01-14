@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import Protocol, Any
 
-from core.device import DeviceName, DeviceConfigurationAttrs
+from core.device import DeviceName, DeviceConfigurationAttrs, DeviceParameter
 from core.session.shot import TimeLanes
 from .variable_namespace import VariableNamespace
 
@@ -16,7 +16,7 @@ class ShotCompiler(Protocol):
 
     def compile_shot(
         self, shot_parameters: VariableNamespace
-    ) -> Mapping[DeviceName, Any]:
+    ) -> Mapping[DeviceName, Mapping[DeviceParameter, Any]]:
         ...
 
 
