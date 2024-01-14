@@ -72,10 +72,14 @@ class TimeLanesEditor(QTableView):
 
     def update_delegates(self):
         for row in range(self._model.rowCount()):
+            previous_delegate = self.itemDelegateForRow(row)
+            if previous_delegate:
+                previous_delegate.deleteLater()
             self.setItemDelegateForRow(row, None)
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             delegate = self.lane_delegate_factory(type(lane))
+            delegate.setParent(self)
             self.setItemDelegateForRow(row, delegate)
 
     def set_read_only(self, read_only: bool) -> None:
