@@ -171,12 +171,8 @@ class StepSequenceRunner:
     @run_step.register
     @wrap_error
     def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
-        print(context.variables)
-
+        self._sequence_manager.schedule_shot(context.variables)
         return context
-
-        # self._sequence_manager.schedule_shot(shot.name, context)
-        # return context.reset_history()
 
 
 def evaluate_arange_loop_parameters(
