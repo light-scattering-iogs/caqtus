@@ -21,6 +21,8 @@ from ..variable_namespace import VariableNamespace
 
 
 class AnalogLaneCompiler:
+    """Evaluates an analog time lane to a sequencer instruction."""
+
     def __init__(
         self,
         lane: AnalogTimeLane,
@@ -28,6 +30,18 @@ class AnalogLaneCompiler:
         step_durations: Sequence[Expression],
         unit: Optional[str],
     ):
+        """
+
+        Args:
+            lane: The lane to compile by replacing the expressions inside it when given
+            the variable values.
+            step_names: The names of the steps in the lane. Must be the same length as
+            the lane.
+            step_durations: The durations to be evaluated of the steps in the lane.
+            Must be the same length as the lane.
+            unit: The unit in which the sequencer instruction should be returned.
+            Can be None if the lane is dimensionless.
+        """
         if len(lane) != len(step_names):
             raise ValueError(
                 f"Number of steps in lane ({len(lane)}) does not match number of"
@@ -45,6 +59,15 @@ class AnalogLaneCompiler:
     def compile(
         self, variables: VariableNamespace, time_step: int
     ) -> SequencerInstruction[np.float64]:
+        """Compile the lane to a sequencer instruction.
+
+        This function discretizes the lane time and replaces the expressions in the
+        lane with the given variable values.
+        It also evaluates the ramps in the lane.
+        The sequencer instruction returned is the magnitude of the lane in the given
+        unit.
+        """
+
         step_durations = evaluate_step_durations(self.steps, variables)
         step_bounds = get_step_bounds(step_durations)
         instructions = []
