@@ -44,7 +44,7 @@ class AnalogLaneCompiler:
 
     def compile(
         self, variables: VariableNamespace, time_step: int
-    ) -> SequencerInstruction[AnalogValue]:
+    ) -> SequencerInstruction[np.float64]:
         step_durations = evaluate_step_durations(self.steps, variables)
         step_bounds = get_step_bounds(step_durations)
         instructions = []
@@ -77,12 +77,12 @@ class AnalogLaneCompiler:
         start: float,
         stop: float,
         time_step: int,
-    ) -> SequencerInstruction[float]:
+    ) -> SequencerInstruction[np.float64]:
         length = number_ticks(start, stop, time_step * ns)
         if is_constant(expression):
             evaluated = self._evaluate_expression(expression, variables)
             value = magnitude_in_unit(evaluated, self.unit)
-            result = Pattern([float(value)]) * length
+            result = Pattern([float(value)], dtype=np.float64) * length
         else:
             variables = variables | {
                 DottedVariableName("t"): (
@@ -91,7 +91,7 @@ class AnalogLaneCompiler:
                 * ureg.s
             }
             evaluated = self._evaluate_expression(expression, variables)
-            result = Pattern(magnitude_in_unit(evaluated, self.unit))
+            result = Pattern(magnitude_in_unit(evaluated, self.unit), dtype=np.float64)
         if not len(result) == length:
             raise ValueError(
                 f"Expression <{expression}> evaluates to an array of length"
@@ -106,7 +106,7 @@ class AnalogLaneCompiler:
         step_bounds: Sequence[float],
         variables,
         time_step: int,
-    ) -> SequencerInstruction[float]:
+    ) -> SequencerInstruction[np.float64]:
         t0 = step_bounds[start_index]
         t1 = step_bounds[stop_index]
         previous_step_duration = (
@@ -130,7 +130,7 @@ class AnalogLaneCompiler:
         t = get_time_array(t0, t1, time_step)
         result = (t - t0) / (t1 - t0) * (next_value - previous_value) + previous_value
 
-        return Pattern(magnitude_in_unit(result, self.unit))
+        return Pattern(magnitude_in_unit(result, self.unit), dtype=np.float64)
 
     @staticmethod
     def _evaluate_expression(expression: Expression, variables) -> AnalogValue:
