@@ -153,7 +153,9 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         return f"{type(self).__name__}({self._spanned_values!r})"
 
     def __eq__(self, other):
-        if isinstance(other, Sequence):
+        if isinstance(other, TimeLane):
+            return self._spanned_values == other._spanned_values
+        elif isinstance(other, Sequence):
             if len(self) != len(other):
                 return False
             return all(a == b for a, b in zip(self, other))
