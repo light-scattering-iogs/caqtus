@@ -48,6 +48,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
         self.time_lanes_editor = TimeLanesEditor(self)
         self.time_lanes_editor.set_time_lanes(time_lanes)
+        self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
         self.tabWidget.addTab(self.time_lanes_editor, "Shot")
 
         self.state_watcher_thread = self.StateWatcherThread(self)
@@ -82,6 +83,19 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.sequence_path
                 )
                 self.iteration_editor.set_iteration(iterations)
+
+    def on_time_lanes_changed(self):
+        time_lanes = self.time_lanes_editor.get_time_lanes()
+        with self.session_maker() as session:
+            try:
+                session.sequence_collection.set_time_lanes(
+                    self.sequence_path, time_lanes
+                )
+            except SequenceNotEditableError:
+                time_lanes = session.sequence_collection.get_time_lanes(
+                    self.sequence_path
+                )
+                self.time_lanes_editor.set_time_lanes(time_lanes)
 
     def apply_stats(self, stats: SequenceStats):
         self.apply_state(stats.state)

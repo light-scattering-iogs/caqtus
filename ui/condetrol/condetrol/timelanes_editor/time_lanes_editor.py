@@ -37,6 +37,13 @@ class TimeLanesEditor(QTableView):
         self.customContextMenuRequested.connect(self.show_cell_context_menu)
         self._model.modelReset.connect(self.update_spans)
 
+        self._model.dataChanged.connect(self.time_lanes_changed)
+        self._model.rowsInserted.connect(self.time_lanes_changed)
+        self._model.rowsRemoved.connect(self.time_lanes_changed)
+        self._model.columnsInserted.connect(self.time_lanes_changed)
+        self._model.columnsRemoved.connect(self.time_lanes_changed)
+        self._model.modelReset.connect(self.time_lanes_changed)
+
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
 
