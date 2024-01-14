@@ -88,7 +88,7 @@ def default_time_lane_serializer(time_lane: TimeLane) -> serialization.JSON:
 
 @default_time_lane_serializer.register
 def _(time_lane: DigitalTimeLane):
-    content = serialization.converters["json"].unstructure(time_lane, TimeLane)
+    content = serialization.converters["json"].unstructure(time_lane, DigitalTimeLane)
     content["type"] = "digital"
     return content
 
