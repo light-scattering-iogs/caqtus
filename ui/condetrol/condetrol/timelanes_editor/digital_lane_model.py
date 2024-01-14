@@ -2,7 +2,7 @@ import copy
 from typing import Optional, Any, assert_never
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QBrush
 from PyQt6.QtWidgets import QMenu
 
 from core.session.shot import DigitalTimeLane
@@ -14,6 +14,7 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         super().__init__(name, parent)
         self._lane = DigitalTimeLane([(False, 1)])
+        self._brush = QBrush(Qt.GlobalColor.blue)
 
     def set_lane(self, lane: DigitalTimeLane) -> None:
         self.beginResetModel()
@@ -32,14 +33,23 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            value = self._lane[index.row()]
+        value = self._lane[index.row()]
+        if role == Qt.ItemDataRole.DisplayRole:
             if isinstance(value, bool):
-                return value
+                return
             elif isinstance(value, Expression):
                 return str(value)
             else:
                 assert_never(value)
+        elif role == Qt.ItemDataRole.EditRole:
+            return value
+        elif role == Qt.ItemDataRole.BackgroundRole:
+            if isinstance(value, bool):
+                if value:
+                    return self._brush
+        elif role == Qt.ItemDataRole.ForegroundRole:
+            if isinstance(value, Expression):
+                return self._brush
         else:
             return None
 
@@ -54,8 +64,8 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
                 self._lane[start:stop] = value
                 self.dataChanged.emit(index, index)
                 return True
-            elif isinstance(value, str):
-                self._lane[start:stop] = Expression(value)
+            elif isinstance(value, Expression):
+                self._lane[start:stop] = value
                 self.dataChanged.emit(index, index)
                 return True
             else:
@@ -97,9 +107,7 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
             expr_action.setChecked(True)
         else:
             expr_action.triggered.connect(
-                lambda: self.setData(
-                    index, str(Expression("...")), Qt.ItemDataRole.EditRole
-                )
+                lambda: self.setData(index, Expression("..."), Qt.ItemDataRole.EditRole)
             )
 
         return [cell_type_menu]

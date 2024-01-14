@@ -2,11 +2,19 @@ from typing import Optional
 
 from PyQt6.QtCore import pyqtSignal, QObject, Qt, QModelIndex
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTableView, QMenu
+from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate
 
-from core.session.shot import TimeLanes
+from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 from .default_lane_model_factory import default_lane_model_factory
+from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel
+
+
+def lane_delegate_factory(lane_type: type[TimeLane]) -> QStyledItemDelegate:
+    if issubclass(lane_type, DigitalTimeLane):
+        return DigitalTimeLaneDelegate()
+    else:
+        raise NotImplementedError
 
 
 class TimeLanesEditor(QTableView):
@@ -16,6 +24,7 @@ class TimeLanesEditor(QTableView):
         super().__init__(parent)
         self._read_only: bool = False
         self._model = TimeLanesModel(default_lane_model_factory, self)
+        self.lane_delegate_factory = lane_delegate_factory
         self.setModel(self._model)
 
         self.horizontalHeader().setContextMenuPolicy(
@@ -39,10 +48,12 @@ class TimeLanesEditor(QTableView):
 
         self._model.dataChanged.connect(self.time_lanes_changed)
         self._model.rowsInserted.connect(self.time_lanes_changed)
+        self._model.rowsInserted.connect(self.update_delegates)
         self._model.rowsRemoved.connect(self.time_lanes_changed)
         self._model.columnsInserted.connect(self.time_lanes_changed)
         self._model.columnsRemoved.connect(self.time_lanes_changed)
         self._model.modelReset.connect(self.time_lanes_changed)
+        self._model.modelReset.connect(self.update_delegates)
 
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
@@ -58,6 +69,14 @@ class TimeLanesEditor(QTableView):
                 span = self._model.span(index)
                 if span.width() > 1 or span.height() > 1:
                     self.setSpan(row, column, span.height(), span.width())
+
+    def update_delegates(self):
+        for row in range(self._model.rowCount()):
+            self.setItemDelegateForRow(row, None)
+        for row in range(2, self._model.rowCount()):
+            lane = self._model.get_lane(row - 2)
+            delegate = self.lane_delegate_factory(type(lane))
+            self.setItemDelegateForRow(row, delegate)
 
     def set_read_only(self, read_only: bool) -> None:
         raise NotImplementedError

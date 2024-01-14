@@ -250,6 +250,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._lane_models.insert(index, lane_model)
         self.endInsertRows()
 
+    def get_lane(self, index: int) -> TimeLane:
+        return self._lane_models[index].get_lane()
+
     def get_timelanes(self) -> TimeLanes:
         return TimeLanes(
             step_names=self._step_names_model.get_names(),
