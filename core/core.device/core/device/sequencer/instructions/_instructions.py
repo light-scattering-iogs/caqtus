@@ -14,14 +14,13 @@ from typing import (
     overload,
     Optional,
     assert_never,
-    Self,
     Callable,
     TypeAlias,
+    Any,
 )
 
 import numpy
 import numpy as np
-from numpy.typing import DTypeLike
 
 from util.itertools import pairwise
 
@@ -29,16 +28,23 @@ Length = NewType("Length", int)
 Width = NewType("Width", int)
 Depth = NewType("Depth", int)
 
-_T = TypeVar("_T")
+_S = TypeVar("_S", covariant=True, bound=numpy.generic)
+_T = TypeVar("_T", covariant=True, bound=numpy.generic)
+_U = TypeVar("_U", covariant=True, bound=numpy.generic)
+
+Array1D = numpy.ndarray[Any, numpy.dtype[_T]]
 
 
 class _BaseInstruction(abc.ABC, Generic[_T]):
     """An immutable representation of instructions to output on a sequencer.
 
-    This represents a high-level series of instructions to output on a sequencer. Each instruction is a compact
-    representation of values to output at integer time steps. The length of the instruction is the number of time steps
-    it takes to output all the values. The width of the instruction is the number of channels that are output at each
-    time step.
+    This represents a high-level series of instructions to output on a sequencer.
+    Each instruction is a compact representation of values to output at integer time
+    steps.
+    The length of the instruction is the number of time steps it takes to output all
+    the values.
+    The width of the instruction is the number of channels that are output at each time
+    step.
     """
 
     @abc.abstractmethod
@@ -56,22 +62,22 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         ...
 
     @overload
-    def __getitem__(self, item: str) -> SequencerInstruction:
+    def __getitem__(self, item: str) -> SequencerInstruction[_S]:
         ...
 
     @abc.abstractmethod
-    def __getitem__(self, item: int | slice) -> _T | SequencerInstruction[_T]:
+    def __getitem__(self, item):
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
-    def dtype(self) -> numpy.dtype:
+    def dtype(self) -> numpy.dtype[_T]:
         """Returns the dtype of the instruction."""
 
         raise NotImplementedError
 
     @abc.abstractmethod
-    def as_type(self, dtype: numpy.dtype) -> SequencerInstruction:
+    def as_type(self, dtype: numpy.dtype[_S]) -> SequencerInstruction[_S]:
         """Returns a new instruction with the given dtype."""
 
         raise NotImplementedError
@@ -94,7 +100,7 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def to_pattern(self) -> Pattern:
+    def to_pattern(self) -> Pattern[_T]:
         """Returns a flattened pattern of the instruction."""
 
         raise NotImplementedError
@@ -114,7 +120,7 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         else:
             return NotImplemented
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> SequencerInstruction[_T]:
         if isinstance(other, int):
             if other < 0:
                 raise ValueError("Repetitions must be a positive integer")
@@ -130,11 +136,11 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         else:
             return NotImplemented
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> SequencerInstruction[_T]:
         return self.__mul__(other)
 
     @classmethod
-    def _create_pattern_without_copy(cls, array: np.array) -> Pattern:
+    def _create_pattern_without_copy(cls, array: Array1D[_S]) -> Pattern[_S]:
         array.setflags(write=False)
         pattern = Pattern.__new__(Pattern)
         pattern._pattern = array
@@ -142,13 +148,13 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         return pattern
 
     @abc.abstractmethod
-    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+    def merge_channels(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
         raise NotImplementedError
 
     @abc.abstractmethod
     def apply(
-        self, func: Callable[[numpy.ndarray], numpy.ndarray]
-    ) -> SequencerInstruction[_T]:
+        self, func: Callable[[Array1D[_T]], Array1D[_S]]
+    ) -> SequencerInstruction[_S]:
         raise NotImplementedError
 
 
@@ -156,7 +162,7 @@ class Pattern(_BaseInstruction[_T]):
     __slots__ = ("_pattern", "_length")
     """An instruction to output a pattern on a sequencer."""
 
-    def __init__(self, pattern, dtype: Optional[DTypeLike] = None):
+    def __init__(self, pattern, dtype: Optional[np.dtype[_T]] = None):
         self._pattern = numpy.array(pattern, dtype=dtype)
         self._pattern.setflags(write=False)
         self._length = Length(len(self._pattern))
@@ -178,7 +184,7 @@ class Pattern(_BaseInstruction[_T]):
             assert_never(item)
 
     @classmethod
-    def create_without_copy(cls, array: np.array) -> Pattern:
+    def create_without_copy(cls, array: Array1D[_S]) -> Pattern[_S]:
         array.setflags(write=False)
         pattern = cls.__new__(cls)
         pattern._pattern = array
@@ -186,10 +192,10 @@ class Pattern(_BaseInstruction[_T]):
         return pattern
 
     @property
-    def dtype(self) -> numpy.dtype:
+    def dtype(self) -> numpy.dtype[_T]:
         return self._pattern.dtype
 
-    def as_type(self, dtype: numpy.dtype) -> Self:
+    def as_type(self, dtype: numpy.dtype[_S]) -> Pattern[_S]:
         return self.create_without_copy(self._pattern.astype(dtype, copy=False))
 
     def __len__(self) -> Length:
@@ -207,7 +213,7 @@ class Pattern(_BaseInstruction[_T]):
     def depth(self) -> Depth:
         return Depth(0)
 
-    def to_pattern(self) -> Pattern:
+    def to_pattern(self) -> Pattern[_T]:
         return self
 
     def __eq__(self, other):
@@ -216,7 +222,7 @@ class Pattern(_BaseInstruction[_T]):
         else:
             return NotImplemented
 
-    def merge_channels(self, other: SequencerInstruction[_T]) -> Pattern:
+    def merge_channels(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         if self.dtype.fields is None:
@@ -235,16 +241,14 @@ class Pattern(_BaseInstruction[_T]):
             merged[name] = other_pattern._pattern[name]
         return self._create_pattern_without_copy(merged)
 
-    def apply(
-        self, func: Callable[[numpy.ndarray], numpy.ndarray]
-    ) -> SequencerInstruction[_T]:
+    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Pattern[_S]:
         result = func(self._pattern)
         if len(result) != len(self):
             raise ValueError("Function must return an array of the same length")
         return self._create_pattern_without_copy(result)
 
     @property
-    def array(self) -> np.ndarray:
+    def array(self) -> Array1D[_T]:
         return self._pattern
 
 
@@ -356,10 +360,10 @@ class Concatenate(_BaseInstruction[_T]):
         return Concatenate(*(instruction[field] for instruction in self._instructions))
 
     @property
-    def dtype(self) -> numpy.dtype:
+    def dtype(self) -> numpy.dtype[_T]:
         return self._instructions[0].dtype
 
-    def as_type(self, dtype: numpy.dtype) -> Self:
+    def as_type(self, dtype: numpy.dtype[_S]) -> Concatenate[_S]:
         return type(self)(
             *(instruction.as_type(dtype) for instruction in self._instructions)
         )
@@ -375,7 +379,7 @@ class Concatenate(_BaseInstruction[_T]):
     def depth(self) -> Depth:
         return Depth(max(instruction.depth for instruction in self._instructions) + 1)
 
-    def to_pattern(self) -> Pattern:
+    def to_pattern(self) -> Pattern[_T]:
         # noinspection PyProtectedMember
         new_array = numpy.concatenate(
             [instruction.to_pattern()._pattern for instruction in self._instructions],
@@ -390,7 +394,9 @@ class Concatenate(_BaseInstruction[_T]):
             return NotImplemented
 
     # noinspection PyProtectedMember
-    def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
+    def merge_channels(
+        self, other: SequencerInstruction[_S]
+    ) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         match other:
@@ -416,9 +422,7 @@ class Concatenate(_BaseInstruction[_T]):
             case _:
                 assert_never(other)
 
-    def apply(
-        self, func: Callable[[numpy.ndarray], numpy.ndarray]
-    ) -> SequencerInstruction[_T]:
+    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenate[_S]:
         return Concatenate(
             *(instruction.apply(func) for instruction in self._instructions)
         )
@@ -513,10 +517,10 @@ class Repeat(_BaseInstruction[_T]):
         return Repeat(self._repetitions, self._instruction[field])
 
     @property
-    def dtype(self) -> numpy.dtype:
+    def dtype(self) -> numpy.dtype[_T]:
         return self._instruction.dtype
 
-    def as_type(self, dtype: numpy.dtype) -> SequencerInstruction:
+    def as_type(self, dtype: numpy.dtype[_S]) -> Repeat[_S]:
         return type(self)(self._repetitions, self._instruction.as_type(dtype))
 
     @property
@@ -527,7 +531,7 @@ class Repeat(_BaseInstruction[_T]):
     def depth(self) -> Depth:
         return Depth(self._instruction.depth + 1)
 
-    def to_pattern(self) -> Pattern:
+    def to_pattern(self) -> Pattern[_T]:
         inner_pattern = self._instruction.to_pattern()
         # noinspection PyProtectedMember
         new_array = numpy.tile(inner_pattern._pattern, self._repetitions)
@@ -542,7 +546,9 @@ class Repeat(_BaseInstruction[_T]):
         else:
             return NotImplemented
 
-    def merge_channels(self, other: SequencerInstruction[_T]) -> SequencerInstruction:
+    def merge_channels(
+        self, other: SequencerInstruction[_S]
+    ) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         match other:
@@ -566,9 +572,7 @@ class Repeat(_BaseInstruction[_T]):
             case _:
                 assert_never(other)
 
-    def apply(
-        self, func: Callable[[numpy.ndarray], numpy.ndarray]
-    ) -> SequencerInstruction[_T]:
+    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Repeat[_S]:
         return Repeat(self._repetitions, self._instruction.apply(func))
 
 
