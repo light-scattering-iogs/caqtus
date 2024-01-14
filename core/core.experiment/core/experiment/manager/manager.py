@@ -16,7 +16,9 @@ from ..sequence_runner import SequenceManager, StepSequenceRunner
 
 class ExperimentManager(abc.ABC):
     @abc.abstractmethod
-    def create_procedure(self, procedure_name: str) -> Procedure:
+    def create_procedure(
+        self, procedure_name: str, acquisition_timeout: Optional[float] = None
+    ) -> Procedure:
         raise NotImplementedError
 
 
@@ -154,12 +156,15 @@ class BoundExperimentManager(ExperimentManager):
         with self._procedure_running:
             return self._thread_pool.__exit__(exc_type, exc_value, traceback)
 
-    def create_procedure(self, procedure_name: str) -> BoundProcedure:
+    def create_procedure(
+        self, procedure_name: str, acquisition_timeout: Optional[float] = None
+    ) -> BoundProcedure:
         return BoundProcedure(
             procedure_name,
             self._session_maker,
             self._procedure_running,
             self._thread_pool,
+            acquisition_timeout,
         )
 
 
@@ -178,6 +183,7 @@ class BoundProcedure(Procedure):
         session_maker: ExperimentSessionMaker,
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
+        acquisition_timeout: Optional[float] = None,
     ):
         self._name = name
         self._session_maker = session_maker
@@ -185,9 +191,14 @@ class BoundProcedure(Procedure):
         self._thread_pool = thread_pool
         self._sequence_future: Optional[concurrent.futures.Future] = None
         self._sequences: list[PureSequencePath] = []
+        self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self._name})"
 
     def __enter__(self):
-        self._running.acquire()
+        if not self._running.acquire(timeout=self._acquisition_timeout):
+            raise TimeoutError(f"Could not activate procedure <{self}>.")
         self._sequences.clear()
         return self
 

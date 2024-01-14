@@ -19,7 +19,9 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
         "create_procedure": "ProcedureProxy",
     }
 
-    def create_procedure(self, procedure_name: str) -> ProcedureProxy:
+    def create_procedure(
+        self, procedure_name: str, acquisition_timeout: Optional[float] = None
+    ) -> ProcedureProxy:
         return self._callmethod("create_procedure", (procedure_name,))  # type: ignore
 
 
