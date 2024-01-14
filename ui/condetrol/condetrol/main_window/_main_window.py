@@ -90,27 +90,23 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         except Exception as e:
             self.display_error("Failed to connect to experiment manager.", e)
             return
-        with experiment_manager.create_procedure(
-            "sequence launched from GUI"
-        ) as procedure:
-            try:
-                procedure.start_sequence(path)
-            except Exception as e:
-                self.display_error(
-                    f"An error occurred while starting the sequence {path}.", e
-                )
-            self._procedure_watcher_thread.set_procedure(procedure)
-            assert not self._procedure_watcher_thread.isRunning()
-            self._procedure_watcher_thread.start()
+        if self._procedure_watcher_thread.isRunning():
+            self.display_error(
+                "A sequence is already running.",
+                RuntimeError("A sequence is already running."),
+            )
+            return
+        procedure = experiment_manager.create_procedure(
+            "sequence launched from GUI", acquisition_timeout=1
+        )
+        self._procedure_watcher_thread.set_procedure(procedure)
+        self._procedure_watcher_thread.set_sequence(path)
 
-    def on_procedure_exception(self, procedure: Procedure):
-        exception = procedure.exception()
-        assert exception is not None
-        sequences = procedure.sequences()
-        assert sequences
-        last_sequence = sequences[-1]
+        self._procedure_watcher_thread.start()
+
+    def on_procedure_exception(self, exception: Exception):
         self.display_error(
-            f"An error occurred while running the sequence '{last_sequence}'.",
+            f"An error occurred while running a sequence.",
             exception,
         )
 
@@ -212,29 +208,42 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
 
 class ProcedureWatcherThread(QThread):
-    exception_occurred = pyqtSignal(Procedure)
+    exception_occurred = pyqtSignal(Exception)
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self._procedure: Optional[Procedure] = None
+        self._sequence: Optional[PureSequencePath] = None
 
     def set_procedure(self, procedure: Procedure):
         self._procedure = procedure
 
-    def run(self):
-        timer = QTimer()
+    def set_sequence(self, sequence: PureSequencePath):
+        self._sequence = sequence
 
+    def run(self):
         def watch():
             assert self._procedure is not None
-            if self._procedure.is_active():
+            if self._procedure.is_running_sequence():
                 return
             else:
-                if self._procedure.exception() is not None:
-                    self.exception_occurred.emit(self._procedure)
-                self._procedure = None
+                if (e := self._procedure.exception()) is not None:
+                    self.exception_occurred.emit(e)
                 self.quit()
 
+        timer = QTimer()
         timer.timeout.connect(watch)  # type: ignore
-        timer.start(50)
-        self.exec()
+        with self._procedure as procedure:
+            timer.start(50)
+            try:
+                procedure.start_sequence(self._sequence)
+            except Exception as e:
+                exception = RuntimeError(
+                    f"An error occurred while starting the sequence {self._sequence}."
+                )
+                exception.__cause__ = e
+                self.exception_occurred.emit(exception)
+            self.exec()
+        self._procedure = None
+        self._sequence = None
         timer.stop()
