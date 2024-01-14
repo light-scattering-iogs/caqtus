@@ -43,6 +43,8 @@ class TimeStepNameModel(QAbstractListModel):
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._names[index.row()]
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
@@ -100,6 +102,8 @@ class TimeStepDurationModel(QAbstractListModel):
             return None
         if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             return self._durations[index.row()].body
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid():
