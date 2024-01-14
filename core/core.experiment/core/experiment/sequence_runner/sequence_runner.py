@@ -4,6 +4,7 @@ from typing import assert_never, Any
 
 import numpy
 
+from core.compilation import units
 from core.session import ConstantTable
 from core.session.sequence.iteration_configuration import (
     Step,
@@ -24,7 +25,6 @@ from core.types.parameter.analog_value import add_unit
 from core.types.variable_name import DottedVariableName
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
-from ..unit_namespace import units
 
 
 def wrap_error(function: Callable[[Any, Step, StepContext], StepContext]):

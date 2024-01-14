@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Generic, TypeVar, Self
 
+from core.compilation import VariableNamespace
 from core.types.variable_name import DottedVariableName
-from ..variable_namespace import VariableNamespace
 
 T = TypeVar("T")
 
