@@ -3,6 +3,8 @@ from collections.abc import Set, Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
+from core.compilation import ShotCompilerFactory, ShotCompiler
+from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import PureSequencePath, ExperimentSessionMaker, ConstantTable
 from core.session.sequence import State
 
@@ -12,13 +14,17 @@ class SequenceManager(AbstractContextManager):
         self,
         sequence_path: PureSequencePath,
         session_maker: ExperimentSessionMaker,
+        shot_compiler_factory: ShotCompilerFactory,
         device_configurations_uuid: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuid: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence_path
+        self._shot_compiler_factory = shot_compiler_factory
 
         self.constant_tables: Mapping[str, ConstantTable]
+        self.device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
+        self._shot_compiler: ShotCompiler
 
         with self._session_maker() as session:
             if device_configurations_uuid is None:
@@ -63,10 +69,22 @@ class SequenceManager(AbstractContextManager):
                 )
                 for uuid_ in self._constant_tables_uuid
             }
+            self.device_configurations = {
+                session.device_configurations.get_device_name(
+                    uuid_
+                ): session.device_configurations.get_configuration(uuid_)
+                for uuid_ in self._device_configurations_uuid
+            }
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
             session.sequence_collection.set_state(self._sequence_path, state)
 
     def _prepare(self):
-        pass
+        with self._session_maker() as session:
+            shot_timelanes = session.sequence_collection.get_time_lanes(
+                self._sequence_path
+            )
+            self._shot_compiler = self._shot_compiler_factory(
+                shot_timelanes, self.device_configurations
+            )

@@ -9,6 +9,7 @@ from typing import Optional
 from core.session import ExperimentSessionMaker
 from core.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
+from ...compilation import ShotCompilerFactory
 
 experiment_manager: Optional[BoundExperimentManager] = None
 
@@ -91,10 +92,10 @@ def _exit_experiment_manager(exc_value) -> None:
 
 
 def _create_experiment_manager(
-    session_maker: ExperimentSessionMaker,
+    session_maker: ExperimentSessionMaker, shot_compiler_factory: ShotCompilerFactory
 ) -> None:
     global experiment_manager
-    experiment_manager = BoundExperimentManager(session_maker)
+    experiment_manager = BoundExperimentManager(session_maker, shot_compiler_factory)
 
 
 _MultiprocessingServerManager.register(
@@ -120,15 +121,19 @@ class RemoteExperimentManagerServer:
         address: tuple[str, int],
         authkey: bytes,
         session_maker: ExperimentSessionMaker,
+        shot_compiler_factory: ShotCompilerFactory,
     ):
         self._session_maker = session_maker
         self._multiprocessing_manager = _MultiprocessingServerManager(
             address=address, authkey=authkey
         )
+        self._shot_compiler_factory = shot_compiler_factory
 
     def __enter__(self):
         self._multiprocessing_manager.start()
-        self._multiprocessing_manager.create_experiment_manager(self._session_maker)
+        self._multiprocessing_manager.create_experiment_manager(
+            self._session_maker, self._shot_compiler_factory
+        )
         self._multiprocessing_manager.enter_experiment_manager()
         return self
 

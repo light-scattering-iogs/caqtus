@@ -8,6 +8,7 @@ from collections.abc import Set
 from contextlib import AbstractContextManager
 from typing import Optional
 
+from core.compilation import ShotCompilerFactory
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from core.session.sequence.iteration_configuration import StepsConfiguration
@@ -143,9 +144,14 @@ class Procedure(AbstractContextManager, abc.ABC):
 
 
 class BoundExperimentManager(ExperimentManager):
-    def __init__(self, session_maker: ExperimentSessionMaker):
+    def __init__(
+        self,
+        session_maker: ExperimentSessionMaker,
+        shot_compiler_factory: ShotCompilerFactory,
+    ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
+        self._shot_compiler_factory = shot_compiler_factory
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
     def __enter__(self):
@@ -164,6 +170,7 @@ class BoundExperimentManager(ExperimentManager):
             self._session_maker,
             self._procedure_running,
             self._thread_pool,
+            self._shot_compiler_factory,
             acquisition_timeout,
         )
 
@@ -183,6 +190,7 @@ class BoundProcedure(Procedure):
         session_maker: ExperimentSessionMaker,
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
+        shot_compiler_factory: ShotCompilerFactory,
         acquisition_timeout: Optional[float] = None,
     ):
         self._name = name
@@ -192,6 +200,7 @@ class BoundProcedure(Procedure):
         self._sequence_future: Optional[concurrent.futures.Future] = None
         self._sequences: list[PureSequencePath] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
+        self._shot_compiler_factory = shot_compiler_factory
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._name})"
@@ -252,6 +261,7 @@ class BoundProcedure(Procedure):
         with SequenceManager(
             sequence_path,
             self._session_maker,
+            self._shot_compiler_factory,
             device_configurations_uuids,
             constant_tables_uuids,
         ) as sequence_manager:
