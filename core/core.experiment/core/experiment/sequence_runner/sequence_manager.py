@@ -4,6 +4,7 @@ import concurrent.futures
 import contextlib
 import queue
 import threading
+import time
 import uuid
 from collections.abc import Set, Mapping
 from contextlib import AbstractContextManager
@@ -23,6 +24,16 @@ def nothing():
 
 
 class SequenceManager(AbstractContextManager):
+    """
+
+    Instances of this class run background tasks to compile and run shots for a given
+    sequence.
+    It will properly manage the state of the sequence, meaning it will set it to
+    PREPARING while acquiring the necessary resources, RUNNING while running the shots,
+    FINISHED when the sequence is done normally, CRASHED if an error occurs, and
+    INTERRUPTED if the sequence is interrupted by the user.
+    """
+
     def __init__(
         self,
         sequence_path: PureSequencePath,
@@ -63,6 +74,10 @@ class SequenceManager(AbstractContextManager):
         )
 
         self._current_shot = 0
+
+        # _is_shutting down is an event that is set to indicate that the background
+        # tasks should stop. It can either be set by a task if an error occurs, or
+        # by the __exit__ method at the end of the sequence.
         self._is_shutting_down = threading.Event()
         self._exit_stack = contextlib.ExitStack()
         self._thread_pool = concurrent.futures.ThreadPoolExecutor()
@@ -87,16 +102,25 @@ class SequenceManager(AbstractContextManager):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Indicates if an error occurred in the scheduler thread.
         error_occurred = exc_val is not None
 
         if error_occurred:
             self._is_shutting_down.set()
 
         if not self._is_shutting_down.is_set():
-            self._shot_parameter_queue.join()
-            self._device_parameter_queue.join()
+            # We can't just join the queues because an error might occur while
+            # processing them, in which case they'll never join.
+            # If an error occurs in a task, the task will set the is_shutting_down
+            # event, and we won't wait for the queues to empty.
+            while not (self._shot_parameter_queue.empty() or self.is_shutting_down()):
+                time.sleep(20e-3)
+            while not (self._device_parameter_queue.empty() or self.is_shutting_down()):
+                time.sleep(20e-3)
             self._is_shutting_down.set()
         try:
+            # Here we check is any of the background tasks raised an exception. If so,
+            # they are re-raised here.
             self._task_group.__exit__(exc_type, exc_val, exc_tb)
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
@@ -193,7 +217,7 @@ class SequenceManager(AbstractContextManager):
                 raise
 
     def _run_shot(self, device_parameters: DeviceParameters):
-        raise NotImplementedError
+        pass
 
 
 @attrs.frozen(order=True)
