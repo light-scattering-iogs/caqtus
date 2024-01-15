@@ -50,6 +50,10 @@ class SequenceNotEditableError(SequenceStateError):
     pass
 
 
+class ShotNotFoundError(RuntimeError):
+    pass
+
+
 class SequenceCollection(Protocol):
     @abc.abstractmethod
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
@@ -144,6 +148,14 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def get_shots(self, path: PureSequencePath) -> list[Shot]:
+        """Return the shots that belong to this sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shot_parameters(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DottedVariableName, Parameter]:
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError

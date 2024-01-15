@@ -148,14 +148,17 @@ def test_shot_creation(
         )
         session.sequence_collection.set_state(p, State.PREPARING)
         session.sequence_collection.set_state(p, State.RUNNING)
+        parameters = {
+            DottedVariableName("test"): 1.0,
+            DottedVariableName("test2"): 2.0 * ureg.MHz,
+        }
         session.sequence_collection.create_shot(
             p,
             0,
-            {
-                DottedVariableName("test"): 1.0,
-                DottedVariableName("test2"): 2.0 * ureg.MHz,
-            },
+            parameters,
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        assert sequence.get_shots() == [Shot(sequence, 0)], sequence.get_shots()
+        shots = sequence.get_shots()
+        assert shots == [Shot(sequence, 0)], sequence.get_shots()
+        assert shots[0].get_parameters(session) == parameters

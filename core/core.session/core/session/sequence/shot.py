@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import typing
+from collections.abc import Mapping
+
+from ...types.parameter import Parameter
+from ...types.variable_name import DottedVariableName
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
     from .sequence import Sequence
+    from ..experiment_session import ExperimentSession
 
 
 class Shot:
@@ -38,3 +43,12 @@ class Shot:
 
     def __hash__(self):
         return hash((self.sequence, self.index))
+
+    def get_parameters(
+        self, session: ExperimentSession
+    ) -> Mapping[DottedVariableName, Parameter]:
+        """Return the parameters used to run this shot."""
+
+        return session.sequence_collection.get_shot_parameters(
+            self.sequence.path, self.index
+        )

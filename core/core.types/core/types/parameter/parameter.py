@@ -11,10 +11,10 @@ def unstructure_quantity(value: Quantity):
 
 
 def structure_quantity(value: Any, _) -> Quantity:
-    if isinstance(value, tuple) and len(value) == 2:
+    try:
         return Quantity(*value)
-    else:
-        raise ValueError(f"Expected tuple of length 2, got {value}")
+    except TypeError:
+        raise ValueError(f"Cannot structure {value!r} as a Quantity.")
 
 
 serialization.register_unstructure_hook(Quantity, unstructure_quantity)

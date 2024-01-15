@@ -38,9 +38,11 @@ from ..sequence_collection import (
     InvalidStateTransitionError,
     SequenceNotEditableError,
     SequenceStats,
+    ShotNotFoundError,
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes
+from ...types.units import Quantity
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -332,6 +334,18 @@ class SQLSequenceCollection(SequenceCollection):
 
         return [Shot(sequence, shot.index) for shot in sql_sequence.shots]
 
+    def get_shot_parameters(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DottedVariableName, Parameter]:
+        shot_model = unwrap(self._query_shot_model(path, shot_index))
+        parameters = {
+            DottedVariableName(parameter.name): serialization.converters[
+                "json"
+            ].structure(parameter.value, bool | int | float | Quantity)
+            for parameter in shot_model.parameters
+        }
+        return parameters
+
     def _query_path_model(
         self, path: PureSequencePath
     ) -> Result[SQLSequencePath, PathNotFoundError]:
@@ -349,6 +363,27 @@ class SQLSequenceCollection(SequenceCollection):
         match path_result:
             case Success(path_model):
                 stmt = select(SQLSequence).where(SQLSequence.path == path_model)
+                result = self._get_sql_session().execute(stmt)
+                if found := result.scalar():
+                    return Success(found)
+                else:
+                    return Failure(PathIsNotSequenceError(path))
+            case Failure() as failure:
+                return failure
+
+    def _query_shot_model(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Result[
+        SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError
+    ]:
+        sequence_model_result = self._query_sequence_model(path)
+        match sequence_model_result:
+            case Success(sequence_model):
+                stmt = (
+                    select(SQLShot)
+                    .where(SQLShot.sequence == sequence_model)
+                    .where(SQLShot.index == shot_index)
+                )
                 result = self._get_sql_session().execute(stmt)
                 if found := result.scalar():
                     return Success(found)
