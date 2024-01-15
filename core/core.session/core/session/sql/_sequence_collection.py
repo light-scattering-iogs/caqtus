@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from core.types.expression import Expression
 from core.types.parameter import Parameter
+from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
 from util import serialization
 from ._path_table import SQLSequencePath
@@ -42,7 +43,6 @@ from ..sequence_collection import (
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes
-from ...types.units import Quantity
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

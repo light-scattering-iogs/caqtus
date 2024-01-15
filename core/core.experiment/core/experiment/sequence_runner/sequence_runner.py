@@ -111,7 +111,8 @@ class StepSequenceRunner:
 
         variable_name = arange_loop.variable
         for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
-            value_with_unit = add_unit(value, unit)
+            # val.item() is used to convert numpy scalar to python scalar
+            value_with_unit = add_unit(value.item(), unit)
             context = context.update_variable(variable_name, value_with_unit)
             for step in arange_loop.sub_steps:
                 context = self.run_step(step, context)
@@ -134,7 +135,8 @@ class StepSequenceRunner:
 
         variable_name = linspace_loop.variable
         for value in numpy.linspace(start_magnitude, stop_magnitude, num):
-            value_with_unit = add_unit(value, unit)
+            # val.item() is used to convert numpy scalar to python scalar
+            value_with_unit = add_unit(value.item(), unit)
             context = context.update_variable(variable_name, value_with_unit)
             for step in linspace_loop.sub_steps:
                 context = self.run_step(step, context)

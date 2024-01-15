@@ -317,8 +317,18 @@ class SequenceManager(AbstractContextManager):
                 self._is_shutting_down.set()
                 raise
 
-    def _store_shot(self, shot_data: ShotData):
-        pass
+    def _store_shot(self, shot_data: ShotData) -> None:
+        params = {
+            name: value for name, value in shot_data.variables.to_flat_dict().items()
+        }
+        with self._session_maker() as session:
+            session.sequence_collection.create_shot(
+                self._sequence_path,
+                shot_data.index,
+                params,
+                shot_data.start_time,
+                shot_data.end_time,
+            )
 
 
 @attrs.frozen(order=True)
