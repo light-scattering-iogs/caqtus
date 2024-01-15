@@ -12,7 +12,8 @@ from core.compilation import ShotCompilerFactory
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from core.session.sequence.iteration_configuration import StepsConfiguration
-from ..sequence_runner import SequenceManager, StepSequenceRunner
+from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
+from ..shot_runner import ShotRunnerFactory
 
 
 class ExperimentManager(abc.ABC):
@@ -148,10 +149,14 @@ class BoundExperimentManager(ExperimentManager):
         self,
         session_maker: ExperimentSessionMaker,
         shot_compiler_factory: ShotCompilerFactory,
+        shot_runner_factory: ShotRunnerFactory,
+        shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
         self._shot_compiler_factory = shot_compiler_factory
+        self._shot_runner_factory = shot_runner_factory
+        self._shot_retry_config = shot_retry_config
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
     def __enter__(self):
@@ -171,6 +176,8 @@ class BoundExperimentManager(ExperimentManager):
             self._procedure_running,
             self._thread_pool,
             self._shot_compiler_factory,
+            self._shot_runner_factory,
+            self._shot_retry_config,
             acquisition_timeout,
         )
 
@@ -191,6 +198,8 @@ class BoundProcedure(Procedure):
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
         shot_compiler_factory: ShotCompilerFactory,
+        shot_runner_factory: ShotRunnerFactory,
+        shot_retry_config: ShotRetryConfig,
         acquisition_timeout: Optional[float] = None,
     ):
         self._name = name
@@ -201,6 +210,8 @@ class BoundProcedure(Procedure):
         self._sequences: list[PureSequencePath] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_compiler_factory = shot_compiler_factory
+        self._shot_runner_factory = shot_runner_factory
+        self._shot_retry_config = shot_retry_config
 
     def __str__(self):
         return f"{self.__class__.__name__}({self._name})"
@@ -262,6 +273,8 @@ class BoundProcedure(Procedure):
             sequence_path,
             self._session_maker,
             self._shot_compiler_factory,
+            self._shot_runner_factory,
+            self._shot_retry_config,
             device_configurations_uuids,
             constant_tables_uuids,
         ) as sequence_manager:

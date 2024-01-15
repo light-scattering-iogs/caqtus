@@ -318,7 +318,7 @@ class SequenceManager(AbstractContextManager):
                 raise
 
     def _store_shot(self, shot_data: ShotData):
-        print(shot_data)
+        pass
 
 
 @attrs.frozen(order=True)
