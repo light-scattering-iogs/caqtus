@@ -1,7 +1,7 @@
 import datetime
 import functools
 import uuid
-from collections.abc import Callable, Set
+from collections.abc import Callable, Set, Mapping
 from typing import TYPE_CHECKING
 
 import attrs
@@ -11,6 +11,8 @@ from returns.result import Success, Failure
 from sqlalchemy import select
 
 from core.types.expression import Expression
+from core.types.parameter import Parameter
+from core.types.variable_name import DottedVariableName
 from util import serialization
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -20,7 +22,7 @@ from ._sequence_table import (
     SQLSequenceConstantTableUUID,
     SQLTimelanes,
 )
-from ._shot_tables import SQLShot
+from ._shot_tables import SQLShot, SQLShotParameter
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
@@ -290,19 +292,39 @@ class SQLSequenceCollection(SequenceCollection):
         self,
         path: PureSequencePath,
         shot_index: int,
+        shot_parameters: Mapping[DottedVariableName, Parameter],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
+
+        parameters = [
+            SQLShotParameter(name=variable_name, value=parameter)
+            for variable_name, parameter in self.serialize_shot_parameters(
+                shot_parameters
+            ).items()
+        ]
         shot = SQLShot(
             sequence=sequence,
             index=shot_index,
+            parameters=parameters,
             start_time=shot_start_time,
             end_time=shot_end_time,
         )
         self._get_sql_session().add(shot)
+
+    @staticmethod
+    def serialize_shot_parameters(
+        shot_parameters: Mapping[DottedVariableName, Parameter]
+    ) -> dict[str, serialization.JSON]:
+        return {
+            str(variable_name): serialization.converters["json"].unstructure(
+                parameter, Parameter
+            )
+            for variable_name, parameter in shot_parameters.items()
+        }
 
     def get_shots(self, path: PureSequencePath) -> list[Shot]:
         sql_sequence = unwrap(self._query_sequence_model(path))

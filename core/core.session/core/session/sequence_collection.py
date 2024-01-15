@@ -3,12 +3,14 @@ from __future__ import annotations
 import abc
 import datetime
 import uuid
-from collections.abc import Set
+from collections.abc import Set, Mapping
 from typing import Protocol, Optional
 
 import attrs
 from returns.result import Result
 
+from core.types.parameter import Parameter
+from core.types.variable_name import DottedVariableName
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
@@ -134,6 +136,7 @@ class SequenceCollection(Protocol):
         self,
         path: PureSequencePath,
         shot_index: int,
+        shot_parameters: Mapping[DottedVariableName, Parameter],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:

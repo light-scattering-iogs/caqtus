@@ -10,6 +10,8 @@ from core.session.sequence.iteration_configuration import StepsConfiguration
 from core.session.sequence_collection import PathIsSequenceError
 from core.session.shot import TimeLanes
 from core.types.expression import Expression
+from core.types.units import ureg
+from core.types.variable_name import DottedVariableName
 from .session_maker import get_session_maker
 from ..generate_path import path
 from ..steps_iteration import steps_configuration
@@ -147,6 +149,13 @@ def test_shot_creation(
         session.sequence_collection.set_state(p, State.PREPARING)
         session.sequence_collection.set_state(p, State.RUNNING)
         session.sequence_collection.create_shot(
-            p, 0, datetime.datetime.now(), datetime.datetime.now()
+            p,
+            0,
+            {
+                DottedVariableName("test"): 1.0,
+                DottedVariableName("test2"): 2.0 * ureg.MHz,
+            },
+            datetime.datetime.now(),
+            datetime.datetime.now(),
         )
         assert sequence.get_shots() == [Shot(sequence, 0)], sequence.get_shots()
