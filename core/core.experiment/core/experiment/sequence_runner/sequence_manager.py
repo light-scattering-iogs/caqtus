@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import contextlib
+import datetime
 import queue
 import threading
 import time
@@ -16,6 +17,7 @@ from core.compilation import ShotCompilerFactory, VariableNamespace
 from core.device import DeviceName, DeviceParameter
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.sequence import State
+from core.types.data import DataLabel, Data
 from util.concurrent import TaskGroup
 
 
@@ -83,6 +85,7 @@ class SequenceManager(AbstractContextManager):
         self._thread_pool = concurrent.futures.ThreadPoolExecutor()
         self._shot_parameter_queue = queue.PriorityQueue[ShotParameters](4)
         self._device_parameter_queue = queue.PriorityQueue[DeviceParameters](4)
+        self._shot_data_queue = queue.PriorityQueue[ShotData](4)
         self._task_group = TaskGroup(self._thread_pool, name="SequenceManager")
 
     def __enter__(self):
@@ -93,6 +96,7 @@ class SequenceManager(AbstractContextManager):
             self._task_group.__enter__()
             self._task_group.create_task(self._compile_shots)
             self._task_group.create_task(self._run_shots)
+            self._task_group.create_task(self._store_shots)
             self._prepare()
             self._set_sequence_state(State.RUNNING)
         except Exception as e:
@@ -116,6 +120,8 @@ class SequenceManager(AbstractContextManager):
             while not (self._shot_parameter_queue.empty() or self.is_shutting_down()):
                 time.sleep(20e-3)
             while not (self._device_parameter_queue.empty() or self.is_shutting_down()):
+                time.sleep(20e-3)
+            while not (self._shot_data_queue.empty() or self.is_shutting_down()):
                 time.sleep(20e-3)
             self._is_shutting_down.set()
         try:
@@ -184,12 +190,7 @@ class SequenceManager(AbstractContextManager):
             except queue.Empty:
                 continue
             try:
-                compiled = self._shot_compiler.compile_shot(shot_parameters.parameters)
-                device_parameters = DeviceParameters(
-                    index=shot_parameters.index,
-                    shot_parameters=shot_parameters.parameters,
-                    device_parameters=compiled,
-                )
+                device_parameters = self._compile_shot(shot_parameters)
                 while not self.is_shutting_down():
                     try:
                         self._device_parameter_queue.put(
@@ -203,6 +204,14 @@ class SequenceManager(AbstractContextManager):
                 self._is_shutting_down.set()
                 raise
 
+    def _compile_shot(self, shot_parameters: ShotParameters) -> DeviceParameters:
+        compiled = self._shot_compiler.compile_shot(shot_parameters.parameters)
+        return DeviceParameters(
+            index=shot_parameters.index,
+            shot_parameters=shot_parameters.parameters,
+            device_parameters=compiled,
+        )
+
     def _run_shots(self):
         while not self.is_shutting_down():
             try:
@@ -210,14 +219,42 @@ class SequenceManager(AbstractContextManager):
             except queue.Empty:
                 continue
             try:
-                self._run_shot(device_parameters)
+                shot_data = self._run_shot(device_parameters)
+                while not self.is_shutting_down():
+                    try:
+                        self._shot_data_queue.put(shot_data, timeout=20e-3)
+                        break
+                    except queue.Full:
+                        continue
                 self._device_parameter_queue.task_done()
             except Exception:
                 self._is_shutting_down.set()
                 raise
 
-    def _run_shot(self, device_parameters: DeviceParameters):
-        pass
+    def _run_shot(self, device_parameters: DeviceParameters) -> ShotData:
+        return ShotData(
+            index=device_parameters.index,
+            start_time=datetime.datetime.now(),
+            end_time=datetime.datetime.now(),
+            variables=device_parameters.shot_parameters,
+            data={},
+        )
+
+    def _store_shots(self):
+        while not self.is_shutting_down():
+            try:
+                shot_data = self._shot_data_queue.get(timeout=20e-3)
+            except queue.Empty:
+                continue
+            try:
+                self._store_shot(shot_data)
+                self._shot_data_queue.task_done()
+            except Exception:
+                self._is_shutting_down.set()
+                raise
+
+    def _store_shot(self, shot_data: ShotData):
+        print(shot_data)
 
 
 @attrs.frozen(order=True)
@@ -230,11 +267,24 @@ class ShotParameters:
 
 @attrs.frozen(order=True)
 class DeviceParameters:
+    """Holds information necessary to run a shot."""
+
     index: int
     shot_parameters: VariableNamespace = attrs.field(eq=False)
     device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]] = attrs.field(
         eq=False
     )
+
+
+@attrs.frozen(order=True)
+class ShotData:
+    """Holds information necessary to store a shot."""
+
+    index: int
+    start_time: datetime.datetime = attrs.field(eq=False)
+    end_time: datetime.datetime = attrs.field(eq=False)
+    variables: VariableNamespace = attrs.field(eq=False)
+    data: dict[DeviceName, dict[DataLabel, Data]] = attrs.field(eq=False)
 
 
 class SequenceInterruptedException(RuntimeError):
