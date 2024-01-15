@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import abc
+import datetime
 import uuid
 from collections.abc import Set
-from typing import Protocol
+from typing import Protocol, Optional
 
 import attrs
 from returns.result import Result
@@ -132,3 +133,5 @@ class SequenceCollection(Protocol):
 @attrs.frozen
 class SequenceStats:
     state: State
+    start_time: Optional[datetime.datetime]
+    stop_time: Optional[datetime.datetime]

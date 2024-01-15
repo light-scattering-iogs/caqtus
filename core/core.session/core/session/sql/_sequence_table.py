@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import datetime
+from typing import Optional
+
 import sqlalchemy
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -48,21 +51,8 @@ class SQLSequence(Base):
         cascade="all, delete, delete-orphan"
     )
 
-    #
-    # config_id: Mapped[int] = mapped_column(
-    #     ForeignKey("sequence_config.id"), unique=True
-    # )
-    # config: Mapped[SequenceConfig] = relationship(cascade="all")
-    #
-    # experiment_config_name: Mapped[Optional[str]] = mapped_column(
-    #     ForeignKey("experiment_config.name")
-    # )
-    # experiment_config: Mapped[Optional[ExperimentConfig]] = relationship(viewonly=True)
-    #
-    # creation_date: Mapped[datetime] = mapped_column()
-    # modification_date: Mapped[datetime] = mapped_column()
-    # start_date: Mapped[Optional[datetime]] = mapped_column()
-    # stop_date: Mapped[Optional[datetime]] = mapped_column()
+    start_time: Mapped[Optional[datetime.datetime]] = mapped_column()
+    stop_time: Mapped[Optional[datetime.datetime]] = mapped_column()
     #
     # total_number_shots: Mapped[
     #     Optional[int]

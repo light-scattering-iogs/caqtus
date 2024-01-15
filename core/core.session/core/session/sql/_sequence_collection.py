@@ -1,3 +1,4 @@
+import datetime
 import functools
 import uuid
 from collections.abc import Callable, Set
@@ -9,6 +10,7 @@ from returns.result import Result
 from returns.result import Success, Failure
 from sqlalchemy import select
 
+from core.types.expression import Expression
 from util import serialization
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -36,7 +38,6 @@ from ..sequence_collection import (
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes
-from ...types.expression import Expression
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -177,6 +178,8 @@ class SQLSequenceCollection(SequenceCollection):
             state=State.DRAFT,
             device_uuids=set(),
             constant_table_uuids=set(),
+            start_time=None,
+            stop_time=None,
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(BoundSequencePath(path, self.parent_session))
@@ -237,6 +240,12 @@ class SQLSequenceCollection(SequenceCollection):
         if state == State.DRAFT:
             sequence.device_uuids = set()
             sequence.constant_table_uuids = set()
+            sequence.start_time = None
+            sequence.stop_time = None
+        elif state == State.RUNNING:
+            sequence.start_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
+            sequence.stop_date = datetime.datetime.now(tz=datetime.timezone.utc)
 
     def set_device_configuration_uuids(
         self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
@@ -270,6 +279,8 @@ class SQLSequenceCollection(SequenceCollection):
         def extract_stats(sequence: SQLSequence) -> SequenceStats:
             return SequenceStats(
                 state=sequence.state,
+                start_time=sequence.start_time,
+                stop_time=sequence.stop_time,
             )
 
         return result.map(extract_stats)
