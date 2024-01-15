@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import contextlib
 import datetime
+import logging
 import queue
 import threading
 import time
@@ -19,10 +20,36 @@ from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
 from util.concurrent import TaskGroup
+from ..shot_runner import ShotRunnerFactory
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def nothing():
     pass
+
+
+@attrs.define
+class ShotRetryConfig:
+    """Specifies how to retry a shot if an error occurs.
+
+    Attributes:
+        exceptions_to_retry: If an exception occurs while running a shot, it will be
+        retried if it is an instance of one of the exceptions in this tuple.
+        number_of_attempts: The number of times to retry a shot if an error occurs.
+    """
+
+    exceptions_to_retry: tuple[type[Exception], ...] = attrs.field(
+        factory=tuple,
+        eq=False,
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(tuple),
+            member_validator=attrs.validators.instance_of(Exception),
+        ),
+        on_setattr=attrs.setters.validate,
+    )
+    number_of_attempts: int = attrs.field(default=1, eq=False)
 
 
 class SequenceManager(AbstractContextManager):
@@ -48,11 +75,14 @@ class SequenceManager(AbstractContextManager):
         sequence_path: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         shot_compiler_factory: ShotCompilerFactory,
+        shot_runner_factory: ShotRunnerFactory,
+        shot_retry_config: Optional[ShotRetryConfig] = None,
         device_configurations_uuid: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuid: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence_path
+        self._shot_retry_config = shot_retry_config or ShotRetryConfig()
 
         with self._session_maker() as session:
             if device_configurations_uuid is None:
@@ -79,6 +109,9 @@ class SequenceManager(AbstractContextManager):
                 self._sequence_path
             )
         self._shot_compiler = shot_compiler_factory(
+            self.time_lanes, self.device_configurations
+        )
+        self._shot_runner = shot_runner_factory(
             self.time_lanes, self.device_configurations
         )
 
@@ -188,7 +221,7 @@ class SequenceManager(AbstractContextManager):
             session.sequence_collection.set_state(self._sequence_path, state)
 
     def _prepare(self):
-        pass
+        self._exit_stack.enter_context(self._shot_runner)
 
     def _compile_shots(self):
         while not self.is_shutting_down():
@@ -226,7 +259,7 @@ class SequenceManager(AbstractContextManager):
             except queue.Empty:
                 continue
             try:
-                shot_data = self._run_shot(device_parameters)
+                shot_data = self._run_shot_with_retry(device_parameters)
                 while not self.is_shutting_down():
                     try:
                         self._shot_data_queue.put(shot_data, timeout=20e-3)
@@ -238,13 +271,37 @@ class SequenceManager(AbstractContextManager):
                 self._is_shutting_down.set()
                 raise
 
-    def _run_shot(self, device_parameters: DeviceParameters) -> ShotData:
-        return ShotData(
-            index=device_parameters.index,
-            start_time=datetime.datetime.now(),
-            end_time=datetime.datetime.now(),
-            variables=device_parameters.shot_parameters,
-            data={},
+    def _run_shot_with_retry(
+        self,
+        device_parameters: DeviceParameters,
+    ) -> ShotData:
+        exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
+        number_of_attempts = self._shot_retry_config.number_of_attempts
+        if number_of_attempts < 1:
+            raise ValueError("number_of_attempts must be >= 1")
+
+        errors: list[Exception] = []
+
+        for attempt in range(number_of_attempts):
+            try:
+                start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+                data = self._shot_runner.run_shot(device_parameters.device_parameters)
+                end_time = datetime.datetime.now(tz=datetime.timezone.utc)
+            except* exceptions_to_retry as e:
+                errors.extend(e.exceptions)
+                logger.warning(
+                    f"Attempt {attempt+1}/{number_of_attempts} failed with {e}"
+                )
+            else:
+                return ShotData(
+                    index=device_parameters.index,
+                    start_time=start_time,
+                    end_time=end_time,
+                    variables=device_parameters.shot_parameters,
+                    data=data,
+                )
+        raise ExceptionGroup(
+            f"Could not execute shot after {number_of_attempts} attempts", errors
         )
 
     def _store_shots(self):
@@ -291,7 +348,7 @@ class ShotData:
     start_time: datetime.datetime = attrs.field(eq=False)
     end_time: datetime.datetime = attrs.field(eq=False)
     variables: VariableNamespace = attrs.field(eq=False)
-    data: dict[DeviceName, dict[DataLabel, Data]] = attrs.field(eq=False)
+    data: Mapping[DataLabel, Data] = attrs.field(eq=False)
 
 
 class SequenceInterruptedException(RuntimeError):
