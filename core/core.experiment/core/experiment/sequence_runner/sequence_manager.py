@@ -34,6 +34,13 @@ class SequenceManager(AbstractContextManager):
     PREPARING while acquiring the necessary resources, RUNNING while running the shots,
     FINISHED when the sequence is done normally, CRASHED if an error occurs, and
     INTERRUPTED if the sequence is interrupted by the user.
+
+    When calling :meth:`schedule_shot`, the parameters for a shot are queued for
+    compilation.
+    A :py:class:`ShotCompiler` will compile the shot parameters into device parameters.
+    The device parameters are then queued to run a shot on the experiment.
+    When a shot runs, it produces data.
+    The data is then queued for storage.
     """
 
     def __init__(
