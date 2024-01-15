@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ._path_table import SQLSequencePath
 from ._table_base import Base
 from ..sequence.state import State
+from ._shot_tables import SQLShot
 
 
 class SQLIterationConfiguration(Base):
@@ -27,7 +28,7 @@ class SQLTimelanes(Base):
 
 
 class SQLSequence(Base):
-    __tablename__ = "sequence"
+    __tablename__ = "sequences"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     path_id: Mapped[str] = mapped_column(
@@ -53,6 +54,10 @@ class SQLSequence(Base):
 
     start_time: Mapped[Optional[datetime.datetime]] = mapped_column()
     stop_time: Mapped[Optional[datetime.datetime]] = mapped_column()
+
+    shots: Mapped[list["SQLShot"]] = relationship(
+        cascade="all, delete, delete-orphan", passive_deletes=True
+    )
     #
     # total_number_shots: Mapped[
     #     Optional[int]

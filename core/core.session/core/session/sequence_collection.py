@@ -129,6 +129,16 @@ class SequenceCollection(Protocol):
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def create_shot(
+        self,
+        path: PureSequencePath,
+        shot_index: int,
+        shot_start_time: datetime.datetime,
+        shot_end_time: datetime.datetime,
+    ) -> None:
+        raise NotImplementedError
+
 
 @attrs.frozen
 class SequenceStats:

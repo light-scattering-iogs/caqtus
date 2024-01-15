@@ -20,6 +20,7 @@ from ._sequence_table import (
     SQLSequenceConstantTableUUID,
     SQLTimelanes,
 )
+from ._shot_tables import SQLShot
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
@@ -284,6 +285,24 @@ class SQLSequenceCollection(SequenceCollection):
             )
 
         return result.map(extract_stats)
+
+    def create_shot(
+        self,
+        path: PureSequencePath,
+        shot_index: int,
+        shot_start_time: datetime.datetime,
+        shot_end_time: datetime.datetime,
+    ) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        if sequence.state != State.RUNNING:
+            raise RuntimeError("Can't create shot in sequence that is not running")
+        shot = SQLShot(
+            sequence=sequence,
+            index=shot_index,
+            start_time=shot_start_time,
+            end_time=shot_end_time,
+        )
+        self._get_sql_session().add(shot)
 
     def _query_path_model(
         self, path: PureSequencePath
