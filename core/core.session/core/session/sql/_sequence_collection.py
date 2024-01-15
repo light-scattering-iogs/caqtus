@@ -24,7 +24,7 @@ from ._shot_tables import SQLShot
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from ..sequence import Sequence
+from ..sequence import Sequence, Shot
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
@@ -303,6 +303,12 @@ class SQLSequenceCollection(SequenceCollection):
             end_time=shot_end_time,
         )
         self._get_sql_session().add(shot)
+
+    def get_shots(self, path: PureSequencePath) -> list[Shot]:
+        sql_sequence = unwrap(self._query_sequence_model(path))
+        sequence = Sequence(BoundSequencePath(path, self.parent_session))
+
+        return [Shot(sequence, shot.index) for shot in sql_sequence.shots]
 
     def _query_path_model(
         self, path: PureSequencePath

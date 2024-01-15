@@ -1,8 +1,11 @@
+import datetime
+
 import pytest
 from hypothesis import given
 
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
+from core.session.sequence import State, Shot
 from core.session.sequence.iteration_configuration import StepsConfiguration
 from core.session.sequence_collection import PathIsSequenceError
 from core.session.shot import TimeLanes
@@ -131,3 +134,19 @@ def test_iteration_save(
         )
         assert sequence.get_iteration_configuration() == new_steps_configuration
         assert sequence.get_time_lanes() == time_lanes
+
+
+def test_shot_creation(
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
+):
+    with empty_session as session:
+        p = PureSequencePath(r"\test")
+        sequence = session.sequence_collection.create(
+            p, steps_configuration, time_lanes
+        )
+        session.sequence_collection.set_state(p, State.PREPARING)
+        session.sequence_collection.set_state(p, State.RUNNING)
+        session.sequence_collection.create_shot(
+            p, 0, datetime.datetime.now(), datetime.datetime.now()
+        )
+        assert sequence.get_shots() == [Shot(sequence, 0)], sequence.get_shots()

@@ -11,7 +11,7 @@ from returns.result import Result
 
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
-from .sequence import Sequence
+from .sequence import Sequence, Shot
 from .sequence.iteration_configuration import IterationConfiguration
 from .sequence.state import State
 from .shot import TimeLanes
@@ -137,6 +137,12 @@ class SequenceCollection(Protocol):
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shots(self, path: PureSequencePath) -> list[Shot]:
+        """Return the shots that belong to this sequence."""
+
         raise NotImplementedError
 
 
