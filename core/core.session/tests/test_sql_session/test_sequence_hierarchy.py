@@ -1,5 +1,6 @@
 import datetime
 
+import numpy as np
 import pytest
 from hypothesis import given
 
@@ -9,6 +10,7 @@ from core.session.sequence import State, Shot
 from core.session.sequence.iteration_configuration import StepsConfiguration
 from core.session.sequence_collection import PathIsSequenceError
 from core.session.shot import TimeLanes
+from core.types.data import DataLabel
 from core.types.expression import Expression
 from core.types.units import ureg
 from core.types.variable_name import DottedVariableName
@@ -152,13 +154,22 @@ def test_shot_creation(
             DottedVariableName("test"): 1.0,
             DottedVariableName("test2"): 2.0 * ureg.MHz,
         }
+        data = {
+            DataLabel("a"): [1, 2, 3],
+            DataLabel("b"): np.linspace(0, 1, 100),
+        }
         session.sequence_collection.create_shot(
             p,
             0,
             parameters,
+            data,
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
         shots = sequence.get_shots()
         assert shots == [Shot(sequence, 0)], sequence.get_shots()
         assert shots[0].get_parameters(session) == parameters
+        d = shots[0].get_data(session)
+        assert d[DataLabel("a")] == [1, 2, 3]
+        assert np.array_equal(d[DataLabel("b")], np.linspace(0, 1, 100))
+        assert shots[0].get_data_by_label(session, DataLabel("a")) == [1, 2, 3]

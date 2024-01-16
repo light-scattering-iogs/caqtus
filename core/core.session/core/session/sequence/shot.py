@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing
 from collections.abc import Mapping
 
+from ...types.data import DataLabel, Data
 from ...types.parameter import Parameter
 from ...types.variable_name import DottedVariableName
 
@@ -51,4 +52,23 @@ class Shot:
 
         return session.sequence_collection.get_shot_parameters(
             self.sequence.path, self.index
+        )
+
+    def get_data(self, session: ExperimentSession) -> Mapping[DataLabel, Data]:
+        """Return the data of this shot.
+
+        This will return all data that was acquired during the shot.
+        If you want to get only a subset of the data, use :meth:`get_data_by_label`
+        which will avoid querying unnecessary data.
+        """
+
+        return session.sequence_collection.get_all_shot_data(
+            self.sequence.path, self.index
+        )
+
+    def get_data_by_label(self, session: ExperimentSession, label: DataLabel) -> Data:
+        """Return the data of this shot with the given label."""
+
+        return session.sequence_collection.get_shot_data_by_label(
+            self.sequence.path, self.index, label
         )

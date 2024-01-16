@@ -380,6 +380,40 @@ class SQLSequenceCollection(SequenceCollection):
         )
         return parameters
 
+    def get_all_shot_data(
+        self, path: PureSequencePath, shot_index: int
+    ) -> dict[DataLabel, Data]:
+        shot_model = unwrap(self._query_shot_model(path, shot_index))
+        arrays = shot_model.array_data
+        structured_data = shot_model.structured_data
+        result = {}
+        for array in arrays:
+            result[array.label] = np.frombuffer(
+                array.bytes_, dtype=array.dtype
+            ).reshape(array.shape)
+        for data in structured_data:
+            result[data.label] = data.content
+        return result
+
+    def get_shot_data_by_label(
+        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    ) -> Data:
+        shot_model = unwrap(self._query_shot_model(path, shot_index))
+        structure_query = select(SQLStructuredShotData).where(
+            SQLStructuredShotData.shot == shot_model
+            and SQLStructuredShotData.label == data_label
+        )
+        result = self._get_sql_session().execute(structure_query)
+        if found := result.scalar():
+            return found.content
+        array_query = select(SQLShotArray).where(
+            SQLShotArray.shot == shot_model and SQLShotArray.label == data_label
+        )
+        result = self._get_sql_session().execute(array_query)
+        if found := result.scalar():
+            return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
+        raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
+
     def _query_path_model(
         self, path: PureSequencePath
     ) -> Result[SQLSequencePath, PathNotFoundError]:

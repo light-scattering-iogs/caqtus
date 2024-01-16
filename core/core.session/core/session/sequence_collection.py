@@ -162,6 +162,18 @@ class SequenceCollection(Protocol):
 
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_all_shot_data(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DataLabel, Data]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shot_data_by_label(
+        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    ) -> Data:
+        raise NotImplementedError
+
 
 @attrs.frozen
 class SequenceStats:
