@@ -7,7 +7,7 @@ Parameter = AnalogValue | int | bool
 
 
 def unstructure_quantity(value: Quantity):
-    return float(value.magnitude), str(value.units)
+    return float(value.magnitude), f"{value.units:~}"
 
 
 def structure_quantity(value: Any, _) -> Quantity:

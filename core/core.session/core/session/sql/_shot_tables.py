@@ -25,7 +25,7 @@ class SQLShot(Base):
     start_time: Mapped[datetime.datetime] = mapped_column()
     end_time: Mapped[datetime.datetime] = mapped_column()
 
-    parameters: Mapped[list["SQLShotParameter"]] = relationship(
+    parameters: Mapped["SQLShotParameter"] = relationship(
         back_populates="shot",
         cascade="all, delete",
         passive_deletes=True,
@@ -35,13 +35,11 @@ class SQLShot(Base):
 class SQLShotParameter(Base):
     __tablename__ = "shot.parameters"
 
-    __table_args__ = (UniqueConstraint("shot_id", "name", name="parameter_identifier"),)
-
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     shot_id: Mapped[int] = mapped_column(
         ForeignKey("shots.id", ondelete="CASCADE"),
+        unique=True,
         index=True,
     )
     shot: Mapped[SQLShot] = relationship(back_populates="parameters")
-    name: Mapped[str] = mapped_column()
-    value = mapped_column(JSON)
+    content = mapped_column(JSON)

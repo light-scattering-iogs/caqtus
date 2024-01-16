@@ -311,16 +311,12 @@ class SQLSequenceCollection(SequenceCollection):
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
 
-        parameters = [
-            SQLShotParameter(name=variable_name, value=parameter)
-            for variable_name, parameter in self.serialize_shot_parameters(
-                shot_parameters
-            ).items()
-        ]
+        parameters = self.serialize_shot_parameters(shot_parameters)
+
         shot = SQLShot(
             sequence=sequence,
             index=shot_index,
-            parameters=parameters,
+            parameters=SQLShotParameter(content=parameters),
             start_time=shot_start_time,
             end_time=shot_end_time,
         )
@@ -347,12 +343,10 @@ class SQLSequenceCollection(SequenceCollection):
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
         shot_model = unwrap(self._query_shot_model(path, shot_index))
-        parameters = {
-            DottedVariableName(parameter.name): serialization.converters[
-                "json"
-            ].structure(parameter.value, bool | int | float | Quantity)
-            for parameter in shot_model.parameters
-        }
+        values = shot_model.parameters.content
+        parameters = serialization.converters["json"].structure(
+            values, dict[DottedVariableName, bool | int | float | Quantity]
+        )
         return parameters
 
     def _query_path_model(
