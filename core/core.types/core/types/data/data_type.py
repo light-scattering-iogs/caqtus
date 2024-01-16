@@ -1,12 +1,16 @@
-from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
 
-DataKey: TypeAlias = bool | str | Real | tuple["DataKey", ...]
-
-
 Array = np.ndarray
-Data: TypeAlias = (
-        bool | str | Real | Array | dict[DataKey, "Data"] | list["Data"] | tuple["Data"]
+StructuredData: TypeAlias = (
+    dict[str, "StructuredData"]
+    | list["StructuredData"]
+    | float
+    | int
+    | str
+    | bool
+    | None
 )
+
+Data: TypeAlias = StructuredData | Array
