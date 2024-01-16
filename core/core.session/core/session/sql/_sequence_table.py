@@ -175,7 +175,7 @@ class SQLSequence(Base):
 
 
 class SQLSequenceDeviceUUID(Base):
-    __tablename__ = "sequence_device_configurations"
+    __tablename__ = "sequence.device_configurations"
 
     __table_args__ = (
         sqlalchemy.UniqueConstraint(
@@ -192,7 +192,7 @@ class SQLSequenceDeviceUUID(Base):
 
 
 class SQLSequenceConstantTableUUID(Base):
-    __tablename__ = "sequence_constant_tables"
+    __tablename__ = "sequence.constant_tables"
 
     __table_args__ = (
         sqlalchemy.UniqueConstraint(
