@@ -247,6 +247,7 @@ class SQLSequenceCollection(SequenceCollection):
             sequence.constant_table_uuids = set()
             sequence.start_time = None
             sequence.stop_time = None
+            sequence.shots.clear()
         elif state == State.RUNNING:
             sequence.start_date = datetime.datetime.now(tz=datetime.timezone.utc)
         elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
@@ -302,20 +303,21 @@ class SQLSequenceCollection(SequenceCollection):
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
 
-        parameters = [
-            SQLShotParameter(name=variable_name, value=parameter)
-            for variable_name, parameter in self.serialize_shot_parameters(
-                shot_parameters
-            ).items()
-        ]
         shot = SQLShot(
             sequence=sequence,
             index=shot_index,
-            parameters=parameters,
+            parameters=[],
             start_time=shot_start_time,
             end_time=shot_end_time,
         )
         self._get_sql_session().add(shot)
+        self._get_sql_session().flush()
+        parameters = [
+            SQLShotParameter(name=variable_name, value=parameter, shot=shot)
+            for variable_name, parameter in self.serialize_shot_parameters(
+                shot_parameters
+            ).items()
+        ]
 
     @staticmethod
     def serialize_shot_parameters(
