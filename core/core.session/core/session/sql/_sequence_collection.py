@@ -146,7 +146,7 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> IterationConfiguration:
         sequence_model = unwrap(self._query_sequence_model(sequence))
         return self.serializer.iteration_constructor(
-            sequence_model.iteration_config.content,
+            sequence_model.iteration.content,
         )
 
     def set_iteration_configuration(
@@ -158,7 +158,7 @@ class SQLSequenceCollection(SequenceCollection):
         iteration_content = self.serializer.iteration_serializer(
             iteration_configuration
         )
-        sequence_model.iteration_config.content = iteration_content
+        sequence_model.iteration.content = iteration_content
 
     def create(
         self,
@@ -176,10 +176,8 @@ class SQLSequenceCollection(SequenceCollection):
         )
         new_sequence = SQLSequence(
             path=unwrap(self._query_path_model(path)),
-            iteration_config=SQLIterationConfiguration(content=iteration_content),
-            time_lanes_config=SQLTimelanes(
-                content=self.serialize_time_lanes(time_lanes)
-            ),
+            iteration=SQLIterationConfiguration(content=iteration_content),
+            time_lanes=SQLTimelanes(content=self.serialize_time_lanes(time_lanes)),
             state=State.DRAFT,
             device_uuids=set(),
             constant_table_uuids=set(),
@@ -219,7 +217,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
         sequence_model = unwrap(self._query_sequence_model(sequence_path))
-        return self.construct_time_lanes(sequence_model.time_lanes_config.content)
+        return self.construct_time_lanes(sequence_model.time_lanes.content)
 
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
@@ -227,7 +225,7 @@ class SQLSequenceCollection(SequenceCollection):
         sequence_model = unwrap(self._query_sequence_model(sequence_path))
         if not sequence_model.state.is_editable():
             raise SequenceNotEditableError(sequence_path)
-        sequence_model.time_lanes_config.content = self.serialize_time_lanes(time_lanes)
+        sequence_model.time_lanes.content = self.serialize_time_lanes(time_lanes)
 
     def get_state(
         self, path: PureSequencePath
@@ -243,11 +241,21 @@ class SQLSequenceCollection(SequenceCollection):
             )
         sequence.state = state
         if state == State.DRAFT:
-            sequence.device_uuids = set()
-            sequence.constant_table_uuids = set()
             sequence.start_time = None
             sequence.stop_time = None
-            sequence.shots.clear()
+            delete_device_uuids = sqlalchemy.delete(SQLSequenceDeviceUUID).where(
+                SQLSequenceDeviceUUID.sequence == sequence
+            )
+            self._get_sql_session().execute(delete_device_uuids)
+            delete_constant_table_uuids = sqlalchemy.delete(
+                SQLSequenceConstantTableUUID
+            ).where(SQLSequenceConstantTableUUID.sequence == sequence)
+            self._get_sql_session().execute(delete_constant_table_uuids)
+
+            delete_shots = sqlalchemy.delete(SQLShot).where(
+                SQLShot.sequence == sequence
+            )
+            self._get_sql_session().execute(delete_shots)
         elif state == State.RUNNING:
             sequence.start_date = datetime.datetime.now(tz=datetime.timezone.utc)
         elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
@@ -303,21 +311,20 @@ class SQLSequenceCollection(SequenceCollection):
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
 
-        shot = SQLShot(
-            sequence=sequence,
-            index=shot_index,
-            parameters=[],
-            start_time=shot_start_time,
-            end_time=shot_end_time,
-        )
-        self._get_sql_session().add(shot)
-        self._get_sql_session().flush()
         parameters = [
-            SQLShotParameter(name=variable_name, value=parameter, shot=shot)
+            SQLShotParameter(name=variable_name, value=parameter)
             for variable_name, parameter in self.serialize_shot_parameters(
                 shot_parameters
             ).items()
         ]
+        shot = SQLShot(
+            sequence=sequence,
+            index=shot_index,
+            parameters=parameters,
+            start_time=shot_start_time,
+            end_time=shot_end_time,
+        )
+        self._get_sql_session().add(shot)
 
     @staticmethod
     def serialize_shot_parameters(

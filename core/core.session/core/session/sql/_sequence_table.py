@@ -14,16 +14,24 @@ from ._shot_tables import SQLShot
 
 
 class SQLIterationConfiguration(Base):
-    __tablename__ = "iteration_configurations"
+    __tablename__ = "sequence.iteration"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey("sequences.id", ondelete="CASCADE"), index=True, unique=True
+    )
+    sequence: Mapped["SQLSequence"] = relationship(back_populates="iteration")
     content = mapped_column(sqlalchemy.types.JSON)
 
 
 class SQLTimelanes(Base):
-    __tablename__ = "timelanes"
+    __tablename__ = "sequence.timelanes"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey("sequences.id", ondelete="CASCADE"), index=True, unique=True
+    )
+    sequence: Mapped["SQLSequence"] = relationship(back_populates="time_lanes")
     content = mapped_column(sqlalchemy.types.JSON)
 
 
@@ -32,31 +40,29 @@ class SQLSequence(Base):
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True)
     path_id: Mapped[str] = mapped_column(
-        ForeignKey(SQLSequencePath.id_), unique=True, index=True
+        ForeignKey(SQLSequencePath.id_, ondelete="CASCADE"), unique=True, index=True
     )
     path: Mapped[SQLSequencePath] = relationship(back_populates="sequence")
     state: Mapped[State]
 
-    iteration_config_id: Mapped[int] = mapped_column(
-        ForeignKey(SQLIterationConfiguration.id_), unique=True
+    iteration: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
+    time_lanes: Mapped[SQLTimelanes] = relationship(
+        cascade="all, delete", back_populates="sequence", passive_deletes=True
     )
-    iteration_config: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
-    time_lanes_config_id: Mapped[int] = mapped_column(
-        ForeignKey(SQLTimelanes.id_), unique=True
-    )
-    time_lanes_config: Mapped[SQLTimelanes] = relationship(cascade="all")
     device_uuids: Mapped[set[SQLSequenceDeviceUUID]] = relationship(
-        cascade="all, delete, delete-orphan"
+        cascade="all, delete", passive_deletes=True
     )
     constant_table_uuids: Mapped[set[SQLSequenceConstantTableUUID]] = relationship(
-        cascade="all, delete, delete-orphan"
+        cascade="all, delete", passive_deletes=True
     )
 
     start_time: Mapped[Optional[datetime.datetime]] = mapped_column()
     stop_time: Mapped[Optional[datetime.datetime]] = mapped_column()
 
     shots: Mapped[list["SQLShot"]] = relationship(
-        cascade="all, delete, delete-orphan", passive_deletes=True
+        back_populates="sequence",
+        cascade="all, delete",
+        passive_deletes=True,
     )
     #
     # total_number_shots: Mapped[
@@ -178,7 +184,10 @@ class SQLSequenceDeviceUUID(Base):
     )
 
     id_: Mapped[int] = mapped_column(primary_key=True)
-    sequence_id: Mapped[int] = mapped_column(ForeignKey(SQLSequence.id_))
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE")
+    )
+    sequence: Mapped[SQLSequence] = relationship(back_populates="device_uuids")
     device_configuration_uuid = mapped_column(ForeignKey("device_configurations.uuid"))
 
 
@@ -192,5 +201,8 @@ class SQLSequenceConstantTableUUID(Base):
     )
 
     id_: Mapped[int] = mapped_column(primary_key=True)
-    sequence_id: Mapped[int] = mapped_column(ForeignKey(SQLSequence.id_))
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE")
+    )
+    sequence: Mapped[SQLSequence] = relationship(back_populates="constant_table_uuids")
     constant_table_uuid = mapped_column(ForeignKey("constant_tables.uuid"))

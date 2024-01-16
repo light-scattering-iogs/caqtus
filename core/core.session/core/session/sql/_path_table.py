@@ -17,17 +17,19 @@ class SQLSequencePath(Base):
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
     path: Mapped[str] = mapped_column(index=True, unique=True)
-    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("path.id"), index=True)
+    parent_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("path.id", ondelete="CASCADE"), index=True
+    )
 
     children: Mapped[list[SQLSequencePath]] = relationship(
-        back_populates="parent", cascade="delete, delete-orphan"
+        back_populates="parent", cascade="delete, delete-orphan", passive_deletes=True
     )
     parent: Mapped[SQLSequencePath] = relationship(
         back_populates="children", remote_side=[id_]
     )
     creation_date: Mapped[datetime.datetime] = mapped_column()
     sequence: Mapped[Optional["SQLSequence"]] = relationship(
-        back_populates="path", cascade="delete, delete-orphan"
+        back_populates="path", cascade="all, delete", passive_deletes=True
     )
 
     def __str__(self):
