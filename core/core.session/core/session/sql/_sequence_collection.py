@@ -5,6 +5,7 @@ from collections.abc import Callable, Set, Mapping
 from typing import TYPE_CHECKING
 
 import attrs
+import numpy as np
 import sqlalchemy.orm
 from returns.result import Result
 from returns.result import Success, Failure
@@ -23,7 +24,7 @@ from ._sequence_table import (
     SQLSequenceConstantTableUUID,
     SQLTimelanes,
 )
-from ._shot_tables import SQLShot, SQLShotParameter
+from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
@@ -43,6 +44,7 @@ from ..sequence_collection import (
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes
+from core.types.data import DataLabel, Data, is_data
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -304,6 +306,7 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         shot_index: int,
         shot_parameters: Mapping[DottedVariableName, Parameter],
+        shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
@@ -313,14 +316,42 @@ class SQLSequenceCollection(SequenceCollection):
 
         parameters = self.serialize_shot_parameters(shot_parameters)
 
+        array_data, structured_data = self.serialize_data(shot_data)
+
         shot = SQLShot(
             sequence=sequence,
             index=shot_index,
             parameters=SQLShotParameter(content=parameters),
+            array_data=array_data,
+            structured_data=structured_data,
             start_time=shot_start_time,
             end_time=shot_end_time,
         )
         self._get_sql_session().add(shot)
+
+    @staticmethod
+    def serialize_data(
+        data: Mapping[DataLabel, Data]
+    ) -> tuple[list[SQLShotArray], list[SQLStructuredShotData]]:
+        arrays = []
+        structured_data = []
+        for label, value in data.items():
+            if not is_data(value):
+                raise TypeError(f"Invalid data type for {label}: {type(value)}")
+            if isinstance(value, np.ndarray):
+                arrays.append(
+                    SQLShotArray(
+                        label=label,
+                        dtype=str(value.dtype),
+                        shape=value.shape,
+                        bytes_=value.tobytes(),
+                    )
+                )
+            else:
+                structured_data.append(
+                    SQLStructuredShotData(label=label, content=value)
+                )
+        return arrays, structured_data
 
     @staticmethod
     def serialize_shot_parameters(

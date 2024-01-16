@@ -90,7 +90,7 @@ class SQLShotArray(Base):
         ForeignKey("shots.id", ondelete="CASCADE"),
         index=True,
     )
-    shot: Mapped[SQLShot] = relationship(back_populates="arrays")
+    shot: Mapped[SQLShot] = relationship(back_populates="array_data")
     label: Mapped[str] = mapped_column()
     dtype: Mapped[str] = mapped_column()
     shape = mapped_column(JSON)

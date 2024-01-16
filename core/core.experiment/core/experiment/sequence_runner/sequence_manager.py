@@ -326,6 +326,7 @@ class SequenceManager(AbstractContextManager):
                 self._sequence_path,
                 shot_data.index,
                 params,
+                shot_data.data,
                 shot_data.start_time,
                 shot_data.end_time,
             )

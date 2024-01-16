@@ -9,6 +9,7 @@ from typing import Protocol, Optional
 import attrs
 from returns.result import Result
 
+from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
 from .path import PureSequencePath
@@ -141,6 +142,7 @@ class SequenceCollection(Protocol):
         path: PureSequencePath,
         shot_index: int,
         shot_parameters: Mapping[DottedVariableName, Parameter],
+        shot_data: Mapping[DataLabel, Data],
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
