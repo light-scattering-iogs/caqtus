@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, TypeVar, Generic
 
 import attrs
 import sqlalchemy
@@ -10,6 +10,7 @@ from core.device import (
     DeviceConfigurationAttrs,
 )
 from util.serialization import JSON
+
 from ._device_configuration_tables import (
     SQLDeviceConfiguration,
     SQLCurrentDeviceConfiguration,
@@ -19,8 +20,9 @@ from ..device_configuration_collection import DeviceConfigurationCollection
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
 
+T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
-class DeviceConfigurationSerializer[T: DeviceConfigurationAttrs](TypedDict):
+class DeviceConfigurationSerializer(TypedDict, Generic[T]):
     dumper: Callable[[T], JSON]
     loader: Callable[[JSON], T]
 
