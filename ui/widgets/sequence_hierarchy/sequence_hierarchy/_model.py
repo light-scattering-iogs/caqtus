@@ -444,7 +444,7 @@ def _build_children_items(
         _SequenceHierarchyItem(
             child,
             row=row,
-            is_sequence=experiment_session.sequence_collection.is_sequence(child),
+            is_sequence=experiment_session.sequences.is_sequence(child),
         )
         for row, child in enumerate(sorted_children)
     ]

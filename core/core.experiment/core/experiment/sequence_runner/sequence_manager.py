@@ -105,7 +105,7 @@ class SequenceManager(AbstractContextManager):
                 )
                 for uuid_ in self._constant_tables_uuid
             }
-            self.time_lanes = session.sequence_collection.get_time_lanes(
+            self.time_lanes = session.sequences.get_time_lanes(
                 self._sequence_path
             )
         self._shot_compiler = shot_compiler_factory(
@@ -208,17 +208,17 @@ class SequenceManager(AbstractContextManager):
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
-            session.sequence_collection.set_state(self._sequence_path, State.PREPARING)
-            session.sequence_collection.set_device_configuration_uuids(
+            session.sequences.set_state(self._sequence_path, State.PREPARING)
+            session.sequences.set_device_configuration_uuids(
                 self._sequence_path, self._device_configurations_uuid
             )
-            session.sequence_collection.set_constant_table_uuids(
+            session.sequences.set_constant_table_uuids(
                 self._sequence_path, self._constant_tables_uuid
             )
 
     def _set_sequence_state(self, state: State):
         with self._session_maker() as session:
-            session.sequence_collection.set_state(self._sequence_path, state)
+            session.sequences.set_state(self._sequence_path, state)
 
     def _prepare(self):
         self._exit_stack.enter_context(self._shot_runner)
@@ -322,7 +322,7 @@ class SequenceManager(AbstractContextManager):
             name: value for name, value in shot_data.variables.to_flat_dict().items()
         }
         with self._session_maker() as session:
-            session.sequence_collection.create_shot(
+            session.sequences.create_shot(
                 self._sequence_path,
                 shot_data.index,
                 params,

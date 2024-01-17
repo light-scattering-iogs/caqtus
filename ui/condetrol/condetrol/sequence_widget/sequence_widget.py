@@ -39,7 +39,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             sequence = Sequence(BoundSequencePath(self.sequence_path, session))
             iteration_config = sequence.get_iteration_configuration()
             time_lanes = sequence.get_time_lanes()
-            stats = unwrap(session.sequence_collection.get_stats(self.sequence_path))
+            stats = unwrap(session.sequences.get_stats(self.sequence_path))
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_changed
@@ -72,7 +72,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     def clear_sequence(self):
         def clear():
             with self.session_maker() as session:
-                session.sequence_collection.set_state(self.sequence_path, State.DRAFT)
+                session.sequences.set_state(self.sequence_path, State.DRAFT)
 
         run_with_wip_widget(self, "Clearing sequence", clear)
 
@@ -80,11 +80,11 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         iterations = self.iteration_editor.get_iteration()
         with self.session_maker() as session:
             try:
-                session.sequence_collection.set_iteration_configuration(
+                session.sequences.set_iteration_configuration(
                     Sequence(BoundSequencePath(self.sequence_path, session)), iterations
                 )
             except SequenceNotEditableError:
-                iterations = session.sequence_collection.get_iteration_configuration(
+                iterations = session.sequences.get_iteration_configuration(
                     self.sequence_path
                 )
                 self.iteration_editor.set_iteration(iterations)
@@ -93,11 +93,11 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         time_lanes = self.time_lanes_editor.get_time_lanes()
         with self.session_maker() as session:
             try:
-                session.sequence_collection.set_time_lanes(
+                session.sequences.set_time_lanes(
                     self.sequence_path, time_lanes
                 )
             except SequenceNotEditableError:
-                time_lanes = session.sequence_collection.get_time_lanes(
+                time_lanes = session.sequences.get_time_lanes(
                     self.sequence_path
                 )
                 self.time_lanes_editor.set_time_lanes(time_lanes)
@@ -137,7 +137,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.sequence_widget = sequence_widget
             with self.sequence_widget.session_maker() as session:
                 self.stats = unwrap(
-                    session.sequence_collection.get_stats(
+                    session.sequences.get_stats(
                         self.sequence_widget.sequence_path
                     )
                 )
@@ -147,14 +147,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 with self.sequence_widget.session_maker() as session:
                     try:
                         stats = unwrap(
-                            session.sequence_collection.get_stats(
+                            session.sequences.get_stats(
                                 self.sequence_widget.sequence_path
                             )
                         )
                         if stats != self.stats:
                             self.stats = stats
                             self.stats_changed.emit(stats)
-                        time_lanes = session.sequence_collection.get_time_lanes(
+                        time_lanes = session.sequences.get_time_lanes(
                             self.sequence_widget.sequence_path
                         )
                         if time_lanes != self.sequence_widget.time_lanes:

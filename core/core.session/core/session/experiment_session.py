@@ -49,6 +49,6 @@ class ExperimentSession(
     """
 
     paths: PathHierarchy
-    sequence_collection: SequenceCollection
+    sequences: SequenceCollection
     device_configurations: DeviceConfigurationCollection
     constants: ConstantTableCollection

@@ -33,7 +33,7 @@ default_serializer = Serializer(
 @attrs.define(init=False)
 class SQLExperimentSession(ExperimentSession):
     paths: SQLPathHierarchy
-    sequence_collection: SQLSequenceCollection
+    sequences: SQLSequenceCollection
     device_configurations: SQLDeviceConfigurationCollection
     constants: SQLConstantTableCollection
 
@@ -58,7 +58,7 @@ class SQLExperimentSession(ExperimentSession):
         self._sql_session = session
         self._is_active = False
         self.paths = SQLPathHierarchy(parent_session=self)
-        self.sequence_collection = SQLSequenceCollection(
+        self.sequences = SQLSequenceCollection(
             parent_session=self,
             serializer=serializer.sequence_serializer,
         )

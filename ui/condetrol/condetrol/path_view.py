@@ -55,7 +55,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         menu = QMenu(self)
 
         with self.session_maker() as session:
-            is_sequence = unwrap(session.sequence_collection.is_sequence(path))
+            is_sequence = unwrap(session.sequences.is_sequence(path))
         if not is_sequence:
             new_menu = QMenu("New...")
             menu.addMenu(new_menu)
@@ -103,7 +103,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         if ok and text:
             new_path = path / text
             with self.session_maker() as session:
-                session.sequence_collection.create(
+                session.sequences.create(
                     new_path,
                     copy.deepcopy(DEFAULT_ITERATION_CONFIG),
                     copy.deepcopy(DEFAULT_TIME_LANES),
@@ -116,7 +116,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         )
         if self.exec_confirmation_message_box(message):
             with self.session_maker() as session:
-                if unwrap(session.sequence_collection.is_sequence(path)):
+                if unwrap(session.sequences.is_sequence(path)):
                     session.paths.delete_path(path, delete_sequences=True)
                 else:
                     # An error will be raised if someone tries to delete a folder that

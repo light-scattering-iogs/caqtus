@@ -36,7 +36,7 @@ class SQLPathHierarchy(PathHierarchy):
     ) -> Result[list[PureSequencePath], PathIsSequenceError]:
         paths_to_create: list[PureSequencePath] = []
         current = path
-        sequence_collection = self.parent_session.sequence_collection
+        sequence_collection = self.parent_session.sequences
         while parent := current.parent:
             match sequence_collection.is_sequence(current):
                 case Success(True):
@@ -99,7 +99,7 @@ class SQLPathHierarchy(PathHierarchy):
         session = self._get_sql_session()
 
         if not delete_sequences:
-            sequence_collection = self.parent_session.sequence_collection
+            sequence_collection = self.parent_session.sequences
             if contained := sequence_collection.get_contained_sequences(path):
                 raise PathIsSequenceError(
                     f"Cannot delete a path that contains sequences: {contained}"

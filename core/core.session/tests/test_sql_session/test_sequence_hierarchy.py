@@ -85,15 +85,15 @@ def test_deletion_1(empty_session):
 def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequence_collection.create(
+        sequence = session.sequences.create(
             p, steps_configuration, time_lanes
         )
         assert sequence.exists()
-        assert session.sequence_collection.is_sequence(p)
+        assert session.sequences.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
-            session.sequence_collection.create(p, steps_configuration, time_lanes)
+            session.sequences.create(p, steps_configuration, time_lanes)
 
-        assert not unwrap(session.sequence_collection.is_sequence(p.parent))
+        assert not unwrap(session.sequences.is_sequence(p.parent))
 
 
 def test_sequence_deletion(
@@ -101,7 +101,7 @@ def test_sequence_deletion(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequence_collection.create(
+        sequence = session.sequences.create(
             p, steps_configuration, time_lanes
         )
         with pytest.raises(PathIsSequenceError):
@@ -123,17 +123,17 @@ def test_iteration_save(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequence_collection.create(
+        sequence = session.sequences.create(
             p, steps_configuration, time_lanes
         )
         assert sequence.get_iteration_configuration() == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
         )
-        session.sequence_collection.set_iteration_configuration(
+        session.sequences.set_iteration_configuration(
             sequence, new_steps_configuration
         )
-        session.sequence_collection.set_iteration_configuration(
+        session.sequences.set_iteration_configuration(
             sequence, new_steps_configuration
         )
         assert sequence.get_iteration_configuration() == new_steps_configuration
@@ -145,11 +145,11 @@ def test_shot_creation(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequence_collection.create(
+        sequence = session.sequences.create(
             p, steps_configuration, time_lanes
         )
-        session.sequence_collection.set_state(p, State.PREPARING)
-        session.sequence_collection.set_state(p, State.RUNNING)
+        session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_state(p, State.RUNNING)
         parameters = {
             DottedVariableName("test"): 1.0,
             DottedVariableName("test2"): 2.0 * ureg.MHz,
@@ -159,7 +159,7 @@ def test_shot_creation(
             DataLabel("b"): np.linspace(0, 1, 100),
             DataLabel("c"): np.random.normal(size=(10, 20)),
         }
-        session.sequence_collection.create_shot(
+        session.sequences.create_shot(
             p,
             0,
             parameters,

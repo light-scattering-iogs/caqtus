@@ -265,7 +265,7 @@ class BoundProcedure(Procedure):
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         with self._session_maker() as session:
-            iteration = session.sequence_collection.get_iteration_configuration(
+            iteration = session.sequences.get_iteration_configuration(
                 sequence_path
             )
 

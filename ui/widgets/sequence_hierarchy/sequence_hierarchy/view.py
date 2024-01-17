@@ -49,7 +49,7 @@ class PathHierarchyView(QTreeView):
     def on_double_click(self, index: QModelIndex):
         path = self._model.get_path(self._proxy_model.mapToSource(index))
         with self.session_maker() as session:
-            is_sequence = unwrap(session.sequence_collection.is_sequence(path))
+            is_sequence = unwrap(session.sequences.is_sequence(path))
         if is_sequence:
             self.sequence_double_clicked.emit(path)
 

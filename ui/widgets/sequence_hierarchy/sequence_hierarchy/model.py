@@ -253,7 +253,7 @@ class PathHierarchyModel(QAbstractItemModel):
                 path = path_item.hierarchy_path
                 try:
                     sequence_stats = unwrap(
-                        self.session.sequence_collection.get_stats(path)
+                        self.session.sequences.get_stats(path)
                     )
                 except PathIsNotSequenceError:
                     sequence_stats = None

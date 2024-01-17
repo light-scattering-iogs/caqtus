@@ -50,7 +50,7 @@ class Shot:
     ) -> Mapping[DottedVariableName, Parameter]:
         """Return the parameters used to run this shot."""
 
-        return session.sequence_collection.get_shot_parameters(
+        return session.sequences.get_shot_parameters(
             self.sequence.path, self.index
         )
 
@@ -62,13 +62,13 @@ class Shot:
         which will avoid querying unnecessary data.
         """
 
-        return session.sequence_collection.get_all_shot_data(
+        return session.sequences.get_all_shot_data(
             self.sequence.path, self.index
         )
 
     def get_data_by_label(self, session: ExperimentSession, label: DataLabel) -> Data:
         """Return the data of this shot with the given label."""
 
-        return session.sequence_collection.get_shot_data_by_label(
+        return session.sequences.get_shot_data_by_label(
             self.sequence.path, self.index, label
         )
