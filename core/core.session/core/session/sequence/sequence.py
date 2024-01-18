@@ -51,6 +51,11 @@ class Sequence:
 
         return self.session.sequences.get_time_lanes(self.path)
 
+    def set_time_lanes(self, time_lanes: TimeLanes) -> None:
+        """Set the time lanes that define how a shot is run for this sequence."""
+
+        return self.session.sequences.set_time_lanes(self.path, time_lanes)
+
     def get_shots(self) -> list[Shot]:
         """Return the shots that belong to this sequence."""
 

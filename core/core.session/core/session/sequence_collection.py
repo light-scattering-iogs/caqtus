@@ -7,11 +7,11 @@ from collections.abc import Set, Mapping
 from typing import Protocol, Optional
 
 import attrs
-from returns.result import Result
-
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
+from returns.result import Result
+
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
@@ -56,6 +56,12 @@ class ShotNotFoundError(RuntimeError):
 
 
 class SequenceCollection(Protocol):
+    """A collection of sequences."""
+
+    @abc.abstractmethod
+    def __getitem__(self, item: str) -> Sequence:
+        raise NotImplementedError
+
     @abc.abstractmethod
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         raise NotImplementedError

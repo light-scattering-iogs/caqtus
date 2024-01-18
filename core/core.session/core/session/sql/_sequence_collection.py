@@ -126,6 +126,9 @@ class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: SequenceSerializer
 
+    def __getitem__(self, item: str) -> Sequence:
+        return Sequence(BoundSequencePath(item, self.parent_session))
+
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         if path.is_root():
             return Success(False)
