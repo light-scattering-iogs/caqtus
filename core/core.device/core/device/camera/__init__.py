@@ -1,4 +1,4 @@
 from .configuration import CameraConfiguration
-from .runtime import Camera
+from .runtime import Camera, CameraTimeoutError
 
-__all__ = ["CameraConfiguration", "Camera"]
+__all__ = ["CameraConfiguration", "Camera", "CameraTimeoutError"]
