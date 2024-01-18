@@ -1,4 +1,4 @@
-from .configuration import SequencerConfiguration
+from .configuration import SequencerConfiguration, Trigger, SoftwareTrigger
 from .runtime import Sequencer
 
-__all__ = ["SequencerConfiguration", "Sequencer"]
+__all__ = ["SequencerConfiguration", "Sequencer", "Trigger", "SoftwareTrigger"]
