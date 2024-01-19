@@ -8,7 +8,7 @@ from core.device.sequencer import SequencerConfiguration, AnalogChannelConfigura
 from util import serialization
 
 
-@attrs.define(slots=False)
+@attrs.define
 class NI6738SequencerConfiguration(SequencerConfiguration):
     @classmethod
     def channel_types(cls) -> tuple[Type[AnalogChannelConfiguration], ...]:
@@ -52,12 +52,12 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
 
     @classmethod
     def dump(cls, obj: NI6738SequencerConfiguration) -> serialization.JSON:
-        return serialization.converters["JSON"].unstructure(
+        return serialization.converters["json"].unstructure(
             obj, NI6738SequencerConfiguration
         )
 
     @classmethod
     def load(cls, data: serialization.JSON) -> NI6738SequencerConfiguration:
-        return serialization.converters["JSON"].structure(
+        return serialization.converters["json"].structure(
             data, NI6738SequencerConfiguration
         )

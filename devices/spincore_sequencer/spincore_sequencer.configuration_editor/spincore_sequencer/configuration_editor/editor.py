@@ -55,6 +55,7 @@ class SpincorePulseBlasterDeviceConfigEditor(
         self._layout.addRow("Channels", self._channels_view)
 
         self.setLayout(self._layout)
+        self.set_configuration(self.device_config)
 
     def set_configuration(
         self, device_configuration: SpincoreSequencerConfiguration

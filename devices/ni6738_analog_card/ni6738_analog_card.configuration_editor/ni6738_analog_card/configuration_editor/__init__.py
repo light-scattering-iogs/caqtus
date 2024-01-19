@@ -1,3 +1,3 @@
-from .editor import NI6738AnalogCardConfigEditor
+from .editor import NI6738DeviceConfigEditor
 
-__all__ = ["NI6738AnalogCardConfigEditor"]
+__all__ = ["NI6738DeviceConfigEditor"]
