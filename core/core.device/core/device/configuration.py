@@ -1,8 +1,10 @@
 from abc import abstractmethod, ABC
+from collections.abc import Mapping
 from typing import Any, TypeVar
 
 import attrs
 
+from .name import DeviceName
 from .parameter import DeviceParameter
 
 
@@ -44,3 +46,14 @@ class DeviceConfigurationAttrs(ABC):
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfigurationAttrs)
+
+
+def get_configurations_by_type(
+    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+    device_type: type[DeviceConfigType],
+) -> dict[DeviceName, DeviceConfigType]:
+    return {
+        name: configuration
+        for name, configuration in device_configurations.items()
+        if isinstance(configuration, device_type)
+    }
