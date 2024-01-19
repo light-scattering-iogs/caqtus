@@ -4,6 +4,7 @@ from .configuration import (
     SoftwareTrigger,
     ChannelConfiguration,
     DigitalChannelConfiguration,
+    AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
 
@@ -14,4 +15,5 @@ __all__ = [
     "SoftwareTrigger",
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
+    "AnalogChannelConfiguration",
 ]

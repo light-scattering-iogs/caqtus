@@ -1,19 +1,17 @@
+from __future__ import annotations
+
 from typing import Any, ClassVar, Type
 
-from device.configuration import DeviceParameter
-from sequencer.configuration import (
-    SequencerConfiguration,
-    AnalogChannelConfiguration,
-    ChannelConfiguration,
-)
-from settings_model import YAMLSerializable
-from util import attrs
+import attrs
+from core.device import DeviceParameter
+from core.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
+from util import serialization
 
 
 @attrs.define(slots=False)
 class NI6738SequencerConfiguration(SequencerConfiguration):
     @classmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
+    def channel_types(cls) -> tuple[Type[AnalogChannelConfiguration], ...]:
         return (AnalogChannelConfiguration,) * cls.number_channels
 
     number_channels: ClassVar[int] = 32
@@ -36,10 +34,9 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
     def validate_channels(self, attribute, channels: list[AnalogChannelConfiguration]):
         super().validate_channels(attribute, channels)
         for channel in channels:
-            mapping = channel.output_mapping
-            if (output_units := mapping.get_output_units()) != "V":
+            if channel.output_unit != "V":
                 raise ValueError(
-                    f"Channel {channel} output units ({output_units}) are not"
+                    f"Channel {channel} output units ({channel.output_unit}) are not"
                     " compatible with Volt"
                 )
 
@@ -53,5 +50,14 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
         }
         return super().get_device_init_args() | extra
 
+    @classmethod
+    def dump(cls, obj: NI6738SequencerConfiguration) -> serialization.JSON:
+        return serialization.converters["JSON"].unstructure(
+            obj, NI6738SequencerConfiguration
+        )
 
-YAMLSerializable.register_attrs_class(NI6738SequencerConfiguration)
+    @classmethod
+    def load(cls, data: serialization.JSON) -> NI6738SequencerConfiguration:
+        return serialization.converters["JSON"].structure(
+            data, NI6738SequencerConfiguration
+        )

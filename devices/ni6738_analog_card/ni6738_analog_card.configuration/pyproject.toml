@@ -9,11 +9,7 @@ packages = [{include = "ni6738_analog_card"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-pydantic = "^1.10.4"
-
-units = {path = "../../../common/units", develop = true}
-device-config = {path = "../../device/device.configuration", develop = true}
-sequencer-configuration = {path = "../../sequencer/sequencer.configuration", develop = true}
+core-device = {path = "../../../core/core.device", develop = true}
 
 
 [build-system]
