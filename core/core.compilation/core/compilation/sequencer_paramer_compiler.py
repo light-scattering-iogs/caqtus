@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import logging
 from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
@@ -33,8 +34,11 @@ from core.types.units import Unit
 
 from .lane_compilers import DigitalLaneCompiler
 from .lane_compilers import evaluate_step_durations
-from .lane_compilers.timing import number_ticks
+from .lane_compilers.timing import number_ticks, ns
 from .unit_namespace import units
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class SequencerParameterCompiler:
@@ -96,6 +100,7 @@ class SingleShotCompiler:
         unreached_sequencers = set(self.sequencer_configurations.keys()) - set(
             self.sequencer_instructions.keys()
         )
+
         if unreached_sequencers:
             raise ValueError(
                 f"Could not trigger sequencers {unreached_sequencers} from root "
@@ -118,13 +123,15 @@ class SingleShotCompiler:
             output_ = self.evaluate_output(channel, sequencer_config)
             instruction = self.convert_to_channel_instruction(output_, channel)
             channel_instructions.append(with_name(instruction, f"ch {channel_number}"))
-        return stack_instructions(channel_instructions)
+        stacked = stack_instructions(channel_instructions)
+        self.sequencer_instructions[sequencer_name] = stacked
+        return stacked
 
     def evaluate_output(
         self, channel: ChannelConfiguration, sequencer_config: SequencerConfiguration
     ) -> ChannelOutput:
         time_step = sequencer_config.time_step
-        length = number_ticks(0, self.shot_duration, time_step)
+        length = number_ticks(0, self.shot_duration, time_step * ns)
 
         match channel.output:
             case Constant(expression):
@@ -147,6 +154,8 @@ class SingleShotCompiler:
             case DeviceTrigger(device_name):
                 device_config = self.devices[device_name]
                 return self.evaluate_device_trigger(device_config, sequencer_config)
+            case _:
+                raise NotImplementedError
 
     def evaluate_lane_output(
         self, lane: TimeLane, sequencer_config: SequencerConfiguration
