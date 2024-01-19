@@ -199,12 +199,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         message_box.exec()
 
     def format_error(self, exception: Exception):
-        result = []
-        while exception.__cause__ is not None:
-            result.append(str(exception))
-            exception = exception.__cause__
-        result.append(str(exception))
-        return "\nbecause: ".join(result)
+        formatted = traceback.format_exception_only(exception)
+        print(formatted)
+        return "".join(formatted)
+
 
 
 class ProcedureWatcherThread(QThread):
