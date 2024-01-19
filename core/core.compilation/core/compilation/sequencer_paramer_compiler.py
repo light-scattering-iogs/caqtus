@@ -94,6 +94,7 @@ class SingleShotCompiler:
         self.devices = devices
 
         self.sequencer_instructions: dict[DeviceName, SequencerInstruction] = {}
+        self.used_lanes = set()
 
     def compile(self) -> dict[DeviceName, SequencerParameters]:
         self.compile_sequencer_instruction(self.root_sequencer)
@@ -106,6 +107,14 @@ class SingleShotCompiler:
                 f"Could not trigger sequencers {unreached_sequencers} from root "
                 f"sequencer {self.root_sequencer}"
             )
+
+        unused_lanes = set(self.lanes.keys()) - self.used_lanes
+        if unused_lanes:
+            raise ValueError(
+                f"The following lanes where not used when compiling the shot: "
+                f"{unused_lanes}"
+            )
+
         return {
             sequencer_name: {"sequence": instruction}
             for sequencer_name, instruction in self.sequencer_instructions.items()
@@ -151,6 +160,7 @@ class SingleShotCompiler:
                         f"<{channel.description}>"
                     )
                 if isinstance(lane, DigitalTimeLane):
+                    self.used_lanes.add(lane_name)
                     return self.evaluate_digital_lane_output(lane, sequencer_config)
                 elif isinstance(lane, AnalogTimeLane):
                     if not isinstance(channel, AnalogChannelConfiguration):
@@ -158,6 +168,7 @@ class SingleShotCompiler:
                             f"Cannot evaluate analog lane <{lane_name}> for channel "
                             f"<{channel.description}> with type {type(channel)}"
                         )
+                    self.used_lanes.add(lane_name)
                     return self.evaluate_analog_lane_output(
                         lane, sequencer_config, channel.output_unit
                     )
