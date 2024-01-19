@@ -2,12 +2,11 @@ import copy
 from typing import Optional, Any, assert_never
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
-from PyQt6.QtGui import QAction, QBrush
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
-
-from core.session.shot import DigitalTimeLane
 from core.session.shot.timelane import AnalogTimeLane, Ramp
 from core.types.expression import Expression
+
 from .model import TimeLaneModel
 
 
@@ -39,7 +38,7 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
             if isinstance(value, Expression):
                 return str(value)
             elif isinstance(value, Ramp):
-                return "->"
+                return "\u279F"
             else:
                 assert_never(value)
         elif role == Qt.ItemDataRole.EditRole:
@@ -48,6 +47,8 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
             return None
         elif role == Qt.ItemDataRole.ForegroundRole:
             return self._brush
+        elif role == Qt.ItemDataRole.TextAlignmentRole:
+            return Qt.AlignmentFlag.AlignCenter
         else:
             return None
 
@@ -91,21 +92,21 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
             return []
         cell_type_menu = QMenu("Cell type")
         value = self._lane[index.row()]
-        bool_action = cell_type_menu.addAction("on/off")
-        if isinstance(value, bool):
-            bool_action.setCheckable(True)
-            bool_action.setChecked(True)
-        else:
-            bool_action.triggered.connect(
-                lambda: self.setData(index, False, Qt.ItemDataRole.EditRole)
-            )
         expr_action = cell_type_menu.addAction("expression")
         if isinstance(value, Expression):
             expr_action.setCheckable(True)
             expr_action.setChecked(True)
         else:
             expr_action.triggered.connect(
-                lambda: self.setData(index, Expression("..."), Qt.ItemDataRole.EditRole)
+                lambda: self.setData(index, "...", Qt.ItemDataRole.EditRole)
+            )
+        ramp_action = cell_type_menu.addAction("ramp")
+        if isinstance(value, Ramp):
+            ramp_action.setCheckable(True)
+            ramp_action.setChecked(True)
+        else:
+            ramp_action.triggered.connect(
+                lambda: self.setData(index, Ramp(), Qt.ItemDataRole.EditRole)
             )
 
         return [cell_type_menu]
