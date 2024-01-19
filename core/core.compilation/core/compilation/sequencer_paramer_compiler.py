@@ -177,7 +177,13 @@ class SingleShotCompiler:
                         f"Cannot evaluate values of lane with type " f"{type(lane)}"
                     )
             case DeviceTrigger(device_name):
-                device_config = self.devices[device_name]
+                try:
+                    device_config = self.devices[device_name]
+                except KeyError:
+                    raise ValueError(
+                        f"Could not find device <{device_name}> to generate trigger "
+                        f"for channel <{channel.description}>."
+                    )
                 return self.evaluate_device_trigger(device_config, sequencer_config)
             case _:
                 raise NotImplementedError
