@@ -7,15 +7,17 @@ from typing import TYPE_CHECKING
 import attrs
 import numpy as np
 import sqlalchemy.orm
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import select
-
+from core.session.shot.timelane import AnalogTimeLane
+from core.types.data import DataLabel, Data, is_data
 from core.types.expression import Expression
 from core.types.parameter import Parameter
 from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import select
 from util import serialization
+
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -44,7 +46,6 @@ from ..sequence_collection import (
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes
-from core.types.data import DataLabel, Data, is_data
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -101,6 +102,13 @@ def _(time_lane: DigitalTimeLane):
     return content
 
 
+@default_time_lane_serializer.register
+def _(time_lane: AnalogTimeLane):
+    content = serialization.converters["json"].unstructure(time_lane, AnalogTimeLane)
+    content["type"] = "analog"
+    return content
+
+
 def default_time_lane_constructor(
     time_lane_content: serialization.JSON,
 ) -> TimeLane:
@@ -108,6 +116,10 @@ def default_time_lane_constructor(
     if time_lane_type == "digital":
         return serialization.converters["json"].structure(
             time_lane_content, DigitalTimeLane
+        )
+    elif time_lane_type == "analog":
+        return serialization.converters["json"].structure(
+            time_lane_content, AnalogTimeLane
         )
     else:
         raise ValueError(f"Unknown time lane type {time_lane_type}")
