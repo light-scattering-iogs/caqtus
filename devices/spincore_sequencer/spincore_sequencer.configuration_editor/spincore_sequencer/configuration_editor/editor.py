@@ -63,6 +63,7 @@ class SpincorePulseBlasterDeviceConfigEditor(
         self._time_step.setValue(device_configuration.time_step)
         self._board_number.setValue(device_configuration.board_number)
         self._channels_view.channel_model.channels = device_configuration.channels
+        self.device_config.remote_server = device_configuration.remote_server
 
     def get_configuration(self) -> SpincoreSequencerConfiguration:
         self.device_config.board_number = self._board_number.value()
