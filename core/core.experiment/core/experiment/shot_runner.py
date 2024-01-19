@@ -61,10 +61,10 @@ class ShotRunner(abc.ABC):
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
 
-def update_device(name: str, device: Device, parameters: Mapping[str, Any]):
+def update_device(name: str, device: Device, parameters: Mapping[DeviceParameter, Any]):
     try:
         if parameters:
-            device.update_parameters(**parameters)
+            device.update_parameters(**parameters)  # type: ignore
     except Exception as error:
         raise RuntimeError(f"Failed to update device {name}") from error
 
