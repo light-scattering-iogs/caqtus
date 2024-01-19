@@ -63,6 +63,7 @@ class NI6738DeviceConfigEditor(DeviceConfigurationEditor[NI6738SequencerConfigur
         self._device_id.setText(device_configuration.device_id)
         self._channels_view.channel_model.channels = device_configuration.channels
         self.device_config.remote_server = device_configuration.remote_server
+        self.device_config.trigger = device_configuration.trigger
 
     def get_configuration(self) -> NI6738SequencerConfiguration:
         self.device_config.device_id = self._device_id.text()
