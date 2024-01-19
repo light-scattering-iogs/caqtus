@@ -1,6 +1,7 @@
+import attrs
 from pydantic import SecretStr
 
-from util import attrs, serialization
+from util import serialization
 
 
 def secret_str_converter(value: str | SecretStr) -> SecretStr:
