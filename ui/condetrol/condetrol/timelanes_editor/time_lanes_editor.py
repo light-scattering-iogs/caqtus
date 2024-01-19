@@ -10,11 +10,11 @@ from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel
 
 
-def lane_delegate_factory(lane_type: type[TimeLane]) -> QStyledItemDelegate:
+def lane_delegate_factory(lane_type: type[TimeLane]) -> Optional[QStyledItemDelegate]:
     if issubclass(lane_type, DigitalTimeLane):
         return DigitalTimeLaneDelegate()
     else:
-        raise NotImplementedError
+        return None
 
 
 class TimeLanesEditor(QTableView):
@@ -79,8 +79,9 @@ class TimeLanesEditor(QTableView):
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             delegate = self.lane_delegate_factory(type(lane))
-            delegate.setParent(self)
             self.setItemDelegateForRow(row, delegate)
+            if delegate:
+                delegate.setParent(self)
 
     def set_read_only(self, read_only: bool) -> None:
         raise NotImplementedError
