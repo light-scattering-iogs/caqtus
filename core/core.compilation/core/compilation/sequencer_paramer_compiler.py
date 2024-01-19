@@ -27,12 +27,12 @@ from core.device.sequencer.instructions import (
     stack_instructions,
     Pattern,
 )
-from core.session.shot import TimeLane, DigitalTimeLane
+from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
 from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit, get_unit
 from core.types.units import Unit
 
-from .lane_compilers import DigitalLaneCompiler
+from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns
 from .unit_namespace import units
@@ -150,25 +150,51 @@ class SingleShotCompiler:
                         f"Could not find lane <{lane_name}> for channel "
                         f"<{channel.description}>"
                     )
-                return self.evaluate_lane_output(lane, sequencer_config)
+                if isinstance(lane, DigitalTimeLane):
+                    return self.evaluate_digital_lane_output(lane, sequencer_config)
+                elif isinstance(lane, AnalogTimeLane):
+                    if not isinstance(channel, AnalogChannelConfiguration):
+                        raise TypeError(
+                            f"Cannot evaluate analog lane <{lane_name}> for channel "
+                            f"<{channel.description}> with type {type(channel)}"
+                        )
+                    return self.evaluate_analog_lane_output(
+                        lane, sequencer_config, channel.output_unit
+                    )
+                else:
+                    raise TypeError(
+                        f"Cannot evaluate values of lane with type " f"{type(lane)}"
+                    )
             case DeviceTrigger(device_name):
                 device_config = self.devices[device_name]
                 return self.evaluate_device_trigger(device_config, sequencer_config)
             case _:
                 raise NotImplementedError
 
-    def evaluate_lane_output(
-        self, lane: TimeLane, sequencer_config: SequencerConfiguration
+    def evaluate_digital_lane_output(
+        self, lane: DigitalTimeLane, sequencer_config: SequencerConfiguration
     ) -> ChannelOutput:
-        if isinstance(lane, DigitalTimeLane):
-            compiler = DigitalLaneCompiler(lane, self.step_names, self.step_durations)
-            lane_output = compiler.compile(self.variables, sequencer_config.time_step)
-            return ChannelOutput(
-                instruction=lane_output,
-                unit=None,
-            )
-        else:
-            raise NotImplementedError
+        compiler = DigitalLaneCompiler(lane, self.step_names, self.step_durations)
+        lane_output = compiler.compile(self.variables, sequencer_config.time_step)
+        return ChannelOutput(
+            instruction=lane_output,
+            unit=None,
+        )
+
+    def evaluate_analog_lane_output(
+        self,
+        lane: AnalogTimeLane,
+        sequencer_config: SequencerConfiguration,
+        target_unit: Optional[Unit],
+    ) -> ChannelOutput:
+        compiler = AnalogLaneCompiler(
+            lane, self.step_names, self.step_durations, target_unit
+        )
+        lane_output = compiler.compile(self.variables, sequencer_config.time_step)
+        return ChannelOutput(
+            instruction=lane_output,
+            unit=target_unit,
+        )
 
     def convert_to_channel_instruction(
         self, output_: ChannelOutput, channel: ChannelConfiguration
