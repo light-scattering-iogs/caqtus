@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import concurrent.futures
+import logging
 import threading
 import uuid
 from collections.abc import Set
@@ -12,8 +13,13 @@ from core.compilation import ShotCompilerFactory
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from core.session.sequence.iteration_configuration import StepsConfiguration
+
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
+from util import log_exception
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class ExperimentManager(abc.ABC):
@@ -258,6 +264,7 @@ class BoundProcedure(Procedure):
         if self.is_running_sequence():
             self._sequence_future.result()
 
+    @log_exception(logger)
     def _run_sequence(
         self,
         sequence_path: PureSequencePath,
@@ -265,9 +272,7 @@ class BoundProcedure(Procedure):
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         with self._session_maker() as session:
-            iteration = session.sequences.get_iteration_configuration(
-                sequence_path
-            )
+            iteration = session.sequences.get_iteration_configuration(sequence_path)
 
         with SequenceManager(
             sequence_path,
