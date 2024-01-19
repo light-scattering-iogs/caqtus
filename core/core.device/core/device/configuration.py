@@ -17,6 +17,8 @@ class DeviceConfigurationAttrs(ABC):
     information to connect to the device, such as the IP address, port, etc.
     """
 
+    remote_server: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+
     @abstractmethod
     def get_device_type(self) -> str:
         """Return the runtime type of the device.
