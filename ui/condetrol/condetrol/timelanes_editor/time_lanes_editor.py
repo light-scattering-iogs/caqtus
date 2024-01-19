@@ -144,3 +144,5 @@ class TimeLanesEditor(QTableView):
             elif isinstance(action, QMenu):
                 menu.addMenu(action)
         menu.exec(self.mapToGlobal(pos))
+        # TODO: Deal with model change in the context menu better
+        self._model.modelReset.emit()
