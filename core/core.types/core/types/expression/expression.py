@@ -47,6 +47,8 @@ BUILTINS = {
     "square_wave": square_wave,
     "max": max,
     "min": min,
+    "Enabled": True,
+    "Disabled": False,
 }
 
 
