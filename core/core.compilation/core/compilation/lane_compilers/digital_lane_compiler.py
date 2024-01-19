@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+import numpy as np
 from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from core.session.shot.timelane import DigitalTimeLane
 from core.types.expression import Expression
@@ -32,7 +33,7 @@ class DigitalLaneCompiler:
 
     def compile(
         self, variables: VariableNamespace, time_step: int
-    ) -> SequencerInstruction[bool]:
+    ) -> SequencerInstruction[np.bool_]:
         """Compiles the lane into a sequencer instruction.
 
         Args:
