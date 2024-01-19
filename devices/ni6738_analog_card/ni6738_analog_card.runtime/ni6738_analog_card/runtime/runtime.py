@@ -11,14 +11,13 @@ import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-
-from sequencer.instructions.struct_array_instruction import (
+from core.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
+from core.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Concatenate,
     Repeat,
 )
-from sequencer.runtime import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
 from util import log_exception
 
 logger = logging.getLogger(__name__)
@@ -32,8 +31,8 @@ class NI6738AnalogCard(Sequencer):
     """Device class to program the NI6738 analog card.
 
     Fields:
-        device_id: The ID of the device to use. It is the name of the device as it appears in the NI MAX software, e.g.
-        Dev1.
+        device_id: The ID of the device to use.
+        It is the name of the device as it appears in the NI MAX software, e.g. Dev0.
         time_step: The smallest allowed time step, in nanoseconds.
         trigger: Indicates how the sequence is started and how it is clocked.
     """

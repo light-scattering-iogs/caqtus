@@ -6,6 +6,7 @@ from .configuration import (
     ExternalTriggerStart,
     ExternalClockOnChange,
     ChannelConfiguration,
+    TriggerEdge,
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "ExternalClock",
     "ExternalTriggerStart",
     "ExternalClockOnChange",
+    "TriggerEdge",
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
