@@ -15,6 +15,7 @@ from spincore_sequencer.configuration import SpincoreSequencerConfiguration
 
 def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
     return SpincoreSequencerConfiguration(
+        remote_server="default",
         board_number=0,
         time_step=50,
         channels=tuple(
