@@ -4,18 +4,19 @@ from enum import IntFlag
 from functools import singledispatchmethod
 from typing import ClassVar
 
+import attrs.validators
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-
-from sequencer.instructions.struct_array_instruction import (
+from core.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Repeat,
     Concatenate,
 )
-from sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
+from core.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from util import log_exception
+
 from . import spinapi
 from .spinapi import ns
 
@@ -38,8 +39,9 @@ class SpincorePulseBlaster(Sequencer):
         clock_cycle: Duration of a clock cycle in ns
         time_step: Digitization time in ns
 
-        board_number: The number used to refer to a given spincore pulseblaster. If there are multiple boards connected
-        to the computer, they are numbered from 0 to n-1.
+        board_number: The number used to refer to a given spincore pulseblaster.
+        If there are multiple boards connected to the computer, they are numbered from
+        0 to n-1.
         spincore_lib_debug: If True, the spincore library will log debug messages in a file in the current working
         directory. This can be useful to debug the program, but generates large files.
         time_step: The time step of the sequencer in nanoseconds.
@@ -59,14 +61,17 @@ class SpincorePulseBlaster(Sequencer):
     )
 
     trigger: Trigger = field(
-        factory=SoftwareTrigger, validator=instance_of(Trigger), on_setattr=frozen
+        factory=SoftwareTrigger,
+        validator=attrs.validators.instance_of(Trigger),
+        on_setattr=frozen,
     )
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
         if not isinstance(value, SoftwareTrigger):
             raise NotImplementedError(
-                f"Trigger type {type(value)} is not implemented for the Spincore PulseBlaster"
+                f"Trigger type {type(value)} is not implemented for the Spincore "
+                f"PulseBlaster"
             )
         return value
 
@@ -100,7 +105,7 @@ class SpincorePulseBlaster(Sequencer):
         spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
     @log_exception(logger)
-    def update_parameters(self, /, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         sequence_duration = len(sequence) * self.time_step * 1e-9
         logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:
@@ -150,8 +155,8 @@ class SpincorePulseBlaster(Sequencer):
 
         flags = self._output_to_flags(output_)
         if number_of_repetitions >= 1:
-            # Delay multiplier must be greater than 2, so we divide by 2 the length of the wait and multiply the number
-            # of repetitions by 2
+            # Delay multiplier must be greater than 2, so we divide by 2 the length of
+            # the wait and multiply the number of repetitions by 2
             if (
                 spinapi.pb_inst_pbonly(
                     flags,
