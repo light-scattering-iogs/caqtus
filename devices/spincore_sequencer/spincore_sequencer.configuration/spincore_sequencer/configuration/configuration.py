@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Type
 import attrs
 
 from core.device import DeviceParameter
-from core.device.sequencer.configuration import (
+from core.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
