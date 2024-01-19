@@ -3,7 +3,6 @@ from typing import Any
 import attrs
 import pytest
 import sqlalchemy
-
 from core.device import DeviceConfigurationAttrs, DeviceParameter
 from core.session import ExperimentSession
 from core.session.sql import (
@@ -13,7 +12,6 @@ from core.session.sql import (
 )
 from util import serialization
 from util.serialization import JSON
-from .session_maker import get_session_maker
 
 
 @attrs.define
@@ -62,6 +60,7 @@ def empty_session():
 
 def test_1(empty_session):
     config = DummyConfiguration(
+        remote_server="test",
         a=1,
         b="test",
     )
