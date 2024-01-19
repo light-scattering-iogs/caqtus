@@ -14,6 +14,7 @@ from core.device.sequencer import (
     SoftwareTrigger,
     ChannelConfiguration,
     DigitalChannelConfiguration,
+    ExternalClockOnChange,
 )
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
@@ -25,7 +26,7 @@ from core.device.sequencer.instructions import (
     SequencerInstruction,
     with_name,
     stack_instructions,
-    Pattern,
+    Pattern, Repeat, Concatenate, join,
 )
 from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
 from core.types.expression import Expression
@@ -176,15 +177,13 @@ class SingleShotCompiler:
                     raise TypeError(
                         f"Cannot evaluate values of lane with type " f"{type(lane)}"
                     )
-            case DeviceTrigger(device_name):
-                try:
-                    device_config = self.devices[device_name]
-                except KeyError:
+            case DeviceTrigger(device):
+                if device not in self.devices:
                     raise ValueError(
-                        f"Could not find device <{device_name}> to generate trigger "
+                        f"Could not find device <{device}> to generate trigger "
                         f"for channel <{channel.description}>."
                     )
-                return self.evaluate_device_trigger(device_config, sequencer_config)
+                return self.evaluate_device_trigger(device, sequencer_config)
             case _:
                 raise NotImplementedError
 
@@ -213,6 +212,48 @@ class SingleShotCompiler:
             unit=target_unit,
         )
 
+    def evaluate_device_trigger(
+        self,
+        device: DeviceName,
+        sequencer_config: SequencerConfiguration,
+    ) -> ChannelOutput:
+        device_config = self.devices[device]
+        if isinstance(device_config, SequencerConfiguration):
+            return self.evaluate_sequencer_trigger(
+                slave=device, master=sequencer_config
+            )
+        else:
+            raise NotImplementedError(
+                f"Cannot evaluate trigger for device of type {type(device_config)}"
+            )
+
+    def evaluate_sequencer_trigger(
+        self,
+        slave: DeviceName,
+        master: SequencerConfiguration,
+    ) -> ChannelOutput:
+        length = number_ticks(0, self.shot_duration, master.time_step * ns)
+        slave_config = self.devices[slave]
+        assert isinstance(slave_config, SequencerConfiguration)
+        if isinstance(slave_config.trigger, ExternalClockOnChange):
+            _, high, low = high_low_clicks(
+                slave_config.time_step, master.time_step
+            )
+            single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
+            slave_instruction = self.compile_sequencer_instruction(slave)
+            instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
+                :length
+            ]
+            return ChannelOutput(
+                instruction=instruction,
+                unit=None,
+            )
+        else:
+            raise NotImplementedError(
+                f"Cannot evaluate trigger for trigger of type "
+                f"{type(slave_config.trigger)}"
+            )
+
     def convert_to_channel_instruction(
         self, output_: ChannelOutput, channel: ChannelConfiguration
     ) -> SequencerInstruction:
@@ -233,7 +274,7 @@ class SingleShotCompiler:
             case AnalogChannelConfiguration(output_unit=output_unit):
                 return output_.instruction.apply(
                     functools.partial(
-                        convert_units, input_units=output_.unit, output_unit=output_unit
+                        convert_units, input_unit=output_.unit, output_unit=output_unit
                     )
                 )
             case _:
@@ -293,3 +334,71 @@ class ChannelOutput:
     @property
     def dtype(self):
         return self.instruction.dtype
+
+
+def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
+    """Return the number of steps the master sequencer must be high then low to
+    produce a clock pulse for the slave sequencer.
+
+    Returns:
+        A tuple with its first element being the number of master steps that constitute
+        a full slave clock cycle, the second element being the number of master steps
+        for which the master must be high and the third element being the number of
+        master steps for which the master must be low.
+        The first element is the sum of the second and third elements.
+    """
+
+    if not slave_time_step >= 2 * master_timestep:
+        raise ValueError(
+            "Slave time step must be at least twice the master sequencer time step"
+        )
+    div, mod = divmod(slave_time_step, master_timestep)
+    if not mod == 0:
+        raise ValueError(
+            "Slave time step must be an integer multiple of the master sequencer time "
+            "step"
+        )
+    if div % 2 == 0:
+        return div, div // 2, div // 2
+    else:
+        return div, div // 2 + 1, div // 2
+
+
+@functools.singledispatch
+def get_adaptive_clock(
+    slave_instruction: SequencerInstruction, slave_clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
+    raise NotImplementedError(f"Target sequence {slave_instruction} not implemented")
+
+
+@get_adaptive_clock.register
+def _(
+    target_sequence: Pattern, clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
+    return clock_pulse * len(target_sequence)
+
+
+@get_adaptive_clock.register
+def _(
+    target_sequence: Concatenate, clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
+    return join(
+        *(
+            get_adaptive_clock(sequence, clock_pulse)
+            for sequence in target_sequence.instructions
+        )
+    )
+
+
+@get_adaptive_clock.register
+def _(
+    target_sequence: Repeat, clock_pulse: SequencerInstruction
+) -> SequencerInstruction:
+    if len(target_sequence.instruction) == 1:
+        return clock_pulse + Pattern([False]) * (
+            (len(target_sequence) - 1) * len(clock_pulse)
+        )
+    else:
+        raise NotImplementedError(
+            "Only one instruction is supported in a repeat block at the moment"
+        )
