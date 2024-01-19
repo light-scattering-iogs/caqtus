@@ -48,7 +48,10 @@ class DigitalChannelConfiguration(ChannelConfiguration):
 
 @attrs.define
 class AnalogChannelConfiguration(ChannelConfiguration):
-    pass
+    output_unit: str = attrs.field(
+        converter=str,
+        on_setattr=attrs.setters.convert,
+    )
 
 
 def validate_trigger(instance, attribute, value):
