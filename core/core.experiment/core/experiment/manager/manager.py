@@ -219,8 +219,11 @@ class BoundProcedure(Procedure):
         self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
+
     def __str__(self):
-        return f"{self.__class__.__name__}({self._name})"
+        return self._name
 
     def __enter__(self):
         if not self._running.acquire(timeout=self._acquisition_timeout):

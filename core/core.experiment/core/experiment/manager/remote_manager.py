@@ -9,6 +9,7 @@ from typing import Optional
 from core.compilation import ShotCompilerFactory
 from core.session import ExperimentSessionMaker
 from core.session import PureSequencePath
+
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
@@ -26,6 +27,9 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
         self, procedure_name: str, acquisition_timeout: Optional[float] = None
     ) -> ProcedureProxy:
         return self._callmethod("create_procedure", (procedure_name,))  # type: ignore
+
+    def __repr__(self):
+        return f"<ExperimentManagerProxy at {hex(id(self))}>"
 
 
 class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
@@ -45,6 +49,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         "exception",
         "start_sequence",
         "run_sequence",
+        "__str__",
     )
     _method_to_typeid_ = {"__enter__": "ProcedureProxy"}
 
@@ -53,6 +58,12 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._callmethod("__exit__", (None, exc_val, None))
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
+
+    def __str__(self):
+        return self._callmethod("__str__", ())
 
     def is_active(self) -> bool:
         return self._callmethod("is_active", ())
