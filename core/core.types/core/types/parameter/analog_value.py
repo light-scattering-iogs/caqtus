@@ -42,6 +42,11 @@ def magnitude_in_unit(value: _R, unit: None) -> _R:
 
 
 @overload
+def magnitude_in_unit(value: _R, unit: Unit | str) -> _R:
+    ...
+
+
+@overload
 def magnitude_in_unit(value: NDArray[np.floating], unit: None) -> NDArray[np.floating]:
     ...
 
@@ -61,9 +66,11 @@ def magnitude_in_unit(value, unit):
             raise ValueError(f"Cannot convert quantity {value} to dimensionless")
         return value.to(unit).magnitude
     else:
-        if unit is not None:
-            raise ValueError(f"Cannot convert value {value} to unit {unit}")
-        return value
+        if unit is None:
+            return value
+        else:
+            value = value * dimensionless
+            return value.to(unit).magnitude
 
 
 def add_unit(
