@@ -46,16 +46,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@attrs.frozen
-class ChannelOutputResult:
-    instruction: SequencerInstruction
-    unit: Optional[Unit]
-
-    @property
-    def dtype(self):
-        return self.instruction.dtype
-
-
 class SequencerParameterCompiler:
     def __init__(
         self,
@@ -109,7 +99,7 @@ class SingleShotCompiler:
         self.devices = devices
 
         self.sequencer_instructions: dict[DeviceName, SequencerInstruction] = {}
-        self.used_lanes = set()
+        self.used_lanes: set[str] = set()
 
     def compile(self) -> dict[DeviceName, SequencerParameters]:
         self.compile_sequencer_instruction(self.root_sequencer)
@@ -158,16 +148,11 @@ class SingleShotCompiler:
                     f"{channel_number} ({channel.description}) of sequencer "
                     f"{sequencer_name}"
                 ) from e
-            instruction = self.convert_to_channel_instruction(
-                output_values, channel
-            )
-            channel_instructions.append(
-                with_name(instruction, f"ch {channel_number}")
-            )
+            instruction = self.convert_channel_instruction(output_values, channel)
+            channel_instructions.append(with_name(instruction, f"ch {channel_number}"))
         stacked = stack_instructions(channel_instructions)
         self.sequencer_instructions[sequencer_name] = stacked
         return stacked
-
 
     @functools.singledispatchmethod
     def evaluate_output(
@@ -175,22 +160,19 @@ class SingleShotCompiler:
         output_: ChannelOutput,
         required_time_step: int,
         required_unit: Optional[Unit],
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction:
         raise NotImplementedError(f"Cannot evaluate output <{output_}>")
 
     @evaluate_output.register
     def _(
         self, output_: Constant, required_time_step: int, required_unit: Optional[Unit]
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction:
         length = number_ticks(0, self.shot_duration, required_time_step * ns)
 
         expression = output_.value
         value = expression.evaluate(self.variables | units)
         magnitude = magnitude_in_unit(value, required_unit)
-        return ChannelOutputResult(
-            instruction=Pattern([magnitude]) * length,
-            unit=required_unit,
-        )
+        return Pattern([magnitude]) * length
 
     @evaluate_output.register
     def _(
@@ -198,7 +180,7 @@ class SingleShotCompiler:
         output_: LaneValues,
         required_time_step: int,
         required_unit: Optional[Unit],
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction:
         lane_name = output_.lane
         try:
             lane = self.lanes[lane_name]
@@ -228,30 +210,24 @@ class SingleShotCompiler:
 
     def evaluate_digital_lane_output(
         self, lane: DigitalTimeLane, time_step: int
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction:
         assert isinstance(lane, DigitalTimeLane)
         compiler = DigitalLaneCompiler(lane, self.step_names, self.step_durations)
         lane_output = compiler.compile(self.variables, time_step)
         assert lane_output.dtype == np.dtype("bool")
-        return ChannelOutputResult(
-            instruction=lane_output,
-            unit=None,
-        )
+        return lane_output
 
     def evaluate_analog_lane_output(
         self,
         lane: AnalogTimeLane,
         time_step: int,
         target_unit: Optional[Unit],
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction[np.floating]:
         compiler = AnalogLaneCompiler(
             lane, self.step_names, self.step_durations, target_unit
         )
         lane_output = compiler.compile(self.variables, time_step)
-        return ChannelOutputResult(
-            instruction=lane_output,
-            unit=target_unit,
-        )
+        return lane_output
 
     @evaluate_output.register
     def _(
@@ -259,7 +235,7 @@ class SingleShotCompiler:
         output_: DeviceTrigger,
         required_time_step: int,
         required_unit: Optional[Unit],
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction[np.bool_]:
         device = output_.device_name
         if device not in self.devices:
             raise ValueError(
@@ -277,7 +253,7 @@ class SingleShotCompiler:
         self,
         device: DeviceName,
         time_step: int,
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction[np.bool_]:
         device_config = self.devices[device]
         if isinstance(device_config, SequencerConfiguration):
             return self.evaluate_trigger_for_sequencer(
@@ -292,7 +268,7 @@ class SingleShotCompiler:
         self,
         slave: DeviceName,
         master_time_step: int,
-    ) -> ChannelOutputResult:
+    ) -> SequencerInstruction[np.bool_]:
         length = number_ticks(0, self.shot_duration, master_time_step * ns)
         slave_config = self.devices[slave]
         assert isinstance(slave_config, SequencerConfiguration)
@@ -303,39 +279,21 @@ class SingleShotCompiler:
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
                 :length
             ]
-            return ChannelOutputResult(
-                instruction=instruction,
-                unit=None,
-            )
+            return instruction
         else:
             raise NotImplementedError(
                 f"Cannot evaluate trigger for trigger of type "
                 f"{type(slave_config.trigger)}"
             )
 
-    def convert_to_channel_instruction(
-        self, output_: ChannelOutputResult, channel: ChannelConfiguration
+    def convert_channel_instruction(
+        self, instruction: SequencerInstruction, channel: ChannelConfiguration
     ) -> SequencerInstruction:
         match channel:
             case DigitalChannelConfiguration():
-                if not output_.dtype == np.dtype("bool"):
-                    raise TypeError(
-                        f"Channel {channel.description} is digital but its output "
-                        f"<{channel.output}> is not boolean and has dtype "
-                        f"{output_.dtype}"
-                    )
-                if output_.unit is not None:
-                    raise TypeError(
-                        f"Channel {channel.description} is digital but its output "
-                        f"<{channel.output}> has unit {output_.unit}"
-                    )
-                return output_.instruction
-            case AnalogChannelConfiguration(output_unit=output_unit):
-                return output_.instruction.apply(
-                    functools.partial(
-                        convert_units, input_unit=output_.unit, output_unit=output_unit
-                    )
-                )
+                return instruction.as_type(np.dtype(np.bool_))
+            case AnalogChannelConfiguration():
+                return instruction.as_type(np.dtype(np.float64))
             case _:
                 raise NotImplementedError
 
