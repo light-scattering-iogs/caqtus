@@ -1,9 +1,9 @@
 from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
 from .swabian_pulse_streamer_configuration_editor import (
-    SwabianPulseStreamerConfigurationEditor,
+    SwabianPulseStreamerDeviceConfigEditor,
 )
 
 __all__ = [
-    "SwabianPulseStreamerConfigurationEditor",
+    "SwabianPulseStreamerDeviceConfigEditor",
     "SwabianPulseStreamerConfiguration",
 ]

@@ -7,13 +7,14 @@ readme = "README.md"
 packages = [{include = "swabian_pulse_streamer"}]
 
 [tool.poetry.dependencies]
-python = "^3.11, <3.13"
+python = "^3.12"
 
 pyqt6 = "^6.5.2"
-
-device-configuration-editor = {path = "../../device/device.configuration_editor", develop = true}
-sequencer-configuration-editor = {path = "../../sequencer/sequencer.configuration_editor", develop = true}
+condetrol = {path = "../../../ui/condetrol", develop = true}
+core-device = {path = "../../../core/core.device", develop = true}
+core-types = {path = "../../../core/core.types", develop = true}
 swabian-pulse-streamer-configuration = {path = "../swabian_pulse_streamer.configuration", develop = true}
+
 
 
 [build-system]
