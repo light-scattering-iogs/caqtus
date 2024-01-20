@@ -332,6 +332,14 @@ class SQLSequenceCollection(SequenceCollection):
         sequence = unwrap(self._query_sequence_model(path))
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
+        if shot_index < 0:
+            raise ValueError("Shot index must be non-negative")
+        if sequence.expected_number_of_shots is not None:
+            if shot_index >= sequence.expected_number_of_shots:
+                raise ValueError(
+                    f"Shot index must be less than the expected number of shots "
+                    f"({sequence.expected_number_of_shots})"
+                )
 
         parameters = self.serialize_shot_parameters(shot_parameters)
 
