@@ -1,18 +1,16 @@
-from typing import ClassVar, Any, Type, Self
+from typing import ClassVar, Any, Self
 
-from device.configuration import DeviceParameter
-from sequencer.configuration import (
+import attrs
+
+from core.device import DeviceParameter
+from core.device.sequencer import (
     SequencerConfiguration,
-    ChannelConfiguration,
     DigitalChannelConfiguration,
-    DigitalMapping,
-    ChannelName,
 )
-from settings_model import YAMLSerializable
-from util import attrs
+from util import serialization
 
 
-@attrs.define(slots=False)
+@attrs.define
 class SwabianPulseStreamerConfiguration(SequencerConfiguration):
     number_channels: ClassVar[int] = 8
 
@@ -27,7 +25,7 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
     )
 
     @classmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
+    def channel_types(cls) -> tuple[type[DigitalChannelConfiguration], ...]:
         return (DigitalChannelConfiguration,) * cls.number_channels
 
     def get_device_type(self) -> str:
@@ -41,18 +39,9 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
         return super().get_device_init_args(*args, **kwargs) | extra
 
     @classmethod
-    def get_default_config(cls, remote_server: str) -> Self:
-        return cls(
-            remote_server=remote_server,
-            ip_address="",
-            time_step=1,
-            channels=tuple(
-                DigitalChannelConfiguration(
-                    output_mapping=DigitalMapping(), description=ChannelName("")
-                )
-                for _ in range(cls.number_channels)
-            ),
-        )
+    def dump(cls, config: Self) -> serialization.JSON:
+        return serialization.converters["json"].unstructure(config, cls)
 
-
-YAMLSerializable.register_attrs_class(SwabianPulseStreamerConfiguration)
+    @classmethod
+    def load(cls, data: serialization.JSON) -> Self:
+        return serialization.converters["json"].structure(data, cls)

@@ -9,9 +9,8 @@ packages = [{include = "swabian_pulse_streamer"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-sequencer-configuration = {path = "../../sequencer/sequencer.configuration", develop = true}
-device-config = {path = "../../device/device.configuration", develop = true}
 util = {path = "../../../util", develop = true}
+core-device = {path = "../../../core/core.device", develop = true}
 
 
 [build-system]
