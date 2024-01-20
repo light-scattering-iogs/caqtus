@@ -20,7 +20,7 @@ from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
     LaneValues,
-    DeviceTrigger,
+    DeviceTrigger, ChannelOutput,
 )
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -134,8 +134,16 @@ class SingleShotCompiler:
             sequencer_config = self.sequencer_configurations[sequencer_name]
             channel_instructions = []
             for channel_number, channel in enumerate(sequencer_config.channels):
-                output_ = self.evaluate_output(channel, sequencer_config)
-                instruction = self.convert_to_channel_instruction(output_, channel)
+                if isinstance(channel, AnalogChannelConfiguration):
+                    required_unit = channel.output_unit
+                else:
+                    required_unit = None
+                output_values = self.evaluate_output(
+                    channel.output, sequencer_config.time_step, required_unit
+                )
+                instruction = self.convert_to_channel_instruction(
+                    output_values, channel
+                )
                 channel_instructions.append(
                     with_name(instruction, f"ch {channel_number}")
                 )
@@ -148,17 +156,19 @@ class SingleShotCompiler:
             ) from e
 
     def evaluate_output(
-        self, channel: ChannelConfiguration, sequencer_config: SequencerConfiguration
-    ) -> ChannelOutput:
-        time_step = sequencer_config.time_step
-        length = number_ticks(0, self.shot_duration, time_step * ns)
+        self,
+        output_: ChannelOutput,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+    ) -> ChannelOutputResult:
+        length = number_ticks(0, self.shot_duration, required_time_step * ns)
 
-        match channel.output:
+        match output_:
             case Constant(expression):
                 value = expression.evaluate(self.variables | units)
                 unit = get_unit(value)
                 magnitude = magnitude_in_unit(value, unit)
-                return ChannelOutput(
+                return ChannelOutputResult(
                     instruction=Pattern([magnitude]) * length,
                     unit=unit,
                 )
@@ -167,21 +177,24 @@ class SingleShotCompiler:
                     lane = self.lanes[lane_name]
                 except KeyError:
                     raise ValueError(
-                        f"Could not find lane <{lane_name}> for channel "
-                        f"<{channel.description}>"
+                        f"Could not find lane <{lane_name}> when evaluating output "
+                        f"<{output_}>"
                     )
                 if isinstance(lane, DigitalTimeLane):
-                    self.used_lanes.add(lane_name)
-                    return self.evaluate_digital_lane_output(lane, sequencer_config)
-                elif isinstance(lane, AnalogTimeLane):
-                    if not isinstance(channel, AnalogChannelConfiguration):
-                        raise TypeError(
-                            f"Cannot evaluate analog lane <{lane_name}> for channel "
-                            f"<{channel.description}> with type {type(channel)}"
+                    if required_unit is not None:
+                        raise ValueError(
+                            f"Cannot evaluate digital lane <{lane_name}> with unit "
+                            f"{required_unit:~}"
                         )
+                    evaluated = self.evaluate_digital_lane_output(
+                        lane, required_time_step
+                    )
+                    self.used_lanes.add(lane_name)
+                    return evaluated
+                elif isinstance(lane, AnalogTimeLane):
                     self.used_lanes.add(lane_name)
                     return self.evaluate_analog_lane_output(
-                        lane, sequencer_config, channel.output_unit
+                        lane, required_time_step, required_unit
                     )
                 else:
                     raise TypeError(
@@ -191,18 +204,25 @@ class SingleShotCompiler:
                 if device not in self.devices:
                     raise ValueError(
                         f"Could not find device <{device}> to generate trigger "
-                        f"for channel <{channel.description}>."
+                        f"for output <{output_}>."
                     )
-                return self.evaluate_device_trigger(device, sequencer_config)
+                if required_unit is not None:
+                    raise ValueError(
+                        f"Cannot evaluate trigger for device <{device}> with unit "
+                        f"{required_unit:~}"
+                    )
+                return self.evaluate_device_trigger(device, required_time_step)
             case _:
                 raise NotImplementedError
 
     def evaluate_digital_lane_output(
-        self, lane: DigitalTimeLane, sequencer_config: SequencerConfiguration
-    ) -> ChannelOutput:
+        self, lane: DigitalTimeLane, time_step: int
+    ) -> ChannelOutputResult:
+        assert isinstance(lane, DigitalTimeLane)
         compiler = DigitalLaneCompiler(lane, self.step_names, self.step_durations)
-        lane_output = compiler.compile(self.variables, sequencer_config.time_step)
-        return ChannelOutput(
+        lane_output = compiler.compile(self.variables, time_step)
+        assert lane_output.dtype == np.dtype("bool")
+        return ChannelOutputResult(
             instruction=lane_output,
             unit=None,
         )
@@ -210,14 +230,14 @@ class SingleShotCompiler:
     def evaluate_analog_lane_output(
         self,
         lane: AnalogTimeLane,
-        sequencer_config: SequencerConfiguration,
+        time_step: int,
         target_unit: Optional[Unit],
-    ) -> ChannelOutput:
+    ) -> ChannelOutputResult:
         compiler = AnalogLaneCompiler(
             lane, self.step_names, self.step_durations, target_unit
         )
-        lane_output = compiler.compile(self.variables, sequencer_config.time_step)
-        return ChannelOutput(
+        lane_output = compiler.compile(self.variables, time_step)
+        return ChannelOutputResult(
             instruction=lane_output,
             unit=target_unit,
         )
@@ -225,34 +245,34 @@ class SingleShotCompiler:
     def evaluate_device_trigger(
         self,
         device: DeviceName,
-        sequencer_config: SequencerConfiguration,
-    ) -> ChannelOutput:
+        time_step: int,
+    ) -> ChannelOutputResult:
         device_config = self.devices[device]
         if isinstance(device_config, SequencerConfiguration):
-            return self.evaluate_sequencer_trigger(
-                slave=device, master=sequencer_config
+            return self.evaluate_trigger_for_sequencer(
+                slave=device, master_time_step=time_step
             )
         else:
             raise NotImplementedError(
                 f"Cannot evaluate trigger for device of type {type(device_config)}"
             )
 
-    def evaluate_sequencer_trigger(
+    def evaluate_trigger_for_sequencer(
         self,
         slave: DeviceName,
-        master: SequencerConfiguration,
-    ) -> ChannelOutput:
-        length = number_ticks(0, self.shot_duration, master.time_step * ns)
+        master_time_step: int,
+    ) -> ChannelOutputResult:
+        length = number_ticks(0, self.shot_duration, master_time_step * ns)
         slave_config = self.devices[slave]
         assert isinstance(slave_config, SequencerConfiguration)
         if isinstance(slave_config.trigger, ExternalClockOnChange):
-            _, high, low = high_low_clicks(slave_config.time_step, master.time_step)
+            _, high, low = high_low_clicks(slave_config.time_step, master_time_step)
             single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
             slave_instruction = self.compile_sequencer_instruction(slave)
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
                 :length
             ]
-            return ChannelOutput(
+            return ChannelOutputResult(
                 instruction=instruction,
                 unit=None,
             )
@@ -263,7 +283,7 @@ class SingleShotCompiler:
             )
 
     def convert_to_channel_instruction(
-        self, output_: ChannelOutput, channel: ChannelConfiguration
+        self, output_: ChannelOutputResult, channel: ChannelConfiguration
     ) -> SequencerInstruction:
         match channel:
             case DigitalChannelConfiguration():
@@ -335,7 +355,7 @@ class SequencerParameters(TypedDict):
 
 
 @attrs.frozen
-class ChannelOutput:
+class ChannelOutputResult:
     instruction: SequencerInstruction
     unit: Optional[Unit]
 
