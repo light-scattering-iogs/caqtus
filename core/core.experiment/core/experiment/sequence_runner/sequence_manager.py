@@ -105,9 +105,7 @@ class SequenceManager(AbstractContextManager):
                 )
                 for uuid_ in self._constant_tables_uuid
             }
-            self.time_lanes = session.sequences.get_time_lanes(
-                self._sequence_path
-            )
+            self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
         self._shot_compiler = shot_compiler_factory(
             self.time_lanes, self.device_configurations
         )
@@ -126,7 +124,9 @@ class SequenceManager(AbstractContextManager):
         self._shot_parameter_queue = queue.PriorityQueue[ShotParameters](4)
         self._device_parameter_queue = queue.PriorityQueue[DeviceParameters](4)
         self._shot_data_queue = queue.PriorityQueue[ShotData](4)
-        self._task_group = TaskGroup(self._thread_pool, name="SequenceManager")
+        self._task_group = TaskGroup(
+            self._thread_pool, name=f"managing the sequence '{self._sequence_path}'"
+        )
 
     def __enter__(self):
         self._prepare_sequence()

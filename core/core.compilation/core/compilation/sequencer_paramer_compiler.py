@@ -26,7 +26,10 @@ from core.device.sequencer.instructions import (
     SequencerInstruction,
     with_name,
     stack_instructions,
-    Pattern, Repeat, Concatenate, join,
+    Pattern,
+    Repeat,
+    Concatenate,
+    join,
 )
 from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
 from core.types.expression import Expression
@@ -124,18 +127,25 @@ class SingleShotCompiler:
     def compile_sequencer_instruction(
         self, sequencer_name: DeviceName
     ) -> SequencerInstruction:
-        if sequencer_name in self.sequencer_instructions:
-            return self.sequencer_instructions[sequencer_name]
+        try:
+            if sequencer_name in self.sequencer_instructions:
+                return self.sequencer_instructions[sequencer_name]
 
-        sequencer_config = self.sequencer_configurations[sequencer_name]
-        channel_instructions = []
-        for channel_number, channel in enumerate(sequencer_config.channels):
-            output_ = self.evaluate_output(channel, sequencer_config)
-            instruction = self.convert_to_channel_instruction(output_, channel)
-            channel_instructions.append(with_name(instruction, f"ch {channel_number}"))
-        stacked = stack_instructions(channel_instructions)
-        self.sequencer_instructions[sequencer_name] = stacked
-        return stacked
+            sequencer_config = self.sequencer_configurations[sequencer_name]
+            channel_instructions = []
+            for channel_number, channel in enumerate(sequencer_config.channels):
+                output_ = self.evaluate_output(channel, sequencer_config)
+                instruction = self.convert_to_channel_instruction(output_, channel)
+                channel_instructions.append(
+                    with_name(instruction, f"ch {channel_number}")
+                )
+            stacked = stack_instructions(channel_instructions)
+            self.sequencer_instructions[sequencer_name] = stacked
+            return stacked
+        except Exception as e:
+            raise SequencerCompilationError(
+                f"Couldn't compile instruction for " f"sequencer {sequencer_name}"
+            ) from e
 
     def evaluate_output(
         self, channel: ChannelConfiguration, sequencer_config: SequencerConfiguration
@@ -236,9 +246,7 @@ class SingleShotCompiler:
         slave_config = self.devices[slave]
         assert isinstance(slave_config, SequencerConfiguration)
         if isinstance(slave_config.trigger, ExternalClockOnChange):
-            _, high, low = high_low_clicks(
-                slave_config.time_step, master.time_step
-            )
+            _, high, low = high_low_clicks(slave_config.time_step, master.time_step)
             single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
             slave_instruction = self.compile_sequencer_instruction(slave)
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
@@ -402,3 +410,7 @@ def _(
         raise NotImplementedError(
             "Only one instruction is supported in a repeat block at the moment"
         )
+
+
+class SequencerCompilationError(Exception):
+    pass

@@ -107,9 +107,9 @@ class TaskGroup:
 
         if exceptions:
             if self._name is None:
-                msg = f"Unhandled exceptions in task group"
+                msg = f"Errors occurred in task group"
             else:
-                msg = f"Unhandled exceptions in task group {self._name}"
+                msg = f"Errors occurred while running the task group {self._name}"
             if not all(isinstance(exception, Exception) for exception in exceptions):
                 raise BaseExceptionGroup(msg, exceptions)
             else:

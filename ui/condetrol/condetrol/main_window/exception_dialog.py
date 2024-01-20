@@ -15,6 +15,8 @@ class ExceptionDialog(QDialog, Ui_ExceptionDialog):
 
         self.exception_tree.addTopLevelItems(tree)
         self.exception_tree.expandAll()
+        self.exception_tree.resizeColumnToContents(0)
+        self.exception_tree.resizeColumnToContents(1)
         self.setWindowTitle("Error")
 
     def set_message(self, message: str):

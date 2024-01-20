@@ -4,10 +4,13 @@ from PyQt6.QtWidgets import QTreeWidgetItem, QApplication
 
 
 def create_exception_tree(
-    exception: BaseException, prepend: str = "Error:"
+    exception: BaseException, prepend: str = "error:"
 ) -> list[QTreeWidgetItem]:
     result = []
-    exception_item = QTreeWidgetItem(None, [prepend, str(exception)])
+    text = str(exception)
+    if isinstance(exception, ExceptionGroup):
+        text = exception.args[0]
+    exception_item = QTreeWidgetItem(None, [prepend, text])
     highlight_color = QApplication.palette().color(QPalette.ColorRole.Accent)
     exception_item.setForeground(0, highlight_color)
     result.append(exception_item)
@@ -15,9 +18,13 @@ def create_exception_tree(
         for note in exception.__notes__:
             result.append(QTreeWidgetItem(exception_item, ["", note]))
     if isinstance(exception, ExceptionGroup):
-        for child_exception in exception.exceptions:
-            exception_item.addChildren(create_exception_tree(child_exception, "Child:"))
+        if len(exception.exceptions) > 0:
+            exception_item.addChildren(
+                create_exception_tree(exception.exceptions[0], "namely:")
+            )
+        for child_exception in exception.exceptions[1:]:
+            exception_item.addChildren(create_exception_tree(child_exception, "and:"))
     if exception.__cause__ is not None:
-        for cause in create_exception_tree(exception.__cause__, "Because:"):
+        for cause in create_exception_tree(exception.__cause__, "because:"):
             exception_item.addChild(cause)
     return result
