@@ -5,7 +5,6 @@ import logging
 from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
-import attrs
 import numpy as np
 from core.compilation import VariableNamespace
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
@@ -36,6 +35,7 @@ from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
 from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
+from util import add_exc_note
 
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler
 from .lane_compilers import evaluate_step_durations
@@ -195,14 +195,16 @@ class SingleShotCompiler:
                     f"Cannot evaluate digital lane <{lane_name}> with unit "
                     f"{required_unit:~}"
                 )
-            evaluated = self.evaluate_digital_lane_output(lane, required_time_step)
+            with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
+                evaluated = self.evaluate_digital_lane_output(lane, required_time_step)
             self.used_lanes.add(lane_name)
             return evaluated
         elif isinstance(lane, AnalogTimeLane):
             self.used_lanes.add(lane_name)
-            return self.evaluate_analog_lane_output(
-                lane, required_time_step, required_unit
-            )
+            with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
+                return self.evaluate_analog_lane_output(
+                    lane, required_time_step, required_unit
+                )
         else:
             raise TypeError(
                 f"Cannot evaluate values of lane with type " f"{type(lane)}"
