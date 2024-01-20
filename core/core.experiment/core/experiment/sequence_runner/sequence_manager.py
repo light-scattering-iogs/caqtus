@@ -6,7 +6,6 @@ import datetime
 import logging
 import queue
 import threading
-import time
 import uuid
 from collections.abc import Set, Mapping
 from contextlib import AbstractContextManager
@@ -76,6 +75,7 @@ class SequenceManager(AbstractContextManager):
         session_maker: ExperimentSessionMaker,
         shot_compiler_factory: ShotCompilerFactory,
         shot_runner_factory: ShotRunnerFactory,
+        interruption_event: threading.Event,
         shot_retry_config: Optional[ShotRetryConfig] = None,
         device_configurations_uuid: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuid: Optional[Set[uuid.UUID]] = None,
@@ -128,6 +128,7 @@ class SequenceManager(AbstractContextManager):
             self._thread_pool, name=f"managing the sequence '{self._sequence_path}'"
         )
         self._lock = threading.Lock()
+        self._interruption_event = interruption_event
 
     def __enter__(self):
         self._prepare_sequence()
@@ -135,6 +136,7 @@ class SequenceManager(AbstractContextManager):
         try:
             self._exit_stack.enter_context(self._thread_pool)
             self._task_group.__enter__()
+            self._task_group.create_task(self._watch_for_interruption)
             self._task_group.create_task(self._compile_shots)
             self._task_group.create_task(self._run_shots)
             self._task_group.create_task(self._store_shots)
@@ -168,7 +170,10 @@ class SequenceManager(AbstractContextManager):
             raise
         else:
             if error_occurred:
-                self._set_sequence_state(State.CRASHED)
+                if isinstance(error_occurred, KeyboardInterrupt):
+                    self._set_sequence_state(State.INTERRUPTED)
+                else:
+                    self._set_sequence_state(State.CRASHED)
             else:
                 self._set_sequence_state(State.FINISHED)
         finally:
@@ -215,6 +220,14 @@ class SequenceManager(AbstractContextManager):
 
     def _prepare(self):
         self._exit_stack.enter_context(self._shot_runner)
+
+    def _watch_for_interruption(self):
+        while not self.is_shutting_down():
+            if self._interruption_event.wait(20e-3):
+                self._is_shutting_down.set()
+                raise SequenceInterruptedException()
+            else:
+                continue
 
     def _compile_shots(self):
         while not self.is_shutting_down():
