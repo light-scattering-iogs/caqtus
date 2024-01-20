@@ -21,6 +21,7 @@ from core.device.sequencer.configuration import (
     LaneValues,
     DeviceTrigger,
     ChannelOutput,
+    CalibratedAnalogMapping,
 )
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -234,6 +235,27 @@ class SingleShotCompiler:
     @evaluate_output.register
     def _(
         self,
+        mapping: CalibratedAnalogMapping,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+    ) -> SequencerInstruction[np.floating]:
+        input_values = self.evaluate_output(
+            mapping.input_, required_time_step, mapping.input_units
+        )
+        output_values = input_values.apply(mapping.interpolate)
+        if required_unit != mapping.output_units:
+            output_values = output_values.apply(
+                functools.partial(
+                    convert_units,
+                    input_unit=mapping.output_units,
+                    output_unit=required_unit,
+                )
+            )
+        return output_values
+
+    @evaluate_output.register
+    def _(
+        self,
         output_: DeviceTrigger,
         required_time_step: int,
         required_unit: Optional[Unit],
@@ -301,7 +323,7 @@ class SingleShotCompiler:
 
 
 def convert_units(
-    array: np.ndarray, input_unit: Optional[str], output_unit: str
+    array: np.ndarray, input_unit: Optional[str], output_unit: Optional[str]
 ) -> np.ndarray:
     if input_unit == output_unit:
         return array
