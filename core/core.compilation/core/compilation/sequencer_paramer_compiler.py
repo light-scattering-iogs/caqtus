@@ -13,7 +13,7 @@ from core.device.sequencer import (
     SoftwareTrigger,
     ChannelConfiguration,
     DigitalChannelConfiguration,
-    ExternalClockOnChange,
+    ExternalClockOnChange, ExternalTriggerStart,
 )
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
@@ -302,14 +302,23 @@ class SingleShotCompiler:
         length = number_ticks(0, self.shot_duration, master_time_step * ns)
         slave_config = self.devices[slave]
         assert isinstance(slave_config, SequencerConfiguration)
+        slave_instruction = self.compile_sequencer_instruction(slave)
         if isinstance(slave_config.trigger, ExternalClockOnChange):
             _, high, low = high_low_clicks(slave_config.time_step, master_time_step)
             single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
-            slave_instruction = self.compile_sequencer_instruction(slave)
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
                 :length
             ]
             return instruction
+        elif isinstance(slave_config.trigger, ExternalTriggerStart):
+            high_duration = length // 2
+            low_duration = length - high_duration
+            if high_duration == 0 or low_duration == 0:
+                raise ValueError(
+                    "The shot duration is too short to generate a trigger pulse for "
+                    f"sequencer '{slave}'"
+                )
+            return Pattern([True]) * high_duration + Pattern([False]) * low_duration
         else:
             raise NotImplementedError(
                 f"Cannot evaluate trigger for trigger of type "
