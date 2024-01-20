@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Optional, TypeAlias, TypeGuard, assert_never
 
 import attrs
@@ -159,9 +160,8 @@ class StepsConfiguration(IterationConfiguration):
 
     def expected_number_shots(self) -> Optional[int]:
         child_number_shots = [expected_number_shots(step) for step in self.steps]
-        if any(child_number_shots is None):
-            return None
-        return sum(child_number_shots)
+        result = sum_number_shots(child_number_shots)
+        return result
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
@@ -179,10 +179,22 @@ def expected_number_shots(step: Step) -> Optional[int]:
         case ExecuteShot():
             return 1
         case LinspaceLoop(_, _, _, num, sub_steps):
-            return None
+            sub_steps_number = sum_number_shots(
+                [expected_number_shots(step) for step in sub_steps]
+            )
+            if sub_steps_number is None:
+                return None
+            else:
+                return num * sub_steps_number
         case ArangeLoop(_, _, _, _, sub_steps):
             return None
         case ImportConstantTable():
             return 0
         case _:
             assert_never(step)
+
+
+def sum_number_shots(number_shots: Iterable[int | None]) -> Optional[int]:
+    if any(n is None for n in number_shots):
+        return None
+    return sum(number_shots)
