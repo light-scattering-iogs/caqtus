@@ -34,7 +34,7 @@ from core.device.sequencer.instructions import (
 )
 from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
 from core.types.expression import Expression
-from core.types.parameter import add_unit, magnitude_in_unit, get_unit
+from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
 
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler
@@ -44,6 +44,7 @@ from .unit_namespace import units
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 @attrs.frozen
 class ChannelOutputResult:
@@ -137,33 +138,36 @@ class SingleShotCompiler:
     def compile_sequencer_instruction(
         self, sequencer_name: DeviceName
     ) -> SequencerInstruction:
-        try:
-            if sequencer_name in self.sequencer_instructions:
-                return self.sequencer_instructions[sequencer_name]
+        if sequencer_name in self.sequencer_instructions:
+            return self.sequencer_instructions[sequencer_name]
 
-            sequencer_config = self.sequencer_configurations[sequencer_name]
-            channel_instructions = []
-            for channel_number, channel in enumerate(sequencer_config.channels):
-                if isinstance(channel, AnalogChannelConfiguration):
-                    required_unit = channel.output_unit
-                else:
-                    required_unit = None
+        sequencer_config = self.sequencer_configurations[sequencer_name]
+        channel_instructions = []
+        for channel_number, channel in enumerate(sequencer_config.channels):
+            if isinstance(channel, AnalogChannelConfiguration):
+                required_unit = channel.output_unit
+            else:
+                required_unit = None
+            try:
                 output_values = self.evaluate_output(
                     channel.output, sequencer_config.time_step, required_unit
                 )
-                instruction = self.convert_to_channel_instruction(
-                    output_values, channel
-                )
-                channel_instructions.append(
-                    with_name(instruction, f"ch {channel_number}")
-                )
-            stacked = stack_instructions(channel_instructions)
-            self.sequencer_instructions[sequencer_name] = stacked
-            return stacked
-        except Exception as e:
-            raise SequencerCompilationError(
-                f"Couldn't compile instruction for sequencer {sequencer_name}"
-            ) from e
+            except Exception as e:
+                raise SequencerCompilationError(
+                    f"Error occurred when evaluating output for channel "
+                    f"{channel_number} ({channel.description}) of sequencer "
+                    f"{sequencer_name}"
+                ) from e
+            instruction = self.convert_to_channel_instruction(
+                output_values, channel
+            )
+            channel_instructions.append(
+                with_name(instruction, f"ch {channel_number}")
+            )
+        stacked = stack_instructions(channel_instructions)
+        self.sequencer_instructions[sequencer_name] = stacked
+        return stacked
+
 
     @functools.singledispatchmethod
     def evaluate_output(
@@ -379,9 +383,6 @@ def find_root_sequencer(
 
 class SequencerParameters(TypedDict):
     sequence: SequencerInstruction
-
-
-
 
 
 def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
