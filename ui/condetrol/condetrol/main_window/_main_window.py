@@ -20,6 +20,7 @@ from ..device_configuration_editors import (
 )
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
+from .exception_dialog import ExceptionDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -190,19 +191,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def display_error(self, message: str, exception: Exception):
         logger.error(message, exc_info=exception)
-        message_box = QMessageBox(self)
-        message_box.setIcon(QMessageBox.Icon.Critical)
-        message_box.setText(f"{message}\n\n{self.format_error(exception)}")
-        detail = traceback.format_exception(exception)
-        message_box.setDetailedText("".join(detail))
-        message_box.setWindowTitle("Error")
-        message_box.exec()
-
-    def format_error(self, exception: Exception):
-        formatted = traceback.format_exception_only(exception)
-        print(formatted)
-        return "".join(formatted)
-
+        exception_dialog = ExceptionDialog(self)
+        exception_dialog.set_exception(exception)
+        exception_dialog.set_message(message)
+        exception_dialog.exec()
 
 
 class ProcedureWatcherThread(QThread):
