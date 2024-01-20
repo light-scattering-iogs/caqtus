@@ -127,6 +127,7 @@ class SequenceManager(AbstractContextManager):
         self._task_group = TaskGroup(
             self._thread_pool, name=f"managing the sequence '{self._sequence_path}'"
         )
+        self._lock = threading.Lock()
 
     def __enter__(self):
         self._prepare_sequence()
@@ -151,19 +152,10 @@ class SequenceManager(AbstractContextManager):
 
         if error_occurred:
             self._is_shutting_down.set()
-
-        if not self._is_shutting_down.is_set():
-            # We can't just join the queues because an error might occur while
-            # processing them, in which case they'll never join.
-            # If an error occurs in a task, the task will set the is_shutting_down
-            # event, and we won't wait for the queues to empty.
-            while not (self._shot_parameter_queue.empty() or self.is_shutting_down()):
-                time.sleep(20e-3)
-            while not (self._device_parameter_queue.empty() or self.is_shutting_down()):
-                time.sleep(20e-3)
-            while not (self._shot_data_queue.empty() or self.is_shutting_down()):
-                time.sleep(20e-3)
-            self._is_shutting_down.set()
+        self._shot_parameter_queue.join()
+        self._device_parameter_queue.join()
+        self._shot_data_queue.join()
+        self._is_shutting_down.set()
         try:
             # Here we check is any of the background tasks raised an exception. If so,
             # they are re-raised here.
@@ -188,16 +180,17 @@ class SequenceManager(AbstractContextManager):
         )
 
         def push_shot() -> bool:
-            if self.is_shutting_down():
-                raise RuntimeError(
-                    "Cannot schedule shot while sequence manager is shutting down."
-                )
-            try:
-                self._shot_parameter_queue.put(shot_parameters, timeout=20e-3)
-            except queue.Full:
-                return False
-            else:
-                return True
+            with self._lock:
+                if self.is_shutting_down():
+                    raise RuntimeError(
+                        "Cannot schedule shot while sequence manager is shutting down."
+                    )
+                try:
+                    self._shot_parameter_queue.put(shot_parameters, timeout=20e-3)
+                except queue.Full:
+                    return False
+                else:
+                    return True
 
         while not push_shot():
             continue
@@ -241,7 +234,12 @@ class SequenceManager(AbstractContextManager):
                         continue
                 self._shot_parameter_queue.task_done()
             except Exception:
-                self._is_shutting_down.set()
+                with self._lock:
+                    self._is_shutting_down.set()
+                    self._shot_parameter_queue.task_done()
+                    while not self._shot_parameter_queue.empty():
+                        self._shot_parameter_queue.get()
+                        self._shot_parameter_queue.task_done()
                 raise
 
     def _compile_shot(self, shot_parameters: ShotParameters) -> DeviceParameters:
@@ -268,7 +266,15 @@ class SequenceManager(AbstractContextManager):
                         continue
                 self._device_parameter_queue.task_done()
             except Exception:
-                self._is_shutting_down.set()
+                # If an exception occurs while running a shot, we indicate that the
+                # sequence manager should shut down, and we discard all the shots that
+                # are queued.
+                with self._lock:
+                    self._is_shutting_down.set()
+                    self._device_parameter_queue.task_done()
+                    while not self._device_parameter_queue.empty():
+                        self._device_parameter_queue.get()
+                        self._device_parameter_queue.task_done()
                 raise
 
     def _run_shot_with_retry(
@@ -314,7 +320,12 @@ class SequenceManager(AbstractContextManager):
                 self._store_shot(shot_data)
                 self._shot_data_queue.task_done()
             except Exception:
-                self._is_shutting_down.set()
+                with self._lock:
+                    self._is_shutting_down.set()
+                    self._shot_data_queue.task_done()
+                    while not self._shot_data_queue.empty():
+                        self._shot_data_queue.get()
+                        self._shot_data_queue.task_done()
                 raise
 
     def _store_shot(self, shot_data: ShotData) -> None:
