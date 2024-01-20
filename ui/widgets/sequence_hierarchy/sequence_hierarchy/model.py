@@ -109,7 +109,7 @@ class PathHierarchyModel(QAbstractItemModel):
         return len(item.children)
 
     def columnCount(self, parent=QModelIndex()):
-        return 3
+        return 4
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -125,6 +125,13 @@ class PathHierarchyModel(QAbstractItemModel):
                 else:
                     return item.sequence_stats.state.value
             elif index.column() == 2:
+                if item.sequence_stats is None:
+                    return None
+                else:
+                    completed = item.sequence_stats.number_completed_shots
+                    total = item.sequence_stats.expected_number_shots
+                    return f"{completed}/{total}"
+            elif index.column() == 3:
                 return QDateTime(item.creation_date)
         return None
 
@@ -134,8 +141,10 @@ class PathHierarchyModel(QAbstractItemModel):
                 if section == 0:
                     return "Name"
                 elif section == 1:
-                    return "State"
+                    return "Status"
                 elif section == 2:
+                    return "Progress"
+                elif section == 3:
                     return "Date created"
             else:
                 return section
