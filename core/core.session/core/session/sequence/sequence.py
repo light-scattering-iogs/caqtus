@@ -61,17 +61,20 @@ class Sequence:
 
         return self.session.sequences.get_shots(self.path)
 
-    def duplicate(self, new_path: PureSequencePath) -> Sequence:
+    def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
         """Duplicate the sequence to a new path.
 
         The sequence created will be in the draft state and will have the same iteration
         configuration and time lanes as the original sequence.
         """
 
+        if isinstance(target_path, str):
+            target_path = PureSequencePath(target_path)
+
         iteration_configuration = self.get_iteration_configuration()
         time_lanes = self.get_time_lanes()
         return self.session.sequences.create(
-            new_path, iteration_configuration, time_lanes
+            target_path, iteration_configuration, time_lanes
         )
 
     def __eq__(self, other):
