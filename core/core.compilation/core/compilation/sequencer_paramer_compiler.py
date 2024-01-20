@@ -20,7 +20,8 @@ from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
     LaneValues,
-    DeviceTrigger, ChannelOutput,
+    DeviceTrigger,
+    ChannelOutput,
 )
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -43,6 +44,15 @@ from .unit_namespace import units
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+@attrs.frozen
+class ChannelOutputResult:
+    instruction: SequencerInstruction
+    unit: Optional[Unit]
+
+    @property
+    def dtype(self):
+        return self.instruction.dtype
 
 
 class SequencerParameterCompiler:
@@ -152,68 +162,65 @@ class SingleShotCompiler:
             return stacked
         except Exception as e:
             raise SequencerCompilationError(
-                f"Couldn't compile instruction for " f"sequencer {sequencer_name}"
+                f"Couldn't compile instruction for sequencer {sequencer_name}"
             ) from e
 
+    @functools.singledispatchmethod
     def evaluate_output(
         self,
         output_: ChannelOutput,
         required_time_step: int,
         required_unit: Optional[Unit],
     ) -> ChannelOutputResult:
+        raise NotImplementedError(f"Cannot evaluate output <{output_}>")
+
+    @evaluate_output.register
+    def _(
+        self, output_: Constant, required_time_step: int, required_unit: Optional[Unit]
+    ) -> ChannelOutputResult:
         length = number_ticks(0, self.shot_duration, required_time_step * ns)
 
-        match output_:
-            case Constant(expression):
-                value = expression.evaluate(self.variables | units)
-                unit = get_unit(value)
-                magnitude = magnitude_in_unit(value, unit)
-                return ChannelOutputResult(
-                    instruction=Pattern([magnitude]) * length,
-                    unit=unit,
+        expression = output_.value
+        value = expression.evaluate(self.variables | units)
+        magnitude = magnitude_in_unit(value, required_unit)
+        return ChannelOutputResult(
+            instruction=Pattern([magnitude]) * length,
+            unit=required_unit,
+        )
+
+    @evaluate_output.register
+    def _(
+        self,
+        output_: LaneValues,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+    ) -> ChannelOutputResult:
+        lane_name = output_.lane
+        try:
+            lane = self.lanes[lane_name]
+        except KeyError:
+            raise ValueError(
+                f"Could not find lane <{lane_name}> when evaluating output "
+                f"<{output_}>"
+            )
+        if isinstance(lane, DigitalTimeLane):
+            if required_unit is not None:
+                raise ValueError(
+                    f"Cannot evaluate digital lane <{lane_name}> with unit "
+                    f"{required_unit:~}"
                 )
-            case LaneValues(lane_name):
-                try:
-                    lane = self.lanes[lane_name]
-                except KeyError:
-                    raise ValueError(
-                        f"Could not find lane <{lane_name}> when evaluating output "
-                        f"<{output_}>"
-                    )
-                if isinstance(lane, DigitalTimeLane):
-                    if required_unit is not None:
-                        raise ValueError(
-                            f"Cannot evaluate digital lane <{lane_name}> with unit "
-                            f"{required_unit:~}"
-                        )
-                    evaluated = self.evaluate_digital_lane_output(
-                        lane, required_time_step
-                    )
-                    self.used_lanes.add(lane_name)
-                    return evaluated
-                elif isinstance(lane, AnalogTimeLane):
-                    self.used_lanes.add(lane_name)
-                    return self.evaluate_analog_lane_output(
-                        lane, required_time_step, required_unit
-                    )
-                else:
-                    raise TypeError(
-                        f"Cannot evaluate values of lane with type " f"{type(lane)}"
-                    )
-            case DeviceTrigger(device):
-                if device not in self.devices:
-                    raise ValueError(
-                        f"Could not find device <{device}> to generate trigger "
-                        f"for output <{output_}>."
-                    )
-                if required_unit is not None:
-                    raise ValueError(
-                        f"Cannot evaluate trigger for device <{device}> with unit "
-                        f"{required_unit:~}"
-                    )
-                return self.evaluate_device_trigger(device, required_time_step)
-            case _:
-                raise NotImplementedError
+            evaluated = self.evaluate_digital_lane_output(lane, required_time_step)
+            self.used_lanes.add(lane_name)
+            return evaluated
+        elif isinstance(lane, AnalogTimeLane):
+            self.used_lanes.add(lane_name)
+            return self.evaluate_analog_lane_output(
+                lane, required_time_step, required_unit
+            )
+        else:
+            raise TypeError(
+                f"Cannot evaluate values of lane with type " f"{type(lane)}"
+            )
 
     def evaluate_digital_lane_output(
         self, lane: DigitalTimeLane, time_step: int
@@ -241,6 +248,26 @@ class SingleShotCompiler:
             instruction=lane_output,
             unit=target_unit,
         )
+
+    @evaluate_output.register
+    def _(
+        self,
+        output_: DeviceTrigger,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+    ) -> ChannelOutputResult:
+        device = output_.device_name
+        if device not in self.devices:
+            raise ValueError(
+                f"Could not find device <{device}> to generate trigger "
+                f"for output <{output_}>."
+            )
+        if required_unit is not None:
+            raise ValueError(
+                f"Cannot evaluate trigger for device <{device}> with unit "
+                f"{required_unit:~}"
+            )
+        return self.evaluate_device_trigger(device, required_time_step)
 
     def evaluate_device_trigger(
         self,
@@ -354,14 +381,7 @@ class SequencerParameters(TypedDict):
     sequence: SequencerInstruction
 
 
-@attrs.frozen
-class ChannelOutputResult:
-    instruction: SequencerInstruction
-    unit: Optional[Unit]
 
-    @property
-    def dtype(self):
-        return self.instruction.dtype
 
 
 def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
