@@ -15,6 +15,7 @@ def create_exception() -> Exception:
     exception_0.__cause__ = exception_1
     exception_3 = Exception("Exception 3")
     exception_4 = Exception("Exception 4")
+    exception_4.add_note("note")
     exception_5 = Exception("Exception 5")
     exception_4.__cause__ = exception_5
     exception_2 = ExceptionGroup("Group of exceptions", [exception_3, exception_4])
