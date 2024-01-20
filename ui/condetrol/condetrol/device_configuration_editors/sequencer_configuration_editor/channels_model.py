@@ -3,15 +3,18 @@ from typing import Any
 
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex
 from PyQt6.QtCore import Qt
-
 from core.device.sequencer.configuration import (
     ChannelConfiguration,
     is_channel_output,
     LaneValues,
     DeviceTrigger,
     Constant,
+    CalibratedAnalogMapping,
 )
-from core.device.sequencer.configuration.channel_output import Advance, Delay
+from core.device.sequencer.configuration.channel_output import (
+    Advance,
+    Delay,
+)
 from core.types.expression import Expression
 
 delay_multiplier = 1e-6
@@ -70,6 +73,7 @@ class SequencerChannelsModel(QAbstractTableModel):
                         Constant=Constant,
                         Advance=Advance,
                         Delay=Delay,
+                        CalibratedAnalogMapping=CalibratedAnalogMapping,
                     ),
                     {},
                 )
