@@ -252,7 +252,14 @@ class BoundProcedure(Procedure):
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         if not self.is_active():
-            raise ProcedureNotActiveError("The procedure is not active.")
+            exception = ProcedureNotActiveError("The procedure is not active.")
+            exception.add_note(
+                "It is only possible to run sequences inside active procedures."
+            )
+            exception.add_note(
+                "Maybe you forgot to use the procedure inside a `with` statement?"
+            )
+            raise exception
         if self.is_running_sequence():
             raise SequenceAlreadyRunningError("A sequence is already running.")
         self._sequence_future = self._thread_pool.submit(
