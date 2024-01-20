@@ -109,10 +109,16 @@ class SingleShotCompiler:
         )
 
         if unreached_sequencers:
-            raise ValueError(
-                f"Could not trigger sequencers {unreached_sequencers} from root "
-                f"sequencer {self.root_sequencer}"
+            error = ValueError(
+                f"There is no trigger relationship from the root sequencer "
+                f"'{self.root_sequencer}' to the following sequencers: "
+                f"{unreached_sequencers}"
             )
+            error.add_note(
+                "Check that the above sequencers are triggered by the root "
+                "sequencer or one of its children"
+            )
+            raise error
 
         unused_lanes = set(self.lanes.keys()) - self.used_lanes
         if unused_lanes:
