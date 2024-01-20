@@ -176,6 +176,9 @@ class SQLSequenceCollection(SequenceCollection):
             iteration_configuration
         )
         sequence_model.iteration.content = iteration_content
+        sequence_model.expected_number_of_shots = (
+            iteration_configuration.expected_number_shots()
+        )
 
     def create(
         self,
@@ -200,6 +203,7 @@ class SQLSequenceCollection(SequenceCollection):
             constant_table_uuids=set(),
             start_time=None,
             stop_time=None,
+            expected_number_of_shots=iteration_configuration.expected_number_shots(),
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(BoundSequencePath(path, self.parent_session))

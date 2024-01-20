@@ -64,10 +64,11 @@ class SQLSequence(Base):
         cascade="all, delete",
         passive_deletes=True,
     )
-    #
-    # total_number_shots: Mapped[
-    #     Optional[int]
-    # ] = mapped_column()  # None indicates that this number is unknown
+    # expected_number_of_shots indicates how many shots are expected to be executed in
+    # total for this sequence.
+    # It is written when the sequence iteration is set.
+    # None indicates that this value is not known.
+    expected_number_of_shots: Mapped[Optional[int]] = mapped_column()
     # number_completed_shots: Mapped[int] = mapped_column()
     #
     # shots: Mapped[list[Shot]] = relationship(
