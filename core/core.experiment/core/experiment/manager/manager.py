@@ -29,6 +29,18 @@ class ExperimentManager(abc.ABC):
     ) -> Procedure:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def interrupt_running_procedure(self) -> bool:
+        """Indicates to the active procedure that it must stop running sequences.
+
+        Returns:
+            True if there was an active procedure, and it signaled that it will stop
+            running sequences.
+            False if no procedure was active.
+        """
+
+        raise NotImplementedError
+
 
 class Procedure(AbstractContextManager, abc.ABC):
     """Used to perform a procedure on the experiment.
@@ -112,6 +124,22 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def interrupt_sequence(self) -> bool:
+        """Interrupt the currently running sequence.
+
+        This method only signals the sequence that it must interrupt as soon as
+        possible, but it does not wait for the sequence to finish.
+        To wait for the sequence to finish, use :meth:`wait_until_sequence_finished`
+        after calling :meth:`interrupt_sequence`.
+
+        Returns:
+            True if a sequence was running and was interrupted.
+            False if no sequence was running.
+        """
+
+        raise NotImplementedError
+
     def run_sequence(
         self,
         sequence_path: PureSequencePath,
@@ -164,6 +192,7 @@ class BoundExperimentManager(ExperimentManager):
         self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self._active_procedure: Optional[BoundProcedure] = None
 
     def __enter__(self):
         self._thread_pool.__enter__()
@@ -177,6 +206,7 @@ class BoundExperimentManager(ExperimentManager):
         self, procedure_name: str, acquisition_timeout: Optional[float] = None
     ) -> BoundProcedure:
         return BoundProcedure(
+            self,
             procedure_name,
             self._session_maker,
             self._procedure_running,
@@ -186,6 +216,11 @@ class BoundExperimentManager(ExperimentManager):
             self._shot_retry_config,
             acquisition_timeout,
         )
+
+    def interrupt_running_procedure(self) -> bool:
+        if self._active_procedure is None:
+            return False
+        return self._active_procedure.interrupt_sequence()
 
 
 class BoundProcedure(Procedure):
@@ -199,6 +234,7 @@ class BoundProcedure(Procedure):
 
     def __init__(
         self,
+        experiment_manager: BoundExperimentManager,
         name: str,
         session_maker: ExperimentSessionMaker,
         lock: threading.Lock,
@@ -208,6 +244,7 @@ class BoundProcedure(Procedure):
         shot_retry_config: ShotRetryConfig,
         acquisition_timeout: Optional[float] = None,
     ):
+        self._parent = experiment_manager
         self._name = name
         self._session_maker = session_maker
         self._running = lock
@@ -218,6 +255,7 @@ class BoundProcedure(Procedure):
         self._shot_compiler_factory = shot_compiler_factory
         self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
+        self._must_interrupt = threading.Event()
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -228,6 +266,7 @@ class BoundProcedure(Procedure):
     def __enter__(self):
         if not self._running.acquire(timeout=self._acquisition_timeout):
             raise TimeoutError(f"Could not activate procedure <{self}>.")
+        self._parent._active_procedure = self
         self._sequences.clear()
         return self
 
@@ -262,6 +301,7 @@ class BoundProcedure(Procedure):
             raise exception
         if self.is_running_sequence():
             raise SequenceAlreadyRunningError("A sequence is already running.")
+        self._must_interrupt.clear()
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence_path,
@@ -269,6 +309,12 @@ class BoundProcedure(Procedure):
             constant_tables_uuids,
         )
         self._sequences.append(sequence_path)
+
+    def interrupt_sequence(self) -> bool:
+        if not self.is_running_sequence():
+            return False
+        self._must_interrupt.set()
+        return True
 
     def wait_until_sequence_finished(self):
         if self.is_running_sequence():
@@ -289,6 +335,7 @@ class BoundProcedure(Procedure):
             self._session_maker,
             self._shot_compiler_factory,
             self._shot_runner_factory,
+            self._must_interrupt,
             self._shot_retry_config,
             device_configurations_uuids,
             constant_tables_uuids,
@@ -332,6 +379,7 @@ class BoundProcedure(Procedure):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.wait_until_sequence_finished()
+        self._parent._active_procedure = None
         self._running.release()
 
 
