@@ -2,9 +2,23 @@ import logging
 from functools import singledispatchmethod
 from typing import Optional, ClassVar
 
-from attr.validators import instance_of, ge, le
+import attrs.setters
 from attrs import define, field
 from attrs.setters import frozen
+from attrs.validators import instance_of, ge, le
+from core.device.sequencer import (
+    Sequencer,
+    Trigger,
+    ExternalTriggerStart,
+    TriggerEdge,
+    SoftwareTrigger,
+)
+from core.device.sequencer.instructions import (
+    SequencerInstruction,
+    Pattern,
+    Concatenate,
+    Repeat,
+)
 from pulsestreamer import (
     PulseStreamer,
     TriggerStart,
@@ -13,26 +27,15 @@ from pulsestreamer import (
     OutputState,
 )
 
-from sequencer.instructions.struct_array_instruction import (
-    SequencerInstruction,
-    Pattern,
-    Concatenate,
-    Repeat,
-)
-from sequencer.runtime import (
-    Sequencer,
-    SequenceNotConfiguredError,
-    Trigger,
-    ExternalTriggerStart,
-    TriggerEdge,
-)
-
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
 
 
-@define(slots=False)
+
+
+
+@define
 class SwabianPulseStreamer(Sequencer):
     # only support digital channels at the moment
     channel_number: ClassVar[int] = 8
@@ -43,8 +46,7 @@ class SwabianPulseStreamer(Sequencer):
 
     trigger: Trigger = field(
         factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
-        validator=instance_of(Trigger),
-        on_setattr=frozen,
+        on_setattr=attrs.setters.frozen,
     )
 
     _pulse_streamer: PulseStreamer = field(init=False)
@@ -52,9 +54,8 @@ class SwabianPulseStreamer(Sequencer):
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, attribute, value):
-        if not (value.is_software_trigger() or isinstance(value, ExternalTriggerStart)):
+        if not isinstance(value, (ExternalTriggerStart, SoftwareTrigger)):
             raise ValueError("Only supports software or external trigger start.")
-        return value
 
     def initialize(self) -> None:
         super().initialize()
@@ -64,7 +65,7 @@ class SwabianPulseStreamer(Sequencer):
         self.setup_trigger()
 
     def setup_trigger(self) -> None:
-        if self.trigger.is_software_trigger():
+        if isinstance(self.trigger, SoftwareTrigger):
             start = TriggerStart.SOFTWARE
         elif isinstance(self.trigger, ExternalTriggerStart):
             if self.trigger.edge == TriggerEdge.RISING:
@@ -93,11 +94,11 @@ class SwabianPulseStreamer(Sequencer):
     def start_sequence(self) -> None:
         super().start_sequence()
         if not self._sequence:
-            raise SequenceNotConfiguredError("The sequence has not been set yet.")
+            raise RuntimeError("The sequence has not been set yet.")
         self._pulse_streamer.stream(
             seq=self._sequence, n_runs=1, final=self._final_state
         )
-        if self.trigger.is_software_trigger():
+        if isinstance(self.trigger, SoftwareTrigger):
             self._pulse_streamer.startNow()
 
     def has_sequence_finished(self) -> bool:
