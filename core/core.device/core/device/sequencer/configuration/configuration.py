@@ -43,7 +43,8 @@ class ChannelConfiguration(ABC):
 
 @attrs.define
 class DigitalChannelConfiguration(ChannelConfiguration):
-    pass
+    def __str__(self):
+        return f"digital channel '{self.description}'"
 
 
 @attrs.define
@@ -52,6 +53,9 @@ class AnalogChannelConfiguration(ChannelConfiguration):
         converter=str,
         on_setattr=attrs.setters.convert,
     )
+
+    def __str__(self):
+        return f"analog channel '{self.description}' with unit {self.output_unit}"
 
 
 def validate_trigger(instance, attribute, value):

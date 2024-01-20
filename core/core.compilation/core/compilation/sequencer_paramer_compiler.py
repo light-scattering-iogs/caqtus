@@ -146,7 +146,7 @@ class SingleShotCompiler:
             except Exception as e:
                 raise SequencerCompilationError(
                     f"Error occurred when evaluating output for channel "
-                    f"{channel_number} ({channel.description}) of sequencer "
+                    f"{channel_number} ({channel}) of sequencer "
                     f"{sequencer_name}"
                 ) from e
             instruction = self.convert_channel_instruction(output_values, channel)
