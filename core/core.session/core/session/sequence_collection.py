@@ -186,3 +186,5 @@ class SequenceStats:
     state: State
     start_time: Optional[datetime.datetime]
     stop_time: Optional[datetime.datetime]
+    number_completed_shots: int
+    expected_number_shots: Optional[int]

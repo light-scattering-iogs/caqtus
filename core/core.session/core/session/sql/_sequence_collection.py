@@ -7,17 +7,18 @@ from typing import TYPE_CHECKING
 import attrs
 import numpy as np
 import sqlalchemy.orm
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import func
+from sqlalchemy import select
+
 from core.session.shot.timelane import AnalogTimeLane
 from core.types.data import DataLabel, Data, is_data
 from core.types.expression import Expression
 from core.types.parameter import Parameter
 from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import select
 from util import serialization
-
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -312,10 +313,18 @@ class SQLSequenceCollection(SequenceCollection):
         result = self._query_sequence_model(path)
 
         def extract_stats(sequence: SQLSequence) -> SequenceStats:
+            number_shot_query = select(func.count()).select_from(
+                select(SQLShot).where(SQLShot.sequence == sequence).subquery()
+            )
+            number_shot_run = (
+                self._get_sql_session().execute(number_shot_query).scalar_one()
+            )
             return SequenceStats(
                 state=sequence.state,
                 start_time=sequence.start_time,
                 stop_time=sequence.stop_time,
+                number_completed_shots=number_shot_run,
+                expected_number_shots=sequence.expected_number_of_shots,
             )
 
         return result.map(extract_stats)
