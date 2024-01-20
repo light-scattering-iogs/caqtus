@@ -6,7 +6,7 @@ import attrs
 
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
-from ..path import BoundSequencePath
+from ..path import BoundSequencePath, PureSequencePath
 from ..shot import TimeLanes
 
 if TYPE_CHECKING:
@@ -60,6 +60,19 @@ class Sequence:
         """Return the shots that belong to this sequence."""
 
         return self.session.sequences.get_shots(self.path)
+
+    def duplicate(self, new_path: PureSequencePath) -> Sequence:
+        """Duplicate the sequence to a new path.
+
+        The sequence created will be in the draft state and will have the same iteration
+        configuration and time lanes as the original sequence.
+        """
+
+        iteration_configuration = self.get_iteration_configuration()
+        time_lanes = self.get_time_lanes()
+        return self.session.sequences.create(
+            new_path, iteration_configuration, time_lanes
+        )
 
     def __eq__(self, other):
         if isinstance(other, Sequence):
