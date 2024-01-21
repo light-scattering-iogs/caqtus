@@ -6,12 +6,21 @@ import uuid
 from collections.abc import Set
 from typing import Optional
 
+from tblib import pickling_support
+
 from core.compilation import ShotCompilerFactory
 from core.session import ExperimentSessionMaker
 from core.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
+
+
+# This is necessary to be able to pass exception properly between the experiment server
+# process and the clients.
+# It allows sending the exception cause, context, notes, and traceback.
+# It is not safe since it allows arbitrary code execution upon unpickling.
+pickling_support.install()
 
 experiment_manager: Optional[BoundExperimentManager] = None
 
