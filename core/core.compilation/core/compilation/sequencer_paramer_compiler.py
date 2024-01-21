@@ -6,6 +6,7 @@ from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
 import numpy as np
+
 from core.compilation import VariableNamespace
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
 from core.device.sequencer import (
@@ -13,7 +14,8 @@ from core.device.sequencer import (
     SoftwareTrigger,
     ChannelConfiguration,
     DigitalChannelConfiguration,
-    ExternalClockOnChange, ExternalTriggerStart,
+    ExternalClockOnChange,
+    ExternalTriggerStart,
 )
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
@@ -32,16 +34,16 @@ from core.device.sequencer.instructions import (
     Concatenate,
     join,
 )
-from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane
+from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
 from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
 from util import add_exc_note
-
-from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler
+from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns
 from .unit_namespace import units
+from ..device.camera import CameraConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -60,6 +62,7 @@ class SequencerParameterCompiler:
         self.sequencer_configurations = get_configurations_by_type(
             devices, SequencerConfiguration
         )
+        self.device_configurations = devices
         self.root_sequencer = find_root_sequencer(self.sequencer_configurations)
 
     def compile(
@@ -70,7 +73,7 @@ class SequencerParameterCompiler:
             [duration for _, duration in self.steps],
             self.lanes,
             self.sequencer_configurations,
-            self.sequencer_configurations,
+            self.device_configurations,
             self.root_sequencer,
             variables,
         )
@@ -120,7 +123,18 @@ class SingleShotCompiler:
             )
             raise error
 
-        unused_lanes = set(self.lanes.keys()) - self.used_lanes
+        digital_lanes = {
+            name
+            for name, lane in self.lanes.items()
+            if isinstance(lane, DigitalTimeLane)
+        }
+        analog_lanes = {
+            name
+            for name, lane in self.lanes.items()
+            if isinstance(lane, AnalogTimeLane)
+        }
+
+        unused_lanes = (digital_lanes | analog_lanes) - self.used_lanes
         if unused_lanes:
             raise ValueError(
                 f"The following lanes where not used when compiling the shot: "
@@ -289,6 +303,8 @@ class SingleShotCompiler:
             return self.evaluate_trigger_for_sequencer(
                 slave=device, master_time_step=time_step
             )
+        elif isinstance(device_config, CameraConfiguration):
+            return self.evaluate_trigger_for_camera(device, time_step)
         else:
             raise NotImplementedError(
                 f"Cannot evaluate trigger for device of type {type(device_config)}"
@@ -324,6 +340,26 @@ class SingleShotCompiler:
                 f"Cannot evaluate trigger for trigger of type "
                 f"{type(slave_config.trigger)}"
             )
+
+    def evaluate_trigger_for_camera(
+        self, device: DeviceName, time_step: int
+    ) -> SequencerInstruction[np.bool_]:
+        try:
+            lane = self.lanes[device]
+        except KeyError:
+            raise ValueError(
+                f"Asked to generate trigger for device '{device}', which is a "
+                f"camera, but there is no lane with this name to indicate how to "
+                f"take pictures"
+            )
+        if not isinstance(lane, CameraTimeLane):
+            raise ValueError(
+                f"Asked to generate trigger for device '{device}', which is a "
+                f"camera, but the lane with this name is not a camera lane "
+                f"(got {type(lane)})"
+            )
+        camera_compiler = CameraLaneCompiler(lane, self.step_names, self.step_durations)
+        return camera_compiler.compile_trigger(self.variables, time_step)
 
     def convert_channel_instruction(
         self, instruction: SequencerInstruction, channel: ChannelConfiguration
