@@ -6,8 +6,8 @@ from collections.abc import MutableSequence, Iterable, Sequence
 from typing import TypeVar, Generic, Self
 
 import attrs
-
 from core.types.expression import Expression
+from util.asserts import assert_length_changed
 
 T = TypeVar("T")
 
@@ -138,9 +138,30 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         else:
             raise TypeError(f"Invalid type for index: {type(key)}")
 
+    @assert_length_changed(-1)
     def delete_index(self, index: int):
-        del self.values[index]
+        """Delete a single index from the lane.
 
+        The length of the lane is always exactly one less after this operation.
+        """
+
+        previous_length = len(self)
+
+        index = normalize_index(index, len(self))
+        if not (0 <= index < len(self)):
+            raise IndexError(f"Index out of bounds: {index}")
+        block = find_containing_step(self._bounds, index)
+        if self._get_span(block) == 1:
+            del self._spanned_values[block]
+        else:
+            self._spanned_values[block] = (
+                self._get_value(block),
+                self._get_span(block) - 1,
+            )
+        self._bounds = compute_bounds(span for _, span in self._spanned_values)
+        assert len(self) == previous_length - 1
+
+    @assert_length_changed(+1)
     def insert(self, index: int, value: T):
         index = normalize_index(index, len(self))
         if index == len(self):
