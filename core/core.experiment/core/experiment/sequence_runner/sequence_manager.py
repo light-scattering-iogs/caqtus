@@ -7,9 +7,9 @@ import logging
 import queue
 import threading
 import uuid
-from collections.abc import Set, Mapping
+from collections.abc import Set, Mapping, Generator
 from contextlib import AbstractContextManager
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar, Generic
 
 import attrs
 
@@ -121,14 +121,25 @@ class SequenceManager(AbstractContextManager):
         self._is_shutting_down = threading.Event()
         self._exit_stack = contextlib.ExitStack()
         self._thread_pool = concurrent.futures.ThreadPoolExecutor()
+
         self._shot_parameter_queue = queue.PriorityQueue[ShotParameters](4)
+        self._is_compiling = LockedEvent()
+        self._is_compiling.set()
+
         self._device_parameter_queue = queue.PriorityQueue[DeviceParameters](4)
+        self._is_running_shots = LockedEvent()
+        self._is_running_shots.set()
+
         self._shot_data_queue = queue.PriorityQueue[ShotData](4)
+        self._is_saving_data = LockedEvent()
+        self._is_saving_data.set()
+
         self._task_group = TaskGroup(
             self._thread_pool, name=f"managing the sequence '{self._sequence_path}'"
         )
-        self._lock = threading.Lock()
         self._interruption_event = interruption_event
+        self._is_watching_for_interruption = threading.Event()
+        self._is_watching_for_interruption.set()
 
     def __enter__(self):
         self._prepare_sequence()
@@ -151,17 +162,29 @@ class SequenceManager(AbstractContextManager):
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.
         error_occurred = exc_val is not None
-
         if error_occurred:
-            self._is_shutting_down.set()
+            self._is_compiling.clear()
+            self._is_running_shots.clear()
+            self._is_saving_data.clear()
+
         self._shot_parameter_queue.join()
+        self._is_compiling.clear()
         self._device_parameter_queue.join()
+        self._is_running_shots.clear()
         self._shot_data_queue.join()
-        self._is_shutting_down.set()
+        self._is_saving_data.clear()
+        self._is_watching_for_interruption.clear()
         try:
             # Here we check is any of the background tasks raised an exception. If so,
-            # they are re-raised here.
-            self._task_group.__exit__(exc_type, exc_val, exc_tb)
+            # they are re-raised here, and the exception that occurred in the scheduler
+            # thread is added to the list of exceptions.
+            try:
+                self._task_group.__exit__(exc_type, exc_val, exc_tb)
+            except ExceptionGroup as e:
+                if error_occurred:
+                    raise ExceptionGroup(e.message, [*e.exceptions])
+                else:
+                    raise e
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
@@ -184,11 +207,12 @@ class SequenceManager(AbstractContextManager):
             index=self._current_shot, parameters=shot_parameters
         )
 
-        def push_shot() -> bool:
-            with self._lock:
-                if self.is_shutting_down():
+        def try_pushing_shot() -> bool:
+            with self._is_compiling.is_set_context() as is_compiling:
+                if not is_compiling:
                     raise RuntimeError(
-                        "Cannot schedule shot while sequence manager is shutting down."
+                        "Cannot schedule shot after shot compilation has been "
+                        "terminated."
                     )
                 try:
                     self._shot_parameter_queue.put(shot_parameters, timeout=20e-3)
@@ -197,12 +221,9 @@ class SequenceManager(AbstractContextManager):
                 else:
                     return True
 
-        while not push_shot():
+        while not try_pushing_shot():
             continue
         self._current_shot += 1
-
-    def is_shutting_down(self) -> bool:
-        return self._is_shutting_down.is_set()
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
@@ -222,38 +243,53 @@ class SequenceManager(AbstractContextManager):
         self._exit_stack.enter_context(self._shot_runner)
 
     def _watch_for_interruption(self):
-        while not self.is_shutting_down():
+        while self._is_watching_for_interruption.is_set():
             if self._interruption_event.wait(20e-3):
-                self._is_shutting_down.set()
-                raise SequenceInterruptedException()
+                logger.debug("Sequence interrupted")
+                self._is_compiling.clear()
+                self._is_running_shots.clear()
+                self._is_saving_data.clear()
+                raise SequenceInterruptedException(
+                    f"Sequence '{self._sequence_path}' received an external "
+                    f"interruption signal."
+                )
             else:
                 continue
 
     def _compile_shots(self):
-        while not self.is_shutting_down():
-            try:
-                shot_parameters = self._shot_parameter_queue.get(timeout=20e-3)
-            except queue.Empty:
-                continue
-            try:
-                device_parameters = self._compile_shot(shot_parameters)
-                while not self.is_shutting_down():
-                    try:
-                        self._device_parameter_queue.put(
-                            device_parameters, timeout=20e-3
-                        )
-                        break
-                    except queue.Full:
-                        continue
-                self._shot_parameter_queue.task_done()
-            except Exception:
-                with self._lock:
-                    self._is_shutting_down.set()
+        try:
+            while self._is_compiling.is_set():
+                try:
+                    shot_parameters = self._shot_parameter_queue.get(timeout=20e-3)
+                except queue.Empty:
+                    continue
+                try:
+                    device_parameters = self._compile_shot(shot_parameters)
+                    self.put_device_parameters(device_parameters)
+                except ProcessingFinishedException:
+                    self._is_compiling.clear()
+                    break
+                except Exception:
+                    self._is_compiling.clear()
+                    raise
+                finally:
                     self._shot_parameter_queue.task_done()
-                    while not self._shot_parameter_queue.empty():
-                        self._shot_parameter_queue.get()
-                        self._shot_parameter_queue.task_done()
-                raise
+        finally:
+            discard_queue(self._shot_parameter_queue)
+
+    def put_device_parameters(self, device_parameters: DeviceParameters) -> None:
+        while True:
+            with self._is_running_shots.is_set_context() as is_processing:
+                if not is_processing:
+                    raise ProcessingFinishedException(
+                        "Cannot put device parameters after processing has been "
+                        "terminated."
+                    )
+                try:
+                    self._device_parameter_queue.put(device_parameters, timeout=20e-3)
+                    return
+                except queue.Full:
+                    continue
 
     def _compile_shot(self, shot_parameters: ShotParameters) -> DeviceParameters:
         compiled = self._shot_compiler.compile_shot(shot_parameters.parameters)
@@ -264,31 +300,38 @@ class SequenceManager(AbstractContextManager):
         )
 
     def _run_shots(self):
-        while not self.is_shutting_down():
-            try:
-                device_parameters = self._device_parameter_queue.get(timeout=20e-3)
-            except queue.Empty:
-                continue
-            try:
-                shot_data = self._run_shot_with_retry(device_parameters)
-                while not self.is_shutting_down():
-                    try:
-                        self._shot_data_queue.put(shot_data, timeout=20e-3)
-                        break
-                    except queue.Full:
-                        continue
-                self._device_parameter_queue.task_done()
-            except Exception:
-                # If an exception occurs while running a shot, we indicate that the
-                # sequence manager should shut down, and we discard all the shots that
-                # are queued.
-                with self._lock:
-                    self._is_shutting_down.set()
+        try:
+            while self._is_running_shots.is_set():
+                try:
+                    device_parameters = self._device_parameter_queue.get(timeout=20e-3)
+                except queue.Empty:
+                    continue
+                try:
+                    shot_data = self._run_shot_with_retry(device_parameters)
+                    self.put_shot_data(shot_data)
+                except ProcessingFinishedException:
+                    self._is_running_shots.clear()
+                    break
+                except Exception:
+                    self._is_running_shots.clear()
+                    raise
+                finally:
                     self._device_parameter_queue.task_done()
-                    while not self._device_parameter_queue.empty():
-                        self._device_parameter_queue.get()
-                        self._device_parameter_queue.task_done()
-                raise
+        finally:
+            discard_queue(self._device_parameter_queue)
+
+    def put_shot_data(self, shot_data: ShotData) -> None:
+        while True:
+            with self._is_saving_data.is_set_context() as is_saving:
+                if not is_saving:
+                    raise ProcessingFinishedException(
+                        "Cannot put shot data after saving has been terminated."
+                    )
+                try:
+                    self._shot_data_queue.put(shot_data, timeout=20e-3)
+                    return
+                except queue.Full:
+                    continue
 
     def _run_shot_with_retry(
         self,
@@ -324,22 +367,21 @@ class SequenceManager(AbstractContextManager):
         )
 
     def _store_shots(self):
-        while not self.is_shutting_down():
-            try:
-                shot_data = self._shot_data_queue.get(timeout=20e-3)
-            except queue.Empty:
-                continue
-            try:
-                self._store_shot(shot_data)
-                self._shot_data_queue.task_done()
-            except Exception:
-                with self._lock:
-                    self._is_shutting_down.set()
+        try:
+            while self._is_saving_data.is_set():
+                try:
+                    shot_data = self._shot_data_queue.get(timeout=20e-3)
+                except queue.Empty:
+                    continue
+                try:
+                    self._store_shot(shot_data)
+                except Exception:
+                    self._is_saving_data.clear()
+                    raise
+                finally:
                     self._shot_data_queue.task_done()
-                    while not self._shot_data_queue.empty():
-                        self._shot_data_queue.get()
-                        self._shot_data_queue.task_done()
-                raise
+        finally:
+            discard_queue(self._shot_data_queue)
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {
@@ -354,6 +396,15 @@ class SequenceManager(AbstractContextManager):
                 shot_data.start_time,
                 shot_data.end_time,
             )
+
+
+def discard_queue(q: queue.Queue) -> None:
+    while True:
+        try:
+            q.get_nowait()
+            q.task_done()
+        except queue.Empty:
+            break
 
 
 @attrs.frozen(order=True)
@@ -387,4 +438,30 @@ class ShotData:
 
 
 class SequenceInterruptedException(RuntimeError):
+    pass
+
+
+class LockedEvent:
+    def __init__(self):
+        self._event = threading.Event()
+        self._lock = threading.Lock()
+
+    def set(self):
+        with self._lock:
+            self._event.set()
+
+    def clear(self):
+        with self._lock:
+            self._event.clear()
+
+    def is_set(self) -> bool:
+        return self._event.is_set()
+
+    @contextlib.contextmanager
+    def is_set_context(self) -> Generator[bool, None, None]:
+        with self._lock:
+            yield self._event.is_set()
+
+
+class ProcessingFinishedException(Exception):
     pass

@@ -9,7 +9,6 @@ from typing import Optional
 from core.compilation import ShotCompilerFactory
 from core.session import ExperimentSessionMaker
 from core.session import PureSequencePath
-
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
@@ -18,7 +17,7 @@ experiment_manager: Optional[BoundExperimentManager] = None
 
 
 class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BaseProxy):
-    _exposed_ = "create_procedure"
+    _exposed_ = ("create_procedure", "interrupt_running_procedure")
     _method_to_typeid_ = {
         "create_procedure": "ProcedureProxy",
     }
@@ -27,6 +26,9 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
         self, procedure_name: str, acquisition_timeout: Optional[float] = None
     ) -> ProcedureProxy:
         return self._callmethod("create_procedure", (procedure_name,))  # type: ignore
+
+    def interrupt_running_procedure(self) -> bool:
+        return self._callmethod("interrupt_running_procedure", ())
 
     def __repr__(self):
         return f"<ExperimentManagerProxy at {hex(id(self))}>"
@@ -48,6 +50,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         "sequences",
         "exception",
         "start_sequence",
+        "interrupt_sequence",
         "run_sequence",
         "__str__",
     )
@@ -84,6 +87,9 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         return self._callmethod("start_sequence", (sequence_path,))
+
+    def interrupt_sequence(self) -> bool:
+        return self._callmethod("interrupt_sequence", ())
 
 
 class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):

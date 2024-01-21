@@ -1,18 +1,19 @@
 import copy
 import logging
-import traceback
 from collections.abc import Mapping, Callable
 from typing import Optional
 
 import pyqtgraph.dockarea
 from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QMessageBox, QApplication
+from PyQt6.QtWidgets import QMainWindow, QApplication
 
 from core.device import DeviceName, DeviceConfigurationAttrs
+from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
 from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
 from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
+from .exception_dialog import ExceptionDialog
 from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -20,7 +21,6 @@ from ..device_configuration_editors import (
 )
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
-from .exception_dialog import ExceptionDialog
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -75,6 +75,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def open_sequence_editor(self, path: PureSequencePath):
         editor = SequenceWidget(path, self.session_maker)
         editor.sequence_start_requested.connect(self.start_sequence)
+        editor.sequence_interruption_requested.connect(self.interrupt_sequence)
 
         dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
         dock.sigClosed.connect(editor.close)
@@ -196,6 +197,16 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         exception_dialog.set_message(message)
         exception_dialog.exec()
 
+    def interrupt_sequence(self, path: PureSequencePath):
+        experiment_manager = run_with_wip_widget(
+            self,
+            "Connecting to experiment manager...",
+            self._connect_to_experiment_manager,
+        )
+        # we're actually lying here because we interrupt the running procedure, which
+        # may be different from the one passed in argument.
+        experiment_manager.interrupt_running_procedure()
+
 
 class ProcedureWatcherThread(QThread):
     exception_occurred = pyqtSignal(Exception)
@@ -217,8 +228,16 @@ class ProcedureWatcherThread(QThread):
             if self._procedure.is_running_sequence():
                 return
             else:
-                if (e := self._procedure.exception()) is not None:
-                    self.exception_occurred.emit(e)
+                if (exc := self._procedure.exception()) is not None:
+                    # Here we ignore the SequenceInterruptedException because it is
+                    # expected to happen when the sequence is interrupted and we don't
+                    # want to display it to the user as an actual error.
+                    if isinstance(exc, SequenceInterruptedException):
+                        exc = None
+                    elif isinstance(exc, ExceptionGroup):
+                        _, exc = exc.split(SequenceInterruptedException)
+                    if exc is not None:
+                        self.exception_occurred.emit(exc)
                 self.quit()
 
         timer = QTimer()

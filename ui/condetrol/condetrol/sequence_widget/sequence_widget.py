@@ -23,6 +23,7 @@ from ..timelanes_editor import TimeLanesEditor
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
     sequence_start_requested = pyqtSignal(PureSequencePath)
+    sequence_interruption_requested = pyqtSignal(PureSequencePath)
 
     def __init__(
         self,
@@ -63,6 +64,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             lambda _: self.sequence_start_requested.emit(self.sequence_path)
         )
         self.clear_button.clicked.connect(self.clear_sequence)
+        self.interrupt_button.clicked.connect(
+            lambda _: self.sequence_interruption_requested.emit(self.sequence_path)
+        )
         self.state_watcher_thread.sequence_not_found.connect(self.deleteLater)
         self.state_watcher_thread.stats_changed.connect(self.apply_stats)
         self.state_watcher_thread.time_lanes_changed.connect(
