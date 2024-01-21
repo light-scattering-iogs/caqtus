@@ -17,7 +17,6 @@ class LoadShotId(CombinableLoader):
                 polars.Series(
                     "sequence", [str(shot.sequence)], dtype=polars.Categorical
                 ),
-                polars.Series("shot name", [shot.name], dtype=polars.Categorical),
                 polars.Series("shot index", [shot.index], dtype=polars.Int64),
             ]
         )
