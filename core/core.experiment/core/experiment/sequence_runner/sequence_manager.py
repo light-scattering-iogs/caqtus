@@ -51,6 +51,17 @@ class ShotRetryConfig:
     number_of_attempts: int = attrs.field(default=1, eq=False)
 
 
+def _compile_shot(
+        shot_parameters: ShotParameters, shot_compiler: ShotCompiler
+) -> DeviceParameters:
+    compiled = shot_compiler.compile_shot(shot_parameters.parameters)
+    return DeviceParameters(
+        index=shot_parameters.index,
+        shot_parameters=shot_parameters.parameters,
+        device_parameters=compiled,
+    )
+
+
 class SequenceManager(AbstractContextManager):
     """
 
@@ -117,6 +128,7 @@ class SequenceManager(AbstractContextManager):
         self._is_shutting_down = threading.Event()
         self._exit_stack = contextlib.ExitStack()
         self._thread_pool = concurrent.futures.ThreadPoolExecutor()
+        self._process_pool = concurrent.futures.ProcessPoolExecutor()
 
         self._shot_parameter_queue = queue.PriorityQueue[ShotParameters](4)
         self._is_compiling = LockedEvent()
@@ -142,6 +154,7 @@ class SequenceManager(AbstractContextManager):
         self._exit_stack.__enter__()
         try:
             self._exit_stack.enter_context(self._thread_pool)
+            self._exit_stack.enter_context(self._process_pool)
             self._task_group.__enter__()
             self._prepare()
             self._task_group.create_task(self._watch_for_interruption)
@@ -154,15 +167,20 @@ class SequenceManager(AbstractContextManager):
         return self
 
     def _prepare(self) -> None:
+        # This task is here to force the process pool to start now.
+        # Otherwise, it waits until the first shot is submitted for compilation.
+        task = self._process_pool.submit(nothing)
         shot_compiler = self.shot_compiler_factory(
             self.time_lanes, self.device_configurations
         )
-        self._task_group.create_task(self._compile_shots, shot_compiler)
+        for _ in range(4):
+            self._task_group.create_task(self._compile_shots, shot_compiler)
         shot_runner: ShotRunner = self.shot_runner_factory(
             self.time_lanes, self.device_configurations
         )
         self._exit_stack.enter_context(shot_runner)
         self._task_group.create_task(self._run_shots, shot_runner)
+        task.result()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.
@@ -266,9 +284,10 @@ class SequenceManager(AbstractContextManager):
                 except queue.Empty:
                     continue
                 try:
-                    device_parameters = self._compile_shot(
-                        shot_parameters, shot_compiler
+                    task = self._process_pool.submit(
+                        _compile_shot, shot_parameters, shot_compiler
                     )
+                    device_parameters = task.result()
                     self.put_device_parameters(device_parameters)
                 except ProcessingFinishedException:
                     self._is_compiling.clear()
@@ -294,16 +313,6 @@ class SequenceManager(AbstractContextManager):
                     return
                 except queue.Full:
                     continue
-
-    def _compile_shot(
-        self, shot_parameters: ShotParameters, shot_compiler: ShotCompiler
-    ) -> DeviceParameters:
-        compiled = shot_compiler.compile_shot(shot_parameters.parameters)
-        return DeviceParameters(
-            index=shot_parameters.index,
-            shot_parameters=shot_parameters.parameters,
-            device_parameters=compiled,
-        )
 
     def _run_shots(self, shot_runner: ShotRunner):
         try:
