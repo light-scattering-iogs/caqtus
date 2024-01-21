@@ -15,6 +15,7 @@ core-session = {path = "../core.session", develop = true}
 core-types = {path = "../core.types", develop = true}
 core-device = {path = "../core.device", develop = true}
 core-compilation = {path = "../core.compilation", develop = true}
+tblib = "^3.0.0"
 
 
 [build-system]
