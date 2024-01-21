@@ -63,7 +63,7 @@ class SQLPathHierarchy(PathHierarchy):
             new_path = SQLSequencePath(
                 path=str(path_to_create),
                 parent=parent,
-                creation_date=datetime.now(tz=timezone.utc),
+                creation_date=datetime.now(tz=timezone.utc).replace(tzinfo=None),
             )
             session.add(new_path)
             created_paths.append(path_to_create)
@@ -132,4 +132,6 @@ class SQLPathHierarchy(PathHierarchy):
     ) -> Result[datetime, PathNotFoundError]:
         if path.is_root():
             return Failure(PathIsRootError(path))
-        return self._query_path_model(path).map(lambda x: x.creation_date)
+        return self._query_path_model(path).map(
+            lambda x: x.creation_date.replace(tzinfo=timezone.utc)
+        )

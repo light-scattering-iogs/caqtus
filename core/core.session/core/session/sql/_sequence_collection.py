@@ -279,9 +279,13 @@ class SQLSequenceCollection(SequenceCollection):
             )
             self._get_sql_session().execute(delete_shots)
         elif state == State.RUNNING:
-            sequence.start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+            sequence.start_time = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).replace(tzinfo=None)
         elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
-            sequence.stop_time = datetime.datetime.now(tz=datetime.timezone.utc)
+            sequence.stop_time = datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).replace(tzinfo=None)
 
     def set_device_configuration_uuids(
         self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
@@ -321,8 +325,12 @@ class SQLSequenceCollection(SequenceCollection):
             )
             return SequenceStats(
                 state=sequence.state,
-                start_time=sequence.start_time,
-                stop_time=sequence.stop_time,
+                start_time=sequence.start_time.replace(tzinfo=datetime.timezone.utc)
+                if sequence.start_time is not None
+                else None,
+                stop_time=sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
+                if sequence.stop_time is not None
+                else None,
                 number_completed_shots=number_shot_run,
                 expected_number_shots=sequence.expected_number_of_shots,
             )

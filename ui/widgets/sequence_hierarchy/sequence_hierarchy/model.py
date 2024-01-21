@@ -14,10 +14,10 @@ from PyQt6.QtCore import (
     QDateTime,
 )
 from anytree import NodeMixin
-
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
+from core.session.sequence import State
 from core.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
@@ -109,7 +109,7 @@ class PathHierarchyModel(QAbstractItemModel):
         return len(item.children)
 
     def columnCount(self, parent=QModelIndex()):
-        return 4
+        return 5
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -132,6 +132,12 @@ class PathHierarchyModel(QAbstractItemModel):
                     total = item.sequence_stats.expected_number_shots
                     return f"{completed}/{total}"
             elif index.column() == 3:
+                if item.sequence_stats is None:
+                    return None
+                else:
+                    return format_duration(item.sequence_stats)
+
+            elif index.column() == 4:
                 return QDateTime(item.creation_date)
         return None
 
@@ -145,6 +151,8 @@ class PathHierarchyModel(QAbstractItemModel):
                 elif section == 2:
                     return "Progress"
                 elif section == 3:
+                    return "Duration"
+                elif section == 4:
                     return "Date created"
             else:
                 return section
@@ -261,9 +269,7 @@ class PathHierarchyModel(QAbstractItemModel):
                 path_item = index.internalPointer()
                 path = path_item.hierarchy_path
                 try:
-                    sequence_stats = unwrap(
-                        self.session.sequences.get_stats(path)
-                    )
+                    sequence_stats = unwrap(self.session.sequences.get_stats(path))
                 except PathIsNotSequenceError:
                     sequence_stats = None
                 if sequence_stats != path_item.sequence_stats:
@@ -274,3 +280,64 @@ class PathHierarchyModel(QAbstractItemModel):
 class FoundChange(Exception):
     def __init__(self, index: QModelIndex):
         self.index = index
+
+def is_time_zone_aware(dt: datetime.datetime) -> bool:
+    return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None
+
+
+def format_duration(stats: SequenceStats) -> str:
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    if stats.state == State.DRAFT or stats.state == State.PREPARING:
+        return f"--/--"
+    elif stats.state == State.RUNNING:
+        running_duration = now - stats.start_time
+        if stats.expected_number_shots is None or stats.number_completed_shots == 0:
+            remaining = "--"
+        else:
+            remaining = (
+                running_duration
+                / stats.number_completed_shots
+                * (stats.expected_number_shots - stats.number_completed_shots)
+            )
+        if isinstance(remaining, datetime.timedelta):
+            total = remaining + running_duration
+            remaining = _format_seconds(total.total_seconds())
+        running_duration = _format_seconds(running_duration.total_seconds())
+        return f"{running_duration}/{remaining}"
+    elif (
+        stats.state == State.FINISHED
+        or stats.state == State.CRASHED
+        or stats.state == State.INTERRUPTED
+    ):
+        try:
+            total_duration = stats.stop_time - stats.start_time
+            total_duration = _format_seconds(total_duration.total_seconds())
+            return total_duration
+        except TypeError:
+            return ""
+
+
+def _format_seconds(seconds: float) -> str:
+    """Format seconds into a string.
+
+    Args:
+        seconds: Seconds to format.
+
+    Returns:
+        Formatted string.
+    """
+
+    seconds = int(seconds)
+    result = [f"{seconds % 60}s"]
+
+    minutes = seconds // 60
+    if minutes > 0:
+        result.append(f"{minutes % 60}m")
+        hours = minutes // 60
+        if hours > 0:
+            result.append(f"{hours % 24}h")
+            days = hours // 24
+            if days > 0:
+                result.append(f"{days}d")
+
+    return ":".join(reversed(result))

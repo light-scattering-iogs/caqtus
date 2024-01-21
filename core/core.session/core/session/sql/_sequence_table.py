@@ -4,13 +4,13 @@ import datetime
 from typing import Optional
 
 import sqlalchemy
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
+from ._shot_tables import SQLShot
 from ._table_base import Base
 from ..sequence.state import State
-from ._shot_tables import SQLShot
 
 
 class SQLIterationConfiguration(Base):
@@ -56,8 +56,13 @@ class SQLSequence(Base):
         cascade="all, delete", passive_deletes=True
     )
 
-    start_time: Mapped[Optional[datetime.datetime]] = mapped_column()
-    stop_time: Mapped[Optional[datetime.datetime]] = mapped_column()
+    # Stored as timezone naive datetimes, with the assumption that the timezone is UTC.
+    start_time: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=False)
+    )
+    stop_time: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=False)
+    )
 
     shots: Mapped[list["SQLShot"]] = relationship(
         back_populates="sequence",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._table_base import Base
@@ -27,7 +27,9 @@ class SQLSequencePath(Base):
     parent: Mapped[SQLSequencePath] = relationship(
         back_populates="children", remote_side=[id_]
     )
-    creation_date: Mapped[datetime.datetime] = mapped_column()
+
+    # Stored as timezone naive datetime, with the assumption that the timezone is UTC.
+    creation_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=False))
     sequence: Mapped[Optional["SQLSequence"]] = relationship(
         back_populates="path", cascade="all, delete", passive_deletes=True
     )

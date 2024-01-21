@@ -2,8 +2,6 @@ import datetime
 
 import numpy as np
 import pytest
-from hypothesis import given
-
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
 from core.session.sequence import State, Shot
@@ -14,6 +12,8 @@ from core.types.data import DataLabel
 from core.types.expression import Expression
 from core.types.units import ureg
 from core.types.variable_name import DottedVariableName
+from hypothesis import given
+
 from .session_maker import get_session_maker
 from ..generate_path import path
 from ..steps_iteration import steps_configuration
@@ -85,9 +85,7 @@ def test_deletion_1(empty_session):
 def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(
-            p, steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.exists()
         assert session.sequences.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
@@ -101,9 +99,7 @@ def test_sequence_deletion(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(
-            p, steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert sequence.exists()
@@ -123,21 +119,33 @@ def test_iteration_save(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(
-            p, steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.get_iteration_configuration() == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
         )
-        session.sequences.set_iteration_configuration(
-            sequence, new_steps_configuration
-        )
-        session.sequences.set_iteration_configuration(
-            sequence, new_steps_configuration
-        )
+        session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
+        session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
         assert sequence.get_iteration_configuration() == new_steps_configuration
         assert sequence.get_time_lanes() == time_lanes
+
+
+def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
+    with empty_session as session:
+        p = PureSequencePath(r"\test\test")
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_state(p, State.RUNNING)
+    with session:
+        stats = unwrap(session.sequences.get_stats(p))
+        d = stats.start_time
+        assert d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        assert (
+            now - datetime.timedelta(seconds=10)
+            < d
+            < now + datetime.timedelta(seconds=10)
+        )
 
 
 def test_shot_creation(
@@ -145,9 +153,7 @@ def test_shot_creation(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(
-            p, steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {
