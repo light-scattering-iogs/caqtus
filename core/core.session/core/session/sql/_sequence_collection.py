@@ -46,7 +46,7 @@ from ..sequence_collection import (
     ShotNotFoundError,
 )
 from ..sequence_collection import SequenceCollection
-from ..shot import TimeLane, DigitalTimeLane, TimeLanes
+from ..shot import TimeLane, DigitalTimeLane, TimeLanes, CameraTimeLane
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -93,7 +93,15 @@ def default_iteration_configuration_constructor(
 
 @functools.singledispatch
 def default_time_lane_serializer(time_lane: TimeLane) -> serialization.JSON:
-    raise TypeError(f"Cannot serialize time lane of type {type(time_lane)}")
+    error = TypeError(f"Cannot serialize time lane of type {type(time_lane)}")
+
+    error.add_note(
+        f"{default_time_lane_serializer} doesn't support saving this lane type."
+    )
+    error.add_note(
+        "You need to provide a custom lane serializer to the experiment session maker."
+    )
+    raise error
 
 
 @default_time_lane_serializer.register
@@ -109,6 +117,12 @@ def _(time_lane: AnalogTimeLane):
     content["type"] = "analog"
     return content
 
+@default_time_lane_serializer.register
+def _(time_lane: CameraTimeLane):
+    content = serialization.converters["json"].unstructure(time_lane, CameraTimeLane)
+    content["type"] = "camera"
+    return content
+
 
 def default_time_lane_constructor(
     time_lane_content: serialization.JSON,
@@ -121,6 +135,10 @@ def default_time_lane_constructor(
     elif time_lane_type == "analog":
         return serialization.converters["json"].structure(
             time_lane_content, AnalogTimeLane
+        )
+    elif time_lane_type == "camera":
+        return serialization.converters["json"].structure(
+            time_lane_content, CameraTimeLane
         )
     else:
         raise ValueError(f"Unknown time lane type {time_lane_type}")
