@@ -1,8 +1,9 @@
 import abc
 import bisect
+import copy
 import itertools
 from collections.abc import MutableSequence, Iterable, Sequence
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Self
 
 import attrs
 
@@ -20,6 +21,20 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     # _bounds[i] is the index at which spanned_values[i] starts (inclusive)
     # _bounds[i+1] is the index at which spanned_values[i] ends (exclusive)
     _bounds: list[int] = attrs.field(init=False, repr=False)
+
+    @_spanned_values.validator  # type: ignore
+    def validate_spanned_values(self, _, value):
+        if not value:
+            raise ValueError("Spanned values must not be empty")
+        if not all(span >= 1 for _, span in value):
+            raise ValueError("Span must be at least 1")
+
+    @classmethod
+    def from_sequence(cls, sequence: Sequence[T]) -> Self:
+        # We do a deep copy in case the user passes something like [obj] * length, in
+        # which case each value would be the same object.
+        spanned_values = [(copy.deepcopy(x), 1) for x in sequence]
+        return cls(spanned_values)
 
     def __attrs_post_init__(self):
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
