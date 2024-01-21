@@ -75,7 +75,7 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
         if not (0 <= row <= len(self._lane)):
             return False
         self.beginInsertRows(parent, row, row)
-        self._lane.insert(row, False)
+        self._lane.insert(row, Expression("..."))
         self.endInsertRows()
         return True
 
