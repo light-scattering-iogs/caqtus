@@ -117,6 +117,7 @@ def _(time_lane: AnalogTimeLane):
     content["type"] = "analog"
     return content
 
+
 @default_time_lane_serializer.register
 def _(time_lane: CameraTimeLane):
     content = serialization.converters["json"].unstructure(time_lane, CameraTimeLane)
@@ -462,14 +463,14 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> Data:
         shot_model = unwrap(self._query_shot_model(path, shot_index))
         structure_query = select(SQLStructuredShotData).where(
-            SQLStructuredShotData.shot == shot_model
-            and SQLStructuredShotData.label == data_label
+            (SQLStructuredShotData.shot == shot_model)
+            & (SQLStructuredShotData.label == data_label)
         )
         result = self._get_sql_session().execute(structure_query)
         if found := result.scalar():
             return found.content
         array_query = select(SQLShotArray).where(
-            SQLShotArray.shot == shot_model and SQLShotArray.label == data_label
+            (SQLShotArray.shot == shot_model) & (SQLShotArray.label == data_label)
         )
         result = self._get_sql_session().execute(array_query)
         if found := result.scalar():

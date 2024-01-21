@@ -181,3 +181,32 @@ def test_shot_creation(
         assert np.array_equal(d[DataLabel("b")], np.linspace(0, 1, 100))
         assert np.array_equal(d[DataLabel("c")], data[DataLabel("c")])
         assert shots[0].get_data_by_label(DataLabel("a"), session) == [1, 2, 3]
+
+        with pytest.raises(KeyError):
+            shots[0].get_data_by_label(DataLabel("d"), session)
+
+
+def test_data_not_existing(
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
+):
+    with empty_session as session:
+        p = PureSequencePath(r"\test")
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_state(p, State.RUNNING)
+        parameters = {}
+        data = {
+            DataLabel("a"): [1, 2, 3],
+            DataLabel("b"): np.linspace(0, 1, 100),
+        }
+        session.sequences.create_shot(
+            p,
+            0,
+            parameters,
+            data,
+            datetime.datetime.now(),
+            datetime.datetime.now(),
+        )
+        shots = sequence.get_shots()
+        with pytest.raises(KeyError):
+            shots[0].get_data_by_label(DataLabel("c"), session)
