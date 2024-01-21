@@ -57,11 +57,10 @@ class CameraLaneCompiler:
 
     def compile_exposures(self, variables: VariableNamespace) -> list[float]:
         step_durations = evaluate_step_durations(self.steps, variables)
-        step_bounds = get_step_bounds(step_durations)
 
         exposures = []
         for value, (start, stop) in zip(self.lane.values(), self.lane.bounds()):
             if isinstance(value, TakePicture):
-                exposure = step_bounds[stop] - step_bounds[start]
+                exposure = sum(step_durations[start:stop])
                 exposures.append(exposure)
         return exposures
