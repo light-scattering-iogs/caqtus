@@ -2,7 +2,11 @@ import logging
 from multiprocessing.managers import BaseManager
 from typing import Iterable
 
+from tblib import pickling_support
+
 from ..runtime import Device
+
+pickling_support.install()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
