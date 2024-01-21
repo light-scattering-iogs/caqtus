@@ -91,14 +91,8 @@ class Sequencer(RuntimeDevice, ABC):
         while not self.has_sequence_finished():
             pass
 
-    def get_trigger_priority(self) -> int:
-        """Get the priority of the trigger.
-
-        Returns:
-            The priority of the trigger.
-        """
-
-        return self.trigger.priority
+    def get_trigger(self) -> Trigger:
+        return self.trigger
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:
@@ -106,7 +100,7 @@ class Sequencer(RuntimeDevice, ABC):
             "start_sequence",
             "has_sequence_finished",
             "wait_sequence_finished",
-            "get_trigger_priority",
+            "get_trigger",
         )
 
     def close(self) -> None:
