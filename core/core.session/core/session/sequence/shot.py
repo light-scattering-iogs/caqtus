@@ -66,7 +66,7 @@ class Shot:
             self.sequence.path, self.index
         )
 
-    def get_data_by_label(self, session: ExperimentSession, label: DataLabel) -> Data:
+    def get_data_by_label(self, label: DataLabel, session: ExperimentSession) -> Data:
         """Return the data of this shot with the given label."""
 
         return session.sequences.get_shot_data_by_label(

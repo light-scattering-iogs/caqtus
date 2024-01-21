@@ -180,4 +180,4 @@ def test_shot_creation(
         assert d[DataLabel("a")] == [1, 2, 3]
         assert np.array_equal(d[DataLabel("b")], np.linspace(0, 1, 100))
         assert np.array_equal(d[DataLabel("c")], data[DataLabel("c")])
-        assert shots[0].get_data_by_label(session, DataLabel("a")) == [1, 2, 3]
+        assert shots[0].get_data_by_label(DataLabel("a"), session) == [1, 2, 3]
