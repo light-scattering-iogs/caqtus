@@ -9,17 +9,17 @@ import threading
 import uuid
 from collections.abc import Set, Mapping, Generator
 from contextlib import AbstractContextManager
-from typing import Optional, Any, TypeVar, Generic
+from typing import Optional, Any
 
 import attrs
-
-from core.compilation import ShotCompilerFactory, VariableNamespace
+from core.compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
 from core.device import DeviceName, DeviceParameter
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
 from util.concurrent import TaskGroup
-from ..shot_runner import ShotRunnerFactory
+
+from ..shot_runner import ShotRunnerFactory, ShotRunner
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -106,12 +106,8 @@ class SequenceManager(AbstractContextManager):
                 for uuid_ in self._constant_tables_uuid
             }
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
-        self._shot_compiler = shot_compiler_factory(
-            self.time_lanes, self.device_configurations
-        )
-        self._shot_runner = shot_runner_factory(
-            self.time_lanes, self.device_configurations
-        )
+        self.shot_compiler_factory = shot_compiler_factory
+        self.shot_runner_factory = shot_runner_factory
 
         self._current_shot = 0
 
@@ -147,17 +143,26 @@ class SequenceManager(AbstractContextManager):
         try:
             self._exit_stack.enter_context(self._thread_pool)
             self._task_group.__enter__()
-            self._task_group.create_task(self._watch_for_interruption)
-            self._task_group.create_task(self._compile_shots)
-            self._task_group.create_task(self._run_shots)
-            self._task_group.create_task(self._store_shots)
             self._prepare()
+            self._task_group.create_task(self._watch_for_interruption)
+            self._task_group.create_task(self._store_shots)
             self._set_sequence_state(State.RUNNING)
         except Exception as e:
             self._exit_stack.__exit__(type(e), e, e.__traceback__)
             self._set_sequence_state(State.CRASHED)
             raise
         return self
+
+    def _prepare(self) -> None:
+        shot_compiler = self.shot_compiler_factory(
+            self.time_lanes, self.device_configurations
+        )
+        self._task_group.create_task(self._compile_shots, shot_compiler)
+        shot_runner: ShotRunner = self.shot_runner_factory(
+            self.time_lanes, self.device_configurations
+        )
+        self._exit_stack.enter_context(shot_runner)
+        self._task_group.create_task(self._run_shots, shot_runner)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.
@@ -202,9 +207,9 @@ class SequenceManager(AbstractContextManager):
         finally:
             self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
-    def schedule_shot(self, shot_parameters: VariableNamespace) -> None:
+    def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
-            index=self._current_shot, parameters=shot_parameters
+            index=self._current_shot, parameters=shot_variables
         )
 
         def try_pushing_shot() -> bool:
@@ -239,9 +244,6 @@ class SequenceManager(AbstractContextManager):
         with self._session_maker() as session:
             session.sequences.set_state(self._sequence_path, state)
 
-    def _prepare(self):
-        self._exit_stack.enter_context(self._shot_runner)
-
     def _watch_for_interruption(self):
         while self._is_watching_for_interruption.is_set():
             if self._interruption_event.wait(20e-3):
@@ -256,7 +258,7 @@ class SequenceManager(AbstractContextManager):
             else:
                 continue
 
-    def _compile_shots(self):
+    def _compile_shots(self, shot_compiler: ShotCompiler):
         try:
             while self._is_compiling.is_set():
                 try:
@@ -264,7 +266,9 @@ class SequenceManager(AbstractContextManager):
                 except queue.Empty:
                     continue
                 try:
-                    device_parameters = self._compile_shot(shot_parameters)
+                    device_parameters = self._compile_shot(
+                        shot_parameters, shot_compiler
+                    )
                     self.put_device_parameters(device_parameters)
                 except ProcessingFinishedException:
                     self._is_compiling.clear()
@@ -291,15 +295,17 @@ class SequenceManager(AbstractContextManager):
                 except queue.Full:
                     continue
 
-    def _compile_shot(self, shot_parameters: ShotParameters) -> DeviceParameters:
-        compiled = self._shot_compiler.compile_shot(shot_parameters.parameters)
+    def _compile_shot(
+        self, shot_parameters: ShotParameters, shot_compiler: ShotCompiler
+    ) -> DeviceParameters:
+        compiled = shot_compiler.compile_shot(shot_parameters.parameters)
         return DeviceParameters(
             index=shot_parameters.index,
             shot_parameters=shot_parameters.parameters,
             device_parameters=compiled,
         )
 
-    def _run_shots(self):
+    def _run_shots(self, shot_runner: ShotRunner):
         try:
             while self._is_running_shots.is_set():
                 try:
@@ -307,7 +313,9 @@ class SequenceManager(AbstractContextManager):
                 except queue.Empty:
                     continue
                 try:
-                    shot_data = self._run_shot_with_retry(device_parameters)
+                    shot_data = self._run_shot_with_retry(
+                        device_parameters, shot_runner
+                    )
                     self.put_shot_data(shot_data)
                 except ProcessingFinishedException:
                     self._is_running_shots.clear()
@@ -334,8 +342,7 @@ class SequenceManager(AbstractContextManager):
                     continue
 
     def _run_shot_with_retry(
-        self,
-        device_parameters: DeviceParameters,
+        self, device_parameters: DeviceParameters, shot_runner: ShotRunner
     ) -> ShotData:
         exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
         number_of_attempts = self._shot_retry_config.number_of_attempts
@@ -347,7 +354,7 @@ class SequenceManager(AbstractContextManager):
         for attempt in range(number_of_attempts):
             try:
                 start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-                data = self._shot_runner.run_shot(device_parameters.device_parameters)
+                data = shot_runner.run_shot(device_parameters.device_parameters)
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
                 errors.extend(e.exceptions)
