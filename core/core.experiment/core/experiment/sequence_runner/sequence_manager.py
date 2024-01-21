@@ -17,10 +17,12 @@ from core.device import DeviceName, DeviceParameter
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
+from tblib import pickling_support
 from util.concurrent import TaskGroup
 
 from ..shot_runner import ShotRunnerFactory, ShotRunner
 
+pickling_support.install()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -52,14 +54,17 @@ class ShotRetryConfig:
 
 
 def _compile_shot(
-        shot_parameters: ShotParameters, shot_compiler: ShotCompiler
-) -> DeviceParameters:
-    compiled = shot_compiler.compile_shot(shot_parameters.parameters)
-    return DeviceParameters(
-        index=shot_parameters.index,
-        shot_parameters=shot_parameters.parameters,
-        device_parameters=compiled,
-    )
+    shot_parameters: ShotParameters, shot_compiler: ShotCompiler
+) -> DeviceParameters | Exception:
+    try:
+        compiled = shot_compiler.compile_shot(shot_parameters.parameters)
+        return DeviceParameters(
+            index=shot_parameters.index,
+            shot_parameters=shot_parameters.parameters,
+            device_parameters=compiled,
+        )
+    except Exception as e:
+        return e
 
 
 class SequenceManager(AbstractContextManager):
@@ -287,8 +292,16 @@ class SequenceManager(AbstractContextManager):
                     task = self._process_pool.submit(
                         _compile_shot, shot_parameters, shot_compiler
                     )
-                    device_parameters = task.result()
-                    self.put_device_parameters(device_parameters)
+                    result = task.result()
+                    # Here we don't use task.exception() because it returns an ugly
+                    # RemoteTraceback that is hard to read.
+                    # Instead, if an exception occurs in the task, it is pickled with
+                    # tblib and returned, so we just have to check if the result is an
+                    # exception or not.
+                    if isinstance(result, Exception):
+                        result.add_note(f"When compiling shot {shot_parameters.index}")
+                        raise result
+                    self.put_device_parameters(result)
                 except ProcessingFinishedException:
                     self._is_compiling.clear()
                     break
