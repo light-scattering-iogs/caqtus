@@ -279,9 +279,9 @@ class SQLSequenceCollection(SequenceCollection):
             )
             self._get_sql_session().execute(delete_shots)
         elif state == State.RUNNING:
-            sequence.start_date = datetime.datetime.now(tz=datetime.timezone.utc)
+            sequence.start_time = datetime.datetime.now(tz=datetime.timezone.utc)
         elif state in (State.INTERRUPTED, State.CRASHED, State.FINISHED):
-            sequence.stop_date = datetime.datetime.now(tz=datetime.timezone.utc)
+            sequence.stop_time = datetime.datetime.now(tz=datetime.timezone.utc)
 
     def set_device_configuration_uuids(
         self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
