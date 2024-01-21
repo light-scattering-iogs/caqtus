@@ -39,6 +39,7 @@ class OrcaQuestConfigurationEditor(
     def get_default_configuration(cls) -> OrcaQuestCameraConfiguration:
         return OrcaQuestCameraConfiguration(
             camera_number=0,
+            remote_server="default",
             roi=RectangularROI(
                 original_image_size=(Width(4096), Height(2304)),
                 x=0,

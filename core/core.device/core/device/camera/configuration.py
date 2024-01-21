@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Any
 
-from util import attrs
+import attrs
 from util.roi import RectangularROI
 from ..configuration import DeviceConfigurationAttrs, DeviceParameter
 
