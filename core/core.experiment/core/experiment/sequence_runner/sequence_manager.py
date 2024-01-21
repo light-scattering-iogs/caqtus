@@ -158,12 +158,7 @@ class SequenceManager(AbstractContextManager):
         self._prepare_sequence()
         self._exit_stack.__enter__()
         try:
-            self._exit_stack.enter_context(self._thread_pool)
-            self._exit_stack.enter_context(self._process_pool)
-            self._task_group.__enter__()
             self._prepare()
-            self._task_group.create_task(self._watch_for_interruption)
-            self._task_group.create_task(self._store_shots)
             self._set_sequence_state(State.RUNNING)
         except Exception as e:
             self._exit_stack.__exit__(type(e), e, e.__traceback__)
@@ -172,20 +167,29 @@ class SequenceManager(AbstractContextManager):
         return self
 
     def _prepare(self) -> None:
+        self._exit_stack.enter_context(self._process_pool)
         # This task is here to force the process pool to start now.
         # Otherwise, it waits until the first shot is submitted for compilation.
         task = self._process_pool.submit(nothing)
+
         shot_compiler = self.shot_compiler_factory(
             self.time_lanes, self.device_configurations
         )
-        for _ in range(4):
-            self._task_group.create_task(self._compile_shots, shot_compiler)
         shot_runner: ShotRunner = self.shot_runner_factory(
             self.time_lanes, self.device_configurations
         )
         self._exit_stack.enter_context(shot_runner)
+
+        self._exit_stack.enter_context(self._thread_pool)
+        self._task_group.__enter__()
+        self._task_group.create_task(self._watch_for_interruption)
+        self._task_group.create_task(self._store_shots)
+        for _ in range(4):
+            self._task_group.create_task(self._compile_shots, shot_compiler)
         self._task_group.create_task(self._run_shots, shot_runner)
         task.result()
+
+
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.
