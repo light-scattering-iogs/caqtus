@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 from typing import TypeVar, Any
 
@@ -11,9 +12,12 @@ from core.device.camera import CameraConfiguration
 from core.session.shot import TimeLanes, TimeLane
 from core.session.shot.timelane import CameraTimeLane
 from .camera_parameter_compiler import CamerasParameterCompiler
+from .sequencer_paramer_compiler import SequencerParameterCompiler
 from .shot_compiler import ShotCompiler
 from .variable_namespace import VariableNamespace
-from .sequencer_paramer_compiler import SequencerParameterCompiler
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class DefaultShotCompiler(ShotCompiler):
