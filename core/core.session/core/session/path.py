@@ -92,7 +92,7 @@ class PureSequencePath:
             else:
                 return tuple(path.split(_PATH_SEPARATOR)[1:])
         else:
-            raise ValueError(f"Invalid path: {path}")
+            raise InvalidPathFormatError(f"Invalid path: {path}")
 
     @classmethod
     def from_parts(cls, parts: Iterable[str]) -> PureSequencePath:
@@ -219,3 +219,9 @@ class BoundSequencePath(PureSequencePath):
     @property
     def session(self) -> "ExperimentSession":
         return self._session
+
+
+class InvalidPathFormatError(ValueError):
+    """Raised when a path has an invalid format."""
+
+    pass
