@@ -11,7 +11,8 @@ from typing import Optional
 
 from core.compilation import ShotCompilerFactory
 from core.device import DeviceConfigurationAttrs, DeviceName
-from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
+from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable, \
+    Sequence
 from core.session.sequence.iteration_configuration import StepsConfiguration
 
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
@@ -96,7 +97,7 @@ class Procedure(AbstractContextManager, abc.ABC):
     @abc.abstractmethod
     def start_sequence(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
@@ -109,7 +110,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         but can be retrieved with the `exception` method.
 
         Args:
-            sequence_path: the path of the sequence to run.
+            sequence: the sequence to run.
             device_configurations_uuids: the uuids of the device configurations to use for
             running this sequence.
             If None, this will default to the device configurations that are currently
@@ -142,7 +143,7 @@ class Procedure(AbstractContextManager, abc.ABC):
 
     def run_sequence(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
@@ -159,7 +160,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         """
 
         self.start_sequence(
-            sequence_path, device_configurations_uuids, constant_tables_uuids
+            sequence, device_configurations_uuids, constant_tables_uuids
         )
         if exception := self.exception():
             raise exception
@@ -250,7 +251,7 @@ class BoundProcedure(Procedure):
         self._running = lock
         self._thread_pool = thread_pool
         self._sequence_future: Optional[concurrent.futures.Future] = None
-        self._sequences: list[PureSequencePath] = []
+        self._sequences: list[Sequence] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_compiler_factory = shot_compiler_factory
         self._shot_runner_factory = shot_runner_factory
@@ -276,7 +277,7 @@ class BoundProcedure(Procedure):
     def is_running_sequence(self) -> bool:
         return self._sequence_future is not None and not self._sequence_future.done()
 
-    def sequences(self) -> list[PureSequencePath]:
+    def sequences(self) -> list[Sequence]:
         return self._sequences.copy()
 
     def exception(self) -> Optional[Exception]:
@@ -286,7 +287,7 @@ class BoundProcedure(Procedure):
 
     def start_sequence(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
@@ -304,11 +305,11 @@ class BoundProcedure(Procedure):
         self._must_interrupt.clear()
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
-            sequence_path,
+            sequence,
             device_configurations_uuids,
             constant_tables_uuids,
         )
-        self._sequences.append(sequence_path)
+        self._sequences.append(sequence)
 
     def interrupt_sequence(self) -> bool:
         if not self.is_running_sequence():
@@ -323,15 +324,15 @@ class BoundProcedure(Procedure):
     @log_exception(logger)
     def _run_sequence(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         with self._session_maker() as session:
-            iteration = session.sequences.get_iteration_configuration(sequence_path)
+            iteration = session.sequences.get_iteration_configuration(sequence.path)
 
         with SequenceManager(
-            sequence_path,
+            sequence,
             self._session_maker,
             self._shot_compiler_factory,
             self._shot_runner_factory,

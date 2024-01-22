@@ -12,14 +12,14 @@ from contextlib import AbstractContextManager
 from typing import Optional, Any
 
 import attrs
+from tblib import pickling_support
+
 from core.compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
 from core.device import DeviceName, DeviceParameter
-from core.session import PureSequencePath, ExperimentSessionMaker
+from core.session import ExperimentSessionMaker, Sequence
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
-from tblib import pickling_support
 from util.concurrent import TaskGroup
-
 from ..shot_runner import ShotRunnerFactory, ShotRunner
 
 pickling_support.install()
@@ -87,7 +87,7 @@ class SequenceManager(AbstractContextManager):
 
     def __init__(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         session_maker: ExperimentSessionMaker,
         shot_compiler_factory: ShotCompilerFactory,
         shot_runner_factory: ShotRunnerFactory,
@@ -97,7 +97,7 @@ class SequenceManager(AbstractContextManager):
         constant_tables_uuid: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         self._session_maker = session_maker
-        self._sequence_path = sequence_path
+        self._sequence_path = sequence.path
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
 
         with self._session_maker() as session:
@@ -188,8 +188,6 @@ class SequenceManager(AbstractContextManager):
             self._task_group.create_task(self._compile_shots, shot_compiler)
         self._task_group.create_task(self._run_shots, shot_runner)
         task.result()
-
-
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.

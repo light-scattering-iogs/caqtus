@@ -6,7 +6,8 @@ import attrs
 
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
-from ..path import BoundSequencePath, PureSequencePath
+from .._return_or_raise import unwrap
+from ..path import PureSequencePath
 from ..shot import TimeLanes
 
 if TYPE_CHECKING:
@@ -24,44 +25,44 @@ class Sequence:
     network.
     """
 
-    path: BoundSequencePath
+    path: PureSequencePath
 
     def __str__(self) -> str:
         return str(self.path)
 
-    @property
-    def session(self) -> ExperimentSession:
-        return self.path.session
-
-    def exists(self) -> bool:
+    def exists(self, session: ExperimentSession) -> bool:
         """Check if the sequence exists in the session."""
 
-        if self.session.paths.does_path_exists(self.path):
-            return self.session.sequences.is_sequence(self.path)
+        if session.paths.does_path_exists(self.path):
+            return unwrap(session.sequences.is_sequence(self.path))
         else:
             return False
 
-    def get_iteration_configuration(self) -> IterationConfiguration:
+    def get_iteration_configuration(
+        self, session: ExperimentSession
+    ) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""
 
-        return self.session.sequences.get_iteration_configuration(self.path)
+        return session.sequences.get_iteration_configuration(self.path)
 
-    def get_time_lanes(self) -> TimeLanes:
+    def get_time_lanes(self, session: ExperimentSession) -> TimeLanes:
         """Return the time lanes that define how a shot is run for this sequence."""
 
-        return self.session.sequences.get_time_lanes(self.path)
+        return session.sequences.get_time_lanes(self.path)
 
-    def set_time_lanes(self, time_lanes: TimeLanes) -> None:
+    def set_time_lanes(self, time_lanes: TimeLanes, session: ExperimentSession) -> None:
         """Set the time lanes that define how a shot is run for this sequence."""
 
-        return self.session.sequences.set_time_lanes(self.path, time_lanes)
+        return session.sequences.set_time_lanes(self.path, time_lanes)
 
-    def get_shots(self) -> list[Shot]:
+    def get_shots(self, session: ExperimentSession) -> list[Shot]:
         """Return the shots that belong to this sequence."""
 
-        return self.session.sequences.get_shots(self.path)
+        return session.sequences.get_shots(self.path)
 
-    def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
+    def duplicate(
+        self, target_path: PureSequencePath | str, session: ExperimentSession
+    ) -> Sequence:
         """Duplicate the sequence to a new path.
 
         The sequence created will be in the draft state and will have the same iteration
@@ -71,9 +72,9 @@ class Sequence:
         if isinstance(target_path, str):
             target_path = PureSequencePath(target_path)
 
-        iteration_configuration = self.get_iteration_configuration()
-        time_lanes = self.get_time_lanes()
-        return self.session.sequences.create(
+        iteration_configuration = self.get_iteration_configuration(session)
+        time_lanes = self.get_time_lanes(session)
+        return session.sequences.create(
             target_path, iteration_configuration, time_lanes
         )
 

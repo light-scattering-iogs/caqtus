@@ -37,9 +37,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.sequence_path = sequence
 
         with self.session_maker() as session:
-            sequence = Sequence(BoundSequencePath(self.sequence_path, session))
-            iteration_config = sequence.get_iteration_configuration()
-            time_lanes = sequence.get_time_lanes()
+            sequence = Sequence(self.sequence_path)
+            iteration_config = sequence.get_iteration_configuration(session)
+            time_lanes = sequence.get_time_lanes(session)
             stats = unwrap(session.sequences.get_stats(self.sequence_path))
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(

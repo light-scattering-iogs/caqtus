@@ -10,7 +10,8 @@ from PyQt6.QtWidgets import QMainWindow, QApplication
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
-from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable
+from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable, \
+    Sequence
 from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .exception_dialog import ExceptionDialog
@@ -102,7 +103,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             "sequence launched from GUI", acquisition_timeout=1
         )
         self._procedure_watcher_thread.set_procedure(procedure)
-        self._procedure_watcher_thread.set_sequence(path)
+        self._procedure_watcher_thread.set_sequence(Sequence(path))
 
         self._procedure_watcher_thread.start()
 
@@ -214,12 +215,12 @@ class ProcedureWatcherThread(QThread):
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self._procedure: Optional[Procedure] = None
-        self._sequence: Optional[PureSequencePath] = None
+        self._sequence: Optional[Sequence] = None
 
     def set_procedure(self, procedure: Procedure):
         self._procedure = procedure
 
-    def set_sequence(self, sequence: PureSequencePath):
+    def set_sequence(self, sequence: Sequence):
         self._sequence = sequence
 
     def run(self):

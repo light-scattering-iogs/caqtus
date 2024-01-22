@@ -226,7 +226,7 @@ class SQLSequenceCollection(SequenceCollection):
             expected_number_of_shots=iteration_configuration.expected_number_shots(),
         )
         self._get_sql_session().add(new_sequence)
-        return Sequence(BoundSequencePath(path, self.parent_session))
+        return Sequence(path)
 
     def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return dict(

@@ -9,7 +9,7 @@ from typing import Optional
 from tblib import pickling_support
 
 from core.compilation import ShotCompilerFactory
-from core.session import ExperimentSessionMaker
+from core.session import ExperimentSessionMaker, Sequence
 from core.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
@@ -91,11 +91,11 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
 
     def start_sequence(
         self,
-        sequence_path: PureSequencePath,
+        sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
-        return self._callmethod("start_sequence", (sequence_path,))
+        return self._callmethod("start_sequence", (sequence,))
 
     def interrupt_sequence(self) -> bool:
         return self._callmethod("interrupt_sequence", ())

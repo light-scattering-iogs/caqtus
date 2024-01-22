@@ -86,7 +86,7 @@ def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_l
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.exists()
+        assert sequence.exists(session)
         assert session.sequences.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
             session.sequences.create(p, steps_configuration, time_lanes)
@@ -102,7 +102,7 @@ def test_sequence_deletion(
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
-        assert sequence.exists()
+        assert sequence.exists(session)
 
 
 @pytest.fixture
@@ -120,14 +120,14 @@ def test_iteration_save(
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.get_iteration_configuration() == steps_configuration
+        assert sequence.get_iteration_configuration(session) == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
         )
         session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
         session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
-        assert sequence.get_iteration_configuration() == new_steps_configuration
-        assert sequence.get_time_lanes() == time_lanes
+        assert sequence.get_iteration_configuration(session) == new_steps_configuration
+        assert sequence.get_time_lanes(session) == time_lanes
 
 
 def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
@@ -173,8 +173,8 @@ def test_shot_creation(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots()
-        assert shots == [Shot(sequence, 0)], sequence.get_shots()
+        shots = sequence.get_shots(session)
+        assert shots == [Shot(sequence, 0)], sequence.get_shots(session)
         assert shots[0].get_parameters(session) == parameters
         d = shots[0].get_data(session)
         assert d[DataLabel("a")] == [1, 2, 3]
@@ -207,6 +207,6 @@ def test_data_not_existing(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots()
+        shots = sequence.get_shots(session)
         with pytest.raises(KeyError):
             shots[0].get_data_by_label(DataLabel("c"), session)
