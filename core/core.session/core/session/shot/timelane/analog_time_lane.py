@@ -11,6 +11,9 @@ class Ramp:
     def __eq__(self, other):
         return isinstance(other, Ramp)
 
+    def __repr__(self):
+        return "Ramp()"
+
 
 def unstructure_union(union: Expression | Ramp):
     if isinstance(union, Expression):
