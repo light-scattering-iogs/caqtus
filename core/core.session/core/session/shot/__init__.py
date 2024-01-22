@@ -3,7 +3,9 @@ from .timelane import (
     TimeLanes,
     DigitalTimeLane,
     AnalogTimeLane,
+    Ramp,
     CameraTimeLane,
+    TakePicture,
 )
 
 __all__ = [
@@ -11,5 +13,7 @@ __all__ = [
     "TimeLanes",
     "DigitalTimeLane",
     "AnalogTimeLane",
+    "Ramp",
     "CameraTimeLane",
+    "TakePicture",
 ]
