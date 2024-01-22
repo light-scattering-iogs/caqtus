@@ -9,6 +9,7 @@ import numpy as np
 
 from core.compilation import VariableNamespace
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
+from core.device.camera import CameraConfiguration
 from core.device.sequencer import (
     SequencerConfiguration,
     SoftwareTrigger,
@@ -41,9 +42,8 @@ from core.types.units import Unit
 from util import add_exc_note
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
-from .lane_compilers.timing import number_ticks, ns
+from .lane_compilers.timing import number_ticks, ns, get_step_bounds
 from .unit_namespace import units
-from ..device.camera import CameraConfiguration
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -95,7 +95,11 @@ class SingleShotCompiler:
         durations = evaluate_step_durations(steps, variables)
         self.step_names = step_names
         self.step_durations = step_durations
-        self.shot_duration = sum(durations)
+        # Here we need to compute the shot duration the exact same way as in the
+        # step bounds.
+        # In particular, get_step_bounds(durations)[-1] is not the same in general
+        # as sum(durations) due to floating point errors.
+        self.shot_duration = get_step_bounds(durations)[-1]
         self.variables = variables
         self.sequencer_configurations = sequencer_configurations
         self.lanes = lanes
@@ -189,7 +193,6 @@ class SingleShotCompiler:
         self, output_: Constant, required_time_step: int, required_unit: Optional[Unit]
     ) -> SequencerInstruction:
         length = number_ticks(0, self.shot_duration, required_time_step * ns)
-
         expression = output_.value
         value = expression.evaluate(self.variables | units)
         magnitude = magnitude_in_unit(value, required_unit)
