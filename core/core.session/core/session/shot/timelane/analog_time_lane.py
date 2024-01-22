@@ -1,9 +1,9 @@
 from typing import assert_never
 
 import attrs
+
 from core.types.expression import Expression
 from util import serialization
-
 from .timelane import TimeLane
 
 
@@ -37,6 +37,25 @@ serialization.register_structure_hook(Expression | Ramp, structure_union)
 serialization.register_unstructure_hook(Expression | Ramp, unstructure_union)
 
 
-@attrs.define(eq=False, repr=False)
+@attrs.define(init=False, eq=False, repr=False)
 class AnalogTimeLane(TimeLane[Expression | Ramp]):
     pass
+
+
+def unstructure_hook(lane: AnalogTimeLane):
+    return {
+        "spanned_values": serialization.unstructure(
+            lane._spanned_values, list[tuple[Expression | Ramp, int]]
+        )
+    }
+
+
+def structure_hook(data, _) -> AnalogTimeLane:
+    structured = serialization.structure(
+        data["spanned_values"], list[tuple[Expression | Ramp, int]]
+    )
+    return AnalogTimeLane.from_spanned_values(structured)
+
+
+serialization.register_structure_hook(AnalogTimeLane, structure_hook)
+serialization.register_unstructure_hook(AnalogTimeLane, unstructure_hook)

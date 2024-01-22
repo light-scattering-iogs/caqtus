@@ -1,18 +1,18 @@
 import abc
 import bisect
-import copy
 import itertools
 from collections.abc import MutableSequence, Iterable, Sequence
 from typing import TypeVar, Generic, Self
 
 import attrs
+
 from core.types.expression import Expression
 from util.asserts import assert_length_changed
 
 T = TypeVar("T")
 
 
-@attrs.define(eq=False, repr=False)
+@attrs.define(init=False, eq=False, repr=False)
 class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     # spanned_values[i] is the value of the lane at index i and the number of steps it
     # spans.
@@ -29,15 +29,40 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not all(span >= 1 for _, span in value):
             raise ValueError("Span must be at least 1")
 
-    @classmethod
-    def from_sequence(cls, sequence: Sequence[T]) -> Self:
-        # We do a deep copy in case the user passes something like [obj] * length, in
-        # which case each value would be the same object.
-        spanned_values = [(copy.deepcopy(x), 1) for x in sequence]
-        return cls(spanned_values)
+    def __init__(self, values: Iterable[T]):
+        """Initialize the lane with the given values.
 
-    def __attrs_post_init__(self):
+        This constructor will group consecutive values that share the same id into
+        blocks.
+
+        This means that the following three lanes have the same blocks with length 3, 2,
+        and 1:
+        DigitalTimeLane([(True, 3), (False, 2), (True, 1)])
+        DigitalTimeLane([True, True, True, False, False, True])
+        DigitalTimeLane([True] * 3 + [False] * 2 + [True])
+
+        Note however that the two following lanes are equivalent:
+        AnalogTimeLane([Expression("...")] * 2 + [Expression("...")] * 3)
+        AnalogTimeLane([(Expression("..."), 2), (Expression("..."), 3)])
+        but are different from:
+        AnalogTimeLane([Expression("...")] * 5)
+
+        """
+
+        values_list = list(values)
+        spanned_values = []
+        for value, group in itertools.groupby(values_list, key=id):
+            g = list(group)
+            spanned_values.append((g[0], len(g)))
+        self._spanned_values = spanned_values
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
+
+    @classmethod
+    def from_spanned_values(cls, spanned_values: Iterable[tuple[T, int]]) -> Self:
+        obj = cls.__new__(cls)
+        obj._spanned_values = list(spanned_values)
+        obj._bounds = compute_bounds(span for _, span in obj._spanned_values)
+        return obj
 
     def get_bounds(self, index: int) -> tuple[int, int]:
         index = normalize_index(index, len(self))
@@ -186,7 +211,20 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def __repr__(self):
-        return f"{type(self).__name__}({self._spanned_values!r})"
+        to_concatenate = []
+        for length, group in itertools.groupby(
+            self._spanned_values, key=lambda x: x[1]
+        ):
+            if length == 1:
+                to_concatenate.append(
+                    f"[{', '.join(repr(value) for value, _ in group)}]"
+                )
+            else:
+                to_concatenate.extend(
+                    [f"[{repr(value)}] * {length}" for value, _ in group]
+                )
+        formatted = " + ".join(to_concatenate)
+        return f"{type(self).__name__}({formatted})"
 
     def __eq__(self, other):
         if isinstance(other, TimeLane):

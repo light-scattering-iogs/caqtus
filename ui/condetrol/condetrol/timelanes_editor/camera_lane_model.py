@@ -14,7 +14,7 @@ from ..icons import get_icon
 class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         super().__init__(name, parent)
-        self._lane = CameraTimeLane.from_sequence([None])
+        self._lane = CameraTimeLane([None])
         self._brush = None
 
     def set_lane(self, lane: CameraTimeLane) -> None:
