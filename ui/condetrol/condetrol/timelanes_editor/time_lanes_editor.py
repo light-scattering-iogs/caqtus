@@ -66,7 +66,6 @@ class TimeLanesEditor(QTableView):
             for column in range(top_left.column(), bottom_right.column() + 1):
                 index = self._model.index(row, column, QModelIndex())
                 span = self._model.span(index)
-                print(span)
                 if span.width() >= 1 or span.height() >= 1:
                     self.setSpan(row, column, span.height(), span.width())
 
@@ -184,8 +183,3 @@ class TimeLanesEditor(QTableView):
             start = group[0][1]
             stop = group[-1][1]
             self._model.merge_lane_cells(row - 2, start, stop)
-            # for row in range(top_left.row(), bottom_right.row() + 1):
-            #     print(top_left.column(), bottom_right.column())
-            #     self._model.merge_lane_cells(
-            #         row - 2, top_left.column(), bottom_right.column()
-            #     )

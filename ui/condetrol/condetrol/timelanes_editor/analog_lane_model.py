@@ -1,7 +1,6 @@
-import copy
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
+from PyQt6.QtCore import QObject, QModelIndex, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
 
@@ -12,23 +11,9 @@ from .model import TimeLaneModel
 
 class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
-        super().__init__(name, parent)
-        self._lane = AnalogTimeLane([Expression("...")])
+        lane = AnalogTimeLane([Expression("...")])
+        super().__init__(name, lane, parent)
         self._brush = None
-
-    def set_lane(self, lane: AnalogTimeLane) -> None:
-        self.beginResetModel()
-        self._lane = copy.deepcopy(lane)
-        self.endResetModel()
-
-    def get_lane(self) -> AnalogTimeLane:
-        return copy.deepcopy(self._lane)
-
-    def set_display_options(self, options) -> None:
-        pass
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()):
-        return len(self._lane)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -55,7 +40,6 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
     ):
-        print(index.row())
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
@@ -80,19 +64,10 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row < len(self._lane)):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane[row]
-        self.endRemoveRows()
-        return True
-
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
-        break_span_action = QAction("Break span")
-        break_span_action.triggered.connect(lambda: self.break_span(index))
+
         cell_type_menu = QMenu("Cell type")
         value = self._lane[index.row()]
         expr_action = cell_type_menu.addAction("expression")
@@ -112,24 +87,4 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
                 lambda: self.setData(index, Ramp(), Qt.ItemDataRole.EditRole)
             )
 
-        return [break_span_action, cell_type_menu]
-
-    def span(self, index) -> QSize:
-        start, stop = self._lane.get_bounds(index.row())
-        if index.row() == start:
-            return QSize(1, stop - start)
-        else:
-            return QSize(1, 1)
-
-    def break_span(self, index: QModelIndex) -> bool:
-        start, stop = self._lane.get_bounds(index.row())
-        value = self._lane[index.row()]
-        for i in range(start, stop):
-            self._lane[i] = value
-            self.dataChanged.emit(self.index(i), self.index(i))
-        return True
-
-    def merge_cells(self, start: int, stop: int) -> None:
-        value = self._lane[start]
-        self._lane[start:stop+1] = value
-        self.dataChanged.emit(self.index(start), self.index(stop - 1))
+        return super().get_cell_context_actions(index) + [cell_type_menu]

@@ -1,11 +1,9 @@
-import copy
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtCore import QObject, QModelIndex, Qt
 
 from core.session.shot.timelane import CameraTimeLane, TakePicture
+from core.types.data import DataLabel
 from core.types.image import ImageLabel
 from .model import TimeLaneModel
 from ..icons import get_icon
@@ -13,23 +11,9 @@ from ..icons import get_icon
 
 class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
-        super().__init__(name, parent)
-        self._lane = CameraTimeLane([None])
+        lane = CameraTimeLane([None])
+        super().__init__(name, lane, parent)
         self._brush = None
-
-    def set_lane(self, lane: CameraTimeLane) -> None:
-        self.beginResetModel()
-        self._lane = copy.deepcopy(lane)
-        self.endResetModel()
-
-    def get_lane(self) -> CameraTimeLane:
-        return copy.deepcopy(self._lane)
-
-    def set_display_options(self, options) -> None:
-        pass
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()):
-        return len(self._lane)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -69,8 +53,10 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
             if isinstance(value, str):
                 if value == "":
                     self._lane[start:stop] = None
+                elif isinstance(value, str):
+                    self._lane[start:stop] = TakePicture(ImageLabel(DataLabel(value)))
                 else:
-                    self._lane[start:stop] = TakePicture(ImageLabel(value))
+                    raise TypeError(f"Invalid type for value: {type(value)}")
                 self.dataChanged.emit(index, index)
                 return True
             else:
@@ -84,21 +70,3 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
         self._lane.insert(row, None)
         self.endInsertRows()
         return True
-
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row < len(self._lane)):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane[row]
-        self.endRemoveRows()
-        return True
-
-    def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
-        return []
-
-    def span(self, index) -> QSize:
-        start, stop = self._lane.get_bounds(index.row())
-        if index.row() == start:
-            return QSize(1, stop - start)
-        else:
-            return QSize(1, 0)

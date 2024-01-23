@@ -1,7 +1,6 @@
-import copy
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
+from PyQt6.QtCore import QObject, QModelIndex, Qt
 from PyQt6.QtGui import QAction, QBrush
 from PyQt6.QtWidgets import QMenu
 
@@ -12,23 +11,9 @@ from .model import TimeLaneModel
 
 class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
-        super().__init__(name, parent)
-        self._lane = DigitalTimeLane([(False, 1)])
+        lane = DigitalTimeLane([False])
+        super().__init__(name, lane, parent)
         self._brush = QBrush(Qt.GlobalColor.blue)
-
-    def set_lane(self, lane: DigitalTimeLane) -> None:
-        self.beginResetModel()
-        self._lane = copy.deepcopy(lane)
-        self.endResetModel()
-
-    def get_lane(self) -> DigitalTimeLane:
-        return copy.deepcopy(self._lane)
-
-    def set_display_options(self, options) -> None:
-        pass
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()):
-        return len(self._lane)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -80,14 +65,6 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
         self.endInsertRows()
         return True
 
-    def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row < len(self._lane)):
-            return False
-        self.beginRemoveRows(parent, row, row)
-        del self._lane[row]
-        self.endRemoveRows()
-        return True
-
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
@@ -110,11 +87,4 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
                 lambda: self.setData(index, Expression("..."), Qt.ItemDataRole.EditRole)
             )
 
-        return [cell_type_menu]
-
-    def span(self, index) -> QSize:
-        start, stop = self._lane.get_bounds(index.row())
-        if index.row() == start:
-            return QSize(1, stop - start)
-        else:
-            return QSize(1, 0)
+        return super().get_cell_context_actions(index) + [cell_type_menu]

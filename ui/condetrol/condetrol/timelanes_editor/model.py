@@ -120,10 +120,7 @@ class TimeStepDurationModel(QAbstractListModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
-        return (
-            Qt.ItemFlag.ItemIsEnabled
-            | Qt.ItemFlag.ItemIsEditable
-        )
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
 
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         if not (0 <= row <= self.rowCount()):
@@ -143,10 +140,47 @@ class TimeStepDurationModel(QAbstractListModel):
 
 
 class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
-    @abc.abstractmethod
-    def __init__(self, name: str, parent: Optional[QObject] = None):
+    """An abstract list model to represent a time lane.
+
+    This class is meant to be subclassed for each lane type that needs to be
+    represented in the timelanes editor.
+    Some common methods are implemented here, but subclasses will need to implement at
+    least the abstract methods: :meth:`data`, :meth:`setData`, :meth:`insertRow`.
+    In addition, subclasses may want to override :meth:`flags` to change the item flags
+    for the cells in the lane.
+    The :meth:`get_cell_context_actions` method can be overridden to add context menu
+    actions to the cells in the lane.
+    """
+
+    def __init__(self, name: str, lane: L, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._name = name
+        self._lane = lane
+
+    def get_lane(self) -> L:
+        """Return a copy of the lane represented by this model."""
+
+        return copy.deepcopy(self._lane)
+
+    def set_lane(self, lane: L) -> None:
+        """Set the lane represented by this model."""
+
+        self.beginResetModel()
+        self._lane = copy.deepcopy(lane)
+        self.endResetModel()
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return len(self._lane)
+
+    @abc.abstractmethod
+    def data(
+        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        raise NotImplementedError
 
     def headerData(
         self,
@@ -160,20 +194,6 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
             elif orientation == Qt.Orientation.Vertical:
                 return section
 
-    @abc.abstractmethod
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def data(
-        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
-    ):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
-        raise NotImplementedError
-
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
@@ -184,34 +204,41 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         )
 
     @abc.abstractmethod
-    def set_lane(self, lane: L) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_lane(self) -> L:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def set_display_options(self, options: O) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         raise NotImplementedError
 
-    @abc.abstractmethod
     def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        raise NotImplementedError
+        if not (0 <= row < len(self._lane)):
+            return False
+        self.beginRemoveRows(parent, row, row)
+        del self._lane[row]
+        self.endRemoveRows()
+        return True
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
-        return []
+        break_span_action = QAction("Break span")
+        break_span_action.triggered.connect(lambda: self.break_span(index))
+        return [break_span_action]
 
-    @abc.abstractmethod
     def span(self, index) -> QSize:
-        raise NotImplementedError
+        start, stop = self._lane.get_bounds(index.row())
+        if index.row() == start:
+            return QSize(1, stop - start)
+        else:
+            return QSize(1, 1)
+
+    def break_span(self, index: QModelIndex) -> bool:
+        start, stop = self._lane.get_bounds(index.row())
+        value = self._lane[index.row()]
+        for i in range(start, stop):
+            self._lane[i] = value
+        self.dataChanged.emit(self.index(start), self.index(stop - 1))
+        return True
 
     def merge_cells(self, start: int, stop: int) -> None:
-        raise NotImplementedError
+        value = self._lane[start]
+        self._lane[start : stop + 1] = value
+        self.dataChanged.emit(self.index(start), self.index(stop - 1))
 
 
 type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
