@@ -1,1 +1,0 @@
-from .sequence_header_editor import SequenceHeaderEditor
