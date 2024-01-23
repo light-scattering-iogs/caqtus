@@ -159,11 +159,7 @@ class StepSequenceRunner:
         namespace = import_constant_table.alias or table_name
         table_context = StepContext()
         for declaration in table:
-            try:
-                table_context = self.run_step(declaration, table_context)
-            except Exception as e:
-                print(e)
-                raise
+            table_context = self.run_step(declaration, table_context)
         for name, value in table_context.variables.to_flat_dict().items():
             context = context.update_variable(
                 DottedVariableName(f"{namespace}.{name}"), value
