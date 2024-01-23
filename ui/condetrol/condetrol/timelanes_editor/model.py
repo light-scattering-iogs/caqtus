@@ -80,6 +80,17 @@ class TimeStepNameModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return "Step names"
+            elif orientation == Qt.Orientation.Vertical:
+                return section
+        elif role == Qt.ItemDataRole.FontRole:
+            font = QFont()
+            font.setBold(True)
+            return font
+
 
 class TimeStepDurationModel(QAbstractListModel):
     def __init__(self, parent: Optional[QObject] = None):
@@ -138,6 +149,17 @@ class TimeStepDurationModel(QAbstractListModel):
         del self._durations[row]
         self.endRemoveRows()
         return True
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                return "Step durations"
+            elif orientation == Qt.Orientation.Vertical:
+                return section
+        elif role == Qt.ItemDataRole.FontRole:
+            font = QFont()
+            font.setBold(True)
+            return font
 
 
 class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
@@ -258,6 +280,7 @@ class ColoredTimeLaneModel[L: TimeLane, O: Any](TimeLaneModel[L, O], qabc.QABC):
     They have the attribute :attr:`_brush` that is optionally a :class:`QBrush` that
     can be used to color the cells in the lane.
     """
+
     def __init__(self, name: str, lane: TimeLane, parent: Optional[QObject] = None):
         super().__init__(name, lane, parent)
         self._brush: Optional[QBrush] = None
@@ -463,11 +486,13 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
                 return f"Step {section}"
         elif orientation == Qt.Orientation.Vertical:
             if section == 0:
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return "Step name"
+                return self._step_names_model.headerData(
+                    0, Qt.Orientation.Horizontal, role
+                )
             elif section == 1:
-                if role == Qt.ItemDataRole.DisplayRole:
-                    return "Step duration"
+                return self._step_durations_model.headerData(
+                    0, Qt.Orientation.Horizontal, role
+                )
             else:
                 return self._lane_models[section - 2].headerData(
                     0, Qt.Orientation.Horizontal, role
