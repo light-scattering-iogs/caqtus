@@ -1,9 +1,9 @@
 import itertools
 from typing import Optional
 
-from PyQt6.QtCore import pyqtSignal, QObject, Qt, QModelIndex
+from PyQt6.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate
+from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
 
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 from .default_lane_model_factory import default_lane_model_factory
@@ -21,7 +21,7 @@ def lane_delegate_factory(lane_type: type[TimeLane]) -> Optional[QStyledItemDele
 class TimeLanesEditor(QTableView):
     time_lanes_changed = pyqtSignal()
 
-    def __init__(self, parent: Optional[QObject] = None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self._read_only: bool = False
         self._model = TimeLanesModel(default_lane_model_factory, self)
