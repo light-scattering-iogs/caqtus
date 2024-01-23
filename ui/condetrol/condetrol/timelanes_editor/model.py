@@ -216,7 +216,7 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         return True
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
-        break_span_action = QAction("Break span")
+        break_span_action = QAction("Break block")
         break_span_action.triggered.connect(lambda: self.break_span(index))
         return [break_span_action]
 
