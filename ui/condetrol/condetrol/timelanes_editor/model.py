@@ -1,5 +1,6 @@
 import abc
 import copy
+import functools
 from collections.abc import Callable
 from typing import Optional, Any
 
@@ -119,7 +120,10 @@ class TimeStepDurationModel(QAbstractListModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
+        )
 
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         if not (0 <= row <= self.rowCount()):
@@ -173,7 +177,11 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+        return (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemIsSelectable
+        )
 
     @abc.abstractmethod
     def set_lane(self, lane: L) -> None:
@@ -202,6 +210,9 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def span(self, index) -> QSize:
         raise NotImplementedError
 
+    def merge_cells(self, start: int, stop: int) -> None:
+        raise NotImplementedError
+
 
 type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
 
@@ -218,9 +229,12 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
 
     def set_timelanes(self, timelanes: TimeLanes):
         new_models = []
-        for name, lane in timelanes.lanes.items():
+        for index, (name, lane) in enumerate(timelanes.lanes.items()):
             lane_model = self._lane_model_factory(lane)(name, self)
             lane_model.set_lane(lane)
+            lane_model.dataChanged.connect(
+                functools.partial(self.on_lane_model_data_changed, lane_index=index)
+            )
             new_models.append(lane_model)
 
         self.beginResetModel()
@@ -229,6 +243,14 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
+
+    def on_lane_model_data_changed(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, lane_index: int
+    ):
+        self.dataChanged.emit(
+            self.index(lane_index + 2, top_left.row()),
+            self.index(lane_index + 2, bottom_right.row()),
+        )
 
     def insert_timelane(self, index: int, name: str, timelane: TimeLane):
         if not (0 <= index <= len(self._lane_models)):
@@ -357,6 +379,10 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             span = self._lane_models[index.row() - 2].span(mapped_index)
             return QSize(span.height(), span.width())
         return QSize(1, 1)
+
+    def merge_lane_cells(self, lane_index: int, start: int, stop: int):
+        lane_model = self._lane_models[lane_index]
+        lane_model.merge_cells(start, stop)
 
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()

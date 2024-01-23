@@ -1,3 +1,4 @@
+import itertools
 from typing import Optional
 
 from PyQt6.QtCore import pyqtSignal, QObject, Qt, QModelIndex
@@ -36,6 +37,9 @@ class TimeLanesEditor(QTableView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setup_connections()
 
+        # self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
+        self.setSelectionMode(QTableView.SelectionMode.ContiguousSelection)
+
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
             self.show_steps_context_menu
@@ -46,7 +50,7 @@ class TimeLanesEditor(QTableView):
         self.customContextMenuRequested.connect(self.show_cell_context_menu)
         self._model.modelReset.connect(self.update_spans)
 
-        self._model.dataChanged.connect(self.time_lanes_changed)
+        self._model.dataChanged.connect(self.on_data_changed)
         self._model.rowsInserted.connect(self.time_lanes_changed)
         self._model.rowsInserted.connect(self.update_delegates)
         self._model.rowsRemoved.connect(self.time_lanes_changed)
@@ -54,6 +58,17 @@ class TimeLanesEditor(QTableView):
         self._model.columnsRemoved.connect(self.time_lanes_changed)
         self._model.modelReset.connect(self.time_lanes_changed)
         self._model.modelReset.connect(self.update_delegates)
+
+    def on_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
+        self.time_lanes_changed.emit()
+
+        for row in range(top_left.row(), bottom_right.row() + 1):
+            for column in range(top_left.column(), bottom_right.column() + 1):
+                index = self._model.index(row, column, QModelIndex())
+                span = self._model.span(index)
+                print(span)
+                if span.width() >= 1 or span.height() >= 1:
+                    self.setSpan(row, column, span.height(), span.width())
 
     def get_time_lanes(self) -> TimeLanes:
         return self._model.get_timelanes()
@@ -67,7 +82,7 @@ class TimeLanesEditor(QTableView):
             for column in range(self._model.columnCount()):
                 index = self._model.index(row, column, QModelIndex())
                 span = self._model.span(index)
-                if span.width() > 1 or span.height() > 1:
+                if span.width() >= 1 or span.height() >= 1:
                     self.setSpan(row, column, span.height(), span.width())
 
     def update_delegates(self):
@@ -135,14 +150,42 @@ class TimeLanesEditor(QTableView):
     def show_cell_context_menu(self, pos):
         index = self.indexAt(pos)
         cell_actions = self._model.get_cell_context_actions(index)
-        if not cell_actions:
-            return
+        selection = self.selectionModel().selection()
+
         menu = QMenu(self)
+        if selection.contains(index):
+            print(selection.count())
+            merge_action = menu.addAction("Merge")
+            merge_action.triggered.connect(lambda: self.merge_cells(selection))
+
         for action in cell_actions:
             if isinstance(action, QAction):
                 menu.addAction(action)
             elif isinstance(action, QMenu):
                 menu.addMenu(action)
-        menu.exec(self.mapToGlobal(pos))
+        menu.exec(self.viewport().mapToGlobal(pos))
         # TODO: Deal with model change in the context menu better
         self._model.modelReset.emit()
+
+    def merge_cells(self, selection):
+        indices: set[tuple[int, int]] = set()
+        for selection_range in selection:
+            top_left = selection_range.topLeft()
+            bottom_right = selection_range.bottomRight()
+            indices.update(
+                itertools.product(
+                    range(top_left.row(), bottom_right.row() + 1),
+                    range(top_left.column(), bottom_right.column() + 1),
+                )
+            )
+
+        for row, group in itertools.groupby(sorted(indices), key=lambda x: x[0]):
+            group = list(group)
+            start = group[0][1]
+            stop = group[-1][1]
+            self._model.merge_lane_cells(row - 2, start, stop)
+            # for row in range(top_left.row(), bottom_right.row() + 1):
+            #     print(top_left.column(), bottom_right.column())
+            #     self._model.merge_lane_cells(
+            #         row - 2, top_left.column(), bottom_right.column()
+            #     )

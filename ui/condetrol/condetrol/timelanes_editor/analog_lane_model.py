@@ -4,16 +4,16 @@ from typing import Optional, Any, assert_never
 from PyQt6.QtCore import QObject, QModelIndex, Qt, QSize
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu
+
 from core.session.shot.timelane import AnalogTimeLane, Ramp
 from core.types.expression import Expression
-
 from .model import TimeLaneModel
 
 
 class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         super().__init__(name, parent)
-        self._lane = AnalogTimeLane([(Expression("..."), 1)])
+        self._lane = AnalogTimeLane([Expression("...")])
         self._brush = None
 
     def set_lane(self, lane: AnalogTimeLane) -> None:
@@ -55,6 +55,7 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
     ):
+        print(index.row())
         if not index.isValid():
             return False
         if role == Qt.ItemDataRole.EditRole:
@@ -90,6 +91,8 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
+        break_span_action = QAction("Break span")
+        break_span_action.triggered.connect(lambda: self.break_span(index))
         cell_type_menu = QMenu("Cell type")
         value = self._lane[index.row()]
         expr_action = cell_type_menu.addAction("expression")
@@ -109,11 +112,24 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
                 lambda: self.setData(index, Ramp(), Qt.ItemDataRole.EditRole)
             )
 
-        return [cell_type_menu]
+        return [break_span_action, cell_type_menu]
 
     def span(self, index) -> QSize:
         start, stop = self._lane.get_bounds(index.row())
         if index.row() == start:
             return QSize(1, stop - start)
         else:
-            return QSize(1, 0)
+            return QSize(1, 1)
+
+    def break_span(self, index: QModelIndex) -> bool:
+        start, stop = self._lane.get_bounds(index.row())
+        value = self._lane[index.row()]
+        for i in range(start, stop):
+            self._lane[i] = value
+            self.dataChanged.emit(self.index(i), self.index(i))
+        return True
+
+    def merge_cells(self, start: int, stop: int) -> None:
+        value = self._lane[start]
+        self._lane[start:stop+1] = value
+        self.dataChanged.emit(self.index(start), self.index(stop - 1))
