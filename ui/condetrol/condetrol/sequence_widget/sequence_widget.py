@@ -52,7 +52,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.time_lanes_editor.set_time_lanes(time_lanes)
         self.time_lanes = time_lanes
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
-        self.tabWidget.addTab(self.time_lanes_editor, "Shot")
+        self.tabWidget.addTab(self.time_lanes_editor, "Timelanes")
 
         self.state_watcher_thread = self.StateWatcherThread(self)
 
