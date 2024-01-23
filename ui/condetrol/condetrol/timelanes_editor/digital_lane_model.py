@@ -1,21 +1,27 @@
 from typing import Optional, Any, assert_never
 
 from PyQt6.QtCore import QObject, QModelIndex, Qt
-from PyQt6.QtGui import QAction, QBrush
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtGui import QAction, QBrush, QPalette
+from PyQt6.QtWidgets import QMenu, QApplication
 
 from core.session.shot import DigitalTimeLane
 from core.types.expression import Expression
-from .model import TimeLaneModel
+from .model import TimeLaneModel, ColoredTimeLaneModel
 
 
-class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
+class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = DigitalTimeLane([False])
         super().__init__(name, lane, parent)
-        self._brush = QBrush(Qt.GlobalColor.blue)
+        if self._brush is None:
+            # If no brush is set the button will be invisible, so we pick the
+            # base color from the palette as default.
+            color = QPalette().base().color()
+            self._brush = QBrush(color)
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(
+        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+    ):
         if not index.isValid():
             return None
         value = self._lane[index.row()]
@@ -32,11 +38,8 @@ class DigitalTimeLaneModel(TimeLaneModel[DigitalTimeLane, None]):
             if isinstance(value, bool):
                 if value:
                     return self._brush
-        elif role == Qt.ItemDataRole.ForegroundRole:
-            if isinstance(value, Expression):
-                return self._brush
         else:
-            return None
+            return super().data(index, role)
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole

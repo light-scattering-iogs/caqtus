@@ -6,16 +6,17 @@ from PyQt6.QtWidgets import QMenu
 
 from core.session.shot.timelane import AnalogTimeLane, Ramp
 from core.types.expression import Expression
-from .model import TimeLaneModel
+from .model import ColoredTimeLaneModel
 
 
-class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
+class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane, None]):
     def __init__(self, name: str, parent: Optional[QObject] = None):
         lane = AnalogTimeLane([Expression("...")])
         super().__init__(name, lane, parent)
-        self._brush = None
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(
+        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+    ):
         if not index.isValid():
             return None
         value = self._lane[index.row()]
@@ -30,12 +31,10 @@ class AnalogTimeLaneModel(TimeLaneModel[AnalogTimeLane, None]):
             if isinstance(value, Expression):
                 return str(value)
             return None
-        elif role == Qt.ItemDataRole.ForegroundRole:
-            return self._brush
         elif role == Qt.ItemDataRole.TextAlignmentRole:
             return Qt.AlignmentFlag.AlignCenter
         else:
-            return None
+            return super().data(index, role)
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole

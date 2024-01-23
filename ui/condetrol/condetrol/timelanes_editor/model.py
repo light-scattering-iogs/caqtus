@@ -11,9 +11,10 @@ from PyQt6.QtCore import (
     QAbstractListModel,
     Qt,
     QSize,
+    QSettings,
 )
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PyQt6.QtGui import QAction, QBrush, QColor, QFont
+from PyQt6.QtWidgets import QMenu, QColorDialog
 
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
@@ -176,7 +177,7 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def data(
         self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Any:
-        raise NotImplementedError
+        return None
 
     @abc.abstractmethod
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
@@ -193,6 +194,10 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
                 return self._name
             elif orientation == Qt.Orientation.Vertical:
                 return section
+        elif role == Qt.ItemDataRole.FontRole:
+            font = QFont()
+            font.setBold(True)
+            return font
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
@@ -240,6 +245,90 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         self._lane[start : stop + 1] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
 
+    def get_header_context_actions(self) -> list[QAction | QMenu]:
+        """Return a list of context menu actions for the lane header."""
+
+        return []
+
+
+class ColoredTimeLaneModel[L: TimeLane, O: Any](TimeLaneModel[L, O], qabc.QABC):
+    """A time lane model that can be colored.
+
+    Instances of this class can be used to color the cells in a lane.
+    They have the attribute :attr:`_brush` that is optionally a :class:`QBrush` that
+    can be used to color the cells in the lane.
+    """
+    def __init__(self, name: str, lane: TimeLane, parent: Optional[QObject] = None):
+        super().__init__(name, lane, parent)
+        self._brush: Optional[QBrush] = None
+
+        color = QSettings().value(f"lane color/{self._name}", None)
+        if color is not None:
+            self._brush = QBrush(color)
+        else:
+            self._brush = None
+
+    @abc.abstractmethod
+    def data(
+        self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+    ) -> Any:
+        """Returns its brush for the `Qt.ItemDataRole.ForegroundRole` role."""
+
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.ForegroundRole:
+            return self._brush
+        return super().data(index, role)
+
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+    ):
+        if role == Qt.ItemDataRole.ForegroundRole:
+            return self._brush
+        return super().headerData(section, orientation, role)
+
+    def get_header_context_actions(self) -> list[QAction | QMenu]:
+        action = QAction("Change color")
+        action.triggered.connect(lambda: self._change_color())
+        return [action]
+
+    def _change_color(self):
+        if self._brush is None:
+            color = QColorDialog.getColor(title=f"Select color for {self._name}")
+        else:
+            color = QColorDialog.getColor(
+                self._brush.color(), title=f"Select color for {self._name}"
+            )
+        if color.isValid():
+            self.setHeaderData(
+                0, Qt.Orientation.Horizontal, color, Qt.ItemDataRole.ForegroundRole
+            )
+
+    def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
+        change = False
+        if (
+            orientation == Qt.Orientation.Horizontal
+            and role == Qt.ItemDataRole.ForegroundRole
+        ):
+            if isinstance(value, QColor):
+                self._brush = QBrush(value)
+                settings = QSettings()
+                settings.setValue(f"lane color/{self._name}", value)
+                change = True
+            elif value is None:
+                self._brush = None
+                settings = QSettings()
+                settings.remove(f"lane color/{self._name}")
+                change = True
+        if change:
+            self.headerDataChanged.emit(orientation, section, section)
+            return True
+
+        return super().setHeaderData(section, orientation, value, role)
+
 
 type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
 
@@ -257,13 +346,7 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
     def set_timelanes(self, timelanes: TimeLanes):
         new_models = []
         for index, (name, lane) in enumerate(timelanes.lanes.items()):
-            lane_model = self._lane_model_factory(lane)(name, self)
-            lane_model.set_lane(lane)
-            lane_model.dataChanged.connect(
-                functools.partial(
-                    self.on_lane_model_data_changed, lane_model=lane_model
-                )
-            )
+            lane_model = self.create_lane_model(name, lane)
             new_models.append(lane_model)
 
         self.beginResetModel()
@@ -272,6 +355,17 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._lane_models.clear()
         self._lane_models.extend(new_models)
         self.endResetModel()
+
+    def create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
+        lane_model = self._lane_model_factory(lane)(name, self)
+        lane_model.set_lane(lane)
+        lane_model.dataChanged.connect(
+            functools.partial(self.on_lane_model_data_changed, lane_model=lane_model)
+        )
+        lane_model.headerDataChanged.connect(
+            functools.partial(self.on_lane_header_data_changed, lane_model=lane_model)
+        )
+        return lane_model
 
     def on_lane_model_data_changed(
         self,
@@ -284,6 +378,21 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             self.index(lane_index + 2, top_left.row()),
             self.index(lane_index + 2, bottom_right.row()),
         )
+
+    def on_lane_header_data_changed(
+        self,
+        orientation: Qt.Orientation,
+        first: int,
+        last: int,
+        lane_model: TimeLaneModel,
+    ):
+        lane_index = self._lane_models.index(lane_model)
+        if orientation == Qt.Orientation.Horizontal:
+            self.headerDataChanged.emit(
+                Qt.Orientation.Vertical,
+                lane_index + 2,
+                lane_index + 2,
+            )
 
     def insert_timelane(self, index: int, name: str, timelane: TimeLane):
         if not (0 <= index <= len(self._lane_models)):
@@ -299,11 +408,7 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         }
         if name in already_used_names:
             raise ValueError(f"Name {name} is already used")
-        lane_model = self._lane_model_factory(timelane)(name, self)
-        lane_model.set_lane(timelane)
-        lane_model.dataChanged.connect(
-            functools.partial(self.on_lane_model_data_changed, lane_model=lane_model)
-        )
+        lane_model = self.create_lane_model(name, timelane)
         self.beginInsertRows(QModelIndex(), index, index)
         self._lane_models.insert(index, lane_model)
         self.endInsertRows()
@@ -404,6 +509,11 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             return self._lane_models[index.row() - 2].get_cell_context_actions(
                 self._map_to_source(index)
             )
+
+    def get_lane_header_context_actions(self, lane_index: int) -> list[QAction | QMenu]:
+        if not 0 <= lane_index < len(self._lane_models):
+            return []
+        return self._lane_models[lane_index].get_header_context_actions()
 
     def span(self, index):
         if not index.isValid():

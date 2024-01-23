@@ -143,6 +143,11 @@ class TimeLanesEditor(QTableView):
             remove_lane_action.triggered.connect(
                 lambda: self._model.removeRow(index, QModelIndex())
             )
+            for action in self._model.get_lane_header_context_actions(index - 2):
+                if isinstance(action, QAction):
+                    menu.addAction(action)
+                elif isinstance(action, QMenu):
+                    menu.addMenu(action)
         else:
             return
         menu.exec(self.verticalHeader().mapToGlobal(pos))
