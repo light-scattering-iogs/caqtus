@@ -235,8 +235,8 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
         return True
 
-    def merge_cells(self, start: int, stop: int) -> None:
-        value = self._lane[start]
+    def expand_step(self, step: int, start: int, stop: int) -> None:
+        value = self._lane[step]
         self._lane[start : stop + 1] = value
         self.dataChanged.emit(self.index(start), self.index(stop - 1))
 
@@ -407,9 +407,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             return QSize(span.height(), span.width())
         return QSize(1, 1)
 
-    def merge_lane_cells(self, lane_index: int, start: int, stop: int):
+    def expand_step(self, step: int, lane_index: int, start: int, stop: int):
         lane_model = self._lane_models[lane_index]
-        lane_model.merge_cells(start, stop)
+        lane_model.expand_step(step, start, stop)
 
     def _map_to_source(self, index: QModelIndex) -> QModelIndex:
         assert index.isValid()

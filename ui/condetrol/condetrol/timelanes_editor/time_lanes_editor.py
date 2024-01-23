@@ -153,9 +153,10 @@ class TimeLanesEditor(QTableView):
 
         menu = QMenu(self)
         if selection.contains(index):
-            print(selection.count())
-            merge_action = menu.addAction("Merge")
-            merge_action.triggered.connect(lambda: self.merge_cells(selection))
+            merge_action = menu.addAction("Expand step")
+            merge_action.triggered.connect(
+                lambda: self.expand_step(index.column(), selection)
+            )
 
         for action in cell_actions:
             if isinstance(action, QAction):
@@ -166,7 +167,7 @@ class TimeLanesEditor(QTableView):
         # TODO: Deal with model change in the context menu better
         self._model.modelReset.emit()
 
-    def merge_cells(self, selection):
+    def expand_step(self, step: int, selection):
         indices: set[tuple[int, int]] = set()
         for selection_range in selection:
             top_left = selection_range.topLeft()
@@ -182,4 +183,4 @@ class TimeLanesEditor(QTableView):
             group = list(group)
             start = group[0][1]
             stop = group[-1][1]
-            self._model.merge_lane_cells(row - 2, start, stop)
+            self._model.expand_step(step, row - 2, start, stop)
