@@ -68,7 +68,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         index = normalize_index(index, len(self))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        return self._get_bounds(find_containing_step(self._bounds, index))
+        return self._get_block_bounds(find_containing_step(self._bounds, index))
 
     def values(self) -> Iterable[T]:
         return (value for value, _ in self._spanned_values)
@@ -76,17 +76,17 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     def bounds(self) -> Iterable[tuple[int, int]]:
         return zip(self._bounds[:-1], self._bounds[1:])
 
-    def _get_step(self, index: int) -> int:
+    def _get_containing_block(self, index: int) -> int:
         return find_containing_step(self._bounds, index)
 
-    def _get_span(self, step: int) -> int:
-        return self._spanned_values[step][1]
+    def _get_block_span(self, block: int) -> int:
+        return self._spanned_values[block][1]
 
-    def _get_value(self, step: int) -> T:
-        return self._spanned_values[step][0]
+    def _get_block_value(self, block: int) -> T:
+        return self._spanned_values[block][0]
 
-    def _get_bounds(self, step: int) -> tuple[int, int]:
-        return self._bounds[step], self._bounds[step + 1]
+    def _get_block_bounds(self, block: int) -> tuple[int, int]:
+        return self._bounds[block], self._bounds[block + 1]
 
     def __len__(self):
         return self._bounds[-1]
@@ -101,7 +101,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         index = normalize_index(index, len(self))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        return self._get_value(find_containing_step(self._bounds, index))
+        return self._get_block_value(find_containing_step(self._bounds, index))
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
@@ -116,10 +116,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
         step = find_containing_step(self._bounds, index)
-        start, stop = self._get_bounds(step)
+        start, stop = self._get_block_bounds(step)
         before_length = index - start
         after_length = stop - index - 1
-        previous_value = self._get_value(step)
+        previous_value = self._get_block_value(step)
         insert_index = step
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
@@ -138,14 +138,14 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if slice_.step is not None:
             raise ValueError(f"Slice step must be None: {slice_}")
         before_step = find_containing_step(self._bounds, start)
-        before_length = start - self._get_bounds(before_step)[0]
-        before_value = self._get_value(before_step)
+        before_length = start - self._get_block_bounds(before_step)[0]
+        before_value = self._get_block_value(before_step)
         if stop == len(self):
             after_step = len(self._spanned_values) - 1
         else:
             after_step = find_containing_step(self._bounds, stop)
-        after_length = self._get_bounds(after_step)[1] - stop
-        after_value = self._get_value(after_step)
+        after_length = self._get_block_bounds(after_step)[1] - stop
+        after_value = self._get_block_value(after_step)
         del self._spanned_values[before_step : after_step + 1]
         insert_index = before_step
         if before_length > 0:
@@ -176,12 +176,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
         block = find_containing_step(self._bounds, index)
-        if self._get_span(block) == 1:
+        if self._get_block_span(block) == 1:
             del self._spanned_values[block]
         else:
             self._spanned_values[block] = (
-                self._get_value(block),
-                self._get_span(block) - 1,
+                self._get_block_value(block),
+                self._get_block_span(block) - 1,
             )
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
         assert len(self) == previous_length - 1
@@ -196,10 +196,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
         step = find_containing_step(self._bounds, index)
-        start, stop = self._get_bounds(step)
+        start, stop = self._get_block_bounds(step)
         before_length = index - start
         after_length = stop - index
-        previous_value = self._get_value(step)
+        previous_value = self._get_block_value(step)
         insert_index = step
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
