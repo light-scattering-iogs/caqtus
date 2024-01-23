@@ -15,7 +15,6 @@ from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
 
-
 # This is necessary to be able to pass exception properly between the experiment server
 # process and the clients.
 # It allows sending the exception cause, context, notes, and traceback.
@@ -99,6 +98,25 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
 
     def interrupt_sequence(self) -> bool:
         return self._callmethod("interrupt_sequence", ())
+
+    def run_sequence(
+        self,
+        sequence: Sequence,
+        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
+    ) -> None:
+        # Here we can't just call the remote method `run_sequence`.
+        # This is because this method takes a long time to return, since it waits for
+        # the sequence to finish.
+        # This means that we can't even raise KeyboardInterrupt while waiting for the
+        # method to return.
+        self.start_sequence(
+            sequence, device_configurations_uuids, constant_tables_uuids
+        )
+        while self.is_running_sequence():
+            time.sleep(100e-3)
+        if exception := self.exception():
+            raise exception
 
 
 class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):

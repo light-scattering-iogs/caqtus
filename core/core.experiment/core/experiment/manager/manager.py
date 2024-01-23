@@ -379,6 +379,9 @@ class BoundProcedure(Procedure):
         return constant_tables
 
     def __exit__(self, exc_type, exc_value, traceback):
+        error_occurred = exc_value is not None
+        if error_occurred:
+            self.interrupt_sequence()
         self.wait_until_sequence_finished()
         self._parent._active_procedure = None
         self._running.release()
