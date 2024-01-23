@@ -260,7 +260,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             lane_model = self._lane_model_factory(lane)(name, self)
             lane_model.set_lane(lane)
             lane_model.dataChanged.connect(
-                functools.partial(self.on_lane_model_data_changed, lane_index=index)
+                functools.partial(
+                    self.on_lane_model_data_changed, lane_model=lane_model
+                )
             )
             new_models.append(lane_model)
 
@@ -272,8 +274,12 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self.endResetModel()
 
     def on_lane_model_data_changed(
-        self, top_left: QModelIndex, bottom_right: QModelIndex, lane_index: int
+        self,
+        top_left: QModelIndex,
+        bottom_right: QModelIndex,
+        lane_model: TimeLaneModel,
     ):
+        lane_index = self._lane_models.index(lane_model)
         self.dataChanged.emit(
             self.index(lane_index + 2, top_left.row()),
             self.index(lane_index + 2, bottom_right.row()),
@@ -295,6 +301,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
             raise ValueError(f"Name {name} is already used")
         lane_model = self._lane_model_factory(timelane)(name, self)
         lane_model.set_lane(timelane)
+        lane_model.dataChanged.connect(
+            functools.partial(self.on_lane_model_data_changed, lane_model=lane_model)
+        )
         self.beginInsertRows(QModelIndex(), index, index)
         self._lane_models.insert(index, lane_model)
         self.endInsertRows()
@@ -330,9 +339,7 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         if not index.isValid():
             return False
         mapped_index = self._map_to_source(index)
-        if mapped_index.model().setData(mapped_index, value, role):
-            self.dataChanged.emit(index, index)
-            return True
+        return mapped_index.model().setData(mapped_index, value, role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
