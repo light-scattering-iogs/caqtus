@@ -36,6 +36,14 @@ class AnalogTimeLaneModel(ColoredTimeLaneModel[AnalogTimeLane, None]):
         else:
             return super().data(index, role)
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        flags = super().flags(index)
+        if isinstance(self._lane[index.row()], Ramp):
+            flags &= ~Qt.ItemFlag.ItemIsEditable
+        return flags
+
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole
     ):
