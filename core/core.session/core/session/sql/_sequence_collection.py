@@ -316,7 +316,13 @@ class SQLSequenceCollection(SequenceCollection):
             SQLSequenceDeviceUUID(device_configuration_uuid=uuid_)
             for uuid_ in device_configuration_uuids
         }
-        sequence.device_configuration_uuids = sql_device_uuids
+        sequence.device_uuids = sql_device_uuids
+
+    def get_device_configuration_uuids(
+        self, path: PureSequencePath
+    ) -> set[uuid.UUID]:
+        sequence = unwrap(self._query_sequence_model(path))
+        return {uuid_.device_configuration_uuid for uuid_ in sequence.device_uuids}
 
     def set_constant_table_uuids(
         self, path: PureSequencePath, constant_table_uuids: Set[uuid.UUID]
@@ -329,6 +335,10 @@ class SQLSequenceCollection(SequenceCollection):
             for uuid_ in constant_table_uuids
         }
         sequence.constant_table_uuids = sql_constant_table_uuids
+
+    def get_constant_table_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
+        sequence = unwrap(self._query_sequence_model(path))
+        return {uuid_.constant_table_uuid for uuid_ in sequence.constant_table_uuids}
 
     def get_stats(
         self, path: PureSequencePath

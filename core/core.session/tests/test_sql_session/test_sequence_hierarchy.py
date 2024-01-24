@@ -2,6 +2,8 @@ import datetime
 
 import numpy as np
 import pytest
+from hypothesis import given
+
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
 from core.session.sequence import State, Shot
@@ -12,9 +14,7 @@ from core.types.data import DataLabel
 from core.types.expression import Expression
 from core.types.units import ureg
 from core.types.variable_name import DottedVariableName
-from hypothesis import given
-
-from .session_maker import get_session_maker
+from .session_maker import get_session_maker, DummyConfiguration
 from ..generate_path import path
 from ..steps_iteration import steps_configuration
 
@@ -210,3 +210,38 @@ def test_data_not_existing(
         shots = sequence.get_shots(session)
         with pytest.raises(KeyError):
             shots[0].get_data_by_label(DataLabel("c"), session)
+
+
+def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
+    with empty_session as session:
+        table_uuid = session.constants.add_table("test", [])
+        device_uuid = session.device_configurations.add_device_configuration(
+            "device", DummyConfiguration(a=1, b="test", remote_server="test")
+        )
+        p = PureSequencePath(r"\a\b\c")
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+
+        session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_constant_table_uuids(p, {table_uuid})
+        session.sequences.set_device_configuration_uuids(p, {device_uuid})
+
+    with session:
+        s = session.sequences.get_constant_table_uuids(p)
+        d = session.sequences.get_device_configuration_uuids(p)
+    assert s == {table_uuid}
+    assert d == {device_uuid}
+
+def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
+    with empty_session as session:
+        device_uuid = session.device_configurations.add_device_configuration(
+            "device", DummyConfiguration(a=1, b="test", remote_server="test")
+        )
+        p = PureSequencePath(r"\a\b\c")
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+
+        session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_device_configuration_uuids(p, {device_uuid})
+
+    with session:
+        d = session.sequences.get_device_configuration_uuids(p)
+    assert d == {device_uuid}
