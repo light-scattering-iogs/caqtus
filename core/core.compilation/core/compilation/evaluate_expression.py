@@ -9,7 +9,7 @@ from .unit_namespace import units
 def evaluate_expression(
     expression: Expression,
     namespace: Mapping[DottedVariableName, Any],
-    builtins: Mapping[str, Any] = units,
+    builtins: Mapping[DottedVariableName, Any] = units,
 ) -> Any:
     """Evaluate an expression in the given namespace.
 
@@ -24,4 +24,7 @@ def evaluate_expression(
         The value of the expression
     """
 
-    return eval(expression, dict(**builtins, **namespace))
+    d = dict(builtins)
+    d.update(namespace)
+
+    return expression.evaluate(d)
