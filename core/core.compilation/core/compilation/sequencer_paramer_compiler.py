@@ -7,7 +7,6 @@ from typing import TypedDict, Optional
 
 import numpy as np
 
-from core.compilation import VariableNamespace
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
 from core.device.camera import CameraConfiguration
 from core.device.sequencer import (
@@ -44,6 +43,7 @@ from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneC
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds
 from .unit_namespace import units
+from .variable_namespace import VariableNamespace
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
