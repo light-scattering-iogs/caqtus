@@ -62,20 +62,20 @@ class SQLConstantTableCollection(
         ]
         return declarations
 
-    def set_in_use(self, uuid_: uuid.UUID) -> None:
+    def add_to_defaults(self, uuid_: uuid.UUID) -> None:
         new = SQLCurrentConstantTables(
             in_use=uuid_,
             table_name=self.get_table_name(uuid_),
         )
         self._get_sql_session().add(new)
 
-    def remove_from_use(self, uuid_: uuid.UUID):
+    def remove_from_defaults(self, uuid_: uuid.UUID):
         action = sqlalchemy.delete(SQLCurrentConstantTables).where(
             SQLCurrentConstantTables.in_use == uuid_
         )
         self._get_sql_session().execute(action)
 
-    def get_in_use_uuids(self) -> set[uuid.UUID]:
+    def get_default_uuids(self) -> set[uuid.UUID]:
         query = sqlalchemy.select(SQLCurrentConstantTables.in_use)
         return {id_ for id_, in self._get_sql_session().execute(query)}
 
