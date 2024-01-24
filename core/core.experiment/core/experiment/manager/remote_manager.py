@@ -94,7 +94,10 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
         constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
-        return self._callmethod("start_sequence", (sequence,))
+        return self._callmethod(
+            "start_sequence",
+            (sequence, device_configurations_uuids, constant_tables_uuids),
+        )
 
     def interrupt_sequence(self) -> bool:
         return self._callmethod("interrupt_sequence", ())
