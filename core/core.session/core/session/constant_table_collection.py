@@ -3,6 +3,7 @@ import datetime
 import uuid
 from collections.abc import MutableMapping
 from typing import TypeAlias
+
 from .sequence.iteration_configuration import VariableDeclaration
 
 ConstantTable: TypeAlias = list[VariableDeclaration]
@@ -48,6 +49,11 @@ class ConstantTableCollection(MutableMapping[str, ConstantTable], abc.ABC):
         """Get the constant table with the given UUID."""
 
         ...
+
+    def get_default_tables(self) -> dict[str, uuid.UUID]:
+        """Returns the tables that are used by default."""
+
+        return {self.get_table_name(uuid_): uuid_ for uuid_ in self.get_in_use_uuids()}
 
     @abc.abstractmethod
     def add_table(
