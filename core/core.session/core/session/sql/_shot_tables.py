@@ -1,7 +1,7 @@
 import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import UniqueConstraint, ForeignKey, JSON, LargeBinary
+from sqlalchemy import UniqueConstraint, ForeignKey, JSON, LargeBinary, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from ._table_base import Base
@@ -22,8 +22,9 @@ class SQLShot(Base):
     sequence: Mapped["SQLSequence"] = relationship(back_populates="shots")
     index: Mapped[int] = mapped_column(index=True)
 
-    start_time: Mapped[datetime.datetime] = mapped_column()
-    end_time: Mapped[datetime.datetime] = mapped_column()
+    # Stored without explicit timezone, with the assumption that all times are UTC.
+    start_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=False))
+    end_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=False))
 
     parameters: Mapped["SQLShotParameter"] = relationship(
         back_populates="shot",

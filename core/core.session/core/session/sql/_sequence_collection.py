@@ -318,9 +318,7 @@ class SQLSequenceCollection(SequenceCollection):
         }
         sequence.device_uuids = sql_device_uuids
 
-    def get_device_configuration_uuids(
-        self, path: PureSequencePath
-    ) -> set[uuid.UUID]:
+    def get_device_configuration_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
         sequence = unwrap(self._query_sequence_model(path))
         return {uuid_.device_configuration_uuid for uuid_ in sequence.device_uuids}
 
@@ -397,8 +395,12 @@ class SQLSequenceCollection(SequenceCollection):
             parameters=SQLShotParameter(content=parameters),
             array_data=array_data,
             structured_data=structured_data,
-            start_time=shot_start_time,
-            end_time=shot_end_time,
+            start_time=shot_start_time.astimezone(datetime.timezone.utc).replace(
+                tzinfo=None
+            ),
+            end_time=shot_end_time.astimezone(datetime.timezone.utc).replace(
+                tzinfo=None
+            ),
         )
         self._get_sql_session().add(shot)
 
