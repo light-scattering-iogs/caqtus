@@ -253,6 +253,9 @@ def normalize_index(index: int, length: int) -> int:
 
 @attrs.define
 class TimeLanes:
+    """A collection of time lanes."""
+
+
     step_names: list[str] = attrs.field(
         factory=list,
         validator=attrs.validators.deep_iterable(
@@ -280,8 +283,43 @@ class TimeLanes:
 
     @property
     def number_steps(self) -> int:
+        """The number of steps in the time lanes.
+
+        The number of steps is the same as the length of each lane.
+        """
+
         return len(self.step_names)
 
     @property
     def number_lanes(self) -> int:
+        """Returns the number of lanes."""
+
         return len(self.lanes)
+
+    def __setitem__(self, name: str, lane: TimeLane):
+        """Sets the value of a lane.
+
+        Raises:
+            TypeError: If the lane value is not an instance of TimeLane.
+            TypeError: If the lane name is not a string.
+            ValueError: If the lane value has a different length than the other lanes.
+        """
+
+        if not isinstance(lane, TimeLane):
+            raise TypeError(f"Invalid type for value: {type(lane)}")
+        if not isinstance(name, str):
+            raise TypeError(f"Invalid type for key: {type(name)}")
+        length = len(lane)
+        if not all(length == len(l) for l in self.lanes.values()):
+            raise ValueError("All lanes must have the same length")
+
+        self.lanes[name] = lane
+
+    def __getitem__(self, key: str) -> TimeLane:
+        """Returns the value of a lane.
+
+        Raises:
+            KeyError: If the lane name is not found.
+        """
+
+        return self.lanes[key]
