@@ -138,7 +138,9 @@ class PathHierarchyModel(QAbstractItemModel):
                     return format_duration(item.sequence_stats)
 
             elif index.column() == 4:
-                return QDateTime(item.creation_date)
+                # We convert to the local time zone before passing it to Qt,
+                # because Qt does not support time zones.
+                return QDateTime(item.creation_date.astimezone(None))
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
