@@ -241,7 +241,7 @@ class TimeLaneModel[L: TimeLane[T], O](QAbstractListModel, qabc.QABC):
         start, stop = self._lane.get_bounds(row)
         self._lane.insert(row, value)
         if start < row < stop:
-            self._lane[start:stop+1] = self._lane[start]
+            self._lane[start : stop + 1] = self._lane[start]
         self.endInsertRows()
         return True
 
@@ -376,6 +376,31 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         self._step_durations_model = TimeStepDurationModel(self)
         self._lane_models: list[TimeLaneModel] = []
         self._lane_model_factory = lane_model_factory
+
+        self._step_names_model.dataChanged.connect(self.on_step_names_data_changed)
+        self._step_durations_model.dataChanged.connect(
+            self.on_step_durations_data_changed
+        )
+
+    def on_step_names_data_changed(
+        self,
+        top_left: QModelIndex,
+        bottom_right: QModelIndex,
+        roles: list[Qt.ItemDataRole],
+    ):
+        self.dataChanged.emit(
+            self.index(0, top_left.row()), self.index(0, bottom_right.row())
+        )
+
+    def on_step_durations_data_changed(
+        self,
+        top_left: QModelIndex,
+        bottom_right: QModelIndex,
+        roles: list[Qt.ItemDataRole],
+    ):
+        self.dataChanged.emit(
+            self.index(1, top_left.row()), self.index(1, bottom_right.row())
+        )
 
     def set_timelanes(self, timelanes: TimeLanes):
         new_models = []
