@@ -27,6 +27,8 @@ class PathHierarchyView(QTreeView):
         self.header().customContextMenuRequested.connect(self.show_header_menu)
         self.doubleClicked.connect(self.on_double_click)
         self._model.dataChanged.connect(lambda _: self.update())
+        self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
+        self.hideColumn(4)
 
     def show_header_menu(self, pos):
         menu = QMenu(self)
