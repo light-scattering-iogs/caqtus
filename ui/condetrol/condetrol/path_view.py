@@ -6,6 +6,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit, QApplication
 
 from core.session import ExperimentSessionMaker, PureSequencePath
+from core.session.path import InvalidPathFormatError
 from core.session.result import unwrap
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
@@ -71,6 +72,12 @@ class EditablePathHierarchyView(PathHierarchyView):
             create_sequence_action.triggered.connect(
                 functools.partial(self.create_new_sequence, path)
             )
+        if is_sequence:
+            dupplicate_action = QAction("Duplicate")
+            menu.addAction(dupplicate_action)
+            dupplicate_action.triggered.connect(
+                functools.partial(self.on_sequence_duplication_requested, path)
+            )
 
         if not path.is_root():
             delete_action = QAction("Delete")
@@ -78,6 +85,41 @@ class EditablePathHierarchyView(PathHierarchyView):
             delete_action.triggered.connect(functools.partial(self.delete, path))
 
         menu.exec(self.mapToGlobal(pos))
+
+    def on_sequence_duplication_requested(self, path: PureSequencePath):
+        """Ask the user for a new sequence name and duplicate the sequence."""
+
+        text, ok = QInputDialog().getText(
+            self,
+            f"Duplicate {path}...",
+            "New sequence name:",
+            QLineEdit.EchoMode.Normal,
+            "new sequence",
+        )
+        if ok and text:
+            try:
+                if text.startswith(PureSequencePath.separator()):
+                    new_path = PureSequencePath(text)
+                else:
+                    assert path.parent is not None
+                    new_path = path.parent / text
+            except InvalidPathFormatError:
+                if (application := QApplication.instance()) is None:
+                    raise RuntimeError("No QApplication instance")
+                QMessageBox.critical(
+                    self,
+                    application.applicationName(),
+                    f"The path '{text}' is not a valid path.",
+                )
+                return
+            with self.session_maker() as session:
+                iterations = session.sequences.get_iteration_configuration(path)
+                timelanes = session.sequences.get_time_lanes(path)
+                session.sequences.create(
+                    new_path,
+                    iterations,
+                    timelanes,
+                )
 
     def create_new_folder(self, path: PureSequencePath):
         text, ok = QInputDialog().getText(
