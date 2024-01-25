@@ -253,6 +253,8 @@ def normalize_index(index: int, length: int) -> int:
 
 @attrs.define
 class TimeLanes:
+    """A collection of time lanes."""
+
     step_names: list[str] = attrs.field(
         factory=list,
         validator=attrs.validators.deep_iterable(
@@ -278,10 +280,62 @@ class TimeLanes:
         on_setattr=attrs.setters.validate,
     )
 
+    @step_durations.validator  # type: ignore
+    def validate_step_durations(self, _, value):
+        if not all(isinstance(v, Expression) for v in value):
+            raise ValueError("All step durations must be instances of Expression")
+
+    @step_names.validator  # type: ignore
+    def validate_step_names(self, _, value):
+        if not all(isinstance(v, str) for v in value):
+            raise ValueError("All step names must be instances of str")
+
+    @lanes.validator  # type: ignore
+    def validate_lanes(self, _, value):
+        if not all(isinstance(v, TimeLane) for v in value.values()):
+            raise ValueError("All lanes must be instances of TimeLane")
+        if not all(len(lane) == self.number_steps for lane in value.values()):
+            raise ValueError("All lanes must have the same length")
+
     @property
     def number_steps(self) -> int:
+        """The number of steps in the time lanes.
+
+        The number of steps is the same as the length of each lane.
+        """
+
         return len(self.step_names)
 
     @property
     def number_lanes(self) -> int:
+        """Returns the number of lanes."""
+
         return len(self.lanes)
+
+    def __setitem__(self, name: str, lane: TimeLane):
+        """Sets the value of a lane.
+
+        Raises:
+            TypeError: If the lane value is not an instance of TimeLane.
+            TypeError: If the lane name is not a string.
+            ValueError: If the lane value has a different length than the other lanes.
+        """
+
+        if not isinstance(lane, TimeLane):
+            raise TypeError(f"Invalid type for value: {type(lane)}")
+        if not isinstance(name, str):
+            raise TypeError(f"Invalid type for key: {type(name)}")
+        length = len(lane)
+        if not all(length == len(l) for l in self.lanes.values()):
+            raise ValueError("All lanes must have the same length")
+
+        self.lanes[name] = lane
+
+    def __getitem__(self, key: str) -> TimeLane:
+        """Returns the value of a lane.
+
+        Raises:
+            KeyError: If the lane name is not found.
+        """
+
+        return self.lanes[key]
