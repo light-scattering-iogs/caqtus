@@ -83,11 +83,13 @@ class SequenceCollection(Protocol):
     def get_iteration_configuration(
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
+        """Return a copy of the iteration configuration for this sequence."""
+
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
-        """Return the time lanes that define how a shot is run for this sequence."""
+        """Return a copy of the time lanes for this sequence."""
 
         raise NotImplementedError
 

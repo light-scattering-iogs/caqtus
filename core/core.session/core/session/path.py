@@ -49,7 +49,13 @@ class PureSequencePath:
         return self._parts
 
     @property
-    def parent(self) -> Optional[Self]:
+    def parent(self) -> Optional[PureSequencePath]:
+        """Return the parent of this path.
+
+        Returns:
+            The parent of this path, or None if this path is the root path.
+        """
+
         if self.is_root():
             return None
         else:
@@ -116,7 +122,7 @@ class PureSequencePath:
     def __truediv__(self, other) -> Self:
         if isinstance(other, str):
             if not re.match(_PATH_NAME, other):
-                raise ValueError("Invalid name format")
+                raise InvalidPathFormatError("Invalid name format")
             if self.is_root():
                 return type(self)(f"{self._str}{other}")
             else:
@@ -129,7 +135,18 @@ class PureSequencePath:
 
     @classmethod
     def root(cls) -> PureSequencePath:
-        return cls(_PATH_SEPARATOR)
+        """Returns the root path.
+
+        The root path is represented by the single separator character "\".
+        """
+
+        return cls(cls.separator())
+
+    @classmethod
+    def separator(cls) -> str:
+        """Returns the character used to separate path names."""
+
+        return _PATH_SEPARATOR
 
 
 def bind(path: PureSequencePath, session: "ExperimentSession") -> BoundSequencePath:
