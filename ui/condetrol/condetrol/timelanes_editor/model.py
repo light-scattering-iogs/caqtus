@@ -162,7 +162,7 @@ class TimeStepDurationModel(QAbstractListModel):
             return font
 
 
-class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
+class TimeLaneModel[L: TimeLane[T], O](QAbstractListModel, qabc.QABC):
     """An abstract list model to represent a time lane.
 
     This class is meant to be subclassed for each lane type that needs to be
@@ -234,6 +234,17 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         raise NotImplementedError
 
+    def insert_value[T](self, row: int, value: T) -> bool:
+        if not (0 <= row <= len(self._lane)):
+            return False
+        self.beginInsertRows(QModelIndex(), row, row)
+        start, stop = self._lane.get_bounds(row)
+        self._lane.insert(row, value)
+        if start < row < stop:
+            self._lane[start:stop+1] = self._lane[start]
+        self.endInsertRows()
+        return True
+
     def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         if not (0 <= row < len(self._lane)):
             return False
@@ -273,7 +284,7 @@ class TimeLaneModel[L: TimeLane, O](QAbstractListModel, qabc.QABC):
         return []
 
 
-class ColoredTimeLaneModel[L: TimeLane, O: Any](TimeLaneModel[L, O], qabc.QABC):
+class ColoredTimeLaneModel[L: TimeLane[T], O: Any](TimeLaneModel[L, O], qabc.QABC):
     """A time lane model that can be colored.
 
     Instances of this class can be used to color the cells in a lane.
@@ -452,7 +463,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         count = self._step_names_model.rowCount()
         assert count == self._step_durations_model.rowCount()
-        assert all(model.rowCount() == count for model in self._lane_models)
+        assert all(model.rowCount() == count for model in self._lane_models), [
+            model.rowCount() for model in self._lane_models
+        ]
         return count
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
@@ -507,6 +520,8 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         for lane_model in self._lane_models:
             lane_model.insertRow(column)
         self.endInsertColumns()
+        self.modelReset.emit()
+
         return True
 
     def removeColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
@@ -518,6 +533,7 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
         for lane_model in self._lane_models:
             lane_model.removeRow(column)
         self.endRemoveColumns()
+        self.modelReset.emit()
         return True
 
     def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:

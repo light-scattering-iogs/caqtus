@@ -61,12 +61,7 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
         return False
 
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row <= len(self._lane)):
-            return False
-        self.beginInsertRows(parent, row, row)
-        self._lane.insert(row, False)
-        self.endInsertRows()
-        return True
+        return self.insert_value(row, False)
 
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():

@@ -64,9 +64,4 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
         return False
 
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
-        if not (0 <= row <= len(self._lane)):
-            return False
-        self.beginInsertRows(parent, row, row)
-        self._lane.insert(row, None)
-        self.endInsertRows()
-        return True
+        return self.insert_value(row, None)
