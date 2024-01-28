@@ -20,6 +20,7 @@ sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
 core-experiment = {path = "../../core/core.experiment", develop = true}
 waiting-widget = {path = "../widgets/waiting_widget", develop = true}
 exception-tree = {path = "../widgets/exception_tree", develop = true}
+black = "^24.1.1"
 
 
 

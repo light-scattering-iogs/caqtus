@@ -1,14 +1,16 @@
 from collections.abc import Mapping, Iterable
 from typing import TypedDict, Optional
 
-from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QValidator
 from PyQt6.QtWidgets import QDialog
-
 from core.device import DeviceConfigurationAttrs, DeviceName
+
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .configurations_editor_ui import Ui_ConfigurationsEditor
-from .device_configuration_editor import DeviceConfigurationEditor
+from .device_configuration_editor import (
+    DeviceConfigurationEditor,
+    DefaultDeviceConfigurationEditor,
+)
 from ..save_geometry_dialog import SaveGeometryDialog
 
 
@@ -38,9 +40,13 @@ class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
         self.tab_widget.tabCloseRequested.connect(self.tab_widget.removeTab)
         self.tab_widget.setMovable(True)
         for device_name, device_configuration in self.device_configurations.items():
-            device_configuration_editor = self.device_configuration_edit_info[
-                type(device_configuration).__qualname__
-            ]["editor_type"]()
+            type_name = type(device_configuration).__qualname__
+            if type_name not in self.device_configuration_edit_info:
+                device_configuration_editor = DefaultDeviceConfigurationEditor()
+            else:
+                device_configuration_editor = self.device_configuration_edit_info[
+                    type_name
+                ]["editor_type"]()
             self.tab_widget.addTab(device_configuration_editor, device_name)
             device_configuration_editor.set_configuration(device_configuration)
 
