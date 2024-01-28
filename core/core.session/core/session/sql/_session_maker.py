@@ -46,7 +46,6 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __getstate__(self):
         return {
             "url": self._engine.url,
-            "device_configuration_serializers": self._device_configuration_serializers,
             "serializer": self._serializer,
         }
 
