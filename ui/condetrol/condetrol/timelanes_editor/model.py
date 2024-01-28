@@ -15,7 +15,6 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import QAction, QBrush, QColor, QFont
 from PyQt6.QtWidgets import QMenu, QColorDialog
-
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
 from core.types.expression import Expression
@@ -474,6 +473,9 @@ class TimeLanesModel(QAbstractTableModel, qabc.QABC):
 
     def get_lane(self, index: int) -> TimeLane:
         return self._lane_models[index].get_lane()
+
+    def get_lane_name(self, index: int) -> str:
+        return self._lane_models[index].headerData(0, Qt.Orientation.Horizontal)
 
     def get_timelanes(self) -> TimeLanes:
         return TimeLanes(

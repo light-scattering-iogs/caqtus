@@ -26,6 +26,7 @@ class LaneDelegateFactory(Protocol):
 
     def __call__(
         self,
+        lane_name: str,
         lane: TimeLane,
         device_configurations: Mapping[str, DeviceConfigurationAttrs],
         constant_tables: Mapping[str, ConstantTable],
@@ -35,6 +36,7 @@ class LaneDelegateFactory(Protocol):
 
 
 def default_lane_delegate_factory(
+    lane_name: str,
     lane: TimeLane,
     device_configurations: Mapping[str, DeviceConfigurationAttrs],
     constant_tables: Mapping[str, ConstantTable],
@@ -148,7 +150,8 @@ class TimeLanesEditor(QTableView):
             self.setItemDelegateForRow(row, None)
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
-            delegate = self.lane_delegate_factory(lane)
+            name = self._model.get_lane_name(row - 2)
+            delegate = self.lane_delegate_factory(name, lane)
             self.setItemDelegateForRow(row, delegate)
             if delegate:
                 delegate.setParent(self)
