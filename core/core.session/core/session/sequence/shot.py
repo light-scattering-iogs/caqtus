@@ -3,9 +3,9 @@ from __future__ import annotations
 import typing
 from collections.abc import Mapping
 
-from ...types.data import DataLabel, Data
-from ...types.parameter import Parameter
-from ...types.variable_name import DottedVariableName
+from core.types.data import DataLabel, Data
+from core.types.parameter import Parameter
+from core.types.variable_name import DottedVariableName
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
@@ -50,9 +50,7 @@ class Shot:
     ) -> Mapping[DottedVariableName, Parameter]:
         """Return the parameters used to run this shot."""
 
-        return session.sequences.get_shot_parameters(
-            self.sequence.path, self.index
-        )
+        return session.sequences.get_shot_parameters(self.sequence.path, self.index)
 
     def get_data(self, session: ExperimentSession) -> Mapping[DataLabel, Data]:
         """Return the data of this shot.
@@ -62,9 +60,7 @@ class Shot:
         which will avoid querying unnecessary data.
         """
 
-        return session.sequences.get_all_shot_data(
-            self.sequence.path, self.index
-        )
+        return session.sequences.get_all_shot_data(self.sequence.path, self.index)
 
     def get_data_by_label(self, label: DataLabel, session: ExperimentSession) -> Data:
         """Return the data of this shot with the given label."""

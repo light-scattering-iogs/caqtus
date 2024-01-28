@@ -11,8 +11,12 @@ from typing import Optional
 
 from core.compilation import ShotCompilerFactory
 from core.device import DeviceConfigurationAttrs, DeviceName
-from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable, \
-    Sequence
+from core.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    ConstantTable,
+    Sequence,
+)
 from core.session.sequence.iteration_configuration import StepsConfiguration
 
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
@@ -369,7 +373,7 @@ class BoundProcedure(Procedure):
     ) -> dict[str, ConstantTable]:
         with self._session_maker() as session:
             if constant_tables_uuids is None:
-                constant_tables_uuids = session.constants.get_in_use_uuids()
+                constant_tables_uuids = session.constants.get_default_uuids()
             constant_tables = {
                 session.constants.get_table_name(uuid_): session.constants.get_table(
                     uuid_
@@ -380,11 +384,13 @@ class BoundProcedure(Procedure):
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
-        if error_occurred:
-            self.interrupt_sequence()
-        self.wait_until_sequence_finished()
-        self._parent._active_procedure = None
-        self._running.release()
+        try:
+            if error_occurred:
+                self.interrupt_sequence()
+            self.wait_until_sequence_finished()
+        finally:
+            self._parent._active_procedure = None
+            self._running.release()
 
 
 class SequenceAlreadyRunningError(RuntimeError):

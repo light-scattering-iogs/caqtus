@@ -113,7 +113,7 @@ class SequenceManager(AbstractContextManager):
                 for uuid_ in self._device_configurations_uuid
             }
             if constant_tables_uuid is None:
-                constant_tables_uuid = session.constants.get_in_use_uuids()
+                constant_tables_uuid = session.constants.get_default_uuids()
             self._constant_tables_uuid = constant_tables_uuid
             self.constant_tables = {
                 session.constants.get_table_name(uuid_): session.constants.get_table(
@@ -212,7 +212,7 @@ class SequenceManager(AbstractContextManager):
                 self._task_group.__exit__(exc_type, exc_val, exc_tb)
             except ExceptionGroup as e:
                 if error_occurred:
-                    raise ExceptionGroup(e.message, [*e.exceptions])
+                    raise ExceptionGroup(e.message, [*e.exceptions, exc_val])
                 else:
                     raise e
         except* SequenceInterruptedException:
@@ -223,10 +223,7 @@ class SequenceManager(AbstractContextManager):
             raise
         else:
             if error_occurred:
-                if isinstance(error_occurred, KeyboardInterrupt):
-                    self._set_sequence_state(State.INTERRUPTED)
-                else:
-                    self._set_sequence_state(State.CRASHED)
+                self._set_sequence_state(State.CRASHED)
             else:
                 self._set_sequence_state(State.FINISHED)
         finally:

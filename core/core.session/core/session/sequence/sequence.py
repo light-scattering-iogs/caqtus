@@ -83,3 +83,6 @@ class Sequence:
             return self.path == other.path
         else:
             return NotImplemented
+
+    def __hash__(self):
+        return hash(self.path)
