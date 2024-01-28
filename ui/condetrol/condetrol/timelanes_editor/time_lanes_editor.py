@@ -1,19 +1,47 @@
+import functools
 import itertools
-from typing import Optional
+from collections.abc import Mapping
+from typing import Optional, Protocol
 
 from PyQt6.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
-
+from core.device import DeviceConfigurationAttrs
+from core.session import ConstantTable
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
-from .default_lane_model_factory import default_lane_model_factory
+
 from .digital_lane_delegate import DigitalTimeLaneDelegate
-from .model import TimeLanesModel
+from .model import TimeLanesModel, TimeLaneModel
 
 
-def lane_delegate_factory(lane_type: type[TimeLane]) -> Optional[QStyledItemDelegate]:
-    if issubclass(lane_type, DigitalTimeLane):
-        return DigitalTimeLaneDelegate()
+class LaneModelFactory(Protocol):
+    """A factory for lane models."""
+
+    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]:
+        ...
+
+
+class LaneDelegateFactory(Protocol):
+    """A factory for lane delegates."""
+
+    def __call__(
+        self,
+        lane: TimeLane,
+        device_configurations: Mapping[str, DeviceConfigurationAttrs],
+        constant_tables: Mapping[str, ConstantTable],
+        parent: QWidget,
+    ) -> Optional[QStyledItemDelegate]:
+        ...
+
+
+def default_lane_delegate_factory(
+    lane: TimeLane,
+    device_configurations: Mapping[str, DeviceConfigurationAttrs],
+    constant_tables: Mapping[str, ConstantTable],
+    parent: QWidget,
+) -> Optional[QStyledItemDelegate]:
+    if isinstance(lane, DigitalTimeLane):
+        return DigitalTimeLaneDelegate(parent)
     else:
         return None
 
@@ -21,11 +49,38 @@ def lane_delegate_factory(lane_type: type[TimeLane]) -> Optional[QStyledItemDele
 class TimeLanesEditor(QTableView):
     time_lanes_changed = pyqtSignal()
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        lane_model_factory: LaneModelFactory,
+        lane_delegate_factory: LaneDelegateFactory,
+        device_configurations: Mapping[str, DeviceConfigurationAttrs],
+        constant_tables: Mapping[str, ConstantTable],
+        parent: Optional[QWidget] = None,
+    ):
+        """A widget for editing time lanes.
+
+        Parameters:
+            lane_delegate_factory: A factory for lane delegates.
+            This is a callable that allows to customize how a lane should be displayed
+            and edited.
+            When a lane is displayed, the factory is called with the lane, the default
+            device configurations and the default constant tables.
+            If the factory returns a QStyledItemDelegate, it is set for the view row
+            corresponding to the lane.
+            It is up to the factory to create a delegate per lane or to reuse the same
+            delegate for multiple lanes.
+            parent: The parent widget.
+        """
+
         super().__init__(parent)
         self._read_only: bool = False
-        self._model = TimeLanesModel(default_lane_model_factory, self)
-        self.lane_delegate_factory = lane_delegate_factory
+        self._model = TimeLanesModel(lane_model_factory, self)
+        self.lane_delegate_factory = functools.partial(
+            lane_delegate_factory,
+            device_configurations=device_configurations,
+            constant_tables=constant_tables,
+            parent=self,
+        )
         self.setModel(self._model)
 
         self.horizontalHeader().setContextMenuPolicy(
@@ -93,7 +148,7 @@ class TimeLanesEditor(QTableView):
             self.setItemDelegateForRow(row, None)
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
-            delegate = self.lane_delegate_factory(type(lane))
+            delegate = self.lane_delegate_factory(lane)
             self.setItemDelegateForRow(row, delegate)
             if delegate:
                 delegate.setParent(self)

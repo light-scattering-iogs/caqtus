@@ -4,7 +4,6 @@ from typing import Optional
 
 from PyQt6.QtCore import pyqtSignal, QThread, QTimer
 from PyQt6.QtWidgets import QWidget
-
 from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -16,9 +15,14 @@ from core.session.sequence_collection import (
 )
 from core.session.shot import TimeLanes
 from waiting_widget import run_with_wip_widget
+
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..sequence_iteration_editors import create_default_editor
-from ..timelanes_editor import TimeLanesEditor
+from ..timelanes_editor import (
+    TimeLanesEditor,
+    LaneDelegateFactory,
+    LaneModelFactory,
+)
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
@@ -27,20 +31,24 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def __init__(
         self,
-        sequence: PureSequencePath,
+        sequence_path: PureSequencePath,
         session_maker: ExperimentSessionMaker,
+        lane_model_factory: LaneModelFactory,
+        lane_delegate_factory: LaneDelegateFactory,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.setupUi(self)
         self.session_maker = session_maker
-        self.sequence_path = sequence
+        self.sequence_path = sequence_path
 
         with self.session_maker() as session:
             sequence = Sequence(self.sequence_path)
             iteration_config = sequence.get_iteration_configuration(session)
             time_lanes = sequence.get_time_lanes(session)
             stats = unwrap(session.sequences.get_stats(self.sequence_path))
+            device_configurations = dict(session.device_configurations)
+            constant_tables = dict(session.constants)
         self.iteration_editor = create_default_editor(iteration_config)
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_changed
@@ -48,7 +56,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.apply_state(stats.state)
         self.tabWidget.clear()
         self.tabWidget.addTab(self.iteration_editor, "Iteration")
-        self.time_lanes_editor = TimeLanesEditor(self)
+        self.time_lanes_editor = TimeLanesEditor(
+            lane_model_factory,
+            lane_delegate_factory,
+            device_configurations,
+            constant_tables,
+            parent,
+        )
         self.time_lanes_editor.set_time_lanes(time_lanes)
         self.time_lanes = time_lanes
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
@@ -97,13 +111,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         time_lanes = self.time_lanes_editor.get_time_lanes()
         with self.session_maker() as session:
             try:
-                session.sequences.set_time_lanes(
-                    self.sequence_path, time_lanes
-                )
+                session.sequences.set_time_lanes(self.sequence_path, time_lanes)
             except SequenceNotEditableError:
-                time_lanes = session.sequences.get_time_lanes(
-                    self.sequence_path
-                )
+                time_lanes = session.sequences.get_time_lanes(self.sequence_path)
                 self.time_lanes_editor.set_time_lanes(time_lanes)
             finally:
                 self.time_lanes = time_lanes
@@ -141,9 +151,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.sequence_widget = sequence_widget
             with self.sequence_widget.session_maker() as session:
                 self.stats = unwrap(
-                    session.sequences.get_stats(
-                        self.sequence_widget.sequence_path
-                    )
+                    session.sequences.get_stats(self.sequence_widget.sequence_path)
                 )
 
         def run(self) -> None:

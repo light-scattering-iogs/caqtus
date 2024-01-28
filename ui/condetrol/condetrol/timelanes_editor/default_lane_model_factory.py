@@ -1,4 +1,5 @@
 from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
+
 from .analog_lane_model import AnalogTimeLaneModel
 from .camera_lane_model import CameraTimeLaneModel
 from .digital_lane_model import DigitalTimeLaneModel

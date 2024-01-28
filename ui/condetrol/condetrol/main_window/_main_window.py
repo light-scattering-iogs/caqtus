@@ -6,13 +6,17 @@ from typing import Optional
 import pyqtgraph.dockarea
 from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QMainWindow, QApplication
-
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
-from core.session import ExperimentSessionMaker, PureSequencePath, ConstantTable, \
-    Sequence
+from core.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    ConstantTable,
+    Sequence,
+)
 from waiting_widget import run_with_wip_widget
+
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .exception_dialog import ExceptionDialog
 from ..constant_tables_editor import ConstantTablesEditor
@@ -22,6 +26,12 @@ from ..device_configuration_editors import (
 )
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
+from ..timelanes_editor import (
+    LaneDelegateFactory,
+    default_lane_delegate_factory,
+    LaneModelFactory,
+    default_lane_model_factory,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,14 +43,31 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         session_maker: ExperimentSessionMaker,
         device_configuration_editors: Mapping[str, DeviceConfigurationEditInfo],
         connect_to_experiment_manager: Callable[[], ExperimentManager],
+        model_factory: LaneModelFactory = default_lane_model_factory,
+        lane_delegate_factory: LaneDelegateFactory = default_lane_delegate_factory,
         *args,
         **kwargs,
     ):
+        """Initialize the main window.
+
+        Args:
+            session_maker: A callable that returns an ExperimentSession.
+            device_configuration_editors: A mapping from device name to device
+                configuration editor info.
+            connect_to_experiment_manager: A callable that returns an
+                ExperimentManager.
+            model_factory: A factory for lane models.
+            lane_delegate_factory: A factory for lane delegates.
+            *args: Positional arguments for QMainWindow.
+            **kwargs: Keyword arguments for QMainWindow.
+        """
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker)
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
+        self.delegate_factory = lane_delegate_factory
+        self.model_factory = model_factory
         self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.setup_ui()
@@ -74,7 +101,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
 
     def open_sequence_editor(self, path: PureSequencePath):
-        editor = SequenceWidget(path, self.session_maker)
+        editor = SequenceWidget(
+            path, self.session_maker, self.model_factory, self.delegate_factory
+        )
         editor.sequence_start_requested.connect(self.start_sequence)
         editor.sequence_interruption_requested.connect(self.interrupt_sequence)
 
