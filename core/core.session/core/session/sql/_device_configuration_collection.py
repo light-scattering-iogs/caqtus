@@ -22,7 +22,11 @@ if TYPE_CHECKING:
 
 T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
-class DeviceConfigurationSerializer(TypedDict, Generic[T]):
+
+@attrs.define
+class DeviceConfigurationSerializer(Generic[T]):
+    """Indicates how to serialize and deserialize device configurations."""
+
     dumper: Callable[[T], JSON]
     loader: Callable[[JSON], T]
 
@@ -51,7 +55,7 @@ class SQLDeviceConfigurationCollection(
             uuid=id_,
             device_name=device_name,
             device_type=type_name,
-            content=serializer["dumper"](device_configuration),
+            content=serializer.dumper(device_configuration),
             creation_date=creation_date,
         )
         self._get_sql_session().add(new)
@@ -63,7 +67,7 @@ class SQLDeviceConfigurationCollection(
     def get_configuration(self, id_: uuid.UUID) -> DeviceConfigurationAttrs:
         configuration = self._get_configuration(id_)
         serializer = self._device_configuration_serializers[configuration.device_type]
-        return serializer["loader"](configuration.content)
+        return serializer.loader(configuration.content)
 
     def set_in_use(self, id_: uuid.UUID) -> None:
         new = SQLCurrentDeviceConfiguration(

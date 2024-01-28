@@ -12,7 +12,6 @@ from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
     SequenceSerializer,
-    default_sequence_serializer,
 )
 from ..experiment_session import (
     ExperimentSession,
@@ -22,12 +21,10 @@ from ..experiment_session import (
 
 @attrs.define
 class Serializer:
+    """Indicates how to serialize and deserialize objects for persistent storage."""
+
     sequence_serializer: SequenceSerializer
-
-
-default_serializer = Serializer(
-    sequence_serializer=default_sequence_serializer,
-)
+    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
 
 
 @attrs.define(init=False)
@@ -43,7 +40,6 @@ class SQLExperimentSession(ExperimentSession):
     def __init__(
         self,
         session: sqlalchemy.orm.Session,
-        device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
         serializer: Serializer,
         *args,
         **kwargs,
@@ -64,7 +60,7 @@ class SQLExperimentSession(ExperimentSession):
         )
         self.device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self,
-            device_configuration_serializers=device_configuration_serializers,
+            device_configuration_serializers=serializer.device_configuration_serializers,
         )
         self.constants = SQLConstantTableCollection(parent_session=self)
 

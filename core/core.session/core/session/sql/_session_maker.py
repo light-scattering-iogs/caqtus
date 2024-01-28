@@ -25,12 +25,10 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __init__(
         self,
         engine: sqlalchemy.Engine,
-        device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer],
         serializer: Serializer,
     ) -> None:
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
-        self._device_configuration_serializers = dict(device_configuration_serializers)
         self._serializer = serializer
 
     def __call__(self) -> ExperimentSession:
@@ -38,7 +36,6 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
 
         return SQLExperimentSession(
             self._session_maker(),
-            self._device_configuration_serializers,
             self._serializer,
         )
 

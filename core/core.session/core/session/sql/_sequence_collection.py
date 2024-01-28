@@ -54,6 +54,8 @@ if TYPE_CHECKING:
 
 @attrs.define
 class SequenceSerializer:
+    """Indicates how to serialize and deserialize sequence configurations."""
+
     iteration_serializer: Callable[[IterationConfiguration], serialization.JSON]
     iteration_constructor: Callable[[serialization.JSON], IterationConfiguration]
     time_lane_serializer: Callable[[TimeLane], serialization.JSON]
