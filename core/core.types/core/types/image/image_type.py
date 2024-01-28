@@ -1,12 +1,11 @@
-from numbers import Real
 from typing import TypeVar, NewType, Any, TypeGuard
 
 import numpy as np
-from ..data import DataLabel, is_data_label
 
 from util.roi import Width, Height
+from ..data import DataLabel, is_data_label
 
-T = TypeVar("T", bound=Real)
+T = TypeVar("T", bound=np.generic)
 
 Image = np.ndarray[tuple[Width, Height], np.dtype[T]]
 
