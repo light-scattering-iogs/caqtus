@@ -41,18 +41,11 @@ class DefaultDeviceConfigurationEditor[T: DeviceConfigurationAttrs](
 
     def set_configuration(self, device_configuration: T) -> None:
         self.device_configuration = copy.deepcopy(device_configuration)
-        try:
-            config = black.format_str(
-                repr(self.device_configuration), mode=black.FileMode()
-            )
-        except black.InvalidInput:
-            config = repr(self.device_configuration)
         self.message_label.setText(
             f"No custom editor is registered to edit a device configuration of type "
             f"<{type(device_configuration).__qualname__}>.\n"
             f"Consider registering an editor for this type of device configuration "
             f"when instantiating the main window.\n\n"
-            f"Here is a naive representation of the device configuration:\n\n{config}"
         )
 
     def get_configuration(self) -> T:
