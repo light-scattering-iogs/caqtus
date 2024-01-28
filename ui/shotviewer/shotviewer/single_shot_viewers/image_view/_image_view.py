@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import queue
-from typing import Optional, Self, Any, assert_never
+from typing import Optional, assert_never
 
 import attrs
 import numpy as np
@@ -11,13 +11,11 @@ from PyQt6.QtWidgets import QDialog
 from PyQt6.QtWidgets import QWidget
 from core.device import DeviceName
 from core.session import Shot, ExperimentSessionMaker
-from core.session import get_standard_experiment_session_maker
 from core.types.image import ImageLabel, Image
 from util import serialization
-from util.serialization import JSON
 
 from .image_view_dialog_ui import Ui_ImageViewDialog
-from ..single_shot_view import ShotView, ViewManager
+from ..single_shot_view import ShotView
 
 
 @attrs.define
@@ -81,15 +79,6 @@ class ImageView(ShotView, pyqtgraph.ImageView):
         )
         self.getHistogramWidget().item.sigLevelsChanged.connect(self._on_levels_changed)
 
-    @classmethod
-    def dump(cls, instance: Self) -> JSON:
-        return serialization.unstructure(instance._state)
-
-    @classmethod
-    def construct(cls, state: Any) -> Self:
-        state = serialization.structure(state, ImageViewState)
-        return cls(state, get_standard_experiment_session_maker())
-
     def _on_levels_changed(self) -> None:
         if self._state.levels is not None:
             self._state.levels = self.getLevels()
@@ -123,10 +112,11 @@ class ImageView(ShotView, pyqtgraph.ImageView):
                 while not self._shot_queue.empty():
                     shot = self._shot_queue.get()
                 with self._session_maker() as session:
-                    pictures = shot.get_data_by_label(
-                        self._parent._state.camera_name, session
+                    camera_name = self._parent._state.camera_name
+                    picture_name = self._parent._state.image
+                    image = shot.get_data_by_label(
+                        f"{camera_name}\\{picture_name}", session
                     )
-                    image = pictures[self._parent._state.image]
                     self.image_loaded.emit(image)  # type: ignore
             self._timer.singleShot(30, self.fetch)
 
@@ -154,10 +144,3 @@ def create_image_view(
         return name, serialization.unstructure(state)
 
     return None
-
-
-image_view_manager = ViewManager(
-    constructor=ImageView.construct,
-    dumper=ImageView.dump,
-    state_generator=create_image_view,
-)
