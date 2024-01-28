@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 )
 from pyqtgraph.dockarea import DockArea, Dock
 
-from core.session import ExperimentSessionMaker
+from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.sequence import Shot, Sequence
 from sequence_hierarchy import PathHierarchyView
 from util import serialization
@@ -41,7 +41,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._experiment_session_maker = experiment_session_maker
         self._view_managers = view_managers
         self._dock_area = DockArea()
-        self._sequence_widget: PathHierarchyView
+        self._sequence_widget = PathHierarchyView(self._experiment_session_maker)
         self._shot_selector: ShotSelector = ShotSelector()
         self._sequence_watcher = SequenceWatcher(self._experiment_session_maker)
 
@@ -50,9 +50,11 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def __enter__(self):
         self._sequence_watcher.__enter__()
+        self._sequence_widget.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._sequence_widget.__exit__(exc_type, exc_val, exc_tb)
         return self._sequence_watcher.__exit__(exc_type, exc_val, exc_tb)
 
     def restore_state(self):
@@ -80,7 +82,6 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def _add_default_docks(self) -> None:
         sequence_dock = Dock("Sequences")
-        self._sequence_widget = PathHierarchyView(self._experiment_session_maker)
         self._sequence_widget.sequence_double_clicked.connect(
             self.on_sequence_double_clicked
         )
@@ -181,8 +182,8 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             workspace = serialization.from_json(json_string, WorkSpace)
             self.set_workspace(workspace)
 
-    def on_sequence_double_clicked(self, sequence: Sequence) -> None:
-        self._sequence_watcher.set_sequence(sequence)
+    def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
+        self._sequence_watcher.set_sequence(Sequence(path))
 
     def _update_views(self, shot: Shot) -> None:
         for view in self._views.values():
