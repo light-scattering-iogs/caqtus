@@ -6,7 +6,7 @@ authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 
 pyqt6 = "^6.6.1"
 platformdirs = "^4.1.0"

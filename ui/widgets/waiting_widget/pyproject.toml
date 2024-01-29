@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "waiting_widget"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 
 pyqt6 = "^6.5.2"
 

@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "orca_quest"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 
 util = {path = "../../../../util", develop = true}
 orca-quest-configuration = {path = "../orca_quest.configuration", develop = true}
