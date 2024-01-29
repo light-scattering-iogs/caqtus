@@ -1,13 +1,14 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, ParamSpec, TypeVar
 
 from PyQt6.QtCore import QThread, Qt
 from PyQt6.QtWidgets import QWidget, QDialog, QMessageBox
 
+P = ParamSpec("P")
+T = TypeVar("T")
+
 
 class WorkerThread(QThread):
-    def __init__[
-        **P, T
-    ](self, function: Callable[[P], T], *args: P.args, **kwargs: P.kwargs):
+    def __init__(self, function: Callable[[P], T], *args: P.args, **kwargs: P.kwargs):
         super().__init__()
         self.function = function
         self.args = args
@@ -34,9 +35,7 @@ class BlockingWidget(QDialog):
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
 
-def run_with_wip_widget[
-    **P, T
-](
+def run_with_wip_widget(
     parent: QWidget,
     msg: str,
     function: Callable[[P], T],
