@@ -1,17 +1,19 @@
 import functools
+from typing import TypeVar
 
 from core.session.sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )
+
 from .sequence_iteration_editor import SequenceIterationEditor
 from .steps_iteration_editor import StepsIterationEditor
 
+T = TypeVar("T", bound=IterationConfiguration)
+
 
 @functools.singledispatch
-def create_default_editor[
-    T: IterationConfiguration
-](iteration: T) -> SequenceIterationEditor[T]:
+def create_default_editor(iteration: T) -> SequenceIterationEditor[T]:
     raise NotImplementedError
 
 

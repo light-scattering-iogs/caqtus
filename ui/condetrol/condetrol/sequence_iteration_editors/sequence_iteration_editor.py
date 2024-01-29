@@ -1,14 +1,16 @@
 import abc
 from collections.abc import Callable
-
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget
+from typing import TypeVar, Generic, TypeAlias
 
 import qabc
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QWidget
 from core.session.sequence.iteration_configuration import IterationConfiguration
 
+T = TypeVar("T", bound=IterationConfiguration)
 
-class SequenceIterationEditor[T: IterationConfiguration](QWidget, qabc.QABC):
+
+class SequenceIterationEditor(QWidget, qabc.QABC, Generic[T]):
     iteration_changed = pyqtSignal()
 
     @abc.abstractmethod
@@ -24,6 +26,4 @@ class SequenceIterationEditor[T: IterationConfiguration](QWidget, qabc.QABC):
         raise NotImplementedError
 
 
-type IterationEditorCreator[T: IterationConfiguration] = Callable[
-    [T], SequenceIterationEditor[T]
-]
+IterationEditorCreator: TypeAlias = Callable[[T], SequenceIterationEditor[T]]

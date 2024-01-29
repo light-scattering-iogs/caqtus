@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Iterable
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, TypeVar, Generic
 
 from PyQt6.QtGui import QValidator
 from PyQt6.QtWidgets import QDialog
@@ -13,8 +13,10 @@ from .device_configuration_editor import (
 )
 from ..save_geometry_dialog import SaveGeometryDialog
 
+T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
-class DeviceConfigurationEditInfo[T: DeviceConfigurationAttrs](TypedDict):
+
+class DeviceConfigurationEditInfo(TypedDict, Generic[T]):
     editor_type: type[DeviceConfigurationEditor[T]]
 
 

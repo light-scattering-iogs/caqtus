@@ -1,13 +1,17 @@
 import abc
 import copy
+from typing import TypeVar
 
 import qabc
-from ..configurations_editor import DeviceConfigurationEditor
 from core.device.camera.configuration import CameraConfiguration
+
 from .editor_ui import Ui_CameraConfigurationEditor
+from ..configurations_editor import DeviceConfigurationEditor
+
+T = TypeVar("T", bound=CameraConfiguration)
 
 
-class CameraConfigurationEditor[T: CameraConfiguration](
+class CameraConfigurationEditor(
     DeviceConfigurationEditor[T], Ui_CameraConfigurationEditor, qabc.QABC
 ):
     @abc.abstractmethod

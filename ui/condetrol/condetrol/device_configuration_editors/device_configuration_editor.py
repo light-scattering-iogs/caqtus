@@ -1,15 +1,16 @@
 import abc
 import copy
-from typing import Optional
+from typing import Optional, Generic, TypeVar
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from core.device import DeviceConfigurationAttrs
 from qabc import QABC
-import black
+
+T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
 
-class DeviceConfigurationEditor[T: DeviceConfigurationAttrs](QWidget, QABC):
+class DeviceConfigurationEditor(QWidget, QABC, Generic[T]):
     @abc.abstractmethod
     def set_configuration(self, device_configuration: T) -> None:
         raise NotImplementedError
@@ -19,9 +20,7 @@ class DeviceConfigurationEditor[T: DeviceConfigurationAttrs](QWidget, QABC):
         raise NotImplementedError
 
 
-class DefaultDeviceConfigurationEditor[T: DeviceConfigurationAttrs](
-    DeviceConfigurationEditor[T]
-):
+class DefaultDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
     """Default device configuration editor.
 
     This editor is used when no editor is registered for a given device configuration.

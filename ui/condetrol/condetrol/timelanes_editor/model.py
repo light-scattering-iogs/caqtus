@@ -2,7 +2,7 @@ import abc
 import copy
 import functools
 from collections.abc import Callable
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar, Generic
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -161,7 +161,12 @@ class TimeStepDurationModel(QAbstractListModel):
             return font
 
 
-class TimeLaneModel[L: TimeLane[T], O](QAbstractListModel, qabc.QABC):
+T = TypeVar("T")
+L = TypeVar("L", bound=TimeLane)
+O = TypeVar("O", bound=Any)
+
+
+class TimeLaneModel(QAbstractListModel, qabc.QABC, Generic[L, O]):
     """An abstract list model to represent a time lane.
 
     This class is meant to be subclassed for each lane type that needs to be
@@ -233,7 +238,7 @@ class TimeLaneModel[L: TimeLane[T], O](QAbstractListModel, qabc.QABC):
     def insertRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
         raise NotImplementedError
 
-    def insert_value[T](self, row: int, value: T) -> bool:
+    def insert_value(self, row: int, value: T) -> bool:
         if not (0 <= row <= len(self._lane)):
             return False
         self.beginInsertRows(QModelIndex(), row, row)
@@ -283,7 +288,7 @@ class TimeLaneModel[L: TimeLane[T], O](QAbstractListModel, qabc.QABC):
         return []
 
 
-class ColoredTimeLaneModel[L: TimeLane[T], O: Any](TimeLaneModel[L, O], qabc.QABC):
+class ColoredTimeLaneModel(TimeLaneModel[L, O], qabc.QABC):
     """A time lane model that can be colored.
 
     Instances of this class can be used to color the cells in a lane.
@@ -363,7 +368,7 @@ class ColoredTimeLaneModel[L: TimeLane[T], O: Any](TimeLaneModel[L, O], qabc.QAB
         return super().setHeaderData(section, orientation, value, role)
 
 
-type LaneModelFactory[L: TimeLane] = Callable[[L], type[TimeLaneModel[L, Any]]]
+LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
 class TimeLanesModel(QAbstractTableModel, qabc.QABC):
