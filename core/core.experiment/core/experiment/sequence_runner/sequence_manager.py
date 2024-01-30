@@ -216,18 +216,21 @@ class SequenceManager(AbstractContextManager):
                 else:
                     raise e
         except* SequenceInterruptedException:
-            self._set_sequence_state(State.INTERRUPTED)
+            state = State.INTERRUPTED
             raise
         except* Exception:
-            self._set_sequence_state(State.CRASHED)
+            state = State.CRASHED
             raise
         else:
             if error_occurred:
-                self._set_sequence_state(State.CRASHED)
+                state = State.CRASHED
             else:
-                self._set_sequence_state(State.FINISHED)
+                state = State.FINISHED
         finally:
-            self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._set_sequence_state(state)
+            finally:
+                self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
     def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
