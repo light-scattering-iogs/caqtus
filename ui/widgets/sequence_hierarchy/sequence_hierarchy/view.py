@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QTreeView, QMenu
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
+from .delegate import ProgressDelegate
 from .model import PathHierarchyModel
 
 
@@ -29,6 +30,7 @@ class PathHierarchyView(QTreeView):
         self._model.dataChanged.connect(lambda _: self.update())
         self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
         self.hideColumn(4)
+        self.setItemDelegateForColumn(1, ProgressDelegate(self))
 
     def show_header_menu(self, pos):
         menu = QMenu(self)
