@@ -23,15 +23,20 @@ from core.types.parameter import (
 )
 from core.types.parameter.analog_value import add_unit
 from core.types.variable_name import DottedVariableName
-from .sequence_manager import SequenceManager
+from .sequence_manager import SequenceManager, SequenceInterruptedException
 from .step_context import StepContext
 
 
 def wrap_error(function: Callable[[Any, Step, StepContext], StepContext]):
+    """Wrap a function that evaluates a step to raise nicer errors for the user."""
+
     @functools.wraps(function)
     def wrapper(self, step: Step, context: StepContext):
         try:
             return function(self, step, context)
+        except SequenceInterruptedException:
+            # Don't want to add user context to this exception
+            raise
         except Exception as e:
             raise StepEvaluationError(f"Error while evaluating step <{step}>") from e
 
