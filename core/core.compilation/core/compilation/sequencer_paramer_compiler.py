@@ -301,6 +301,17 @@ class SingleShotCompiler:
         device: DeviceName,
         time_step: int,
     ) -> SequencerInstruction[np.bool_]:
+        """Computes the trigger for a device.
+
+        If the target device is a sequencer, this function will compute the trigger
+        depending on the target sequencer's trigger configuration.
+        If the target device is a camera, this function will compute a trigger that is
+        high when a picture is being taken and low otherwise.
+        If the target device is neither a sequencer nor a camera, this function will
+        output a trigger that is high for half the shot duration and low for the other
+        half.
+        """
+
         device_config = self.devices[device]
         if isinstance(device_config, SequencerConfiguration):
             return self.evaluate_trigger_for_sequencer(
@@ -309,9 +320,15 @@ class SingleShotCompiler:
         elif isinstance(device_config, CameraConfiguration):
             return self.evaluate_trigger_for_camera(device, time_step)
         else:
-            raise NotImplementedError(
-                f"Cannot evaluate trigger for device of type {type(device_config)}"
-            )
+            length = number_ticks(0, self.shot_duration, time_step * ns)
+            high_duration = length // 2
+            low_duration = length - high_duration
+            if high_duration == 0 or low_duration == 0:
+                raise ValueError(
+                    "The shot duration is too short to generate a trigger pulse for "
+                    f"device '{device}'"
+                )
+            return Pattern([True]) * high_duration + Pattern([False]) * low_duration
 
     def evaluate_trigger_for_sequencer(
         self,
