@@ -6,8 +6,8 @@ from typing import Optional, Any
 
 import numpy
 import token_utils
-
 from util import serialization
+
 from ..variable_name import DottedVariableName, VariableName
 
 EXPRESSION_REGEX = re.compile(".*")
@@ -64,6 +64,7 @@ class Expression:
         builtins: Optional[dict[str, Any]] = None,
         implicit_multiplication: bool = True,
         allow_percentage: bool = True,
+        allow_degree: bool = True,
         cache_evaluation: bool = True,
     ):
         """
@@ -80,6 +81,10 @@ class Expression:
             allow_percentage: if True, the expression will be parsed to understand the
             use of the % symbol as a multiplication by 0.01. If set to False, the %
             symbol will be understood as a modulo operator.
+            allow_degree: if True, the expression will be parsed to understand the use
+            of the ° symbol as the degree symbol and will be replaced by the name
+            `deg` in the expression. If set to False, the ° symbol will not be replaced
+            and evaluating the expression will raise a SyntaxError.
         """
 
         if builtins is None:
@@ -88,6 +93,7 @@ class Expression:
         self._builtins = builtins
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
+        self._allow_degree = allow_degree
         self._cache_evaluation = cache_evaluation
 
     @property
@@ -170,8 +176,13 @@ class Expression:
         if self._allow_percentage:
             expr = expr.replace("%", "*(1e-2)")
 
+        if self._allow_degree:
+            expr = expr.replace("°", "*deg")
+
         if self._implicit_multiplication:
             expr = add_implicit_multiplication(expr)
+
+
         return ast.parse(expr, mode="eval")
 
     @cached_property
