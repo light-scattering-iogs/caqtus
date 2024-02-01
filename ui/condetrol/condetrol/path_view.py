@@ -94,7 +94,7 @@ class EditablePathHierarchyView(PathHierarchyView):
             f"Duplicate {path}...",
             "New sequence name:",
             QLineEdit.EchoMode.Normal,
-            "new sequence",
+            path.name,
         )
         if ok and text:
             try:
