@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QLineEdit
 
-from expression import Expression
+
+from core.types.expression import Expression
 
 
 class ExpressionWidget(QLineEdit):

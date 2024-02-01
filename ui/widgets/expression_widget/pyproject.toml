@@ -7,11 +7,11 @@ readme = "README.md"
 packages = [{include = "expression_widget"}]
 
 [tool.poetry.dependencies]
-python = "^3.8, <3.13"
+python = "^3.11"
 
 pyqt6 = "^6.5.0"
+core-types = {path = "../../../core/core.types", develop = true}
 
-expression = {path = "../../../common/expression", develop = true}
 
 
 [build-system]
