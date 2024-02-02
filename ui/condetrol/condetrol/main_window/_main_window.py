@@ -3,9 +3,8 @@ import logging
 from collections.abc import Mapping, Callable
 from typing import Optional
 
-import pyqtgraph.dockarea
-from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QApplication
+from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal, Qt
+from PyQt6.QtWidgets import QMainWindow, QApplication, QDockWidget
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
@@ -64,12 +63,14 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker)
         self._connect_to_experiment_manager = connect_to_experiment_manager
-        self.dock_area = pyqtgraph.dockarea.DockArea()
         self.session_maker = session_maker
         self.delegate_factory = lane_delegate_factory
         self.model_factory = model_factory
         self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
+        self.sequence_widget = SequenceWidget(
+            self.session_maker, self.model_factory, self.delegate_factory
+        )
         self.setup_ui()
         self.restore_window_state()
         self.setup_connections()
@@ -83,34 +84,26 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        self.setCentralWidget(self.dock_area)
+        self.setCentralWidget(self.sequence_widget)
         app = QApplication.instance()
         self.setWindowTitle(app.applicationName())
-        dock = pyqtgraph.dockarea.Dock("Sequences")
-        dock.addWidget(self._path_view)
-        self.dock_area.addDock(dock, "left")
+        dock = QDockWidget("Sequences")
+        dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        dock.setWidget(self._path_view)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
             self.open_device_configurations_editor
         )
         self.action_edit_constants.triggered.connect(self.open_constants_editor)
-        self._path_view.sequence_double_clicked.connect(self.open_sequence_editor)
+        self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
         self._procedure_watcher_thread.exception_occurred.connect(
             self.on_procedure_exception
         )
 
-    def open_sequence_editor(self, path: PureSequencePath):
-        editor = SequenceWidget(
-            path, self.session_maker, self.model_factory, self.delegate_factory
-        )
-        editor.sequence_start_requested.connect(self.start_sequence)
-        editor.sequence_interruption_requested.connect(self.interrupt_sequence)
-
-        dock = pyqtgraph.dockarea.Dock(str(path), widget=editor, closable=True)
-        dock.sigClosed.connect(editor.close)
-        editor.destroyed.connect(dock.close)
-        self.dock_area.addDock(dock, "right")
+    def set_edited_sequence(self, path: PureSequencePath):
+        self.sequence_widget.set_sequence(path)
 
     def start_sequence(self, path: PureSequencePath):
         try:
