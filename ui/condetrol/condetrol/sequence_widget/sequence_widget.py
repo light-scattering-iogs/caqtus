@@ -144,18 +144,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def apply_state(self, state: State):
         self.iteration_editor.set_read_only(not state.is_editable())
-        if state == State.DRAFT:
-            self.start_button.setEnabled(True)
-        else:
-            self.start_button.setEnabled(False)
-        if state in {State.RUNNING}:
-            self.interrupt_button.setEnabled(True)
-        else:
-            self.interrupt_button.setEnabled(False)
-        if state in {State.FINISHED, State.INTERRUPTED, State.CRASHED}:
-            self.clear_button.setEnabled(True)
-        else:
-            self.clear_button.setEnabled(False)
 
     class StateWatcherThread(QThread):
         stats_changed = pyqtSignal(SequenceStats)
