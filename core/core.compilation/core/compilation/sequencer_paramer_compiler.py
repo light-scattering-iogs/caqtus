@@ -6,7 +6,6 @@ from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
 import numpy as np
-
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
 from core.device.camera import CameraConfiguration
 from core.device.sequencer import (
@@ -39,6 +38,7 @@ from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
 from util import add_exc_note
+
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds
@@ -186,12 +186,23 @@ class SingleShotCompiler:
         required_time_step: int,
         required_unit: Optional[Unit],
     ) -> SequencerInstruction:
+        """Evaluate the output of a channel with the required parameters."""
+
         raise NotImplementedError(f"Cannot evaluate output <{output_}>")
 
     @evaluate_output.register
     def _(
         self, output_: Constant, required_time_step: int, required_unit: Optional[Unit]
     ) -> SequencerInstruction:
+        """Evaluate a constant output.
+
+        Returns an instruction that has constant values for the entire shot duration.
+        The constant value is obtained by evaluating the value stored in the constant
+        output within the shot namespace.
+        Note that `constant` refers to a value constant in shot time, not necessarily
+        constant across shots.
+        """
+
         length = number_ticks(0, self.shot_duration, required_time_step * ns)
         expression = output_.value
         value = expression.evaluate(self.variables | units)
@@ -205,14 +216,28 @@ class SingleShotCompiler:
         required_time_step: int,
         required_unit: Optional[Unit],
     ) -> SequencerInstruction:
+        """Evaluate the output of a channel as the values of a lane.
+
+        This function will look in the shot timelanes to find the lane referenced by the
+        output and evaluate the values of this lane.
+        If the lane cannot be found, and the output has a default value, this default
+        value will be used.
+        If the lane cannot be found and there is no default value, a ValueError will be
+        raised.
+        """
+
         lane_name = output_.lane
         try:
             lane = self.lanes[lane_name]
         except KeyError:
-            raise ValueError(
-                f"Could not find lane <{lane_name}> when evaluating output "
-                f"<{output_}>"
-            )
+            if output_.default is not None:
+                constant = Constant(output_.default)
+                return self.evaluate_output(constant, required_time_step, required_unit)
+            else:
+                raise ValueError(
+                    f"Could not find lane <{lane_name}> when evaluating output "
+                    f"<{output_}>"
+                )
         if isinstance(lane, DigitalTimeLane):
             if required_unit is not None:
                 raise ValueError(

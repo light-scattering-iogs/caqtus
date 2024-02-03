@@ -1,3 +1,18 @@
+"""This module defines the configuration used to compute the output of a sequencer
+channel.
+
+A channel can typically output a constant value, the values of a lane, a trigger for
+another device, or a functional combination of these.
+
+The union type `ChannelOutput` is used to represent the different possible outputs of a
+channel.
+Each possible type of output is represented by a different class.
+An output class is a high-level description of what should be outputted by a channel.
+For more information on how the output is evaluated, see
+`core.compilation.sequencer_parameter_compiler`.
+"""
+
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -5,9 +20,9 @@ from typing import TypeGuard, Optional
 
 import attrs
 import numpy as np
-
 from core.types.expression import Expression
 from util import serialization
+
 from ...name import DeviceName
 
 
@@ -25,9 +40,16 @@ def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
 
 @attrs.define
 class LaneValues:
+    """Indicates that the output should be the values taken by a given lane."""
+
     lane: str = attrs.field(
         converter=str,
         on_setattr=attrs.setters.convert,
+    )
+    default: Optional[Expression] = attrs.field(
+        default=None,
+        validator=attrs.validators.optional(attrs.validators.instance_of(Expression)),
+        on_setattr=attrs.setters.validate,
     )
 
     def __str__(self):
