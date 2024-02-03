@@ -6,10 +6,10 @@ from typing import Optional, Protocol
 from PyQt6.QtCore import pyqtSignal, Qt, QModelIndex
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
+
 from core.device import DeviceConfigurationAttrs
 from core.session import ConstantTable
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
-
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
 
@@ -157,7 +157,7 @@ class TimeLanesEditor(QTableView):
                 delegate.setParent(self)
 
     def set_read_only(self, read_only: bool) -> None:
-        raise NotImplementedError
+        pass
 
     def show_steps_context_menu(self, pos):
         menu = QMenu(self.horizontalHeader())
