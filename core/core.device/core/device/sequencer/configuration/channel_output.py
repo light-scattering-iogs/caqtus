@@ -52,7 +52,9 @@ class LaneValues:
         on_setattr=attrs.setters.validate,
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
+        if self.default is not None:
+            return f"{self.lane} | {self.default}"
         return self.lane
 
 
