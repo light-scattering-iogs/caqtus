@@ -4,7 +4,12 @@ from collections.abc import Mapping, Callable
 from typing import Optional
 
 from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal, Qt
-from PyQt6.QtWidgets import QMainWindow, QApplication, QDockWidget
+from PyQt6.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QDockWidget,
+)
+
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
@@ -15,7 +20,6 @@ from core.session import (
     Sequence,
 )
 from waiting_widget import run_with_wip_widget
-
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .exception_dialog import ExceptionDialog
 from ..constant_tables_editor import ConstantTablesEditor
@@ -98,6 +102,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
         self.action_edit_constants.triggered.connect(self.open_constants_editor)
         self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
+        self._path_view.sequence_start_requested.connect(self.start_sequence)
+        self._path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
         self._procedure_watcher_thread.exception_occurred.connect(
             self.on_procedure_exception
         )
