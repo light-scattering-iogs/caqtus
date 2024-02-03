@@ -7,7 +7,7 @@ Welcome to experiment-control's documentation!
 ==============================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
    tutorials/tutorials
