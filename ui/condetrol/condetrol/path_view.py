@@ -4,10 +4,10 @@ import functools
 from PyQt6 import QtCore
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit, QApplication
-
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.path import InvalidPathFormatError
 from core.session.result import unwrap
+from core.session.sequence import State
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
     ArangeLoop,
@@ -18,6 +18,7 @@ from core.session.shot import TimeLanes
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
+from waiting_widget import run_with_wip_widget
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[
@@ -78,6 +79,11 @@ class EditablePathHierarchyView(PathHierarchyView):
             dupplicate_action.triggered.connect(
                 functools.partial(self.on_sequence_duplication_requested, path)
             )
+            clear_action = QAction("Clear")
+            menu.addAction(clear_action)
+            clear_action.triggered.connect(
+                functools.partial(self.on_clear_sequence_requested, path)
+            )
 
         if not path.is_root():
             delete_action = QAction("Delete")
@@ -85,6 +91,21 @@ class EditablePathHierarchyView(PathHierarchyView):
             delete_action.triggered.connect(functools.partial(self.delete, path))
 
         menu.exec(self.mapToGlobal(pos))
+
+    def on_clear_sequence_requested(self, path: PureSequencePath) -> None:
+        """Clear the sequence at the given path.
+
+        This will revert the sequence to the draft state, effectively clearing all
+        the data in it.
+        During the process, a waiting widget will be shown to the user to prevent them
+        from interacting with the sequence while it is being cleared.
+        """
+
+        def clear():
+            with self.session_maker() as session:
+                session.sequences.set_state(path, State.DRAFT)
+
+        run_with_wip_widget(self, "Clearing sequence", clear)
 
     def on_sequence_duplication_requested(self, path: PureSequencePath):
         """Ask the user for a new sequence name and duplicate the sequence."""

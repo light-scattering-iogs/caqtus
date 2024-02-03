@@ -4,6 +4,7 @@ from typing import Optional
 
 from PyQt6.QtCore import pyqtSignal, QThread, QTimer
 from PyQt6.QtWidgets import QWidget
+
 from condetrol.sequence_iteration_editors import SequenceIterationEditor
 from core.session import ExperimentSessionMaker, PureSequencePath, BoundSequencePath
 from core.session._return_or_raise import unwrap
@@ -19,8 +20,6 @@ from core.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from core.session.shot import TimeLanes
-from waiting_widget import run_with_wip_widget
-
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..sequence_iteration_editors import create_default_editor
 from ..timelanes_editor import (
@@ -105,25 +104,11 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def setup_connections(self):
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
-        self.start_button.clicked.connect(
-            lambda _: self.sequence_start_requested.emit(self.sequence_path)
-        )
-        self.clear_button.clicked.connect(self.clear_sequence)
-        self.interrupt_button.clicked.connect(
-            lambda _: self.sequence_interruption_requested.emit(self.sequence_path)
-        )
         self.state_watcher_thread.sequence_not_found.connect(self.deleteLater)
         self.state_watcher_thread.stats_changed.connect(self.apply_stats)
         self.state_watcher_thread.time_lanes_changed.connect(
             self.time_lanes_editor.set_time_lanes
         )
-
-    def clear_sequence(self):
-        def clear():
-            with self.session_maker() as session:
-                session.sequences.set_state(self.sequence_path, State.DRAFT)
-
-        run_with_wip_widget(self, "Clearing sequence", clear)
 
     def on_sequence_iteration_changed(self):
         iterations = self.iteration_editor.get_iteration()
