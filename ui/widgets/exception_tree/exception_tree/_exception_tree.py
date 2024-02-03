@@ -16,7 +16,7 @@ def create_exception_tree(
     result.append(exception_item)
     if hasattr(exception, "__notes__"):
         for note in exception.__notes__:
-            exception_item.addChild(QTreeWidgetItem(exception_item, ["", note]))
+            exception_item.addChild(QTreeWidgetItem(exception_item, ["...", note]))
     if isinstance(exception, ExceptionGroup):
         if len(exception.exceptions) > 0:
             exception_item.addChildren(
