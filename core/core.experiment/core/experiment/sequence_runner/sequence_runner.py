@@ -3,7 +3,6 @@ from collections.abc import Iterable, Mapping, Callable
 from typing import assert_never, Any
 
 import numpy
-
 from core.compilation import units
 from core.session import ConstantTable
 from core.session.sequence.iteration_configuration import (
@@ -23,6 +22,7 @@ from core.types.parameter import (
 )
 from core.types.parameter.analog_value import add_unit
 from core.types.variable_name import DottedVariableName
+
 from .sequence_manager import SequenceManager, SequenceInterruptedException
 from .step_context import StepContext
 
@@ -156,10 +156,11 @@ class StepSequenceRunner:
 
         table_name = import_constant_table.table
         if table_name not in self._constant_tables:
-            raise ValueError(
-                f"Constant table <{table_name}> does not exist. Available tables are "
-                f"<{', '.join(self._constant_tables)}>"
+            exception = ValueError(f"Constant table <{table_name}> is not available.")
+            exception.add_note(
+                f"Available tables are <{', '.join(self._constant_tables)}>"
             )
+            raise exception
         table = self._constant_tables[table_name]
         namespace = import_constant_table.alias or table_name
         table_context = StepContext()
