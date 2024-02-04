@@ -14,6 +14,7 @@ from PyQt6.QtCore import (
     QDateTime,
 )
 from anytree import NodeMixin
+
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
@@ -120,10 +121,7 @@ class PathHierarchyModel(QAbstractItemModel):
             if index.column() == 0:
                 return item.hierarchy_path.name
             elif index.column() == 1:
-                if item.sequence_stats is None:
-                    return None
-                else:
-                    return item.sequence_stats.state.value
+                return item.sequence_stats
             elif index.column() == 2:
                 if item.sequence_stats is None:
                     return None
@@ -136,7 +134,6 @@ class PathHierarchyModel(QAbstractItemModel):
                     return None
                 else:
                     return format_duration(item.sequence_stats)
-
             elif index.column() == 4:
                 # We convert to the local time zone before passing it to Qt,
                 # because Qt does not support time zones.
@@ -282,6 +279,7 @@ class PathHierarchyModel(QAbstractItemModel):
 class FoundChange(Exception):
     def __init__(self, index: QModelIndex):
         self.index = index
+
 
 def is_time_zone_aware(dt: datetime.datetime) -> bool:
     return dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None

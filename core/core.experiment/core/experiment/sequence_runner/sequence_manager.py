@@ -215,19 +215,22 @@ class SequenceManager(AbstractContextManager):
                     raise ExceptionGroup(e.message, [*e.exceptions, exc_val])
                 else:
                     raise e
+            else:
+                if error_occurred:
+                    raise exc_val
         except* SequenceInterruptedException:
-            self._set_sequence_state(State.INTERRUPTED)
+            state = State.INTERRUPTED
             raise
         except* Exception:
-            self._set_sequence_state(State.CRASHED)
+            state = State.CRASHED
             raise
         else:
-            if error_occurred:
-                self._set_sequence_state(State.CRASHED)
-            else:
-                self._set_sequence_state(State.FINISHED)
+            state = State.FINISHED
         finally:
-            self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+            try:
+                self._set_sequence_state(state)
+            finally:
+                self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
     def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
@@ -237,10 +240,16 @@ class SequenceManager(AbstractContextManager):
         def try_pushing_shot() -> bool:
             with self._is_compiling.is_set_context() as is_compiling:
                 if not is_compiling:
-                    raise RuntimeError(
-                        "Cannot schedule shot after shot compilation has been "
-                        "terminated."
-                    )
+                    if self._interruption_event.is_set():
+                        raise SequenceInterruptedException(
+                            f"Cannot schedule shot after sequence has been "
+                            f"interrupted."
+                        )
+                    else:
+                        raise RuntimeError(
+                            "Cannot schedule shot after shot compilation has been "
+                            "terminated."
+                        )
                 try:
                     self._shot_parameter_queue.put(shot_parameters, timeout=20e-3)
                 except queue.Full:

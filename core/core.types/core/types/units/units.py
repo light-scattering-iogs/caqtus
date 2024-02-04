@@ -40,6 +40,8 @@ VOLTAGE_UNITS = {"V", "mV"}
 
 DISTANCE_UNITS = {"m", "mm", "µm", "um", "nm"}
 
+DEGREE_UNITS = {"deg", "rad"}
+
 UNITS = (
     TIME_UNITS
     | FREQUENCY_UNITS
@@ -48,4 +50,5 @@ UNITS = (
     | CURRENT_UNITS
     | VOLTAGE_UNITS
     | DISTANCE_UNITS
+    | DEGREE_UNITS
 )

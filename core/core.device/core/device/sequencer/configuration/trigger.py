@@ -11,6 +11,9 @@ class TriggerEdge(Enum):
     FALLING = "falling"
     BOTH = "both"
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}.{self.name}"
+
 
 serialization.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)
 

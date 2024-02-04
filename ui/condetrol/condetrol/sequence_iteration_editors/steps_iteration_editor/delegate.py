@@ -10,7 +10,6 @@ from PyQt6.QtWidgets import (
     QWidget,
     QStyleOptionViewItem,
 )
-
 from core.session.sequence.iteration_configuration import (
     Step,
     VariableDeclaration,
@@ -51,19 +50,21 @@ def to_str(step: Step) -> str:
     hl = "#cc7832"
     var_col = "#AA4926"
     val_col = "#6897BB"
+    text_col = "#FFFFFF"
     match step:
         case ExecuteShot():
             return f"<span style='color:{hl}'>do shot</span>"
         case VariableDeclaration(variable, value):
             return (
                 f"<span style='color:{var_col}'>{variable}</span> "
-                f"= <span style='color:{val_col}'>{value}</span>"
+                "<span style='color:#FFFFFF'>=</span> "
+                f"<span style='color:{val_col}'>{value}</span>"
             )
         case ArangeLoop(variable, start, stop, step, sub_steps):
             return (
                 f"<span style='color:{hl}'>for</span> "
                 f"<span style='color:{var_col}'>{variable}</span> "
-                f"= "
+                "<span style='color:#FFFFFF'>=</span> "
                 f"<span style='color:{val_col}'>{start}</span> "
                 f"<span style='color:{hl}'>to </span> "
                 f"<span style='color:{val_col}'>{stop}</span> "
@@ -75,7 +76,7 @@ def to_str(step: Step) -> str:
             return (
                 f"<span style='color:{hl}'>for</span> "
                 f"<span style='color:{var_col}'>{variable}</span> "
-                f"= "
+                "<span style='color:#FFFFFF'>=</span> "
                 f"<span style='color:{val_col}'>{start}</span> "
                 f"<span style='color:{hl}'>to </span> "
                 f"<span style='color:{val_col}'>{stop}</span> "
@@ -85,11 +86,16 @@ def to_str(step: Step) -> str:
             )
         case ImportConstantTable(table, alias):
             if alias is None:
-                return f"<span style='color:{hl}'>import</span> {table}"
+                return (
+                    f"<span style='color:{hl}'>import</span> "
+                    f"<span style='color:{text_col}'>{table}</span>"
+                )
             else:
                 return (
-                    f"<span style='color:{hl}'>import</span> {table} "
-                    f"<span style='color:{hl}'>as</span> {alias}"
+                    f"<span style='color:{hl}'>import</span> "
+                    f"<span style='color:{text_col}'> {table}</span> "
+                    f"<span style='color:{hl}'>as</span> "
+                    f"<span style='color:{text_col}'>{alias}</span>"
                 )
 
         case _:

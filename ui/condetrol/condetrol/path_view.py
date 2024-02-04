@@ -3,11 +3,19 @@ import functools
 
 from PyQt6 import QtCore
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu, QMessageBox, QInputDialog, QLineEdit, QApplication
+from PyQt6.QtWidgets import (
+    QMenu,
+    QMessageBox,
+    QInputDialog,
+    QLineEdit,
+    QApplication,
+    QStyle,
+)
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.path import InvalidPathFormatError
 from core.session.result import unwrap
+from core.session.sequence import State
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
     ArangeLoop,
@@ -18,6 +26,7 @@ from core.session.shot import TimeLanes
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
+from waiting_widget import run_with_wip_widget
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[
@@ -39,6 +48,9 @@ DEFAULT_TIME_LANES = TimeLanes(
 
 
 class EditablePathHierarchyView(PathHierarchyView):
+    sequence_start_requested = QtCore.pyqtSignal(PureSequencePath)
+    sequence_interrupt_requested = QtCore.pyqtSignal(PureSequencePath)
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -57,6 +69,10 @@ class EditablePathHierarchyView(PathHierarchyView):
 
         with self.session_maker() as session:
             is_sequence = unwrap(session.sequences.is_sequence(path))
+            if is_sequence:
+                state = unwrap(session.sequences.get_state(path))
+            else:
+                state = None
         if not is_sequence:
             new_menu = QMenu("New...")
             menu.addMenu(new_menu)
@@ -73,18 +89,81 @@ class EditablePathHierarchyView(PathHierarchyView):
                 functools.partial(self.create_new_sequence, path)
             )
         if is_sequence:
-            dupplicate_action = QAction("Duplicate")
-            menu.addAction(dupplicate_action)
-            dupplicate_action.triggered.connect(
+            start_action = QAction("Start")
+            menu.addAction(start_action)
+            play_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+            start_action.setIcon(play_icon)
+            if state == State.DRAFT:
+                start_action.setEnabled(True)
+            else:
+                start_action.setEnabled(False)
+            start_action.triggered.connect(
+                lambda: self.sequence_start_requested.emit(path)
+            )
+
+            stop_action = QAction("Interrupt")
+            menu.addAction(stop_action)
+            stop_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop)
+            stop_action.setIcon(stop_icon)
+            if state == State.RUNNING:
+                stop_action.setEnabled(True)
+            else:
+                stop_action.setEnabled(False)
+            stop_action.triggered.connect(
+                lambda: self.sequence_interrupt_requested.emit(path)
+            )
+
+            duplicate_action = QAction("Duplicate")
+            menu.addAction(duplicate_action)
+            duplicate_action.triggered.connect(
                 functools.partial(self.on_sequence_duplication_requested, path)
             )
+
+            clear_action = QAction("Clear")
+            menu.addAction(clear_action)
+            clear_action.triggered.connect(
+                functools.partial(self.on_clear_sequence_requested, path)
+            )
+            if state not in {
+                State.FINISHED,
+                State.INTERRUPTED,
+                State.CRASHED,
+            }:
+                clear_action.setEnabled(False)
 
         if not path.is_root():
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
+            trash_icon = self.style().standardIcon(
+                QStyle.StandardPixmap.SP_DialogDiscardButton
+            )
+            delete_action.setIcon(trash_icon)
+            if state not in {
+                State.DRAFT,
+                State.FINISHED,
+                State.INTERRUPTED,
+                State.CRASHED,
+                None,
+            }:
+                delete_action.setEnabled(False)
             delete_action.triggered.connect(functools.partial(self.delete, path))
 
         menu.exec(self.mapToGlobal(pos))
+
+    def on_clear_sequence_requested(self, path: PureSequencePath) -> None:
+        """Clear the sequence at the given path.
+
+        This will revert the sequence to the draft state, effectively clearing all
+        the data in it.
+        During the process, a waiting widget will be shown to the user to prevent them
+        from interacting with the sequence while it is being cleared.
+        """
+
+        def clear():
+            with self.session_maker() as session:
+                session.sequences.set_state(path, State.DRAFT)
+
+        run_with_wip_widget(self, "Clearing sequence", clear)
 
     def on_sequence_duplication_requested(self, path: PureSequencePath):
         """Ask the user for a new sequence name and duplicate the sequence."""
@@ -94,7 +173,7 @@ class EditablePathHierarchyView(PathHierarchyView):
             f"Duplicate {path}...",
             "New sequence name:",
             QLineEdit.EchoMode.Normal,
-            "new sequence",
+            path.name,
         )
         if ok and text:
             try:

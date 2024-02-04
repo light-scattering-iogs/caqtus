@@ -1,3 +1,5 @@
+from typing import Optional
+
 from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import (
     QColor,
@@ -13,15 +15,15 @@ from PyQt6.QtWidgets import (
 )
 
 from core.session.sequence import State
-from .model import SequenceStats
+from core.session.sequence_collection import SequenceStats
 
 
-class SequenceHierarchyDelegate(QStyledItemDelegate):
+class ProgressDelegate(QStyledItemDelegate):
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         model = index.model()
-        sequence_stats: SequenceStats = model.data(index, Qt.ItemDataRole.DisplayRole)
+        sequence_stats: Optional[SequenceStats] = model.data(index, Qt.ItemDataRole.DisplayRole)
         if sequence_stats:
             opt = QStyleOptionProgressBar()
             opt.rect = option.rect
@@ -36,7 +38,7 @@ class SequenceHierarchyDelegate(QStyledItemDelegate):
                 opt.progress = 0
                 opt.text = "preparing"
             else:
-                total = sequence_stats.total_number_shots
+                total = sequence_stats.expected_number_shots
                 if total:
                     opt.progress = sequence_stats.number_completed_shots
                     opt.maximum = total
