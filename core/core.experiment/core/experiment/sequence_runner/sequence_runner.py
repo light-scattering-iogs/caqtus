@@ -19,6 +19,7 @@ from core.types.parameter import (
     get_unit,
     magnitude_in_unit,
     is_parameter,
+    Parameter,
 )
 from core.types.parameter.analog_value import add_unit
 from core.types.variable_name import DottedVariableName
@@ -44,6 +45,8 @@ def wrap_error(function: Callable[[Any, Step, StepContext], StepContext]):
 
 
 class StepSequenceRunner:
+    """Execute a sequence of steps on the experiment."""
+
     def __init__(
         self,
         sequence_manager: SequenceManager,
@@ -53,7 +56,16 @@ class StepSequenceRunner:
         self._constant_tables = constant_tables
 
     def execute_steps(self, steps: Iterable[Step]):
-        context = StepContext()
+        """Execute a sequence of steps on the experiment.
+
+        This method will recursively execute each step in the sequence passed as
+        argument.
+        Before executing the sequence, an empty context is initialized.
+        The context holds the value of the parameters at a given point in the sequence.
+        Each step has the possibility to update the context with new values.
+        """
+
+        context = StepContext[Parameter]()
 
         for step in steps:
             context = self.run_step(step, context)
@@ -63,7 +75,7 @@ class StepSequenceRunner:
     def run_step(self, step: Step, context: StepContext) -> StepContext:
         """Execute a given step of the sequence
 
-        This function should be implemented for each Step type.
+        This function is implemented for each Step type.
 
         Args:
             step: the step of the sequence currently executed
@@ -86,8 +98,7 @@ class StepSequenceRunner:
     ) -> StepContext:
         """Execute a VariableDeclaration step.
 
-        This function evaluates the expression of the declaration and updates the value
-        of the variable in the context.
+        This step updates the context passed with the value of the variable declared.
         """
 
         value = declaration.value.evaluate(context.variables | units)
@@ -105,7 +116,16 @@ class StepSequenceRunner:
         arange_loop: ArangeLoop,
         context: StepContext,
     ):
-        """Loop over a variable in a numpy arange like loop."""
+        """Loop over a variable in a numpy arange like loop.
+
+        This function will loop over the variable defined in the arange loop and execute
+        the sub steps for each value of the variable.
+
+        Returns:
+            A new context object containing the value of the arange loop variable after
+            the last iteration, plus the values of the variables defined in the sub
+            steps.
+        """
 
         start, stop, step = evaluate_arange_loop_parameters(arange_loop, context)
 
@@ -130,7 +150,16 @@ class StepSequenceRunner:
         linspace_loop: LinspaceLoop,
         context: StepContext,
     ):
-        """Loop over a variable in a numpy linspace like loop"""
+        """Loop over a variable in a numpy linspace like loop.
+
+        This function will loop over the variable defined in the linspace loop and
+        execute the sub steps for each value of the variable.
+
+        Returns:
+            A new context object containing the value of the linspace loop variable
+            after the last iteration, plus the values of the variables defined in the
+            sub steps.
+        """
 
         start, stop, num = evaluate_linspace_loop_parameters(linspace_loop, context)
 
@@ -175,6 +204,15 @@ class StepSequenceRunner:
     @run_step.register
     @wrap_error
     def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
+        """Schedule a shot to be run.
+
+        This function schedule to run a shot on the experiment with the parameters
+        defined in the context at this point.
+
+        Returns:
+            The context passed as argument unchanged.
+        """
+
         self._sequence_manager.schedule_shot(context.variables)
         return context
 
