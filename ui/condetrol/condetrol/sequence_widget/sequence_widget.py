@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import QThread, QTimer, Signal
-from PySide6.QtStateMachine import QStateMachine
+from PySide6.QtCore import QThread, QTimer, Signal, QEvent
+from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
-from condetrol.sequence_iteration_editors import SequenceIterationEditor
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -51,6 +50,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     If the sequence is in the draft state, the iteration editor and timelanes editor
     will become editable and any change will be saved.
     """
+
+    sequence_editable_set = Signal(PureSequencePath, IterationConfiguration, TimeLanes)
+    sequence_not_editable_set = Signal(
+        PureSequencePath, IterationConfiguration, TimeLanes
+    )
+    sequence_cleared = Signal()
 
     def __init__(
         self,
@@ -101,52 +106,87 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_watcher_thread = self.StateWatcherThread(self)
         self.state_machine = QStateMachine(self)
 
-        self.sequence_path: Optional[PureSequencePath]
-        self.iteration_editor: SequenceIterationEditor
-        self.time_lanes: TimeLanes
-        self.iterations: IterationConfiguration
-        self.set_sequence(None)
+        self.state_no_sequence = QState()
+        self.state_sequence = SequenceSetState()
+        self.state_sequence_editable = QState(self.state_sequence)
+        self.state_sequence_not_editable = QState(self.state_sequence)
+
+        self.state_no_sequence.addTransition(
+            self.sequence_editable_set, self.state_sequence_editable
+        )
+        self.state_no_sequence.addTransition(
+            self.sequence_not_editable_set, self.state_sequence_not_editable
+        )
+        self.state_sequence.addTransition(self.sequence_cleared, self.state_no_sequence)
+        self.state_sequence.addTransition(
+            self.sequence_not_editable_set, self.state_sequence_not_editable
+        )
+        self.state_sequence.addTransition(
+            self.sequence_editable_set, self.state_sequence_editable
+        )
+
+        self.state_no_sequence.entered.connect(self.on_sequence_unset)
+        self.state_sequence.entered.connect(self.on_sequence_set)
+        self.state_sequence_editable.entered.connect(self.on_sequence_became_editable)
+        self.state_sequence_not_editable.entered.connect(
+            self.on_sequence_became_not_editable
+        )
+
+        self.state_machine.addState(self.state_no_sequence)
+        self.state_machine.addState(self.state_sequence)
+        self.state_machine.setInitialState(self.state_no_sequence)
+        self.state_machine.start()
 
         self.setup_connections()
 
-    def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
-        self.state_watcher_thread.quit()
-        self.state_watcher_thread.wait()
-        self.sequence_path = sequence_path
+    def on_sequence_unset(self):
+        print("Sequence unset")
+        self.setVisible(False)
+
+    def on_sequence_set(self):
+        print("Sequence set")
         previous_index = self.tabWidget.currentIndex()
         self.tabWidget.clear()
+        self.iteration_editor = create_default_editor(
+            self.state_sequence.iteration_config
+        )
+        self.iteration_editor.iteration_changed.connect(
+            self.on_sequence_iteration_edited
+        )
+        self.tabWidget.addTab(self.iteration_editor, "Iterations")
+        self.time_lanes_editor.blockSignals(True)
+        self.time_lanes_editor.set_time_lanes(self.state_sequence.timelanes)
+        self.time_lanes_editor.blockSignals(False)
+        self.tabWidget.addTab(self.time_lanes_editor, "Timelanes")
+        self.tabWidget.setCurrentIndex(previous_index)
+        self.setVisible(True)
 
+    def on_sequence_became_editable(self):
+        self.iteration_editor.set_read_only(False)
+        self.time_lanes_editor.set_read_only(False)
+
+    def on_sequence_became_not_editable(self):
+        self.iteration_editor.set_read_only(True)
+        self.time_lanes_editor.set_read_only(True)
+
+    def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
         if sequence_path is None:
-            iteration_config = create_default_iteration_config()
+            self.sequence_cleared.emit()
         else:
             with self.session_maker() as session:
+                state = unwrap(session.sequences.get_stats(sequence_path)).state
                 iteration_config = session.sequences.get_iteration_configuration(
                     sequence_path
                 )
-        self.iteration_editor = create_default_editor(iteration_config)
-        self.iteration_editor.iteration_changed.connect(
-            self.on_sequence_iteration_changed
-        )
-        self.tabWidget.addTab(self.iteration_editor, "Iterations")
-
-        if sequence_path is not None:
-            with self.session_maker() as session:
-                time_lanes = session.sequences.get_time_lanes(sequence_path)
-            self.time_lanes_editor.blockSignals(True)
-            self.time_lanes_editor.set_time_lanes(time_lanes)
-            self.time_lanes_editor.blockSignals(False)
-        else:
-            time_lanes = self.time_lanes_editor.get_time_lanes()
-        self.tabWidget.addTab(self.time_lanes_editor, "Timelanes")
-        if sequence_path is None:
-            self.setVisible(False)
-        else:
-            self.setVisible(True)
-        self.tabWidget.setCurrentIndex(previous_index)
-        self.time_lanes = time_lanes
-        self.iterations = iteration_config
-
-        self.state_watcher_thread.start()
+                timelanes = session.sequences.get_time_lanes(sequence_path)
+            if state.is_editable():
+                self.sequence_editable_set.emit(
+                    sequence_path, iteration_config, timelanes
+                )
+            else:
+                self.sequence_not_editable_set.emit(
+                    sequence_path, iteration_config, timelanes
+                )
 
     def setup_connections(self):
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
@@ -155,20 +195,23 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.time_lanes_editor.set_time_lanes
         )
 
-    def on_sequence_iteration_changed(self):
-        iterations = self.iteration_editor.get_iteration()
-        with self.session_maker() as session:
-            try:
-                session.sequences.set_iteration_configuration(
-                    Sequence(self.sequence_path), iterations
-                )
-            except SequenceNotEditableError:
-                iterations = session.sequences.get_iteration_configuration(
-                    self.sequence_path
-                )
-                self.iteration_editor.set_iteration(iterations)
-            finally:
-                self.iterations = iterations
+    def on_sequence_iteration_edited(self, iterations: IterationConfiguration):
+        if self.state_sequence in self.state_machine.configuration():
+            sequence = Sequence(self.state_sequence.sequence_path)
+            with self.session_maker() as session:
+                try:
+                    session.sequences.set_iteration_configuration(sequence, iterations)
+                except SequenceNotEditableError:
+                    iterations = session.sequences.get_iteration_configuration(
+                        self.state_sequence.sequence_path
+                    )
+                    self.sequence_not_editable_set.emit(
+                        self.state_sequence.sequence_path,
+                        iterations,
+                        self.state_sequence.timelanes,
+                    )
+                else:
+                    self.state_sequence.iteration_config = iterations
 
     def on_time_lanes_changed(self):
         time_lanes = self.time_lanes_editor.get_time_lanes()
@@ -248,3 +291,45 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             timer.start(50)
             self.exec()
             timer.stop()
+
+
+class SequenceSetState(QState):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._sequence_path: Optional[PureSequencePath] = None
+        self._iteration_config: Optional[IterationConfiguration] = None
+        self._timelanes: Optional[TimeLanes] = None
+
+    @property
+    def sequence_path(self) -> PureSequencePath:
+        if self._sequence_path is None:
+            raise ValueError("Sequence path not set")
+
+        return self._sequence_path
+
+    @property
+    def iteration_config(self) -> IterationConfiguration:
+        if self._iteration_config is None:
+            raise ValueError("Iteration config not set")
+        return self._iteration_config
+
+    @iteration_config.setter
+    def iteration_config(self, value: IterationConfiguration) -> None:
+        self._iteration_config = value
+
+    @property
+    def timelanes(self) -> TimeLanes:
+        if self._timelanes is None:
+            raise ValueError("Timelanes not set")
+        return self._timelanes
+
+    def onEntry(self, event: QEvent) -> None:
+        super().onEntry(event)
+        if isinstance(event, QStateMachine.SignalEvent):
+            self._sequence_path = event.arguments()[0]
+            self._iteration_config = event.arguments()[1]
+            self._timelanes = event.arguments()[2]
+
+    def onExit(self, event: QEvent) -> None:
+        super().onExit(event)
+        self._sequence_path = None

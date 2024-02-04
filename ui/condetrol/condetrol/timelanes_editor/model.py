@@ -166,7 +166,7 @@ L = TypeVar("L", bound=TimeLane)
 O = TypeVar("O", bound=Any)
 
 
-class TimeLaneModel(QAbstractListModel, qabc.QABC, Generic[L, O]):
+class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
     """An abstract list model to represent a time lane.
 
     This class is meant to be subclassed for each lane type that needs to be
@@ -288,7 +288,7 @@ class TimeLaneModel(QAbstractListModel, qabc.QABC, Generic[L, O]):
         return []
 
 
-class ColoredTimeLaneModel(TimeLaneModel[L, O], qabc.QABC):
+class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
     """A time lane model that can be colored.
 
     Instances of this class can be used to color the cells in a lane.

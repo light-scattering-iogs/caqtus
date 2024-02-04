@@ -5,7 +5,6 @@ from PySide6 import QtCore
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut, QAction
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
-
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
     VariableDeclaration,
@@ -16,6 +15,7 @@ from core.session.sequence.iteration_configuration import (
 )
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
+
 from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
@@ -48,7 +48,7 @@ def create_arange_loop():
 
 
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
-    iteration_changed = QtCore.Signal()
+    iteration_changed = QtCore.Signal(StepsConfiguration)
 
     def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -77,7 +77,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.modelReset.connect(self.emit_iteration_changed)
 
     def emit_iteration_changed(self, *args, **kwargs):
-        self.iteration_changed.emit()
+        self.iteration_changed.emit(self.get_iteration())
 
     def get_iteration(self) -> StepsConfiguration:
         return self._model.get_steps()
