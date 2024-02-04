@@ -1,29 +1,21 @@
 import atexit
 import logging
-import time
-from concurrent.futures import ThreadPoolExecutor, Future
-from copy import copy
-from typing import Optional, Any, ClassVar
-
 import numpy as np
+import time
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
+from concurrent.futures import ThreadPoolExecutor, Future
+from copy import copy
+from core.device.camera.runtime import Camera, CameraTimeoutError
+from typing import Optional, Any, ClassVar
 
-from camera.runtime import Camera, CameraTimeoutError
 from util import log_exception
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-if Dcamapi.init():
-    atexit.register(Dcamapi.uninit)
-else:
-    # If this error occurs, check that the dcam-api from hamamatsu is installed
-    # https://dcam-api.com/
-    raise ImportError(f"Failed to initialize DCAM-API: {Dcamapi.lasterr().name}")
 
 
 @define(slots=False)
@@ -58,6 +50,14 @@ class OrcaQuestCamera(Camera):
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()
+        if Dcamapi.init():
+            self._add_closing_callback(Dcamapi.uninit)
+        else:
+            # If this error occurs, check that the dcam-api from hamamatsu is installed
+            # https://dcam-api.com/
+            raise ImportError(
+                f"Failed to initialize DCAM-API: {Dcamapi.lasterr().name}"
+            )
         self._thread_pool_executor = ThreadPoolExecutor(max_workers=1)
         self._pictures = [None] * self.number_pictures_to_acquire
 
@@ -105,9 +105,7 @@ class OrcaQuestCamera(Camera):
             self._read_last_error()
 
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
-            raise RuntimeError(
-                f"can't set subarray mode on: {self._read_last_error()}"
-            )
+            raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
         if not self._camera.buf_alloc(self.number_pictures_to_acquire):
             raise RuntimeError(
