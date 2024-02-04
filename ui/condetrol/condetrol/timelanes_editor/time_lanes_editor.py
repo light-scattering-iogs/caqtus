@@ -75,7 +75,6 @@ class TimeLanesEditor(QTableView):
         """
 
         super().__init__(parent)
-        self._read_only: bool = False
         self._model = TimeLanesModel(lane_model_factory, self)
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,
@@ -160,7 +159,7 @@ class TimeLanesEditor(QTableView):
                 delegate.setParent(self)
 
     def set_read_only(self, read_only: bool) -> None:
-        pass
+        self._model.set_read_only(read_only)
 
     def show_steps_context_menu(self, pos):
         menu = QMenu(self.horizontalHeader())

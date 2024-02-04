@@ -385,6 +385,10 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         self._step_durations_model.dataChanged.connect(
             self.on_step_durations_data_changed
         )
+        self._read_only = False
+
+    def set_read_only(self, read_only: bool) -> None:
+        self._read_only = read_only
 
     def on_step_names_data_changed(
         self,
@@ -407,6 +411,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         )
 
     def set_timelanes(self, timelanes: TimeLanes):
+        # Don't check if read only, because we need to update the content of the editor
+        # even if it is readonly when swapping sequences.
         new_models = []
         for index, (name, lane) in enumerate(timelanes.lanes.items()):
             lane_model = self.create_lane_model(name, lane)
@@ -458,6 +464,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
             )
 
     def insert_timelane(self, index: int, name: str, timelane: TimeLane):
+        if self._read_only:
+            return
         if not (0 <= index <= len(self._lane_models)):
             raise IndexError(f"Index {index} is out of range")
         if len(timelane) != self.columnCount():
@@ -509,6 +517,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         return self._map_to_source(index).data(role)
 
     def setData(self, index, value, role: Qt.ItemDataRole = Qt.ItemDataRole.EditRole):
+        if self._read_only:
+            return False
         if not index.isValid():
             return False
         mapped_index = self._map_to_source(index)
@@ -518,7 +528,11 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         mapped_index = self._map_to_source(index)
-        return mapped_index.model().flags(mapped_index)
+        flags = mapped_index.model().flags(mapped_index)
+        if self._read_only:
+            flags &= ~Qt.ItemFlag.ItemIsEditable
+            flags &= ~Qt.ItemFlag.ItemIsDropEnabled
+        return flags
 
     def headerData(
         self,
@@ -544,6 +558,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
                 )
 
     def insertColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
+        if self._read_only:
+            return False
         if not (0 <= column <= self.columnCount()):
             return False
         self.beginInsertColumns(parent, column, column)
@@ -557,6 +573,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         return True
 
     def removeColumn(self, column, parent: QModelIndex = QModelIndex()) -> bool:
+        if self._read_only:
+            return False
         if not (0 <= column < self.columnCount()):
             return False
         self.beginRemoveColumns(parent, column, column)
@@ -569,6 +587,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         return True
 
     def removeRow(self, row, parent: QModelIndex = QModelIndex()) -> bool:
+        if self._read_only:
+            return False
         if not (2 <= row < self.rowCount()):
             return False
         self.beginRemoveRows(parent, row, row)
@@ -578,13 +598,19 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def get_cell_context_actions(self, index: QModelIndex) -> list[QAction | QMenu]:
         if not index.isValid():
             return []
+        if self._read_only:
+            return []
         if index.row() >= 2:
             return self._lane_models[index.row() - 2].get_cell_context_actions(
                 self._map_to_source(index)
             )
+        else:
+            return []
 
     def get_lane_header_context_actions(self, lane_index: int) -> list[QAction | QMenu]:
         if not 0 <= lane_index < len(self._lane_models):
+            return []
+        if self._read_only:
             return []
         return self._lane_models[lane_index].get_header_context_actions()
 
@@ -598,6 +624,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         return QSize(1, 1)
 
     def expand_step(self, step: int, lane_index: int, start: int, stop: int):
+        if self._read_only:
+            return
         lane_model = self._lane_models[lane_index]
         lane_model.expand_step(step, start, stop)
 
