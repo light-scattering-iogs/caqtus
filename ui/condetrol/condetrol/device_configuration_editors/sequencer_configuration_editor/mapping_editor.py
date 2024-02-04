@@ -1,15 +1,15 @@
-from PyQt6 import QtGui
-from PyQt6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
-from PyQt6.QtCore import (
+from PySide6 import QtGui
+from PySide6.QtCharts import QChartView, QLineSeries, QChart, QValueAxis
+from PySide6.QtCore import (
     Qt,
     QAbstractTableModel,
     QModelIndex,
-    pyqtSignal,
+    Signal,
     QSortFilterProxyModel,
     QSettings,
 )
-from PyQt6.QtGui import QPainter, QAction
-from PyQt6.QtWidgets import (
+from PySide6.QtGui import QPainter, QAction
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QDialog,
     QTableView,
@@ -177,7 +177,7 @@ class CalibratedMappingEditor(QDialog):
 
 
 class CalibratedUnitMappingModel(QAbstractTableModel):
-    mapping_changed = pyqtSignal(CalibratedAnalogMapping)
+    mapping_changed = Signal(CalibratedAnalogMapping)
 
     def __init__(self, input_label: str, output_label: str, *args, **kwargs):
         self._mapping: CalibratedAnalogMapping = CalibratedAnalogMapping()

@@ -1,10 +1,10 @@
 import functools
 from typing import Optional
 
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut, QAction
-from PyQt6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
+from PySide6 import QtCore
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut, QAction
+from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
@@ -48,7 +48,7 @@ def create_arange_loop():
 
 
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
-    iteration_changed = QtCore.pyqtSignal()
+    iteration_changed = QtCore.Signal()
 
     def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
         super().__init__(parent)

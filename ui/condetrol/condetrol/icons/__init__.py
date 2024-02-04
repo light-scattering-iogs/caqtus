@@ -1,7 +1,7 @@
 import functools
 from pathlib import Path
 
-from PyQt6.QtGui import QIcon
+from PySide6.QtGui import QIcon
 
 
 @functools.lru_cache(maxsize=None)

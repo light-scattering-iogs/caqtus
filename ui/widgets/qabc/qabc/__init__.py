@@ -1,3 +1,3 @@
-from .qabc import QABC
+from .qabc import QABC, QABCMeta
 
-__all__ = ["QABC"]
+__all__ = ["QABC", "QABCMeta"]

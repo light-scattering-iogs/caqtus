@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QSpinBox, QFormLayout
+from PySide6.QtWidgets import QSpinBox, QFormLayout
 
 from condetrol.device_configuration_editors import DeviceConfigurationEditor
 from condetrol.device_configuration_editors.sequencer_configuration_editor import (

@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from PyQt6.QtWidgets import QTableView
+from PySide6.QtWidgets import QTableView
 
 from core.device.sequencer.configuration import ChannelConfiguration
 from .channels_model import SequencerChannelsModel

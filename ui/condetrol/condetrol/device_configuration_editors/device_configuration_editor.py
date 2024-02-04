@@ -2,8 +2,8 @@ import abc
 import copy
 from typing import Optional, Generic, TypeVar
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from core.device import DeviceConfigurationAttrs
 from qabc import QABC
 

@@ -1,12 +1,12 @@
 from typing import Optional
 
-from PyQt6.QtCore import QModelIndex, Qt
-from PyQt6.QtGui import (
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtGui import (
     QColor,
     QPalette,
     QPainter,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QStyleOptionViewItem,
     QStyleOptionProgressBar,
     QApplication,

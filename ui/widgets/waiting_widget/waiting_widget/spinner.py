@@ -27,13 +27,13 @@ SOFTWARE.
 """
 
 # This is a copy of https://github.com/fbjorn/QtWaitingSpinner/blob/master/pyqtspinner/spinner.py
-# updated from PyQt5 to PyQt6
+# updated from PyQt5 to PySide6
 
 import math
 
-from PyQt6.QtCore import Qt, QTimer, QRect
-from PyQt6.QtGui import QColor, QPaintEvent, QPainter
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QTimer, QRect
+from PySide6.QtGui import QColor, QPaintEvent, QPainter
+from PySide6.QtWidgets import QWidget
 
 
 # pylint: disable=too-many-instance-attributes,too-many-arguments

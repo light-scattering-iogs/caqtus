@@ -1,8 +1,8 @@
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QMenu
+from PySide6.QtCore import QObject, QModelIndex, Qt
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu
 
 from core.session.shot.timelane import AnalogTimeLane, Ramp
 from core.types.expression import Expression

@@ -1,9 +1,9 @@
 import copy
 import functools
 
-from PyQt6 import QtCore
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import (
+from PySide6 import QtCore
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QInputDialog,
@@ -48,8 +48,8 @@ DEFAULT_TIME_LANES = TimeLanes(
 
 
 class EditablePathHierarchyView(PathHierarchyView):
-    sequence_start_requested = QtCore.pyqtSignal(PureSequencePath)
-    sequence_interrupt_requested = QtCore.pyqtSignal(PureSequencePath)
+    sequence_start_requested = QtCore.Signal(PureSequencePath)
+    sequence_interrupt_requested = QtCore.Signal(PureSequencePath)
 
     def __init__(
         self,

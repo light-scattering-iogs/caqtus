@@ -1,8 +1,8 @@
 from collections.abc import Mapping, Iterable
 from typing import Optional
 
-from PyQt6.QtGui import QValidator
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtGui import QValidator
+from PySide6.QtWidgets import QDialog
 
 from core.session import ConstantTable
 from .add_constant_table_ui import Ui_AddTableDialog

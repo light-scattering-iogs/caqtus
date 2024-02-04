@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from typing import Any
 
-from PyQt6.QtCore import QAbstractTableModel, QModelIndex
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex
+from PySide6.QtCore import Qt
 from core.device.sequencer.configuration import (
     ChannelConfiguration,
     is_channel_output,

@@ -1,8 +1,8 @@
 from collections.abc import Mapping, Iterable
 from typing import TypedDict, Optional, TypeVar, Generic
 
-from PyQt6.QtGui import QValidator
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtGui import QValidator
+from PySide6.QtWidgets import QDialog
 from core.device import DeviceConfigurationAttrs, DeviceName
 
 from .add_device_dialog_ui import Ui_AddDeviceDialog

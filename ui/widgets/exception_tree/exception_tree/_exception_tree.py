@@ -1,6 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPalette
-from PyQt6.QtWidgets import QTreeWidgetItem, QApplication
+from PySide6.QtGui import QPalette
+from PySide6.QtWidgets import QTreeWidgetItem, QApplication
 
 
 def create_exception_tree(

@@ -6,7 +6,7 @@ For example by running the following command in the terminal:
 
 .. code-block:: bash
 
-    python -m PyQt6.uic.pyuic mywidget.ui -o mywidget_ui.py
+    pyside6-uic mywidget.ui -o mywidget_ui.py
 
 This will generate a file `mywidget_ui.py` containing the class `Ui_mywidget` which can be used to create the widget in Python.
 

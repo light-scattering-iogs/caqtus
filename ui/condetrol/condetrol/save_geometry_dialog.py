@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import QDialog
 
 
 class SaveGeometryDialog(QDialog):

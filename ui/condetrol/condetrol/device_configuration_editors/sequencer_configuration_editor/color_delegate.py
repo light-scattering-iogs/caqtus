@@ -1,7 +1,7 @@
-from PyQt6 import QtCore
-from PyQt6.QtCore import QModelIndex, Qt
-from PyQt6.QtGui import QPainter, QColor, QBrush
-from PyQt6.QtWidgets import (
+from PySide6 import QtCore
+from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtGui import QPainter, QColor, QBrush
+from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QStyle,

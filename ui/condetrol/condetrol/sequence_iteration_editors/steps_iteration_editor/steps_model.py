@@ -4,7 +4,7 @@ import functools
 from abc import ABCMeta
 from typing import Iterable, Optional
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractItemModel,
     QModelIndex,
     Qt,

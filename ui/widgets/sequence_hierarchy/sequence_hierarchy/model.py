@@ -4,13 +4,13 @@ import datetime
 import threading
 from typing import Optional
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractItemModel,
     QThread,
     QModelIndex,
     Qt,
     QTimer,
-    pyqtSignal,
+    Signal,
     QDateTime,
 )
 from anytree import NodeMixin
@@ -197,9 +197,9 @@ class PathHierarchyModel(QAbstractItemModel):
         self._thread.start()
 
     class TreeUpdateThread(QThread):
-        item_structure_changed = pyqtSignal(QModelIndex)
-        creation_date_changed = pyqtSignal(QModelIndex)
-        sequence_stats_changed = pyqtSignal(QModelIndex)
+        item_structure_changed = Signal(QModelIndex)
+        creation_date_changed = Signal(QModelIndex)
+        sequence_stats_changed = Signal(QModelIndex)
 
         def __init__(
             self,

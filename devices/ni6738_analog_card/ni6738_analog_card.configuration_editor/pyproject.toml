@@ -7,9 +7,8 @@ readme = "README.md"
 packages = [{include = "ni6738_analog_card"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
 
-pyqt6 = "^6.5.1"
 ni6738-analog-card-configuration = {path = "../ni6738_analog_card.configuration", develop = true}
 core-device = {path = "../../../core/core.device", develop = true}
 core-types = {path = "../../../core/core.types", develop = true}

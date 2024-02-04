@@ -1,9 +1,9 @@
 import functools
 
-from PyQt6 import QtCore
-from PyQt6.QtCore import QSortFilterProxyModel, QModelIndex
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTreeView, QMenu
+from PySide6 import QtCore
+from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QTreeView, QMenu
 
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
@@ -12,7 +12,7 @@ from .model import PathHierarchyModel
 
 
 class PathHierarchyView(QTreeView):
-    sequence_double_clicked = QtCore.pyqtSignal(PureSequencePath)
+    sequence_double_clicked = QtCore.Signal(PureSequencePath)
 
     def __init__(self, session_maker: ExperimentSessionMaker, parent=None):
         super().__init__(parent)

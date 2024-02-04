@@ -7,9 +7,10 @@ readme = "README.md"
 packages = [{include = "swabian_pulse_streamer"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
 
-pyqt6 = "^6.5.2"
+pyside6 = "^6.6.1"
+
 condetrol = {path = "../../../ui/condetrol", develop = true}
 core-device = {path = "../../../core/core.device", develop = true}
 core-types = {path = "../../../core/core.types", develop = true}

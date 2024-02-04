@@ -4,7 +4,7 @@ import functools
 from collections.abc import Callable
 from typing import Optional, Any, TypeVar, Generic
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QAbstractTableModel,
     QObject,
     QModelIndex,
@@ -371,7 +371,7 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], qabc.QABC):
 LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
-class TimeLanesModel(QAbstractTableModel, qabc.QABC):
+class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def __init__(
         self, lane_model_factory: LaneModelFactory, parent: Optional[QObject] = None
     ):

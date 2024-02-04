@@ -1,8 +1,8 @@
 import logging
 
-from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel
-from PyQt6.QtGui import QPainter
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QApplication,

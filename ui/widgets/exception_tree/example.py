@@ -1,6 +1,6 @@
 import sys
 
-from PyQt6.QtWidgets import QApplication, QTreeWidget
+from PySide6.QtWidgets import QApplication, QTreeWidget
 
 from exception_tree import create_exception_tree
 

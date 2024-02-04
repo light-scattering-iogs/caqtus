@@ -1,10 +1,10 @@
 import re
 from typing import Optional, assert_never
 
-from PyQt6 import QtWidgets, QtCore
-from PyQt6.QtCore import QModelIndex, Qt, QAbstractItemModel, QRectF
-from PyQt6.QtGui import QValidator, QTextDocument, QAbstractTextDocumentLayout
-from PyQt6.QtWidgets import (
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QRectF
+from PySide6.QtGui import QValidator, QTextDocument, QAbstractTextDocumentLayout
+from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QLineEdit,
     QWidget,

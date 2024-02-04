@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QSpinBox
+from PySide6.QtWidgets import QSpinBox
 
 from condetrol.device_configuration_editors.camera_configuration_editor.editor import (
     CameraConfigurationEditor,

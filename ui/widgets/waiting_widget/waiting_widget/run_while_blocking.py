@@ -1,7 +1,7 @@
 from typing import Callable, Optional, ParamSpec, TypeVar
 
-from PyQt6.QtCore import QThread, Qt
-from PyQt6.QtWidgets import QWidget, QDialog, QMessageBox
+from PySide6.QtCore import QThread, Qt
+from PySide6.QtWidgets import QWidget, QDialog, QMessageBox
 
 P = ParamSpec("P")
 T = TypeVar("T")

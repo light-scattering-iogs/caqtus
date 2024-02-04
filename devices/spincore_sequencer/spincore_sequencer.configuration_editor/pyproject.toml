@@ -7,9 +7,9 @@ readme = "README.md"
 packages = [{include = "spincore_sequencer"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11, <3.13"
 
-pyqt6 = "^6.5.1"
+pyside6 = "^6.6.1"
 
 spincore-sequencer-configuration = {path = "../spincore_sequencer.configuration", develop = true}
 condetrol = {path = "../../../ui/condetrol", develop = true}

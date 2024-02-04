@@ -1,6 +1,6 @@
 from typing import Optional, Any, assert_never
 
-from PyQt6.QtCore import QObject, QModelIndex, Qt
+from PySide6.QtCore import QObject, QModelIndex, Qt
 
 from core.session.shot.timelane import CameraTimeLane, TakePicture
 from core.types.data import DataLabel

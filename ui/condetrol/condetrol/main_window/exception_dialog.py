@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog
 from exception_tree import create_exception_tree
 
 from .exception_dialog_ui import Ui_ExceptionDialog

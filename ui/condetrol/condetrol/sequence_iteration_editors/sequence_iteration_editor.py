@@ -3,15 +3,15 @@ from collections.abc import Callable
 from typing import TypeVar, Generic, TypeAlias
 
 import qabc
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget
 from core.session.sequence.iteration_configuration import IterationConfiguration
 
 T = TypeVar("T", bound=IterationConfiguration)
 
 
-class SequenceIterationEditor(QWidget, qabc.QABC, Generic[T]):
-    iteration_changed = pyqtSignal()
+class SequenceIterationEditor(Generic[T], metaclass=qabc.QABCMeta):
+    iteration_changed = Signal()
 
     @abc.abstractmethod
     def get_iteration(self) -> T:

@@ -1,7 +1,7 @@
 import copy
 from typing import Optional
 
-from PyQt6.QtCore import QAbstractListModel, QObject, Qt, QModelIndex
+from PySide6.QtCore import QAbstractListModel, QObject, Qt, QModelIndex
 
 from core.session import ConstantTable
 from core.session.sequence.iteration_configuration import VariableDeclaration
