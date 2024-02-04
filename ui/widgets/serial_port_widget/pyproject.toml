@@ -7,9 +7,9 @@ readme = "README.md"
 packages = [{include = "serial_port_widget"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.8, <3.13"
 
-pyqt6 = "^6.5.3"
+pyside6 = "^6.6.1"
 
 
 [build-system]

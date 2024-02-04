@@ -13,8 +13,8 @@ from PyQt6.QtCore import (
     QSize,
     QSettings,
 )
-from PyQt6.QtGui import QAction, QBrush, QColor, QFont
-from PyQt6.QtWidgets import QMenu, QColorDialog
+from PySide6.QtGui import QAction, QBrush, QColor, QFont
+from PySide6.QtWidgets import QMenu, QColorDialog
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
 from core.types.expression import Expression

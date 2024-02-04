@@ -6,8 +6,8 @@ authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-pyqt6 = "^6.6.1"
+python = "^3.11, <3.13"
+pyside6 = "^6.6.1"
 
 
 [build-system]

@@ -3,9 +3,9 @@ import itertools
 from collections.abc import Mapping
 from typing import Optional, Protocol
 
-from PyQt6.QtCore import pyqtSignal, Qt, QModelIndex
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
+from PySide6.QtCore import Signal, Qt, QModelIndex
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
 
 from core.device import DeviceConfigurationAttrs
 from core.session import ConstantTable
@@ -49,7 +49,7 @@ def default_lane_delegate_factory(
 
 
 class TimeLanesEditor(QTableView):
-    time_lanes_changed = pyqtSignal()
+    time_lanes_changed = Signal()
 
     def __init__(
         self,

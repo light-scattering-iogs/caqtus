@@ -3,13 +3,12 @@ import logging
 from collections.abc import Mapping, Callable
 from typing import Optional
 
-from PyQt6.QtCore import QSettings, QThread, QObject, QTimer, pyqtSignal, Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
+from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
     QDockWidget,
 )
-
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
@@ -20,6 +19,7 @@ from core.session import (
     Sequence,
 )
 from waiting_widget import run_with_wip_widget
+
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .exception_dialog import ExceptionDialog
 from ..constant_tables_editor import ConstantTablesEditor
@@ -238,7 +238,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
 
 class ProcedureWatcherThread(QThread):
-    exception_occurred = pyqtSignal(Exception)
+    exception_occurred = Signal(Exception)
 
     def __init__(self, parent: QObject):
         super().__init__(parent)

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PyQt6.QtCore import pyqtSignal, QThread, QTimer
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QThread, QTimer, Signal
+from PySide6.QtStateMachine import QStateMachine
+from PySide6.QtWidgets import QWidget
 from condetrol.sequence_iteration_editors import SequenceIterationEditor
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session._return_or_raise import unwrap
@@ -98,6 +99,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         )
 
         self.state_watcher_thread = self.StateWatcherThread(self)
+        self.state_machine = QStateMachine(self)
 
         self.sequence_path: Optional[PureSequencePath]
         self.iteration_editor: SequenceIterationEditor
@@ -192,9 +194,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.time_lanes_editor.set_read_only(not state.is_editable())
 
     class StateWatcherThread(QThread):
-        state_changed = pyqtSignal(object)  # Optional[State]
-        time_lanes_changed = pyqtSignal(TimeLanes)
-        iteration_changed = pyqtSignal(IterationConfiguration)
+        state_changed = Signal(object)  # Optional[State]
+        time_lanes_changed = Signal(TimeLanes)
+        iteration_changed = Signal(IterationConfiguration)
 
         def __init__(self, sequence_widget: SequenceWidget):
             super().__init__(sequence_widget)
