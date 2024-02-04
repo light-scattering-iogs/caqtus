@@ -49,7 +49,7 @@ def default_lane_delegate_factory(
 
 
 class TimeLanesEditor(QTableView):
-    time_lanes_changed = Signal()
+    time_lanes_changed = Signal(TimeLanes)
 
     def __init__(
         self,
@@ -107,18 +107,21 @@ class TimeLanesEditor(QTableView):
         self.customContextMenuRequested.connect(self.show_cell_context_menu)
 
         self._model.dataChanged.connect(self.on_data_changed)
-        self._model.rowsInserted.connect(self.time_lanes_changed)
+        self._model.rowsInserted.connect(self.on_time_lanes_changed)
         self._model.rowsInserted.connect(self.update_delegates)
-        self._model.rowsRemoved.connect(self.time_lanes_changed)
-        self._model.columnsInserted.connect(self.time_lanes_changed)
-        self._model.columnsRemoved.connect(self.time_lanes_changed)
+        self._model.rowsRemoved.connect(self.on_time_lanes_changed)
+        self._model.columnsInserted.connect(self.on_time_lanes_changed)
+        self._model.columnsRemoved.connect(self.on_time_lanes_changed)
 
         self._model.modelReset.connect(self.update_spans)
-        self._model.modelReset.connect(self.time_lanes_changed)
+        self._model.modelReset.connect(self.on_time_lanes_changed)
         self._model.modelReset.connect(self.update_delegates)
 
+    def on_time_lanes_changed(self):
+        self.time_lanes_changed.emit(self.get_time_lanes())
+
     def on_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
-        self.time_lanes_changed.emit()
+        self.on_time_lanes_changed()
 
         for row in range(top_left.row(), bottom_right.row() + 1):
             for column in range(top_left.column(), bottom_right.column() + 1):

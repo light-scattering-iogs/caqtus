@@ -189,7 +189,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 )
 
     def setup_connections(self):
-        self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_changed)
+        self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_edited)
         self.state_watcher_thread.state_changed.connect(self.apply_state)
         self.state_watcher_thread.time_lanes_changed.connect(
             self.time_lanes_editor.set_time_lanes
@@ -213,16 +213,25 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 else:
                     self.state_sequence.iteration_config = iterations
 
-    def on_time_lanes_changed(self):
-        time_lanes = self.time_lanes_editor.get_time_lanes()
-        with self.session_maker() as session:
-            try:
-                session.sequences.set_time_lanes(self.sequence_path, time_lanes)
-            except SequenceNotEditableError:
-                time_lanes = session.sequences.get_time_lanes(self.sequence_path)
-                self.time_lanes_editor.set_time_lanes(time_lanes)
-            finally:
-                self.time_lanes = time_lanes
+    def on_time_lanes_edited(self, timelanes: TimeLanes):
+        if self.state_sequence in self.state_machine.configuration():
+            with self.session_maker() as session:
+                try:
+                    session.sequences.set_time_lanes(
+                        self.state_sequence.sequence_path,
+                        timelanes
+                    )
+                except SequenceNotEditableError:
+                    timelanes = session.sequences.get_time_lanes(
+                        self.state_sequence.sequence_path
+                    )
+                    self.sequence_not_editable_set.emit(
+                        self.state_sequence.sequence_path,
+                        self.state_sequence.iteration_config,
+                        timelanes,
+                    )
+                else:
+                    self.state_sequence.timelanes = timelanes
 
     def closeEvent(self, event):
         self.state_watcher_thread.quit()
@@ -322,6 +331,10 @@ class SequenceSetState(QState):
         if self._timelanes is None:
             raise ValueError("Timelanes not set")
         return self._timelanes
+
+    @timelanes.setter
+    def timelanes(self, value: TimeLanes) -> None:
+        self._timelanes = value
 
     def onEntry(self, event: QEvent) -> None:
         super().onEntry(event)
