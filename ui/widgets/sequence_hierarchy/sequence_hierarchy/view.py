@@ -27,7 +27,7 @@ class PathHierarchyView(QTreeView):
         )
         self.header().customContextMenuRequested.connect(self.show_header_menu)
         self.doubleClicked.connect(self.on_double_click)
-        self._model.dataChanged.connect(lambda _: self.update())
+        self._model.dataChanged.connect(lambda _: self.update(QModelIndex()))
         self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
         self.hideColumn(4)
         self.setItemDelegateForColumn(1, ProgressDelegate(self))
