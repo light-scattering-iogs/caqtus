@@ -7,6 +7,7 @@ from core.device import DeviceName, DeviceConfigurationAttrs
 
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
+from .state import State
 from .._return_or_raise import unwrap
 from ..path import PureSequencePath
 from ..shot import TimeLanes
@@ -38,6 +39,16 @@ class Sequence:
             return unwrap(session.sequences.is_sequence(self.path))
         else:
             return False
+
+    def get_state(self, session: ExperimentSession) -> State:
+        """Return the state of the sequence.
+
+        Raises:
+            PathNotFoundError: If the sequence does not exist in the session.
+            PathIsNotSequenceError: If the path exists but is not a sequence.
+        """
+
+        return unwrap(session.sequences.get_state(self.path))
 
     def get_iteration_configuration(
         self, session: ExperimentSession
