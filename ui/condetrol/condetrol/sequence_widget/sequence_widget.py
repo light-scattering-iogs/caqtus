@@ -33,8 +33,23 @@ def create_default_iteration_config() -> IterationConfiguration:
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
-    sequence_start_requested = pyqtSignal(PureSequencePath)
-    sequence_interruption_requested = pyqtSignal(PureSequencePath)
+    """Widget for editing sequence iterations and timelanes.
+
+    This widget is a tab widget with two tabs: one for editing how the parameters should
+    be iterated over for a sequence, and one for editing the timelanes that specify how
+    a given shot should be executed.
+
+    This widget is (optionally) associated with a sequence and displays the iteration
+    configuration and timelanes for that sequence.
+    If the widget is not associated with a sequence, it will hide itself.
+
+    When associated with a sequence, the widget is constantly watching the state of the
+    sequence.
+    If the sequence is not in the draft state, the iteration editor and timelanes editor
+    will become read-only.
+    If the sequence is in the draft state, the iteration editor and timelanes editor
+    will become editable and any change will be saved.
+    """
 
     def __init__(
         self,
@@ -43,6 +58,27 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         lane_delegate_factory: LaneDelegateFactory,
         parent: Optional[QWidget] = None,
     ):
+        """Initializes the sequence widget.
+
+        The sequence widget will initially be associated with no sequence.
+
+        Args:
+            session_maker: It is used to connect to the storage system in which to look
+            for the sequence.
+            lane_model_factory: A factory function that returns a lane model for a
+            given lane.
+            This is used to customize how a lane should be displayed and edited.
+            When the timelanes editor needs to display a lane, the factory is called
+            with the lane as argument.
+            The factory should return a subclass of TimeLaneModel that is used as the
+            model for the lane row.
+            lane_delegate_factory: A factory function that returns a lane delegate for
+            a given lane.
+            It can optionally return a QStyledItemDelegate that is used to further
+            customize how a lane should be displayed and edited.
+            parent: The parent widget.
+        """
+
         super().__init__(parent)
         self.setupUi(self)
         self.session_maker = session_maker
@@ -147,9 +183,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_watcher_thread.wait()
         super().closeEvent(event)
 
-    def apply_state(self, state: State):
-        self.iteration_editor.set_read_only(not state.is_editable())
-        self.time_lanes_editor.set_read_only(not state.is_editable())
+    def apply_state(self, state: Optional[State]):
+        if state is None:
+            self.set_sequence(None)
+        else:
+            self.iteration_editor.set_read_only(not state.is_editable())
+            self.time_lanes_editor.set_read_only(not state.is_editable())
 
     class StateWatcherThread(QThread):
         state_changed = pyqtSignal(object)  # Optional[State]
