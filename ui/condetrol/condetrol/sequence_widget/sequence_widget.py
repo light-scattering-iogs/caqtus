@@ -143,6 +143,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.setCurrentIndex(previous_index)
         self.time_lanes = time_lanes
         self.iterations = iteration_config
+
         self.state_watcher_thread.start()
 
     def setup_connections(self):
@@ -198,21 +199,29 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         def __init__(self, sequence_widget: SequenceWidget):
             super().__init__(sequence_widget)
             self.sequence_widget = sequence_widget
-            self.state: Optional[State] = None
+            self._sequence_and_state: Optional[tuple[PureSequencePath, State]] = None
+
+        @property
+        def sequence_path(self) -> Optional[PureSequencePath]:
+            return self._sequence_and_state[0] if self._sequence_and_state else None
+
+        @property
+        def state(self) -> Optional[State]:
+            return self._sequence_and_state[1] if self._sequence_and_state else None
 
         def get_state(self) -> Optional[State]:
+            if self.sequence_path is None:
+                return None
             try:
                 with self.sequence_widget.session_maker() as session:
-                    stats = unwrap(
-                        session.sequences.get_stats(self.sequence_widget.sequence_path)
-                    )
+                    stats = unwrap(session.sequences.get_stats(self.sequence_path))
                 return stats.state
             except (PathNotFoundError, PathIsNotSequenceError):
                 return None
 
         def run(self) -> None:
             def watch():
-                state = self.get_state()
+                state = self.sequence_widget.get_state()
                 if state != self.state:
                     self.state = state
                     self.state_changed.emit(state)
