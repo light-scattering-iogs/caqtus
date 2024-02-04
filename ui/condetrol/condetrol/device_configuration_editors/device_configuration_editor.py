@@ -2,15 +2,15 @@ import abc
 import copy
 from typing import Optional, Generic, TypeVar
 
+import qabc
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from core.device import DeviceConfigurationAttrs
-from qabc import QABC
 
 T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
 
-class DeviceConfigurationEditor(QWidget, QABC, Generic[T]):
+class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
     @abc.abstractmethod
     def set_configuration(self, device_configuration: T) -> None:
         raise NotImplementedError
