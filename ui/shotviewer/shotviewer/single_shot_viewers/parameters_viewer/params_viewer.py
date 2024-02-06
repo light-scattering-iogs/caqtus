@@ -2,8 +2,8 @@ import threading
 from collections.abc import Mapping
 from typing import Optional
 
-from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PyQt6.QtWidgets import QWidget, QTableView, QVBoxLayout
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtWidgets import QWidget, QTableView, QVBoxLayout
 
 from analyza.loading.importers import ParametersImporter
 from core.session import ExperimentSession, get_standard_experiment_session

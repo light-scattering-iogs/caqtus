@@ -4,14 +4,13 @@ from abc import abstractmethod
 from typing import Optional, TypeVar, Generic, Callable, NewType
 
 import attrs
-from PyQt6.QtWidgets import QWidget
-
+import qabc
+from PySide6.QtWidgets import QWidget
 from core.session.sequence import Shot
-from qabc import QABC
 from util.serialization import JSON
 
 
-class ShotView(QWidget, QABC):
+class ShotView(QWidget, metaclass=qabc.QABCMeta):
     @abstractmethod
     def display_shot(self, shot: Shot) -> None:
         raise NotImplementedError

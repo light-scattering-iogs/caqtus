@@ -1,7 +1,7 @@
 import threading
 from typing import Optional
 
-from PyQt6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 

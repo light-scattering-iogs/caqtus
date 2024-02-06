@@ -6,9 +6,9 @@ from typing import Optional, assert_never
 import attrs
 import numpy as np
 import pyqtgraph
-from PyQt6.QtCore import QThread, pyqtSignal, QTimer
-from PyQt6.QtWidgets import QDialog
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import QThread, Signal, QTimer
+from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QWidget
 from core.device import DeviceName
 from core.session import Shot, ExperimentSessionMaker
 from core.types.image import ImageLabel, Image
@@ -34,7 +34,7 @@ class ImageView(ShotView, pyqtgraph.ImageView):
         session_maker: ExperimentSessionMaker,
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(parent=parent)
+        super().__init__(parent)
         self._state = state
         self.set_state(state)
         self._session_maker = session_maker
@@ -84,7 +84,7 @@ class ImageView(ShotView, pyqtgraph.ImageView):
             self._state.levels = self.getLevels()
 
     class _FetchImageThread(QThread):
-        image_loaded = pyqtSignal(np.ndarray)
+        image_loaded = Signal(np.ndarray)
 
         def __init__(
             self,

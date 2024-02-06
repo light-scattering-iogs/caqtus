@@ -1,6 +1,6 @@
 from typing import Optional
 
-from PyQt6.QtWidgets import QDialog, QWidget
+from PySide6.QtWidgets import QDialog, QWidget
 
 from analyza.loading.importers import ParametersLoader
 from .create_parameters_viewer_ui import Ui_ParametersDialog

@@ -2,8 +2,8 @@ import collections
 import functools
 from typing import Optional, Mapping, assert_never
 
-from PyQt6.QtCore import pyqtSignal, QSignalBlocker, QSettings, QObject
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Signal, QSignalBlocker, QSettings, QObject
+from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QPushButton,
@@ -12,21 +12,21 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QSizePolicy,
 )
-from pyqtgraph.dockarea import DockArea, Dock
-
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.sequence import Shot, Sequence
+from pyqtgraph.dockarea import DockArea, Dock
 from sequence_hierarchy import PathHierarchyView
 from util import serialization
 from util.concurrent import BackgroundScheduler
+
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ViewManager, ManagerName
 
 
 class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
-    current_shot_changed = pyqtSignal(Shot)
-    shots_changed = pyqtSignal()
+    current_shot_changed = Signal(Shot)
+    shots_changed = Signal()
 
     def __init__(
         self,
@@ -34,7 +34,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         view_managers: Mapping[str, ViewManager],
         parent: Optional[QWidget] = None,
     ):
-        super().__init__(parent=parent)
+        super().__init__(parent)
         # self._sequence_watcher: Optional[SequenceWatcher] = None
 
         self._views: dict[str, tuple[ManagerName, ShotView]] = {}
@@ -261,7 +261,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
 
 class ShotSelector(QWidget):
-    current_shot_changed = pyqtSignal(Shot)
+    current_shot_changed = Signal(Shot)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent=parent)
@@ -356,7 +356,7 @@ class ShotSelector(QWidget):
 
 
 class SequenceWatcher(QObject):
-    shots_changed = pyqtSignal(list)
+    shots_changed = Signal(list)
 
     def __init__(self, session_maker: ExperimentSessionMaker):
         super().__init__()
