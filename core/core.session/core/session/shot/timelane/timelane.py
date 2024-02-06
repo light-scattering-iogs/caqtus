@@ -14,12 +14,25 @@ T = TypeVar("T")
 
 @attrs.define(init=False, eq=False, repr=False)
 class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
-    # spanned_values[i] is the value of the lane at index i and the number of steps it
+    """Represents a sequence of values covering some steps in time.
+
+    A time lane is a sequence of values that are associated with time steps.
+    The time steps are not explicitly stored in the lane.
+    Instead, for a given lane, lane[i] is the value of the lane at the i-th step.
+
+    Consecutive identical values in a lane can be grouped in a single block spanning
+    multiple steps.
+
+    TimeLane is an abstract class, generic over the type of values it contains.
+    It provides common methods such as value access, insertion, and deletion.
+    """
+
+    # spanned_values[i] is the value of i-th block of the lane the number of steps it
     # spans.
     _spanned_values: list[tuple[T, int]] = attrs.field()
 
-    # _bounds[i] is the index at which spanned_values[i] starts (inclusive)
-    # _bounds[i+1] is the index at which spanned_values[i] ends (exclusive)
+    # _bounds[i] is the index at which the i-th block starts (inclusive)
+    # _bounds[i+1] is the index at which the i-th block ends (exclusive)
     _bounds: list[int] = attrs.field(init=False, repr=False)
 
     @_spanned_values.validator  # type: ignore
