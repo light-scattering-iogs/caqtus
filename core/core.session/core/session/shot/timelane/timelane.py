@@ -83,10 +83,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     def get_bounds(self, step: Step) -> tuple[Step, Step]:
         """Returns the bounds of the block containing the given step."""
 
-        index = Step(normalize_index(step, len(self)))
-        if not (0 <= index < len(self)):
-            raise IndexError(f"Index out of bounds: {index}")
-        return self._get_block_bounds(find_containing_block(self._bounds, index))
+        step = self._normalize_step(step)
+        if not (0 <= step < len(self)):
+            raise IndexError(f"Index out of bounds: {step}")
+        return self._get_block_bounds(find_containing_block(self._bounds, step))
 
     def values(self) -> Iterable[T]:
         """Returns an iterator over the block values.
@@ -125,13 +125,13 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         if isinstance(item, int):
             return self.get_value_at_step(Step(item))
         else:
-            raise TypeError(f"Invalid type for index: {type(item)}")
+            raise TypeError(f"Invalid type for item: {type(item)}")
 
     def get_value_at_step(self, step: Step) -> T:
-        index = Step(normalize_index(step, len(self)))
-        if not (0 <= index < len(self)):
-            raise IndexError(f"Index out of bounds: {index}")
-        return self._get_block_value(find_containing_block(self._bounds, index))
+        step = self._normalize_step(step)
+        if not (0 <= step < len(self)):
+            raise IndexError(f"Step out of bounds: {step}")
+        return self._get_block_value(find_containing_block(self._bounds, step))
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
@@ -139,16 +139,16 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         elif isinstance(key, slice):
             self.set_value_for_slice(key, value)
         else:
-            raise TypeError(f"Invalid type for index: {type(key)}")
+            raise TypeError(f"Invalid type for item: {type(key)}")
 
     def set_value_at_step(self, step: Step, value: T):
-        index = Step(normalize_index(step, len(self)))
-        if not (0 <= index < len(self)):
-            raise IndexError(f"Index out of bounds: {index}")
-        block = find_containing_block(self._bounds, index)
+        step = self._normalize_step(step)
+        if not (0 <= step < len(self)):
+            raise IndexError(f"Step out of bounds: {step}")
+        block = find_containing_block(self._bounds, step)
         start, stop = self._get_block_bounds(block)
-        before_length = Span(index - start)
-        after_length = Span(stop - index - 1)
+        before_length = Span(step - start)
+        after_length = Span(stop - step - 1)
         previous_value = self._get_block_value(block)
         insert_index = block
         if before_length > 0:
@@ -161,8 +161,8 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def set_value_for_slice(self, slice_: slice, value: T):
-        start = Step(normalize_index(slice_.start, len(self)))
-        stop = Step(normalize_index(slice_.stop, len(self)))
+        start = self._normalize_step(Step(slice_.start))
+        stop = self._normalize_step(Step(slice_.stop))
         if not (0 <= start <= stop <= len(self)):
             raise IndexError(f"Slice out of bounds: {slice_}")
         if slice_.step is not None:
@@ -187,25 +187,30 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             self._spanned_values.insert(insert_index, (after_value, after_length))
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
+    def _normalize_step(self, step: Step) -> Step:
+        if step < 0:
+            step = Step(len(self) + step)
+        return step
+
     def __delitem__(self, key):
         if isinstance(key, int):
             self.delete_step(Step(key))
         else:
-            raise TypeError(f"Invalid type for index: {type(key)}")
+            raise TypeError(f"Invalid type for item: {type(key)}")
 
     @assert_length_changed(-1)
-    def delete_step(self, step: Step):
-        """Delete a single index from the lane.
+    def delete_step(self, step: Step) -> None:
+        """Delete a single step from the lane.
 
         The length of the lane is always exactly one less after this operation.
         """
 
         previous_length = len(self)
 
-        index = Step(normalize_index(step, len(self)))
-        if not (0 <= index < len(self)):
-            raise IndexError(f"Index out of bounds: {index}")
-        block = find_containing_block(self._bounds, index)
+        step = self._normalize_step(step)
+        if not (0 <= step < len(self)):
+            raise IndexError(f"Index out of bounds: {step}")
+        block = find_containing_block(self._bounds, step)
         if self._get_block_span(block) == 1:
             del self._spanned_values[block]
         else:
@@ -217,18 +222,18 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         assert len(self) == previous_length - 1
 
     @assert_length_changed(+1)
-    def insert(self, step: Step, value: T):
-        index = Step(normalize_index(step, len(self)))
-        if index == len(self):
+    def insert(self, step: Step, value: T) -> None:
+        step = self._normalize_step(step)
+        if step == len(self):
             self._spanned_values.append((value, Span(1)))
             self._bounds.append(Step(self._bounds[-1] + 1))
             return
-        if not (0 <= index < len(self)):
-            raise IndexError(f"Index out of bounds: {index}")
-        block = find_containing_block(self._bounds, index)
+        if not (0 <= step < len(self)):
+            raise IndexError(f"Step out of bounds: {step}")
+        block = find_containing_block(self._bounds, step)
         start, stop = self._get_block_bounds(block)
-        before_length = Span(index - start)
-        after_length = Span(stop - index)
+        before_length = Span(step - start)
+        after_length = Span(stop - step)
         previous_value = self._get_block_value(block)
         insert_index = block
         if before_length > 0:
@@ -273,12 +278,6 @@ def compute_bounds(spans: Iterable[Span]) -> list[Step]:
 
 def find_containing_block(bounds: Sequence[Step], index: Step) -> Block:
     return Block(bisect.bisect(bounds, index) - 1)
-
-
-def normalize_index(index: int, length: int) -> int:
-    if index < 0:
-        index = length + index
-    return index
 
 
 @attrs.define(eq=False)
