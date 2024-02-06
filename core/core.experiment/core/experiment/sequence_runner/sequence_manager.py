@@ -68,7 +68,7 @@ def _compile_shot(
 
 
 class SequenceManager(AbstractContextManager):
-    """
+    """Manages the execution of a sequence.
 
     Instances of this class run background tasks to compile and run shots for a given
     sequence.
@@ -83,6 +83,48 @@ class SequenceManager(AbstractContextManager):
     The device parameters are then queued to run a shot on the experiment.
     When a shot runs, it produces data.
     The data is then queued for storage.
+
+    Args:
+        sequence: The sequence to run.
+        session_maker: A factory for creating experiment sessions.
+        This is used to connect to the storage in which to find the sequence.
+        shot_compiler_factory: A function used to create a shot compiler.
+        It is a user-defined function used to customize how the parameters for a shot
+        are compiled into device parameters.
+        When the sequence is preparing, this function is called with the timelanes of
+        the sequence and the device configurations to use.
+        The sequence manager stores the shot compiler returned by the factory.
+        Every time a shot is scheduled, the sequence manager uses the shot compiler to
+        compile the shot parameters into device parameters.
+        Note that the shot compiler will be copied and passed to other processes to
+        compile shots in parallel.
+        Because of this, the shot compiler must be pickleable and should not rely on
+        persistent states from shot to shot.
+        shot_runner_factory: A function used to create a shot runner.
+        It is a user-defined function used to customize how the device parameters are
+        used to run a shot.
+        When the sequence is preparing, this function is called with the timelanes of
+        the sequence and the device configurations to use.
+        The sequence manager stores the shot runner returned by the factory.
+        After the parameters for a shot are compiled into device parameters by a shot
+        compiler, the device parameters are passed to the shot runner to run the shot.
+        The shot runner should return the data produced by the shot that will then
+        be stored in the sequence.
+        interruption_event: An event that is set to interrupt the sequence.
+        When this event is set, the sequence manager will attempt to stop the sequence
+        as soon as possible.
+        Note that the sequence manager cannot interrupt a shot that is currently
+        running, but will wait for it to finish.
+        shot_retry_config: Specifies how to retry a shot if an error occurs.
+        If an error occurs when the shot runner is running a shot, it will be caught
+        by the sequence manager and the shot will be retried according to the
+        configuration in this object.
+        device_configurations_uuid: The UUIDs of the device configurations to use to
+        run the sequence.
+        If None, the sequence manager will use the default device configurations.
+        constant_tables_uuid: The UUIDs of the constant tables to use to run the
+        sequence.
+        If None, the sequence manager will use the default constant tables.
     """
 
     def __init__(
