@@ -2,21 +2,24 @@ import abc
 import bisect
 import itertools
 from collections.abc import MutableSequence, Iterable, Sequence
-from typing import TypeVar, Generic, Self
+from typing import TypeVar, Generic, Self, NewType
 
 import attrs
-
 from core.types.expression import Expression
 from util.asserts import assert_length_changed
 
 T = TypeVar("T")
+
+Step = NewType("Step", int)
+Block = NewType("Block", int)
+Span = NewType("Span", int)
 
 
 @attrs.define(init=False, eq=False, repr=False)
 class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     """Represents a sequence of values covering some steps in time.
 
-    A time lane is a sequence of values that are associated with time steps.
+    A time lane is a sequence of values that are associated with some time steps.
     The time steps are not explicitly stored in the lane.
     Instead, for a given lane, lane[i] is the value of the lane at the i-th step.
 
@@ -27,13 +30,13 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     It provides common methods such as value access, insertion, and deletion.
     """
 
-    # spanned_values[i] is the value of i-th block of the lane the number of steps it
-    # spans.
-    _spanned_values: list[tuple[T, int]] = attrs.field()
+    # spanned_values[i] is the value of i-th block of the lane and the number of steps
+    # it spans.
+    _spanned_values: list[tuple[T, Span]] = attrs.field()
 
-    # _bounds[i] is the index at which the i-th block starts (inclusive)
-    # _bounds[i+1] is the index at which the i-th block ends (exclusive)
-    _bounds: list[int] = attrs.field(init=False, repr=False)
+    # _bounds[i] is the step at which the i-th block starts (inclusive)
+    # _bounds[i+1] is the step at which the i-th block ends (exclusive)
+    _bounds: list[Step] = attrs.field(init=False, repr=False)
 
     @_spanned_values.validator  # type: ignore
     def validate_spanned_values(self, _, value):
@@ -66,39 +69,53 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         spanned_values = []
         for value, group in itertools.groupby(values_list, key=id):
             g = list(group)
-            spanned_values.append((g[0], len(g)))
+            spanned_values.append((g[0], Span(len(g))))
         self._spanned_values = spanned_values
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     @classmethod
-    def from_spanned_values(cls, spanned_values: Iterable[tuple[T, int]]) -> Self:
+    def from_spanned_values(cls, spanned_values: Iterable[tuple[T, Span]]) -> Self:
         obj = cls.__new__(cls)
         obj._spanned_values = list(spanned_values)
         obj._bounds = compute_bounds(span for _, span in obj._spanned_values)
         return obj
 
-    def get_bounds(self, index: int) -> tuple[int, int]:
-        index = normalize_index(index, len(self))
+    def get_bounds(self, step: Step) -> tuple[Step, Step]:
+        """Returns the bounds of the block containing the given step."""
+
+        index = Step(normalize_index(step, len(self)))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        return self._get_block_bounds(find_containing_step(self._bounds, index))
+        return self._get_block_bounds(find_containing_block(self._bounds, index))
 
     def values(self) -> Iterable[T]:
+        """Returns an iterator over the block values.
+
+        The length of the iterator is the number of blocks in the lane, not the number
+        of steps.
+        """
+
         return (value for value, _ in self._spanned_values)
 
-    def bounds(self) -> Iterable[tuple[int, int]]:
+    def bounds(self) -> Iterable[tuple[Step, Step]]:
+        """Returns an iterator over the bounds of the blocks.
+
+        The length of the iterator is the number of blocks in the lane, not the number
+        of steps.
+        """
+
         return zip(self._bounds[:-1], self._bounds[1:])
 
-    def _get_containing_block(self, index: int) -> int:
-        return find_containing_step(self._bounds, index)
+    def _get_containing_block(self, index: Step) -> Block:
+        return find_containing_block(self._bounds, index)
 
-    def _get_block_span(self, block: int) -> int:
+    def _get_block_span(self, block: Block) -> Span:
         return self._spanned_values[block][1]
 
-    def _get_block_value(self, block: int) -> T:
+    def _get_block_value(self, block: Block) -> T:
         return self._spanned_values[block][0]
 
-    def _get_block_bounds(self, block: int) -> tuple[int, int]:
+    def _get_block_bounds(self, block: Block) -> tuple[Step, Step]:
         return self._bounds[block], self._bounds[block + 1]
 
     def __len__(self):
@@ -106,65 +123,65 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     def __getitem__(self, item) -> T:
         if isinstance(item, int):
-            return self.get_value_at_index(item)
+            return self.get_value_at_step(Step(item))
         else:
             raise TypeError(f"Invalid type for index: {type(item)}")
 
-    def get_value_at_index(self, index: int) -> T:
-        index = normalize_index(index, len(self))
+    def get_value_at_step(self, step: Step) -> T:
+        index = Step(normalize_index(step, len(self)))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        return self._get_block_value(find_containing_step(self._bounds, index))
+        return self._get_block_value(find_containing_block(self._bounds, index))
 
     def __setitem__(self, key, value):
         if isinstance(key, int):
-            self.set_value_at_index(key, value)
+            self.set_value_at_step(Step(key), value)
         elif isinstance(key, slice):
             self.set_value_for_slice(key, value)
         else:
             raise TypeError(f"Invalid type for index: {type(key)}")
 
-    def set_value_at_index(self, index: int, value: T):
-        index = normalize_index(index, len(self))
+    def set_value_at_step(self, step: Step, value: T):
+        index = Step(normalize_index(step, len(self)))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        step = find_containing_step(self._bounds, index)
-        start, stop = self._get_block_bounds(step)
-        before_length = index - start
-        after_length = stop - index - 1
-        previous_value = self._get_block_value(step)
-        insert_index = step
+        block = find_containing_block(self._bounds, index)
+        start, stop = self._get_block_bounds(block)
+        before_length = Span(index - start)
+        after_length = Span(stop - index - 1)
+        previous_value = self._get_block_value(block)
+        insert_index = block
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
             insert_index += 1
-        self._spanned_values[insert_index] = (value, 1)
+        self._spanned_values[insert_index] = (value, Span(1))
         insert_index += 1
         if after_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, after_length))
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def set_value_for_slice(self, slice_: slice, value: T):
-        start = normalize_index(slice_.start, len(self))
-        stop = normalize_index(slice_.stop, len(self))
+        start = Step(normalize_index(slice_.start, len(self)))
+        stop = Step(normalize_index(slice_.stop, len(self)))
         if not (0 <= start <= stop <= len(self)):
             raise IndexError(f"Slice out of bounds: {slice_}")
         if slice_.step is not None:
             raise ValueError(f"Slice step must be None: {slice_}")
-        before_step = find_containing_step(self._bounds, start)
-        before_length = start - self._get_block_bounds(before_step)[0]
-        before_value = self._get_block_value(before_step)
+        before_block = find_containing_block(self._bounds, start)
+        before_length = Span(start - self._get_block_bounds(before_block)[0])
+        before_value = self._get_block_value(before_block)
         if stop == len(self):
-            after_step = len(self._spanned_values) - 1
+            after_block = Block(len(self._spanned_values) - 1)
         else:
-            after_step = find_containing_step(self._bounds, stop)
-        after_length = self._get_block_bounds(after_step)[1] - stop
-        after_value = self._get_block_value(after_step)
-        del self._spanned_values[before_step : after_step + 1]
-        insert_index = before_step
+            after_block = find_containing_block(self._bounds, stop)
+        after_length = Span(self._get_block_bounds(after_block)[1] - stop)
+        after_value = self._get_block_value(after_block)
+        del self._spanned_values[before_block : after_block + 1]
+        insert_index = before_block
         if before_length > 0:
-            self._spanned_values.insert(before_step, (before_value, before_length))
+            self._spanned_values.insert(before_block, (before_value, before_length))
             insert_index += 1
-        self._spanned_values.insert(insert_index, (value, stop - start))
+        self._spanned_values.insert(insert_index, (value, Span(stop - start)))
         insert_index += 1
         if after_length > 0:
             self._spanned_values.insert(insert_index, (after_value, after_length))
@@ -172,12 +189,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
     def __delitem__(self, key):
         if isinstance(key, int):
-            self.delete_index(key)
+            self.delete_step(Step(key))
         else:
             raise TypeError(f"Invalid type for index: {type(key)}")
 
     @assert_length_changed(-1)
-    def delete_index(self, index: int):
+    def delete_step(self, step: Step):
         """Delete a single index from the lane.
 
         The length of the lane is always exactly one less after this operation.
@@ -185,39 +202,39 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
         previous_length = len(self)
 
-        index = normalize_index(index, len(self))
+        index = Step(normalize_index(step, len(self)))
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        block = find_containing_step(self._bounds, index)
+        block = find_containing_block(self._bounds, index)
         if self._get_block_span(block) == 1:
             del self._spanned_values[block]
         else:
             self._spanned_values[block] = (
                 self._get_block_value(block),
-                self._get_block_span(block) - 1,
+                Span(self._get_block_span(block) - 1),
             )
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
         assert len(self) == previous_length - 1
 
     @assert_length_changed(+1)
-    def insert(self, index: int, value: T):
-        index = normalize_index(index, len(self))
+    def insert(self, step: Step, value: T):
+        index = Step(normalize_index(step, len(self)))
         if index == len(self):
-            self._spanned_values.append((value, 1))
-            self._bounds.append(self._bounds[-1] + 1)
+            self._spanned_values.append((value, Span(1)))
+            self._bounds.append(Step(self._bounds[-1] + 1))
             return
         if not (0 <= index < len(self)):
             raise IndexError(f"Index out of bounds: {index}")
-        step = find_containing_step(self._bounds, index)
-        start, stop = self._get_block_bounds(step)
-        before_length = index - start
-        after_length = stop - index
-        previous_value = self._get_block_value(step)
-        insert_index = step
+        block = find_containing_block(self._bounds, index)
+        start, stop = self._get_block_bounds(block)
+        before_length = Span(index - start)
+        after_length = Span(stop - index)
+        previous_value = self._get_block_value(block)
+        insert_index = block
         if before_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, before_length))
             insert_index += 1
-        self._spanned_values[insert_index] = (value, 1)
+        self._spanned_values[insert_index] = (value, Span(1))
         insert_index += 1
         if after_length > 0:
             self._spanned_values.insert(insert_index, (previous_value, after_length))
@@ -250,12 +267,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             return NotImplemented
 
 
-def compute_bounds(spans: Iterable[int]) -> list[int]:
-    return [0] + list(itertools.accumulate(spans))
+def compute_bounds(spans: Iterable[Span]) -> list[Step]:
+    return [0] + list(itertools.accumulate(spans))  # type: ignore
 
 
-def find_containing_step(bounds: Sequence[int], index: int) -> int:
-    return bisect.bisect(bounds, index) - 1
+def find_containing_block(bounds: Sequence[Step], index: Step) -> Block:
+    return Block(bisect.bisect(bounds, index) - 1)
 
 
 def normalize_index(index: int, length: int) -> int:
