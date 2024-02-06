@@ -251,7 +251,7 @@ def normalize_index(index: int, length: int) -> int:
     return index
 
 
-@attrs.define
+@attrs.define(eq=False)
 class TimeLanes:
     """A collection of time lanes."""
 
@@ -339,3 +339,16 @@ class TimeLanes:
         """
 
         return self.lanes[key]
+
+    def __eq__(self, other):
+        if not isinstance(other, TimeLanes):
+            return NotImplemented
+        return (
+            self.step_names == other.step_names
+            and self.step_durations == other.step_durations
+            and self.lanes == other.lanes
+            # We say that two TimeLanes are different if the order of the lanes is
+            # different.
+            # This is because the order of the lanes is important for the user.
+            and list(self.lanes.keys()) == list(other.lanes.keys())
+        )
