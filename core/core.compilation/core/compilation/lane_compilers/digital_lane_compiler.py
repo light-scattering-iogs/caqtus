@@ -67,7 +67,7 @@ class DigitalLaneCompiler:
     @staticmethod
     def get_constant_instruction(
         value: bool, length: int
-    ) -> SequencerInstruction[bool]:
+    ) -> SequencerInstruction[np.bool_]:
         return Pattern([value]) * length
 
 
