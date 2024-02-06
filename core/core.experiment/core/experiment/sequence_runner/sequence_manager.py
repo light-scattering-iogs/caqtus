@@ -12,14 +12,14 @@ from contextlib import AbstractContextManager
 from typing import Optional, Any
 
 import attrs
-from tblib import pickling_support
-
 from core.compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
 from core.device import DeviceName, DeviceParameter
 from core.session import ExperimentSessionMaker, Sequence
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
+from tblib import pickling_support
 from util.concurrent import TaskGroup
+
 from ..shot_runner import ShotRunnerFactory, ShotRunner
 
 pickling_support.install()
@@ -44,10 +44,6 @@ class ShotRetryConfig:
     exceptions_to_retry: tuple[type[Exception], ...] = attrs.field(
         factory=tuple,
         eq=False,
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(tuple),
-            member_validator=attrs.validators.instance_of(Exception),
-        ),
         on_setattr=attrs.setters.validate,
     )
     number_of_attempts: int = attrs.field(default=1, eq=False)
