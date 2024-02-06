@@ -1,7 +1,9 @@
-import attrs
+from typing import assert_never
 
+import attrs
 from core.types.expression import Expression
 from util import serialization
+
 from .timelane import TimeLane
 
 
