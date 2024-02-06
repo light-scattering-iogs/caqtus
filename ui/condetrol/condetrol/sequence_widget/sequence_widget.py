@@ -200,6 +200,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 try:
                     session.sequences.set_iteration_configuration(sequence, iterations)
                 except SequenceNotEditableError:
+                    state = sequence.get_state(session)
                     iterations = session.sequences.get_iteration_configuration(
                         self.state_sequence.sequence_path
                     )
@@ -207,12 +208,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path,
                         iterations,
                         self.state_sequence.timelanes,
+                        state
                     )
                 else:
                     self.state_sequence.iteration_config = iterations
 
     def on_time_lanes_edited(self, timelanes: TimeLanes):
         if self.state_sequence in self.state_machine.configuration():
+            sequence = Sequence(self.state_sequence.sequence_path)
             with self.session_maker() as session:
                 try:
                     session.sequences.set_time_lanes(
@@ -226,6 +229,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path,
                         self.state_sequence.iteration_config,
                         timelanes,
+                        sequence.get_state(session)
                     )
                 else:
                     self.state_sequence.timelanes = timelanes
