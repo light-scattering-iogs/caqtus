@@ -8,7 +8,9 @@ from core.session import ExperimentSession
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
-    default_serializer,
+    Serializer,
+    DeviceConfigurationSerializer,
+    default_sequence_serializer,
 )
 from util import serialization
 from util.serialization import JSON
@@ -47,8 +49,14 @@ def create_empty_session() -> ExperimentSession:
 
     session_maker = SQLExperimentSessionMaker(
         engine,
-        {"DummyConfiguration": {"dumper": dump, "loader": load}},
-        serializer=default_serializer,
+        serializer=Serializer(
+            device_configuration_serializers={
+                "DummyConfiguration": DeviceConfigurationSerializer(
+                    dumper=dump, loader=load
+                )
+            },
+            sequence_serializer=default_sequence_serializer,
+        ),
     )
     return session_maker()
 

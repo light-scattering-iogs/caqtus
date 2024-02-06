@@ -1,23 +1,15 @@
-import sqlalchemy
+from typing import Any
 
+import attrs
+import sqlalchemy
+from core.device import DeviceConfigurationAttrs, DeviceParameter
 from core.session import ExperimentSessionMaker
 from core.session.sql import (
     SQLExperimentSessionMaker,
     create_tables,
-    default_serializer,
-)
-
-from typing import Any
-
-import attrs
-import pytest
-import sqlalchemy
-from core.device import DeviceConfigurationAttrs, DeviceParameter
-from core.session import ExperimentSession
-from core.session.sql import (
-    SQLExperimentSessionMaker,
-    create_tables,
-    default_serializer,
+    default_sequence_serializer,
+    Serializer,
+    DeviceConfigurationSerializer,
 )
 from util import serialization
 from util.serialization import JSON
@@ -56,8 +48,13 @@ def get_session_maker() -> ExperimentSessionMaker:
 
     session_maker = SQLExperimentSessionMaker(
         engine,
-        {"DummyConfiguration": {"dumper": dump, "loader": load}},
-        serializer=default_serializer,
+        serializer=Serializer(
+            device_configuration_serializers={
+                "DummyConfiguration": DeviceConfigurationSerializer(
+                    dumper=dump, loader=load
+                )
+            },
+            sequence_serializer=default_sequence_serializer,
+        ),
     )
     return session_maker
-
