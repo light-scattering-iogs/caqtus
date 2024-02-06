@@ -15,6 +15,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
+
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
 from core.types.expression import Expression
@@ -429,7 +430,13 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         lane_model = self._lane_model_factory(lane)(name, self)
         lane_model.set_lane(lane)
         lane_model.dataChanged.connect(
-            functools.partial(self.on_lane_model_data_changed, lane_model=lane_model)
+            # For some reason, functools.partial does not work here, but lambda does.
+            # functools.partial(
+            #     self.on_lane_model_data_changed, lane_model=lane_model
+            # )
+            lambda top_left, bottom_right: self.on_lane_model_data_changed(
+                top_left, bottom_right, lane_model
+            )
         )
         lane_model.headerDataChanged.connect(
             functools.partial(self.on_lane_header_data_changed, lane_model=lane_model)

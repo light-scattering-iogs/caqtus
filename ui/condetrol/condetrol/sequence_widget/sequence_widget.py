@@ -5,6 +5,7 @@ from typing import Optional
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
+
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -18,8 +19,8 @@ from core.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from core.session.shot import TimeLanes
-
 from .sequence_widget_ui import Ui_SequenceWidget
+from ..logger import logger
 from ..sequence_iteration_editors import create_default_editor
 from ..timelanes_editor import (
     TimeLanesEditor,
@@ -208,12 +209,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path,
                         iterations,
                         self.state_sequence.timelanes,
-                        state
+                        state,
                     )
                 else:
                     self.state_sequence.iteration_config = iterations
 
     def on_time_lanes_edited(self, timelanes: TimeLanes):
+        logger.debug("Time lanes edited")
         if self.state_sequence in self.state_machine.configuration():
             sequence = Sequence(self.state_sequence.sequence_path)
             with self.session_maker() as session:
@@ -229,7 +231,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path,
                         self.state_sequence.iteration_config,
                         timelanes,
-                        sequence.get_state(session)
+                        sequence.get_state(session),
                     )
                 else:
                     self.state_sequence.timelanes = timelanes

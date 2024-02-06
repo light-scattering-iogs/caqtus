@@ -2,11 +2,11 @@ from typing import Optional, Any, assert_never
 
 from PySide6.QtCore import QObject, QModelIndex, Qt
 from PySide6.QtGui import QAction, QBrush, QPalette
-from PySide6.QtWidgets import QMenu, QApplication
+from PySide6.QtWidgets import QMenu
 
 from core.session.shot import DigitalTimeLane
 from core.types.expression import Expression
-from .model import TimeLaneModel, ColoredTimeLaneModel
+from .model import ColoredTimeLaneModel
 
 
 class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
