@@ -56,6 +56,9 @@ class State(Enum):
 
         return self in {State.RUNNING}
 
+    def __str__(self):
+        return self.value
+
 
 _ALLOWED_TRANSITIONS = {
     State.DRAFT: {State.PREPARING},

@@ -7,7 +7,7 @@ from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
-    QDockWidget,
+    QDockWidget, QLabel, QLineEdit,
 )
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
@@ -18,6 +18,7 @@ from core.session import (
     ConstantTable,
     Sequence,
 )
+from core.session.sequence import State
 from waiting_widget import run_with_wip_widget
 
 from ._main_window_ui import Ui_CondetrolMainWindow
@@ -107,6 +108,17 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._procedure_watcher_thread.exception_occurred.connect(
             self.on_procedure_exception
         )
+        self.sequence_widget.sequence_changed.connect(self.on_viewed_sequence_changed)
+
+    def on_viewed_sequence_changed(
+        self, sequence: Optional[tuple[PureSequencePath, State]]
+    ):
+        if sequence is None:
+            text = ""
+        else:
+            path, state = sequence
+            text = f"{path} [{state}]"
+        self.statusBar().showMessage(text)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)

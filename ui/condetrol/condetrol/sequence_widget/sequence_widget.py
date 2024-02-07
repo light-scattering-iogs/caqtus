@@ -5,7 +5,6 @@ from typing import Optional
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
-
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -19,6 +18,7 @@ from core.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from core.session.shot import TimeLanes
+
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger
 from ..sequence_iteration_editors import create_default_editor
@@ -51,6 +51,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     If the sequence is in the draft state, the iteration editor and timelanes editor
     will become editable and any change will be saved.
     """
+
+    sequence_changed = Signal(object)  # Optional[tuple[PureSequencePath, State]]
 
     sequence_editable_set = Signal(
         PureSequencePath, IterationConfiguration, TimeLanes, State
@@ -145,6 +147,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def on_sequence_unset(self):
         self.setVisible(False)
+        self.sequence_changed.emit(None)
 
     def on_sequence_set(self):
         previous_index = self.tabWidget.currentIndex()
@@ -162,6 +165,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.addTab(self.time_lanes_editor, "Timelanes")
         self.tabWidget.setCurrentIndex(previous_index)
         self.setVisible(True)
+        self.sequence_changed.emit(
+            (self.state_sequence.sequence_path, self.state_sequence.sequence_state)
+        )
 
     def on_sequence_became_editable(self):
         self.iteration_editor.set_read_only(False)
