@@ -282,7 +282,10 @@ def find_containing_block(bounds: Sequence[Step], index: Step) -> Block:
 
 @attrs.define(eq=False)
 class TimeLanes:
-    """A collection of time lanes."""
+    """A collection of time lanes.
+
+    Groups together multiple time lanes and the associated step names and durations.
+    """
 
     step_names: list[str] = attrs.field(
         factory=list,
