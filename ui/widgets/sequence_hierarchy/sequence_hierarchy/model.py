@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import datetime
+import math
 import threading
+import time
 from typing import Optional
 
 from PySide6.QtCore import (
@@ -42,6 +44,11 @@ class PathHierarchyItem(NodeMixin):
         self.children = []
         self.creation_date = creation_date
         self.sequence_stats: Optional[SequenceStats] = None
+
+        # This is used to keep track of the last time the item was queried by the view.
+        # If the item was queried a long time ago, it is likely that the view is not
+        # displaying it, so we can avoid querying the item's children and stats.
+        self.last_time_used = -math.inf
 
     def row(self):
         if self.parent:
@@ -142,13 +149,33 @@ class PathHierarchyModel(QAbstractItemModel):
         return self.createIndex(parent_item.row(), index.column(), parent_item)
 
     def rowCount(self, parent=QModelIndex()):
-        if not parent.isValid():
-            return len(self._root.children)
-        item = parent.internalPointer()
-        return len(item.children)
+        parent_item = self._get_item(parent)
+        return len(parent_item.children)
+
+    def hasChildren(self, parent: QModelIndex) -> bool:
+        parent_item = self._get_item(parent)
+        logger.debug("Checking if %s has children", parent_item.hierarchy_path)
+        return bool(parent_item.children)
+
+    def _get_item(self, index: QModelIndex) -> PathHierarchyItem:
+        if not index.isValid():
+            return self._root
+        item = index.internalPointer()
+        assert isinstance(item, PathHierarchyItem)
+        return item
 
     def columnCount(self, parent=QModelIndex()):
         return 5
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        item = index.internalPointer()
+        assert isinstance(item, PathHierarchyItem)
+        if item.sequence_stats is not None:
+            flags |= Qt.ItemFlag.ItemNeverHasChildren
+        return flags
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
         """Get the data for a specific index in the model.
@@ -172,11 +199,13 @@ class PathHierarchyModel(QAbstractItemModel):
         sequence or folder was created.
         """
 
-        if not index.isValid():
+        item = self._get_item(index)
+        item.last_time_used = time.time()
+
+        # logger.debug("Getting data for %s", item.hierarchy_path)
+        if item is self._root:
             return None
 
-        item = index.internalPointer()
-        assert isinstance(item, PathHierarchyItem)
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 return item.hierarchy_path.name
@@ -295,13 +324,17 @@ class PathHierarchyModel(QAbstractItemModel):
             timer.stop()
 
         def check_item_change(self, index: QModelIndex) -> None:
-            self.check_creation_date_changed(index)
-            self.check_sequence_stats_changed(index)
             if not index.isValid():
                 path_item = self.root
             else:
                 path_item = index.internalPointer()  # type: ignore
                 assert isinstance(path_item, PathHierarchyItem)
+                if time.time() - path_item.last_time_used > 10:
+                    return
+            # logger.debug("Checking %s", path_item.hierarchy_path)
+
+            self.check_creation_date_changed(index)
+            self.check_sequence_stats_changed(index)
             path = path_item.hierarchy_path
             try:
                 fetched_child_paths = unwrap(self.session.paths.get_children(path))
