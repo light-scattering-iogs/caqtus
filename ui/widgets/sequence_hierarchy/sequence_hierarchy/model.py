@@ -14,7 +14,6 @@ from PySide6.QtCore import (
     QDateTime,
 )
 from anytree import NodeMixin
-
 from core.session import PureSequencePath, ExperimentSessionMaker
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
@@ -24,6 +23,8 @@ from core.session.sequence_collection import (
     SequenceStats,
     PathIsNotSequenceError,
 )
+
+from .logger import logger
 
 
 class PathHierarchyItem(NodeMixin):
@@ -47,7 +48,29 @@ class PathHierarchyItem(NodeMixin):
 
 
 class PathHierarchyModel(QAbstractItemModel):
+    """A Qt tree model that provides data for a sequence hierarchy.
+
+    This model is used in combination with a QTreeView to display a hierarchy of
+    folders and sequences.
+    This model automatically populates and updates itself based on the path
+    hierarchy and the changes that occur to it.
+    It uses a background thread to periodically check for changes in the hierarchy and
+    updates the model when changes are found.
+    It doesn't provide support for editing the hierarchy, only for displaying it.
+    Changes to the hierarchy can be done independently of the model, and the model will
+    automatically update itself to reflect the changes.
+    This model must be used as a context manager to start watching for changes.
+    """
+
     def __init__(self, session_maker: ExperimentSessionMaker, parent=None):
+        """Create a new PathHierarchyModel.
+
+        Args:
+            session_maker: A function that returns a new session when called.
+            This is used to connect to the experiment storage in which the sequence
+            hierarchy is stored.
+        """
+
         super().__init__(parent)
         self._tree_structure_lock = threading.Lock()
         self._root = PathHierarchyItem(PureSequencePath.root(), None, None)
@@ -64,10 +87,14 @@ class PathHierarchyModel(QAbstractItemModel):
         )
 
     def __enter__(self):
+        """Starts the background thread that watches for changes in the hierarchy."""
+
         self._thread.start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Stops the background thread that watches for changes in the hierarchy."""
+
         self._thread.quit()
         self._thread.wait()
 
@@ -91,7 +118,7 @@ class PathHierarchyModel(QAbstractItemModel):
         child_item = parent_item.children[row]
         return self.createIndex(row, column, child_item)
 
-    def parent(self, index: QModelIndex):
+    def parent(self, index: QModelIndex) -> QModelIndex:
         if not index.isValid():
             return QModelIndex()
 
@@ -113,10 +140,32 @@ class PathHierarchyModel(QAbstractItemModel):
         return 5
 
     def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+        """Get the data for a specific index in the model.
+
+        The displayed data returned for each column is as follows:
+        0: Name
+        A string with the name of the folder or sequence.
+        1: Status
+        The status of the sequence.
+        It is None for folders and a SequenceStats object for sequences.
+        2: Progress
+        A string representing the number of completed shots and the total
+        number of shots of the sequence.
+        It is None for folders.
+        3: Duration
+        A string representing the elapsed and remaining time of the
+        sequence.
+        It is None for folders.
+        4: Date created
+        A QDateTime object representing the date and time when the
+        sequence or folder was created.
+        """
+
         if not index.isValid():
             return None
 
         item: PathHierarchyItem = index.internalPointer()
+        logger.debug(f"Getting data for {item.hierarchy_path}")
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 return item.hierarchy_path.name
