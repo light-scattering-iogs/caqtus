@@ -76,6 +76,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.sequence_widget = SequenceWidget(
             self.session_maker, self.model_factory, self.delegate_factory
         )
+        self.status_widget = QLabel("")
         self.setup_ui()
         self.restore_window_state()
         self.setup_connections()
@@ -96,6 +97,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         dock.setWidget(self._path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
+        self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
@@ -118,7 +120,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         else:
             path, state = sequence
             text = f"{path} [{state}]"
-        self.statusBar().showMessage(text)
+        self.status_widget.setText(text)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
