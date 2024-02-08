@@ -41,9 +41,33 @@ class PathHierarchyItem(NodeMixin):
         self.parent = parent
         self.children = []
         self.creation_date = creation_date
-        self.sequence_stats: Optional[SequenceStats] = None
+        self.sequence_stats = None
 
         self.should_fetch_stats = False
+
+    @property
+    def sequence_stats(self) -> Optional[SequenceStats]:
+        return self._sequence_stats
+
+    @sequence_stats.setter
+    def sequence_stats(self, value: Optional[SequenceStats]):
+        self._sequence_stats = value
+        if value is not None:
+            self.formatted_duration = format_duration(value)
+        else:
+            self.formatted_duration = None
+
+    @property
+    def creation_date(self) -> Optional[datetime.datetime]:
+        return self._creation_date
+
+    @creation_date.setter
+    def creation_date(self, value: Optional[datetime.datetime]):
+        self._creation_date = value
+        if value is not None:
+            self.formatted_creation_date = QDateTime(value.astimezone(None))
+        else:
+            self.formatted_creation_date = None
 
     def row(self):
         if self.parent:
@@ -209,14 +233,9 @@ class PathHierarchyModel(QAbstractItemModel):
                     total = item.sequence_stats.expected_number_shots
                     return f"{completed}/{total}"
             elif index.column() == 3:
-                if item.sequence_stats is None:
-                    return None
-                else:
-                    return format_duration(item.sequence_stats)
+                return item.formatted_duration
             elif index.column() == 4:
-                # We convert to the local time zone before passing it to Qt,
-                # because Qt does not support time zones.
-                return QDateTime(item.creation_date.astimezone(None))
+                return item.formatted_creation_date
         return None
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
@@ -308,7 +327,7 @@ class PathHierarchyModel(QAbstractItemModel):
                         self.item_structure_changed.emit(e.index)
 
             timer.timeout.connect(update)  # type: ignore
-            timer.start(10)
+            timer.start(50)
             self.exec()
             timer.stop()
 
