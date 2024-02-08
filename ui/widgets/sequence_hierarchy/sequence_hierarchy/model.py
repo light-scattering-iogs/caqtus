@@ -24,6 +24,7 @@ from core.session.sequence_collection import (
     PathIsNotSequenceError,
 )
 from returns.result import Success
+from util import log_exception
 
 from .logger import logger
 
@@ -273,6 +274,7 @@ class PathHierarchyModel(QAbstractItemModel):
         def run(self):
             timer = QTimer()
 
+            @log_exception(logger)
             def update():
                 with self.lock, self.session:
                     try:
