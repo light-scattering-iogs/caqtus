@@ -77,7 +77,7 @@ class PathHierarchyModel(QAbstractItemModel):
         self._tree_structure_lock = threading.Lock()
         self._root = PathHierarchyItem(PureSequencePath.root(), None, None)
         self._session_maker = session_maker
-        self._thread = self.TreeUpdateThread(self, self._root, self._session_maker)
+        self._thread = self.TreeUpdateThread(self, self._session_maker)
         self._thread.item_structure_changed.connect(self.process_structure_change)
         self._thread.creation_date_changed.connect(self.on_data_changed)
         self._thread.sequence_stats_changed.connect(self.on_data_changed)
@@ -173,8 +173,8 @@ class PathHierarchyModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        item: PathHierarchyItem = index.internalPointer()
-        logger.debug(f"Getting data for {item.hierarchy_path}")
+        item = index.internalPointer()
+        assert isinstance(item, PathHierarchyItem)
         if role == Qt.ItemDataRole.DisplayRole:
             if index.column() == 0:
                 return item.hierarchy_path.name
@@ -219,7 +219,8 @@ class PathHierarchyModel(QAbstractItemModel):
         if not parent.isValid():
             parent_item = self._root
         else:
-            parent_item: PathHierarchyItem = parent.internalPointer()
+            parent_item = parent.internalPointer()  # type: ignore
+            assert isinstance(parent_item, PathHierarchyItem)
 
         with self._tree_structure_lock, self._session_maker() as session:
             children_query = session.paths.get_children(parent_item.hierarchy_path)
@@ -262,14 +263,16 @@ class PathHierarchyModel(QAbstractItemModel):
         def __init__(
             self,
             parent: PathHierarchyModel,
-            root: PathHierarchyItem,
             session_maker: ExperimentSessionMaker,
         ):
             super().__init__(parent)
             self._parent = parent
             self.lock = parent._tree_structure_lock
-            self.root = root
             self.session = session_maker()
+
+        @property
+        def root(self) -> PathHierarchyItem:
+            return self._parent._root
 
         def run(self):
             timer = QTimer()
@@ -295,7 +298,8 @@ class PathHierarchyModel(QAbstractItemModel):
             if not index.isValid():
                 path_item = self.root
             else:
-                path_item = index.internalPointer()
+                path_item = index.internalPointer()  # type: ignore
+                assert isinstance(path_item, PathHierarchyItem)
             path = path_item.hierarchy_path
             try:
                 fetched_child_paths = unwrap(self.session.paths.get_children(path))
@@ -303,6 +307,13 @@ class PathHierarchyModel(QAbstractItemModel):
                 return
             present_child_paths = {child.hierarchy_path for child in path_item.children}
             if fetched_child_paths != present_child_paths:
+                logger.debug(
+                    f"Found change in %s: "
+                    f"fetched_child_paths=%s vs present_child_paths=%s",
+                    path,
+                    fetched_child_paths,
+                    present_child_paths,
+                )
                 raise FoundChange(index)
             else:
                 for child in path_item.children:
