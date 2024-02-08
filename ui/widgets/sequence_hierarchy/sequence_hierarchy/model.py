@@ -14,7 +14,7 @@ from PySide6.QtCore import (
     QDateTime,
 )
 from anytree import NodeMixin
-from core.session import PureSequencePath, ExperimentSessionMaker
+from core.session import PureSequencePath, ExperimentSessionMaker, ExperimentSession
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.result import unwrap, Failure
 from core.session.sequence import State
@@ -23,6 +23,7 @@ from core.session.sequence_collection import (
     SequenceStats,
     PathIsNotSequenceError,
 )
+from returns.result import Success
 
 from .logger import logger
 
@@ -87,7 +88,14 @@ class PathHierarchyModel(QAbstractItemModel):
         )
 
     def __enter__(self):
-        """Starts the background thread that watches for changes in the hierarchy."""
+        """Populates the model with paths and start watching for changes."""
+
+        with self._session_maker() as session:
+            logger.debug("Started populating model with paths")
+            self.beginResetModel()
+            self._root = construct_hierarchy(session)
+            self.endResetModel()
+            logger.debug("Finished populating model with paths")
 
         self._thread.start()
         return self
@@ -390,3 +398,35 @@ def _format_seconds(seconds: float) -> str:
                 result.append(f"{days}d")
 
     return ":".join(reversed(result))
+
+
+def construct_hierarchy(session: ExperimentSession) -> PathHierarchyItem:
+    root = PathHierarchyItem(PureSequencePath.root(), None, None)
+    root.children = construct_children(session, root)
+    return root
+
+
+def construct_children(
+    session: ExperimentSession, parent_item: PathHierarchyItem
+) -> list[PathHierarchyItem]:
+    match session.paths.get_children(parent_item.hierarchy_path):
+        case Failure(PathNotFoundError() as e):
+            raise e
+        case Failure(PathIsSequenceError()):
+            return []
+        case Success(child_paths):
+            child_items = []
+            for child_path in child_paths:
+                child_item = PathHierarchyItem(
+                    child_path,
+                    parent_item,
+                    unwrap(session.paths.get_path_creation_date(child_path)),
+                )
+                child_item.children = construct_children(session, child_item)
+                if unwrap(session.sequences.is_sequence(child_path)):
+                    child_item.sequence_stats = unwrap(
+                        session.sequences.get_stats(child_path)
+                    )
+                session.sequences.get_stats(child_path)
+                child_items.append(child_item)
+            return child_items
