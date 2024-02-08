@@ -127,7 +127,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             icon = None
         else:
             path, state = sequence
-            text = str(path)
+            text = " > ".join(path.parts)
             if state.is_editable():
                 icon = get_icon("editable-sequence")
             else:
