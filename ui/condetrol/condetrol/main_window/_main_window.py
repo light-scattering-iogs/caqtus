@@ -1,3 +1,4 @@
+import contextlib
 import copy
 import logging
 from collections.abc import Mapping, Callable
@@ -7,7 +8,8 @@ from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
-    QDockWidget, QLabel, QLineEdit,
+    QDockWidget,
+    QLabel,
 )
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
@@ -80,13 +82,16 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setup_ui()
         self.restore_window_state()
         self.setup_connections()
+        self._exit_stack = contextlib.ExitStack()
 
     def __enter__(self):
-        self._path_view.__enter__()
+        self._exit_stack.__enter__()
+        self._exit_stack.enter_context(self._path_view)
+        self._exit_stack.enter_context(self.sequence_widget)
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
-        return self._path_view.__exit__(exc_type, exc_value, exc_tb)
+        return self._exit_stack.__exit__(exc_type, exc_value, exc_tb)
 
     def setup_ui(self):
         self.setupUi(self)

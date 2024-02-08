@@ -143,7 +143,21 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_machine.start()
 
         self.setup_connections()
+
+    def __enter__(self):
+        """Starts the watcher thread to monitor the sequence state."""
+
+        logger.debug("Entering SequenceWidget")
         self.state_watcher_thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Stops the state watcher thread."""
+
+        logger.debug("Exiting SequenceWidget")
+        self.state_watcher_thread.quit()
+        self.state_watcher_thread.wait()
+        return False
 
     def on_sequence_unset(self):
         self.setVisible(False)
