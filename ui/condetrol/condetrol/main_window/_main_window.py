@@ -1,6 +1,5 @@
 import contextlib
 import copy
-import logging
 from collections.abc import Mapping, Callable
 from typing import Optional
 
@@ -30,6 +29,7 @@ from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
 )
+from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
 from ..timelanes_editor import (
@@ -38,9 +38,6 @@ from ..timelanes_editor import (
     LaneModelFactory,
     default_lane_model_factory,
 )
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
