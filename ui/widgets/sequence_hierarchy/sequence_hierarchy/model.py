@@ -110,7 +110,8 @@ class PathHierarchyModel(QAbstractItemModel):
     def get_path(self, index: QModelIndex) -> PureSequencePath:
         if not index.isValid():
             return self._root.hierarchy_path
-        item: PathHierarchyItem = index.internalPointer()
+        item = index.internalPointer()  # type: ignore
+        assert isinstance(item, PathHierarchyItem)
         return item.hierarchy_path
 
     def index(self, row, column, parent=QModelIndex()):
@@ -131,7 +132,8 @@ class PathHierarchyModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
 
-        child_item: PathHierarchyItem = index.internalPointer()
+        child_item = index.internalPointer()  # type: ignore
+        assert isinstance(child_item, PathHierarchyItem)
         parent_item = child_item.parent
         if not parent_item:
             return QModelIndex()
@@ -325,17 +327,22 @@ class PathHierarchyModel(QAbstractItemModel):
                 return False
             else:
                 path_item = index.internalPointer()
+                assert isinstance(path_item, PathHierarchyItem)
                 path = path_item.hierarchy_path
                 creation_date = unwrap(self.session.paths.get_path_creation_date(path))
                 if creation_date != path_item.creation_date:
                     path_item.creation_date = creation_date
                     self.creation_date_changed.emit(index.sibling(index.row(), 1))
+                    return True
+                else:
+                    return False
 
         def check_sequence_stats_changed(self, index: QModelIndex) -> bool:
             if not index.isValid():
                 return False
             else:
                 path_item = index.internalPointer()
+                assert isinstance(path_item, PathHierarchyItem)
                 path = path_item.hierarchy_path
                 try:
                     sequence_stats = unwrap(self.session.sequences.get_stats(path))
