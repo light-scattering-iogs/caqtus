@@ -31,6 +31,7 @@ class PathHierarchyView(QTreeView):
         self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
         self.hideColumn(4)
         self.setItemDelegateForColumn(1, ProgressDelegate(self))
+        self.setUniformRowHeights(True)
 
     def show_header_menu(self, pos):
         menu = QMenu(self)

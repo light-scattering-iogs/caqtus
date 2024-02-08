@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import datetime
-import math
 import threading
-import time
 from typing import Optional
 
 from PySide6.QtCore import (
@@ -45,10 +43,7 @@ class PathHierarchyItem(NodeMixin):
         self.creation_date = creation_date
         self.sequence_stats: Optional[SequenceStats] = None
 
-        # This is used to keep track of the last time the item was queried by the view.
-        # If the item was queried a long time ago, it is likely that the view is not
-        # displaying it, so we can avoid querying the item's children and stats.
-        self.last_time_used = -math.inf
+        self.should_fetch_stats = False
 
     def row(self):
         if self.parent:
@@ -86,24 +81,21 @@ class PathHierarchyModel(QAbstractItemModel):
         self._session_maker = session_maker
         self._thread = self.TreeUpdateThread(self, self._session_maker)
         self._thread.item_structure_changed.connect(self.process_structure_change)
-        self._thread.creation_date_changed.connect(self.on_data_changed)
-        self._thread.sequence_stats_changed.connect(self.on_data_changed)
+        self._thread.data_changed.connect(self.on_data_changed)
 
     def on_data_changed(self, index: QModelIndex):
         self.dataChanged.emit(
             self.index(index.row(), 0, index.parent()),
-            self.index(index.row(), self.columnCount(index)),
+            self.index(index.row(), self.columnCount(index), index.parent()),
         )
 
     def __enter__(self):
         """Populates the model with paths and start watching for changes."""
 
         with self._session_maker() as session:
-            logger.debug("Started populating model with paths")
             self.beginResetModel()
             self._root = construct_hierarchy(session)
             self.endResetModel()
-            logger.debug("Finished populating model with paths")
 
         self._thread.start()
         return self
@@ -154,7 +146,6 @@ class PathHierarchyModel(QAbstractItemModel):
 
     def hasChildren(self, parent: QModelIndex) -> bool:
         parent_item = self._get_item(parent)
-        logger.debug("Checking if %s has children", parent_item.hierarchy_path)
         return bool(parent_item.children)
 
     def _get_item(self, index: QModelIndex) -> PathHierarchyItem:
@@ -200,13 +191,12 @@ class PathHierarchyModel(QAbstractItemModel):
         """
 
         item = self._get_item(index)
-        item.last_time_used = time.time()
 
-        # logger.debug("Getting data for %s", item.hierarchy_path)
         if item is self._root:
             return None
 
         if role == Qt.ItemDataRole.DisplayRole:
+            item.should_fetch_stats = True
             if index.column() == 0:
                 return item.hierarchy_path.name
             elif index.column() == 1:
@@ -288,8 +278,7 @@ class PathHierarchyModel(QAbstractItemModel):
 
     class TreeUpdateThread(QThread):
         item_structure_changed = Signal(QModelIndex)
-        creation_date_changed = Signal(QModelIndex)
-        sequence_stats_changed = Signal(QModelIndex)
+        data_changed = Signal(QModelIndex)
 
         def __init__(
             self,
@@ -324,17 +313,9 @@ class PathHierarchyModel(QAbstractItemModel):
             timer.stop()
 
         def check_item_change(self, index: QModelIndex) -> None:
-            if not index.isValid():
-                path_item = self.root
-            else:
-                path_item = index.internalPointer()  # type: ignore
-                assert isinstance(path_item, PathHierarchyItem)
-                if time.time() - path_item.last_time_used > 10:
-                    return
-            # logger.debug("Checking %s", path_item.hierarchy_path)
+            path_item = self._parent._get_item(index)
 
-            self.check_creation_date_changed(index)
-            self.check_sequence_stats_changed(index)
+            self.check_path_data_changed(index)
             path = path_item.hierarchy_path
             try:
                 fetched_child_paths = unwrap(self.session.paths.get_children(path))
@@ -355,35 +336,44 @@ class PathHierarchyModel(QAbstractItemModel):
                     child_index = self._parent.index(child.row(), 0, index)
                     self.check_item_change(child_index)
 
-        def check_creation_date_changed(self, index: QModelIndex) -> bool:
+        def check_path_data_changed(self, index: QModelIndex) -> None:
             if not index.isValid():
-                return False
+                return
             else:
                 path_item = index.internalPointer()
                 assert isinstance(path_item, PathHierarchyItem)
+                if not path_item.should_fetch_stats:
+                    return
+                logger.debug("Checking if %s has changed", path_item.hierarchy_path)
                 path = path_item.hierarchy_path
                 creation_date = unwrap(self.session.paths.get_path_creation_date(path))
                 if creation_date != path_item.creation_date:
                     path_item.creation_date = creation_date
-                    self.creation_date_changed.emit(index.sibling(index.row(), 1))
-                    return True
-                else:
-                    return False
-
-        def check_sequence_stats_changed(self, index: QModelIndex) -> bool:
-            if not index.isValid():
-                return False
-            else:
-                path_item = index.internalPointer()
-                assert isinstance(path_item, PathHierarchyItem)
-                path = path_item.hierarchy_path
                 try:
                     sequence_stats = unwrap(self.session.sequences.get_stats(path))
                 except PathIsNotSequenceError:
                     sequence_stats = None
                 if sequence_stats != path_item.sequence_stats:
                     path_item.sequence_stats = sequence_stats
-                    self.sequence_stats_changed.emit(index)
+                path_item.should_fetch_stats = False
+                self.data_changed.emit(index)
+
+        # def check_sequence_stats_changed(self, index: QModelIndex) -> bool:
+        #     if not index.isValid():
+        #         return False
+        #     else:
+        #         path_item = index.internalPointer()
+        #         assert isinstance(path_item, PathHierarchyItem)
+        #         if path_item.should_fetch_stats:
+        #             path = path_item.hierarchy_path
+        #             try:
+        #                 sequence_stats = unwrap(self.session.sequences.get_stats(path))
+        #             except PathIsNotSequenceError:
+        #                 sequence_stats = None
+        #             if sequence_stats != path_item.sequence_stats:
+        #                 path_item.sequence_stats = sequence_stats
+        #             path_item.should_fetch_stats = False
+        #             self.sequence_stats_changed.emit(index)
 
 
 class FoundChange(Exception):
