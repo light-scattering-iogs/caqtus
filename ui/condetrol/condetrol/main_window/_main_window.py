@@ -1,14 +1,17 @@
 import contextlib
 import copy
 from collections.abc import Mapping, Callable
-from typing import Optional
+from typing import Optional, Literal
 
 from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByteArray
+from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
     QDockWidget,
     QLabel,
+    QHBoxLayout,
+    QWidget,
 )
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
@@ -29,6 +32,7 @@ from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
 )
+from ..icons import get_icon
 from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
@@ -64,6 +68,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             *args: Positional arguments for QMainWindow.
             **kwargs: Keyword arguments for QMainWindow.
         """
+
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker)
         self._connect_to_experiment_manager = connect_to_experiment_manager
@@ -75,7 +80,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.sequence_widget = SequenceWidget(
             self.session_maker, self.model_factory, self.delegate_factory
         )
-        self.status_widget = QLabel("")
+        self.status_widget = IconLabel(icon_position="left")
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
@@ -119,10 +124,16 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     ):
         if sequence is None:
             text = ""
+            icon = None
         else:
             path, state = sequence
-            text = f"{path} [{state}]"
-        self.status_widget.setText(text)
+            text = str(path)
+            if state.is_editable():
+                icon = get_icon("editable-sequence")
+            else:
+                icon = get_icon("read-only-sequence")
+        self.status_widget.set_text(text)
+        self.status_widget.set_icon(icon)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
@@ -305,3 +316,36 @@ class ProcedureWatcherThread(QThread):
         self._procedure = None
         self._sequence = None
         timer.stop()
+
+
+class IconLabel(QWidget):
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        icon_position: Literal["left", "right"] = "left",
+    ):
+        super().__init__(parent)
+        self._label = QLabel()
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self._label.setFont(font)
+        self._icon = QLabel()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        if icon_position == "left":
+            layout.addWidget(self._icon)
+            layout.addWidget(self._label)
+        else:
+            layout.addWidget(self._label)
+            layout.addWidget(self._icon)
+        self.setLayout(layout)
+
+    def set_text(self, text: str):
+        self._label.setText(text)
+
+    def set_icon(self, icon: Optional[QIcon]):
+        if icon is None:
+            self._icon.clear()
+        else:
+            self._icon.setPixmap(icon.pixmap(20, 20))

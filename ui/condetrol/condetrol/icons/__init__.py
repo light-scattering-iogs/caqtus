@@ -1,12 +1,16 @@
 import functools
-from pathlib import Path
 
+import qtawesome
 from PySide6.QtGui import QIcon
 
 
 @functools.lru_cache(maxsize=None)
 def get_icon(name: str) -> QIcon:
-    if name == "camera":
-        return QIcon(str(Path(__file__).parent / "camera-lens.png"))
-    else:
-        raise ValueError(f"Unknown icon name: {name}")
+    ids = {
+        "camera": "mdi6.camera-outline",
+        "editable-sequence": "mdi6.pencil-outline",
+        "read-only-sequence": "mdi6.pencil-off-outline",
+    }
+
+    icon = qtawesome.icon(ids[name], color="white")
+    return icon
