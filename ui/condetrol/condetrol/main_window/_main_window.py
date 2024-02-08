@@ -4,7 +4,7 @@ import logging
 from collections.abc import Mapping, Callable
 from typing import Optional
 
-from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
+from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByteArray
 from PySide6.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -80,7 +80,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
         self.status_widget = QLabel("")
         self.setup_ui()
-        self.restore_window_state()
+        self.restore_window()
         self.setup_connections()
         self._exit_stack = contextlib.ExitStack()
 
@@ -221,19 +221,23 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 ]
 
     def closeEvent(self, a0):
-        self.save_window_state()
+        self.save_window()
         super().closeEvent(a0)
 
-    def restore_window_state(self):
+    def restore_window(self) -> None:
+        """Restore the window state and geometry from the app settings."""
+
         ui_settings = QSettings()
-        state = ui_settings.value(f"{__name__}/state")
-        if state is not None:
+        state = ui_settings.value(f"{__name__}/state", defaultValue=None)
+        if isinstance(state, QByteArray):
             self.restoreState(state)
-        geometry = ui_settings.value(f"{__name__}/geometry")
-        if geometry is not None:
+        geometry = ui_settings.value(f"{__name__}/geometry", defaultValue=None)
+        if isinstance(geometry, QByteArray):
             self.restoreGeometry(geometry)
 
-    def save_window_state(self):
+    def save_window(self) -> None:
+        """Save the window state and geometry to the app settings."""
+
         ui_settings = QSettings()
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
