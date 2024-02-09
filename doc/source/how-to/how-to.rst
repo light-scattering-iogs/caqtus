@@ -5,3 +5,4 @@ How to
    :maxdepth: 2
 
    ui
+   add lane
