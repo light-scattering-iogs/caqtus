@@ -170,6 +170,7 @@ class ChannelOutputScene(QGraphicsScene):
                 return link
             else:
                 return None
+        return None
 
     def add_analog_mapping(self, pos):
         block = AnalogMappingBlock()
