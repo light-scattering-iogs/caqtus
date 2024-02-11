@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from typing import Optional, Any
 
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QColor, QPen
+from PySide6.QtGui import QPen
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsEllipseItem,
@@ -15,11 +17,22 @@ class ConnectionPoint(QGraphicsEllipseItem):
     def __init__(self):
         super().__init__(0, 0, 10, 10)
 
-        self.setBrush(QColor(0, 255, 0))
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
-        self.link: Optional[ConnectionLink] = None
+        self.link = None
+
+    @property
+    def link(self) -> Optional[ConnectionLink]:
+        return self._link
+
+    @link.setter
+    def link(self, link: Optional[ConnectionLink]) -> None:
+        self._link = link
+        if link is not None:
+            self.setBrush(Qt.GlobalColor.green)
+        else:
+            self.setBrush(Qt.GlobalColor.red)
 
     def setPos(self, x, y) -> None:
         super().setPos(x - 5, y)

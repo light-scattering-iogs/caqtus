@@ -17,8 +17,8 @@ from .item_container import (
     ChannelOutputBlock,
     TimeLaneBlock,
     ConnectionPoint,
-    ConnectionLink,
 )
+from .connection import ConnectionLink
 
 
 class ChannelOutputEditor(QGraphicsView):
