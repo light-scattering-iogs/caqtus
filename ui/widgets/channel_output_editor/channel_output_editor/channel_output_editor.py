@@ -50,7 +50,7 @@ class ChannelOutputScene(QGraphicsScene):
             channel_label, channel_configuration
         )
         self.add_block(self.channel_output)
-        # self.addItem(self.channel_output)
+        self.reposition_child_blocks(self.channel_output)
 
         # This object is used to store the line and the initial connection point when
         # the user starts dragging a line to connect two blocks.
@@ -207,3 +207,11 @@ class ChannelOutputScene(QGraphicsScene):
         block = TimeLaneBlock()
         self.addItem(block)
         block.setPos(pos.x(), pos.y())
+
+    def reposition_child_blocks(self, block: FunctionalBlock):
+        for connection in block.input_connections:
+            link = connection.link
+            if link is not None:
+                input_block = link.output_connection.block
+                input_block.setX(block.x() - input_block.boundingRect().width() - 100)
+                self.reposition_child_blocks(input_block)
