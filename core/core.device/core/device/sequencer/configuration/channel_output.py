@@ -198,6 +198,11 @@ class CalibratedAnalogMapping:
             xp=input_values,
             fp=output_values,
         )
+        # Warning !!!
+        # We want to make absolutely sure that the output is within the range of data
+        # points that are measured, to avoid values that could be dangerous for the
+        # hardware.
+        # To ensure this, we clip the output to the range of the measured data points.
         min_ = np.min(output_values)
         max_ = np.max(output_values)
         clipped = np.clip(interp, min_, max_)
