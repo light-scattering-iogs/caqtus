@@ -140,8 +140,9 @@ class ChannelOutputScene(QGraphicsScene):
             link.output_connection.link = None
             self.removeItem(link)
 
+    @staticmethod
     def create_link(
-        self, initial_connection: ConnectionPoint, final_connection: ConnectionPoint
+            initial_connection: ConnectionPoint, final_connection: ConnectionPoint
     ) -> Optional[ConnectionLink]:
         """Attempts to create a link between two connection points.
 
