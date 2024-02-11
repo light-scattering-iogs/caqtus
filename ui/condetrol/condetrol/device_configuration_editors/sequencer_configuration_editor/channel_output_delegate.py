@@ -24,7 +24,7 @@ class ChannelOutputDelegate(QStyledItemDelegate):
         logger.debug(
             "Starting editing channel configuration: %r", channel_configuration
         )
-        editor.set_channel_output(index.data(role=Qt.ItemDataRole.EditRole))
+        editor.set_channel_output(f"channel {channel_index}", channel_configuration)
 
     def setModelData(self, editor, model, index):
         assert isinstance(editor, ChannelOutputDialog)
@@ -44,8 +44,10 @@ class ChannelOutputDialog(QDialog, Ui_ChannelOutputDialog):
         self.setupUi(self)
         self.show()
 
-    def set_channel_output(self, channel_configuration: ChannelConfiguration):
-        self.view = ChannelOutputEditor("test", channel_configuration)
+    def set_channel_output(
+        self, channel_label: str, channel_configuration: ChannelConfiguration
+    ):
+        self.view = ChannelOutputEditor(channel_label, channel_configuration)
         layout = self.layout()
         assert isinstance(layout, QVBoxLayout)
         layout.insertWidget(0, self.view)
