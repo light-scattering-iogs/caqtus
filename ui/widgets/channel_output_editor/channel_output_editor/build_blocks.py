@@ -4,9 +4,15 @@ from core.device.sequencer.configuration import (
     ChannelConfiguration,
     ChannelOutput,
     LaneValues,
+    CalibratedAnalogMapping,
 )
 from .connection import ConnectionLink
-from .functional_blocks import FunctionalBlock, ChannelOutputBlock, TimeLaneBlock
+from .functional_blocks import (
+    FunctionalBlock,
+    ChannelOutputBlock,
+    TimeLaneBlock,
+    AnalogMappingBlock,
+)
 
 
 def create_functional_blocks(
@@ -30,8 +36,7 @@ def create_functional_blocks(
         input_connection=block.input_connections[0],
         output_connection=output_connection,
     )
-    block.input_connections[0].link = link
-    output_connection.link = link
+    link.connect()
     return block
 
 
@@ -55,4 +60,24 @@ def build_block(channel_output: ChannelOutput) -> FunctionalBlock:
 def build_lane_block(channel_output: LaneValues) -> FunctionalBlock:
     block = TimeLaneBlock()
     block.set_lane_name(channel_output.lane)
+    return block
+
+
+@build_block.register
+def build_analog_mapping_block(
+    channel_output: CalibratedAnalogMapping,
+) -> FunctionalBlock:
+    block = AnalogMappingBlock()
+    measured_values = channel_output.measured_data_points
+    block.set_data_points(
+        [x for x, _ in measured_values], [y for _, y in measured_values]
+    )
+    block.set_input_units(channel_output.input_units)
+    block.set_output_units(channel_output.output_units)
+    previous_block = build_block(channel_output.input_)
+    link = ConnectionLink(
+        input_connection=block.input_connections[0],
+        output_connection=previous_block.output_connection,
+    )
+    link.connect()
     return block

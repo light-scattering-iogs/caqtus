@@ -23,33 +23,59 @@ class CalibratedAnalogMappingItem(QGraphicsProxyWidget):
 
 
 class AnalogMappingBlock(FunctionalBlock):
-    """The output"""
+    """Represents a function mapping an input quantity to an output quantity."""
 
     def __init__(self, parent: Optional[QGraphicsItem] = None):
         super().__init__(
             number_input_connections=1, has_output_connection=True, parent=parent
         )
-        widget = QWidget()
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Analog Mapping"))
-        layout.addWidget(CalibratedAnalogMappingWidget())
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        widget.setLayout(layout)
         proxy = QGraphicsProxyWidget()
+        widget = QWidget()
+        widget.setLayout(layout := QVBoxLayout())
+        layout.addWidget(QLabel("Analog Mapping"))
+        self.mapping_widget = CalibratedAnalogMappingWidget()
+        layout.addWidget(self.mapping_widget)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         proxy.setWidget(widget)
         self.set_item(proxy)
+
+    def set_data_points(self, x: list[float], y: list[float]) -> None:
+        self.mapping_widget.set_data_points(x, y)
+
+    def set_input_units(self, units: Optional[str]) -> None:
+        self.mapping_widget.set_input_units(units)
+
+    def set_output_units(self, units: Optional[str]) -> None:
+        self.mapping_widget.set_output_units(units)
 
 
 class CalibratedAnalogMappingWidget(FigureCanvasQTAgg):
     def __init__(self, parent: Optional[QWidget] = None):
-        fig = Figure(figsize=(3, 2))
+        fig = Figure(figsize=(4, 3))
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
         self.setParent(parent)
-        self.axes.plot([-20, +20], [-6, +6], "-o")
-        self.axes.set_xlabel("Input [MHz]")
-        self.axes.set_ylabel("Output [V]")
+        (self.line,) = self.axes.plot([], [], "-o")
+        self.axes.set_xlabel(r"Input $x(t)$")
+        self.axes.set_ylabel(r"Output $y(t)$")
         self.axes.yaxis.tick_right()
         self.axes.yaxis.set_label_position("right")
         self.figure.tight_layout()
         self.axes.grid(True)
+
+    def set_data_points(self, x: list[float], y: list[float]) -> None:
+        self.line.set_data(x, y)
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.figure.tight_layout()
+        self.draw()
+
+    def set_input_units(self, units: Optional[str]) -> None:
+        self.axes.set_xlabel(f"Input $x(t)$ [{units}]")
+        self.figure.tight_layout()
+        self.draw()
+
+    def set_output_units(self, units: Optional[str]) -> None:
+        self.axes.set_ylabel(f"Output $y(t)$ [{units}]")
+        self.figure.tight_layout()
+        self.draw()

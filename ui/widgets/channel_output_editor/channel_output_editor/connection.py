@@ -94,9 +94,9 @@ class ConnectionLink(QGraphicsLineItem):
             output_connection.link_position().y(),
         )
         self.setPen(QPen(Qt.GlobalColor.white, 1))
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
         self.input_connection = input_connection
         self.output_connection = output_connection
 
@@ -109,3 +109,7 @@ class ConnectionLink(QGraphicsLineItem):
             self.output_connection.link_position().x(),
             self.output_connection.link_position().y(),
         )
+
+    def connect(self) -> None:
+        self.input_connection.link = self
+        self.output_connection.link = self
