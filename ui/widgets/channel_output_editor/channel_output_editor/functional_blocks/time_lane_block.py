@@ -29,6 +29,7 @@ class TimeLaneBlock(FunctionalBlock):
         layout = QFormLayout()
         widget.setLayout(layout)
         self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("Lane name")
         layout.addRow("Time lane", self.line_edit)
         self.default_value = QLineEdit()
         self.default_value.setPlaceholderText("None")

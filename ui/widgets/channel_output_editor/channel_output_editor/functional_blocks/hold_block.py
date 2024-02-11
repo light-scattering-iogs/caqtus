@@ -29,6 +29,7 @@ class HoldBlock(FunctionalBlock):
         layout = QFormLayout()
         widget.setLayout(layout)
         self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("Value")
         layout.addRow("Hold", self.line_edit)
         proxy.setWidget(widget)
         self.set_item(proxy)
