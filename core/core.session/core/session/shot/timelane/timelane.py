@@ -8,6 +8,7 @@ import attrs
 from core.types.expression import Expression
 from util.asserts import assert_length_changed
 
+#: The type of the values in the time lane.
 T = TypeVar("T")
 
 Step = NewType("Step", int)

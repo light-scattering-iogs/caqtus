@@ -9,6 +9,28 @@ from .timelane import TimeLane
 
 @attrs.define(init=False, eq=False, repr=False)
 class DigitalTimeLane(TimeLane[bool | Expression]):
+    """A time lane that represents digital values over time.
+
+    The values of a digital time lane can be a boolean: True or False, or a
+    placeholder expression.
+    The placeholder expression is used to represent a value that is not known
+    at the time of creation of the time lane and will be evaluated at a later
+    time.
+
+    Examples:
+
+    .. code-block:: python
+
+       from core.session.shot import DigitalTimeLane
+       from core.types.expression import Expression
+
+       # Creates a digital time lane with known values
+       lane = DigitalTimeLane([True] * 3 + [False, True])
+
+       # Creates a digital time lane with a placeholder expression
+       lane = DigitalTimeLane([Expression("x"), False, True])
+    """
+
     pass
 
 
