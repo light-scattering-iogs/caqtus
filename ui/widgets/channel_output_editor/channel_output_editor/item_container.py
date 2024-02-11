@@ -88,6 +88,11 @@ class ConnectionPoint(QGraphicsEllipseItem):
         super().setPos(x - 5, y)
         self.update()
 
+    def link_position(self):
+        """Return the center of the connection point"""
+        rect = self.rect()
+        return self.scenePos() + rect.center()
+
 
 class ChannelOutputBlock(FunctionalBlock):
     """The output"""

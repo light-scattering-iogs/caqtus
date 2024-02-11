@@ -1,17 +1,19 @@
 import functools
 from typing import Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QLineF
+from PySide6.QtGui import QPen
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsScene,
     QWidget,
     QGraphicsSceneMouseEvent,
     QMenu,
+    QGraphicsLineItem,
 )
 
 from .calibrated_analog_mapping_item import AnalogMappingBlock
-from .item_container import ChannelOutputBlock, TimeLaneBlock
+from .item_container import ChannelOutputBlock, TimeLaneBlock, ConnectionPoint
 
 
 class ChannelOutputEditor(QGraphicsView):
@@ -26,8 +28,10 @@ class ChannelOutputScene(QGraphicsScene):
         self.channel_output = ChannelOutputBlock(channel_label)
         self.addItem(self.channel_output)
 
-    def mousePressEvent(self, event: QGraphicsSceneMouseEvent):
-        super().mousePressEvent(event)
+        # A line that is drawn when the user is linking two connections
+        self.line: Optional[QGraphicsLineItem] = None
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
             action = menu.addAction("Add time lane")
@@ -39,6 +43,35 @@ class ChannelOutputScene(QGraphicsScene):
                 functools.partial(self.add_analog_mapping, event.scenePos())
             )
             menu.exec(event.screenPos())
+            return
+        elif event.button() == Qt.MouseButton.LeftButton:
+            items_at_click = self.items(event.scenePos())
+            if len(items_at_click) != 0:
+                highest_item = items_at_click[0]
+                if isinstance(highest_item, ConnectionPoint):
+                    self.line = QGraphicsLineItem(
+                        QLineF(
+                            highest_item.link_position(), highest_item.link_position()
+                        )
+                    )
+                    self.line.setPen(QPen(Qt.GlobalColor.white, 1))
+                    self.addItem(self.line)
+                    return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if self.line is not None:
+            new_line = QLineF(self.line.line().p1(), event.scenePos())
+            self.line.setLine(new_line)
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if self.line is not None:
+            self.removeItem(self.line)
+            self.line = None
+        else:
+            super().mouseReleaseEvent(event)
 
     def add_analog_mapping(self, pos):
         block = AnalogMappingBlock()
