@@ -20,14 +20,19 @@ class ChannelOutputBlock(FunctionalBlock):
     channel.
     """
 
-    def __init__(self, output_name: str, parent: Optional[QGraphicsItem] = None):
+    def __init__(
+        self,
+        channel_label: str,
+        description: str,
+        parent: Optional[QGraphicsItem] = None,
+    ):
         super().__init__(
             number_input_connections=1, has_output_connection=False, parent=parent
         )
         widget = QWidget()
-        layout = QFormLayout()
-        layout.addRow("Channel 0", QLabel(output_name))
+        layout = QFormLayout(widget)
         widget.setLayout(layout)
+        layout.addRow(channel_label, QLabel(description, widget))
         proxy = QGraphicsProxyWidget()
         proxy.setWidget(widget)
         self.set_item(proxy)

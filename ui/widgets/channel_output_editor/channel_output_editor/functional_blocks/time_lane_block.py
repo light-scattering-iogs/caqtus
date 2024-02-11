@@ -1,7 +1,5 @@
 from typing import Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QWidget,
@@ -17,6 +15,7 @@ class TimeLaneBlock(FunctionalBlock):
     """A block representing values fed by evaluating a time lane.
 
     This block is a leftmost block in the scene and has no input connections.
+    It presents a line edit to input the name of the time lane it represents.
     """
 
     def __init__(self, parent: Optional[QGraphicsItem] = None):
@@ -25,19 +24,18 @@ class TimeLaneBlock(FunctionalBlock):
         )
 
         widget = QWidget()
-        layout = QFormLayout()
-
-        layout.addRow("Time lane", QLineEdit())
+        layout = QFormLayout(widget)
         widget.setLayout(layout)
-
-        pal = QPalette()
-
-        pal.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
-
-        widget.setAutoFillBackground(True)
-        widget.setPalette(pal)
+        self.line_edit = QLineEdit(widget)
+        layout.addRow("Time lane", self.line_edit)
 
         proxy = QGraphicsProxyWidget()
         proxy.setWidget(widget)
 
         self.set_item(proxy)
+
+    def set_lane_name(self, lane: str) -> None:
+        self.line_edit.setText(lane)
+
+    def get_lane_name(self) -> str:
+        return self.line_edit.text()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPen
@@ -10,17 +10,21 @@ from PySide6.QtWidgets import (
     QGraphicsLineItem,
 )
 
+if TYPE_CHECKING:
+    from .functional_blocks import FunctionalBlock
+
 
 class ConnectionPoint(QGraphicsEllipseItem):
     """A connection point for a :class:`FunctionalBlock`."""
 
-    def __init__(self):
-        super().__init__(0, 0, 10, 10)
+    def __init__(self, parent: FunctionalBlock):
+        super().__init__(0, 0, 10, 10, parent=parent)
 
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
         self.link = None
+        self.block = parent
 
     @property
     def link(self) -> Optional[ConnectionLink]:

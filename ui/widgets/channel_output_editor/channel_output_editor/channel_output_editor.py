@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QGraphicsLineItem,
 )
 
+from core.device.sequencer import ChannelConfiguration
 from .connection import (
     ConnectionLink,
     ConnectionPoint,
@@ -19,29 +20,53 @@ from .connection import (
     InputConnectionPoint,
 )
 from .functional_blocks import (
-    ChannelOutputBlock,
     TimeLaneBlock,
     AnalogMappingBlock,
+    FunctionalBlock,
 )
+from .build_blocks import create_functional_blocks
 
 
 class ChannelOutputEditor(QGraphicsView):
-    def __init__(self, parent: Optional[QWidget] = None):
-        self._scene = ChannelOutputScene("421 cell \\ AOM", parent)
+    def __init__(
+        self,
+        channel_label: str,
+        channel_configuration: ChannelConfiguration,
+        parent: Optional[QWidget] = None,
+    ):
+        self._scene = ChannelOutputScene(channel_label, channel_configuration, parent)
         super().__init__(self._scene, parent)
 
 
 class ChannelOutputScene(QGraphicsScene):
-    def __init__(self, channel_label: str, parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        channel_label: str,
+        channel_configuration: ChannelConfiguration,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
-        self.channel_output = ChannelOutputBlock(channel_label)
-        self.addItem(self.channel_output)
+        self.channel_output = create_functional_blocks(
+            channel_label, channel_configuration
+        )
+        self.add_block(self.channel_output)
+        # self.addItem(self.channel_output)
 
         # This object is used to store the line and the initial connection point when
         # the user starts dragging a line to connect two blocks.
         self._line_and_initial_connection: Optional[
             tuple[QGraphicsLineItem, ConnectionPoint]
         ] = None
+
+    def add_block(self, block: FunctionalBlock) -> None:
+        """Recursively add a block and all its input blocks to the scene."""
+
+        self.addItem(block)
+        for connection in block.input_connections:
+            link = connection.link
+            if link is not None:
+                self.addItem(link)
+                self.add_block(link.output_connection.block)
 
     def _is_user_dragging_line(self) -> bool:
         return self._line_and_initial_connection is not None

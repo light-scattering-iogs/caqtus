@@ -29,29 +29,32 @@ class FunctionalBlock(QGraphicsRectItem):
         parent: Optional[QGraphicsItem] = None,
     ):
         super().__init__(0, 0, 100, 100, parent)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, True)
         self.setBrush(QColor(100, 100, 100))
         self.setPen(QColor(255, 255, 255))
 
         self.input_connections: list[InputConnectionPoint] = []
         for i in range(number_input_connections):
-            connection = InputConnectionPoint()
-            connection.setParentItem(self)
+            connection = InputConnectionPoint(self)
             connection.setZValue(2)
             self.input_connections.append(connection)
 
         self.output_connection: Optional[OutputConnectionPoint] = None
         if has_output_connection:
-            self.output_connection = OutputConnectionPoint()
-            self.output_connection.setParentItem(self)
+            self.output_connection = OutputConnectionPoint(self)
             self.output_connection.setZValue(2)
         self.update_connection_positions()
 
     def set_item(self, item: QGraphicsItem) -> None:
-        """Set the item that will be displayed inside the functional block."""
+        """Set the item that will be displayed inside the functional block.
+
+        The item will be displayed inside the functional block and will be used to
+        represent the function itself.
+        The functional block takes ownership of the item.
+        """
 
         item.setParentItem(self)
         # The item might not be a rectangle, so we pick the bounding rectangle of the
