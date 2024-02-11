@@ -2,13 +2,20 @@ import re
 from typing import Optional, assert_never
 
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QRectF
-from PySide6.QtGui import QValidator, QTextDocument, QAbstractTextDocumentLayout
+from PySide6.QtCore import QModelIndex, Qt, QRectF, QAbstractItemModel, QSize
+from PySide6.QtGui import (
+    QValidator,
+    QTextDocument,
+    QAbstractTextDocumentLayout,
+    QFontMetrics,
+)
 from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QLineEdit,
     QWidget,
     QStyleOptionViewItem,
+    QStyleOptionFrame,
+    QStyle,
 )
 from core.session.sequence.iteration_configuration import (
     Step,
@@ -136,33 +143,45 @@ class StepDelegate(QStyledItemDelegate):
 
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ) -> QLineEdit:
-        editor = QLineEdit()
-        editor.setParent(parent)
-        return editor
+    ) -> QWidget:
+        data = index.data(role=Qt.ItemDataRole.EditRole)
+        if isinstance(data, VariableDeclaration):
+            editor = VariableDeclarationEditor(parent)
+            return editor
+        else:
+            editor = QLineEdit()
+            editor.setParent(parent)
+            return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
-        editor: QLineEdit
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         match data:
             case VariableDeclaration(variable, value):
-                text = f"{variable} = {value}"
-                editor.setValidator(VariableDeclarationValidator())
+                assert isinstance(editor, VariableDeclarationEditor)
+                editor.set_data(data)
             case LinspaceLoop(variable, start, stop, num, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {num} steps:"
                 editor.setValidator(LinSpaceLoopValidator())
+                editor.setText(text)
             case ArangeLoop(variable, start, stop, step, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {step} spacing:"
                 editor.setValidator(ArangeLoopValidator())
+                editor.setText(text)
             case ImportConstantTable(table, alias):
                 if alias is None:
                     text = f"import {table}"
                 else:
                     text = f"import {table} as {alias}"
                 editor.setValidator(ImportConstantTableValidator())
+                editor.setText(text)
             case _:
                 raise ValueError(f"Can't set editor data for {data}")
-        editor.setText(text)
+
+    def updateEditorGeometry(
+        self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ):
+        geometry = option.rect
+        editor.setGeometry(geometry)
 
     def setModelData(
         self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
@@ -259,3 +278,60 @@ class ImportConstantTableValidator(QValidator):
             return QValidator.State.Acceptable, input, pos
         else:
             return QValidator.State.Invalid, input, pos
+
+
+class VariableDeclarationEditor(QWidget):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        layout = QtWidgets.QHBoxLayout()
+        self.variable = AutoResizeLineEdit(self)
+        self.value = AutoResizeLineEdit(self)
+        layout.addWidget(self.variable)
+        label = QtWidgets.QLabel(self)
+        label.setText("=")
+        label.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(label, 0)
+        layout.addWidget(self.value, 0)
+        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+
+    def set_data(self, data: VariableDeclaration):
+        self.variable.setText(str(data.variable))
+        self.value.setText(str(data.value))
+
+    def get_data(self) -> VariableDeclaration:
+        return VariableDeclaration(
+            variable=DottedVariableName(self.variable.text()),
+            value=Expression(self.value.text()),
+        )
+
+
+class AutoResizeLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.textChanged.connect(self.resize_to_content)
+
+    def _resize_to_content(self):
+        font_metric = QFontMetrics(self.font())
+        pixel_width = font_metric.width(self.text() + " ")
+        self.setFixedWidth(pixel_width)
+        self.adjustSize()
+
+    def resize_to_content(self):
+        text = self.text()
+        text_size = self.fontMetrics().size(0, text)
+        tm = self.textMargins()
+        tm_size = QSize(tm.left() + tm.right(), tm.top() + tm.bottom())
+        cm = self.contentsMargins()
+        cm_size = QSize(cm.left() + cm.right(), cm.top() + cm.bottom())
+        extra_size = QSize(8, 4)
+        contents_size = text_size + tm_size + cm_size + extra_size
+        op = QStyleOptionFrame()
+        op.initFrom(self)
+        perfect_size = self.style().sizeFromContents(
+            QStyle.ContentsType.CT_LineEdit, op, contents_size
+        )
+        self.setFixedSize(perfect_size)

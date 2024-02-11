@@ -1,8 +1,10 @@
 from collections.abc import Sequence
 
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTableView
-
 from core.device.sequencer.configuration import ChannelConfiguration
+
+from .channel_output_delegate import ChannelOutputDelegate
 from .channels_model import SequencerChannelsModel
 
 
@@ -11,7 +13,7 @@ class SequencerChannelView(QTableView):
         super().__init__(*args, **kwargs)
 
         self.channel_model = SequencerChannelsModel(channels)
-
+        self.setItemDelegate(ChannelOutputDelegate(self))
         self.verticalHeader().setMinimumSectionSize(-1)
 
     @property
@@ -27,3 +29,10 @@ class SequencerChannelView(QTableView):
         self.channel_model.channels = tuple(channels)
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            self.edit(index)
+        else:
+            super().mouseDoubleClickEvent(event)

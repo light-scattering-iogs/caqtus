@@ -51,7 +51,7 @@ class SequencerChannelsModel(QAbstractTableModel):
                 if role == Qt.ItemDataRole.DisplayRole:
                     return str(self._channels[index.row()].output)
                 elif role == Qt.ItemDataRole.EditRole:
-                    return repr(self._channels[index.row()].output)
+                    return self._channels[index.row()]
 
     def setData(
         self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole

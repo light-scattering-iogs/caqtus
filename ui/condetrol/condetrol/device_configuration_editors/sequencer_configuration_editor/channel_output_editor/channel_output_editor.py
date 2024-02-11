@@ -249,6 +249,13 @@ class ChannelOutputScene(QGraphicsScene):
                 self.reposition_child_blocks(input_block)
 
     def build_channel_configuration(self) -> ChannelConfiguration:
+        """Construct the channel configuration from the blocks in the scene.
+
+        Raises:
+            OutputConstructionError: If the output of the channel output block cannot be
+            constructed from the blocks in the scene.
+        """
+
         channel_configuration = copy.deepcopy(self.channel_configuration)
         link = self.channel_output.input_connections[0].link
         if link is None:
