@@ -4,8 +4,14 @@ from core.device.sequencer.configuration import (
     ChannelOutput,
     LaneValues,
     CalibratedAnalogMapping,
+    Constant,
 )
-from .functional_blocks import FunctionalBlock, TimeLaneBlock, AnalogMappingBlock
+from .functional_blocks import (
+    FunctionalBlock,
+    TimeLaneBlock,
+    AnalogMappingBlock,
+    HoldBlock,
+)
 
 
 @functools.singledispatch
@@ -24,6 +30,11 @@ def build_output(block: FunctionalBlock) -> ChannelOutput:
 @build_output.register
 def build_lane_output(block: TimeLaneBlock) -> LaneValues:
     return LaneValues(lane=block.get_lane_name(), default=block.get_default_value())
+
+
+@build_output.register
+def build_constant_output(block: HoldBlock) -> Constant:
+    return Constant(block.get_value())
 
 
 @build_output.register

@@ -5,6 +5,7 @@ from core.device.sequencer.configuration import (
     ChannelOutput,
     LaneValues,
     CalibratedAnalogMapping,
+    Constant,
 )
 from .connection import ConnectionLink
 from .functional_blocks import (
@@ -12,6 +13,7 @@ from .functional_blocks import (
     ChannelOutputBlock,
     TimeLaneBlock,
     AnalogMappingBlock,
+    HoldBlock,
 )
 
 
@@ -44,6 +46,7 @@ def create_functional_blocks(
 def build_block(channel_output: ChannelOutput) -> FunctionalBlock:
     """Builds a block that represents the given channel output.
 
+    This function is the inverse of `build_output`.
     The returned block has its input linked to the previous blocks and its output not
     linked to anything.
     All functional blocks and links accessible from the returned block have no parent
@@ -57,7 +60,7 @@ def build_block(channel_output: ChannelOutput) -> FunctionalBlock:
 
 
 @build_block.register
-def build_lane_block(channel_output: LaneValues) -> FunctionalBlock:
+def build_lane_block(channel_output: LaneValues) -> TimeLaneBlock:
     block = TimeLaneBlock()
     block.set_lane_name(channel_output.lane)
     block.set_default_value(channel_output.default)
@@ -65,9 +68,16 @@ def build_lane_block(channel_output: LaneValues) -> FunctionalBlock:
 
 
 @build_block.register
+def build_hold_block(channel_output: Constant) -> HoldBlock:
+    block = HoldBlock()
+    block.set_value(channel_output.value)
+    return block
+
+
+@build_block.register
 def build_analog_mapping_block(
     channel_output: CalibratedAnalogMapping,
-) -> FunctionalBlock:
+) -> AnalogMappingBlock:
     block = AnalogMappingBlock()
     measured_values = channel_output.measured_data_points
     block.set_data_points(
