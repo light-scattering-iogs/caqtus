@@ -188,6 +188,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             for table_name in in_both
             if new_tables[table_name] != previous_tables[table_name]
         }
+        logger.debug("previous_tables: %r", previous_tables)
+        logger.debug("new_tables: %r", new_tables)
         with self.session_maker() as session:
             for table_name in to_remove:
                 del session.constants[table_name]
