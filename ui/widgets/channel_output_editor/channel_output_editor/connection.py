@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QColor, QPen
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -21,16 +21,17 @@ class ConnectionPoint(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
         self.link: Optional[ConnectionLink] = None
 
-    def setPos(self, x, y):
+    def setPos(self, x, y) -> None:
         super().setPos(x - 5, y)
         self.update()
 
-    def link_position(self):
-        """Return the center of the connection point"""
+    def link_position(self) -> QPointF:
+        """Return the point where the link should connect to."""
+
         rect = self.rect()
         return self.scenePos() + rect.center()
 
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value):
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value: Any) -> Any:
         if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
             if self.link is not None:
                 self.link.update_position()
