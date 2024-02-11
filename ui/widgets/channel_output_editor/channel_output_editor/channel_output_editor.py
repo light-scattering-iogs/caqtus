@@ -2,7 +2,7 @@ import functools
 from typing import Optional
 
 from PySide6.QtCore import Qt, QLineF
-from PySide6.QtGui import QPen
+from PySide6.QtGui import QPen, QShortcut, QKeySequence
 from PySide6.QtWidgets import (
     QGraphicsView,
     QGraphicsScene,
@@ -36,6 +36,11 @@ class ChannelOutputEditor(QGraphicsView):
     ):
         self._scene = ChannelOutputScene(channel_label, channel_configuration, parent)
         super().__init__(self._scene, parent)
+        self.reposition_blocks = QShortcut(QKeySequence("Ctrl+L"), self)
+        self.reposition_blocks.activated.connect(self.on_reposition_blocks)
+
+    def on_reposition_blocks(self):
+        self._scene.reposition_child_blocks(self._scene.channel_output)
 
 
 class ChannelOutputScene(QGraphicsScene):
