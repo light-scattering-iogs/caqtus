@@ -111,23 +111,34 @@ class ChannelOutputScene(QGraphicsScene):
             if len(items_at_release):
                 # The dragged line is often the first item in the list of items at the
                 # release point, so we remove it.
-                if items_at_release[0] is self.get_line_item():
+                if items_at_release[0] is line_item:
                     items_at_release = items_at_release[1:]
-            initial_connection = self.get_initial_connection_point()
-            assert initial_connection is not None
+            initial_connection_point = self.get_initial_connection_point()
+            assert initial_connection_point is not None
             self._clear_user_dragging_line()
 
             if len(items_at_release):
                 highest_item = items_at_release[0]
                 if isinstance(highest_item, ConnectionPoint):
-                    link = self.create_link(initial_connection, highest_item)
+                    final_connection_point = highest_item
+                    link = self.create_link(
+                        initial_connection_point, final_connection_point
+                    )
                     if link is not None:
-                        initial_connection.link = link
-                        highest_item.link = link
+                        self.remove_potential_link(initial_connection_point)
+                        self.remove_potential_link(final_connection_point)
+                        initial_connection_point.link = link
+                        final_connection_point.link = link
                         self.addItem(link)
                     return
         else:
             super().mouseReleaseEvent(event)
+
+    def remove_potential_link(self, connection: ConnectionPoint) -> None:
+        if (link := connection.link) is not None:
+            link.input_connection.link = None
+            link.output_connection.link = None
+            self.removeItem(link)
 
     def create_link(
         self, initial_connection: ConnectionPoint, final_connection: ConnectionPoint
