@@ -1,7 +1,11 @@
 import functools
 
-from core.device.sequencer.configuration import ChannelOutput, LaneValues
-from .functional_blocks import FunctionalBlock, TimeLaneBlock
+from core.device.sequencer.configuration import (
+    ChannelOutput,
+    LaneValues,
+    CalibratedAnalogMapping,
+)
+from .functional_blocks import FunctionalBlock, TimeLaneBlock, AnalogMappingBlock
 
 
 @functools.singledispatch
@@ -14,6 +18,22 @@ def build_output(block: FunctionalBlock) -> ChannelOutput:
 @build_output.register
 def build_lane_output(block: TimeLaneBlock) -> LaneValues:
     return LaneValues(lane=block.get_lane_name(), default=block.get_default_value())
+
+
+@build_output.register
+def build_analog_mapping_output(block: AnalogMappingBlock) -> CalibratedAnalogMapping:
+    link = block.input_connections[0].link
+    if link is None:
+        raise MissingInputError("Analog mapping block has no input")
+
+    input_block = link.output_connection.block
+    x_points, y_points = block.get_data_points()
+    return CalibratedAnalogMapping(
+        input_=build_output(input_block),
+        measured_data_points=tuple((x, y) for x, y in zip(x_points, y_points)),
+        input_units=block.get_input_units(),
+        output_units=block.get_output_units(),
+    )
 
 
 class OutputConstructionError(ValueError):

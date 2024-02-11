@@ -42,11 +42,20 @@ class AnalogMappingBlock(FunctionalBlock):
     def set_data_points(self, x: list[float], y: list[float]) -> None:
         self.mapping_widget.set_data_points(x, y)
 
+    def get_data_points(self) -> tuple[list[float], list[float]]:
+        return self.mapping_widget.get_data_points()
+
     def set_input_units(self, units: Optional[str]) -> None:
         self.mapping_widget.set_input_units(units)
 
+    def get_input_units(self) -> Optional[str]:
+        return self.mapping_widget.get_input_units()
+
     def set_output_units(self, units: Optional[str]) -> None:
         self.mapping_widget.set_output_units(units)
+
+    def get_output_units(self) -> Optional[str]:
+        return self.mapping_widget.get_output_units()
 
 
 class CalibratedAnalogMappingWidget(FigureCanvasQTAgg):
@@ -55,6 +64,10 @@ class CalibratedAnalogMappingWidget(FigureCanvasQTAgg):
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
         self.setParent(parent)
+        self.x: list[float] = []
+        self.y: list[float] = []
+        self.input_units: Optional[str] = None
+        self.output_units: Optional[str] = None
         (self.line,) = self.axes.plot([], [], "-o")
         self.axes.set_xlabel(r"Input $x(t)$")
         self.axes.set_ylabel(r"Output $y(t)$")
@@ -64,18 +77,30 @@ class CalibratedAnalogMappingWidget(FigureCanvasQTAgg):
         self.axes.grid(True)
 
     def set_data_points(self, x: list[float], y: list[float]) -> None:
+        self.x, self.y = x, y
         self.line.set_data(x, y)
         self.axes.relim()
         self.axes.autoscale_view()
         self.figure.tight_layout()
         self.draw()
 
+    def get_data_points(self) -> tuple[list[float], list[float]]:
+        return self.x, self.y
+
     def set_input_units(self, units: Optional[str]) -> None:
+        self.input_units = units
         self.axes.set_xlabel(f"Input $x(t)$ [{units}]")
         self.figure.tight_layout()
         self.draw()
 
+    def get_input_units(self) -> Optional[str]:
+        return self.input_units
+
     def set_output_units(self, units: Optional[str]) -> None:
+        self.output_units = units
         self.axes.set_ylabel(f"Output $y(t)$ [{units}]")
         self.figure.tight_layout()
         self.draw()
+
+    def get_output_units(self) -> Optional[str]:
+        return self.output_units
