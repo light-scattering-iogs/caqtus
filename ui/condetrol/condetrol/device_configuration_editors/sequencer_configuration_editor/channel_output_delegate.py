@@ -34,6 +34,9 @@ class ChannelOutputDelegate(QStyledItemDelegate):
                 "Finished editing channel configuration: %r",
                 channel_configuration,
             )
+            index.model().setData(
+                index, channel_configuration, role=Qt.ItemDataRole.EditRole
+            )
 
 
 class ChannelOutputDialog(QDialog, Ui_ChannelOutputDialog):

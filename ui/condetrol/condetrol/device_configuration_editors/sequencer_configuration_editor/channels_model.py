@@ -63,22 +63,8 @@ class SequencerChannelsModel(QAbstractTableModel):
                 self.dataChanged.emit(index, index)
                 return True
             elif index.column() == 1:
-                # TODO: Implement a secure way to evaluate the channel output
-                result = eval(
-                    str(value),
-                    dict(
-                        Expression=Expression,
-                        LaneValues=LaneValues,
-                        DeviceTrigger=DeviceTrigger,
-                        Constant=Constant,
-                        Advance=Advance,
-                        Delay=Delay,
-                        CalibratedAnalogMapping=CalibratedAnalogMapping,
-                    ),
-                    {},
-                )
-                if is_channel_output(result):
-                    self._channels[channel].output = result
+                if isinstance(value, ChannelConfiguration):
+                    self._channels[channel].output = value.output
                     self.dataChanged.emit(index, index)
                     return True
         return super().setData(index, value, role)
