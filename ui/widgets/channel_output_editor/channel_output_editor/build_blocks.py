@@ -6,6 +6,7 @@ from core.device.sequencer.configuration import (
     LaneValues,
     CalibratedAnalogMapping,
     Constant,
+    DeviceTrigger,
 )
 from .connection import ConnectionLink
 from .functional_blocks import (
@@ -14,6 +15,7 @@ from .functional_blocks import (
     TimeLaneBlock,
     AnalogMappingBlock,
     HoldBlock,
+    DeviceTriggerBlock,
 )
 
 
@@ -71,6 +73,15 @@ def build_lane_block(channel_output: LaneValues) -> TimeLaneBlock:
 def build_hold_block(channel_output: Constant) -> HoldBlock:
     block = HoldBlock()
     block.set_value(channel_output.value)
+    return block
+
+
+@build_block.register
+def build_device_trigger_block(
+    channel_output: DeviceTrigger,
+) -> DeviceTriggerBlock:
+    block = DeviceTriggerBlock()
+    block.set_device_name(channel_output.device_name)
     return block
 
 

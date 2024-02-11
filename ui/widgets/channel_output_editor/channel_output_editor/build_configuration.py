@@ -5,12 +5,14 @@ from core.device.sequencer.configuration import (
     LaneValues,
     CalibratedAnalogMapping,
     Constant,
+    DeviceTrigger,
 )
 from .functional_blocks import (
     FunctionalBlock,
     TimeLaneBlock,
     AnalogMappingBlock,
     HoldBlock,
+    DeviceTriggerBlock,
 )
 
 
@@ -35,6 +37,11 @@ def build_lane_output(block: TimeLaneBlock) -> LaneValues:
 @build_output.register
 def build_constant_output(block: HoldBlock) -> Constant:
     return Constant(block.get_value())
+
+
+@build_output.register
+def build_device_trigger(block: DeviceTriggerBlock) -> DeviceTrigger:
+    return DeviceTrigger(block.get_device_name())
 
 
 @build_output.register
