@@ -1,7 +1,7 @@
 from typing import Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QPalette, QPen
 from PySide6.QtWidgets import (
     QGraphicsRectItem,
     QGraphicsItem,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QWidget,
     QFormLayout,
+    QGraphicsLineItem,
 )
 
 
@@ -83,6 +84,7 @@ class ConnectionPoint(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.link: Optional[ConnectionLink] = None
 
     def setPos(self, x, y):
         super().setPos(x - 5, y)
@@ -92,6 +94,22 @@ class ConnectionPoint(QGraphicsEllipseItem):
         """Return the center of the connection point"""
         rect = self.rect()
         return self.scenePos() + rect.center()
+
+
+class ConnectionLink(QGraphicsLineItem):
+    """A link between two connection points."""
+
+    def __init__(self, start: ConnectionPoint, end: ConnectionPoint):
+        super().__init__(
+            start.link_position().x(),
+            start.link_position().y(),
+            end.link_position().x(),
+            end.link_position().y(),
+        )
+        self.setPen(QPen(Qt.GlobalColor.white, 1))
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
 
 
 class ChannelOutputBlock(FunctionalBlock):
