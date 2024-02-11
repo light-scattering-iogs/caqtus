@@ -1,3 +1,4 @@
+import copy
 import functools
 from typing import Optional
 
@@ -13,6 +14,8 @@ from PySide6.QtWidgets import (
 )
 
 from core.device.sequencer import ChannelConfiguration
+from .build_blocks import create_functional_blocks
+from .build_configuration import build_output, MissingInputError
 from .connection import (
     ConnectionLink,
     ConnectionPoint,
@@ -24,7 +27,6 @@ from .functional_blocks import (
     AnalogMappingBlock,
     FunctionalBlock,
 )
-from .build_blocks import create_functional_blocks
 
 
 class ChannelOutputEditor(QGraphicsView):
@@ -42,6 +44,9 @@ class ChannelOutputEditor(QGraphicsView):
     def on_reposition_blocks(self):
         self._scene.reposition_child_blocks(self._scene.channel_output)
 
+    def get_channel_configuration(self) -> ChannelConfiguration:
+        return self._scene.build_channel_configuration()
+
 
 class ChannelOutputScene(QGraphicsScene):
     def __init__(
@@ -54,6 +59,7 @@ class ChannelOutputScene(QGraphicsScene):
         self.channel_output = create_functional_blocks(
             channel_label, channel_configuration
         )
+        self.channel_configuration = channel_configuration
         self.add_block(self.channel_output)
         self.reposition_child_blocks(self.channel_output)
 
@@ -220,3 +226,12 @@ class ChannelOutputScene(QGraphicsScene):
                 input_block = link.output_connection.block
                 input_block.setX(block.x() - input_block.boundingRect().width() - 100)
                 self.reposition_child_blocks(input_block)
+
+    def build_channel_configuration(self) -> ChannelConfiguration:
+        channel_configuration = copy.deepcopy(self.channel_configuration)
+        link = self.channel_output.input_connections[0].link
+        if link is None:
+            raise MissingInputError("The channel output block has no input")
+        previous_block = link.output_connection.block
+        channel_configuration.output = build_output(previous_block)
+        return channel_configuration
