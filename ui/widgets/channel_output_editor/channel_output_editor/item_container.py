@@ -95,6 +95,12 @@ class ConnectionPoint(QGraphicsEllipseItem):
         rect = self.rect()
         return self.scenePos() + rect.center()
 
+    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            if self.link is not None:
+                self.link.update_position()
+        return super().itemChange(change, value)
+
 
 class ConnectionLink(QGraphicsLineItem):
     """A link between two connection points."""
@@ -110,6 +116,18 @@ class ConnectionLink(QGraphicsLineItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.start_connection = start
+        self.end_connection = end
+
+    def update_position(self) -> None:
+        """Update the position of the link to follow the connection points."""
+
+        self.setLine(
+            self.start_connection.link_position().x(),
+            self.start_connection.link_position().y(),
+            self.end_connection.link_position().x(),
+            self.end_connection.link_position().y(),
+        )
 
 
 class ChannelOutputBlock(FunctionalBlock):
