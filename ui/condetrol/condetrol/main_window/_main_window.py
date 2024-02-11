@@ -220,6 +220,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             if new_device_configurations[device_name]
             != previous_device_configurations[device_name]
         }
+        logger.debug(
+            "previous_device_configurations: %r", previous_device_configurations
+        )
+        logger.debug("new_device_configurations: %r", new_device_configurations)
         with self.session_maker() as session:
             for device_name in to_remove:
                 del session.device_configurations[device_name]
