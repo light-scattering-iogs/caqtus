@@ -10,7 +10,13 @@ from .functional_blocks import FunctionalBlock, TimeLaneBlock, AnalogMappingBloc
 
 @functools.singledispatch
 def build_output(block: FunctionalBlock) -> ChannelOutput:
-    """Builds the channel output configuration from the given block."""
+    """Builds the channel output configuration from the given block.
+
+    This function is the inverse of `create_functional_blocks`.
+    It is used to convert the blocks in the scene to a channel output configuration.
+    When called on a given block, it returns a ChannelOutput object that represents
+    output pipeline of the block, including all its input connections.
+    """
 
     raise NotImplementedError(f"<build_output> not implemented for {type(block)}")
 
