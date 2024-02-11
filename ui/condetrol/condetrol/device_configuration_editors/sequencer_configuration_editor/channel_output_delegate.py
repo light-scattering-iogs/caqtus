@@ -1,11 +1,9 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QStyledItemDelegate, QDialog, QWidget, QVBoxLayout
-from condetrol.device_configuration_editors.sequencer_configuration_editor.channel_output_editor import \
-    OutputConstructionError
 from core.device.sequencer import ChannelConfiguration
 from exception_tree import ExceptionDialog
 
-from .channel_output_editor import ChannelOutputEditor
+from .channel_output_editor import ChannelOutputEditor, OutputConstructionError
 from .dialog_ui import Ui_ChannelOutputDialog
 from ...logger import logger
 
@@ -70,4 +68,3 @@ class ChannelOutputDialog(QDialog, Ui_ChannelOutputDialog):
             exception_dialog.exec()
         else:
             super().accept()
-
