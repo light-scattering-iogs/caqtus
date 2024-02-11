@@ -23,10 +23,10 @@ from core.session import (
     Sequence,
 )
 from core.session.sequence import State
+from exception_tree import ExceptionDialog
 from waiting_widget import run_with_wip_widget
 
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..exception_dialog import ExceptionDialog
 from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
