@@ -28,6 +28,9 @@ class ConnectionPoint(QGraphicsEllipseItem):
 
     @link.setter
     def link(self, link: Optional[ConnectionLink]) -> None:
+        if hasattr(self, "_link"):
+            if self._link is not None and link is not None:
+                raise ValueError("The connection point is already linked")
         self._link = link
         if link is not None:
             self.setBrush(Qt.GlobalColor.green)
@@ -51,29 +54,54 @@ class ConnectionPoint(QGraphicsEllipseItem):
         return super().itemChange(change, value)
 
 
-class ConnectionLink(QGraphicsLineItem):
-    """A link between two connection points."""
+class InputConnectionPoint(ConnectionPoint):
+    """A connection point for an input a functional block."""
 
-    def __init__(self, start: ConnectionPoint, end: ConnectionPoint):
+    pass
+
+
+class OutputConnectionPoint(ConnectionPoint):
+    """A connection point for the output of a functional block."""
+
+    pass
+
+
+class ConnectionLink(QGraphicsLineItem):
+    """A link between two connection points.
+
+    The link must connect an output connection point to an input connection point.
+    It cannot connect two input connection points or two output connection points.
+    """
+
+    def __init__(
+        self,
+        *,
+        input_connection: InputConnectionPoint,
+        output_connection: OutputConnectionPoint,
+    ):
+        if not isinstance(input_connection, InputConnectionPoint):
+            raise ValueError("The input_connection must be an InputConnectionPoint")
+        if not isinstance(output_connection, OutputConnectionPoint):
+            raise ValueError("The output_connection must be an OutputConnectionPoint")
         super().__init__(
-            start.link_position().x(),
-            start.link_position().y(),
-            end.link_position().x(),
-            end.link_position().y(),
+            input_connection.link_position().x(),
+            input_connection.link_position().y(),
+            output_connection.link_position().x(),
+            output_connection.link_position().y(),
         )
         self.setPen(QPen(Qt.GlobalColor.white, 1))
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
-        self.start_connection = start
-        self.end_connection = end
+        self.input_connection = input_connection
+        self.output_connection = output_connection
 
     def update_position(self) -> None:
         """Update the position of the link to follow the connection points."""
 
         self.setLine(
-            self.start_connection.link_position().x(),
-            self.start_connection.link_position().y(),
-            self.end_connection.link_position().x(),
-            self.end_connection.link_position().y(),
+            self.input_connection.link_position().x(),
+            self.input_connection.link_position().y(),
+            self.output_connection.link_position().x(),
+            self.output_connection.link_position().y(),
         )

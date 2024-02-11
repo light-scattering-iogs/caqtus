@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
 )
 
-from .connection import ConnectionPoint
+from .connection import InputConnectionPoint, OutputConnectionPoint
 
 
 class FunctionalBlock(QGraphicsRectItem):
@@ -37,16 +37,16 @@ class FunctionalBlock(QGraphicsRectItem):
         self.setBrush(QColor(100, 100, 100))
         self.setPen(QColor(255, 255, 255))
 
-        self.input_connections: list[ConnectionPoint] = []
+        self.input_connections: list[InputConnectionPoint] = []
         for i in range(number_input_connections):
-            connection = ConnectionPoint()
+            connection = InputConnectionPoint()
             connection.setParentItem(self)
             connection.setZValue(2)
             self.input_connections.append(connection)
 
-        self.output_connection: Optional[ConnectionPoint] = None
+        self.output_connection: Optional[OutputConnectionPoint] = None
         if has_output_connection:
-            self.output_connection = ConnectionPoint()
+            self.output_connection = OutputConnectionPoint()
             self.output_connection.setParentItem(self)
             self.output_connection.setZValue(2)
         self.update_connection_positions()

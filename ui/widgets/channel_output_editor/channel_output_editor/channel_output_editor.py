@@ -13,12 +13,16 @@ from PySide6.QtWidgets import (
 )
 
 from .calibrated_analog_mapping_item import AnalogMappingBlock
+from .connection import (
+    ConnectionLink,
+    ConnectionPoint,
+    OutputConnectionPoint,
+    InputConnectionPoint,
+)
 from .item_container import (
     ChannelOutputBlock,
     TimeLaneBlock,
-    ConnectionPoint,
 )
-from .connection import ConnectionLink
 
 
 class ChannelOutputEditor(QGraphicsView):
@@ -116,13 +120,45 @@ class ChannelOutputScene(QGraphicsScene):
             if len(items_at_release):
                 highest_item = items_at_release[0]
                 if isinstance(highest_item, ConnectionPoint):
-                    link = ConnectionLink(initial_connection, highest_item)
-                    self.addItem(link)
-                    initial_connection.link = link
-                    highest_item.link = link
+                    link = self.create_link(initial_connection, highest_item)
+                    if link is not None:
+                        initial_connection.link = link
+                        highest_item.link = link
+                        self.addItem(link)
                     return
         else:
             super().mouseReleaseEvent(event)
+
+    def create_link(
+        self, initial_connection: ConnectionPoint, final_connection: ConnectionPoint
+    ) -> Optional[ConnectionLink]:
+        """Attempts to create a link between two connection points.
+
+        This will check is on of the connection points is an input and the other is an
+        output.
+        If that is the case, a link between the two connection points is created and
+        returned.
+        If not, None is returned.
+        """
+
+        if isinstance(initial_connection, OutputConnectionPoint):
+            if isinstance(final_connection, InputConnectionPoint):
+                link = ConnectionLink(
+                    input_connection=final_connection,
+                    output_connection=initial_connection,
+                )
+                return link
+            else:
+                return None
+        elif isinstance(initial_connection, InputConnectionPoint):
+            if isinstance(final_connection, OutputConnectionPoint):
+                link = ConnectionLink(
+                    input_connection=initial_connection,
+                    output_connection=final_connection,
+                )
+                return link
+            else:
+                return None
 
     def add_analog_mapping(self, pos):
         block = AnalogMappingBlock()
