@@ -1,33 +1,32 @@
 from typing import Optional
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QGraphicsRectItem,
     QGraphicsItem,
-    QLineEdit,
-    QGraphicsProxyWidget,
-    QLabel,
-    QWidget,
-    QFormLayout,
 )
 
-from .connection import InputConnectionPoint, OutputConnectionPoint
+from ..connection import InputConnectionPoint, OutputConnectionPoint
 
 
 class FunctionalBlock(QGraphicsRectItem):
     """A block item that represents a function.
 
-    A functional block is a block that represents a function. It has input connections
-    that are used to feed function arguments and an (optional) output connection that
-    can be used to connect the result of the function to another block.
+    A functional block is a block that represents a function and can be drawn on a
+    QGraphicsScene.
+    It has input connections points that are used to feed function arguments.
+    It also has an (optional) output connection that can be used to connect the result
+    of the function to another block.
+    Links between blocks can be created to represent the flow of data between blocks.
+    It contains a QGraphicsItem that represents the function itself and can be used to
+    display and edit various function parameters.
     """
 
     def __init__(
         self,
         number_input_connections: int,
         has_output_connection: bool = True,
-        parent=None,
+        parent: Optional[QGraphicsItem] = None,
     ):
         super().__init__(0, 0, 100, 100, parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
@@ -51,7 +50,9 @@ class FunctionalBlock(QGraphicsRectItem):
             self.output_connection.setZValue(2)
         self.update_connection_positions()
 
-    def set_item(self, item: QGraphicsItem):
+    def set_item(self, item: QGraphicsItem) -> None:
+        """Set the item that will be displayed inside the functional block."""
+
         item.setParentItem(self)
         # The item might not be a rectangle, so we pick the bounding rectangle of the
         # item to set the size of the functional block.
@@ -72,44 +73,3 @@ class FunctionalBlock(QGraphicsRectItem):
             input_connection.setPos(0, (i + 1) * vertical_spacing - 5)
         if self.output_connection is not None:
             self.output_connection.setPos(width, height / 2 - 5)
-
-
-class ChannelOutputBlock(FunctionalBlock):
-    """The output"""
-
-    def __init__(self, output_name: str, parent: Optional[QGraphicsItem] = None):
-        super().__init__(
-            number_input_connections=1, has_output_connection=False, parent=parent
-        )
-        widget = QWidget()
-        layout = QFormLayout()
-        layout.addRow("Channel 0", QLabel(output_name))
-        widget.setLayout(layout)
-        proxy = QGraphicsProxyWidget()
-        proxy.setWidget(widget)
-        self.set_item(proxy)
-
-
-class TimeLaneBlock(FunctionalBlock):
-    def __init__(self, parent: Optional[QGraphicsItem] = None):
-        super().__init__(
-            number_input_connections=0, has_output_connection=True, parent=parent
-        )
-
-        widget = QWidget()
-        layout = QFormLayout()
-
-        layout.addRow("Time lane", QLineEdit())
-        widget.setLayout(layout)
-
-        pal = QPalette()
-
-        pal.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
-
-        widget.setAutoFillBackground(True)
-        widget.setPalette(pal)
-
-        proxy = QGraphicsProxyWidget()
-        proxy.setWidget(widget)
-
-        self.set_item(proxy)

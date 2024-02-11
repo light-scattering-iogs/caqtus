@@ -12,16 +12,16 @@ from PySide6.QtWidgets import (
     QGraphicsLineItem,
 )
 
-from .calibrated_analog_mapping_item import AnalogMappingBlock
 from .connection import (
     ConnectionLink,
     ConnectionPoint,
     OutputConnectionPoint,
     InputConnectionPoint,
 )
-from .item_container import (
+from .functional_blocks import (
     ChannelOutputBlock,
     TimeLaneBlock,
+    AnalogMappingBlock,
 )
 
 

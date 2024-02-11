@@ -5,13 +5,13 @@ from PySide6.QtWidgets import (
     QGraphicsProxyWidget,
     QGraphicsItem,
     QWidget,
-    QFormLayout,
     QVBoxLayout,
     QLabel,
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from .item_container import FunctionalBlock
+
+from .functional_block import FunctionalBlock
 
 
 class CalibratedAnalogMappingItem(QGraphicsProxyWidget):
