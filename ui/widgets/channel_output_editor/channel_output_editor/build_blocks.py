@@ -60,6 +60,7 @@ def build_block(channel_output: ChannelOutput) -> FunctionalBlock:
 def build_lane_block(channel_output: LaneValues) -> FunctionalBlock:
     block = TimeLaneBlock()
     block.set_lane_name(channel_output.lane)
+    block.set_default_value(channel_output.default)
     return block
 
 
