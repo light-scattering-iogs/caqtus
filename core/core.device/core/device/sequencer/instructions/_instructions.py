@@ -253,45 +253,36 @@ class Pattern(_BaseInstruction[_T]):
 
 
 class Concatenate(_BaseInstruction[_T]):
+    """Represents an immutable concatenation of instructions.
+
+    Attributes:
+        instructions: The instructions concatenated together.
+    """
+
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
     __match_args__ = ("instructions",)
 
     def __init__(self, *instructions: SequencerInstruction[_T]):
         """
-        Creates a new instruction that is the concatenation of the given instructions.
-
-        This constructor is not expected to be called in user code. Instead, use the
-        `+` operator or the `join` function.
-
-        Args:
-            instructions: The instructions to concatenate.
-                It must contain at least two instructions.
-                All instructions must have a lengths strictly greater than zero.
-                All instructions must have the same dtype.
+        Do not use this constructor in user code.
+        Instead, use the `+` operator or the `join` function.
         """
 
+        # The following assertions define a "pure" concatenation.
+        # (i.e. no empty instructions, no nested concatenations, and at least two
+        # instructions).
+        assert all(len(instruction) >= 1 for instruction in instructions)
         assert len(instructions) >= 2
-
-        assert not any(
-            isinstance(instruction, Concatenate) for instruction in instructions
+        assert all(
+            not isinstance(instruction, Concatenate) for instruction in instructions
         )
 
-        instructions_list: list[SequencerInstruction[_T]] = []
-        for instruction in instructions:
-            instructions_list.append(instruction)
+        assert all(
+            instruction.dtype == instructions[0].dtype for instruction in instructions
+        )
 
-        self._instructions = tuple(instructions_list)
-        dtype = self._instructions[0].dtype
-        for index, instruction in enumerate(self._instructions):
-            if len(instruction) == 0:
-                raise ValueError(
-                    f"Cannot concatenate empty instruction at index {index}"
-                )
-            if instruction.dtype != dtype:
-                raise TypeError(
-                    f"Instruction at index {index} has dtype {instruction.dtype},"
-                    f" expected {dtype}"
-                )
+        self._instructions = instructions
+
         # self._instruction_bounds[i] is the first element index (included) the i-th
         # instruction
         #
@@ -311,10 +302,7 @@ class Concatenate(_BaseInstruction[_T]):
         return f"Concatenate({inner})"
 
     def __str__(self):
-        sub_strings = [
-            str(instruction) if instruction.depth == 0 else f"{instruction!s}"
-            for instruction in self._instructions
-        ]
+        sub_strings = [str(instruction) for instruction in self._instructions]
         return " + ".join(sub_strings)
 
     def __getitem__(self, item):
@@ -429,6 +417,13 @@ class Concatenate(_BaseInstruction[_T]):
 
 
 class Repeat(_BaseInstruction[_T]):
+    """Represents a repetition of an instruction.
+
+    Attributes:
+        instruction: The instruction to repeat.
+        repetitions: The number of times to repeat the instruction.
+    """
+
     __slots__ = ("_repetitions", "_instruction", "_length")
 
     @property
@@ -441,14 +436,8 @@ class Repeat(_BaseInstruction[_T]):
 
     def __init__(self, repetitions: int, instruction: SequencerInstruction[_T]):
         """
-        Creates a new instruction that is the repetition of the given instruction.
-
-        User code should not call this constructor directly. Instead, use the `*`
-        operator.
-
-        Args:
-            repetitions: The number of times to repeat the instruction.
-            instruction: The instruction to repeat.
+        Do not use this constructor in user code.
+        Instead, use the `*` operator.
         """
 
         assert isinstance(repetitions, int)
@@ -623,10 +612,26 @@ def tile(
 
 
 def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
-    """Joins the given instructions into a single instruction."""
+    """Joins the given instructions into a single instruction.
+
+    Raises:
+        ValueError: If no instructions are provided.
+        TypeError: If the instructions have different dtypes.
+    """
 
     if len(instructions) == 0:
         raise ValueError("Must provide at least one instruction")
+    dtype = instructions[0].dtype
+    if not all(instruction.dtype == dtype for instruction in instructions):
+        raise TypeError("All instructions must have the same dtype")
+    return _join(*instructions)
+
+
+def _join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+    assert len(instructions) >= 1
+    assert all(
+        instruction.dtype == instructions[0].dtype for instruction in instructions
+    )
 
     instruction_deque = collections.deque(_break_concatenations(instructions))
 
