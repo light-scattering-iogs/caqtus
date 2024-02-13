@@ -144,21 +144,18 @@ class StepDelegate(QStyledItemDelegate):
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
-        data = index.data(role=Qt.ItemDataRole.EditRole)
-        if isinstance(data, VariableDeclaration):
-            editor = VariableDeclarationEditor(parent)
-            return editor
-        else:
-            editor = QLineEdit()
-            editor.setParent(parent)
-            return editor
+
+        editor = QLineEdit()
+        editor.setParent(parent)
+        return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         match data:
             case VariableDeclaration(variable, value):
-                assert isinstance(editor, VariableDeclarationEditor)
-                editor.set_data(data)
+                text = f"{variable} = {value}"
+                editor.setValidator(VariableDeclarationValidator())
+                editor.setText(text)
             case LinspaceLoop(variable, start, stop, num, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {num} steps:"
                 editor.setValidator(LinSpaceLoopValidator())
