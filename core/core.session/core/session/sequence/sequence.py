@@ -14,6 +14,7 @@ from ..shot import TimeLanes
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
+    from ..sequence_collection import ConstantTable
 
 
 @attrs.frozen(eq=False, order=False)
@@ -98,6 +99,13 @@ class Sequence:
         device_configurations = session.sequences.get_device_configurations(self.path)
 
         return dict(device_configurations)
+
+    def get_parameter_tables(
+        self, session: ExperimentSession
+    ) -> dict[str, ConstantTable]:
+        """Return a copy of the parameter tables set for this sequence."""
+
+        return dict(session.sequences.get_parameter_tables(self.path))
 
     def __eq__(self, other):
         if isinstance(other, Sequence):

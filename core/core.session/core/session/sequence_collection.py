@@ -162,7 +162,11 @@ class SequenceCollection(Protocol):
     def set_parameter_tables(
         self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
     ) -> None:
-        """Set the parameter tables that are used by this sequence."""
+        """Set the parameter tables that are used by this sequence.
+
+        Raises:
+            SequenceNotEditableError: If the sequence is not in an editable state.
+        """
 
         raise NotImplementedError
 
