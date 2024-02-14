@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import attrs
-from core.device import DeviceName, DeviceConfigurationAttrs
 
+from core.device import DeviceName, DeviceConfigurationAttrs
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
 from .state import State
@@ -95,14 +95,9 @@ class Sequence:
     ) -> dict[DeviceName, DeviceConfigurationAttrs]:
         """Return the device configurations used when the sequence was launched."""
 
-        device_uuids = session.sequences.get_device_configuration_uuids(self.path)
+        device_configurations = session.sequences.get_device_configurations(self.path)
 
-        return {
-            session.device_configurations.get_device_name(
-                device_uuid
-            ): session.device_configurations.get_configuration(device_uuid)
-            for device_uuid in device_uuids
-        }
+        return dict(device_configurations)
 
     def __eq__(self, other):
         if isinstance(other, Sequence):
