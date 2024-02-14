@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QGraphicsItem,
     QWidget,
     QVBoxLayout,
-    QLabel,
+    QLabel, QPushButton, QDialog,
 )
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -17,8 +17,8 @@ from .functional_block import FunctionalBlock
 class CalibratedAnalogMappingItem(QGraphicsProxyWidget):
     def __init__(self, parent: Optional[QGraphicsItem] = None):
         super().__init__(parent)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setWidget(CalibratedAnalogMappingWidget())
 
 
@@ -33,6 +33,8 @@ class AnalogMappingBlock(FunctionalBlock):
         widget = QWidget()
         widget.setLayout(layout := QVBoxLayout())
         layout.addWidget(QLabel("Analog Mapping"))
+        self.edit_button = QPushButton("Edit")
+        layout.addWidget(self.edit_button)
         self.mapping_widget = CalibratedAnalogMappingWidget()
         layout.addWidget(self.mapping_widget)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -104,3 +106,14 @@ class CalibratedAnalogMappingWidget(FigureCanvasQTAgg):
 
     def get_output_units(self) -> Optional[str]:
         return self.output_units
+
+class CalibratedMappingValuesDialog(QDialog):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.setLayout(layout := QVBoxLayout())
+        self.setModal(True)
+        self.setWindowTitle("Calibrated Mapping Values")
+        self.x = QLabel()
+        self.y = QLabel()
+        layout.addWidget(self.x)
+        layout.addWidget(self.y)
