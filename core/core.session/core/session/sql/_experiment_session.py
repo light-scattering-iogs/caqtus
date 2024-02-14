@@ -3,15 +3,11 @@ from typing import Mapping
 import attrs
 import sqlalchemy.orm
 
-from ._constant_table_collection import SQLConstantTableCollection
-from ._device_configuration_collection import (
-    SQLDeviceConfigurationCollection,
-    DeviceConfigurationSerializer,
-)
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
     SequenceSerializer,
+    DeviceConfigurationSerializer,
     default_sequence_serializer,
 )
 from ..experiment_session import (
@@ -41,8 +37,6 @@ containing digital, analog and camera time lanes.
 class SQLExperimentSession(ExperimentSession):
     paths: SQLPathHierarchy
     sequences: SQLSequenceCollection
-    device_configurations: SQLDeviceConfigurationCollection
-    constants: SQLConstantTableCollection
 
     _sql_session: sqlalchemy.orm.Session
     _is_active: bool
@@ -68,11 +62,6 @@ class SQLExperimentSession(ExperimentSession):
             parent_session=self,
             serializer=serializer.sequence_serializer,
         )
-        self.device_configurations = SQLDeviceConfigurationCollection(
-            parent_session=self,
-            device_configuration_serializers=serializer.device_configuration_serializers,
-        )
-        self.constants = SQLConstantTableCollection(parent_session=self)
 
     def __str__(self):
         return f"<{self.__class__.__name__} @ {self._sql_session.get_bind()}>"

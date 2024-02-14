@@ -1,4 +1,3 @@
-from ._device_configuration_collection import DeviceConfigurationSerializer
 from ._experiment_session import SQLExperimentSession, Serializer
 from ._sequence_collection import (
     default_sequence_serializer,
@@ -7,6 +6,7 @@ from ._sequence_collection import (
     default_iteration_configuration_serializer,
     default_iteration_configuration_constructor,
     SequenceSerializer,
+    DeviceConfigurationSerializer,
 )
 from ._session_maker import SQLExperimentSessionMaker
 from ._table_base import create_tables
