@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import abc
 import datetime
-import uuid
-from collections.abc import Set, Mapping
+from collections.abc import Mapping
 from typing import Protocol, Optional, TypeAlias
 
 import attrs
 from returns.result import Result
 
+from core.device import DeviceName, DeviceConfigurationAttrs
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
@@ -61,7 +61,10 @@ class ShotNotFoundError(RuntimeError):
 
 
 class SequenceCollection(Protocol):
-    """A collection of sequences."""
+    """A collection of sequences.
+
+    This abstract class defines the interface to read and write sequences in a session.
+    """
 
     @abc.abstractmethod
     def __getitem__(self, item: str) -> Sequence:
@@ -93,6 +96,14 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def set_iteration_configuration(
+        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+    ) -> None:
+        """Set the iteration configuration for this sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
         """Return a copy of the time lanes for this sequence."""
 
@@ -107,9 +118,25 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_iteration_configuration(
-        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+    def set_device_configurations(
+        self,
+        path: PureSequencePath,
+        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
     ) -> None:
+        """Set the device configurations that should be used by this sequence.
+
+        Raises:
+            SequenceNotEditableError: If the sequence is not in an editable state.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_device_configurations(
+        self, path: PureSequencePath
+    ) -> Mapping[DeviceName, DeviceConfigurationAttrs]:
+        """Get the device configurations that are used by this sequence."""
+
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -129,16 +156,6 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def set_state(self, path: PureSequencePath, state: State) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def set_device_configuration_uuids(
-        self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
-    ) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_device_configuration_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
         raise NotImplementedError
 
     @abc.abstractmethod
