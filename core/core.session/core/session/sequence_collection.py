@@ -154,16 +154,6 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_constant_table_uuids(
-        self, path: PureSequencePath, constant_table_uuids: Set[uuid.UUID]
-    ) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_constant_table_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
