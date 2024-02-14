@@ -126,7 +126,7 @@ class SequenceCollection(Protocol):
         """Set the device configurations that should be used by this sequence.
 
         Raises:
-            SequenceNotEditableError: If the sequence is not in an editable state.
+            SequenceNotEditableError: If the sequence is not in the PREPARING state.
         """
 
         raise NotImplementedError

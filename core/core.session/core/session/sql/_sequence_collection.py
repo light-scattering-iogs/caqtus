@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import datetime
 import functools
-import uuid
-from collections.abc import Callable, Set, Mapping
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 import attrs
@@ -12,7 +13,7 @@ from returns.result import Success, Failure
 from sqlalchemy import func
 from sqlalchemy import select
 
-from core.device import DeviceConfigurationAttrs
+from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session.shot.timelane import AnalogTimeLane
 from core.types.data import DataLabel, Data, is_data
 from core.types.expression import Expression
@@ -161,6 +162,7 @@ default_sequence_serializer = SequenceSerializer(
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: SequenceSerializer
+    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
 
     def __getitem__(self, item: str) -> Sequence:
         return Sequence(BoundSequencePath(item, self.parent_session))
@@ -310,21 +312,43 @@ class SQLSequenceCollection(SequenceCollection):
                 tz=datetime.timezone.utc
             ).replace(tzinfo=None)
 
-    def set_device_configuration_uuids(
-        self, path: PureSequencePath, device_configuration_uuids: Set[uuid.UUID]
+    def set_device_configurations(
+        self,
+        path: PureSequencePath,
+        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
         if sequence.state != State.PREPARING:
             raise SequenceNotEditableError(path)
-        sql_device_uuids = {
-            SQLSequenceDeviceUUID(device_configuration_uuid=uuid_)
-            for uuid_ in device_configuration_uuids
-        }
-        sequence.device_uuids = sql_device_uuids
+        sql_device_configs = []
+        for order, (name, device_configuration) in enumerate(
+            device_configurations.items()
+        ):
+            type_name = type(device_configuration).__qualname__
+            serializer = self.device_configuration_serializers[type_name]
+            sql_device_configs.append(
+                SQLDeviceConfiguration(
+                    name=name,
+                    order=order,
+                    device_type=type_name,
+                    content=serializer.dumper(device_configuration),
+                )
+            )
+        sequence.device_configurations = sql_device_configs
 
-    def get_device_configuration_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
+    def get_device_configurations(
+        self, path: PureSequencePath
+    ) -> dict[DeviceName, DeviceConfigurationAttrs]:
+        device_configurations = {}
         sequence = unwrap(self._query_sequence_model(path))
-        return {uuid_.device_configuration_uuid for uuid_ in sequence.device_uuids}
+        for device_configuration in sequence.device_configurations:
+            serializer = self.device_configuration_serializers[
+                device_configuration.device_type
+            ]
+            device_configurations[device_configuration.name] = serializer.loader(
+                device_configuration.content
+            )
+        return device_configurations
 
     def set_parameter_tables(
         self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
