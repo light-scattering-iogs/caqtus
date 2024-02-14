@@ -7,11 +7,12 @@ from collections.abc import Set, Mapping
 from typing import Protocol, Optional
 
 import attrs
+from returns.result import Result
+
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
-from returns.result import Result
-
+from .constant_table_collection import ConstantTable
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
@@ -133,9 +134,23 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_device_configuration_uuids(
+    def get_device_configuration_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def set_parameter_tables(
+        self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
+    ) -> None:
+        """Set the parameter tables that are used by this sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_parameter_tables(
         self, path: PureSequencePath
-    ) -> set[uuid.UUID]:
+    ) -> Mapping[str, ConstantTable]:
+        """Get the parameter tables that are used by this sequence."""
+
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -145,9 +160,7 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_constant_table_uuids(
-        self, path: PureSequencePath
-    ) -> set[uuid.UUID]:
+    def get_constant_table_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
         raise NotImplementedError
 
     @abc.abstractmethod
