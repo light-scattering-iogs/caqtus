@@ -88,7 +88,7 @@ class SQLDeviceConfiguration(Base):
     sequence_id: Mapped[int] = mapped_column(
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
     )
-    sequence: Mapped[SQLSequence] = relationship(back_populates="device_uuids")
+    sequence: Mapped[SQLSequence] = relationship(back_populates="device_configurations")
     name: Mapped[str] = mapped_column()
     order: Mapped[int] = mapped_column()
     content = mapped_column(sqlalchemy.types.JSON)
@@ -106,7 +106,7 @@ class SQLParameterTable(Base):
     sequence_id: Mapped[int] = mapped_column(
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
     )
-    sequence: Mapped[SQLSequence] = relationship(back_populates="constant_table_uuids")
+    sequence: Mapped[SQLSequence] = relationship(back_populates="parameter_tables")
     name: Mapped[str] = mapped_column()
     order: Mapped[int] = mapped_column()
     content = mapped_column(sqlalchemy.types.JSON)
