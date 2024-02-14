@@ -2,7 +2,7 @@ import datetime
 import functools
 import uuid
 from collections.abc import Callable, Set, Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import attrs
 import numpy as np
@@ -12,6 +12,7 @@ from returns.result import Success, Failure
 from sqlalchemy import func
 from sqlalchemy import select
 
+from core.device import DeviceConfigurationAttrs
 from core.session.shot.timelane import AnalogTimeLane
 from core.types.data import DataLabel, Data, is_data
 from core.types.expression import Expression
@@ -19,6 +20,7 @@ from core.types.parameter import Parameter
 from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
 from util import serialization
+from util.serialization import JSON
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -29,7 +31,6 @@ from ._sequence_table import (
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
-from ..constant_table_collection import ConstantTable
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
@@ -46,7 +47,7 @@ from ..sequence_collection import (
     SequenceStats,
     ShotNotFoundError,
 )
-from ..sequence_collection import SequenceCollection
+from ..sequence_collection import SequenceCollection, ConstantTable
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes, CameraTimeLane
 
 if TYPE_CHECKING:
@@ -555,3 +556,14 @@ class SQLSequenceCollection(SequenceCollection):
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
         return self.parent_session._get_sql_session()
+
+
+T = TypeVar("T", bound=DeviceConfigurationAttrs)
+
+
+@attrs.define
+class DeviceConfigurationSerializer(Generic[T]):
+    """Indicates how to serialize and deserialize device configurations."""
+
+    dumper: Callable[[T], JSON]
+    loader: Callable[[JSON], T]

@@ -1,11 +1,8 @@
-from typing import Mapping
-
 import sqlalchemy
 import sqlalchemy.orm
 
 from ._experiment_session import (
     SQLExperimentSession,
-    DeviceConfigurationSerializer,
     Serializer,
 )
 from ..experiment_session import ExperimentSession

@@ -1,9 +1,9 @@
-from .constant_table_collection import ConstantTable
 from .data_type import DataType
 from .experiment_session import ExperimentSession
 from .path import BoundSequencePath, PureSequencePath
 from .path_hierarchy import PathHierarchy
 from .sequence import Sequence, Shot
+from .sequence_collection import ConstantTable
 from .session_maker import ExperimentSessionMaker
 
 __all__ = [
@@ -13,7 +13,7 @@ __all__ = [
     "BoundSequencePath",
     "DataType",
     "PathHierarchy",
-    "ConstantTable",
     "Sequence",
     "Shot",
+    "ConstantTable",
 ]

@@ -4,7 +4,7 @@ import abc
 import datetime
 import uuid
 from collections.abc import Set, Mapping
-from typing import Protocol, Optional
+from typing import Protocol, Optional, TypeAlias
 
 import attrs
 from returns.result import Result
@@ -12,13 +12,17 @@ from returns.result import Result
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
-from .constant_table_collection import ConstantTable
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
-from .sequence.iteration_configuration import IterationConfiguration
+from .sequence.iteration_configuration import (
+    IterationConfiguration,
+    VariableDeclaration,
+)
 from .sequence.state import State
 from .shot import TimeLanes
+
+ConstantTable: TypeAlias = list[VariableDeclaration]
 
 
 class PathIsSequenceError(PathError):

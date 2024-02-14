@@ -4,8 +4,6 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from .constant_table_collection import ConstantTableCollection
-from .device_configuration_collection import DeviceConfigurationCollection
 from .path_hierarchy import PathHierarchy
 from .sequence_collection import SequenceCollection
 
@@ -50,5 +48,3 @@ class ExperimentSession(
 
     paths: PathHierarchy
     sequences: SequenceCollection
-    device_configurations: DeviceConfigurationCollection
-    constants: ConstantTableCollection
