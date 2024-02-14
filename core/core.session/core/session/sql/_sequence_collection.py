@@ -23,12 +23,13 @@ from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
     SQLIterationConfiguration,
-    SQLSequenceDeviceUUID,
-    SQLSequenceConstantTableUUID,
     SQLTimelanes,
+    SQLDeviceConfiguration,
+    SQLParameterTable,
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
+from ..constant_table_collection import ConstantTable
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
@@ -286,13 +287,13 @@ class SQLSequenceCollection(SequenceCollection):
         if state == State.DRAFT:
             sequence.start_time = None
             sequence.stop_time = None
-            delete_device_uuids = sqlalchemy.delete(SQLSequenceDeviceUUID).where(
-                SQLSequenceDeviceUUID.sequence == sequence
+            delete_device_configurations = sqlalchemy.delete(
+                SQLDeviceConfiguration
+            ).where(SQLDeviceConfiguration.sequence == sequence)
+            self._get_sql_session().execute(delete_device_configurations)
+            delete_constant_table_uuids = sqlalchemy.delete(SQLParameterTable).where(
+                SQLParameterTable.sequence == sequence
             )
-            self._get_sql_session().execute(delete_device_uuids)
-            delete_constant_table_uuids = sqlalchemy.delete(
-                SQLSequenceConstantTableUUID
-            ).where(SQLSequenceConstantTableUUID.sequence == sequence)
             self._get_sql_session().execute(delete_constant_table_uuids)
 
             delete_shots = sqlalchemy.delete(SQLShot).where(
@@ -324,21 +325,35 @@ class SQLSequenceCollection(SequenceCollection):
         sequence = unwrap(self._query_sequence_model(path))
         return {uuid_.device_configuration_uuid for uuid_ in sequence.device_uuids}
 
-    def set_constant_table_uuids(
-        self, path: PureSequencePath, constant_table_uuids: Set[uuid.UUID]
+    def set_parameter_tables(
+        self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
-        if sequence.state != State.PREPARING:
+        if not sequence.state.is_editable():
             raise SequenceNotEditableError(path)
-        sql_constant_table_uuids = {
-            SQLSequenceConstantTableUUID(constant_table_uuid=uuid_)
-            for uuid_ in constant_table_uuids
-        }
-        sequence.constant_table_uuids = sql_constant_table_uuids
 
-    def get_constant_table_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
+        sql_parameter_tables = [
+            SQLParameterTable(
+                name=name,
+                order=order,
+                content=serialization.converters["json"].unstructure(
+                    table, ConstantTable
+                ),
+            )
+            for order, (name, table) in enumerate(parameter_tables.items())
+        ]
+        sequence.parameter_tables = sql_parameter_tables
+
+    def get_parameter_tables(self, path: PureSequencePath) -> dict[str, ConstantTable]:
         sequence = unwrap(self._query_sequence_model(path))
-        return {uuid_.constant_table_uuid for uuid_ in sequence.constant_table_uuids}
+        return {
+            table.name: serialization.converters["json"].structure(
+                table.content, ConstantTable
+            )
+            for table in sorted(
+                sequence.parameter_tables, key=lambda table: table.order
+            )
+        }
 
     def get_stats(
         self, path: PureSequencePath
