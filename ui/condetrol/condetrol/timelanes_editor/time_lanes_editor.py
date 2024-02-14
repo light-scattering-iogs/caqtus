@@ -192,6 +192,7 @@ class TimeLanesEditor(QTableView):
                     lambda: self._model.removeColumn(index, QModelIndex())
                 )
         menu.exec(self.horizontalHeader().mapToGlobal(pos))
+        menu.deleteLater()
 
     def show_lanes_context_menu(self, pos):
         menu = QMenu(self.verticalHeader())
@@ -211,6 +212,7 @@ class TimeLanesEditor(QTableView):
         else:
             return
         menu.exec(self.verticalHeader().mapToGlobal(pos))
+        menu.deleteLater()
 
     def show_cell_context_menu(self, pos):
         index = self.indexAt(pos)
@@ -230,6 +232,7 @@ class TimeLanesEditor(QTableView):
             elif isinstance(action, QMenu):
                 menu.addMenu(action)
         menu.exec(self.viewport().mapToGlobal(pos))
+        menu.deleteLater()
         # TODO: Deal with model change in the context menu better
         self._model.modelReset.emit()
 

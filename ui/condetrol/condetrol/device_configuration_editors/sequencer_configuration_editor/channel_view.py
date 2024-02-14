@@ -13,7 +13,7 @@ class SequencerChannelView(QTableView):
         super().__init__(*args, **kwargs)
 
         self.channel_model = SequencerChannelsModel(channels)
-        self.setItemDelegate(ChannelOutputDelegate(self))
+        self.setItemDelegateForColumn(1, ChannelOutputDelegate(self))
         self.verticalHeader().setMinimumSectionSize(-1)
 
     @property
