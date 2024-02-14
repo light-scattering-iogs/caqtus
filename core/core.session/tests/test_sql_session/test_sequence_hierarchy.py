@@ -8,7 +8,10 @@ from core.device import DeviceName
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
 from core.session.sequence import State, Shot
-from core.session.sequence.iteration_configuration import StepsConfiguration
+from core.session.sequence.iteration_configuration import (
+    StepsConfiguration,
+    VariableDeclaration,
+)
 from core.session.sequence_collection import PathIsSequenceError
 from core.session.shot import TimeLanes
 from core.types.data import DataLabel
@@ -215,22 +218,26 @@ def test_data_not_existing(
 
 def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
-        table_uuid = session.constants.add_table("test", [])
-        device_uuid = session.device_configurations.add_device_configuration(
-            "device", DummyConfiguration(a=1, b="test", remote_server="test")
-        )
+        tables = {
+            "test": [VariableDeclaration(DottedVariableName("a"), Expression("1"))]
+        }
+        device_configurations = {
+            DeviceName("device"): DummyConfiguration(
+                a=1, b="test", remote_server="test"
+            ),
+        }
         p = PureSequencePath(r"\a\b\c")
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.set_parameter_tables(p, tables)
 
         session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_constant_table_uuids(p, {table_uuid})
-        session.sequences.set_device_configuration_uuids(p, {device_uuid})
+        session.sequences.set_device_configurations(p, device_configurations)
 
     with session:
-        s = session.sequences.get_constant_table_uuids(p)
-        d = session.sequences.get_device_configuration_uuids(p)
-    assert s == {table_uuid}
-    assert d == {device_uuid}
+        s = sequence.get_parameter_tables(session)
+        d = session.sequences.get_device_configurations(p)
+    assert s == tables
+    assert d == device_configurations
 
 
 def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
