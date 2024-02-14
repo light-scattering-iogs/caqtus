@@ -49,10 +49,10 @@ class SQLSequence(Base):
     time_lanes: Mapped[SQLTimelanes] = relationship(
         cascade="all, delete", back_populates="sequence", passive_deletes=True
     )
-    device_uuids: Mapped[set[SQLSequenceDeviceUUID]] = relationship(
+    device_configurations: Mapped[list[SQLDeviceConfiguration]] = relationship(
         cascade="all, delete", passive_deletes=True
     )
-    constant_table_uuids: Mapped[set[SQLSequenceConstantTableUUID]] = relationship(
+    parameter_tables: Mapped[list[SQLParameterTable]] = relationship(
         cascade="all, delete", passive_deletes=True
     )
 
@@ -180,13 +180,12 @@ class SQLSequence(Base):
     #     self.number_completed_shots += 1
 
 
-class SQLSequenceDeviceUUID(Base):
+class SQLDeviceConfiguration(Base):
     __tablename__ = "sequence.device_configurations"
 
+    # For a given sequence, the device configuration name must be unique.
     __table_args__ = (
-        sqlalchemy.UniqueConstraint(
-            "sequence_id", "device_configuration_uuid", name="device_configuration"
-        ),
+        sqlalchemy.UniqueConstraint("sequence_id", "name", name="device_configuration"),
     )
 
     id_: Mapped[int] = mapped_column(primary_key=True)
@@ -194,16 +193,17 @@ class SQLSequenceDeviceUUID(Base):
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
     )
     sequence: Mapped[SQLSequence] = relationship(back_populates="device_uuids")
-    device_configuration_uuid = mapped_column(ForeignKey("device_configurations.uuid"))
+    name: Mapped[str] = mapped_column()
+    order: Mapped[int] = mapped_column()
+    content = mapped_column(sqlalchemy.types.JSON)
 
 
-class SQLSequenceConstantTableUUID(Base):
-    __tablename__ = "sequence.constant_tables"
+class SQLParameterTable(Base):
+    __tablename__ = "sequence.parameter_tables"
 
+    # For a given sequence, a parameter table name must be unique.
     __table_args__ = (
-        sqlalchemy.UniqueConstraint(
-            "sequence_id", "constant_table_uuid", name="constant_table"
-        ),
+        sqlalchemy.UniqueConstraint("sequence_id", "name", name="parameter_table"),
     )
 
     id_: Mapped[int] = mapped_column(primary_key=True)
@@ -211,4 +211,6 @@ class SQLSequenceConstantTableUUID(Base):
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
     )
     sequence: Mapped[SQLSequence] = relationship(back_populates="constant_table_uuids")
-    constant_table_uuid = mapped_column(ForeignKey("constant_tables.uuid"))
+    name: Mapped[str] = mapped_column()
+    order: Mapped[int] = mapped_column()
+    content = mapped_column(sqlalchemy.types.JSON)
