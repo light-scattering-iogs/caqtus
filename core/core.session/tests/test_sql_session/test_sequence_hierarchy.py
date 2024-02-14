@@ -242,6 +242,7 @@ def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
         }
         p = PureSequencePath(r"\a\b\c")
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_device_configurations(p, configurations)
 
     with session:
