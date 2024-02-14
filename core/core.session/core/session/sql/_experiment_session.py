@@ -61,6 +61,7 @@ class SQLExperimentSession(ExperimentSession):
         self.sequences = SQLSequenceCollection(
             parent_session=self,
             serializer=serializer.sequence_serializer,
+            device_configuration_serializers=serializer.device_configuration_serializers,
         )
 
     def __str__(self):

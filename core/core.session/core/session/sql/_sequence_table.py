@@ -90,6 +90,7 @@ class SQLDeviceConfiguration(Base):
     )
     sequence: Mapped[SQLSequence] = relationship(back_populates="device_configurations")
     name: Mapped[str] = mapped_column()
+    device_type: Mapped[str] = mapped_column()
     order: Mapped[int] = mapped_column()
     content = mapped_column(sqlalchemy.types.JSON)
 
