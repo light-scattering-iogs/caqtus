@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from hypothesis import given
 
+from core.device import DeviceName
 from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
 from core.session.result import unwrap
 from core.session.sequence import State, Shot
@@ -231,17 +232,18 @@ def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     assert s == {table_uuid}
     assert d == {device_uuid}
 
+
 def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
-        device_uuid = session.device_configurations.add_device_configuration(
-            "device", DummyConfiguration(a=1, b="test", remote_server="test")
-        )
+        configurations = {
+            DeviceName("device"): DummyConfiguration(
+                a=1, b="test", remote_server="test"
+            )
+        }
         p = PureSequencePath(r"\a\b\c")
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
-
-        session.sequences.set_state(p, State.PREPARING)
-        session.sequences.set_device_configuration_uuids(p, {device_uuid})
+        session.sequences.set_device_configurations(p, configurations)
 
     with session:
-        d = session.sequences.get_device_configuration_uuids(p)
-    assert d == {device_uuid}
+        d = sequence.get_device_configurations(session)
+    assert d == configurations
