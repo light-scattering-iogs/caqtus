@@ -77,3 +77,13 @@ def test_4():
     result = compiler.compile(VariableNamespace(), 1)
     expected = Pattern([10.0]) * 10 + Pattern([1000.0]) * 10
     assert result == expected, str(result)
+
+
+def test_5():
+    lane = AnalogTimeLane([Expression("t / (10 ns) * 1 Hz")])
+    compiler = AnalogLaneCompiler(lane, ["step1"], [Expression("10 ns")], unit="Hz")
+    result = compiler.compile(VariableNamespace(), 1)
+    expected = Pattern([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    assert np.allclose(result.to_pattern().array, expected.to_pattern().array), str(
+        result
+    )
