@@ -3,6 +3,7 @@ import copy
 from collections.abc import Mapping, Callable
 from typing import Optional, Literal
 
+import qdarkstyle
 from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByteArray
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
@@ -129,6 +130,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
+        self.setStyleSheet(qdarkstyle.load_stylesheet())
         self.setCentralWidget(self.sequence_widget)
         app = QApplication.instance()
         self.setWindowTitle(app.applicationName())
