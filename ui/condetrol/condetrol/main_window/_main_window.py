@@ -8,7 +8,6 @@ from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByt
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
-    QApplication,
     QDockWidget,
     QLabel,
     QHBoxLayout,
@@ -130,7 +129,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        self.setStyleSheet(qdarkstyle.load_stylesheet())
+        # self.setStyleSheet(qdarkstyle.load_stylesheet())
         self.setCentralWidget(self.sequence_widget)
         dock = QDockWidget("Sequences")
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
@@ -160,10 +159,11 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         else:
             path, state = sequence
             text = " > ".join(path.parts)
+            color = self.palette().text().color()
             if state.is_editable():
-                icon = get_icon("editable-sequence")
+                icon = get_icon("editable-sequence", color=color)
             else:
-                icon = get_icon("read-only-sequence")
+                icon = get_icon("read-only-sequence", color=color)
         self.status_widget.set_text(text)
         self.status_widget.set_icon(icon)
 

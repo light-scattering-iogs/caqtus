@@ -1,6 +1,7 @@
 from typing import Optional, Any, assert_never
 
 from PySide6.QtCore import QObject, QModelIndex, Qt
+from PySide6.QtGui import QPalette
 
 from core.session.shot.timelane import CameraTimeLane, TakePicture
 from core.types.data import DataLabel
@@ -14,6 +15,9 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
         lane = CameraTimeLane([None])
         super().__init__(name, lane, parent)
         self._brush = None
+        palette = QPalette()
+        color = palette.text().color()
+        self._icon = get_icon("camera", color=color)
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
@@ -39,7 +43,7 @@ class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         elif role == Qt.ItemDataRole.DecorationRole:
             if isinstance(value, TakePicture):
-                return get_icon("camera")
+                return self._icon
         else:
             return None
 
