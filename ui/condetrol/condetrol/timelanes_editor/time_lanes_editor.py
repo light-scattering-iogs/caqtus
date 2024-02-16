@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
 
-from core.device import DeviceConfigurationAttrs
+from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ConstantTable
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 from .digital_lane_delegate import DigitalTimeLaneDelegate
@@ -17,8 +17,7 @@ from .model import TimeLanesModel, TimeLaneModel
 class LaneModelFactory(Protocol):
     """A factory for lane models."""
 
-    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]:
-        ...
+    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]: ...
 
 
 class LaneDelegateFactory(Protocol):
@@ -28,11 +27,10 @@ class LaneDelegateFactory(Protocol):
         self,
         lane_name: str,
         lane: TimeLane,
-        device_configurations: Mapping[str, DeviceConfigurationAttrs],
-        constant_tables: Mapping[str, ConstantTable],
+        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        parameter_tables: Mapping[str, ConstantTable],
         parent: QWidget,
-    ) -> Optional[QStyledItemDelegate]:
-        ...
+    ) -> Optional[QStyledItemDelegate]: ...
 
 
 def default_lane_delegate_factory(
@@ -55,8 +53,6 @@ class TimeLanesEditor(QTableView):
         self,
         lane_model_factory: LaneModelFactory,
         lane_delegate_factory: LaneDelegateFactory,
-        device_configurations: Mapping[str, DeviceConfigurationAttrs],
-        constant_tables: Mapping[str, ConstantTable],
         parent: Optional[QWidget] = None,
     ):
         """A widget for editing time lanes.
@@ -76,10 +72,12 @@ class TimeLanesEditor(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
+        self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = {}
+        self._parameter_tables: dict[str, ConstantTable] = {}
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,
-            device_configurations=device_configurations,
-            constant_tables=constant_tables,
+            device_configurations=self._device_configurations,
+            constant_tables=self._parameter_tables,
             parent=self,
         )
         self.setModel(self._model)

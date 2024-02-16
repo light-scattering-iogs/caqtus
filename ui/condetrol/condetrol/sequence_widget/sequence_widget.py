@@ -5,6 +5,7 @@ from typing import Optional
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
+
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -18,7 +19,6 @@ from core.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from core.session.shot import TimeLanes
-
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger
 from ..sequence_iteration_editors import create_default_editor
@@ -96,15 +96,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.lane_model_factory = lane_model_factory
         self.lane_delegate_factory = lane_delegate_factory
 
-        with self.session_maker() as session:
-            device_configurations = dict(session.device_configurations)
-            constant_tables = dict(session.constants)
-
         self.time_lanes_editor = TimeLanesEditor(
             lane_model_factory,
             lane_delegate_factory,
-            device_configurations,
-            constant_tables,
             self,
         )
 
