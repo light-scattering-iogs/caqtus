@@ -13,11 +13,13 @@ from core.types.parameter import (
     magnitude_in_unit,
 )
 from core.types.units import ureg
-from core.types.variable_name import DottedVariableName
+from core.types.variable_name import DottedVariableName, VariableName
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
 from ..unit_namespace import units
 from ..variable_namespace import VariableNamespace
+
+TIME_VARIABLE = VariableName("t")
 
 
 class AnalogLaneCompiler:
@@ -108,10 +110,7 @@ class AnalogLaneCompiler:
             result = Pattern([float(value)], dtype=np.float64) * length
         else:
             variables = variables | {
-                DottedVariableName("t"): (
-                    get_time_array(start, stop, time_step) - start
-                )
-                * ureg.s
+                TIME_VARIABLE: (get_time_array(start, stop, time_step) - start) * ureg.s
             }
             evaluated = self._evaluate_expression(expression, variables)
             result = Pattern(magnitude_in_unit(evaluated, self.unit), dtype=np.float64)
@@ -136,16 +135,12 @@ class AnalogLaneCompiler:
             step_bounds[self.lane.get_bounds(start_index - 1)[1]]
             - step_bounds[self.lane.get_bounds(start_index - 1)[0]]
         )
-        v = (
-            variables
-            | units
-            | {DottedVariableName("t"): previous_step_duration * ureg.s}
-        )
+        v = variables | units | {TIME_VARIABLE: previous_step_duration * ureg.s}
         ramp_start = self._evaluate_expression(self.lane[start_index - 1], v)
         if is_quantity(ramp_start):
             ramp_start = ramp_start.to_base_units()
 
-        v = variables | units | {DottedVariableName("t"): 0.0 * ureg.s}
+        v = variables | units | {TIME_VARIABLE: 0.0 * ureg.s}
         ramp_end = self._evaluate_expression(self.lane[stop_index], v)
         if is_quantity(ramp_end):
             ramp_end = ramp_end.to_base_units()
@@ -170,7 +165,7 @@ class AnalogLaneCompiler:
 
 
 def is_constant(expression: Expression) -> bool:
-    return "t" not in expression.upstream_variables
+    return TIME_VARIABLE not in expression.upstream_variables
 
 
 def get_time_array(start: float, stop: float, time_step: int) -> np.ndarray:
