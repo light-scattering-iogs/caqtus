@@ -59,10 +59,22 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
         Args:
             session_maker: A callable that returns an ExperimentSession.
-            device_configuration_editors: A mapping from device name to device
-                configuration editor info.
+            This is used to access the storage in which to look for sequences to display
+            and edit.
+            device_configuration_editors: Contains the editors to use to display and
+            edit a given device configurations.
+            This must be a mapping from strings corresponding to device configuration
+            types to device configuration editors.
+            When the GUI needs to display an editor for a device configurations, it
+            will look up this mapping for an editor matching the configurations type.
+            If the configuration type cannot be found in this mapping, the configuration
+            editor will just contain a message suggesting to register an editor.
+            If you want to be able to edit a device configuration in the GUI, you need
+            to have the key corresponding to the configuration type in this mapping.
             connect_to_experiment_manager: A callable that returns an
-                ExperimentManager.
+            ExperimentManager.
+            When the user starts a sequence in the GUI, it will call this function to
+            connect to the experiment manager and submit the sequence to the manager.
             model_factory: A factory for lane models.
             lane_delegate_factory: A factory for lane delegates.
             *args: Positional arguments for QMainWindow.
