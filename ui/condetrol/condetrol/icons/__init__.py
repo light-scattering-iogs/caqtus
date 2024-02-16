@@ -1,7 +1,7 @@
 import functools
 
 import qtawesome
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QGuiApplication
 
 
 @functools.lru_cache(maxsize=None)
@@ -12,5 +12,7 @@ def get_icon(name: str) -> QIcon:
         "read-only-sequence": "mdi6.pencil-off-outline",
     }
 
-    icon = qtawesome.icon(ids[name], color="white")
+    color = QGuiApplication.palette().text().color()
+
+    icon = qtawesome.icon(ids[name], color=color)
     return icon
