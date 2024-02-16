@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -37,7 +37,7 @@ class Ui_CondetrolMainWindow(object):
         CondetrolMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(CondetrolMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 21))
+        self.menubar.setGeometry(QRect(0, 0, 800, 18))
         self.device_configurations_menu = QMenu(self.menubar)
         self.device_configurations_menu.setObjectName(u"device_configurations_menu")
         self.menu = QMenu(self.menubar)
@@ -61,7 +61,7 @@ class Ui_CondetrolMainWindow(object):
     # setupUi
 
     def retranslateUi(self, CondetrolMainWindow):
-        CondetrolMainWindow.setWindowTitle(QCoreApplication.translate("CondetrolMainWindow", u"Condetrol", None))
+        CondetrolMainWindow.setWindowTitle("")
         self.action_edit_device_configurations.setText(QCoreApplication.translate("CondetrolMainWindow", u"Edit...", None))
         self.actionExport.setText(QCoreApplication.translate("CondetrolMainWindow", u"Export...", None))
         self.actionLoad.setText(QCoreApplication.translate("CondetrolMainWindow", u"Load...", None))

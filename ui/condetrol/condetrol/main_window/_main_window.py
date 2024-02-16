@@ -132,8 +132,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setupUi(self)
         self.setStyleSheet(qdarkstyle.load_stylesheet())
         self.setCentralWidget(self.sequence_widget)
-        app = QApplication.instance()
-        self.setWindowTitle(app.applicationName())
         dock = QDockWidget("Sequences")
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         dock.setWidget(self._path_view)
