@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QWidget,
 )
+
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
@@ -25,7 +26,6 @@ from core.session import (
 from core.session.sequence import State
 from exception_tree import ExceptionDialog
 from waiting_widget import run_with_wip_widget
-
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
@@ -44,12 +44,30 @@ from ..timelanes_editor import (
 )
 
 
+# noinspection PyTypeChecker
+def default_connect_to_experiment_manager() -> ExperimentManager:
+    error = NotImplementedError("Not implemented.")
+    error.add_note(
+        f"You need to provide a function to connect to the experiment "
+        f"manager when initializing the main window."
+    )
+    error.add_note(
+        "It is not possible to run sequences without connecting to an experiment "
+        "manager."
+    )
+    raise error
+
+
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        device_configuration_editors: Mapping[str, DeviceConfigurationEditInfo],
-        connect_to_experiment_manager: Callable[[], ExperimentManager],
+        device_configuration_editors: (
+            Mapping[str, DeviceConfigurationEditInfo] | None
+        ) = None,
+        connect_to_experiment_manager: Callable[
+            [], ExperimentManager
+        ] = default_connect_to_experiment_manager,
         model_factory: LaneModelFactory = default_lane_model_factory,
         lane_delegate_factory: LaneDelegateFactory = default_lane_delegate_factory,
         *args,
@@ -87,6 +105,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.session_maker = session_maker
         self.delegate_factory = lane_delegate_factory
         self.model_factory = model_factory
+        if device_configuration_editors is None:
+            device_configuration_editors = {}
         self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.sequence_widget = SequenceWidget(

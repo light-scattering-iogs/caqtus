@@ -1,13 +1,7 @@
-from typing import Mapping
-
 import sqlalchemy
 import sqlalchemy.orm
 
-from ._experiment_session import (
-    SQLExperimentSession,
-    DeviceConfigurationSerializer,
-    Serializer,
-)
+from ._experiment_session import SQLExperimentSession, Serializer, default_serializer
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
 
@@ -25,7 +19,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __init__(
         self,
         engine: sqlalchemy.Engine,
-        serializer: Serializer,
+        serializer: Serializer = default_serializer,
     ) -> None:
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)

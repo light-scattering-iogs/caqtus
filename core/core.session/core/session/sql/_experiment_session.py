@@ -12,6 +12,7 @@ from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
     SequenceSerializer,
+    default_sequence_serializer,
 )
 from ..experiment_session import (
     ExperimentSession,
@@ -25,6 +26,15 @@ class Serializer:
 
     sequence_serializer: SequenceSerializer
     device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
+
+
+default_serializer = Serializer(
+    sequence_serializer=default_sequence_serializer, device_configuration_serializers={}
+)
+"""A default serializer object for SQLExperimentSessionMaker,
+It can read and store sequences that use steps to iterate over parameters and with shots 
+containing digital, analog and camera time lanes. 
+"""
 
 
 @attrs.define(init=False)
