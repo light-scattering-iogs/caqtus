@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QApplication,
-    QStyle,
 )
 
 from core.session import ExperimentSessionMaker, PureSequencePath
@@ -27,6 +26,7 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
 from waiting_widget import run_with_wip_widget
+from .icons import get_icon
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[
@@ -67,6 +67,8 @@ class EditablePathHierarchyView(PathHierarchyView):
 
         menu = QMenu(self)
 
+        color = self.palette().text().color()
+
         with self.session_maker() as session:
             is_sequence = unwrap(session.sequences.is_sequence(path))
             if is_sequence:
@@ -91,7 +93,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         if is_sequence:
             start_action = QAction("Start")
             menu.addAction(start_action)
-            play_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+            play_icon = get_icon("start", color)
             start_action.setIcon(play_icon)
             if state == State.DRAFT:
                 start_action.setEnabled(True)
@@ -103,7 +105,7 @@ class EditablePathHierarchyView(PathHierarchyView):
 
             stop_action = QAction("Interrupt")
             menu.addAction(stop_action)
-            stop_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop)
+            stop_icon = get_icon("stop", color)
             stop_action.setIcon(stop_icon)
             if state == State.RUNNING:
                 stop_action.setEnabled(True)
@@ -114,12 +116,16 @@ class EditablePathHierarchyView(PathHierarchyView):
             )
 
             duplicate_action = QAction("Duplicate")
+            duplicate_icon = get_icon("duplicate", color)
+            duplicate_action.setIcon(duplicate_icon)
             menu.addAction(duplicate_action)
             duplicate_action.triggered.connect(
                 functools.partial(self.on_sequence_duplication_requested, path)
             )
 
             clear_action = QAction("Clear")
+            clear_icon = get_icon("clear", color)
+            clear_action.setIcon(clear_icon)
             menu.addAction(clear_action)
             clear_action.triggered.connect(
                 functools.partial(self.on_clear_sequence_requested, path)
@@ -134,9 +140,7 @@ class EditablePathHierarchyView(PathHierarchyView):
         if not path.is_root():
             delete_action = QAction("Delete")
             menu.addAction(delete_action)
-            trash_icon = self.style().standardIcon(
-                QStyle.StandardPixmap.SP_DialogDiscardButton
-            )
+            trash_icon = get_icon("delete", color)
             delete_action.setIcon(trash_icon)
             if state not in {
                 State.DRAFT,

@@ -129,7 +129,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        # self.setStyleSheet(qdarkstyle.load_stylesheet())
+        self.setStyleSheet(qdarkstyle.load_stylesheet())
         self.setCentralWidget(self.sequence_widget)
         dock = QDockWidget("Sequences")
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
