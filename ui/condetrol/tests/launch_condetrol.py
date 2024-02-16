@@ -24,6 +24,7 @@ create_tables(engine)
 session_maker = SQLExperimentSessionMaker(engine)
 
 app = QApplication(sys.argv)
+app.setStyle("Fusion")
 app.setApplicationName("Condetrol")
 
 window = CondetrolMainWindow(session_maker)

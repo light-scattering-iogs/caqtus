@@ -102,6 +102,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             lane_delegate_factory,
             self,
         )
+
         self.parameter_tables_editor = ParameterTablesEditor(self)
 
         self.state_watcher_thread = self.StateWatcherThread(self)
@@ -169,6 +170,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.on_sequence_iteration_edited
         )
         self.tabWidget.addTab(self.parameter_tables_editor, "Parameters")
+        self.parameter_tables_editor.set_tables(...)
         self.tabWidget.addTab(self.iteration_editor, "Iterations")
         self.time_lanes_editor.blockSignals(True)
         self.time_lanes_editor.set_time_lanes(self.state_sequence.timelanes)

@@ -100,7 +100,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         """
 
         super().__init__(*args, **kwargs)
-        self._path_view = EditablePathHierarchyView(session_maker)
+        self.setStyleSheet(qdarkstyle.load_stylesheet())
+        self._path_view = EditablePathHierarchyView(session_maker, self)
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.delegate_factory = lane_delegate_factory
@@ -110,7 +111,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.sequence_widget = SequenceWidget(
-            self.session_maker, self.model_factory, self.delegate_factory
+            self.session_maker, self.model_factory, self.delegate_factory, parent=self
         )
         self.status_widget = IconLabel(icon_position="left")
         self.setup_ui()
@@ -129,7 +130,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        self.setStyleSheet(qdarkstyle.load_stylesheet())
         self.setCentralWidget(self.sequence_widget)
         dock = QDockWidget("Sequences")
         dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)

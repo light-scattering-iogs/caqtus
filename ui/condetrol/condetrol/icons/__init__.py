@@ -14,6 +14,8 @@ def get_icon(name: str, color) -> QIcon:
         "delete": "mdi6.delete",
         "duplicate": "mdi6.content-duplicate",
         "clear": "mdi6.database-remove",
+        "plus": "mdi6.plus",
+        "minus": "mdi6.minus",
     }
 
     icon = qtawesome.icon(ids[name], color=color)

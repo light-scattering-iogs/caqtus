@@ -51,15 +51,15 @@ class Ui_ParameterTablesEditor(object):
 
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.pushButton = QPushButton(ParameterTablesEditor)
-        self.pushButton.setObjectName(u"pushButton")
+        self.add_button = QPushButton(ParameterTablesEditor)
+        self.add_button.setObjectName(u"add_button")
 
-        self.horizontalLayout_2.addWidget(self.pushButton)
+        self.horizontalLayout_2.addWidget(self.add_button)
 
-        self.pushButton_2 = QPushButton(ParameterTablesEditor)
-        self.pushButton_2.setObjectName(u"pushButton_2")
+        self.delete_button = QPushButton(ParameterTablesEditor)
+        self.delete_button.setObjectName(u"delete_button")
 
-        self.horizontalLayout_2.addWidget(self.pushButton_2)
+        self.horizontalLayout_2.addWidget(self.delete_button)
 
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -78,7 +78,7 @@ class Ui_ParameterTablesEditor(object):
         ParameterTablesEditor.setWindowTitle(QCoreApplication.translate("ParameterTablesEditor", u"Form", None))
         self.pushButton_3.setText(QCoreApplication.translate("ParameterTablesEditor", u"Write to default", None))
         self.pushButton_4.setText(QCoreApplication.translate("ParameterTablesEditor", u"Read from default", None))
-        self.pushButton.setText(QCoreApplication.translate("ParameterTablesEditor", u"Add...", None))
-        self.pushButton_2.setText(QCoreApplication.translate("ParameterTablesEditor", u"Delete", None))
+        self.add_button.setText("")
+        self.delete_button.setText("")
     # retranslateUi
 
