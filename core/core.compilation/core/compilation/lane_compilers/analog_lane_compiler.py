@@ -13,7 +13,7 @@ from core.types.parameter import (
     magnitude_in_unit,
 )
 from core.types.units import ureg
-from core.types.variable_name import DottedVariableName, VariableName
+from core.types.variable_name import VariableName
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
 from ..unit_namespace import units
