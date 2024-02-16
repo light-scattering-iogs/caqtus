@@ -2,7 +2,6 @@ import copy
 import functools
 
 from PySide6 import QtCore
-from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
@@ -26,6 +25,7 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
 from waiting_widget import run_with_wip_widget
+from ._temporary_widget import temporary_widget
 from .icons import get_icon
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
@@ -65,94 +65,81 @@ class EditablePathHierarchyView(PathHierarchyView):
 
         path = self._model.get_path(self._proxy_model.mapToSource(index))
 
-        menu = QMenu(self)
+        with temporary_widget(QMenu(self)) as menu:
 
-        color = self.palette().text().color()
+            color = self.palette().text().color()
 
-        with self.session_maker() as session:
-            is_sequence = unwrap(session.sequences.is_sequence(path))
+            with self.session_maker() as session:
+                is_sequence = unwrap(session.sequences.is_sequence(path))
+                if is_sequence:
+                    state = unwrap(session.sequences.get_state(path))
+                else:
+                    state = None
+            if not is_sequence:
+                new_menu = menu.addMenu("New...")
+
+                create_folder_action = new_menu.addAction("folder")
+                create_folder_action.triggered.connect(
+                    functools.partial(self.create_new_folder, path)
+                )
+
+                create_sequence_action = new_menu.addAction("sequence")
+                create_sequence_action.triggered.connect(
+                    functools.partial(self.create_new_sequence, path)
+                )
             if is_sequence:
-                state = unwrap(session.sequences.get_state(path))
-            else:
-                state = None
-        if not is_sequence:
-            new_menu = QMenu("New...")
-            menu.addMenu(new_menu)
+                play_icon = get_icon("start", color)
+                start_action = menu.addAction(play_icon, "Start")
+                if state == State.DRAFT:
+                    start_action.setEnabled(True)
+                else:
+                    start_action.setEnabled(False)
+                start_action.triggered.connect(
+                    lambda: self.sequence_start_requested.emit(path)
+                )
 
-            create_folder_action = QAction("folder")
-            new_menu.addAction(create_folder_action)
-            create_folder_action.triggered.connect(
-                functools.partial(self.create_new_folder, path)
-            )
+                stop_icon = get_icon("stop", color)
+                stop_action = menu.addAction(stop_icon, "Interrupt")
+                if state == State.RUNNING:
+                    stop_action.setEnabled(True)
+                else:
+                    stop_action.setEnabled(False)
+                stop_action.triggered.connect(
+                    lambda: self.sequence_interrupt_requested.emit(path)
+                )
 
-            create_sequence_action = QAction("sequence")
-            new_menu.addAction(create_sequence_action)
-            create_sequence_action.triggered.connect(
-                functools.partial(self.create_new_sequence, path)
-            )
-        if is_sequence:
-            start_action = QAction("Start")
-            menu.addAction(start_action)
-            play_icon = get_icon("start", color)
-            start_action.setIcon(play_icon)
-            if state == State.DRAFT:
-                start_action.setEnabled(True)
-            else:
-                start_action.setEnabled(False)
-            start_action.triggered.connect(
-                lambda: self.sequence_start_requested.emit(path)
-            )
+                duplicate_icon = get_icon("duplicate", color)
+                duplicate_action = menu.addAction(duplicate_icon, "Duplicate")
+                duplicate_action.triggered.connect(
+                    functools.partial(self.on_sequence_duplication_requested, path)
+                )
 
-            stop_action = QAction("Interrupt")
-            menu.addAction(stop_action)
-            stop_icon = get_icon("stop", color)
-            stop_action.setIcon(stop_icon)
-            if state == State.RUNNING:
-                stop_action.setEnabled(True)
-            else:
-                stop_action.setEnabled(False)
-            stop_action.triggered.connect(
-                lambda: self.sequence_interrupt_requested.emit(path)
-            )
+                clear_icon = get_icon("clear", color)
+                clear_action = menu.addAction(clear_icon, "Clear")
+                clear_action.triggered.connect(
+                    functools.partial(self.on_clear_sequence_requested, path)
+                )
+                if state not in {
+                    State.FINISHED,
+                    State.INTERRUPTED,
+                    State.CRASHED,
+                }:
+                    clear_action.setEnabled(False)
 
-            duplicate_action = QAction("Duplicate")
-            duplicate_icon = get_icon("duplicate", color)
-            duplicate_action.setIcon(duplicate_icon)
-            menu.addAction(duplicate_action)
-            duplicate_action.triggered.connect(
-                functools.partial(self.on_sequence_duplication_requested, path)
-            )
+            if not path.is_root():
+                trash_icon = get_icon("delete", color)
+                delete_action = menu.addAction(trash_icon, "Delete")
+                if state not in {
+                    State.DRAFT,
+                    State.FINISHED,
+                    State.INTERRUPTED,
+                    State.CRASHED,
+                    None,
+                }:
+                    delete_action.setEnabled(False)
+                delete_action.triggered.connect(functools.partial(self.delete, path))
 
-            clear_action = QAction("Clear")
-            clear_icon = get_icon("clear", color)
-            clear_action.setIcon(clear_icon)
-            menu.addAction(clear_action)
-            clear_action.triggered.connect(
-                functools.partial(self.on_clear_sequence_requested, path)
-            )
-            if state not in {
-                State.FINISHED,
-                State.INTERRUPTED,
-                State.CRASHED,
-            }:
-                clear_action.setEnabled(False)
-
-        if not path.is_root():
-            delete_action = QAction("Delete")
-            menu.addAction(delete_action)
-            trash_icon = get_icon("delete", color)
-            delete_action.setIcon(trash_icon)
-            if state not in {
-                State.DRAFT,
-                State.FINISHED,
-                State.INTERRUPTED,
-                State.CRASHED,
-                None,
-            }:
-                delete_action.setEnabled(False)
-            delete_action.triggered.connect(functools.partial(self.delete, path))
-
-        menu.exec(self.mapToGlobal(pos))
+            menu.exec(self.mapToGlobal(pos))
 
     def on_clear_sequence_requested(self, path: PureSequencePath) -> None:
         """Clear the sequence at the given path.
