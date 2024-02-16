@@ -8,7 +8,7 @@ from core.types.expression import Expression
 
 
 def test_0():
-    lane = AnalogTimeLane([(Expression("0 dB"), 1), (Expression("10 dB"), 1)])
+    lane = AnalogTimeLane([Expression("0 dB"), Expression("10 dB")])
     compiler = AnalogLaneCompiler(
         lane, ["step1", "step2"], [Expression("10 ns")] * 2, unit=None
     )
@@ -20,9 +20,7 @@ def test_0():
 
 
 def test_1():
-    lane = AnalogTimeLane(
-        [(Expression("0 dB"), 1), (Ramp(), 1), (Expression("10 dB"), 1)]
-    )
+    lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     compiler = AnalogLaneCompiler(
         lane, ["step1", "step2", "step3"], [Expression("10 ns")] * 3, unit=None
     )
@@ -47,9 +45,7 @@ def test_1():
 
 
 def test_2():
-    lane = AnalogTimeLane(
-        [(Expression("0 dB"), 1), (Ramp(), 1), (Expression("10 dB"), 1)]
-    )
+    lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     compiler = AnalogLaneCompiler(
         lane, ["step1", "step2", "step3"], [Expression("10 ns")] * 3, unit="dB"
     )
@@ -74,7 +70,7 @@ def test_2():
 
 
 def test_4():
-    lane = AnalogTimeLane([(Expression("10 Hz"), 1), (Expression("1 kHz"), 1)])
+    lane = AnalogTimeLane([Expression("10 Hz"), Expression("1 kHz")])
     compiler = AnalogLaneCompiler(
         lane, ["step1", "step2"], [Expression("10 ns")] * 2, unit="Hz"
     )
