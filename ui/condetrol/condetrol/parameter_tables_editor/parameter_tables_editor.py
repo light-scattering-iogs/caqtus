@@ -20,7 +20,7 @@ PARAMETER_NAME_ROLE = Qt.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.UserRole + 2
 
 
-class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
+class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.view = ColumnView(self)

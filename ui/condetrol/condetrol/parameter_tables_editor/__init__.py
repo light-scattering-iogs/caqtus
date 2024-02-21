@@ -1,3 +1,3 @@
-from .parameter_tables_editor import ParameterTablesEditor, ParameterNamespaceModel
+from .parameter_tables_editor import ParametersEditor, ParameterNamespaceModel
 
-__all__ = ["ParameterTablesEditor", "ParameterNamespaceModel"]
+__all__ = ["ParametersEditor", "ParameterNamespaceModel"]
