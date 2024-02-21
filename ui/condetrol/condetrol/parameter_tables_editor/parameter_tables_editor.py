@@ -52,11 +52,13 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
         self.add_button.setEnabled(False)
         self.delete_button.setEnabled(False)
         self.paste_from_clipboard_button.setEnabled(False)
+        self._model.set_read_only(True)
 
     def on_set_to_editable(self) -> None:
         self.add_button.setEnabled(True)
         self.delete_button.setEnabled(True)
         self.paste_from_clipboard_button.setEnabled(True)
+        self._model.set_read_only(False)
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         """Set the parameters to be displayed in the table.
@@ -124,6 +126,10 @@ class ColumnView(QColumnView):
 class ParameterNamespaceModel(QStandardItemModel):
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
+        self._read_only = False
+
+    def set_read_only(self, read_only: bool) -> None:
+        self._read_only = read_only
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         root = self.invisibleRootItem()
@@ -141,6 +147,13 @@ class ParameterNamespaceModel(QStandardItemModel):
             name, value = self._get_parameters_from_item(item)
             namespace[name] = value
         return namespace
+
+    def flags(self, index):
+        flags = super().flags(index)
+        if self._read_only:
+            flags &= ~Qt.ItemFlag.ItemIsEditable
+            flags &= ~Qt.ItemFlag.ItemIsDropEnabled
+        return flags
 
     def _get_parameters_from_item(
         self, item: QStandardItem
