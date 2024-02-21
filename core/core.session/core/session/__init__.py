@@ -1,5 +1,6 @@
 from .data_type import DataType
 from .experiment_session import ExperimentSession
+from .parameter_namespace import ParameterNamespace
 from .path import BoundSequencePath, PureSequencePath
 from .path_hierarchy import PathHierarchy
 from .sequence import Sequence, Shot
@@ -16,4 +17,5 @@ __all__ = [
     "Sequence",
     "Shot",
     "ConstantTable",
+    "ParameterNamespace",
 ]
