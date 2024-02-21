@@ -7,9 +7,12 @@ from PySide6.QtCore import (
     Qt,
     QAbstractItemModel,
 )
-from PySide6.QtWidgets import QWidget, QListView
+from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtWidgets import QWidget
 
-from core.session import ConstantTable
+from core.session import ConstantTable, ParameterNamespace, is_parameter_namespace
+from core.types.expression import Expression
+from core.types.variable_name import DottedVariableName
 from .parameter_tables_editor_ui import Ui_ParameterTablesEditor
 from ..icons import get_icon
 
@@ -54,6 +57,60 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
         self.delete_button.setIcon(get_icon("minus", color))
 
 
+class ParameterNamespaceModel(QStandardItemModel):
+    def __init__(self, parent: Optional[QObject] = None):
+        super().__init__(parent)
+
+    def set_namespace(self, namespace: ParameterNamespace) -> None:
+        root = self.invisibleRootItem()
+        root.removeRows(0, root.rowCount())
+        for name, value in namespace.items():
+            item = self._create_item(name, value)
+            root.appendRow(item)
+
+    def get_namespace(self) -> ParameterNamespace:
+        namespace = {}
+        root = self.invisibleRootItem()
+        for row in range(root.rowCount()):
+            item = root.child(row)
+            name = DottedVariableName(item.data(Qt.ItemDataRole.DisplayRole))
+            value = item.data(Qt.ItemDataRole.UserRole)
+            if value is None:
+                value = self.get_namespace_from_item(item)
+            namespace[name] = value
+        return namespace
+
+    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
+        if not parent.isValid():
+            return self.rowCount() > 0
+        item = self.itemFromIndex(parent)
+        return item.rowCount() > 0
+
+    def _create_item(
+        self, name: DottedVariableName, value: ParameterNamespace | Expression
+    ) -> QStandardItem:
+        item = QStandardItem()
+        if isinstance(value, Expression):
+            item.setData(f"{name} = {value}", Qt.ItemDataRole.DisplayRole)
+            item.setData(value, Qt.ItemDataRole.UserRole)
+            item.setFlags(
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsEditable
+                | Qt.ItemFlag.ItemNeverHasChildren
+            )
+        elif is_parameter_namespace(value):
+            item.setData(str(name), Qt.ItemDataRole.DisplayRole)
+            item.setData(value, Qt.ItemDataRole.UserRole)
+            for sub_name, sub_value in value.items():
+                sub_item = self._create_item(sub_name, sub_value)
+                item.appendRow(sub_item)
+            item.setData(None, Qt.ItemDataRole.UserRole)
+        else:
+            raise ValueError(f"Invalid value {value}")
+        return item
+
+
 class ParameterTablesModel(QAbstractItemModel):
     def __init__(self, parent: Optional[QObject]):
         super().__init__(parent)
@@ -64,7 +121,6 @@ class ParameterTablesModel(QAbstractItemModel):
         self.beginResetModel()
         self.tables = [(name, table) for name, table in tables.items()]
         self.endResetModel()
-        print(self.tables)
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()):
         if self.hasIndex(row, column, parent):
