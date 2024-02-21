@@ -80,12 +80,6 @@ class ParameterNamespaceModel(QStandardItemModel):
             namespace[name] = value
         return namespace
 
-    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
-        if not parent.isValid():
-            return self.rowCount() > 0
-        item = self.itemFromIndex(parent)
-        return item.rowCount() > 0
-
     def _create_item(
         self, name: DottedVariableName, value: ParameterNamespace | Expression
     ) -> QStandardItem:

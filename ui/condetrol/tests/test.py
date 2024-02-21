@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtWidgets import QApplication, QColumnView, QLabel
+from PySide6.QtWidgets import QApplication, QColumnView, QLabel, QListView
 
 from condetrol.parameter_tables_editor import ParameterNamespaceModel
 from core.types.expression import Expression
@@ -8,8 +8,10 @@ from core.types.variable_name import DottedVariableName
 
 
 class View(QColumnView):
-    def setPreviewWidget(self, widget):
-        pass
+    def createColumn(self, rootIndex):
+        view = super().createColumn(rootIndex)
+        view.setHidden(True)
+        return view
 
 
 app = QApplication(sys.argv)
