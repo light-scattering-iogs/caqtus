@@ -5,12 +5,15 @@ from PySide6.QtCore import (
     Qt,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
-from PySide6.QtWidgets import QWidget, QColumnView, QSizePolicy
+from PySide6.QtWidgets import QWidget, QColumnView, QSizePolicy, QApplication
 
 from core.session import ParameterNamespace, is_parameter_namespace
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
+from exception_tree import ExceptionDialog
+from util import serialization
 from .parameter_tables_editor_ui import Ui_ParameterTablesEditor
+from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 
 PARAMETER_NAME_ROLE = Qt.UserRole + 1
@@ -31,6 +34,12 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
     def setup_ui(self):
         self.setupUi(self)
         self._layout.insertWidget(0, self.view)
+        self.copy_to_clipboard_button.clicked.connect(
+            self.on_copy_to_clipboard_button_clicked
+        )
+        self.paste_from_clipboard_button.clicked.connect(
+            self.on_paste_from_clipboard_button_clicked
+        )
         self.set_parameters({})
 
     def set_read_only(self, read_only: bool) -> None:
@@ -69,6 +78,29 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
 
         return self._model.get_parameters()
 
+    def on_copy_to_clipboard_button_clicked(self) -> None:
+        """Copy all the displayed parameters to the clipboard."""
+
+        parameters = self.get_parameters()
+        serialized = serialization.to_json(parameters, ParameterNamespace)
+        clipboard = QApplication.clipboard()
+        clipboard.setText(serialized)
+
+    def on_paste_from_clipboard_button_clicked(self) -> None:
+        """Paste the parameters from the clipboard and display them in the table."""
+
+        clipboard = QApplication.clipboard()
+        serialized = clipboard.text()
+        try:
+            parameters = serialization.from_json(serialized, ParameterNamespace)
+        except Exception as e:
+            with temporary_widget(ExceptionDialog(self)) as dialog:
+                dialog.set_exception(e)
+                dialog.set_message("The clipboard does not contain valid parameters.")
+                dialog.exec()
+        else:
+            self.set_parameters(parameters)
+
 
 class ColumnView(QColumnView):
     """A QColumnView that does not show a preview widget."""
@@ -99,6 +131,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         for name, value in parameters.items():
             item = self._create_item(name, value)
             root.appendRow(item)
+        self.modelReset.emit()
 
     def get_parameters(self) -> ParameterNamespace:
         namespace = {}
