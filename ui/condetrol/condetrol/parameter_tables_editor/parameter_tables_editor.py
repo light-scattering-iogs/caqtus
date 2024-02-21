@@ -13,6 +13,9 @@ from core.types.variable_name import DottedVariableName
 from .parameter_tables_editor_ui import Ui_ParameterTablesEditor
 from ..icons import get_icon
 
+PARAMETER_NAME_ROLE = Qt.UserRole + 1
+PARAMETER_VALUE_ROLE = Qt.UserRole + 2
+
 
 class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
     def __init__(self, parent: Optional[QWidget] = None):
@@ -51,6 +54,7 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
 
         This method ignore the read-only flag and always set the parameters displayed.
         """
+
         # The palette is not set yet in the __init__, so we need to update the icons
         # here, now that it is set to have the right color.
         color = self.palette().buttonText().color()
@@ -59,6 +63,11 @@ class ParameterTablesEditor(QWidget, Ui_ParameterTablesEditor):
         self.copy_to_clipboard_button.setIcon(get_icon("copy", color))
         self.paste_from_clipboard_button.setIcon(get_icon("paste", color))
         self._model.set_parameters(parameters)
+
+    def get_parameters(self) -> ParameterNamespace:
+        """Return the parameters displayed in the table."""
+
+        return self._model.get_parameters()
 
 
 class ColumnView(QColumnView):
@@ -91,17 +100,31 @@ class ParameterNamespaceModel(QStandardItemModel):
             item = self._create_item(name, value)
             root.appendRow(item)
 
-    def get_namespace(self) -> ParameterNamespace:
+    def get_parameters(self) -> ParameterNamespace:
         namespace = {}
         root = self.invisibleRootItem()
         for row in range(root.rowCount()):
             item = root.child(row)
-            name = DottedVariableName(item.data(Qt.ItemDataRole.DisplayRole))
-            value = item.data(Qt.ItemDataRole.UserRole)
-            if value is None:
-                value = self.get_namespace_from_item(item)
+            name, value = self._get_parameters_from_item(item)
             namespace[name] = value
         return namespace
+
+    def _get_parameters_from_item(
+        self, item: QStandardItem
+    ) -> tuple[DottedVariableName, ParameterNamespace | Expression]:
+        name = item.data(PARAMETER_NAME_ROLE)
+        assert isinstance(name, DottedVariableName)
+        value = item.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(value, Expression) or value is None
+        if value is None:
+            result = {}
+            for row in range(item.rowCount()):
+                sub_item = item.child(row)
+                sub_name, sub_value = self._get_parameters_from_item(sub_item)
+                result[sub_name] = sub_value
+        else:
+            result = value
+        return name, result
 
     def _create_item(
         self, name: DottedVariableName, value: ParameterNamespace | Expression
@@ -109,7 +132,8 @@ class ParameterNamespaceModel(QStandardItemModel):
         item = QStandardItem()
         if isinstance(value, Expression):
             item.setData(f"{name} = {value}", Qt.ItemDataRole.DisplayRole)
-            item.setData(value, Qt.ItemDataRole.UserRole)
+            item.setData(name, PARAMETER_NAME_ROLE)
+            item.setData(value, PARAMETER_VALUE_ROLE)
             item.setFlags(
                 Qt.ItemFlag.ItemIsEnabled
                 | Qt.ItemFlag.ItemIsSelectable
@@ -118,7 +142,8 @@ class ParameterNamespaceModel(QStandardItemModel):
             )
         elif is_parameter_namespace(value):
             item.setData(str(name), Qt.ItemDataRole.DisplayRole)
-            item.setData(value, Qt.ItemDataRole.UserRole)
+            item.setData(name, PARAMETER_NAME_ROLE)
+            item.setData(None, PARAMETER_VALUE_ROLE)
             for sub_name, sub_value in value.items():
                 sub_item = self._create_item(sub_name, sub_value)
                 item.appendRow(sub_item)
