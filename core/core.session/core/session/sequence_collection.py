@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import datetime
 from collections.abc import Mapping
-from typing import Protocol, Optional, TypeAlias
+from typing import Protocol, Optional
 
 import attrs
 from returns.result import Result
@@ -12,17 +12,13 @@ from core.device import DeviceName, DeviceConfigurationAttrs
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
+from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
-from .sequence.iteration_configuration import (
-    IterationConfiguration,
-    VariableDeclaration,
-)
+from .sequence.iteration_configuration import IterationConfiguration
 from .sequence.state import State
 from .shot import TimeLanes
-
-ConstantTable: TypeAlias = list[VariableDeclaration]
 
 
 class PathIsSequenceError(PathError):
@@ -159,10 +155,10 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_parameter_tables(
-        self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
+    def set_parameters(
+        self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
-        """Set the parameter tables that are used by this sequence.
+        """Set the parameter that are used by this sequence.
 
         Raises:
             SequenceNotEditableError: If the sequence is not in an editable state.
@@ -171,10 +167,8 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_parameter_tables(
-        self, path: PureSequencePath
-    ) -> Mapping[str, ConstantTable]:
-        """Get the parameter tables that are used by this sequence."""
+    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        """Get the parameters that are used by this sequence."""
 
         raise NotImplementedError
 

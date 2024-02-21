@@ -32,6 +32,7 @@ from ._sequence_table import (
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
+from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
@@ -48,7 +49,7 @@ from ..sequence_collection import (
     SequenceStats,
     ShotNotFoundError,
 )
-from ..sequence_collection import SequenceCollection, ConstantTable
+from ..sequence_collection import SequenceCollection
 from ..shot import TimeLane, DigitalTimeLane, TimeLanes, CameraTimeLane
 
 if TYPE_CHECKING:
@@ -350,8 +351,8 @@ class SQLSequenceCollection(SequenceCollection):
             )
         return device_configurations
 
-    def set_parameter_tables(
-        self, path: PureSequencePath, parameter_tables: Mapping[str, ConstantTable]
+    def set_parameters(
+        self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
         if not sequence.state.is_editable():
