@@ -45,21 +45,21 @@ class _SequenceInfo:
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
-    """Widget for editing sequence iterations and timelanes.
+    """Widget for editing sequence parameters, iterations and time lanes.
 
-    This widget is a tab widget with two tabs: one for editing how the parameters should
-    be iterated over for a sequence, and one for editing the timelanes that specify how
+    This widget is a tab widget with three tabs: one for defining initial parameters, one for editing how the
+    parameters should be iterated over for the sequence, and one for editing the time lanes that specify how
     a given shot should be executed.
 
     This widget is (optionally) associated with a sequence and displays the iteration
-    configuration and timelanes for that sequence.
+    configuration and time lanes for that sequence.
     If the widget is not associated with a sequence, it will hide itself.
 
     When associated with a sequence, the widget is constantly watching the state of the
     sequence.
-    If the sequence is not in the draft state, the iteration editor and timelanes editor
+    If the sequence is not in the draft state, the iteration editor and time lanes editor
     will become read-only.
-    If the sequence is in the draft state, the iteration editor and timelanes editor
+    If the sequence is in the draft state, the iteration editor and time lanes editor
     will become editable and any change will be saved.
     """
 
