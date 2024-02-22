@@ -185,12 +185,14 @@ class EditablePathHierarchyView(PathHierarchyView):
                 )
                 return
             with self.session_maker() as session:
+                parameters = session.sequences.get_parameters(path)
                 iterations = session.sequences.get_iteration_configuration(path)
-                timelanes = session.sequences.get_time_lanes(path)
+                time_lanes = session.sequences.get_time_lanes(path)
                 session.sequences.create(
                     new_path,
+                    parameters,
                     iterations,
-                    timelanes,
+                    time_lanes,
                 )
 
     def create_new_folder(self, path: PureSequencePath):
