@@ -1,10 +1,11 @@
 import functools
-from collections.abc import Iterable, Mapping, Callable
+from collections.abc import Iterable, Callable
 from typing import assert_never, Any
 
 import numpy
+
 from core.compilation import units
-from core.session import ConstantTable
+from core.session import ParameterNamespace
 from core.session.sequence.iteration_configuration import (
     Step,
     ArangeLoop,
@@ -23,7 +24,6 @@ from core.types.parameter import (
 )
 from core.types.parameter.analog_value import add_unit
 from core.types.variable_name import DottedVariableName
-
 from .sequence_manager import SequenceManager, SequenceInterruptedException
 from .step_context import StepContext
 
@@ -50,10 +50,10 @@ class StepSequenceRunner:
     def __init__(
         self,
         sequence_manager: SequenceManager,
-        constant_tables: Mapping[str, ConstantTable],
+        initial_parameters: ParameterNamespace,
     ):
         self._sequence_manager = sequence_manager
-        self._constant_tables = constant_tables
+        self._initial_parameters = initial_parameters
 
     def execute_steps(self, steps: Iterable[Step]):
         """Execute a sequence of steps on the experiment.

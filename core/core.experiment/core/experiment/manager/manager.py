@@ -337,7 +337,7 @@ class BoundProcedure(Procedure):
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
             sequence_runner = StepSequenceRunner(
-                sequence_manager, sequence_manager.constant_tables
+                sequence_manager, sequence_manager.sequence_parameters
             )
             sequence_runner.execute_steps(iteration.steps)
 
