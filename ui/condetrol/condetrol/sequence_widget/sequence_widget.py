@@ -181,7 +181,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.parameters_editor.blockSignals(False)
         self.tabWidget.addTab(self.iteration_editor, "&Iterations")
         self.time_lanes_editor.blockSignals(True)
-        self.time_lanes_editor.set_time_lanes(self.state_sequence.timelanes)
+        self.time_lanes_editor.set_time_lanes(self.state_sequence.time_lanes)
         self.time_lanes_editor.blockSignals(False)
         self.tabWidget.addTab(self.time_lanes_editor, "&Time lanes")
         self.tabWidget.setCurrentIndex(previous_index)
@@ -240,24 +240,24 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                             sequence_path=self.state_sequence.sequence_path,
                             sequence_parameters=self.state_sequence.sequence_parameters,
                             iteration_config=iterations,
-                            time_lanes=self.state_sequence.timelanes,
+                            time_lanes=self.state_sequence.time_lanes,
                             state=state,
                         )
                     )
                 else:
                     self.state_sequence.iteration_config = iterations
 
-    def on_time_lanes_edited(self, timelanes: TimeLanes):
+    def on_time_lanes_edited(self, time_lanes: TimeLanes):
         logger.debug("Time lanes edited")
         if self.state_sequence in self.state_machine.configuration():
             sequence = Sequence(self.state_sequence.sequence_path)
             with self.session_maker() as session:
                 try:
                     session.sequences.set_time_lanes(
-                        self.state_sequence.sequence_path, timelanes
+                        self.state_sequence.sequence_path, time_lanes
                     )
                 except SequenceNotEditableError:
-                    timelanes = session.sequences.get_time_lanes(
+                    time_lanes = session.sequences.get_time_lanes(
                         self.state_sequence.sequence_path
                     )
                     self.sequence_not_editable_set.emit(
@@ -265,12 +265,12 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                             sequence_path=self.state_sequence.sequence_path,
                             sequence_parameters=self.state_sequence.sequence_parameters,
                             iteration_config=self.state_sequence.iteration_config,
-                            time_lanes=timelanes,
+                            time_lanes=time_lanes,
                             state=self.state_sequence.sequence_state,
                         )
                     )
                 else:
-                    self.state_sequence.timelanes = timelanes
+                    self.state_sequence.time_lanes = time_lanes
 
     def closeEvent(self, event):
         self.state_watcher_thread.quit()
@@ -307,7 +307,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         != self.sequence_widget.state_sequence.iteration_config
                     ):
                         self.change_detected.emit(sequence_path)
-                    if timelanes != self.sequence_widget.state_sequence.timelanes:
+                    if timelanes != self.sequence_widget.state_sequence.time_lanes:
                         self.change_detected.emit(sequence_path)
                     if state != self.sequence_widget.state_sequence.sequence_state:
                         self.change_detected.emit(sequence_path)
@@ -355,13 +355,13 @@ class SequenceSetState(QState):
         self._sequence_info.iteration_config = value
 
     @property
-    def timelanes(self) -> TimeLanes:
+    def time_lanes(self) -> TimeLanes:
         if self._sequence_info is None:
             raise ValueError("Sequence info not set")
         return self._sequence_info.time_lanes
 
-    @timelanes.setter
-    def timelanes(self, value: TimeLanes) -> None:
+    @time_lanes.setter
+    def time_lanes(self, value: TimeLanes) -> None:
         if self._sequence_info is None:
             raise ValueError("Sequence info not set")
         self._sequence_info.time_lanes = value
