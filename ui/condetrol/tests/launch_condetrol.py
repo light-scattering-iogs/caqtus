@@ -1,3 +1,4 @@
+import logging
 import sys
 
 import sqlalchemy
@@ -7,6 +8,8 @@ from sqlalchemy.engine import Engine
 
 from condetrol import CondetrolMainWindow
 from core.session.sql import SQLExperimentSessionMaker, create_tables
+
+# logging.basicConfig(level=logging.DEBUG)
 
 
 @event.listens_for(Engine, "connect")

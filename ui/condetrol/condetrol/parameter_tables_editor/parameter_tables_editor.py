@@ -3,6 +3,7 @@ from typing import Optional
 from PySide6.QtCore import (
     QObject,
     Qt,
+    Signal,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import QWidget, QColumnView, QSizePolicy, QApplication
@@ -15,12 +16,18 @@ from util import serialization
 from .parameter_tables_editor_ui import Ui_ParameterTablesEditor
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
+from ..logger import logger
+from ..qt_util import block_signals
 
 PARAMETER_NAME_ROLE = Qt.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.UserRole + 2
 
 
 class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
+    # The argument is a ParameterNamespace, but this is not a valid type for the
+    # Signal.
+    parameters_edited = Signal(object)
+
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.view = ColumnView(self)
@@ -29,6 +36,7 @@ class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
         self.view.setModel(self._model)
 
         self.setup_ui()
+        self.setup_connections()
         self.set_read_only(False)
 
     def setup_ui(self):
@@ -41,6 +49,18 @@ class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
             self.on_paste_from_clipboard_button_clicked
         )
         self.set_parameters({})
+
+    def setup_connections(self) -> None:
+        def emit_edited_signal(*_):
+            parameters = self.get_parameters()
+            logger.debug("Sequence parameters edited: %s", parameters)
+            self.parameters_edited.emit(self.get_parameters())
+
+        self._model.dataChanged.connect(emit_edited_signal)
+        self._model.modelReset.connect(emit_edited_signal)
+        self._model.rowsInserted.connect(emit_edited_signal)
+        self._model.rowsRemoved.connect(emit_edited_signal)
+        self._model.rowsMoved.connect(emit_edited_signal)
 
     def set_read_only(self, read_only: bool) -> None:
         if read_only:
@@ -64,8 +84,13 @@ class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
         """Set the parameters to be displayed in the table.
 
         This method ignore the read-only flag and always set the parameters displayed.
+        It does not emit the parameters_edited signal.
         """
 
+        with block_signals(self._model):
+            self._set_parameters(parameters)
+
+    def _set_parameters(self, parameters: ParameterNamespace) -> None:
         # The palette is not set yet in the __init__, so we need to update the icons
         # here, now that it is set to have the right color.
         color = self.palette().buttonText().color()
@@ -101,7 +126,7 @@ class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
                 dialog.set_message("The clipboard does not contain valid parameters.")
                 dialog.exec()
         else:
-            self.set_parameters(parameters)
+            self._set_parameters(parameters)
 
 
 class ColumnView(QColumnView):
@@ -133,10 +158,11 @@ class ParameterNamespaceModel(QStandardItemModel):
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         root = self.invisibleRootItem()
-        root.removeRows(0, root.rowCount())
-        for name, value in parameters.items():
-            item = self._create_item(name, value)
-            root.appendRow(item)
+        with block_signals(self):
+            root.removeRows(0, root.rowCount())
+            for name, value in parameters.items():
+                item = self._create_item(name, value)
+                root.appendRow(item)
         self.modelReset.emit()
 
     def get_parameters(self) -> ParameterNamespace:
