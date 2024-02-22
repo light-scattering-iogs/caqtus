@@ -13,7 +13,7 @@ from typing import Optional, Any
 
 import attrs
 from core.compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
-from core.device import DeviceName, DeviceParameter
+from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker, Sequence
 from core.session.sequence import State
 from core.types.data import DataLabel, Data
@@ -115,12 +115,9 @@ class SequenceManager(AbstractContextManager):
         If an error occurs when the shot runner is running a shot, it will be caught
         by the sequence manager and the shot will be retried according to the
         configuration in this object.
-        device_configurations_uuid: The UUIDs of the device configurations to use to
+        device_configurations: The device configurations to use to
         run the sequence.
         If None, the sequence manager will use the default device configurations.
-        constant_tables_uuid: The UUIDs of the constant tables to use to run the
-        sequence.
-        If None, the sequence manager will use the default constant tables.
     """
 
     def __init__(
@@ -131,34 +128,22 @@ class SequenceManager(AbstractContextManager):
         shot_runner_factory: ShotRunnerFactory,
         interruption_event: threading.Event,
         shot_retry_config: Optional[ShotRetryConfig] = None,
-        device_configurations_uuid: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuid: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence.path
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
 
         with self._session_maker() as session:
-            if device_configurations_uuid is None:
-                device_configurations_uuid = (
-                    session.device_configurations.get_in_use_uuids()
-                )
-            self._device_configurations_uuid = device_configurations_uuid
-            self.device_configurations = {
-                session.device_configurations.get_device_name(
-                    uuid_
-                ): session.device_configurations.get_configuration(uuid_)
-                for uuid_ in self._device_configurations_uuid
-            }
-            if constant_tables_uuid is None:
-                constant_tables_uuid = session.constants.get_default_uuids()
-            self._constant_tables_uuid = constant_tables_uuid
-            self.constant_tables = {
-                session.constants.get_table_name(uuid_): session.constants.get_table(
-                    uuid_
-                )
-                for uuid_ in self._constant_tables_uuid
-            }
+            if device_configurations is None:
+                self.device_configurations = dict(session.default_device_configurations)
+            else:
+                self.device_configurations = dict(device_configurations)
+            self.sequence_parameters = session.sequences.get_parameters(
+                self._sequence_path
+            )
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
         self.shot_compiler_factory = shot_compiler_factory
         self.shot_runner_factory = shot_runner_factory
@@ -302,11 +287,8 @@ class SequenceManager(AbstractContextManager):
     def _prepare_sequence(self):
         with self._session_maker() as session:
             session.sequences.set_state(self._sequence_path, State.PREPARING)
-            session.sequences.set_device_configuration_uuids(
+            session.sequences.set_device_configurations(
                 self._sequence_path, self._device_configurations_uuid
-            )
-            session.sequences.set_constant_table_uuids(
-                self._sequence_path, self._constant_tables_uuid
             )
 
     def _set_sequence_state(self, state: State):
