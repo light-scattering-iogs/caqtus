@@ -4,6 +4,7 @@ from PySide6.QtCore import (
     QObject,
     Qt,
     Signal,
+    QModelIndex,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import (
@@ -80,6 +81,8 @@ class ParametersEditor(QWidget):
         self.tool_bar.addSeparator()
         self.tool_bar.addWidget(self.copy_to_clipboard_button)
         self.tool_bar.addWidget(self.paste_from_clipboard_button)
+        self.view.setSelectionMode(QColumnView.SelectionMode.SingleSelection)
+        self.view.setSelectionBehavior(QColumnView.SelectionBehavior.SelectItems)
         self.set_parameters({})
 
     def setup_connections(self) -> None:
@@ -93,6 +96,7 @@ class ParametersEditor(QWidget):
         self._model.rowsInserted.connect(emit_edited_signal)
         self._model.rowsRemoved.connect(emit_edited_signal)
         self._model.rowsMoved.connect(emit_edited_signal)
+        self.delete_button.clicked.connect(self.on_delete_button_clicked)
 
     def set_read_only(self, read_only: bool) -> None:
         if read_only:
@@ -111,6 +115,12 @@ class ParametersEditor(QWidget):
         self.delete_button.setEnabled(True)
         self.paste_from_clipboard_button.setEnabled(True)
         self._model.set_read_only(False)
+
+    def on_delete_button_clicked(self) -> None:
+        """Remove the selected item."""
+
+        index = self.view.currentIndex()
+        self._model.remove_item(index)
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         """Set the parameters to be displayed in the table.
@@ -212,6 +222,17 @@ class ParameterNamespaceModel(QStandardItemModel):
             flags &= ~Qt.ItemFlag.ItemIsEditable
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
         return flags
+
+    def remove_item(self, index: QModelIndex) -> None:
+        if not index.isValid():
+            return
+        item = self.itemFromIndex(index)
+        if item is not None:
+            parent = item.parent()
+            if parent is None:
+                self.removeRow(item.row())
+            else:
+                parent.removeRow(item.row())
 
     def _get_parameters_from_item(
         self, item: QStandardItem
