@@ -63,6 +63,7 @@ class ParametersEditor(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.view)
         layout.addWidget(self.tool_bar)
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
         self.copy_to_clipboard_button.clicked.connect(
             self.on_copy_to_clipboard_button_clicked
@@ -233,6 +234,16 @@ class ParameterNamespaceModel(QStandardItemModel):
                 self.removeRow(item.row())
             else:
                 parent.removeRow(item.row())
+
+    def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
+        # hasChildren is used to know when to display a new column in the ColumnView,
+        # so we only return true when the parent is a namespace.
+        if not parent.isValid():
+            return True
+        item = self.itemFromIndex(parent)
+        data = item.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(data, Expression) or data is None
+        return data is None
 
     def _get_parameters_from_item(
         self, item: QStandardItem
