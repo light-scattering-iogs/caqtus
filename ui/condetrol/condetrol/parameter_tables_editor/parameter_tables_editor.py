@@ -230,6 +230,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         if self._read_only:
             flags &= ~Qt.ItemFlag.ItemIsEditable
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
+            flags &= ~Qt.ItemFlag.ItemIsDragEnabled
         return flags
 
     def remove_item(self, index: QModelIndex) -> None:
@@ -284,16 +285,17 @@ class ParameterNamespaceModel(QStandardItemModel):
         self, name: DottedVariableName, value: ParameterNamespace | Expression
     ) -> QStandardItem:
         item = QStandardItem()
+        flags = (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEditable
+            | Qt.ItemFlag.ItemIsDragEnabled
+        )
         if isinstance(value, Expression):
             item.setData(f"{name} = {value}", Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(value, PARAMETER_VALUE_ROLE)
-            item.setFlags(
-                Qt.ItemFlag.ItemIsEnabled
-                | Qt.ItemFlag.ItemIsSelectable
-                | Qt.ItemFlag.ItemIsEditable
-                | Qt.ItemFlag.ItemNeverHasChildren
-            )
+            flags |= Qt.ItemFlag.ItemNeverHasChildren
         elif is_parameter_namespace(value):
             item.setData(str(name), Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
@@ -301,7 +303,9 @@ class ParameterNamespaceModel(QStandardItemModel):
             for sub_name, sub_value in value.items():
                 sub_item = self._create_item(sub_name, sub_value)
                 item.appendRow(sub_item)
+                flags |= Qt.ItemFlag.ItemIsDropEnabled
             item.setData(None, Qt.ItemDataRole.UserRole)
         else:
             raise ValueError(f"Invalid value {value}")
+        item.setFlags(flags)
         return item
