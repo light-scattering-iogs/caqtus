@@ -8,7 +8,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
 
 from core.device import DeviceConfigurationAttrs, DeviceName
-from core.session import ConstantTable
+from core.session import ParameterNamespace
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
@@ -28,7 +28,7 @@ class LaneDelegateFactory(Protocol):
         lane_name: str,
         lane: TimeLane,
         device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-        parameter_tables: Mapping[str, ConstantTable],
+        sequence_parameters: ParameterNamespace,
         parent: QWidget,
     ) -> Optional[QStyledItemDelegate]: ...
 
@@ -37,7 +37,7 @@ def default_lane_delegate_factory(
     lane_name: str,
     lane: TimeLane,
     device_configurations: Mapping[str, DeviceConfigurationAttrs],
-    constant_tables: Mapping[str, ConstantTable],
+    sequence_parameters: ParameterNamespace,
     parent: QWidget,
 ) -> Optional[QStyledItemDelegate]:
     if isinstance(lane, DigitalTimeLane):
@@ -73,11 +73,11 @@ class TimeLanesEditor(QTableView):
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
         self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = {}
-        self._parameter_tables: dict[str, ConstantTable] = {}
+        self._sequence_parameters: ParameterNamespace = {}
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,
             device_configurations=self._device_configurations,
-            constant_tables=self._parameter_tables,
+            sequence_parameters=self._sequence_parameters,
             parent=self,
         )
         self.setModel(self._model)

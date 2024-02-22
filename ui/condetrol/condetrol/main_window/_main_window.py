@@ -20,14 +20,12 @@ from core.experiment.manager import ExperimentManager, Procedure
 from core.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    ConstantTable,
     Sequence,
 )
 from core.session.sequence import State
 from exception_tree import ExceptionDialog
 from waiting_widget import run_with_wip_widget
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..constant_tables_editor import ConstantTablesEditor
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
     ConfigurationsEditor,
@@ -141,7 +139,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.action_edit_device_configurations.triggered.connect(
             self.open_device_configurations_editor
         )
-        self.action_edit_constants.triggered.connect(self.open_constants_editor)
         self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
         self._path_view.sequence_start_requested.connect(self.start_sequence)
         self._path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
@@ -199,34 +196,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             f"An error occurred while running a sequence.",
             exception,
         )
-
-    def open_constants_editor(self):
-        with self.session_maker() as session:
-            previous_constants = dict(session.constants)
-        constants_editor = ConstantTablesEditor(copy.deepcopy(previous_constants))
-        constants_editor.exec()
-        self.update_constant_tables(previous_constants, constants_editor.tables)
-
-    def update_constant_tables(
-        self,
-        previous_tables: Mapping[str, ConstantTable],
-        new_tables: Mapping[str, ConstantTable],
-    ):
-        to_remove = set(previous_tables) - set(new_tables)
-        to_add = set(new_tables) - set(previous_tables)
-        in_both = set(previous_tables) & set(new_tables)
-        to_update = {
-            table_name
-            for table_name in in_both
-            if new_tables[table_name] != previous_tables[table_name]
-        }
-        logger.debug("previous_tables: %r", previous_tables)
-        logger.debug("new_tables: %r", new_tables)
-        with self.session_maker() as session:
-            for table_name in to_remove:
-                del session.constants[table_name]
-            for table_name in to_add | to_update:
-                session.constants[table_name] = new_tables[table_name]
 
     def open_device_configurations_editor(self):
         with self.session_maker() as session:
