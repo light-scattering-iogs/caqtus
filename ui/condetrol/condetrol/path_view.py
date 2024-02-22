@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
-from core.session import ExperimentSessionMaker, PureSequencePath
+from core.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from core.session.path import InvalidPathFormatError
 from core.session.result import unwrap
 from core.session.sequence import State
@@ -27,6 +27,8 @@ from sequence_hierarchy import PathHierarchyView
 from waiting_widget import run_with_wip_widget
 from ._temporary_widget import temporary_widget
 from .icons import get_icon
+
+DEFAULT_SEQUENCE_PARAMETERS: ParameterNamespace = {}
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[
@@ -217,6 +219,7 @@ class EditablePathHierarchyView(PathHierarchyView):
             with self.session_maker() as session:
                 session.sequences.create(
                     new_path,
+                    copy.deepcopy(DEFAULT_SEQUENCE_PARAMETERS),
                     copy.deepcopy(DEFAULT_ITERATION_CONFIG),
                     copy.deepcopy(DEFAULT_TIME_LANES),
                 )

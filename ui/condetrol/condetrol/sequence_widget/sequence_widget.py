@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Optional
 
+import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
 
-from core.session import ExperimentSessionMaker, PureSequencePath
+from core.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.sequence import State, Sequence
@@ -34,6 +35,15 @@ def create_default_iteration_config() -> IterationConfiguration:
     return StepsConfiguration(steps=[])
 
 
+@attrs.define
+class _SequenceInfo:
+    sequence_path: PureSequencePath
+    sequence_parameters: ParameterNamespace
+    iteration_config: IterationConfiguration
+    time_lanes: TimeLanes
+    state: State
+
+
 class SequenceWidget(QWidget, Ui_SequenceWidget):
     """Widget for editing sequence iterations and timelanes.
 
@@ -55,12 +65,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     sequence_changed = Signal(object)  # Optional[tuple[PureSequencePath, State]]
 
-    sequence_editable_set = Signal(
-        PureSequencePath, IterationConfiguration, TimeLanes, State
-    )
-    sequence_not_editable_set = Signal(
-        PureSequencePath, IterationConfiguration, TimeLanes, State
-    )
+    sequence_editable_set = Signal(_SequenceInfo)
+    sequence_not_editable_set = Signal(_SequenceInfo)
     sequence_cleared = Signal()
 
     def __init__(
@@ -170,12 +176,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self.on_sequence_iteration_edited
         )
         self.tabWidget.addTab(self.parameters_editor, "&Parameters")
-        self.parameters_editor.set_parameters(...)
+        self.parameters_editor.blockSignals(True)
+        self.parameters_editor.set_parameters(self.state_sequence.sequence_parameters)
+        self.parameters_editor.blockSignals(False)
         self.tabWidget.addTab(self.iteration_editor, "&Iterations")
         self.time_lanes_editor.blockSignals(True)
         self.time_lanes_editor.set_time_lanes(self.state_sequence.timelanes)
         self.time_lanes_editor.blockSignals(False)
-        self.tabWidget.addTab(self.time_lanes_editor, "&Timelanes")
+        self.tabWidget.addTab(self.time_lanes_editor, "&Time lanes")
         self.tabWidget.setCurrentIndex(previous_index)
         self.setVisible(True)
         self.sequence_changed.emit(
@@ -185,35 +193,38 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     def on_sequence_became_editable(self):
         self.iteration_editor.set_read_only(False)
         self.time_lanes_editor.set_read_only(False)
+        self.parameters_editor.set_read_only(False)
 
     def on_sequence_became_not_editable(self):
         self.iteration_editor.set_read_only(True)
         self.time_lanes_editor.set_read_only(True)
+        self.parameters_editor.set_read_only(True)
 
     def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
         if sequence_path is None:
             self.sequence_cleared.emit()
         else:
             with self.session_maker() as session:
-                state = unwrap(session.sequences.get_stats(sequence_path)).state
-                iteration_config = session.sequences.get_iteration_configuration(
-                    sequence_path
+                sequence_info = _SequenceInfo(
+                    sequence_path=sequence_path,
+                    sequence_parameters=session.sequences.get_parameters(sequence_path),
+                    iteration_config=session.sequences.get_iteration_configuration(
+                        sequence_path
+                    ),
+                    time_lanes=session.sequences.get_time_lanes(sequence_path),
+                    state=unwrap(session.sequences.get_stats(sequence_path)).state,
                 )
-                timelanes = session.sequences.get_time_lanes(sequence_path)
-            if state.is_editable():
-                self.sequence_editable_set.emit(
-                    sequence_path, iteration_config, timelanes, state
-                )
+            if sequence_info.state.is_editable():
+                self.sequence_editable_set.emit(sequence_info)
             else:
-                self.sequence_not_editable_set.emit(
-                    sequence_path, iteration_config, timelanes, state
-                )
+                self.sequence_not_editable_set.emit(sequence_info)
 
     def setup_connections(self):
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_edited)
         self.state_watcher_thread.change_detected.connect(self.set_sequence)
 
     def on_sequence_iteration_edited(self, iterations: IterationConfiguration):
+        assert self.state_sequence in self.state_machine.configuration()
         if self.state_sequence in self.state_machine.configuration():
             sequence = Sequence(self.state_sequence.sequence_path)
             with self.session_maker() as session:
@@ -225,10 +236,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path
                     )
                     self.sequence_not_editable_set.emit(
-                        self.state_sequence.sequence_path,
-                        iterations,
-                        self.state_sequence.timelanes,
-                        state,
+                        _SequenceInfo(
+                            sequence_path=self.state_sequence.sequence_path,
+                            sequence_parameters=self.state_sequence.sequence_parameters,
+                            iteration_config=iterations,
+                            time_lanes=self.state_sequence.timelanes,
+                            state=state,
+                        )
                     )
                 else:
                     self.state_sequence.iteration_config = iterations
@@ -247,10 +261,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                         self.state_sequence.sequence_path
                     )
                     self.sequence_not_editable_set.emit(
-                        self.state_sequence.sequence_path,
-                        self.state_sequence.iteration_config,
-                        timelanes,
-                        sequence.get_state(session),
+                        _SequenceInfo(
+                            sequence_path=self.state_sequence.sequence_path,
+                            sequence_parameters=self.state_sequence.sequence_parameters,
+                            iteration_config=self.state_sequence.iteration_config,
+                            time_lanes=timelanes,
+                            state=self.state_sequence.sequence_state,
+                        )
                     )
                 else:
                     self.state_sequence.timelanes = timelanes
@@ -305,52 +322,58 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 class SequenceSetState(QState):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._sequence_path: Optional[PureSequencePath] = None
-        self._iteration_config: Optional[IterationConfiguration] = None
-        self._timelanes: Optional[TimeLanes] = None
-        self._state: Optional[State] = None
+        self._sequence_info: Optional[_SequenceInfo] = None
 
     @property
     def sequence_state(self) -> State:
-        if self._state is None:
-            raise ValueError("State not set")
-        return self._state
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        return self._sequence_info.state
 
     @property
     def sequence_path(self) -> PureSequencePath:
-        if self._sequence_path is None:
-            raise ValueError("Sequence path not set")
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        return self._sequence_info.sequence_path
 
-        return self._sequence_path
+    @property
+    def sequence_parameters(self) -> ParameterNamespace:
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        return self._sequence_info.sequence_parameters
 
     @property
     def iteration_config(self) -> IterationConfiguration:
-        if self._iteration_config is None:
-            raise ValueError("Iteration config not set")
-        return self._iteration_config
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        return self._sequence_info.iteration_config
 
     @iteration_config.setter
     def iteration_config(self, value: IterationConfiguration) -> None:
-        self._iteration_config = value
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        self._sequence_info.iteration_config = value
 
     @property
     def timelanes(self) -> TimeLanes:
-        if self._timelanes is None:
-            raise ValueError("Timelanes not set")
-        return self._timelanes
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        return self._sequence_info.time_lanes
 
     @timelanes.setter
     def timelanes(self, value: TimeLanes) -> None:
-        self._timelanes = value
+        if self._sequence_info is None:
+            raise ValueError("Sequence info not set")
+        self._sequence_info.time_lanes = value
 
     def onEntry(self, event: QEvent) -> None:
         super().onEntry(event)
         if isinstance(event, QStateMachine.SignalEvent):
-            self._sequence_path = event.arguments()[0]
-            self._iteration_config = event.arguments()[1]
-            self._timelanes = event.arguments()[2]
-            self._state = event.arguments()[3]
+            assert len(event.arguments()) == 1
+            info = event.arguments()[0]
+            assert isinstance(info, _SequenceInfo)
+            self._sequence_info = info
 
     def onExit(self, event: QEvent) -> None:
         super().onExit(event)
-        self._sequence_path = None
+        self._sequence_info = None

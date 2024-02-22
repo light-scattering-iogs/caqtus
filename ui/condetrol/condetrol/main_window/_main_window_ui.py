@@ -37,23 +37,16 @@ class Ui_CondetrolMainWindow(object):
         CondetrolMainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(CondetrolMainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 18))
+        self.menubar.setGeometry(QRect(0, 0, 800, 21))
         self.device_configurations_menu = QMenu(self.menubar)
         self.device_configurations_menu.setObjectName(u"device_configurations_menu")
-        self.menu = QMenu(self.menubar)
-        self.menu.setObjectName(u"menu")
-        self.menuConstants = QMenu(self.menubar)
-        self.menuConstants.setObjectName(u"menuConstants")
         CondetrolMainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(CondetrolMainWindow)
         self.statusbar.setObjectName(u"statusbar")
         CondetrolMainWindow.setStatusBar(self.statusbar)
 
-        self.menubar.addAction(self.menuConstants.menuAction())
         self.menubar.addAction(self.device_configurations_menu.menuAction())
-        self.menubar.addAction(self.menu.menuAction())
         self.device_configurations_menu.addAction(self.action_edit_device_configurations)
-        self.menuConstants.addAction(self.action_edit_constants)
 
         self.retranslateUi(CondetrolMainWindow)
 
@@ -67,7 +60,5 @@ class Ui_CondetrolMainWindow(object):
         self.actionLoad.setText(QCoreApplication.translate("CondetrolMainWindow", u"Load...", None))
         self.action_edit_constants.setText(QCoreApplication.translate("CondetrolMainWindow", u"Edit...", None))
         self.device_configurations_menu.setTitle(QCoreApplication.translate("CondetrolMainWindow", u"Devices", None))
-        self.menu.setTitle(QCoreApplication.translate("CondetrolMainWindow", u"Remote servers", None))
-        self.menuConstants.setTitle(QCoreApplication.translate("CondetrolMainWindow", u"Constants", None))
     # retranslateUi
 
