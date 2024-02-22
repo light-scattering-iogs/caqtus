@@ -6,7 +6,16 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
-from PySide6.QtWidgets import QWidget, QColumnView, QSizePolicy, QApplication
+from PySide6.QtWidgets import (
+    QWidget,
+    QColumnView,
+    QSizePolicy,
+    QApplication,
+    QToolBar,
+    QToolButton,
+    QMenu,
+    QVBoxLayout,
+)
 
 from core.session import ParameterNamespace, is_parameter_namespace
 from core.types.expression import Expression
@@ -23,7 +32,7 @@ PARAMETER_NAME_ROLE = Qt.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.UserRole + 2
 
 
-class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
+class ParametersEditor(QWidget):
     # The argument is a ParameterNamespace, but this is not a valid type for the
     # Signal.
     parameters_edited = Signal(object)
@@ -32,22 +41,46 @@ class ParametersEditor(QWidget, Ui_ParameterTablesEditor):
         super().__init__(parent)
         self.view = ColumnView(self)
         self.view.setResizeGripsVisible(True)
+        self.tool_bar = QToolBar(self)
+
         self._model = ParameterNamespaceModel(self)
         self.view.setModel(self._model)
+
+        self.add_button = QToolButton(self)
+        self.add_menu = QMenu(self)
+        self.add_menu.addAction("Add parameter")
+        self.add_menu.addAction("Add namespace")
+
+        self.delete_button = QToolButton(self)
+        self.copy_to_clipboard_button = QToolButton(self)
+        self.paste_from_clipboard_button = QToolButton(self)
 
         self.setup_ui()
         self.setup_connections()
         self.set_read_only(False)
 
     def setup_ui(self):
-        self.setupUi(self)
-        self._layout.insertWidget(0, self.view)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.view)
+        layout.addWidget(self.tool_bar)
+        self.setLayout(layout)
         self.copy_to_clipboard_button.clicked.connect(
             self.on_copy_to_clipboard_button_clicked
         )
         self.paste_from_clipboard_button.clicked.connect(
             self.on_paste_from_clipboard_button_clicked
         )
+        self.add_button.setMenu(self.add_menu)
+        self.add_button.setToolTip("Add")
+        self.add_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.delete_button.setToolTip("Remove")
+        self.copy_to_clipboard_button.setToolTip("Copy to clipboard")
+        self.paste_from_clipboard_button.setToolTip("Paste from clipboard")
+        self.tool_bar.addWidget(self.add_button)
+        self.tool_bar.addWidget(self.delete_button)
+        self.tool_bar.addSeparator()
+        self.tool_bar.addWidget(self.copy_to_clipboard_button)
+        self.tool_bar.addWidget(self.paste_from_clipboard_button)
         self.set_parameters({})
 
     def setup_connections(self) -> None:
