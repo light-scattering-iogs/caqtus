@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QMenu,
     QVBoxLayout,
+    QAbstractItemView,
 )
 
 from core.session import ParameterNamespace, is_parameter_namespace
@@ -45,6 +46,11 @@ class ParametersEditor(QWidget):
 
         self._model = ParameterNamespaceModel(self)
         self.view.setModel(self._model)
+        self.view.setDragEnabled(True)
+        self.view.setAcceptDrops(True)
+        self.view.setDropIndicatorShown(True)
+        self.view.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.add_button = QToolButton(self)
         self.add_menu = QMenu(self)
@@ -300,10 +306,10 @@ class ParameterNamespaceModel(QStandardItemModel):
             item.setData(str(name), Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(None, PARAMETER_VALUE_ROLE)
+            flags |= Qt.ItemFlag.ItemIsDropEnabled
             for sub_name, sub_value in value.items():
                 sub_item = self._create_item(sub_name, sub_value)
                 item.appendRow(sub_item)
-                flags |= Qt.ItemFlag.ItemIsDropEnabled
             item.setData(None, Qt.ItemDataRole.UserRole)
         else:
             raise ValueError(f"Invalid value {value}")
