@@ -9,12 +9,12 @@ from .iteration_configuration import IterationConfiguration
 from .shot import Shot
 from .state import State
 from .._return_or_raise import unwrap
+from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..shot import TimeLanes
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
-    from ..sequence_collection import ConstantTable
 
 
 @attrs.frozen(eq=False, order=False)
@@ -51,6 +51,18 @@ class Sequence:
 
         return unwrap(session.sequences.get_state(self.path))
 
+    def get_parameters(self, session: ExperimentSession) -> ParameterNamespace:
+        """Return a copy of the parameter tables set for this sequence."""
+
+        return session.sequences.get_parameters(self.path)
+
+    def set_parameters(
+        self, parameters: ParameterNamespace, session: ExperimentSession
+    ) -> None:
+        """Set the parameters for this sequence."""
+
+        session.sequences.set_parameters(self.path, parameters)
+
     def get_iteration_configuration(
         self, session: ExperimentSession
     ) -> IterationConfiguration:
@@ -85,10 +97,11 @@ class Sequence:
         if isinstance(target_path, str):
             target_path = PureSequencePath(target_path)
 
+        parameters = self.get_parameters(session)
         iteration_configuration = self.get_iteration_configuration(session)
         time_lanes = self.get_time_lanes(session)
         return session.sequences.create(
-            target_path, iteration_configuration, time_lanes
+            target_path, parameters, iteration_configuration, time_lanes
         )
 
     def get_device_configurations(
@@ -99,13 +112,6 @@ class Sequence:
         device_configurations = session.sequences.get_device_configurations(self.path)
 
         return dict(device_configurations)
-
-    def get_parameter_tables(
-        self, session: ExperimentSession
-    ) -> dict[str, ConstantTable]:
-        """Return a copy of the parameter tables set for this sequence."""
-
-        return dict(session.sequences.get_parameter_tables(self.path))
 
     def __eq__(self, other):
         if isinstance(other, Sequence):

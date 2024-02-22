@@ -28,11 +28,11 @@ from ._sequence_table import (
     SQLIterationConfiguration,
     SQLTimelanes,
     SQLDeviceConfiguration,
-    SQLParameterTable,
+    SQLSequenceParameters,
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
-from ..parameter_namespace import ParameterNamespace
+from ..parameter_namespace import ParameterNamespace, is_parameter_namespace
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
@@ -185,6 +185,33 @@ class SQLSequenceCollection(SequenceCollection):
             result += self.get_contained_sequences(child)
         return result
 
+    def set_parameters(
+        self, path: PureSequencePath, parameters: ParameterNamespace
+    ) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        if not sequence.state.is_editable():
+            raise SequenceNotEditableError(path)
+
+        if not is_parameter_namespace(parameters):
+            raise TypeError(
+                f"Invalid parameters type {type(parameters)}, expected ParameterNamespace"
+            )
+
+        parameters_content = serialization.converters["json"].unstructure(
+            parameters, ParameterNamespace
+        )
+
+        sequence.parameters.content = parameters_content
+
+    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        sequence = unwrap(self._query_sequence_model(path))
+
+        parameters_content = sequence.parameters.content
+
+        return serialization.converters["json"].structure(
+            parameters_content, ParameterNamespace
+        )
+
     def get_iteration_configuration(
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
@@ -210,6 +237,7 @@ class SQLSequenceCollection(SequenceCollection):
     def create(
         self,
         path: PureSequencePath,
+        parameters: ParameterNamespace,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
     ) -> Sequence:
@@ -218,16 +246,21 @@ class SQLSequenceCollection(SequenceCollection):
             raise PathIsSequenceError(path)
         if unwrap(self.parent_session.paths.get_children(path)):
             raise PathHasChildrenError(path)
+
         iteration_content = self.serializer.iteration_serializer(
             iteration_configuration
         )
+        parameters_content = serialization.converters["json"].unstructure(
+            parameters, ParameterNamespace
+        )
+
         new_sequence = SQLSequence(
             path=unwrap(self._query_path_model(path)),
+            parameters=SQLSequenceParameters(content=parameters_content),
             iteration=SQLIterationConfiguration(content=iteration_content),
             time_lanes=SQLTimelanes(content=self.serialize_time_lanes(time_lanes)),
             state=State.DRAFT,
             device_configurations=[],
-            parameter_tables=[],
             start_time=None,
             stop_time=None,
             expected_number_of_shots=iteration_configuration.expected_number_shots(),
@@ -295,10 +328,6 @@ class SQLSequenceCollection(SequenceCollection):
                 SQLDeviceConfiguration
             ).where(SQLDeviceConfiguration.sequence == sequence)
             self._get_sql_session().execute(delete_device_configurations)
-            delete_constant_table_uuids = sqlalchemy.delete(SQLParameterTable).where(
-                SQLParameterTable.sequence == sequence
-            )
-            self._get_sql_session().execute(delete_constant_table_uuids)
 
             delete_shots = sqlalchemy.delete(SQLShot).where(
                 SQLShot.sequence == sequence
@@ -351,36 +380,6 @@ class SQLSequenceCollection(SequenceCollection):
             )
         return device_configurations
 
-    def set_parameters(
-        self, path: PureSequencePath, parameters: ParameterNamespace
-    ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
-        if not sequence.state.is_editable():
-            raise SequenceNotEditableError(path)
-
-        sql_parameter_tables = [
-            SQLParameterTable(
-                name=name,
-                order=order,
-                content=serialization.converters["json"].unstructure(
-                    table, ConstantTable
-                ),
-            )
-            for order, (name, table) in enumerate(parameter_tables.items())
-        ]
-        sequence.parameter_tables = sql_parameter_tables
-
-    def get_parameter_tables(self, path: PureSequencePath) -> dict[str, ConstantTable]:
-        sequence = unwrap(self._query_sequence_model(path))
-        return {
-            table.name: serialization.converters["json"].structure(
-                table.content, ConstantTable
-            )
-            for table in sorted(
-                sequence.parameter_tables, key=lambda table: table.order
-            )
-        }
-
     def get_stats(
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
@@ -395,12 +394,16 @@ class SQLSequenceCollection(SequenceCollection):
             )
             return SequenceStats(
                 state=sequence.state,
-                start_time=sequence.start_time.replace(tzinfo=datetime.timezone.utc)
-                if sequence.start_time is not None
-                else None,
-                stop_time=sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
-                if sequence.stop_time is not None
-                else None,
+                start_time=(
+                    sequence.start_time.replace(tzinfo=datetime.timezone.utc)
+                    if sequence.start_time is not None
+                    else None
+                ),
+                stop_time=(
+                    sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
+                    if sequence.stop_time is not None
+                    else None
+                ),
                 number_completed_shots=number_shot_run,
                 expected_number_shots=sequence.expected_number_of_shots,
             )

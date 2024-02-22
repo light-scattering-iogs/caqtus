@@ -4,35 +4,13 @@ import datetime
 from typing import Optional
 
 import sqlalchemy
-from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy import ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
 from ._shot_tables import SQLShot
 from ._table_base import Base
 from ..sequence.state import State
-
-
-class SQLIterationConfiguration(Base):
-    __tablename__ = "sequence.iteration"
-
-    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    sequence_id: Mapped[int] = mapped_column(
-        ForeignKey("sequences.id", ondelete="CASCADE"), index=True, unique=True
-    )
-    sequence: Mapped["SQLSequence"] = relationship(back_populates="iteration")
-    content = mapped_column(sqlalchemy.types.JSON)
-
-
-class SQLTimelanes(Base):
-    __tablename__ = "sequence.timelanes"
-
-    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
-    sequence_id: Mapped[int] = mapped_column(
-        ForeignKey("sequences.id", ondelete="CASCADE"), index=True, unique=True
-    )
-    sequence: Mapped["SQLSequence"] = relationship(back_populates="time_lanes")
-    content = mapped_column(sqlalchemy.types.JSON)
 
 
 class SQLSequence(Base):
@@ -45,14 +23,25 @@ class SQLSequence(Base):
     path: Mapped[SQLSequencePath] = relationship(back_populates="sequence")
     state: Mapped[State]
 
-    iteration: Mapped[SQLIterationConfiguration] = relationship(cascade="all")
-    time_lanes: Mapped[SQLTimelanes] = relationship(
-        cascade="all, delete", back_populates="sequence", passive_deletes=True
+    parameters: Mapped[SQLSequenceParameters] = relationship(
+        cascade="all, delete",
+        passive_deletes=True,
+        back_populates="sequence",
     )
+    iteration: Mapped[SQLIterationConfiguration] = relationship(
+        cascade="all",
+        passive_deletes=True,
+        back_populates="sequence",
+    )
+    time_lanes: Mapped[SQLTimelanes] = relationship(
+        cascade="all, delete",
+        passive_deletes=True,
+        back_populates="sequence",
+    )
+
     device_configurations: Mapped[list[SQLDeviceConfiguration]] = relationship(
         cascade="all, delete", passive_deletes=True
     )
-    parameters = mapped_column(sqlalchemy.types.JSON)
 
     # Stored as timezone naive datetimes, with the assumption that the timezone is UTC.
     start_time: Mapped[Optional[datetime.datetime]] = mapped_column(
@@ -72,6 +61,51 @@ class SQLSequence(Base):
     # It is written when the sequence iteration is set.
     # None indicates that this value is not known.
     expected_number_of_shots: Mapped[Optional[int]] = mapped_column()
+
+
+class SQLSequenceParameters(Base):
+    __tablename__ = "sequence.parameters"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True
+    )
+    sequence: Mapped[SQLSequence] = relationship(
+        back_populates="parameters", single_parent=True
+    )
+    content = mapped_column(sqlalchemy.types.JSON)
+
+    __table_args__ = (UniqueConstraint(sequence_id),)
+
+
+class SQLIterationConfiguration(Base):
+    __tablename__ = "sequence.iteration"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True
+    )
+    sequence: Mapped[SQLSequence] = relationship(
+        back_populates="iteration", single_parent=True
+    )
+    content = mapped_column(sqlalchemy.types.JSON)
+
+    __table_args__ = (UniqueConstraint(sequence_id),)
+
+
+class SQLTimelanes(Base):
+    __tablename__ = "sequence.time_lanes"
+
+    id_: Mapped[int] = mapped_column(name="id", primary_key=True)
+    sequence_id: Mapped[int] = mapped_column(
+        ForeignKey(SQLSequence.id_, ondelete="CASCADE"), index=True
+    )
+    sequence: Mapped[SQLSequence] = relationship(
+        back_populates="time_lanes", single_parent=True
+    )
+    content = mapped_column(sqlalchemy.types.JSON)
+
+    __table_args__ = (UniqueConstraint(sequence_id),)
 
 
 class SQLDeviceConfiguration(Base):

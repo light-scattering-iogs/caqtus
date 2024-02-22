@@ -139,6 +139,7 @@ class SequenceCollection(Protocol):
     def create(
         self,
         path: PureSequencePath,
+        parameters: ParameterNamespace,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
     ) -> Sequence:
