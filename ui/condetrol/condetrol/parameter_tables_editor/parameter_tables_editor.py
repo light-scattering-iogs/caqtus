@@ -22,7 +22,6 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from exception_tree import ExceptionDialog
 from util import serialization
-from .parameter_tables_editor_ui import Ui_ParameterTablesEditor
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
