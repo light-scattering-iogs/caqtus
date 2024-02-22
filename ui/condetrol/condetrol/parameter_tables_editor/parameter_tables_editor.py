@@ -48,8 +48,8 @@ class ParametersEditor(QWidget):
 
         self.add_button = QToolButton(self)
         self.add_menu = QMenu(self)
-        self.add_menu.addAction("Add parameter")
-        self.add_menu.addAction("Add namespace")
+        self.add_parameter_action = self.add_menu.addAction("Add parameter")
+        self.add_namespace_action = self.add_menu.addAction("Add namespace")
 
         self.delete_button = QToolButton(self)
         self.copy_to_clipboard_button = QToolButton(self)
@@ -98,6 +98,14 @@ class ParametersEditor(QWidget):
         self._model.rowsRemoved.connect(emit_edited_signal)
         self._model.rowsMoved.connect(emit_edited_signal)
         self.delete_button.clicked.connect(self.on_delete_button_clicked)
+        self.add_parameter_action.triggered.connect(
+            lambda: self._model.add_parameter(
+                DottedVariableName("new_parameter"), Expression("...")
+            )
+        )
+        self.add_namespace_action.triggered.connect(
+            lambda: self._model.add_namespace(DottedVariableName("new_namespace"))
+        )
 
     def set_read_only(self, read_only: bool) -> None:
         if read_only:
@@ -234,6 +242,16 @@ class ParameterNamespaceModel(QStandardItemModel):
                 self.removeRow(item.row())
             else:
                 parent.removeRow(item.row())
+
+    def add_parameter(self, name: DottedVariableName, value: Expression) -> None:
+        root = self.invisibleRootItem()
+        item = self._create_item(name, value)
+        root.appendRow(item)
+
+    def add_namespace(self, name: DottedVariableName) -> None:
+        root = self.invisibleRootItem()
+        item = self._create_item(name, {})
+        root.appendRow(item)
 
     def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
         # hasChildren is used to know when to display a new column in the ColumnView,
