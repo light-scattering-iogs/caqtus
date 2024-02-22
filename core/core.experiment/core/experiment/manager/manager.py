@@ -14,7 +14,7 @@ from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    ConstantTable,
+    ParameterNamespace,
     Sequence,
 )
 from core.session.sequence.iteration_configuration import StepsConfiguration
@@ -103,7 +103,6 @@ class Procedure(AbstractContextManager, abc.ABC):
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         """Start running the sequence on the setup.
 
@@ -119,9 +118,6 @@ class Procedure(AbstractContextManager, abc.ABC):
             running this sequence.
             If None, this will default to the device configurations that are currently
             in use.
-            constant_tables_uuids: the uuids of the constant tables to use for running this
-            sequence.
-            If None, this will default to the constant tables that are currently in use.
         Raises:
             ProcedureNotActiveError: if the procedure is not active.
             SequenceAlreadyRunningError: if a sequence is already running.
@@ -149,7 +145,6 @@ class Procedure(AbstractContextManager, abc.ABC):
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         """Run a sequence on the setup.
 
@@ -163,9 +158,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(
-            sequence, device_configurations_uuids, constant_tables_uuids
-        )
+        self.start_sequence(sequence, device_configurations_uuids)
         if exception := self.exception():
             raise exception
 
@@ -293,7 +286,6 @@ class BoundProcedure(Procedure):
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         if not self.is_active():
             exception = ProcedureNotActiveError("The procedure is not active.")
@@ -311,7 +303,6 @@ class BoundProcedure(Procedure):
             self._run_sequence,
             sequence,
             device_configurations_uuids,
-            constant_tables_uuids,
         )
         self._sequences.append(sequence)
 
@@ -330,7 +321,6 @@ class BoundProcedure(Procedure):
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         with self._session_maker() as session:
             iteration = session.sequences.get_iteration_configuration(sequence.path)
@@ -343,7 +333,6 @@ class BoundProcedure(Procedure):
             self._must_interrupt,
             self._shot_retry_config,
             device_configurations_uuids,
-            constant_tables_uuids,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
@@ -367,20 +356,6 @@ class BoundProcedure(Procedure):
                 for uuid_ in device_configurations_uuids
             }
         return device_configurations
-
-    def _get_constant_tables_to_use(
-        self, constant_tables_uuids: Optional[Set[uuid.UUID]] = None
-    ) -> dict[str, ConstantTable]:
-        with self._session_maker() as session:
-            if constant_tables_uuids is None:
-                constant_tables_uuids = session.constants.get_default_uuids()
-            constant_tables = {
-                session.constants.get_table_name(uuid_): session.constants.get_table(
-                    uuid_
-                )
-                for uuid_ in constant_tables_uuids
-            }
-        return constant_tables
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None

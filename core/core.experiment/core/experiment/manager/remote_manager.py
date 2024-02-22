@@ -36,7 +36,7 @@ class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BasePro
         return self._callmethod("create_procedure", (procedure_name,))  # type: ignore
 
     def interrupt_running_procedure(self) -> bool:
-        return self._callmethod("interrupt_running_procedure", ())
+        return self._callmethod("interrupt_running_procedure", ())  # type: ignore
 
     def __repr__(self):
         return f"<ExperimentManagerProxy at {hex(id(self))}>"
@@ -77,13 +77,13 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         return self._callmethod("__str__", ())
 
     def is_active(self) -> bool:
-        return self._callmethod("is_active", ())
+        return self._callmethod("is_active", ())  # type: ignore
 
     def is_running_sequence(self) -> bool:
-        return self._callmethod("is_running_sequence", ())
+        return self._callmethod("is_running_sequence", ())  # type: ignore
 
     def sequences(self) -> list[PureSequencePath]:
-        return self._callmethod("sequences", ())
+        return self._callmethod("sequences", ())  # type: ignore
 
     def exception(self) -> Optional[Exception]:
         return self._callmethod("exception", ())
@@ -92,30 +92,26 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         return self._callmethod(
             "start_sequence",
-            (sequence, device_configurations_uuids, constant_tables_uuids),
+            (sequence, device_configurations_uuids),
         )
 
     def interrupt_sequence(self) -> bool:
-        return self._callmethod("interrupt_sequence", ())
+        return self._callmethod("interrupt_sequence", ())  # type: ignore
 
     def run_sequence(
         self,
         sequence: Sequence,
         device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
-        constant_tables_uuids: Optional[Set[uuid.UUID]] = None,
     ) -> None:
         # Here we can't just call the remote method `run_sequence`.
         # This is because this method takes a long time to return, since it waits for
         # the sequence to finish.
         # This means that we can't even raise KeyboardInterrupt while waiting for the
         # method to return.
-        self.start_sequence(
-            sequence, device_configurations_uuids, constant_tables_uuids
-        )
+        self.start_sequence(sequence, device_configurations_uuids)
         while self.is_running_sequence():
             time.sleep(100e-3)
         if exception := self.exception():
