@@ -6,6 +6,8 @@ from core.device.sequencer.configuration import (
     CalibratedAnalogMapping,
     Constant,
     DeviceTrigger,
+    Advance,
+    Delay,
 )
 from .functional_blocks import (
     FunctionalBlock,
@@ -13,6 +15,8 @@ from .functional_blocks import (
     AnalogMappingBlock,
     HoldBlock,
     DeviceTriggerBlock,
+    AdvanceBlock,
+    DelayBlock,
 )
 
 
@@ -58,6 +62,26 @@ def build_analog_mapping_output(block: AnalogMappingBlock) -> CalibratedAnalogMa
         input_units=block.get_input_units(),
         output_units=block.get_output_units(),
     )
+
+
+@build_output.register
+def build_advance_output(block: AdvanceBlock) -> Advance:
+    link = block.input_connections[0].link
+    if link is None:
+        raise MissingInputError("Advance block has no input")
+
+    input_block = link.output_connection.block
+    return Advance(input_=build_output(input_block), advance=block.get_advance())
+
+
+@build_output.register
+def build_delay_output(block: DelayBlock) -> Delay:
+    link = block.input_connections[0].link
+    if link is None:
+        raise MissingInputError("Delay block has no input")
+
+    input_block = link.output_connection.block
+    return Delay(input_=build_output(input_block), delay=block.get_delay())
 
 
 class OutputConstructionError(ValueError):
