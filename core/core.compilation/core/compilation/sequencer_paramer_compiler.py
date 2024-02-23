@@ -17,7 +17,7 @@ from core.device.sequencer import (
     ExternalClockOnChange,
     ExternalTriggerStart,
 )
-from core.device.sequencer.configuration import Advance, Delay
+from core.device.sequencer.configuration import Advance, Delay, TimeIndependentMapping
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
@@ -25,6 +25,7 @@ from core.device.sequencer.configuration import (
     DeviceTrigger,
     ChannelOutput,
     CalibratedAnalogMapping,
+    is_value_source,
 )
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -165,8 +166,15 @@ class SingleShotCompiler:
             else:
                 required_unit = None
             try:
+                max_advance, max_delay = self.find_max_advance_and_delays(
+                    sequencer_config
+                )
                 output_values = self.evaluate_output(
-                    channel.output, sequencer_config.time_step, required_unit, 0, 0
+                    channel.output,
+                    sequencer_config.time_step,
+                    required_unit,
+                    max_advance,
+                    max_delay,
                 )
             except Exception as e:
                 raise SequencerCompilationError(
@@ -179,6 +187,18 @@ class SingleShotCompiler:
         stacked = stack_instructions(channel_instructions)
         self.sequencer_instructions[sequencer_name] = stacked
         return stacked
+
+    def find_max_advance_and_delays(
+        self, sequencer_config: SequencerConfiguration
+    ) -> tuple[int, int]:
+        advances_and_delays = [
+            evaluate_max_advance_and_delay(
+                channel.output, sequencer_config.time_step, self.variables
+            )
+            for channel in sequencer_config.channels
+        ]
+        advances, delays = zip(*advances_and_delays)
+        return max(advances), max(delays)
 
     @functools.singledispatchmethod
     def evaluate_output(
@@ -450,7 +470,9 @@ class SingleShotCompiler:
         prepend: int,
         append: int,
     ) -> SequencerInstruction:
-        evaluated_advance = self._evaluate_expression_in_unit(output_.advance, Unit("ns"))
+        evaluated_advance = _evaluate_expression_in_unit(
+            output_.advance, Unit("ns"), self.variables
+        )
         number_ticks_to_advance = round(evaluated_advance / required_time_step)
         if number_ticks_to_advance < 0:
             raise ValueError(
@@ -479,7 +501,9 @@ class SingleShotCompiler:
         prepend: int,
         append: int,
     ) -> SequencerInstruction:
-        evaluated_delay = self._evaluate_expression_in_unit(output_.delay, Unit("ns"))
+        evaluated_delay = _evaluate_expression_in_unit(
+            output_.delay, Unit("ns"), self.variables
+        )
         number_ticks_to_delay = round(evaluated_delay / required_time_step)
         if number_ticks_to_delay < 0:
             raise ValueError(
@@ -504,13 +528,6 @@ class SingleShotCompiler:
                 return instruction.as_type(np.dtype(np.float64))
             case _:
                 raise NotImplementedError
-
-    def _evaluate_expression_in_unit(
-        self, expression: Expression, required_unit: Optional[Unit]
-    ) -> np.floating:
-        value = expression.evaluate(self.variables | units)
-        magnitude = magnitude_in_unit(value, required_unit)
-        return magnitude
 
 
 def convert_units(
@@ -628,3 +645,49 @@ def _(
 
 class SequencerCompilationError(Exception):
     pass
+
+
+def evaluate_max_advance_and_delay(
+    channel_function: ChannelOutput, time_step: int, variables: VariableNamespace
+) -> tuple[int, int]:
+    if is_value_source(channel_function):
+        return 0, 0
+    elif isinstance(channel_function, TimeIndependentMapping):
+        advances_and_delays = [
+            evaluate_max_advance_and_delay(input_, time_step, variables)
+            for input_ in channel_function.inputs()
+        ]
+        advances, delays = zip(*advances_and_delays)
+        return max(advances), max(delays)
+    elif isinstance(channel_function, Advance):
+        advance = _evaluate_expression_in_unit(
+            channel_function.advance, Unit("ns"), variables
+        )
+        advance_ticks = round(advance / time_step)
+        input_advance, input_delay = evaluate_max_advance_and_delay(
+            channel_function.input_, time_step, variables
+        )
+        return advance_ticks + input_advance, input_delay
+    elif isinstance(channel_function, Delay):
+        delay = _evaluate_expression_in_unit(
+            channel_function.delay, Unit("ns"), variables
+        )
+        delay_ticks = round(delay / time_step)
+        input_advance, input_delay = evaluate_max_advance_and_delay(
+            channel_function.input_, time_step, variables
+        )
+        return input_advance, delay_ticks + input_delay
+    else:
+        raise NotImplementedError(
+            f"Cannot evaluate max advance and delay for {channel_function}"
+        )
+
+
+def _evaluate_expression_in_unit(
+    expression: Expression,
+    required_unit: Optional[Unit],
+    variables: VariableNamespace,
+) -> np.floating:
+    value = expression.evaluate(variables | units)
+    magnitude = magnitude_in_unit(value, required_unit)
+    return magnitude
