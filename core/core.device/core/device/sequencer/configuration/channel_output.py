@@ -86,7 +86,7 @@ class Constant:
 
 @attrs.define
 class Advance:
-    output: ChannelOutput = attrs.field(
+    input_: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
     )
@@ -96,12 +96,12 @@ class Advance:
     )
 
     def __str__(self):
-        return f"{self.output} << {self.advance}"
+        return f"{self.input_} << {self.advance}"
 
 
 @attrs.define
 class Delay:
-    output: ChannelOutput = attrs.field(
+    input_: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
     )
@@ -111,7 +111,7 @@ class Delay:
     )
 
     def __str__(self):
-        return f"{self.delay} >> {self.output}"
+        return f"{self.delay} >> {self.input_}"
 
 
 def data_points_converter(data_points: Iterable[tuple[float, float]]):

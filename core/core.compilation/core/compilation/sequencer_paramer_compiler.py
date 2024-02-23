@@ -450,7 +450,7 @@ class SingleShotCompiler:
         prepend: int,
         append: int,
     ) -> SequencerInstruction:
-        evaluated_advance = self._evaluate_expression_in_unit(output_.advance, "ns")
+        evaluated_advance = self._evaluate_expression_in_unit(output_.advance, Unit("ns"))
         number_ticks_to_advance = round(evaluated_advance / required_time_step)
         if number_ticks_to_advance < 0:
             raise ValueError(
@@ -463,7 +463,7 @@ class SingleShotCompiler:
                 f"{prepend} are available"
             )
         return self.evaluate_output(
-            output_.output,
+            output_.input_,
             required_time_step,
             required_unit,
             prepend - number_ticks_to_advance,
@@ -487,7 +487,7 @@ class SingleShotCompiler:
                 f"({number_ticks_to_delay})"
             )
         return self.evaluate_output(
-            output_.output,
+            output_.input_,
             required_time_step,
             required_unit,
             prepend + number_ticks_to_delay,
