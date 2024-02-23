@@ -6,6 +6,7 @@ from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
 import numpy as np
+
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
 from core.device.camera import CameraConfiguration
 from core.device.sequencer import (
@@ -16,6 +17,7 @@ from core.device.sequencer import (
     ExternalClockOnChange,
     ExternalTriggerStart,
 )
+from core.device.sequencer.configuration import Advance, Delay
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
@@ -38,7 +40,6 @@ from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
 from util import add_exc_note
-
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds
@@ -440,6 +441,59 @@ class SingleShotCompiler:
         camera_compiler = CameraLaneCompiler(lane, self.step_names, self.step_durations)
         return camera_compiler.compile_trigger(self.variables, time_step)
 
+    @evaluate_output.register
+    def evaluate_advanced_output(
+        self,
+        output_: Advance,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+    ) -> SequencerInstruction:
+        evaluated_advance = self._evaluate_expression_in_unit(output_.advance, "ns")
+        number_ticks_to_advance = round(evaluated_advance / required_time_step)
+        if number_ticks_to_advance < 0:
+            raise ValueError(
+                f"Cannot advance by a negative number of time steps "
+                f"({number_ticks_to_advance})"
+            )
+        if number_ticks_to_advance > prepend:
+            raise ValueError(
+                f"Cannot advance by {number_ticks_to_advance} time steps when only "
+                f"{prepend} are available"
+            )
+        return self.evaluate_output(
+            output_.output,
+            required_time_step,
+            required_unit,
+            prepend - number_ticks_to_advance,
+            append + number_ticks_to_advance,
+        )
+
+    @evaluate_output.register
+    def evaluate_delayed_output(
+        self,
+        output_: Delay,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+    ) -> SequencerInstruction:
+        evaluated_delay = self._evaluate_expression_in_unit(output_.delay, "ns")
+        number_ticks_to_delay = round(evaluated_delay / required_time_step)
+        if number_ticks_to_delay < 0:
+            raise ValueError(
+                f"Cannot delay by a negative number of time steps "
+                f"({number_ticks_to_delay})"
+            )
+        return self.evaluate_output(
+            output_.output,
+            required_time_step,
+            required_unit,
+            prepend + number_ticks_to_delay,
+            append - number_ticks_to_delay,
+        )
+
     def convert_channel_instruction(
         self, instruction: SequencerInstruction, channel: ChannelConfiguration
     ) -> SequencerInstruction:
@@ -450,6 +504,13 @@ class SingleShotCompiler:
                 return instruction.as_type(np.dtype(np.float64))
             case _:
                 raise NotImplementedError
+
+    def _evaluate_expression_in_unit(
+        self, expression: Expression, required_unit: Optional[Unit]
+    ) -> np.floating:
+        value = expression.evaluate(self.variables | units)
+        magnitude = magnitude_in_unit(value, required_unit)
+        return magnitude
 
 
 def convert_units(
