@@ -663,6 +663,8 @@ def evaluate_max_advance_and_delay(
         advance = _evaluate_expression_in_unit(
             channel_function.advance, Unit("ns"), variables
         )
+        if advance < 0:
+            raise ValueError(f"Advance must be a positive number.")
         advance_ticks = round(advance / time_step)
         input_advance, input_delay = evaluate_max_advance_and_delay(
             channel_function.input_, time_step, variables
@@ -672,6 +674,8 @@ def evaluate_max_advance_and_delay(
         delay = _evaluate_expression_in_unit(
             channel_function.delay, Unit("ns"), variables
         )
+        if delay < 0:
+            raise ValueError(f"Delay must be a positive number.")
         delay_ticks = round(delay / time_step)
         input_advance, input_delay = evaluate_max_advance_and_delay(
             channel_function.input_, time_step, variables
