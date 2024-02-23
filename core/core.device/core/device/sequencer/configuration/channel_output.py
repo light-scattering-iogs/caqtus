@@ -16,6 +16,7 @@ For more information on how the output is evaluated, see
 
 from __future__ import annotations
 
+import abc
 from collections.abc import Iterable
 from typing import TypeGuard, Optional
 
@@ -30,6 +31,24 @@ from ...name import DeviceName
 def validate_channel_output(instance, attribute, value):
     if not is_channel_output(value):
         raise TypeError(f"Output {value} is not of type ChannelOutput")
+
+
+class TimeIndependentMapping(abc.ABC):
+    """A functional mapping of input values to output values independent of time.
+
+    This represents channel transformations of the form:
+
+    .. math::
+        y(t) = f(x_0(t), x_1(t), ..., x_n(t))
+
+    where x_0, x_1, ..., x_n are the input and y is the output.
+    """
+
+    @abc.abstractmethod
+    def inputs(self) -> tuple[ChannelOutput, ...]:
+        """Returns the input values of the mapping."""
+
+        raise NotImplementedError
 
 
 @attrs.define
@@ -120,7 +139,7 @@ def data_points_converter(data_points: Iterable[tuple[float, float]]):
 
 
 @attrs.define
-class CalibratedAnalogMapping:
+class CalibratedAnalogMapping(TimeIndependentMapping):
     """Maps its input to an output quantity by interpolating a set of points.
 
     This mapping is useful for example when one needs to convert an experimentally
@@ -194,6 +213,9 @@ class CalibratedAnalogMapping:
         max_ = np.max(output_values)
         clipped = np.clip(interp, min_, max_)
         return clipped
+
+    def inputs(self) -> tuple[ChannelOutput]:
+        return (self.input_,)
 
     def __getitem__(self, index: int) -> tuple[float, float]:
         return self.measured_data_points[index]
