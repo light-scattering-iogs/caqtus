@@ -479,7 +479,7 @@ class SingleShotCompiler:
         prepend: int,
         append: int,
     ) -> SequencerInstruction:
-        evaluated_delay = self._evaluate_expression_in_unit(output_.delay, "ns")
+        evaluated_delay = self._evaluate_expression_in_unit(output_.delay, Unit("ns"))
         number_ticks_to_delay = round(evaluated_delay / required_time_step)
         if number_ticks_to_delay < 0:
             raise ValueError(
