@@ -5,6 +5,8 @@ from .channel_output import (
     DeviceTrigger,
     Constant,
     CalibratedAnalogMapping,
+    Advance,
+    Delay,
 )
 from .configuration import (
     SequencerConfiguration,
@@ -30,6 +32,8 @@ __all__ = [
     "LaneValues",
     "DeviceTrigger",
     "Constant",
+    "Advance",
+    "Delay",
     "AnalogChannelConfiguration",
     "DigitalChannelConfiguration",
     "CalibratedAnalogMapping",

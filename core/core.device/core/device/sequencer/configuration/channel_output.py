@@ -14,7 +14,6 @@ For more information on how the output is evaluated, see
 :mod:`core.compilation.sequencer_parameter_compiler`.
 """
 
-
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -31,13 +30,6 @@ from ...name import DeviceName
 def validate_channel_output(instance, attribute, value):
     if not is_channel_output(value):
         raise TypeError(f"Output {value} is not of type ChannelOutput")
-
-
-def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
-    return isinstance(
-        obj,
-        (LaneValues, DeviceTrigger, Constant, Advance, Delay, CalibratedAnalogMapping),
-    )
 
 
 @attrs.define
@@ -94,7 +86,6 @@ class Constant:
 
 @attrs.define
 class Advance:
-    # Not yet implemented
     output: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
@@ -110,7 +101,6 @@ class Advance:
 
 @attrs.define
 class Delay:
-    # Not yet implemented
     output: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
@@ -245,3 +235,10 @@ ChannelOutput = (
 )
 
 serialization.configure_tagged_union(ChannelOutput, "type")
+
+
+def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
+    return isinstance(
+        obj,
+        (LaneValues, DeviceTrigger, Constant, Advance, Delay, CalibratedAnalogMapping),
+    )
