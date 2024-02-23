@@ -145,18 +145,15 @@ class CalibratedAnalogMapping:
         validator=validate_channel_output, on_setattr=attrs.setters.validate
     )
     input_units: Optional[str] = attrs.field(
-        default=None,
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
     output_units: Optional[str] = attrs.field(
-        default=None,
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
-
     measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
-        factory=tuple, converter=data_points_converter, on_setattr=attrs.setters.convert
+        converter=data_points_converter, on_setattr=attrs.setters.convert
     )
 
     @property
