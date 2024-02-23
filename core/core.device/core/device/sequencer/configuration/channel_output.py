@@ -239,3 +239,12 @@ def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
         obj,
         (LaneValues, DeviceTrigger, Constant, Advance, Delay, CalibratedAnalogMapping),
     )
+
+
+# A channel output object is said to be a source if it generates values y(t) = f(t)
+# an has no input value x(t).
+ValueSource = LaneValues | DeviceTrigger | Constant
+
+
+def is_value_source(obj) -> TypeGuard[ValueSource]:
+    return isinstance(obj, (LaneValues, DeviceTrigger, Constant))
