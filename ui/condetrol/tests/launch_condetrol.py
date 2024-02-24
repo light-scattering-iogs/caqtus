@@ -1,4 +1,4 @@
-import logging
+import logging.config
 import sys
 
 import sqlalchemy
@@ -8,8 +8,30 @@ from sqlalchemy.engine import Engine
 
 from condetrol import CondetrolMainWindow
 from core.session.sql import SQLExperimentSessionMaker, create_tables
+from core.types.expression import Expression
+from core.types.variable_name import VariableName
 
-# logging.basicConfig(level=logging.DEBUG)
+log_config = {
+    "version": 1,
+    "formatters": {
+        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+    },
+    "handlers": {
+        "default": {
+            "level": "DEBUG",
+            "formatter": "standard",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "": {"level": "WARNING", "handlers": ["default"]},
+        "condetrol.parameters_editor": {"level": "DEBUG"},
+        # "sequence_hierarchy": {"level": "DEBUG"},
+    },
+}
+
+logging.config.dictConfig(log_config)
 
 
 @event.listens_for(Engine, "connect")
@@ -25,6 +47,13 @@ engine = sqlalchemy.create_engine(url)
 create_tables(engine)
 
 session_maker = SQLExperimentSessionMaker(engine)
+
+with session_maker() as session:
+    sequence = session.sequences["\\new sequence"]
+    sequence.set_parameters(
+        {VariableName("namespace"): {VariableName("new_parameter"): Expression("1.0")}},
+        session,
+    )
 
 app = QApplication(sys.argv)
 app.setStyle("Fusion")

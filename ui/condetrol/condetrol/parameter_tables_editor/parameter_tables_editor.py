@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from typing import Optional
 
 from PySide6.QtCore import (
@@ -5,6 +6,7 @@ from PySide6.QtCore import (
     Qt,
     Signal,
     QModelIndex,
+    QMimeData,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from PySide6.QtWidgets import (
@@ -28,6 +30,8 @@ from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
 from ..qt_util import block_signals
+
+logger = logger.getChild("parameters_editor")
 
 PARAMETER_NAME_ROLE = Qt.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.UserRole + 2
@@ -213,6 +217,53 @@ class ParameterNamespaceModel(QStandardItemModel):
     def set_read_only(self, read_only: bool) -> None:
         self._read_only = read_only
 
+    def mimeTypes(self) -> list[str]:
+        return ["text/plain"]
+
+    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+        items = [self.itemFromIndex(index) for index in indexes]
+        data = [self._get_parameters_from_item(item) for item in items]
+        serialized = serialization.to_json(data)
+        mime_data = QMimeData()
+        mime_data.setText(serialized)
+        logger.debug("mimeData: %s", serialized)
+        return mime_data
+
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        if self._read_only:
+            return False
+        json_string = data.text()
+        try:
+            steps = serialization.from_json(
+                json_string,
+                list[tuple[DottedVariableName, Expression]],
+            )
+        except ValueError:
+            return False
+
+        new_items = [self._create_item(name, value) for name, value in steps]
+        if row == -1:
+            if not parent.isValid():
+                return False
+            parent_item = self.itemFromIndex(parent)
+            if not (parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled):
+                return False
+            parent_item.appendRows(new_items)
+            return True
+        if not parent.isValid():
+            parent_item = self.invisibleRootItem()
+        else:
+            parent_item = self.itemFromIndex(parent)
+        parent_item.insertRows(row, new_items)
+        return True
+
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         root = self.invisibleRootItem()
         with block_signals(self):
@@ -225,8 +276,11 @@ class ParameterNamespaceModel(QStandardItemModel):
     def get_parameters(self) -> ParameterNamespace:
         namespace = {}
         root = self.invisibleRootItem()
+        logger.debug(root.rowCount())
+        logger.debug(", ".join([root.child(i).text() for i in range(root.rowCount())]))
         for row in range(root.rowCount()):
             item = root.child(row)
+            logger.debug("row: %s, item: %s", row, item)
             name, value = self._get_parameters_from_item(item)
             namespace[name] = value
         return namespace
@@ -273,14 +327,18 @@ class ParameterNamespaceModel(QStandardItemModel):
     def _get_parameters_from_item(
         self, item: QStandardItem
     ) -> tuple[DottedVariableName, ParameterNamespace | Expression]:
+        logger.debug("item: %s", item)
         name = item.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
         value = item.data(PARAMETER_VALUE_ROLE)
         assert isinstance(value, Expression) or value is None
+        logger.debug("name: %s, value: %s", name, value)
+        logger.debug("item.rowCount(): %s", item.rowCount())
         if value is None:
             result = {}
             for row in range(item.rowCount()):
                 sub_item = item.child(row)
+                logger.debug("sub_item: %s", sub_item)
                 sub_name, sub_value = self._get_parameters_from_item(sub_item)
                 result[sub_name] = sub_value
         else:
@@ -315,3 +373,6 @@ class ParameterNamespaceModel(QStandardItemModel):
             raise ValueError(f"Invalid value {value}")
         item.setFlags(flags)
         return item
+
+    # def supportedDropActions(self):
+    #     return Qt.DropAction.MoveAction

@@ -98,7 +98,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         """
 
         super().__init__(*args, **kwargs)
-        self.setStyleSheet(qdarkstyle.load_stylesheet())
+        # self.setStyleSheet(qdarkstyle.load_stylesheet())
         self._path_view = EditablePathHierarchyView(session_maker, self)
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
