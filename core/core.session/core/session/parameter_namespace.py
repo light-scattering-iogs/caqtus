@@ -7,18 +7,25 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from util import serialization
 
+MappingNamespace = Mapping[str, Union[Expression, "MappingNamespace"]]
+
 
 class ParameterNamespace:
     """A nested namespace of parameters."""
 
     def __init__(
         self,
-        content: Sequence[tuple[DottedVariableName, Expression | ParameterNamespace]],
+        content: Sequence[tuple[DottedVariableName, Expression | Self]],
     ) -> None:
+        for key, value in content:
+            if not isinstance(key, DottedVariableName):
+                raise ValueError(f"Invalid key {key}")
+            if not isinstance(value, (Expression, ParameterNamespace)):
+                raise ValueError(f"Invalid value {value}")
         self._content = list(content)
 
     @classmethod
-    def from_mapping(cls, content: Mapping[str, Any]) -> Self:
+    def from_mapping(cls, mapping: MappingNamespace) -> Self:
         """Construct a ParameterNamespace from a mapping of strings to values.
 
         Example:
@@ -32,7 +39,18 @@ class ParameterNamespace:
                         },
                     })
         """
-        return cls([(DottedVariableName(key), value) for key, value in content.items()])
+
+        content = []
+
+        for key, value in mapping.items():
+            if isinstance(value, Mapping):
+                content.append((DottedVariableName(key), cls.from_mapping(value)))
+            elif isinstance(value, Expression):
+                content.append((DottedVariableName(key), value))
+            else:
+                raise TypeError(f"Invalid value {value}")
+
+        return cls(content)
 
     def items(
         self,
@@ -56,6 +74,16 @@ class ParameterNamespace:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._content})"
+
+    def __eq__(self, other):
+        """Return True if the other object is equal to this one.
+
+        The comparison checks that both objects have the same flattened content.
+        """
+        if isinstance(other, ParameterNamespace):
+            return list(self.flatten()) == list(other.flatten())
+        else:
+            return NotImplemented
 
 
 def union_structure_hook(value, _) -> Expression | ParameterNamespace:
