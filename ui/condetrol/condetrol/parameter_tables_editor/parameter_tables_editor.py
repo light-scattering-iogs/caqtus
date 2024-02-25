@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QMenu,
     QVBoxLayout,
     QAbstractItemView,
+    QHBoxLayout,
+    QLabel,
 )
 
 from core.session import ParameterNamespace
@@ -33,7 +35,7 @@ from util import serialization
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
-from ..qt_util import block_signals, HTMLItemDelegate
+from ..qt_util import block_signals, HTMLItemDelegate, AutoResizeLineEdit
 
 logger = logger.getChild("parameters_editor")
 
@@ -389,12 +391,14 @@ class ParameterNamespaceModel(QStandardItemModel):
         return Qt.DropAction.MoveAction
 
 
+NAME_COLOR = "#AA4926"
+VALUE_COLOR = "#6897BB"
+
+
 class ParameterEditorDelegate(HTMLItemDelegate):
     """A custom delegate to display and edit the parameters in the view."""
 
     def get_text_to_render(self, index: QModelIndex) -> str:
-        name_color = "#AA4926"
-        value_color = "#6897BB"
         text_color = f"#{self.parent().palette().text().color().rgba():X}"
         name = index.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
@@ -402,10 +406,108 @@ class ParameterEditorDelegate(HTMLItemDelegate):
         assert isinstance(value, Expression) or value is None
 
         if value is None:
-            return f"<span style='color:{name_color}'>{name}</span>"
+            return f"<span style='color:{NAME_COLOR}'>{name}</span>"
         else:
             return (
-                f"<span style='color:{name_color}'>{name}</span> "
+                f"<span style='color:{NAME_COLOR}'>{name}</span> "
                 f"<span style='color:{text_color}'>=</span> "
-                f"<span style='color:{value_color}'>{value}</span>"
+                f"<span style='color:{VALUE_COLOR}'>{value}</span>"
             )
+
+    def createEditor(self, parent: QWidget, option, index: QModelIndex) -> QWidget:
+        name = index.data(PARAMETER_NAME_ROLE)
+        assert isinstance(name, DottedVariableName)
+        value = index.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(value, Expression) or value is None
+
+        if value is None:
+            editor = NamespaceEditor()
+        else:
+            editor = ParameterEditor()
+        editor.setParent(parent)
+        return editor
+
+    def setEditorData(self, editor, index):
+        name = index.data(PARAMETER_NAME_ROLE)
+        assert isinstance(name, DottedVariableName)
+        value = index.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(value, Expression) or value is None
+
+        if value is None:
+            assert isinstance(editor, NamespaceEditor)
+            editor.set_namespace(name)
+        else:
+            assert isinstance(editor, ParameterEditor)
+            editor.set_parameter(name, value)
+
+    def setModelData(self, editor, model, index):
+        name = index.data(PARAMETER_NAME_ROLE)
+        assert isinstance(name, DottedVariableName)
+        value = index.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(value, Expression) or value is None
+
+        if value is None:
+            assert isinstance(editor, NamespaceEditor)
+            new_name = editor.get_namespace()
+            model.setData(index, new_name, PARAMETER_NAME_ROLE)
+        else:
+            assert isinstance(editor, ParameterEditor)
+            new_name, new_value = editor.get_parameter()
+            model.setData(index, new_name, PARAMETER_NAME_ROLE)
+            model.setData(index, new_value, PARAMETER_VALUE_ROLE)
+
+
+class ParameterEditor(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QHBoxLayout(self)
+        self.setLayout(layout)
+        self.name_editor = AutoResizeLineEdit(self)
+        layout.addWidget(self.name_editor)
+        label = QLabel("=", self)
+        label.setAttribute(Qt.WA_TranslucentBackground, True)
+        layout.addWidget(label)
+        self.value_editor = AutoResizeLineEdit(self)
+        layout.addWidget(self.value_editor)
+        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+        self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.value_editor.setStyleSheet(f"color: {VALUE_COLOR}")
+
+    def set_parameter(self, name: DottedVariableName, value: Expression) -> None:
+        self.name_editor.setText(str(name))
+        self.value_editor.setText(str(value))
+
+    def get_parameter(self) -> tuple[DottedVariableName, Expression]:
+        name = DottedVariableName(self.name_editor.text())
+        value = Expression(self.value_editor.text())
+        return name, value
+
+
+class NamespaceEditor(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+        self.name_editor = AutoResizeLineEdit(self)
+        layout.addWidget(self.name_editor)
+        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+        self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+
+    def set_namespace(self, name: DottedVariableName) -> None:
+        self.name_editor.setText(str(name))
+
+    def get_namespace(self) -> DottedVariableName:
+        name = DottedVariableName(self.name_editor.text())
+        return name

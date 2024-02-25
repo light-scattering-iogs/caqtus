@@ -49,18 +49,18 @@ create_tables(engine)
 
 session_maker = SQLExperimentSessionMaker(engine)
 
-with session_maker() as session:
-    sequence = session.sequences["\\new sequence"]
-    sequence.set_parameters(
-        ParameterNamespace.from_mapping(
-            {
-                VariableName("namespace"): {
-                    VariableName("new_parameter"): Expression("1.0")
-                }
-            }
-        ),
-        session,
-    )
+# with session_maker() as session:
+#     sequence = session.sequences["\\new sequence"]
+#     sequence.set_parameters(
+#         ParameterNamespace.from_mapping(
+#             {
+#                 VariableName("namespace"): {
+#                     VariableName("new_parameter"): Expression("1.0")
+#                 }
+#             }
+#         ),
+#         session,
+#     )
 
 app = QApplication(sys.argv)
 app.setStyle("Fusion")

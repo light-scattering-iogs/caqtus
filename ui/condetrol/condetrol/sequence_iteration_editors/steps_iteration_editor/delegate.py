@@ -2,21 +2,19 @@ import re
 from typing import Optional, assert_never
 
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtCore import QModelIndex, Qt, QRectF, QAbstractItemModel, QSize
+from PySide6.QtCore import QModelIndex, Qt, QRectF, QAbstractItemModel
 from PySide6.QtGui import (
     QValidator,
     QTextDocument,
     QAbstractTextDocumentLayout,
-    QFontMetrics,
 )
 from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QLineEdit,
     QWidget,
     QStyleOptionViewItem,
-    QStyleOptionFrame,
-    QStyle,
 )
+
 from core.session.sequence.iteration_configuration import (
     Step,
     VariableDeclaration,
@@ -28,6 +26,7 @@ from core.session.sequence.iteration_configuration import (
 from core.types.expression import EXPRESSION_REGEX
 from core.types.expression import Expression
 from core.types.variable_name import DOTTED_VARIABLE_NAME_REGEX, DottedVariableName
+from ...qt_util import AutoResizeLineEdit
 
 VARIABLE_DECLARATION_REGEX = re.compile(
     f"(?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) = (?P<value>{EXPRESSION_REGEX.pattern})"
@@ -144,7 +143,6 @@ class StepDelegate(QStyledItemDelegate):
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
-
         editor = QLineEdit()
         editor.setParent(parent)
         return editor
@@ -304,31 +302,3 @@ class VariableDeclarationEditor(QWidget):
             variable=DottedVariableName(self.variable.text()),
             value=Expression(self.value.text()),
         )
-
-
-class AutoResizeLineEdit(QLineEdit):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.textChanged.connect(self.resize_to_content)
-
-    def _resize_to_content(self):
-        font_metric = QFontMetrics(self.font())
-        pixel_width = font_metric.width(self.text() + " ")
-        self.setFixedWidth(pixel_width)
-        self.adjustSize()
-
-    def resize_to_content(self):
-        text = self.text()
-        text_size = self.fontMetrics().size(0, text)
-        tm = self.textMargins()
-        tm_size = QSize(tm.left() + tm.right(), tm.top() + tm.bottom())
-        cm = self.contentsMargins()
-        cm_size = QSize(cm.left() + cm.right(), cm.top() + cm.bottom())
-        extra_size = QSize(8, 4)
-        contents_size = text_size + tm_size + cm_size + extra_size
-        op = QStyleOptionFrame()
-        op.initFrom(self)
-        perfect_size = self.style().sizeFromContents(
-            QStyle.ContentsType.CT_LineEdit, op, contents_size
-        )
-        self.setFixedSize(perfect_size)
