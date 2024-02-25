@@ -60,6 +60,12 @@ class SequenceCollection(Protocol):
     """A collection of sequences.
 
     This abstract class defines the interface to read and write sequences in a session.
+    Objects of this class provide methods for full access to read/write operations on
+    sequences and their shots.
+    However, they are not meant to be convenient to use directly in user code.
+    Instead, consider using the higher-level API provided by the
+    :class:`core.session.Sequence` and :class:`core.session.Shot` classes to access data
+    from sequences and shots.
     """
 
     @abc.abstractmethod
