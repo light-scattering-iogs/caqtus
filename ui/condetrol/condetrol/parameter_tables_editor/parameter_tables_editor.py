@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
 )
 
-from core.session import ParameterNamespace, is_parameter_namespace
+from core.session import ParameterNamespace
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from exception_tree import ExceptionDialog
@@ -94,7 +94,7 @@ class ParametersEditor(QWidget):
         self.tool_bar.addWidget(self.paste_from_clipboard_button)
         self.view.setSelectionMode(QColumnView.SelectionMode.SingleSelection)
         self.view.setSelectionBehavior(QColumnView.SelectionBehavior.SelectItems)
-        self.set_parameters({})
+        self.set_parameters(ParameterNamespace.empty())
 
     def setup_connections(self) -> None:
         def emit_edited_signal(*_):
@@ -274,16 +274,13 @@ class ParameterNamespaceModel(QStandardItemModel):
         self.modelReset.emit()
 
     def get_parameters(self) -> ParameterNamespace:
-        namespace = {}
+        namespace = []
         root = self.invisibleRootItem()
-        logger.debug(root.rowCount())
-        logger.debug(", ".join([root.child(i).text() for i in range(root.rowCount())]))
         for row in range(root.rowCount()):
             item = root.child(row)
-            logger.debug("row: %s, item: %s", row, item)
             name, value = self._get_parameters_from_item(item)
-            namespace[name] = value
-        return namespace
+            namespace.append((name, value))
+        return ParameterNamespace(namespace)
 
     def flags(self, index):
         flags = super().flags(index)
@@ -311,7 +308,7 @@ class ParameterNamespaceModel(QStandardItemModel):
 
     def add_namespace(self, name: DottedVariableName) -> None:
         root = self.invisibleRootItem()
-        item = self._create_item(name, {})
+        item = self._create_item(name, ParameterNamespace.empty())
         root.appendRow(item)
 
     def hasChildren(self, parent: QModelIndex = QModelIndex()) -> bool:
@@ -327,23 +324,20 @@ class ParameterNamespaceModel(QStandardItemModel):
     def _get_parameters_from_item(
         self, item: QStandardItem
     ) -> tuple[DottedVariableName, ParameterNamespace | Expression]:
-        logger.debug("item: %s", item)
         name = item.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
         value = item.data(PARAMETER_VALUE_ROLE)
         assert isinstance(value, Expression) or value is None
-        logger.debug("name: %s, value: %s", name, value)
-        logger.debug("item.rowCount(): %s", item.rowCount())
         if value is None:
-            result = {}
+            namespace = []
             for row in range(item.rowCount()):
                 sub_item = item.child(row)
                 logger.debug("sub_item: %s", sub_item)
                 sub_name, sub_value = self._get_parameters_from_item(sub_item)
-                result[sub_name] = sub_value
+                namespace.append((sub_name, sub_value))
+            return name, ParameterNamespace(namespace)
         else:
-            result = value
-        return name, result
+            return name, value
 
     def _create_item(
         self, name: DottedVariableName, value: ParameterNamespace | Expression
@@ -360,7 +354,7 @@ class ParameterNamespaceModel(QStandardItemModel):
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(value, PARAMETER_VALUE_ROLE)
             flags |= Qt.ItemFlag.ItemNeverHasChildren
-        elif is_parameter_namespace(value):
+        elif isinstance(value, ParameterNamespace):
             item.setData(str(name), Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(None, PARAMETER_VALUE_ROLE)
@@ -373,6 +367,3 @@ class ParameterNamespaceModel(QStandardItemModel):
             raise ValueError(f"Invalid value {value}")
         item.setFlags(flags)
         return item
-
-    # def supportedDropActions(self):
-    #     return Qt.DropAction.MoveAction

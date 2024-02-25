@@ -7,6 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
 from condetrol import CondetrolMainWindow
+from core.session import ParameterNamespace
 from core.session.sql import SQLExperimentSessionMaker, create_tables
 from core.types.expression import Expression
 from core.types.variable_name import VariableName
@@ -51,7 +52,13 @@ session_maker = SQLExperimentSessionMaker(engine)
 with session_maker() as session:
     sequence = session.sequences["\\new sequence"]
     sequence.set_parameters(
-        {VariableName("namespace"): {VariableName("new_parameter"): Expression("1.0")}},
+        ParameterNamespace.from_mapping(
+            {
+                VariableName("namespace"): {
+                    VariableName("new_parameter"): Expression("1.0")
+                }
+            }
+        ),
         session,
     )
 
