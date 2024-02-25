@@ -5,12 +5,16 @@ import pytest
 from hypothesis import given
 
 from core.device import DeviceName
-from core.session import BoundSequencePath, PureSequencePath, ExperimentSession
+from core.session import (
+    BoundSequencePath,
+    PureSequencePath,
+    ExperimentSession,
+    ParameterNamespace,
+)
 from core.session.result import unwrap
 from core.session.sequence import State, Shot
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
-    VariableDeclaration,
 )
 from core.session.sequence_collection import PathIsSequenceError
 from core.session.shot import TimeLanes
@@ -89,11 +93,15 @@ def test_deletion_1(empty_session):
 def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         assert sequence.exists(session)
         assert session.sequences.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
-            session.sequences.create(p, {}, steps_configuration, time_lanes)
+            session.sequences.create(
+                p, ParameterNamespace.empty(), steps_configuration, time_lanes
+            )
 
         assert not unwrap(session.sequences.is_sequence(p.parent))
 
@@ -103,7 +111,9 @@ def test_sequence_deletion(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert sequence.exists(session)
@@ -123,7 +133,9 @@ def test_iteration_save(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         assert sequence.get_iteration_configuration(session) == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
@@ -137,7 +149,9 @@ def test_iteration_save(
 def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
     with session:
@@ -157,7 +171,9 @@ def test_shot_creation(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {
@@ -195,7 +211,9 @@ def test_data_not_existing(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {}
@@ -218,16 +236,20 @@ def test_data_not_existing(
 
 def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
-        parameters = {
-            VariableName("test"): {DottedVariableName("a"): Expression("1")},
-        }
+        parameters = ParameterNamespace.from_mapping(
+            {
+                VariableName("test"): {DottedVariableName("a"): Expression("1")},
+            }
+        )
         device_configurations = {
             DeviceName("device"): DummyConfiguration(
                 a=1, b="test", remote_server="test"
             ),
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace([]), steps_configuration, time_lanes
+        )
         session.sequences.set_parameters(p, parameters)
 
         session.sequences.set_state(p, State.PREPARING)
@@ -248,7 +270,9 @@ def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             )
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, {}, steps_configuration, time_lanes)
+        sequence = session.sequences.create(
+            p, ParameterNamespace.empty(), steps_configuration, time_lanes
+        )
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_device_configurations(p, configurations)
 

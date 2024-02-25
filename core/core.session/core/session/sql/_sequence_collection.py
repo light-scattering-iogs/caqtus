@@ -32,7 +32,7 @@ from ._sequence_table import (
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
-from ..parameter_namespace import ParameterNamespace, is_parameter_namespace
+from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
@@ -192,9 +192,10 @@ class SQLSequenceCollection(SequenceCollection):
         if not sequence.state.is_editable():
             raise SequenceNotEditableError(path)
 
-        if not is_parameter_namespace(parameters):
+        if not isinstance(parameters, ParameterNamespace):
             raise TypeError(
-                f"Invalid parameters type {type(parameters)}, expected ParameterNamespace"
+                f"Invalid parameters type {type(parameters)}, "
+                f"expected ParameterNamespace"
             )
 
         parameters_content = serialization.converters["json"].unstructure(

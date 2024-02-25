@@ -90,6 +90,24 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def set_parameters(
+        self, path: PureSequencePath, parameters: ParameterNamespace
+    ) -> None:
+        """Set the parameter that are used by this sequence.
+
+        Raises:
+            SequenceNotEditableError: If the sequence is not in an editable state.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        """Get the parameters that are used by this sequence."""
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def get_iteration_configuration(
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
@@ -159,24 +177,6 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def set_state(self, path: PureSequencePath, state: State) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def set_parameters(
-        self, path: PureSequencePath, parameters: ParameterNamespace
-    ) -> None:
-        """Set the parameter that are used by this sequence.
-
-        Raises:
-            SequenceNotEditableError: If the sequence is not in an editable state.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
-        """Get the parameters that are used by this sequence."""
-
         raise NotImplementedError
 
     @abc.abstractmethod

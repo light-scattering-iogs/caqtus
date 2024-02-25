@@ -7,7 +7,9 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from util import serialization
 
-MappingNamespace = Mapping[str, Union[Expression, "MappingNamespace"]]
+MappingNamespace = Mapping[
+    str | DottedVariableName, Union[Expression, "MappingNamespace"]
+]
 
 
 class ParameterNamespace:
@@ -43,14 +45,26 @@ class ParameterNamespace:
         content = []
 
         for key, value in mapping.items():
+            if isinstance(key, str):
+                k = DottedVariableName(key)
+            elif isinstance(key, DottedVariableName):
+                k = key
+            else:
+                raise TypeError(f"Invalid key {key}")
             if isinstance(value, Mapping):
-                content.append((DottedVariableName(key), cls.from_mapping(value)))
+                content.append((k, cls.from_mapping(value)))
             elif isinstance(value, Expression):
-                content.append((DottedVariableName(key), value))
+                content.append((k, value))
             else:
                 raise TypeError(f"Invalid value {value}")
 
         return cls(content)
+
+    @classmethod
+    def empty(cls) -> Self:
+        """Return an empty namespace."""
+
+        return cls([])
 
     def items(
         self,
