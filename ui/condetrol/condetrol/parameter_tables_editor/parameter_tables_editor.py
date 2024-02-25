@@ -99,7 +99,6 @@ class ParametersEditor(QWidget):
     def setup_connections(self) -> None:
         def emit_edited_signal(*_):
             parameters = self.get_parameters()
-            logger.debug("Sequence parameters edited: %s", parameters)
             self.parameters_edited.emit(self.get_parameters())
 
         self._model.dataChanged.connect(emit_edited_signal)
@@ -226,7 +225,6 @@ class ParameterNamespaceModel(QStandardItemModel):
         serialized = serialization.to_json(data)
         mime_data = QMimeData()
         mime_data.setText(serialized)
-        logger.debug("mimeData: %s", serialized)
         return mime_data
 
     def dropMimeData(
@@ -332,7 +330,6 @@ class ParameterNamespaceModel(QStandardItemModel):
             namespace = []
             for row in range(item.rowCount()):
                 sub_item = item.child(row)
-                logger.debug("sub_item: %s", sub_item)
                 sub_name, sub_value = self._get_parameters_from_item(sub_item)
                 namespace.append((sub_name, sub_value))
             return name, ParameterNamespace(namespace)
