@@ -53,7 +53,7 @@ class ParametersEditor(QWidget):
         self.view.setDragEnabled(True)
         self.view.setAcceptDrops(True)
         self.view.setDropIndicatorShown(True)
-        self.view.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.add_button = QToolButton(self)
@@ -241,7 +241,7 @@ class ParameterNamespaceModel(QStandardItemModel):
         try:
             steps = serialization.from_json(
                 json_string,
-                list[tuple[DottedVariableName, Expression]],
+                list[tuple[DottedVariableName, ParameterNamespace | Expression]],
             )
         except ValueError:
             return False
@@ -249,8 +249,9 @@ class ParameterNamespaceModel(QStandardItemModel):
         new_items = [self._create_item(name, value) for name, value in steps]
         if row == -1:
             if not parent.isValid():
-                return False
-            parent_item = self.itemFromIndex(parent)
+                parent_item = self.invisibleRootItem()
+            else:
+                parent_item = self.itemFromIndex(parent)
             if not (parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled):
                 return False
             parent_item.appendRows(new_items)
@@ -261,6 +262,21 @@ class ParameterNamespaceModel(QStandardItemModel):
             parent_item = self.itemFromIndex(parent)
         parent_item.insertRows(row, new_items)
         return True
+
+    def canDropMimeData(self, data, action, row, column, parent):
+        if self._read_only:
+            return False
+        if row == -1:
+            if not parent.isValid():
+                parent_item = self.invisibleRootItem()
+            else:
+                parent_item = self.itemFromIndex(parent)
+            return bool(parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled)
+        if not parent.isValid():
+            parent_item = self.invisibleRootItem()
+        else:
+            parent_item = self.itemFromIndex(parent)
+        return bool(parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled)
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         root = self.invisibleRootItem()
@@ -364,3 +380,6 @@ class ParameterNamespaceModel(QStandardItemModel):
             raise ValueError(f"Invalid value {value}")
         item.setFlags(flags)
         return item
+
+    def supportedDropActions(self) -> Qt.DropAction:
+        return Qt.DropAction.MoveAction
