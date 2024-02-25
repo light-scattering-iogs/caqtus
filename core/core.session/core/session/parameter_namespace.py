@@ -96,12 +96,12 @@ def union_structure_hook(value, _) -> Expression | ParameterNamespace:
 
 
 serialization.register_structure_hook(
-    Union["ParameterNamespace", Expression], union_structure_hook
+    Expression | ParameterNamespace, union_structure_hook
 )
 
 
 def unstructure_hook(value: ParameterNamespace):
-    serialization.unstructure(list(value.items()))
+    return serialization.unstructure(list(value.items()))
 
 
 serialization.register_unstructure_hook(ParameterNamespace, unstructure_hook)
@@ -109,7 +109,7 @@ serialization.register_unstructure_hook(ParameterNamespace, unstructure_hook)
 
 def structure_hook(value: Any, _) -> ParameterNamespace:
     content = serialization.structure(
-        value, list[tuple[DottedVariableName, Expression]]
+        value, list[tuple[DottedVariableName, Expression | ParameterNamespace]]
     )
     return ParameterNamespace(content)
 

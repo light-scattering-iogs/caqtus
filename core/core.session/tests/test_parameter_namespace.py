@@ -1,6 +1,7 @@
 from core.session import ParameterNamespace
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
+from util import serialization
 
 
 def test_0():
@@ -42,3 +43,17 @@ def test_1():
             ),
         ),
     ]
+
+
+def test_serialization():
+    namespace = ParameterNamespace.from_mapping(
+        {
+            "a": Expression("1"),
+            "b": {
+                "c": Expression("2"),
+                "d": Expression("3"),
+            },
+        }
+    )
+    unstructured = serialization.unstructure(namespace)
+    assert serialization.structure(unstructured, ParameterNamespace) == namespace
