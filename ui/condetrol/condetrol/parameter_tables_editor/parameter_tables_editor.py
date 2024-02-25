@@ -11,6 +11,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import (
     QStandardItemModel,
     QStandardItem,
+    QPalette,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -392,12 +393,19 @@ class ParameterEditorDelegate(HTMLItemDelegate):
     """A custom delegate to display and edit the parameters in the view."""
 
     def get_text_to_render(self, index: QModelIndex) -> str:
+        name_color = "#AA4926"
+        value_color = "#6897BB"
+        text_color = f"#{self.parent().palette().text().color().rgba():X}"
         name = index.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
         value = index.data(PARAMETER_VALUE_ROLE)
         assert isinstance(value, Expression) or value is None
 
         if value is None:
-            return str(name)
+            return f"<span style='color:{name_color}'>{name}</span>"
         else:
-            return f"{name} = {value}"
+            return (
+                f"<span style='color:{name_color}'>{name}</span> "
+                f"<span style='color:{text_color}'>=</span> "
+                f"<span style='color:{value_color}'>{value}</span>"
+            )
