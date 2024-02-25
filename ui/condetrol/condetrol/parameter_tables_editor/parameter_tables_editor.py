@@ -8,7 +8,10 @@ from PySide6.QtCore import (
     QModelIndex,
     QMimeData,
 )
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtGui import (
+    QStandardItemModel,
+    QStandardItem,
+)
 from PySide6.QtWidgets import (
     QWidget,
     QColumnView,
@@ -29,7 +32,7 @@ from util import serialization
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
-from ..qt_util import block_signals
+from ..qt_util import block_signals, HTMLItemDelegate
 
 logger = logger.getChild("parameters_editor")
 
@@ -55,6 +58,8 @@ class ParametersEditor(QWidget):
         self.view.setDropIndicatorShown(True)
         self.view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.delegate = ParameterEditorDelegate(self)
+        self.view.setItemDelegate(self.delegate)
 
         self.add_button = QToolButton(self)
         self.add_menu = QMenu(self)
@@ -363,12 +368,10 @@ class ParameterNamespaceModel(QStandardItemModel):
             | Qt.ItemFlag.ItemIsDragEnabled
         )
         if isinstance(value, Expression):
-            item.setData(f"{name} = {value}", Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(value, PARAMETER_VALUE_ROLE)
             flags |= Qt.ItemFlag.ItemNeverHasChildren
         elif isinstance(value, ParameterNamespace):
-            item.setData(str(name), Qt.ItemDataRole.DisplayRole)
             item.setData(name, PARAMETER_NAME_ROLE)
             item.setData(None, PARAMETER_VALUE_ROLE)
             flags |= Qt.ItemFlag.ItemIsDropEnabled
@@ -383,3 +386,18 @@ class ParameterNamespaceModel(QStandardItemModel):
 
     def supportedDropActions(self) -> Qt.DropAction:
         return Qt.DropAction.MoveAction
+
+
+class ParameterEditorDelegate(HTMLItemDelegate):
+    """A custom delegate to display and edit the parameters in the view."""
+
+    def get_text_to_render(self, index: QModelIndex) -> str:
+        name = index.data(PARAMETER_NAME_ROLE)
+        assert isinstance(name, DottedVariableName)
+        value = index.data(PARAMETER_VALUE_ROLE)
+        assert isinstance(value, Expression) or value is None
+
+        if value is None:
+            return str(name)
+        else:
+            return f"{name} = {value}"
