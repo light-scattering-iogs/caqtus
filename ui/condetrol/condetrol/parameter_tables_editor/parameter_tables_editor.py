@@ -274,17 +274,7 @@ class ParameterNamespaceModel(QStandardItemModel):
     def canDropMimeData(self, data, action, row, column, parent):
         if self._read_only:
             return False
-        if row == -1:
-            if not parent.isValid():
-                parent_item = self.invisibleRootItem()
-            else:
-                parent_item = self.itemFromIndex(parent)
-            return bool(parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled)
-        if not parent.isValid():
-            parent_item = self.invisibleRootItem()
-        else:
-            parent_item = self.itemFromIndex(parent)
-        return bool(parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled)
+        return bool(self.flags(parent) & Qt.ItemFlag.ItemIsDropEnabled)
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         root = self.invisibleRootItem()
