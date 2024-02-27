@@ -3,7 +3,6 @@ import copy
 from collections.abc import Mapping, Callable
 from typing import Optional, Literal
 
-import qdarkstyle
 from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByteArray
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
@@ -98,7 +97,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         """
 
         super().__init__(*args, **kwargs)
-        self.setStyleSheet(qdarkstyle.load_stylesheet())
         self._path_view = EditablePathHierarchyView(session_maker, self)
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
