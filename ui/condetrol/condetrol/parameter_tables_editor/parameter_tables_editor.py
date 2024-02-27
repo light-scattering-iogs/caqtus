@@ -106,7 +106,6 @@ class ParametersEditor(QWidget):
 
     def setup_connections(self) -> None:
         def emit_edited_signal(*_):
-            parameters = self.get_parameters()
             self.parameters_edited.emit(self.get_parameters())
 
         self._model.dataChanged.connect(emit_edited_signal)
@@ -146,7 +145,7 @@ class ParametersEditor(QWidget):
         """Remove the selected item."""
 
         index = self.view.currentIndex()
-        self._model.remove_item(index)
+        self._model.removeRow(index.row(), index.parent())
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
         """Set the parameters to be displayed in the table.
@@ -155,7 +154,7 @@ class ParametersEditor(QWidget):
         It does not emit the parameters_edited signal.
         """
 
-        with block_signals(self._model):
+        with block_signals(self):
             self._set_parameters(parameters)
 
     def _set_parameters(self, parameters: ParameterNamespace) -> None:
@@ -256,18 +255,12 @@ class ParameterNamespaceModel(QStandardItemModel):
 
         new_items = [self._create_item(name, value) for name, value in steps]
         if row == -1:
-            if not parent.isValid():
-                parent_item = self.invisibleRootItem()
-            else:
-                parent_item = self.itemFromIndex(parent)
-            if not (parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled):
-                return False
-            parent_item.appendRows(new_items)
-            return True
-        if not parent.isValid():
-            parent_item = self.invisibleRootItem()
-        else:
-            parent_item = self.itemFromIndex(parent)
+            row = self.rowCount(parent)
+        if not (self.flags(parent) & Qt.ItemFlag.ItemIsDropEnabled):
+            return False
+        parent_item = (
+            self.itemFromIndex(parent) if parent.isValid() else self.invisibleRootItem()
+        )
         parent_item.insertRows(row, new_items)
         return True
 
@@ -277,12 +270,10 @@ class ParameterNamespaceModel(QStandardItemModel):
         return bool(self.flags(parent) & Qt.ItemFlag.ItemIsDropEnabled)
 
     def set_parameters(self, parameters: ParameterNamespace) -> None:
-        root = self.invisibleRootItem()
-        with block_signals(self):
-            root.removeRows(0, root.rowCount())
-            for name, value in parameters.items():
-                item = self._create_item(name, value)
-                root.appendRow(item)
+        self.removeRows(0, self.rowCount(), QModelIndex())
+        for name, value in parameters.items():
+            item = self._create_item(name, value)
+            self.appendRow(item)
         self.modelReset.emit()
 
     def get_parameters(self) -> ParameterNamespace:
@@ -301,17 +292,6 @@ class ParameterNamespaceModel(QStandardItemModel):
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
             flags &= ~Qt.ItemFlag.ItemIsDragEnabled
         return flags
-
-    def remove_item(self, index: QModelIndex) -> None:
-        if not index.isValid():
-            return
-        item = self.itemFromIndex(index)
-        if item is not None:
-            parent = item.parent()
-            if parent is None:
-                self.removeRow(item.row())
-            else:
-                parent.removeRow(item.row())
 
     def add_parameter(self, name: DottedVariableName, value: Expression) -> None:
         root = self.invisibleRootItem()
