@@ -194,6 +194,18 @@ class SequenceCollection(Protocol):
     ) -> Data:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def get_shot_start_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shot_end_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        raise NotImplementedError
+
 
 @attrs.frozen
 class SequenceStats:
