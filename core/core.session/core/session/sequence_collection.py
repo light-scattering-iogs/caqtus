@@ -133,9 +133,7 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_device_configuration_uuids(
-        self, path: PureSequencePath
-    ) -> set[uuid.UUID]:
+    def get_device_configuration_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -145,9 +143,7 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_constant_table_uuids(
-        self, path: PureSequencePath
-    ) -> set[uuid.UUID]:
+    def get_constant_table_uuids(self, path: PureSequencePath) -> set[uuid.UUID]:
         raise NotImplementedError
 
     @abc.abstractmethod

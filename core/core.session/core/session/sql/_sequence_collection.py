@@ -354,12 +354,16 @@ class SQLSequenceCollection(SequenceCollection):
             )
             return SequenceStats(
                 state=sequence.state,
-                start_time=sequence.start_time.replace(tzinfo=datetime.timezone.utc)
-                if sequence.start_time is not None
-                else None,
-                stop_time=sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
-                if sequence.stop_time is not None
-                else None,
+                start_time=(
+                    sequence.start_time.replace(tzinfo=datetime.timezone.utc)
+                    if sequence.start_time is not None
+                    else None
+                ),
+                stop_time=(
+                    sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
+                    if sequence.stop_time is not None
+                    else None
+                ),
                 number_completed_shots=number_shot_run,
                 expected_number_shots=sequence.expected_number_of_shots,
             )
