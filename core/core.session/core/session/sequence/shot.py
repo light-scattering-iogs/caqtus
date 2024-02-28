@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import typing
 from collections.abc import Mapping
 
@@ -68,3 +69,13 @@ class Shot:
         return session.sequences.get_shot_data_by_label(
             self.sequence.path, self.index, label
         )
+
+    def get_start_time(self, session: ExperimentSession) -> datetime.datetime:
+        """Return the time at which this shot started running."""
+
+        return session.sequences.get_shot_start_time(self.sequence.path, self.index)
+
+    def get_end_time(self, session: ExperimentSession) -> datetime.datetime:
+        """Return the time at which this shot finished running."""
+
+        return session.sequences.get_shot_end_time(self.sequence.path, self.index)
