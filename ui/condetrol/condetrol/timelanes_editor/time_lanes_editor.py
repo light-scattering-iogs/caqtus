@@ -75,7 +75,7 @@ class TimeLanesEditor(QTableView):
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
         self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = {}
-        self._sequence_parameters: ParameterNamespace = {}
+        self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,
             device_configurations=self._device_configurations,
