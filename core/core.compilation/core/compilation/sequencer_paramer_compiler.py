@@ -420,8 +420,9 @@ class SingleShotCompiler:
         assert isinstance(slave_config, SequencerConfiguration)
         slave_instruction = self.compile_sequencer_instruction(slave)
         if isinstance(slave_config.trigger, ExternalClockOnChange):
-            _, high, low = high_low_clicks(slave_config.time_step, master_time_step)
-            single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
+            single_clock_pulse = get_master_clock_pulse(
+                slave_config.time_step, master_time_step
+            )
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
                 :length
             ]
@@ -575,6 +576,15 @@ class SequencerParameters(TypedDict):
     sequence: SequencerInstruction
 
 
+def get_master_clock_pulse(
+    slave_time_step: int, master_time_step: int
+) -> SequencerInstruction[np.bool_]:
+    _, high, low = high_low_clicks(slave_time_step, master_time_step)
+    single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
+    assert len(single_clock_pulse) * master_time_step == slave_time_step
+    return single_clock_pulse
+
+
 def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
     """Return the number of steps the master sequencer must be high then low to
     produce a clock pulse for the slave sequencer.
@@ -605,7 +615,7 @@ def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, in
 
 @functools.singledispatch
 def get_adaptive_clock(
-    slave_instruction: SequencerInstruction, slave_clock_pulse: SequencerInstruction
+    slave_instruction: SequencerInstruction, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     raise NotImplementedError(f"Target sequence {slave_instruction} not implemented")
 
