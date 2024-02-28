@@ -17,7 +17,8 @@ from .model import TimeLanesModel, TimeLaneModel
 class LaneModelFactory(Protocol):
     """A factory for lane models."""
 
-    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]: ...
+    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]:
+        ...
 
 
 class LaneDelegateFactory(Protocol):
@@ -30,7 +31,8 @@ class LaneDelegateFactory(Protocol):
         device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
         sequence_parameters: ParameterNamespace,
         parent: QWidget,
-    ) -> Optional[QStyledItemDelegate]: ...
+    ) -> Optional[QStyledItemDelegate]:
+        ...
 
 
 def default_lane_delegate_factory(
