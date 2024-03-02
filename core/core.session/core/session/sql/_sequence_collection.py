@@ -360,7 +360,6 @@ class SQLSequenceCollection(SequenceCollection):
             sql_device_configs.append(
                 SQLDeviceConfiguration(
                     name=name,
-                    order=order,
                     device_type=type_name,
                     content=serializer.dumper(device_configuration),
                 )

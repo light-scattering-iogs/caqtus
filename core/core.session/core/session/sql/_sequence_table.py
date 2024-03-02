@@ -40,7 +40,7 @@ class SQLSequence(Base):
     )
 
     device_configurations: Mapped[list[SQLDeviceConfiguration]] = relationship(
-        cascade="all, delete", passive_deletes=True
+        cascade="all, delete", passive_deletes=True, back_populates="sequence"
     )
 
     # Stored as timezone naive datetimes, with the assumption that the timezone is UTC.
@@ -111,11 +111,6 @@ class SQLTimelanes(Base):
 class SQLDeviceConfiguration(Base):
     __tablename__ = "sequence.device_configurations"
 
-    # For a given sequence, the device configuration name must be unique.
-    __table_args__ = (
-        sqlalchemy.UniqueConstraint("sequence_id", "name", name="device_configuration"),
-    )
-
     id_: Mapped[int] = mapped_column(primary_key=True)
     sequence_id: Mapped[int] = mapped_column(
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
@@ -123,5 +118,8 @@ class SQLDeviceConfiguration(Base):
     sequence: Mapped[SQLSequence] = relationship(back_populates="device_configurations")
     name: Mapped[str] = mapped_column()
     device_type: Mapped[str] = mapped_column()
-    order: Mapped[int] = mapped_column()
     content = mapped_column(sqlalchemy.types.JSON)
+
+    __table_args__ = (
+        sqlalchemy.UniqueConstraint(sequence_id, name, name="device_configuration"),
+    )
