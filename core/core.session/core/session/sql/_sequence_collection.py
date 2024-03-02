@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import functools
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar, Optional
 
 import attrs
 import numpy as np
@@ -535,6 +535,20 @@ class SQLSequenceCollection(SequenceCollection):
         if found := result.scalar():
             return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
         raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
+
+    def update_start_and_end_time(
+        self,
+        path: PureSequencePath,
+        start_time: Optional[datetime.datetime],
+        end_time: Optional[datetime.datetime],
+    ) -> None:
+        sequence = unwrap(self._query_sequence_model(path))
+        sequence.start_time = start_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
+        sequence.stop_time = end_time.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
 
     def _query_path_model(
         self, path: PureSequencePath

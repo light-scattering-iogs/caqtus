@@ -223,6 +223,21 @@ class SequenceCollection(Protocol):
     ) -> Data:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def update_start_and_end_time(
+        self,
+        path: PureSequencePath,
+        start_time: Optional[datetime.datetime],
+        end_time: Optional[datetime.datetime],
+    ) -> None:
+        """Update the start and end time of the sequence.
+
+        This method is used for maintenance purposes, such as when copying a sequence from one session to another.
+        It should not be used to record the start and end time of a sequence during normal operation.
+        """
+
+        raise NotImplementedError
+
 
 @attrs.frozen
 class SequenceStats:
