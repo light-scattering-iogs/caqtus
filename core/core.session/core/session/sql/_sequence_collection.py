@@ -554,11 +554,15 @@ class SQLSequenceCollection(SequenceCollection):
         end_time: Optional[datetime.datetime],
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
-        sequence.start_time = start_time.astimezone(datetime.timezone.utc).replace(
-            tzinfo=None
+        sequence.start_time = (
+            start_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            if start_time
+            else None
         )
-        sequence.stop_time = end_time.astimezone(datetime.timezone.utc).replace(
-            tzinfo=None
+        sequence.stop_time = (
+            end_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+            if end_time
+            else None
         )
 
     def _query_path_model(
