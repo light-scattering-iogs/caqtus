@@ -28,7 +28,10 @@ from .functional_blocks import (
     FunctionalBlock,
     HoldBlock,
     DeviceTriggerBlock,
+    AdvanceBlock,
+    DelayBlock,
 )
+from ...._temporary_widget import temporary_widget
 
 
 class ChannelOutputEditor(QGraphicsView):
@@ -106,26 +109,35 @@ class ChannelOutputScene(QGraphicsScene):
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.RightButton:
-            menu = QMenu()
-            add_leftmost_block = menu.addMenu("Add leftmost block")
-            add_time_lane_action = add_leftmost_block.addAction("time lane")
-            add_time_lane_action.triggered.connect(
-                functools.partial(self.add_time_lane, event.scenePos())
-            )
-            add_hold_action = add_leftmost_block.addAction("hold")
-            add_hold_action.triggered.connect(
-                functools.partial(self.add_hold_block, event.scenePos())
-            )
-            add_device_trigger_action = add_leftmost_block.addAction("device trigger")
-            add_device_trigger_action.triggered.connect(
-                functools.partial(self.add_device_trigger_block, event.scenePos())
-            )
-            action = menu.addAction("Add analog mapping")
-            action.triggered.connect(
-                functools.partial(self.add_analog_mapping, event.scenePos())
-            )
-            menu.exec(event.screenPos())
-            return
+            with temporary_widget(QMenu()) as menu:
+                add_source_block = menu.addMenu("Add source block")
+                add_time_lane_action = add_source_block.addAction("time lane")
+                add_time_lane_action.triggered.connect(
+                    functools.partial(self.add_time_lane, event.scenePos())
+                )
+                add_hold_action = add_source_block.addAction("hold")
+                add_hold_action.triggered.connect(
+                    functools.partial(self.add_hold_block, event.scenePos())
+                )
+                add_device_trigger_action = add_source_block.addAction("device trigger")
+                add_device_trigger_action.triggered.connect(
+                    functools.partial(self.add_device_trigger_block, event.scenePos())
+                )
+                action = menu.addAction("Add analog mapping")
+                action.triggered.connect(
+                    functools.partial(self.add_analog_mapping, event.scenePos())
+                )
+                add_timing_block = menu.addMenu("Add timing block")
+                add_advance_action = add_timing_block.addAction("advance")
+                add_advance_action.triggered.connect(
+                    functools.partial(self.add_advance_block, event.scenePos())
+                )
+                add_delay_action = add_timing_block.addAction("delay")
+                add_delay_action.triggered.connect(
+                    functools.partial(self.add_delay_block, event.scenePos())
+                )
+                menu.exec(event.screenPos())
+                return
         elif event.button() == Qt.MouseButton.LeftButton:
             items_at_click = self.items(event.scenePos())
             if len(items_at_click) != 0:
@@ -237,6 +249,16 @@ class ChannelOutputScene(QGraphicsScene):
 
     def add_device_trigger_block(self, pos) -> None:
         block = DeviceTriggerBlock()
+        self.addItem(block)
+        block.setPos(pos.x(), pos.y())
+
+    def add_advance_block(self, pos) -> None:
+        block = AdvanceBlock()
+        self.addItem(block)
+        block.setPos(pos.x(), pos.y())
+
+    def add_delay_block(self, pos) -> None:
+        block = DelayBlock()
         self.addItem(block)
         block.setPos(pos.x(), pos.y())
 

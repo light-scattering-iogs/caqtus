@@ -535,6 +535,18 @@ class SQLSequenceCollection(SequenceCollection):
             return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
         raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
 
+    def get_shot_start_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        shot_model = unwrap(self._query_shot_model(path, shot_index))
+        return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
+
+    def get_shot_end_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        shot_model = unwrap(self._query_shot_model(path, shot_index))
+        return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+
     def update_start_and_end_time(
         self,
         path: PureSequencePath,

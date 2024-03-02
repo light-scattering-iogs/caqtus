@@ -221,7 +221,7 @@ class TimeLanesEditor(QTableView):
 
         menu = QMenu(self)
         if selection.contains(index):
-            merge_action = menu.addAction("Expand step")
+            merge_action = menu.addAction(f"Expand step {index.column()}")
             merge_action.triggered.connect(
                 lambda: self.expand_step(index.column(), selection)
             )

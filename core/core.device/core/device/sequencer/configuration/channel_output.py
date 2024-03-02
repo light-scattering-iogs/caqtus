@@ -14,9 +14,9 @@ For more information on how the output is evaluated, see
 :mod:`core.compilation.sequencer_parameter_compiler`.
 """
 
-
 from __future__ import annotations
 
+import abc
 from collections.abc import Iterable
 from typing import TypeGuard, Optional
 
@@ -33,11 +33,22 @@ def validate_channel_output(instance, attribute, value):
         raise TypeError(f"Output {value} is not of type ChannelOutput")
 
 
-def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
-    return isinstance(
-        obj,
-        (LaneValues, DeviceTrigger, Constant, Advance, Delay, CalibratedAnalogMapping),
-    )
+class TimeIndependentMapping(abc.ABC):
+    """A functional mapping of input values to output values independent of time.
+
+    This represents channel transformations of the form:
+
+    .. math::
+        y(t) = f(x_0(t), x_1(t), ..., x_n(t))
+
+    where x_0, x_1, ..., x_n are the input and y is the output.
+    """
+
+    @abc.abstractmethod
+    def inputs(self) -> tuple[ChannelOutput, ...]:
+        """Returns the input values of the mapping."""
+
+        raise NotImplementedError
 
 
 @attrs.define
@@ -94,8 +105,7 @@ class Constant:
 
 @attrs.define
 class Advance:
-    # Not yet implemented
-    output: ChannelOutput = attrs.field(
+    input_: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
     )
@@ -105,13 +115,12 @@ class Advance:
     )
 
     def __str__(self):
-        return f"{self.output} << {self.advance}"
+        return f"{self.input_} << {self.advance}"
 
 
 @attrs.define
 class Delay:
-    # Not yet implemented
-    output: ChannelOutput = attrs.field(
+    input_: ChannelOutput = attrs.field(
         validator=validate_channel_output,
         on_setattr=attrs.setters.validate,
     )
@@ -121,7 +130,7 @@ class Delay:
     )
 
     def __str__(self):
-        return f"{self.delay} >> {self.output}"
+        return f"{self.delay} >> {self.input_}"
 
 
 def data_points_converter(data_points: Iterable[tuple[float, float]]):
@@ -130,7 +139,7 @@ def data_points_converter(data_points: Iterable[tuple[float, float]]):
 
 
 @attrs.define
-class CalibratedAnalogMapping:
+class CalibratedAnalogMapping(TimeIndependentMapping):
     """Maps its input to an output quantity by interpolating a set of points.
 
     This mapping is useful for example when one needs to convert an experimentally
@@ -155,18 +164,15 @@ class CalibratedAnalogMapping:
         validator=validate_channel_output, on_setattr=attrs.setters.validate
     )
     input_units: Optional[str] = attrs.field(
-        default=None,
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
     output_units: Optional[str] = attrs.field(
-        default=None,
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
-
     measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
-        factory=tuple, converter=data_points_converter, on_setattr=attrs.setters.convert
+        converter=data_points_converter, on_setattr=attrs.setters.convert
     )
 
     @property
@@ -208,6 +214,9 @@ class CalibratedAnalogMapping:
         clipped = np.clip(interp, min_, max_)
         return clipped
 
+    def inputs(self) -> tuple[ChannelOutput]:
+        return (self.input_,)
+
     def __getitem__(self, index: int) -> tuple[float, float]:
         return self.measured_data_points[index]
 
@@ -245,3 +254,19 @@ ChannelOutput = (
 )
 
 serialization.configure_tagged_union(ChannelOutput, "type")
+
+
+def is_channel_output(obj) -> TypeGuard[ChannelOutput]:
+    return isinstance(
+        obj,
+        (LaneValues, DeviceTrigger, Constant, Advance, Delay, CalibratedAnalogMapping),
+    )
+
+
+# A channel output object is said to be a source if it generates values y(t) = f(t)
+# an has no input value x(t).
+ValueSource = LaneValues | DeviceTrigger | Constant
+
+
+def is_value_source(obj) -> TypeGuard[ValueSource]:
+    return isinstance(obj, (LaneValues, DeviceTrigger, Constant))

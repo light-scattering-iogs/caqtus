@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import datetime
+from typing import TYPE_CHECKING, Optional
 
 import attrs
 
@@ -84,6 +85,30 @@ class Sequence:
         """Return the shots that belong to this sequence."""
 
         return session.sequences.get_shots(self.path)
+
+    def get_start_time(self, session: ExperimentSession) -> Optional[datetime.datetime]:
+        """Return the time the sequence was started.
+
+        If the sequence has not been started, return None.
+        """
+
+        return unwrap(session.sequences.get_stats(self.path)).start_time
+
+    def get_end_time(self, session: ExperimentSession) -> Optional[datetime.datetime]:
+        """Return the time the sequence was ended.
+
+        If the sequence has not been ended, return None.
+        """
+
+        return unwrap(session.sequences.get_stats(self.path)).stop_time
+
+    def get_expected_number_of_shots(self, session: ExperimentSession) -> Optional[int]:
+        """Return the expected number of shots for the sequence.
+
+        If the sequence has not been started, return None.
+        """
+
+        return unwrap(session.sequences.get_stats(self.path)).expected_number_shots
 
     def duplicate(
         self, target_path: PureSequencePath | str, session: ExperimentSession

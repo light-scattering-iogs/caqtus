@@ -4,6 +4,7 @@ from .device_trigger_block import DeviceTriggerBlock
 from .functional_block import FunctionalBlock
 from .hold_block import HoldBlock
 from .time_lane_block import TimeLaneBlock
+from .timing_blocks import AdvanceBlock, DelayBlock
 
 __all__ = [
     "FunctionalBlock",
@@ -12,4 +13,6 @@ __all__ = [
     "AnalogMappingBlock",
     "HoldBlock",
     "DeviceTriggerBlock",
+    "AdvanceBlock",
+    "DelayBlock",
 ]

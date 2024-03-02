@@ -7,6 +7,8 @@ from core.device.sequencer.configuration import (
     CalibratedAnalogMapping,
     Constant,
     DeviceTrigger,
+    Advance,
+    Delay,
 )
 from .connection import ConnectionLink
 from .functional_blocks import (
@@ -16,6 +18,8 @@ from .functional_blocks import (
     AnalogMappingBlock,
     HoldBlock,
     DeviceTriggerBlock,
+    AdvanceBlock,
+    DelayBlock,
 )
 
 
@@ -96,6 +100,32 @@ def build_analog_mapping_block(
     )
     block.set_input_units(channel_output.input_units)
     block.set_output_units(channel_output.output_units)
+    previous_block = build_block(channel_output.input_)
+    link = ConnectionLink(
+        input_connection=block.input_connections[0],
+        output_connection=previous_block.output_connection,
+    )
+    link.connect()
+    return block
+
+
+@build_block.register
+def build_advance_block(channel_output: Advance) -> AdvanceBlock:
+    block = AdvanceBlock()
+    block.set_advance(channel_output.advance)
+    previous_block = build_block(channel_output.input_)
+    link = ConnectionLink(
+        input_connection=block.input_connections[0],
+        output_connection=previous_block.output_connection,
+    )
+    link.connect()
+    return block
+
+
+@build_block.register
+def build_delay_block(channel_output: Delay) -> DelayBlock:
+    block = DelayBlock()
+    block.set_delay(channel_output.delay)
     previous_block = build_block(channel_output.input_)
     link = ConnectionLink(
         input_connection=block.input_connections[0],

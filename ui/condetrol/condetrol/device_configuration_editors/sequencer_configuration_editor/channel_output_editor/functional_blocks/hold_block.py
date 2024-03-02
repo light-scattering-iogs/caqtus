@@ -1,11 +1,12 @@
 from typing import Optional
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QWidget,
     QFormLayout,
     QGraphicsProxyWidget,
-    QLineEdit,
+    QLineEdit, QLabel,
 )
 
 from core.types.expression import Expression
@@ -27,10 +28,13 @@ class HoldBlock(FunctionalBlock):
         proxy = QGraphicsProxyWidget()
         widget = QWidget()
         layout = QFormLayout()
+        layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         widget.setLayout(layout)
+        label = QLabel("<i>y(t) = C</i>", widget)
+        layout.addRow("Hold", label)
         self.line_edit = QLineEdit()
         self.line_edit.setPlaceholderText("Value")
-        layout.addRow("Hold", self.line_edit)
+        layout.addRow("<i>C</i>", self.line_edit)
         proxy.setWidget(widget)
         self.set_item(proxy)
 

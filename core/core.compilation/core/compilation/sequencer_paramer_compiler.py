@@ -6,6 +6,7 @@ from collections.abc import Sequence, Mapping
 from typing import TypedDict, Optional
 
 import numpy as np
+
 from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
 from core.device.camera import CameraConfiguration
 from core.device.sequencer import (
@@ -16,6 +17,7 @@ from core.device.sequencer import (
     ExternalClockOnChange,
     ExternalTriggerStart,
 )
+from core.device.sequencer.configuration import Advance, Delay, TimeIndependentMapping
 from core.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
@@ -23,6 +25,7 @@ from core.device.sequencer.configuration import (
     DeviceTrigger,
     ChannelOutput,
     CalibratedAnalogMapping,
+    is_value_source,
 )
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -38,7 +41,6 @@ from core.types.expression import Expression
 from core.types.parameter import add_unit, magnitude_in_unit
 from core.types.units import Unit
 from util import add_exc_note
-
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds
@@ -164,8 +166,15 @@ class SingleShotCompiler:
             else:
                 required_unit = None
             try:
+                max_advance, max_delay = self.find_max_advance_and_delays(
+                    sequencer_config
+                )
                 output_values = self.evaluate_output(
-                    channel.output, sequencer_config.time_step, required_unit
+                    channel.output,
+                    sequencer_config.time_step,
+                    required_unit,
+                    max_advance,
+                    max_delay,
                 )
             except Exception as e:
                 raise SequencerCompilationError(
@@ -179,20 +188,49 @@ class SingleShotCompiler:
         self.sequencer_instructions[sequencer_name] = stacked
         return stacked
 
+    def find_max_advance_and_delays(
+        self, sequencer_config: SequencerConfiguration
+    ) -> tuple[int, int]:
+        advances_and_delays = [
+            evaluate_max_advance_and_delay(
+                channel.output, sequencer_config.time_step, self.variables
+            )
+            for channel in sequencer_config.channels
+        ]
+        advances, delays = zip(*advances_and_delays)
+        return max(advances), max(delays)
+
     @functools.singledispatchmethod
     def evaluate_output(
         self,
         output_: ChannelOutput,
         required_time_step: int,
         required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
     ) -> SequencerInstruction:
-        """Evaluate the output of a channel with the required parameters."""
+        """Evaluate the output of a channel with the required parameters.
+
+        Args:
+            output_: The output to evaluate.
+            required_time_step: The time step of the sequencer that will use the
+            output, in ns.
+            required_unit: The unit in which the output should be expressed when
+            evaluated.
+            prepend: The number of time steps to add at the beginning of the output.
+            append: The number of time steps to add at the end of the output.
+        """
 
         raise NotImplementedError(f"Cannot evaluate output <{output_}>")
 
     @evaluate_output.register
     def _(
-        self, output_: Constant, required_time_step: int, required_unit: Optional[Unit]
+        self,
+        output_: Constant,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
     ) -> SequencerInstruction:
         """Evaluate a constant output.
 
@@ -203,7 +241,11 @@ class SingleShotCompiler:
         constant across shots.
         """
 
-        length = number_ticks(0, self.shot_duration, required_time_step * ns)
+        length = (
+            number_ticks(0, self.shot_duration, required_time_step * ns)
+            + prepend
+            + append
+        )
         expression = output_.value
         value = expression.evaluate(self.variables | units)
         magnitude = magnitude_in_unit(value, required_unit)
@@ -215,11 +257,13 @@ class SingleShotCompiler:
         output_: LaneValues,
         required_time_step: int,
         required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
     ) -> SequencerInstruction:
         """Evaluate the output of a channel as the values of a lane.
 
-        This function will look in the shot timelanes to find the lane referenced by the
-        output and evaluate the values of this lane.
+        This function will look in the shot time lanes to find the lane referenced by
+        the output and evaluate the values of this lane.
         If the lane cannot be found, and the output has a default value, this default
         value will be used.
         If the lane cannot be found and there is no default value, a ValueError will be
@@ -232,7 +276,9 @@ class SingleShotCompiler:
         except KeyError:
             if output_.default is not None:
                 constant = Constant(output_.default)
-                return self.evaluate_output(constant, required_time_step, required_unit)
+                return self.evaluate_output(
+                    constant, required_time_step, required_unit, prepend, append
+                )
             else:
                 raise ValueError(
                     f"Could not find lane <{lane_name}> when evaluating output "
@@ -244,20 +290,24 @@ class SingleShotCompiler:
                     f"Cannot evaluate digital lane <{lane_name}> with unit "
                     f"{required_unit:~}"
                 )
-            with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
-                evaluated = self.evaluate_digital_lane_output(lane, required_time_step)
             self.used_lanes.add(lane_name)
-            return evaluated
+            with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
+                lane_values = self.evaluate_digital_lane_output(
+                    lane, required_time_step
+                )
         elif isinstance(lane, AnalogTimeLane):
             self.used_lanes.add(lane_name)
             with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
-                return self.evaluate_analog_lane_output(
+                lane_values = self.evaluate_analog_lane_output(
                     lane, required_time_step, required_unit
                 )
         else:
             raise TypeError(
                 f"Cannot evaluate values of lane with type " f"{type(lane)}"
             )
+        prepend_pattern = prepend * Pattern([lane_values[0]])
+        append_pattern = append * Pattern([lane_values[-1]])
+        return prepend_pattern + lane_values + append_pattern
 
     def evaluate_digital_lane_output(
         self, lane: DigitalTimeLane, time_step: int
@@ -286,9 +336,11 @@ class SingleShotCompiler:
         mapping: CalibratedAnalogMapping,
         required_time_step: int,
         required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
     ) -> SequencerInstruction[np.floating]:
         input_values = self.evaluate_output(
-            mapping.input_, required_time_step, mapping.input_units
+            mapping.input_, required_time_step, mapping.input_units, prepend, append
         )
         output_values = input_values.apply(mapping.interpolate)
         if required_unit != mapping.output_units:
@@ -307,6 +359,8 @@ class SingleShotCompiler:
         output_: DeviceTrigger,
         required_time_step: int,
         required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
     ) -> SequencerInstruction[np.bool_]:
         device = output_.device_name
         if device not in self.devices:
@@ -319,7 +373,8 @@ class SingleShotCompiler:
                 f"Cannot evaluate trigger for device <{device}> with unit "
                 f"{required_unit:~}"
             )
-        return self.evaluate_device_trigger(device, required_time_step)
+        trigger_values = self.evaluate_device_trigger(device, required_time_step)
+        return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
 
     def evaluate_device_trigger(
         self,
@@ -365,8 +420,9 @@ class SingleShotCompiler:
         assert isinstance(slave_config, SequencerConfiguration)
         slave_instruction = self.compile_sequencer_instruction(slave)
         if isinstance(slave_config.trigger, ExternalClockOnChange):
-            _, high, low = high_low_clicks(slave_config.time_step, master_time_step)
-            single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
+            single_clock_pulse = get_master_clock_pulse(
+                slave_config.time_step, master_time_step
+            )
             instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[
                 :length
             ]
@@ -405,6 +461,63 @@ class SingleShotCompiler:
             )
         camera_compiler = CameraLaneCompiler(lane, self.step_names, self.step_durations)
         return camera_compiler.compile_trigger(self.variables, time_step)
+
+    @evaluate_output.register
+    def evaluate_advanced_output(
+        self,
+        output_: Advance,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+    ) -> SequencerInstruction:
+        evaluated_advance = _evaluate_expression_in_unit(
+            output_.advance, Unit("ns"), self.variables
+        )
+        number_ticks_to_advance = round(evaluated_advance / required_time_step)
+        if number_ticks_to_advance < 0:
+            raise ValueError(
+                f"Cannot advance by a negative number of time steps "
+                f"({number_ticks_to_advance})"
+            )
+        if number_ticks_to_advance > prepend:
+            raise ValueError(
+                f"Cannot advance by {number_ticks_to_advance} time steps when only "
+                f"{prepend} are available"
+            )
+        return self.evaluate_output(
+            output_.input_,
+            required_time_step,
+            required_unit,
+            prepend - number_ticks_to_advance,
+            append + number_ticks_to_advance,
+        )
+
+    @evaluate_output.register
+    def evaluate_delayed_output(
+        self,
+        output_: Delay,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+    ) -> SequencerInstruction:
+        evaluated_delay = _evaluate_expression_in_unit(
+            output_.delay, Unit("ns"), self.variables
+        )
+        number_ticks_to_delay = round(evaluated_delay / required_time_step)
+        if number_ticks_to_delay < 0:
+            raise ValueError(
+                f"Cannot delay by a negative number of time steps "
+                f"({number_ticks_to_delay})"
+            )
+        return self.evaluate_output(
+            output_.input_,
+            required_time_step,
+            required_unit,
+            prepend + number_ticks_to_delay,
+            append - number_ticks_to_delay,
+        )
 
     def convert_channel_instruction(
         self, instruction: SequencerInstruction, channel: ChannelConfiguration
@@ -463,6 +576,15 @@ class SequencerParameters(TypedDict):
     sequence: SequencerInstruction
 
 
+def get_master_clock_pulse(
+    slave_time_step: int, master_time_step: int
+) -> SequencerInstruction[np.bool_]:
+    _, high, low = high_low_clicks(slave_time_step, master_time_step)
+    single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
+    assert len(single_clock_pulse) * master_time_step == slave_time_step
+    return single_clock_pulse
+
+
 def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
     """Return the number of steps the master sequencer must be high then low to
     produce a clock pulse for the slave sequencer.
@@ -493,7 +615,7 @@ def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, in
 
 @functools.singledispatch
 def get_adaptive_clock(
-    slave_instruction: SequencerInstruction, slave_clock_pulse: SequencerInstruction
+    slave_instruction: SequencerInstruction, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     raise NotImplementedError(f"Target sequence {slave_instruction} not implemented")
 
@@ -533,3 +655,53 @@ def _(
 
 class SequencerCompilationError(Exception):
     pass
+
+
+def evaluate_max_advance_and_delay(
+    channel_function: ChannelOutput, time_step: int, variables: VariableNamespace
+) -> tuple[int, int]:
+    if is_value_source(channel_function):
+        return 0, 0
+    elif isinstance(channel_function, TimeIndependentMapping):
+        advances_and_delays = [
+            evaluate_max_advance_and_delay(input_, time_step, variables)
+            for input_ in channel_function.inputs()
+        ]
+        advances, delays = zip(*advances_and_delays)
+        return max(advances), max(delays)
+    elif isinstance(channel_function, Advance):
+        advance = _evaluate_expression_in_unit(
+            channel_function.advance, Unit("ns"), variables
+        )
+        if advance < 0:
+            raise ValueError(f"Advance must be a positive number.")
+        advance_ticks = round(advance / time_step)
+        input_advance, input_delay = evaluate_max_advance_and_delay(
+            channel_function.input_, time_step, variables
+        )
+        return advance_ticks + input_advance, input_delay
+    elif isinstance(channel_function, Delay):
+        delay = _evaluate_expression_in_unit(
+            channel_function.delay, Unit("ns"), variables
+        )
+        if delay < 0:
+            raise ValueError(f"Delay must be a positive number.")
+        delay_ticks = round(delay / time_step)
+        input_advance, input_delay = evaluate_max_advance_and_delay(
+            channel_function.input_, time_step, variables
+        )
+        return input_advance, delay_ticks + input_delay
+    else:
+        raise NotImplementedError(
+            f"Cannot evaluate max advance and delay for {channel_function}"
+        )
+
+
+def _evaluate_expression_in_unit(
+    expression: Expression,
+    required_unit: Optional[Unit],
+    variables: VariableNamespace,
+) -> np.floating:
+    value = expression.evaluate(variables | units)
+    magnitude = magnitude_in_unit(value, required_unit)
+    return magnitude

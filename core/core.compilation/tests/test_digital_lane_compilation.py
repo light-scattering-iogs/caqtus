@@ -1,5 +1,5 @@
-from core.compilation.lane_compilers import DigitalLaneCompiler
 from core.compilation import VariableNamespace
+from core.compilation.lane_compilers import DigitalLaneCompiler
 from core.device.sequencer.instructions import Pattern
 from core.session.shot import DigitalTimeLane
 from core.types.expression import Expression
@@ -7,7 +7,7 @@ from core.types.units import Quantity
 
 
 def test_0():
-    lane = DigitalTimeLane([(True, 1), (False, 1)])
+    lane = DigitalTimeLane([True, False])
     lane_compiler = DigitalLaneCompiler(
         lane, ["a", "b"], [Expression("1 s"), Expression("1 s")]
     )
@@ -16,7 +16,7 @@ def test_0():
 
 
 def test_1():
-    lane = DigitalTimeLane([(Expression("a"), 1), (Expression("b"), 1)])
+    lane = DigitalTimeLane([Expression("a"), Expression("b")])
     lane_compiler = DigitalLaneCompiler(
         lane, ["a", "b"], [Expression("1 s"), Expression("1 s")]
     )
@@ -26,7 +26,7 @@ def test_1():
 
 
 def test_2():
-    lane = DigitalTimeLane([(True, 2), (False, 1)])
+    lane = DigitalTimeLane([True] * 2 + [False])
     lane_compiler = DigitalLaneCompiler(lane, ["a", "b", "c"], [Expression("1 s")] * 3)
     result = lane_compiler.compile(VariableNamespace(), 1)
     assert (
@@ -59,15 +59,15 @@ def test_3():
     ]
     lane = DigitalTimeLane(
         [
-            (True, 1),
-            (False, 1),
-            (True, 1),
-            (True, 1),
-            (True, 1),
-            (True, 1),
-            (True, 1),
-            (True, 1),
-            (True, 1),
+            True,
+            False,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
         ]
     )
     variables = VariableNamespace(
@@ -83,4 +83,4 @@ def test_3():
     )
     lane_compiler = DigitalLaneCompiler(lane, lane_names, lane_durations)
     result = lane_compiler.compile(variables, 1)
-    assert len(result) == 310_000_000
+    assert len(result) == 310_000_001

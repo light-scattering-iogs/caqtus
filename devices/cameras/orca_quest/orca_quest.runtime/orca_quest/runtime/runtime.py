@@ -107,7 +107,9 @@ class OrcaQuestCamera(Camera):
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
-        if not self._camera.buf_alloc(self.number_pictures_to_acquire):
+        # We can't allocate 0 pictures in the buffer, so we allocate at least 1
+        number_picture_in_buffer = self.number_pictures_to_acquire if self.number_pictures_to_acquire > 0 else 1
+        if not self._camera.buf_alloc(number_picture_in_buffer):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {self._read_last_error()}"
             )

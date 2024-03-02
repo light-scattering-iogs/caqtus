@@ -224,6 +224,18 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
+    def get_shot_start_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shot_end_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def update_start_and_end_time(
         self,
         path: PureSequencePath,

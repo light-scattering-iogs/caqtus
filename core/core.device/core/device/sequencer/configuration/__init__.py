@@ -5,6 +5,11 @@ from .channel_output import (
     DeviceTrigger,
     Constant,
     CalibratedAnalogMapping,
+    Advance,
+    Delay,
+    ValueSource,
+    is_value_source,
+    TimeIndependentMapping,
 )
 from .configuration import (
     SequencerConfiguration,
@@ -30,6 +35,8 @@ __all__ = [
     "LaneValues",
     "DeviceTrigger",
     "Constant",
+    "Advance",
+    "Delay",
     "AnalogChannelConfiguration",
     "DigitalChannelConfiguration",
     "CalibratedAnalogMapping",
@@ -39,4 +46,7 @@ __all__ = [
     "ExternalClock",
     "ExternalClockOnChange",
     "TriggerEdge",
+    "ValueSource",
+    "is_value_source",
+    "TimeIndependentMapping",
 ]

@@ -1,11 +1,20 @@
 import logging
 from functools import singledispatchmethod
-from typing import Optional, ClassVar
+from typing import Optional, ClassVar, Literal
 
 import attrs.setters
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge, le
+from pulsestreamer import (
+    PulseStreamer,
+    TriggerStart,
+    TriggerRearm,
+    Sequence as PulseStreamerSequence,
+    OutputState,
+    ClockSource,
+)
+
 from core.device.sequencer import (
     Sequencer,
     Trigger,
@@ -19,34 +28,36 @@ from core.device.sequencer.instructions import (
     Concatenate,
     Repeat,
 )
-from pulsestreamer import (
-    PulseStreamer,
-    TriggerStart,
-    TriggerRearm,
-    Sequence as PulseStreamerSequence,
-    OutputState,
-)
 
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
 
 
-
-
-
 @define
 class SwabianPulseStreamer(Sequencer):
+    """Device class to program the Swabian Pulse Streamer.
+
+    Attributes:
+        ip_address: The IP address of the device.
+        time_step: The smallest allowed time step, in nanoseconds.
+        The time step is fixed to 1 ns.
+        trigger: Indicates how the sequence is started and how it is clocked.
+        clock_source: The hardware clock source of the device.
+    """
+
     # only support digital channels at the moment
     channel_number: ClassVar[int] = 8
 
     ip_address: str = field(validator=instance_of(str), on_setattr=frozen)
-    # only 1 ns time step supported
     time_step: int = field(validator=[ge(1), le(1)], on_setattr=frozen)
 
     trigger: Trigger = field(
         factory=lambda: ExternalTriggerStart(edge=TriggerEdge.RISING),
         on_setattr=attrs.setters.frozen,
+    )
+    clock_source: Literal["internal", "external 10MHz", "external 125MHz"] = field(
+        default="external 10MHz", on_setattr=frozen
     )
 
     _pulse_streamer: PulseStreamer = field(init=False)
@@ -63,6 +74,19 @@ class SwabianPulseStreamer(Sequencer):
         # There is no close method for the PulseStreamer class
         self._pulse_streamer = PulseStreamer(self.ip_address)
         self.setup_trigger()
+        if self.clock_source == "internal":
+            self._pulse_streamer.selectClock(ClockSource.INTERNAL)
+        elif self.clock_source == "external 125MHz":
+            self._pulse_streamer.selectClock(ClockSource.EXT_125MHZ)
+        elif self.clock_source == "external 10MHz":
+            self._pulse_streamer.selectClock(ClockSource.EXT_10MHZ)
+        else:
+            error = ValueError(f"Invalid clock source: {self.clock_source}")
+            error.add_note(
+                "Clock source must be "
+                "'internal', 'external 10MHz' or 'external 125MHz'."
+            )
+            raise error
 
     def setup_trigger(self) -> None:
         if isinstance(self.trigger, SoftwareTrigger):

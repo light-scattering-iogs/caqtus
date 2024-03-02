@@ -191,7 +191,7 @@ class SpincorePulseBlaster(Sequencer):
             return
         else:
             for_part = repeat.instruction[0]
-            middle = repeat.instruction[2:-1]
+            middle = repeat.instruction[1:-1]
             end_for_part = repeat.instruction[-1]
             rep = repeat.repetitions
         for_flag = self._output_to_flags(
