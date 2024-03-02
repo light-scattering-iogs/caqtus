@@ -7,11 +7,11 @@ from collections.abc import Set, Mapping
 from typing import Protocol, Optional
 
 import attrs
+from returns.result import Result
+
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
-from returns.result import Result
-
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
