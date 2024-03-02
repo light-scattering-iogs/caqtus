@@ -102,6 +102,20 @@ class PathHierarchy(Protocol):
 
         raise NotImplementedError
 
+    @abstractmethod
+    def update_creation_date(self, path: PureSequencePath, date: datetime) -> None:
+        """Update the creation date of the path.
+
+        This method is meant to be used for maintenance purposes only, such as when
+        copying sequences from one session to another.
+
+        Args:
+            path: the path to update the creation date for.
+            date: the new creation date.
+        """
+
+        raise NotImplementedError
+
 
 class PathError(RuntimeError):
     pass

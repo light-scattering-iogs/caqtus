@@ -10,12 +10,12 @@ from sqlalchemy import select
 from ._path_table import SQLSequencePath
 from .._return_or_raise import unwrap, is_success
 from ..path import PureSequencePath
-from ..sequence_collection import PathIsSequenceError
 from ..path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
     PathHierarchy,
 )
+from ..sequence_collection import PathIsSequenceError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -112,6 +112,13 @@ class SQLPathHierarchy(PathHierarchy):
         query = select(SQLSequencePath)
         result = self._get_sql_session().execute(query)
         return {PureSequencePath(path.path) for path in result.scalars()}
+
+    def update_creation_date(self, path: PureSequencePath, date: datetime) -> None:
+        if path.is_root():
+            raise PathIsRootError(path)
+
+        sql_path = unwrap(self._query_path_model(path))
+        sql_path.creation_date = date
 
     def _query_path_model(
         self, path: PureSequencePath
