@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QDockWidget,
     QLabel,
     QHBoxLayout,
-    QWidget,
+    QWidget, QSplitter, QVBoxLayout, QToolButton,
 )
 
 from core.experiment import SequenceInterruptedException
@@ -125,11 +125,11 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        self.setCentralWidget(self.sequence_widget)
-        dock = QDockWidget("Sequences")
-        dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        dock.setWidget(self._path_view)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, dock)
+        splitter = QSplitter(self)
+        splitter.addWidget(self._path_view)
+        splitter.addWidget(self.sequence_widget)
+        splitter.setContentsMargins(0, 0, 0, 0)
+        self.setCentralWidget(splitter)
         self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
