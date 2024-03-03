@@ -25,6 +25,15 @@ class ProgressDelegate(QStyledItemDelegate):
         self._progress_bar_option.textVisible = True
         self._progress_bar_option.minimum = 0
 
+        self._progress_bar_colors = {
+            State.DRAFT: None,
+            State.PREPARING: None,
+            State.RUNNING: None,
+            State.INTERRUPTED: QColor(166, 138, 13),
+            State.FINISHED: QColor(98, 151, 85),
+            State.CRASHED: QColor(240, 82, 79),
+        }
+
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
@@ -56,30 +65,13 @@ class ProgressDelegate(QStyledItemDelegate):
 
     @staticmethod
     def _get_text(state: State) -> str:
-        result = {
-            State.DRAFT: "draft",
-            State.PREPARING: "preparing",
-            State.RUNNING: "running",
-            State.INTERRUPTED: "interrupted",
-            State.FINISHED: "finished",
-            State.CRASHED: "crashed",
-        }
-        return result[state]
+        return state.value
 
     def _get_text_color(self, state: State) -> Optional[QColor]:
         return self._get_highlight_color(state)
 
-    @staticmethod
-    def _get_highlight_color(state: State) -> Optional[QColor]:
-        result = {
-            State.DRAFT: None,
-            State.PREPARING: None,
-            State.RUNNING: None,
-            State.INTERRUPTED: QColor(166, 138, 13),
-            State.FINISHED: QColor(98, 151, 85),
-            State.CRASHED: QColor(240, 82, 79),
-        }
-        return result[state]
+    def _get_highlight_color(self, state: State) -> Optional[QColor]:
+        return self._progress_bar_colors[state]
 
     @staticmethod
     def _get_progress_and_max(sequence_stats: SequenceStats) -> tuple[int, int]:
