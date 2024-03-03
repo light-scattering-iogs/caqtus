@@ -33,7 +33,9 @@ class ProgressDelegate(QStyledItemDelegate):
         if sequence_stats:
             self._progress_bar_option.rect = option.rect
             self._progress_bar_option.palette = option.palette
-            self._progress_bar_option.maximum = 100
+            progress, maximum = self._get_progress_and_max(sequence_stats)
+            self._progress_bar_option.progress = progress
+            self._progress_bar_option.maximum = maximum
             state = sequence_stats.state
             self._progress_bar_option.text = self._get_text(state)
             text_color = self._get_text_color(state)
@@ -46,24 +48,6 @@ class ProgressDelegate(QStyledItemDelegate):
                 self._progress_bar_option.palette.setColor(
                     QPalette.ColorRole.Highlight, highlight_color
                 )
-            if state == State.DRAFT:
-                self._progress_bar_option.progress = 0
-            elif state == State.PREPARING:
-                self._progress_bar_option.progress = 0
-            else:
-                total = sequence_stats.expected_number_shots
-                if total is not None:
-                    self._progress_bar_option.progress = (
-                        sequence_stats.number_completed_shots
-                    )
-                    self._progress_bar_option.maximum = total
-                else:
-                    if state == State.RUNNING:  # filled bar with sliding reflects
-                        self._progress_bar_option.progress = 0
-                        self._progress_bar_option.maximum = 0
-                    else:  # filled bar
-                        self._progress_bar_option.progress = 1
-                        self._progress_bar_option.maximum = 1
             QApplication.style().drawControl(
                 QStyle.ControlElement.CE_ProgressBar, self._progress_bar_option, painter
             )
@@ -106,3 +90,22 @@ class ProgressDelegate(QStyledItemDelegate):
         }
         return result[state]
 
+    @staticmethod
+    def _get_progress_and_max(sequence_stats: SequenceStats) -> tuple[int, int]:
+        state = sequence_stats.state
+        if state == State.DRAFT or state == State.PREPARING:
+            progress = 0
+            maximum = 100
+        else:
+            total = sequence_stats.expected_number_shots
+            if total is not None:
+                progress = sequence_stats.number_completed_shots
+                maximum = total
+            else:
+                if state == State.RUNNING:  # in progress bar
+                    progress = 0
+                    maximum = 0
+                else:  # filled fixed bar
+                    progress = 1
+                    maximum = 1
+        return progress, maximum
