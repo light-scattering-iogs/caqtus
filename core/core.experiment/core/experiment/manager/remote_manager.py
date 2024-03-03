@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import multiprocessing.managers
 import time
-import uuid
-from collections.abc import Set
+from collections.abc import Mapping
 from typing import Optional
 
 from tblib import pickling_support
@@ -14,6 +13,7 @@ from core.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
+from ...device import DeviceName, DeviceConfigurationAttrs
 
 # This is necessary to be able to pass exception properly between the experiment server
 # process and the clients.
@@ -86,16 +86,20 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         return self._callmethod("sequences", ())  # type: ignore
 
     def exception(self) -> Optional[Exception]:
-        return self._callmethod("exception", ())
+        while self.is_running_sequence():
+            time.sleep(10e-3)
+        return self._callmethod("exception", ())  # type: ignore
 
     def start_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         return self._callmethod(
             "start_sequence",
-            (sequence, device_configurations_uuids),
+            (sequence, device_configurations),
         )
 
     def interrupt_sequence(self) -> bool:
@@ -104,16 +108,18 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     def run_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         # Here we can't just call the remote method `run_sequence`.
         # This is because this method takes a long time to return, since it waits for
         # the sequence to finish.
         # This means that we can't even raise KeyboardInterrupt while waiting for the
         # method to return.
-        self.start_sequence(sequence, device_configurations_uuids)
+        self.start_sequence(sequence, device_configurations)
         while self.is_running_sequence():
-            time.sleep(100e-3)
+            time.sleep(10e-3)
         if exception := self.exception():
             raise exception
 

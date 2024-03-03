@@ -4,8 +4,7 @@ import abc
 import concurrent.futures
 import logging
 import threading
-import uuid
-from collections.abc import Set
+from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
@@ -14,14 +13,12 @@ from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    ParameterNamespace,
     Sequence,
 )
 from core.session.sequence.iteration_configuration import StepsConfiguration
-
+from util import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
-from util import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -102,7 +99,9 @@ class Procedure(AbstractContextManager, abc.ABC):
     def start_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         """Start running the sequence on the setup.
 
@@ -114,10 +113,9 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         Args:
             sequence: the sequence to run.
-            device_configurations_uuids: the uuids of the device configurations to use for
-            running this sequence.
-            If None, this will default to the device configurations that are currently
-            in use.
+            device_configurations: the device configurations to use for running this
+            sequence.
+            If None, this will use the session default device configurations.
         Raises:
             ProcedureNotActiveError: if the procedure is not active.
             SequenceAlreadyRunningError: if a sequence is already running.
@@ -144,7 +142,9 @@ class Procedure(AbstractContextManager, abc.ABC):
     def run_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         """Run a sequence on the setup.
 
@@ -158,7 +158,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(sequence, device_configurations_uuids)
+        self.start_sequence(sequence, device_configurations)
         if exception := self.exception():
             raise exception
 
@@ -285,7 +285,9 @@ class BoundProcedure(Procedure):
     def start_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         if not self.is_active():
             exception = ProcedureNotActiveError("The procedure is not active.")
@@ -302,7 +304,7 @@ class BoundProcedure(Procedure):
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence,
-            device_configurations_uuids,
+            device_configurations,
         )
         self._sequences.append(sequence)
 
@@ -320,7 +322,9 @@ class BoundProcedure(Procedure):
     def _run_sequence(
         self,
         sequence: Sequence,
-        device_configurations_uuids: Optional[Set[uuid.UUID]] = None,
+        device_configurations: Optional[
+            Mapping[DeviceName, DeviceConfigurationAttrs]
+        ] = None,
     ) -> None:
         with self._session_maker() as session:
             iteration = session.sequences.get_iteration_configuration(sequence.path)
@@ -332,7 +336,7 @@ class BoundProcedure(Procedure):
             self._shot_runner_factory,
             self._must_interrupt,
             self._shot_retry_config,
-            device_configurations_uuids,
+            device_configurations,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
@@ -340,22 +344,6 @@ class BoundProcedure(Procedure):
                 sequence_manager, sequence_manager.sequence_parameters
             )
             sequence_runner.execute_steps(iteration.steps)
-
-    def _get_device_configurations_to_use(
-        self, device_configurations_uuids: Optional[Set[uuid.UUID]] = None
-    ) -> dict[DeviceName, DeviceConfigurationAttrs]:
-        with self._session_maker() as session:
-            if device_configurations_uuids is None:
-                device_configurations_uuids = (
-                    session.device_configurations.get_in_use_uuids()
-                )
-            device_configurations = {
-                session.device_configurations.get_device_name(
-                    uuid_
-                ): session.device_configurations.get_configuration(uuid_)
-                for uuid_ in device_configurations_uuids
-            }
-        return device_configurations
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
