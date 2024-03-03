@@ -74,11 +74,11 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
             SQLDefaultDeviceConfiguration.name
         )
         result = self._get_sql_session().execute(stmt)
-        return (row.name for row in result)
+        return (row.name for row in result.scalars())
 
     def __contains__(self, item):
         stmt = sqlalchemy.select(
-            sqlalchemy.func.count(SQLDefaultDeviceConfiguration)
+            sqlalchemy.func.count(SQLDefaultDeviceConfiguration.name)
         ).where(SQLDefaultDeviceConfiguration.name == str(item))
         result = self._get_sql_session().execute(stmt)
         return result.scalar() > 0
