@@ -66,17 +66,8 @@ class ProgressDelegate(QStyledItemDelegate):
         }
         return result[state]
 
-    @staticmethod
-    def _get_text_color(state: State) -> Optional[QColor]:
-        result = {
-            State.DRAFT: None,
-            State.PREPARING: None,
-            State.RUNNING: None,
-            State.INTERRUPTED: QColor(92, 79, 23),
-            State.FINISHED: QColor(255, 255, 255),
-            State.CRASHED: QColor(119, 46, 44),
-        }
-        return result[state]
+    def _get_text_color(self, state: State) -> Optional[QColor]:
+        return self._get_highlight_color(state)
 
     @staticmethod
     def _get_highlight_color(state: State) -> Optional[QColor]:
