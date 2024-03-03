@@ -17,8 +17,7 @@ from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
 from returns.result import Result
 from returns.result import Success, Failure
-from sqlalchemy import func
-from sqlalchemy import select
+from sqlalchemy import func, select
 from util import serialization
 
 from ._path_table import SQLSequencePath

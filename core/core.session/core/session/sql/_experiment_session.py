@@ -3,6 +3,7 @@ from typing import Mapping
 import attrs
 import sqlalchemy.orm
 
+from ._device_configuration_collection import SQLDeviceConfigurationCollection
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
@@ -37,6 +38,7 @@ containing digital, analog and camera time lanes.
 class SQLExperimentSession(ExperimentSession):
     paths: SQLPathHierarchy
     sequences: SQLSequenceCollection
+    default_device_configurations: SQLDeviceConfigurationCollection
 
     _sql_session: sqlalchemy.orm.Session
     _is_active: bool
@@ -61,6 +63,10 @@ class SQLExperimentSession(ExperimentSession):
         self.sequences = SQLSequenceCollection(
             parent_session=self,
             serializer=serializer.sequence_serializer,
+            device_configuration_serializers=serializer.device_configuration_serializers,
+        )
+        self.default_device_configurations = SQLDeviceConfigurationCollection(
+            parent_session=self,
             device_configuration_serializers=serializer.device_configuration_serializers,
         )
 
