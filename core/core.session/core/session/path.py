@@ -211,6 +211,28 @@ class BoundSequencePath(PureSequencePath):
         result = self._session.paths.get_children(self)
         return {BoundSequencePath(path, self._session) for path in unwrap(result)}
 
+    def get_descendants(self) -> set[BoundSequencePath]:
+        """Return the descendants of this path.
+
+        Returns:
+            A set of the descendants of this path.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsSequenceError: If the path is a sequence.
+        """
+
+        from .sequence_collection import PathIsSequenceError
+
+        descendants = set()
+        for child in self.get_children():
+            descendants.add(child)
+            try:
+                descendants.update(child.get_descendants())
+            except PathIsSequenceError:
+                pass
+        return descendants
+
     def delete(self, delete_sequences: bool = False):
         """Delete the path and all its children if they exist.
 
