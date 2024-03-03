@@ -55,7 +55,9 @@ class StepSequenceRunner:
         self._sequence_manager = sequence_manager
         self._initial_parameters = initial_parameters
 
-    def execute_steps(self, steps: Iterable[Step]):
+    def execute_steps(
+        self, steps: Iterable[Step], initial_context: StepContext[Parameter]
+    ):
         """Execute a sequence of steps on the experiment.
 
         This method will recursively execute each step in the sequence passed as
@@ -65,7 +67,7 @@ class StepSequenceRunner:
         Each step has the possibility to update the context with new values.
         """
 
-        context = StepContext[Parameter]()
+        context = initial_context
 
         for step in steps:
             context = self.run_step(step, context)
@@ -255,3 +257,22 @@ def evaluate_linspace_loop_parameters(
 
 class StepEvaluationError(Exception):
     pass
+
+
+def evaluate_initial_context(parameters: ParameterNamespace) -> StepContext:
+    """Evaluate the initial context of the sequence from the parameters."""
+
+    flat_parameters = parameters.flatten()
+
+    context = StepContext[Parameter]()
+
+    for name, expression in flat_parameters:
+        value = expression.evaluate(units)  # type: ignore
+        if not is_parameter(value):
+            raise TypeError(
+                f"Expression <{expression}> for parameter <{name}> does not evaluate "
+                f"to a valid parameter type, got <{type(value)}>."
+            )
+        context = context.update_variable(name, value)
+
+    return context

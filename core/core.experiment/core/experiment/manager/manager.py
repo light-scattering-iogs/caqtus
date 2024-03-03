@@ -18,6 +18,7 @@ from core.session import (
 from core.session.sequence.iteration_configuration import StepsConfiguration
 from util import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
+from ..sequence_runner.sequence_runner import evaluate_initial_context
 from ..shot_runner import ShotRunnerFactory
 
 logger = logging.getLogger(__name__)
@@ -343,7 +344,10 @@ class BoundProcedure(Procedure):
             sequence_runner = StepSequenceRunner(
                 sequence_manager, sequence_manager.sequence_parameters
             )
-            sequence_runner.execute_steps(iteration.steps)
+            initial_context = evaluate_initial_context(
+                sequence_manager.sequence_parameters
+            )
+            sequence_runner.execute_steps(iteration.steps, initial_context)
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
