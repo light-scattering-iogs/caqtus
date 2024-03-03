@@ -6,8 +6,7 @@ import datetime
 import logging
 import queue
 import threading
-import uuid
-from collections.abc import Set, Mapping, Generator
+from collections.abc import Mapping, Generator
 from contextlib import AbstractContextManager
 from typing import Optional, Any
 
@@ -288,7 +287,7 @@ class SequenceManager(AbstractContextManager):
         with self._session_maker() as session:
             session.sequences.set_state(self._sequence_path, State.PREPARING)
             session.sequences.set_device_configurations(
-                self._sequence_path, self._device_configurations_uuid
+                self._sequence_path, self.device_configurations
             )
 
     def _set_sequence_state(self, state: State):
