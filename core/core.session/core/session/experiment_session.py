@@ -4,6 +4,7 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Protocol
 
+from .device_configuration_collection import DeviceConfigurationCollection
 from .path_hierarchy import PathHierarchy
 from .sequence_collection import SequenceCollection
 
@@ -48,3 +49,4 @@ class ExperimentSession(
 
     paths: PathHierarchy
     sequences: SequenceCollection
+    default_device_configurations: DeviceConfigurationCollection

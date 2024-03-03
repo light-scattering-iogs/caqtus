@@ -3,16 +3,11 @@ from __future__ import annotations
 import datetime
 import functools
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Generic, TypeVar, Optional
+from typing import TYPE_CHECKING, Optional
 
 import attrs
 import numpy as np
 import sqlalchemy.orm
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import func
-from sqlalchemy import select
-
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session.shot.timelane import AnalogTimeLane
 from core.types.data import DataLabel, Data, is_data
@@ -20,8 +15,12 @@ from core.types.expression import Expression
 from core.types.parameter import Parameter
 from core.types.units import Quantity
 from core.types.variable_name import DottedVariableName
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import func
+from sqlalchemy import select
 from util import serialization
-from util.serialization import JSON
+
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -31,6 +30,7 @@ from ._sequence_table import (
     SQLSequenceParameters,
 )
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
+from .device_configuration_serializer import DeviceConfigurationSerializer
 from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath, BoundSequencePath
@@ -614,14 +614,3 @@ class SQLSequenceCollection(SequenceCollection):
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
         return self.parent_session._get_sql_session()
-
-
-T = TypeVar("T", bound=DeviceConfigurationAttrs)
-
-
-@attrs.define
-class DeviceConfigurationSerializer(Generic[T]):
-    """Indicates how to serialize and deserialize device configurations."""
-
-    dumper: Callable[[T], JSON]
-    loader: Callable[[JSON], T]
