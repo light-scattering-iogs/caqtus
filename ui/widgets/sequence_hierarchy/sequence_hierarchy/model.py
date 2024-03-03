@@ -110,7 +110,7 @@ class PathHierarchyModel(QAbstractItemModel):
     def on_data_changed(self, index: QModelIndex):
         self.dataChanged.emit(
             self.index(index.row(), 0, index.parent()),
-            self.index(index.row(), self.columnCount(index), index.parent()),
+            self.index(index.row(), self.columnCount(index)-1, index.parent()),
         )
 
     def __enter__(self):
@@ -363,7 +363,6 @@ class PathHierarchyModel(QAbstractItemModel):
                 assert isinstance(path_item, PathHierarchyItem)
                 if not path_item.should_fetch_stats:
                     return
-                logger.debug("Checking if %s has changed", path_item.hierarchy_path)
                 path = path_item.hierarchy_path
                 creation_date = unwrap(self.session.paths.get_path_creation_date(path))
                 if creation_date != path_item.creation_date:
