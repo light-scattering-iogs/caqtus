@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.device import DeviceName, DeviceConfigurationAttrs
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
 from core.session import (
@@ -197,41 +196,24 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def open_device_configurations_editor(self):
         with self.session_maker() as session:
-            previous_device_configurations = dict(session.device_configurations)
+            previous_device_configurations = dict(session.default_device_configurations)
         configurations_editor = ConfigurationsEditor(
             copy.deepcopy(previous_device_configurations),
             self.device_configuration_edit_infos,
         )
         configurations_editor.exec()
-        self.update_device_configurations(
-            previous_device_configurations, configurations_editor.device_configurations
-        )
-
-    def update_device_configurations(
-        self,
-        previous_device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-        new_device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-    ):
-        to_remove = set(previous_device_configurations) - set(new_device_configurations)
-        to_add = set(new_device_configurations) - set(previous_device_configurations)
-        in_both = set(previous_device_configurations) & set(new_device_configurations)
-        to_update = {
-            device_name
-            for device_name in in_both
-            if new_device_configurations[device_name]
-            != previous_device_configurations[device_name]
-        }
-        logger.debug(
-            "previous_device_configurations: %r", previous_device_configurations
-        )
-        logger.debug("new_device_configurations: %r", new_device_configurations)
+        new_device_configurations = dict(configurations_editor.device_configurations)
         with self.session_maker() as session:
-            for device_name in to_remove:
-                del session.device_configurations[device_name]
-            for device_name in to_add | to_update:
-                session.device_configurations[device_name] = new_device_configurations[
+            for device_name in session.default_device_configurations:
+                if device_name not in new_device_configurations:
+                    del session.default_device_configurations[device_name]
+            for (
+                device_name,
+                device_configuration,
+            ) in new_device_configurations.items():
+                session.default_device_configurations[
                     device_name
-                ]
+                ] = device_configuration
 
     def closeEvent(self, a0):
         self.save_window()
