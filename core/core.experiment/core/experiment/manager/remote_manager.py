@@ -8,12 +8,12 @@ from typing import Optional
 from tblib import pickling_support
 
 from core.compilation import ShotCompilerFactory
+from core.device import DeviceName, DeviceConfigurationAttrs
 from core.session import ExperimentSessionMaker, Sequence
 from core.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
-from ...device import DeviceName, DeviceConfigurationAttrs
 
 # This is necessary to be able to pass exception properly between the experiment server
 # process and the clients.
