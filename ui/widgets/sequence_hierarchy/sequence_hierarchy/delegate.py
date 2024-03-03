@@ -19,6 +19,14 @@ from core.session.sequence_collection import SequenceStats
 
 
 class ProgressDelegate(QStyledItemDelegate):
+    """Delegate to display the progress of a sequence.
+
+    This custom delegate can be used to display the progress of a sequence in a
+    view.
+    It should be used for indices that have a :class:`SequenceStats` as their
+    display role.
+    """
+
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._progress_bar_option = QStyleOptionProgressBar()
@@ -38,10 +46,18 @@ class ProgressDelegate(QStyledItemDelegate):
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex
     ) -> None:
         sequence_stats = index.data(Qt.ItemDataRole.DisplayRole)
-        assert sequence_stats is None or isinstance(sequence_stats, SequenceStats)
-        if sequence_stats:
+        if isinstance(sequence_stats, SequenceStats):
             self._progress_bar_option.rect = option.rect
             self._progress_bar_option.palette = option.palette
+
+            # Need to choose the color of the text that overlays the progress bar.
+            if option.state & QStyle.StateFlag.State_Selected:
+                color = option.palette.color(QPalette.ColorRole.HighlightedText)
+            else:
+                color = option.palette.color(QPalette.ColorRole.Text)
+            self._progress_bar_option.palette.setColor(
+                QPalette.ColorRole.HighlightedText, color
+            )
             progress, maximum = self._get_progress_and_max(sequence_stats)
             self._progress_bar_option.progress = progress
             self._progress_bar_option.maximum = maximum
