@@ -1,6 +1,8 @@
 import abc
+from collections.abc import Sequence
 
 import polars
+
 from core.session import Shot, ExperimentSession
 
 
@@ -44,3 +46,18 @@ class CrossProductLoader(CombinableLoader):
 
     def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
         return self.first(shot, session).join(self.second(shot, session), how="cross")
+
+
+# noinspection PyPep8Naming
+class join(CombinableLoader):
+    def __init__(self, *loaders: CombinableLoader, on: Sequence[str]):
+        if len(loaders) < 1:
+            raise ValueError("At least one loader must be provided.")
+        self.loaders = loaders
+        self.on = on
+
+    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
+        dataframe = self.loaders[0](shot, session)
+        for loader in self.loaders[1:]:
+            dataframe = dataframe.join(loader(shot, session), on=self.on, how="inner")
+        return dataframe
