@@ -62,7 +62,7 @@ def get_error(series: polars.Series) -> polars.Series:
 
 def compute_stats_average(
     dataframe: polars.DataFrame,
-    column_to_average: str,
+    columns_to_average: Sequence[str],
     grouped_by: Sequence[str],
     error_type: Literal["sem", "std"] = "sem",
 ) -> polars.DataFrame:
@@ -73,7 +73,7 @@ def compute_stats_average(
 
     Args:
         dataframe: the dataframe containing the data to average.
-        column_to_average: the name of the column to average.
+        columns_to_average: the name of the columns to average.
         grouped_by: the names of the columns to use to group the data. Must have at least one element at the moment.
         error_type: the type of error to compute. Can be "sem" (standard error of the mean) or "std" (standard
             deviation). Defaults to "sem".
@@ -89,42 +89,54 @@ def compute_stats_average(
 
     # We convert all the y values to a single unit, so that we can compute the mean and sem in a meaningful way.
     # Should add a way to select the unit to use for the averaging.
-    y_magnitudes, y_unit = extract_unit(dataframe[column_to_average])
+    y_magnitudes: dict[str, polars.Series] = {}
+    y_units: dict[str, Optional[Unit]] = {}
+    for column_to_average in columns_to_average:
+        y_magnitudes[column_to_average], y_units[column_to_average] = extract_unit(
+            dataframe[column_to_average]
+        )
 
     # We need to convert all the grouped_by to a single unit, even if no operation is performed on them. The issue is
     # that two values can have different magnitude and unit, but still be equal. For example, 1 m and 100 cm are equal.
     # Converting to a single unit allows to avoid this problem.
     hues_magnitudes: dict[str, polars.Series] = {}
     hues_units: dict[str, Optional[Unit]] = {}
-
     for hue in grouped_by:
         hues_magnitudes[hue], hues_units[hue] = extract_unit(dataframe[hue])
 
     dataframe_without_units = polars.DataFrame(
-        [*hues_magnitudes.values(), y_magnitudes]
+        [*hues_magnitudes.values(), *y_magnitudes.values()]
     )
 
-    value = polars.col(column_to_average).mean()
-    if error_type == "sem":
-        error = polars.col(column_to_average).std() / polars.Expr.sqrt(
-            polars.col(column_to_average).count()
-        )
-    elif error_type == "std":
-        error = polars.col(column_to_average).std()
-    else:
-        assert_never(error_type)
+    value_expressions: dict[str, polars.Expr] = {}
+    error_expressions: dict[str, polars.Expr] = {}
+    for column_to_average in columns_to_average:
+        value_expressions[column_to_average] = polars.col(column_to_average).mean()
+        if error_type == "sem":
+            error_expressions[column_to_average] = polars.col(
+                column_to_average
+            ).std() / polars.Expr.sqrt(polars.col(column_to_average).count())
+        elif error_type == "std":
+            error_expressions[column_to_average] = polars.col(column_to_average).std()
+        else:
+            assert_never(error_type)
+
     dataframe_stats_without_units = (
         dataframe_without_units.lazy()
         .group_by(*grouped_by)
         .agg(
-            polars.struct(value.alias(VALUE_FIELD), error.alias(ERROR_FIELD)).alias(
-                column_to_average
-            )
+            **{
+                column_to_average: polars.struct(
+                    value_expressions[column_to_average].alias(VALUE_FIELD),
+                    error_expressions[column_to_average].alias(ERROR_FIELD),
+                )
+                for column_to_average in columns_to_average
+            }
         )
         .sort(*grouped_by)
         .collect()
     )
 
     return with_units_added_to_columns(
-        dataframe_stats_without_units, {**hues_units, column_to_average: y_unit}
+        dataframe_stats_without_units, {**hues_units, **y_units}
     )
