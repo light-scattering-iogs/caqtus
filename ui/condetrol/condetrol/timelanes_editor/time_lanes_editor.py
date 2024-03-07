@@ -55,6 +55,7 @@ class TimeLanesEditor(QTableView):
         self,
         lane_model_factory: LaneModelFactory,
         lane_delegate_factory: LaneDelegateFactory,
+        device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
         parent: Optional[QWidget] = None,
     ):
         """A widget for editing time lanes.
@@ -74,7 +75,9 @@ class TimeLanesEditor(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
-        self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = {}
+        self._device_configurations: dict[
+            DeviceName, DeviceConfigurationAttrs
+        ] = device_configurations
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,

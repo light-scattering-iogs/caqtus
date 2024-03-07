@@ -103,9 +103,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.lane_model_factory = lane_model_factory
         self.lane_delegate_factory = lane_delegate_factory
 
+        with self.session_maker() as session:
+            device_configurations = dict(session.default_device_configurations)
+
         self.time_lanes_editor = TimeLanesEditor(
             lane_model_factory,
             lane_delegate_factory,
+            device_configurations,
             self,
         )
 
