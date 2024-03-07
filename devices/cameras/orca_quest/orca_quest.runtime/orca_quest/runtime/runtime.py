@@ -1,15 +1,15 @@
-import atexit
 import logging
-import numpy as np
 import time
+from concurrent.futures import ThreadPoolExecutor, Future
+from copy import copy
+from typing import Optional, Any, ClassVar
+
+import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
-from concurrent.futures import ThreadPoolExecutor, Future
-from copy import copy
-from core.device.camera.runtime import Camera, CameraTimeoutError
-from typing import Optional, Any, ClassVar
 
+from core.device.camera.runtime import Camera, CameraTimeoutError
 from util import log_exception
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR
@@ -37,7 +37,6 @@ class OrcaQuestCamera(Camera):
     _pictures: list[Optional[np.ndarray]] = field(init=False)
     _camera: Dcam = field(init=False)
     _thread_pool_executor: ThreadPoolExecutor = field(init=False)
-    _current_exposure: Optional[float] = field(default=None, init=False)
     _future: Optional[Future] = field(default=None, init=False)
 
     @classmethod
@@ -88,11 +87,20 @@ class OrcaQuestCamera(Camera):
         }
 
         if self.external_trigger:
+            # The Camera is set to acquire images when the trigger is high.
+            # This allows changing the exposure by changing the trigger duration and without having to communicate
+            # with the camera.
+            # With this it is possible to change the exposure of two very close pictures.
+            # However, the trigger received by the camera must be clean.
+            # If it bounces, the acquisition will be messed up.
+            # To prevent bouncing, it might be necessary to add a 50 Ohm resistor before the camera trigger input.
             properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.EXTERNAL
-            properties[DCAM_IDPROP.TRIGGERACTIVE] = DCAMPROP.TRIGGERACTIVE.EDGE
+            properties[DCAM_IDPROP.TRIGGERACTIVE] = DCAMPROP.TRIGGERACTIVE.LEVEL
             properties[DCAM_IDPROP.TRIGGERPOLARITY] = DCAMPROP.TRIGGERPOLARITY.POSITIVE
         else:
-            properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.INTERNAL
+            raise NotImplementedError("Only external trigger is supported")
+            # Need to handle different exposures when using internal trigger, so it is not implemented yet.
+            # properties[DCAM_IDPROP.TRIGGERSOURCE] = DCAMPROP.TRIGGERSOURCE.INTERNAL
 
         for property_id, property_value in properties.items():
             if not self._camera.prop_setvalue(property_id, property_value):
@@ -108,7 +116,11 @@ class OrcaQuestCamera(Camera):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
         # We can't allocate 0 pictures in the buffer, so we allocate at least 1
-        number_picture_in_buffer = self.number_pictures_to_acquire if self.number_pictures_to_acquire > 0 else 1
+        number_picture_in_buffer = (
+            self.number_pictures_to_acquire
+            if self.number_pictures_to_acquire > 0
+            else 1
+        )
         if not self._camera.buf_alloc(number_picture_in_buffer):
             raise RuntimeError(
                 f"Failed to allocate buffer for images: {self._read_last_error()}"
@@ -129,14 +141,12 @@ class OrcaQuestCamera(Camera):
     @log_exception(logger)
     def _start_acquisition(self, number_pictures: int):
         exposures = copy(self.exposures)
-        new_exposure = exposures[0]
-        if self._current_exposure != new_exposure:
-            if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
-                raise RuntimeError(
-                    f"Can't set exposure of {self.name} to {new_exposure}:"
-                    f" {self._read_last_error()}"
-                )
-            self._current_exposure = new_exposure
+        # Should change the exposure time using the DCAM_IDPROP.EXPOSURETIME property if using internal trigger.
+        # if not self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure):
+        #     raise RuntimeError(
+        #         f"Can't set exposure of {self.name} to {new_exposure}:"
+        #         f" {self._read_last_error()}"
+        #     )
         if not self._camera.cap_start(bSequence=True):
             raise RuntimeError(
                 f"Can't start acquisition on {self.name}: {self._read_last_error()}"
@@ -146,15 +156,6 @@ class OrcaQuestCamera(Camera):
         def acquire_pictures():
             try:
                 for picture_number, exposure in enumerate(exposures):
-                    if self._current_exposure != exposure:
-                        if not self._camera.prop_setvalue(
-                            DCAM_IDPROP.EXPOSURETIME, exposure
-                        ):
-                            raise RuntimeError(
-                                f"Can't set exposure of {self.name} to {exposure}:"
-                                f" {self._read_last_error()}"
-                            )
-                        self._current_exposure = exposure
                     self._acquire_picture(picture_number, self.timeout)
             finally:
                 self._camera.cap_stop()
