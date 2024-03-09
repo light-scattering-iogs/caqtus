@@ -5,10 +5,17 @@ import datetime
 from typing import Optional
 
 import attrs
+import polars
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from core.session import PureSequencePath, ExperimentSessionMaker
+from core.data_analysis.loading import DataImporter, LoadShotParameters
+from core.session import (
+    PureSequencePath,
+    ExperimentSessionMaker,
+    ExperimentSession,
+    Shot,
+)
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.sequence_collection import PathIsNotSequenceError
@@ -27,6 +34,7 @@ class DataLoader(QWidget, Ui_Loader):
         self.process_chunk_size = 10
         self.progress_bar.setValue(0)
         self.progress_bar.setMaximum(1)
+        self.shot_loader: DataImporter = LoadShotParameters()
 
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
@@ -38,6 +46,7 @@ class DataLoader(QWidget, Ui_Loader):
                 start_time=start_time,
                 number_completed_shots=number_completed_shots,
                 processed_shots=set(),
+                dataframe=empty_dataframe(),
             )
             self.sequence_list.addItem(str(sequence_path))
 
@@ -72,9 +81,10 @@ class DataLoader(QWidget, Ui_Loader):
     async def process(self):
         while True:
             await self.single_process()
-            await asyncio.sleep(10e-3)
+            await asyncio.sleep(1e-3)
 
     async def single_process(self):
+        # Can't update over the dict watchlist, because it might be updated during the processing
         for sequence_path in list(self.watchlist):
             await self.process_new_shots(sequence_path)
 
@@ -96,6 +106,7 @@ class DataLoader(QWidget, Ui_Loader):
                     start_time=stats.start_time,
                     number_completed_shots=stats.number_completed_shots,
                     processed_shots=set(),
+                    dataframe=empty_dataframe(),
                 )
                 return
             result = await asyncio.to_thread(session.sequences.get_shots, sequence)
@@ -106,13 +117,21 @@ class DataLoader(QWidget, Ui_Loader):
                 return
 
             processed_shots = self.watchlist[sequence].processed_shots
-            new_shots = sorted(set(shot.index for shot in shots) - processed_shots)
-            for shot_index in list(new_shots)[: self.process_chunk_size]:
-                await self.process_shot(sequence, shot_index)
+            new_shots = sorted(
+                (shot for shot in shots if shot.index not in processed_shots),
+                key=lambda s: s.index,
+            )
+            for shot in list(new_shots)[: self.process_chunk_size]:
+                await self.process_shot(shot, session)
             self.update_progress_bar()
 
-    async def process_shot(self, sequence: PureSequencePath, shot_index: int) -> None:
-        self.watchlist[sequence].processed_shots.add(shot_index)
+    async def process_shot(self, shot: Shot, session: ExperimentSession) -> None:
+        new_data = await asyncio.to_thread(self.shot_loader, shot, session)
+        processing_info = self.watchlist[shot.sequence.path]
+        total_data = processing_info.dataframe
+        concatenated = polars.concat([total_data, new_data])
+        processing_info.dataframe = concatenated
+        processing_info.processed_shots.add(shot.index)
 
 
 @attrs.define
@@ -120,3 +139,8 @@ class SequenceLoadingInfo:
     start_time: Optional[datetime.datetime]
     number_completed_shots: int
     processed_shots: set[int]
+    dataframe: polars.DataFrame
+
+
+def empty_dataframe() -> polars.DataFrame:
+    return polars.DataFrame()
