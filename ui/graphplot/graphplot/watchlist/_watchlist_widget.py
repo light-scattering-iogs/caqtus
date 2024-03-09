@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget
 from core.session.sequence import Sequence
 
 from .watchlist_widget_ui import Ui_WatchlistWidget
-from ..data_loading import DataImporter
+from .._data_loading import DataImporter
 from ..sequence_analyzer import SequenceAnalyzer
 
 

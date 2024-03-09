@@ -16,7 +16,7 @@ from util import attrs
 from util.concurrent import TaskGroup
 from util.itertools import batched
 
-from .data_loading import DataImporter
+from ._data_loading import DataImporter
 
 
 class SequenceAnalyzer:

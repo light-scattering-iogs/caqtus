@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QLabel
 
 from core.session import ExperimentSessionMaker
 from sequence_hierarchy import PathHierarchyView
+from graphplot.data_loading import DataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,9 @@ class GraphPlotMainWindow(QMainWindow):
         self.setCentralWidget(self.splitter)
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
+        self.loader = DataLoader(self)
         self.splitter.addWidget(self.path_view)
-        self.splitter.addWidget(QLabel("World"))
+        self.splitter.addWidget(self.loader)
 
     def __enter__(self) -> Self:
         self.path_view.__enter__()

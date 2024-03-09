@@ -13,7 +13,7 @@ from core.session import ExperimentSessionMaker, ExperimentSession, Sequence, Sh
 from util.concurrent import BackgroundScheduler
 from ._main_window_ui import Ui_MainWindow
 from .._sequence_hierarchy_widget import SequenceHierarchyWidget
-from ..data_loading import DataLoaderSelector, DataImporter, ShotData
+from .._data_loading import DataLoaderSelector, DataImporter, ShotData
 from ..sequence_analyzer import SequenceAnalyzer
 from ..visualization import ViewCreator, DataView, VisualizerCreatorSelector
 from ..watchlist import WatchlistWidget
