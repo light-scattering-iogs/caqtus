@@ -3,13 +3,14 @@ import logging
 from typing import Self
 
 import PySide6.QtAsyncio as QtAsyncio
+import polars
 import qtawesome
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QLabel
-
+from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter
 from core.session import ExperimentSessionMaker
-from sequence_hierarchy import PathHierarchyView
 from graphplot.data_loading import DataLoader
+from graphplot.views import ScatterView
+from sequence_hierarchy import PathHierarchyView
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +61,28 @@ class GraphPlotMainWindow(QMainWindow):
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
         self.loader = DataLoader(session_maker, self)
-        self.path_view.sequence_double_clicked.connect(self.loader.add_sequence_to_watchlist)
+        self.path_view.sequence_double_clicked.connect(
+            self.loader.add_sequence_to_watchlist
+        )
+        self.view = ScatterView(self)
         self.splitter.addWidget(self.path_view)
+        self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.loader)
 
     def start(self):
         asyncio.create_task(wrap(self.loader.process()))
+        asyncio.create_task(wrap(self.update_view()))
+
+    async def update_view(self):
+        while True:
+            sequences_data = self.loader.get_sequences_data()
+            non_empty_dataframes = [d for d in sequences_data.values() if not d.is_empty()]
+            if non_empty_dataframes:
+                data = await asyncio.to_thread(polars.concat, non_empty_dataframes)
+            else:
+                data = polars.DataFrame()
+            await self.view.update_data(data)
+            await asyncio.sleep(200e-3)
 
     def __enter__(self) -> Self:
         self.path_view.__enter__()

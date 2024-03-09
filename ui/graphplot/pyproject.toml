@@ -13,6 +13,7 @@ qtawesome = "^1.3.0"
 
 core-session = {path = "../../core/core.session", develop = true}
 core-data-analysis = {path = "../../core/core.data_analysis", develop = true}
+matplotlib = "^3.8.3"
 
 
 

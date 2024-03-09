@@ -9,7 +9,7 @@ import polars
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from core.data_analysis.loading import DataImporter, LoadShotParameters
+from core.data_analysis.loading import DataImporter, LoadShotParameters, LoadShotId
 from core.session import (
     PureSequencePath,
     ExperimentSessionMaker,
@@ -34,7 +34,7 @@ class DataLoader(QWidget, Ui_Loader):
         self.process_chunk_size = 10
         self.progress_bar.setValue(0)
         self.progress_bar.setMaximum(1)
-        self.shot_loader: DataImporter = LoadShotParameters()
+        self.shot_loader: DataImporter = LoadShotParameters() + LoadShotId()
 
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
@@ -49,6 +49,9 @@ class DataLoader(QWidget, Ui_Loader):
                 dataframe=empty_dataframe(),
             )
             self.sequence_list.addItem(str(sequence_path))
+
+    def get_sequences_data(self) -> dict[PureSequencePath, polars.DataFrame]:
+        return {path: info.dataframe for path, info in self.watchlist.items()}
 
     def remove_sequence_from_watchlist(self, sequence_path: PureSequencePath) -> None:
         """Remove a sequence from the watchlist.
