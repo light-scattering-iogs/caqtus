@@ -36,7 +36,7 @@ def copy_sequence(
             sequence_path, device_configs
         )
         target_session.sequences.set_state(sequence_path, State.RUNNING)
-        shots = source_session.sequences.get_shots(sequence_path)
+        shots = unwrap(source_session.sequences.get_shots(sequence_path))
         for shot in tqdm(shots, desc=f"Copying {sequence_path}"):
             target_session.sequences.create_shot(
                 sequence_path,

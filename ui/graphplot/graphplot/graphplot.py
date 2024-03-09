@@ -4,6 +4,7 @@ from typing import Self
 
 import PySide6.QtAsyncio as QtAsyncio
 import qtawesome
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QLabel
 
 from core.session import ExperimentSessionMaker
@@ -39,6 +40,8 @@ class GraphPlot:
     def run(self) -> None:
         with self.main_window:
             self.main_window.show()
+            timer = QTimer(self.main_window)
+            timer.singleShot(0, self.main_window.start)
             QtAsyncio.run()
 
 
@@ -60,6 +63,9 @@ class GraphPlotMainWindow(QMainWindow):
         self.path_view.sequence_double_clicked.connect(self.loader.add_sequence_to_watchlist)
         self.splitter.addWidget(self.path_view)
         self.splitter.addWidget(self.loader)
+
+    def start(self):
+        asyncio.create_task(wrap(self.loader.process()))
 
     def __enter__(self) -> Self:
         self.path_view.__enter__()

@@ -198,7 +198,9 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_shots(self, path: PureSequencePath) -> list[Shot]:
+    def get_shots(
+        self, path: PureSequencePath
+    ) -> Result[list[Shot], PathNotFoundError | PathIsNotSequenceError]:
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError

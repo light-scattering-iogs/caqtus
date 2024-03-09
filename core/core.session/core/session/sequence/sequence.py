@@ -84,7 +84,7 @@ class Sequence:
     def get_shots(self, session: ExperimentSession) -> list[Shot]:
         """Return the shots that belong to this sequence."""
 
-        return session.sequences.get_shots(self.path)
+        return unwrap(session.sequences.get_shots(self.path))
 
     def get_start_time(self, session: ExperimentSession) -> Optional[datetime.datetime]:
         """Return the time the sequence was started.
