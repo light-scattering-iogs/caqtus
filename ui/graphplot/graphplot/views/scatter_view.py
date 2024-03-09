@@ -60,6 +60,14 @@ class ScatterView(DataView, Ui_ScatterView):
         y_series = data[self.y_column]
         y_magnitude, y_unit = extract_unit(y_series)
         await asyncio.to_thread(self.line.set_data, x_magnitude, y_magnitude)
-        self.axis.set_xlim(x_magnitude.min(), x_magnitude.max())
-        self.axis.set_ylim(y_magnitude.min(), y_magnitude.max())
+        self.axis.relim()
+        self.axis.autoscale_view()
+        if x_unit:
+            self.axis.set_xlabel(f"{self.x_column} [{x_unit:~}]")
+        else:
+            self.axis.set_xlabel(self.x_column)
+        if y_unit:
+            self.axis.set_ylabel(f"{self.y_column} [{y_unit:~}]")
+        else:
+            self.axis.set_ylabel(self.y_column)
         self.canvas.draw()
