@@ -7,29 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
-
-pandas = "^2.1.3"
-matplotlib = "^3.8.2"
-seaborn = "^0.13.0"
-numpy = "^1.26.2"
-pyqt6 = "^6.6.0"
-polars = "^0.19.15"
-pyqtgraph = "^0.13.3"
-
-util = {path = "../../util", develop = true}
-core-data-analysis = {path = "../../core/core.data_analysis", develop = true}
-core-types = {path = "../../core/core.types", develop = true}
-core-session = {path = "../../core/core.session", develop = true}
-sequence-hierarchy = {path = "../widgets/sequence_hierarchy", develop = true}
-qabc = {path = "../widgets/qabc", develop = true}
-
+pyside6 = "^6.6.2"
 
 
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.11.0"
 mypy = "^1.7.0"
-pandas-stubs = "^2.1.1.230928"
 
 [build-system]
 requires = ["poetry-core"]
