@@ -57,6 +57,7 @@ class GraphPlotMainWindow(QMainWindow):
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
         self.loader = DataLoader(self)
+        self.path_view.sequence_double_clicked.connect(self.loader.add_sequence_to_watchlist)
         self.splitter.addWidget(self.path_view)
         self.splitter.addWidget(self.loader)
 
