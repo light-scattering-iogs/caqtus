@@ -29,7 +29,7 @@
        </rect>
       </property>
       <attribute name="label">
-       <string>Sequences</string>
+       <string>Watchlist</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>

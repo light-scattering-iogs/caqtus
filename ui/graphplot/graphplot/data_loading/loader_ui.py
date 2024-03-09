@@ -37,7 +37,7 @@ class Ui_Loader(object):
 
         self.verticalLayout_2.addWidget(self.sequence_list)
 
-        self.tool_box.addItem(self.widget, u"Sequences")
+        self.tool_box.addItem(self.widget, u"Watchlist")
         self.page_2 = QWidget()
         self.page_2.setObjectName(u"page_2")
         self.page_2.setGeometry(QRect(0, 0, 382, 202))
@@ -62,7 +62,7 @@ class Ui_Loader(object):
 
     def retranslateUi(self, Loader):
         Loader.setWindowTitle(QCoreApplication.translate("Loader", u"Form", None))
-        self.tool_box.setItemText(self.tool_box.indexOf(self.widget), QCoreApplication.translate("Loader", u"Sequences", None))
+        self.tool_box.setItemText(self.tool_box.indexOf(self.widget), QCoreApplication.translate("Loader", u"Watchlist", None))
         self.tool_box.setItemText(self.tool_box.indexOf(self.page_2), QCoreApplication.translate("Loader", u"Loader", None))
     # retranslateUi
 
