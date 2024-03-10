@@ -1,12 +1,12 @@
 import asyncio
 import logging
-from typing import Self
+from typing import Self, Optional
 
 import PySide6.QtAsyncio as QtAsyncio
 import polars
 import qtawesome
-from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter
+
 from core.session import ExperimentSessionMaker
 from graphplot.data_loading import DataLoader
 from graphplot.views import ScatterView
@@ -41,9 +41,7 @@ class GraphPlot:
     def run(self) -> None:
         with self.main_window:
             self.main_window.show()
-            timer = QTimer(self.main_window)
-            timer.singleShot(0, self.main_window.start)
-            QtAsyncio.run()
+            QtAsyncio.run(self.main_window.start())
 
 
 class GraphPlotMainWindow(QMainWindow):
@@ -68,10 +66,18 @@ class GraphPlotMainWindow(QMainWindow):
         self.splitter.addWidget(self.path_view)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.loader)
+        self.task: Optional[asyncio.Task] = None
 
-    def start(self):
-        asyncio.create_task(wrap(self.loader.process()))
-        asyncio.create_task(wrap(self.update_view()))
+    async def start(self):
+        def exception_handler(context):
+            logger.critical("Unhandled exception", exc_info=context.get("exception"))
+            asyncio.get_event_loop().stop()
+        # TODO: Remove this when QtAsyncio has proper exception handling in tasks
+        asyncio.get_event_loop().set_exception_handler(exception_handler)
+
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self.loader.process())
+            tg.create_task(self.update_view())
 
     async def update_view(self):
         while True:
