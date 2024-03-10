@@ -55,19 +55,23 @@ class ScatterView(DataView, Ui_ScatterView):
         if data.is_empty():
             self.clear()
             return
-        x_series = data[self.x_column]
+        await asyncio.to_thread(self.update_plot, self.x_column, self.y_column, data)
+        self.canvas.draw()
+
+    def update_plot(self, x_column: str, y_column: str, data: polars.DataFrame) -> None:
+        x_series = data[x_column]
         x_magnitude, x_unit = extract_unit(x_series)
-        y_series = data[self.y_column]
+        y_series = data[y_column]
         y_magnitude, y_unit = extract_unit(y_series)
-        await asyncio.to_thread(self.line.set_data, x_magnitude, y_magnitude)
+        self.line.set_data(x_magnitude, y_magnitude)
         self.axis.relim()
         self.axis.autoscale_view()
         if x_unit:
-            self.axis.set_xlabel(f"{self.x_column} [{x_unit:~}]")
+            self.axis.set_xlabel(f"{x_column} [{x_unit:~}]")
         else:
-            self.axis.set_xlabel(self.x_column)
+            self.axis.set_xlabel(x_column)
         if y_unit:
-            self.axis.set_ylabel(f"{self.y_column} [{y_unit:~}]")
+            self.axis.set_ylabel(f"{y_column} [{y_unit:~}]")
         else:
-            self.axis.set_ylabel(self.y_column)
-        self.canvas.draw()
+            self.axis.set_ylabel(y_column)
+
