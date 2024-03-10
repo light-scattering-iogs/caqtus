@@ -30,7 +30,7 @@ class ScatterView(DataView, Ui_ScatterView):
         self.apply_button.setIcon(qtawesome.icon("mdi6.check"))
         self.apply_button.clicked.connect(self.on_apply)
 
-        (self.line,) = self.axis.plot([0, 1], [0, 1], "k-")
+        (self.line,) = self.axis.plot([], [], "k.")
         self.clear()
 
         self.x_column: Optional[str] = None
