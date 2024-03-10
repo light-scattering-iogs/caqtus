@@ -9,7 +9,7 @@ import polars
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from core.data_analysis.loading import DataImporter, LoadShotParameters, LoadShotId
+from core.data_analysis.loading import DataImporter
 from core.session import (
     PureSequencePath,
     ExperimentSessionMaker,
@@ -19,12 +19,16 @@ from core.session import (
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
 from core.session.sequence_collection import PathIsNotSequenceError
+from util.itertools import batched
 from .loader_ui import Ui_Loader
 
 
 class DataLoader(QWidget, Ui_Loader):
     def __init__(
-        self, shot_loader: DataImporter, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None
+        self,
+        shot_loader: DataImporter,
+        session_maker: ExperimentSessionMaker,
+        parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.setupUi(self)
@@ -119,14 +123,17 @@ class DataLoader(QWidget, Ui_Loader):
                 self.remove_sequence_from_watchlist(sequence)
                 return
 
-            processed_shots = self.watchlist[sequence].processed_shots
-            new_shots = sorted(
-                (shot for shot in shots if shot.index not in processed_shots),
-                key=lambda s: s.index,
-            )
-            for shot in list(new_shots)[: self.process_chunk_size]:
-                await self.process_shot(shot, session)
-            self.update_progress_bar()
+        processed_shots = self.watchlist[sequence].processed_shots
+        new_shots = sorted(
+            (shot for shot in shots if shot.index not in processed_shots),
+            key=lambda s: s.index,
+        )
+
+        for shot_group in batched(new_shots, self.process_chunk_size):
+            with self.session_maker() as session:
+                for shot in shot_group:
+                    await self.process_shot(shot, session)
+                self.update_progress_bar()
 
     async def process_shot(self, shot: Shot, session: ExperimentSession) -> None:
         new_data = await asyncio.to_thread(self.shot_loader, shot, session)
