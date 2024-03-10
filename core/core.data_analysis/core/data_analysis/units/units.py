@@ -147,7 +147,7 @@ def magnitude_in_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Ser
 
 
 def with_columns_expressed_in_units(
-    dataframe: polars.DataFrame, column_units: Mapping[str, Unit]
+    dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
 ) -> polars.DataFrame:
     """Compute the magnitude of columns in a dataframe to given units.
 
