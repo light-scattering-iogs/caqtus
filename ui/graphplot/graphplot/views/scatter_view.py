@@ -4,7 +4,8 @@ from typing import Optional
 import matplotlib.style as mplstyle
 import polars
 import qtawesome
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtCore import QStringListModel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -36,6 +37,11 @@ class ScatterView(DataView, Ui_ScatterView):
         self.x_column: Optional[str] = None
         self.y_column: Optional[str] = None
 
+        self.columns_model = QStringListModel(self)
+        self.columns_completer = QCompleter(self.columns_model, self)
+        self.x_line_edit.setCompleter(self.columns_completer)
+        self.y_line_edit.setCompleter(self.columns_completer)
+
     def on_apply(self) -> None:
         x_column = self.x_line_edit.text()
         y_column = self.y_line_edit.text()
@@ -49,6 +55,11 @@ class ScatterView(DataView, Ui_ScatterView):
         self.canvas.draw()
 
     async def update_data(self, data: polars.DataFrame) -> None:
+        column_names = data.columns
+        if column_names != self.columns_model.stringList():
+            # We only reset the completer if the columns have actually changed,
+            # otherwise we would reset the user input.
+            self.columns_model.setStringList(data.columns)
         if self.x_column is None or self.y_column is None:
             self.clear()
             return
@@ -74,4 +85,3 @@ class ScatterView(DataView, Ui_ScatterView):
             self.axis.set_ylabel(f"{y_column} [{y_unit:~}]")
         else:
             self.axis.set_ylabel(y_column)
-
