@@ -7,6 +7,7 @@ import polars
 import qtawesome
 from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter
 
+from core.data_analysis.loading import DataImporter
 from core.session import ExperimentSessionMaker
 from graphplot.data_loading import DataLoader
 from graphplot.views import ScatterView
@@ -26,9 +27,12 @@ async def wrap(coro):
 
 
 class GraphPlot:
-    def __init__(self, session_maker: ExperimentSessionMaker, *args) -> None:
+    def __init__(
+        self, data_importer: DataImporter, session_maker: ExperimentSessionMaker, *args
+    ) -> None:
         """
         Args:
+            data_importer: A callable used to import data from shots.
             session_maker: A callable used to create sessions from which the application can retrieve data.
         """
 
@@ -36,7 +40,7 @@ class GraphPlot:
         self.app.setApplicationName("GraphPlot")
         self.app.setStyle("Fusion")
         self.app.setWindowIcon(qtawesome.icon("mdi6.chart-line", size=64))
-        self.main_window = GraphPlotMainWindow(session_maker)
+        self.main_window = GraphPlotMainWindow(data_importer, session_maker)
 
     def run(self) -> None:
         with self.main_window:
@@ -52,13 +56,19 @@ class GraphPlotMainWindow(QMainWindow):
     In the middle, there is a view of the data loaded from the sequences.
     """
 
-    def __init__(self, session_maker: ExperimentSessionMaker, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        data_loader: DataImporter,
+        session_maker: ExperimentSessionMaker,
+        *args,
+        **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.splitter = QSplitter(self)
         self.setCentralWidget(self.splitter)
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
-        self.loader = DataLoader(session_maker, self)
+        self.loader = DataLoader(data_loader, session_maker, self)
         self.path_view.sequence_double_clicked.connect(
             self.loader.add_sequence_to_watchlist
         )
@@ -69,26 +79,23 @@ class GraphPlotMainWindow(QMainWindow):
         self.task: Optional[asyncio.Task] = None
 
     async def start(self):
-        def exception_handler(context):
-            logger.critical("Unhandled exception", exc_info=context.get("exception"))
-            asyncio.get_event_loop().stop()
         # TODO: Remove this when QtAsyncio has proper exception handling in tasks
-        asyncio.get_event_loop().set_exception_handler(exception_handler)
-
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.loader.process())
-            tg.create_task(self.update_view())
+            tg.create_task(wrap(self.loader.process()))
+            tg.create_task(wrap(self.update_view()))
 
     async def update_view(self):
         while True:
             sequences_data = self.loader.get_sequences_data()
-            non_empty_dataframes = [d for d in sequences_data.values() if not d.is_empty()]
+            non_empty_dataframes = [
+                d for d in sequences_data.values() if not d.is_empty()
+            ]
             if non_empty_dataframes:
                 data = await asyncio.to_thread(polars.concat, non_empty_dataframes)
             else:
                 data = polars.DataFrame()
             await self.view.update_data(data)
-            await asyncio.sleep(200e-3)
+            await asyncio.sleep(400e-3)
 
     def __enter__(self) -> Self:
         self.path_view.__enter__()

@@ -24,7 +24,7 @@ from .loader_ui import Ui_Loader
 
 class DataLoader(QWidget, Ui_Loader):
     def __init__(
-        self, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None
+        self, shot_loader: DataImporter, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None
     ):
         super().__init__(parent)
         self.setupUi(self)
@@ -34,7 +34,7 @@ class DataLoader(QWidget, Ui_Loader):
         self.process_chunk_size = 10
         self.progress_bar.setValue(0)
         self.progress_bar.setMaximum(1)
-        self.shot_loader: DataImporter = LoadShotParameters() + LoadShotId()
+        self.shot_loader = shot_loader
 
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
