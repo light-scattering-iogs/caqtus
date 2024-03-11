@@ -46,7 +46,6 @@ class ScatterView(DataView, Ui_ScatterView):
         self.apply_button.setIcon(qtawesome.icon("mdi6.check"))
         self.apply_button.clicked.connect(self.on_apply)
 
-        # (self.line,) = self.axis.plot([], [], "k.")
         self.clear()
 
         self.x_column: Optional[str] = None
@@ -64,11 +63,8 @@ class ScatterView(DataView, Ui_ScatterView):
         self.y_column = y_column
 
     def clear(self) -> None:
-        return
-        self.line.set_data([], [])
-        self.axis.set_xlabel("$NA$")
-        self.axis.set_ylabel("$NA$")
-        self.canvas.draw()
+        self.series.clear()
+        self.chart_view.update()
 
     async def update_data(self, data: polars.DataFrame) -> None:
         column_names = data.columns
@@ -88,7 +84,6 @@ class ScatterView(DataView, Ui_ScatterView):
         self.series.replace(to_plot.points)
         self.x_axis.setRange(*to_plot.x_range)
         self.y_axis.setRange(*to_plot.y_range)
-        self.chart_view.update()
 
     @staticmethod
     def update_plot(
