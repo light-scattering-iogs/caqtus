@@ -22,8 +22,7 @@ async def wrap(coro):
         return await coro
     except Exception:
         logger.critical("Unhandled exception", exc_info=True)
-        loop = asyncio.get_event_loop()
-        loop.stop()
+        QApplication.quit()
 
 
 class GraphPlot:
