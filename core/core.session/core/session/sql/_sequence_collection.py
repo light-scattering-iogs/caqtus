@@ -484,7 +484,9 @@ class SQLSequenceCollection(SequenceCollection):
             for variable_name, parameter in shot_parameters.items()
         }
 
-    def get_shots(self, path: PureSequencePath) -> Result[list[Shot], PathNotFoundError | PathIsNotSequenceError]:
+    def get_shots(
+        self, path: PureSequencePath
+    ) -> Result[list[Shot], PathNotFoundError | PathIsNotSequenceError]:
         sql_sequence = self._query_sequence_model(path)
 
         def extract_shots(sql_sequence: SQLSequence) -> list[Shot]:
@@ -492,7 +494,6 @@ class SQLSequenceCollection(SequenceCollection):
             return [Shot(sequence, shot.index) for shot in sql_sequence.shots]
 
         return sql_sequence.map(extract_shots)
-
 
     def get_shot_parameters(
         self, path: PureSequencePath, shot_index: int

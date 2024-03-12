@@ -167,6 +167,13 @@ class SequenceCollection(Protocol):
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
     ) -> Sequence:
+        """Create a new sequence at the given path.
+
+        Raises:
+            PathIsSequenceError: If the path already exists and is a sequence.
+            PathHasChildrenError: If the path already exists and has children.
+        """
+
         raise NotImplementedError
 
     @abc.abstractmethod

@@ -9,9 +9,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
 )
-
 from core.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from core.session.path import InvalidPathFormatError
+from core.session.path_hierarchy import PathHasChildrenError
 from core.session.result import unwrap
 from core.session.sequence import State
 from core.session.sequence.iteration_configuration import (
@@ -25,6 +25,7 @@ from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from sequence_hierarchy import PathHierarchyView
 from waiting_widget import run_with_wip_widget
+
 from ._temporary_widget import temporary_widget
 from .icons import get_icon
 
@@ -68,7 +69,6 @@ class EditablePathHierarchyView(PathHierarchyView):
         path = self._model.get_path(self._proxy_model.mapToSource(index))
 
         with temporary_widget(QMenu(self)) as menu:
-
             color = self.palette().text().color()
 
             with self.session_maker() as session:
@@ -161,6 +161,8 @@ class EditablePathHierarchyView(PathHierarchyView):
     def on_sequence_duplication_requested(self, path: PureSequencePath):
         """Ask the user for a new sequence name and duplicate the sequence."""
 
+        assert not path.is_root()
+
         text, ok = QInputDialog().getText(
             self,
             f"Duplicate {path}...",
@@ -168,6 +170,10 @@ class EditablePathHierarchyView(PathHierarchyView):
             QLineEdit.EchoMode.Normal,
             path.name,
         )
+        app = QApplication.instance()
+        if app is None:
+            raise RuntimeError("No QApplication instance")
+        title = app.applicationName()
         if ok and text:
             try:
                 if text.startswith(PureSequencePath.separator()):
@@ -176,11 +182,9 @@ class EditablePathHierarchyView(PathHierarchyView):
                     assert path.parent is not None
                     new_path = path.parent / text
             except InvalidPathFormatError:
-                if (application := QApplication.instance()) is None:
-                    raise RuntimeError("No QApplication instance")
                 QMessageBox.critical(
                     self,
-                    application.applicationName(),
+                    title,
                     f"The path '{text}' is not a valid path.",
                 )
                 return
@@ -188,12 +192,27 @@ class EditablePathHierarchyView(PathHierarchyView):
                 parameters = session.sequences.get_parameters(path)
                 iterations = session.sequences.get_iteration_configuration(path)
                 time_lanes = session.sequences.get_time_lanes(path)
-                session.sequences.create(
-                    new_path,
-                    parameters,
-                    iterations,
-                    time_lanes,
-                )
+                try:
+                    session.sequences.create(
+                        new_path,
+                        parameters,
+                        iterations,
+                        time_lanes,
+                    )
+                except PathIsSequenceError:
+                    QMessageBox.critical(
+                        self,
+                        title,
+                        f"Can't duplicate sequence '{path}' to '{new_path}' because "
+                        f"'{new_path}' already exists and is a sequence.",
+                    )
+                except PathHasChildrenError:
+                    QMessageBox.critical(
+                        self,
+                        title,
+                        f"Can't duplicate sequence '{path}' to '{new_path}' because "
+                        f"'{new_path}' already exists and has children.",
+                    )
 
     def create_new_folder(self, path: PureSequencePath):
         text, ok = QInputDialog().getText(
