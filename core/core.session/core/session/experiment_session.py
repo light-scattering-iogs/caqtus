@@ -4,6 +4,8 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Protocol
 
+from core.session.parameter_namespace import ParameterNamespace
+
 from .device_configuration_collection import DeviceConfigurationCollection
 from .path_hierarchy import PathHierarchy
 from .sequence_collection import SequenceCollection
@@ -26,6 +28,15 @@ class ExperimentSession(
     and data of the experiment.
     Every function and method that read or write data do so through an experiment
     session object.
+
+    A session contains the following data:
+    - A hierarchy of paths.
+    - A collection of sequences.
+    - A default collection of device configurations used to run a sequence.
+    - A collection of global parameters.
+    Global parameters are parameters that are not specific to a sequence, but are
+    relevant for all the sequences.
+
 
     An experiment session object must be activated before it can be used.
     This is done by using the `with` statement on the session, inside which the session
@@ -50,3 +61,13 @@ class ExperimentSession(
     paths: PathHierarchy
     sequences: SequenceCollection
     default_device_configurations: DeviceConfigurationCollection
+
+    def get_global_parameters(self) -> ParameterNamespace:
+        """Returns a copy of the global parameters of the session."""
+
+        ...
+
+    def set_global_parameters(self, parameters: ParameterNamespace) -> None:
+        """Overwrite the global parameters of the session with the given parameters."""
+
+        ...
