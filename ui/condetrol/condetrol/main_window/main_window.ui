@@ -29,7 +29,13 @@
     </property>
     <addaction name="action_edit_device_configurations"/>
    </widget>
+   <widget class="QMenu" name="dock_menu">
+    <property name="title">
+     <string>Docks</string>
+    </property>
+   </widget>
    <addaction name="device_configurations_menu"/>
+   <addaction name="dock_menu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_edit_device_configurations">

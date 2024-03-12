@@ -40,12 +40,15 @@ class Ui_CondetrolMainWindow(object):
         self.menubar.setGeometry(QRect(0, 0, 800, 21))
         self.device_configurations_menu = QMenu(self.menubar)
         self.device_configurations_menu.setObjectName(u"device_configurations_menu")
+        self.dock_menu = QMenu(self.menubar)
+        self.dock_menu.setObjectName(u"dock_menu")
         CondetrolMainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(CondetrolMainWindow)
         self.statusbar.setObjectName(u"statusbar")
         CondetrolMainWindow.setStatusBar(self.statusbar)
 
         self.menubar.addAction(self.device_configurations_menu.menuAction())
+        self.menubar.addAction(self.dock_menu.menuAction())
         self.device_configurations_menu.addAction(self.action_edit_device_configurations)
 
         self.retranslateUi(CondetrolMainWindow)
@@ -60,5 +63,6 @@ class Ui_CondetrolMainWindow(object):
         self.actionLoad.setText(QCoreApplication.translate("CondetrolMainWindow", u"Load...", None))
         self.action_edit_constants.setText(QCoreApplication.translate("CondetrolMainWindow", u"Edit...", None))
         self.device_configurations_menu.setTitle(QCoreApplication.translate("CondetrolMainWindow", u"Devices", None))
+        self.dock_menu.setTitle(QCoreApplication.translate("CondetrolMainWindow", u"Docks", None))
     # retranslateUi
 

@@ -3,16 +3,16 @@ import copy
 from collections.abc import Mapping, Callable
 from typing import Optional, Literal
 
-from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt, QByteArray
+from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, QByteArray, Qt
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
-    QDockWidget,
     QLabel,
     QHBoxLayout,
-    QWidget, QSplitter, QVBoxLayout, QToolButton,
+    QWidget,
+    QDockWidget,
 )
-
+from condetrol.parameter_tables_editor import ParametersEditor
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
 from core.session import (
@@ -23,6 +23,7 @@ from core.session import (
 from core.session.sequence import State
 from exception_tree import ExceptionDialog
 from waiting_widget import run_with_wip_widget
+
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -97,6 +98,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker, self)
+        self._global_parameters_editor = ParametersEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.delegate_factory = lane_delegate_factory
@@ -125,11 +127,17 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def setup_ui(self):
         self.setupUi(self)
-        splitter = QSplitter(self)
-        splitter.addWidget(self._path_view)
-        splitter.addWidget(self.sequence_widget)
-        splitter.setContentsMargins(0, 0, 0, 0)
-        self.setCentralWidget(splitter)
+        self.setCentralWidget(self.sequence_widget)
+        paths_dock = QDockWidget("Sequences", self)
+        paths_dock.setWidget(self._path_view)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
+        self.dock_menu.addAction(paths_dock.toggleViewAction())
+        global_parameters_dock = QDockWidget("Global parameters", self)
+        global_parameters_dock.setWidget(self._global_parameters_editor)
+        self.addDockWidget(
+            Qt.DockWidgetArea.RightDockWidgetArea, global_parameters_dock
+        )
+        self.dock_menu.addAction(global_parameters_dock.toggleViewAction())
         self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
