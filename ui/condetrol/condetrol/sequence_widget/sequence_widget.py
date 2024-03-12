@@ -179,9 +179,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.iteration_editor.iteration_changed.connect(
             self.on_sequence_iteration_edited
         )
-        self.tabWidget.addTab(self.parameters_editor, "&Parameters")
-        self.parameters_editor.set_parameters(self.state_sequence.sequence_parameters)
-        self.tabWidget.addTab(self.iteration_editor, "&Iterations")
+        self.tabWidget.addTab(self.parameters_editor, "&Globals")
+        self.tabWidget.addTab(self.iteration_editor, "&Parameters")
         self.time_lanes_editor.blockSignals(True)
         self.time_lanes_editor.set_time_lanes(self.state_sequence.time_lanes)
         self.time_lanes_editor.blockSignals(False)
@@ -196,11 +195,14 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.iteration_editor.set_read_only(False)
         self.time_lanes_editor.set_read_only(False)
         self.parameters_editor.set_read_only(False)
+        self.tabWidget.setTabVisible(0, False)
 
     def on_sequence_became_not_editable(self):
         self.iteration_editor.set_read_only(True)
         self.time_lanes_editor.set_read_only(True)
         self.parameters_editor.set_read_only(True)
+        self.tabWidget.setTabVisible(0, True)
+        self.parameters_editor.set_parameters(self.state_sequence.sequence_parameters)
 
     def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
         if sequence_path is None:
@@ -223,9 +225,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def setup_connections(self):
         self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_edited)
-        self.parameters_editor.parameters_edited.connect(
-            self.on_sequence_parameters_edited
-        )
         self.state_watcher_thread.change_detected.connect(self.set_sequence)
 
     def on_sequence_iteration_edited(self, iterations: IterationConfiguration):
@@ -250,30 +249,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     )
                 else:
                     self.state_sequence.iteration_config = iterations
-
-    def on_sequence_parameters_edited(self, parameters: ParameterNamespace) -> None:
-        if self.state_sequence in self.state_machine.configuration():
-            sequence = Sequence(self.state_sequence.sequence_path)
-            with self.session_maker() as session:
-                try:
-                    sequence.set_parameters(parameters, session)
-                    logger.debug("Sequence parameters set to: %r", parameters)
-                except SequenceNotEditableError:
-                    state = sequence.get_state(session)
-                    parameters = session.sequences.get_parameters(
-                        self.state_sequence.sequence_path
-                    )
-                    self.sequence_not_editable_set.emit(
-                        _SequenceInfo(
-                            sequence_path=self.state_sequence.sequence_path,
-                            sequence_parameters=parameters,
-                            iteration_config=self.state_sequence.iteration_config,
-                            time_lanes=self.state_sequence.time_lanes,
-                            state=state,
-                        )
-                    )
-                else:
-                    self.state_sequence.sequence_parameters = parameters
 
     def on_time_lanes_edited(self, time_lanes: TimeLanes):
         logger.debug("Time lanes edited")
