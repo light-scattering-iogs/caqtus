@@ -184,11 +184,11 @@ class SQLSequenceCollection(SequenceCollection):
             result += self.get_contained_sequences(child)
         return result
 
-    def set_parameters(
+    def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
-        if not sequence.state.is_editable():
+        if sequence.state != State.PREPARING:
             raise SequenceNotEditableError(path)
 
         if not isinstance(parameters, ParameterNamespace):
@@ -203,8 +203,11 @@ class SQLSequenceCollection(SequenceCollection):
 
         sequence.parameters.content = parameters_content
 
-    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+    def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
         sequence = unwrap(self._query_sequence_model(path))
+
+        if sequence.state in (State.DRAFT, State.PREPARING):
+            raise RuntimeError("Sequence has not been prepared yet")
 
         parameters_content = sequence.parameters.content
 
@@ -237,7 +240,6 @@ class SQLSequenceCollection(SequenceCollection):
     def create(
         self,
         path: PureSequencePath,
-        parameters: ParameterNamespace,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
     ) -> Sequence:
@@ -250,13 +252,10 @@ class SQLSequenceCollection(SequenceCollection):
         iteration_content = self.serializer.iteration_serializer(
             iteration_configuration
         )
-        parameters_content = serialization.converters["json"].unstructure(
-            parameters, ParameterNamespace
-        )
 
         new_sequence = SQLSequence(
             path=unwrap(self._query_path_model(path)),
-            parameters=SQLSequenceParameters(content=parameters_content),
+            parameters=SQLSequenceParameters(content=None),
             iteration=SQLIterationConfiguration(content=iteration_content),
             time_lanes=SQLTimelanes(content=self.serialize_time_lanes(time_lanes)),
             state=State.DRAFT,
@@ -324,6 +323,7 @@ class SQLSequenceCollection(SequenceCollection):
         if state == State.DRAFT:
             sequence.start_time = None
             sequence.stop_time = None
+            sequence.parameters.content = None
             delete_device_configurations = sqlalchemy.delete(
                 SQLDeviceConfiguration
             ).where(SQLDeviceConfiguration.sequence == sequence)
@@ -368,8 +368,12 @@ class SQLSequenceCollection(SequenceCollection):
     def get_device_configurations(
         self, path: PureSequencePath
     ) -> dict[DeviceName, DeviceConfigurationAttrs]:
-        device_configurations = {}
         sequence = unwrap(self._query_sequence_model(path))
+        if sequence.state in (State.DRAFT, State.PREPARING):
+            raise RuntimeError("Sequence has not been prepared yet")
+
+        device_configurations = {}
+
         for device_configuration in sequence.device_configurations:
             serializer = self.device_configuration_serializers[
                 device_configuration.device_type

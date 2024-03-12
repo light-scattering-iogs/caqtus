@@ -6,12 +6,12 @@ from collections.abc import Mapping
 from typing import Protocol, Optional
 
 import attrs
-from returns.result import Result
-
 from core.device import DeviceName, DeviceConfigurationAttrs
 from core.types.data import DataLabel, Data
 from core.types.parameter import Parameter
 from core.types.variable_name import DottedVariableName
+from returns.result import Result
+
 from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
@@ -90,20 +90,24 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def set_parameters(
+    def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
-        """Set the parameter that are used by this sequence.
+        """Set the global parameters that should be used by this sequence.
 
         Raises:
-            SequenceNotEditableError: If the sequence is not in an editable state.
+            SequenceNotEditable: If the sequence is not in the PREPARING state.
         """
 
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_parameters(self, path: PureSequencePath) -> ParameterNamespace:
-        """Get the parameters that are used by this sequence."""
+    def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        """Get the global parameters that were used by this sequence.
+
+        Raises:
+            RuntimeError: If the sequence has not been prepared yet.
+        """
 
         raise NotImplementedError
 
@@ -163,7 +167,6 @@ class SequenceCollection(Protocol):
     def create(
         self,
         path: PureSequencePath,
-        parameters: ParameterNamespace,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
     ) -> Sequence:
