@@ -156,8 +156,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, global_parameters_dock
         )
         self.dock_menu.addAction(global_parameters_dock.toggleViewAction())
-        # We hide the global parameters dock by default.
-        global_parameters_dock.toggleViewAction().trigger()
+        # We hide the global parameters dock by default to reduce clutter when
+        # launching the app the first time.
+        global_parameters_dock.hide()
         self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
