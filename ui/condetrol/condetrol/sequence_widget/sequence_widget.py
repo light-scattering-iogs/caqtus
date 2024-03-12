@@ -6,7 +6,6 @@ import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
-
 from core.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from core.session._return_or_raise import unwrap
 from core.session.path_hierarchy import PathNotFoundError
@@ -20,6 +19,7 @@ from core.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from core.session.shot import TimeLanes
+
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger
 from ..parameter_tables_editor import ParametersEditor
@@ -38,7 +38,7 @@ def create_default_iteration_config() -> IterationConfiguration:
 @attrs.define
 class _SequenceInfo:
     sequence_path: PureSequencePath
-    sequence_parameters: ParameterNamespace
+    sequence_parameters: Optional[ParameterNamespace]
     iteration_config: IterationConfiguration
     time_lanes: TimeLanes
     state: State
@@ -201,17 +201,27 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.iteration_editor.set_read_only(True)
         self.time_lanes_editor.set_read_only(True)
         self.parameters_editor.set_read_only(True)
-        self.tabWidget.setTabVisible(0, True)
-        self.parameters_editor.set_parameters(self.state_sequence.sequence_parameters)
+        if self.state_sequence.sequence_parameters is not None:
+            self.parameters_editor.set_parameters(
+                self.state_sequence.sequence_parameters
+            )
+            self.tabWidget.setTabVisible(0, True)
 
     def set_sequence(self, sequence_path: Optional[PureSequencePath]) -> None:
         if sequence_path is None:
             self.sequence_cleared.emit()
         else:
             with self.session_maker() as session:
+                stats = unwrap(session.sequences.get_stats(sequence_path))
+                if stats.state in (State.DRAFT, State.PREPARING):
+                    global_parameters = None
+                else:
+                    global_parameters = session.sequences.get_global_parameters(
+                        sequence_path
+                    )
                 sequence_info = _SequenceInfo(
                     sequence_path=sequence_path,
-                    sequence_parameters=session.sequences.get_parameters(sequence_path),
+                    sequence_parameters=global_parameters,
                     iteration_config=session.sequences.get_iteration_configuration(
                         sequence_path
                     ),
@@ -340,9 +350,7 @@ class SequenceSetState(QState):
         return self._sequence_info.sequence_path
 
     @property
-    def sequence_parameters(self) -> ParameterNamespace:
-        if self._sequence_info is None:
-            raise ValueError("Sequence info not set")
+    def sequence_parameters(self) -> Optional[ParameterNamespace]:
         return self._sequence_info.sequence_parameters
 
     @sequence_parameters.setter
