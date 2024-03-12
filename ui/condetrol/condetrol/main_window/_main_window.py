@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import copy
 from collections.abc import Mapping, Callable
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QDockWidget,
+    QApplication,
 )
 from condetrol.parameter_tables_editor import ParametersEditor
 from core.experiment import SequenceInterruptedException
@@ -19,6 +21,7 @@ from core.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     Sequence,
+    ParameterNamespace,
 )
 from core.session.sequence import State
 from exception_tree import ExceptionDialog
@@ -125,6 +128,21 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self._exit_stack.__exit__(exc_type, exc_value, exc_tb)
 
+    async def run_async(self):
+        async def shutdown_on_exception(coro):
+            try:
+                await coro
+            except Exception as e:
+                logger.critical(
+                    "Unhandled exception in the main window's event loop.",
+                    exc_info=e,
+                )
+                QApplication.quit()
+
+        await asyncio.create_task(
+            shutdown_on_exception(self._monitor_global_parameters())
+        )
+
     def setup_ui(self):
         self.setupUi(self)
         self.setCentralWidget(self.sequence_widget)
@@ -138,6 +156,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             Qt.DockWidgetArea.RightDockWidgetArea, global_parameters_dock
         )
         self.dock_menu.addAction(global_parameters_dock.toggleViewAction())
+        # We hide the global parameters dock by default.
+        global_parameters_dock.toggleViewAction().trigger()
         self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
@@ -151,6 +171,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             self.on_procedure_exception
         )
         self.sequence_widget.sequence_changed.connect(self.on_viewed_sequence_changed)
+        self._global_parameters_editor.parameters_edited.connect(
+            self._on_global_parameters_edited
+        )
 
     def on_viewed_sequence_changed(
         self, sequence: Optional[tuple[PureSequencePath, State]]
@@ -261,6 +284,19 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         # we're actually lying here because we interrupt the running procedure, which
         # may be different from the one passed in argument.
         experiment_manager.interrupt_running_procedure()
+
+    def _on_global_parameters_edited(self, parameters: ParameterNamespace) -> None:
+        with self.session_maker() as session:
+            session.set_global_parameters(parameters)
+            logger.info(f"Global parameters written to storage: {parameters}")
+
+    async def _monitor_global_parameters(self) -> None:
+        while True:
+            with self.session_maker() as session:
+                parameters = await asyncio.to_thread(session.get_global_parameters)
+            if parameters != self._global_parameters_editor.get_parameters():
+                self._global_parameters_editor.set_parameters(parameters)
+            await asyncio.sleep(0.2)
 
 
 class ProcedureWatcherThread(QThread):
