@@ -99,6 +99,15 @@ class ParameterNamespace:
         else:
             return NotImplemented
 
+    def __getitem__(self, item: int) -> Expression | Self:
+        return self._content[item][1]
+
+    def __setitem__(self, item: int, value: Expression | Self) -> None:
+        self._content[item] = (self._content[item][0], value)
+
+    def __delitem__(self, item: int) -> None:
+        del self._content[item]
+
 
 def union_structure_hook(value, _) -> Expression | ParameterNamespace:
     if isinstance(value, str):
