@@ -140,9 +140,7 @@ class SequenceManager(AbstractContextManager):
                 self.device_configurations = dict(session.default_device_configurations)
             else:
                 self.device_configurations = dict(device_configurations)
-            self.sequence_parameters = session.sequences.get_parameters(
-                self._sequence_path
-            )
+            self.sequence_parameters = session.get_global_parameters()
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
         self.shot_compiler_factory = shot_compiler_factory
         self.shot_runner_factory = shot_runner_factory
@@ -288,6 +286,9 @@ class SequenceManager(AbstractContextManager):
             session.sequences.set_state(self._sequence_path, State.PREPARING)
             session.sequences.set_device_configurations(
                 self._sequence_path, self.device_configurations
+            )
+            session.sequences.set_global_parameters(
+                self._sequence_path, self.sequence_parameters
             )
 
     def _set_sequence_state(self, state: State):
