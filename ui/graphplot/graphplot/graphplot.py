@@ -6,14 +6,14 @@ import PySide6.QtAsyncio as QtAsyncio
 import polars
 import qtawesome
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QDockWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 
 from core.data_analysis.loading import DataImporter
 from core.session import ExperimentSessionMaker
 from graphplot.data_loading import DataLoader
-from graphplot.views import ScatterView
 from graphplot.views.error_bar_view import ErrorBarView
 from sequence_hierarchy import PathHierarchyView
+from .graphplot_main_window_ui import Ui_GraphPlotMainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class GraphPlot:
             QtAsyncio.run(self.main_window.start())
 
 
-class GraphPlotMainWindow(QMainWindow):
+class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
     """The main window for the GraphPlot application.
 
     On the left, it displays a tree view of the experiment session's sequences.
@@ -66,16 +66,19 @@ class GraphPlotMainWindow(QMainWindow):
     ) -> None:
         super().__init__(*args, **kwargs)
 
+        self.setupUi(self)
+
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
         paths_dock = QDockWidget("Sequences", self)
         paths_dock.setWidget(self.path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
-        # self.dock_menu.addAction(paths_dock.toggleViewAction())
+        self.docks_menu.addAction(paths_dock.toggleViewAction())
         self.loader = DataLoader(data_loader, session_maker, self)
         loader_dock = QDockWidget("Watchlist", self)
         loader_dock.setWidget(self.loader)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, loader_dock)
+        self.docks_menu.addAction(loader_dock.toggleViewAction())
 
         self.path_view.sequence_double_clicked.connect(
             self.loader.add_sequence_to_watchlist
