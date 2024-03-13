@@ -15,8 +15,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QSizePolicy,
-    QSpacerItem, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QSizePolicy, QSpacerItem,
+    QToolButton, QVBoxLayout, QWidget)
 
 class Ui_ErrorBarView(object):
     def setupUi(self, ErrorBarView):
@@ -39,14 +39,6 @@ class Ui_ErrorBarView(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.frame = QFrame(ErrorBarView)
-        self.frame.setObjectName(u"frame")
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Raised)
-
-        self.verticalLayout.addWidget(self.frame)
-
-        self.verticalLayout.setStretch(1, 1)
 
         self.retranslateUi(ErrorBarView)
 
