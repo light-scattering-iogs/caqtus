@@ -8,7 +8,8 @@ import numpy as np
 import polars
 import pyqtgraph
 import qtawesome
-from PySide6.QtCore import QStringListModel, QTimer
+from PySide6.QtCore import QStringListModel, QTimer, Qt
+from PySide6.QtGui import QPen, QFont
 from PySide6.QtWidgets import QWidget, QDialog, QCompleter
 
 from condetrol._temporary_widget import temporary_widget
@@ -93,6 +94,15 @@ class ErrorBarSettings:
 class ErrorBarPlot(pyqtgraph.PlotWidget):
     def __init__(self, x_column: str, y_column: str, parent: Optional[QWidget] = None):
         super().__init__(parent, background="white")
+        black_pen = QPen(Qt.GlobalColor.black)
+        self.getAxis("bottom").setTextPen(black_pen)
+        self.getAxis("left").setTextPen(black_pen)
+        font = QFont()
+        font.setPointSize(15)
+        self.getAxis("bottom").setTickFont(font)
+        self.getAxis("left").setTickFont(font)
+        self.getAxis("bottom").label.setFont(font)
+        self.getAxis("left").label.setFont(font)
         self.enableAutoRange()
 
         self.error_bar_item = pyqtgraph.ErrorBarItem()
@@ -127,13 +137,13 @@ class ErrorBarPlot(pyqtgraph.PlotWidget):
         self.scatter_plot.setData(x=x, y=y)
 
         if x_unit:
-            x_label = f"{self.x_column} [{x_unit}]"
+            x_label = f"{self.x_column} [{x_unit:~}]"
         else:
             x_label = self.x_column
         self.plot_item.setLabel("bottom", x_label)
 
         if y_unit:
-            y_label = f"{self.y_column} [{y_unit}]"
+            y_label = f"{self.y_column} [{y_unit:~}]"
         else:
             y_label = self.y_column
         self.plot_item.setLabel("left", y_label)
