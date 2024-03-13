@@ -15,54 +15,44 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QListWidget, QListWidgetItem, QProgressBar,
-    QSizePolicy, QToolBox, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QListWidget, QListWidgetItem,
+    QPushButton, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
 class Ui_Loader(object):
     def setupUi(self, Loader):
         if not Loader.objectName():
             Loader.setObjectName(u"Loader")
-        Loader.resize(400, 301)
+        Loader.resize(645, 481)
         self.verticalLayout = QVBoxLayout(Loader)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.tool_box = QToolBox(Loader)
-        self.tool_box.setObjectName(u"tool_box")
-        self.widget = QWidget()
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(0, 0, 382, 202))
-        self.verticalLayout_2 = QVBoxLayout(self.widget)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.sequence_list = QListWidget(self.widget)
+        self.sequence_list = QListWidget(Loader)
         self.sequence_list.setObjectName(u"sequence_list")
 
-        self.verticalLayout_2.addWidget(self.sequence_list)
+        self.verticalLayout.addWidget(self.sequence_list)
 
-        self.tool_box.addItem(self.widget, u"Watchlist")
-        self.page_2 = QWidget()
-        self.page_2.setObjectName(u"page_2")
-        self.page_2.setGeometry(QRect(0, 0, 382, 202))
-        self.tool_box.addItem(self.page_2, u"Loader")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.verticalLayout.addWidget(self.tool_box)
+        self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.progress_bar = QProgressBar(Loader)
-        self.progress_bar.setObjectName(u"progress_bar")
-        self.progress_bar.setValue(24)
+        self.clear_button = QPushButton(Loader)
+        self.clear_button.setObjectName(u"clear_button")
 
-        self.verticalLayout.addWidget(self.progress_bar)
+        self.horizontalLayout.addWidget(self.clear_button)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
 
         self.retranslateUi(Loader)
-
-        self.tool_box.setCurrentIndex(0)
-
 
         QMetaObject.connectSlotsByName(Loader)
     # setupUi
 
     def retranslateUi(self, Loader):
         Loader.setWindowTitle(QCoreApplication.translate("Loader", u"Form", None))
-        self.tool_box.setItemText(self.tool_box.indexOf(self.widget), QCoreApplication.translate("Loader", u"Watchlist", None))
-        self.tool_box.setItemText(self.tool_box.indexOf(self.page_2), QCoreApplication.translate("Loader", u"Loader", None))
+        self.clear_button.setText(QCoreApplication.translate("Loader", u"Clear", None))
     # retranslateUi
 

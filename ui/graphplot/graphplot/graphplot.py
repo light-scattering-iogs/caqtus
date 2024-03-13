@@ -5,7 +5,8 @@ from typing import Self, Optional
 import PySide6.QtAsyncio as QtAsyncio
 import polars
 import qtawesome
-from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QDockWidget
 
 from core.data_analysis.loading import DataImporter
 from core.session import ExperimentSessionMaker
@@ -64,18 +65,23 @@ class GraphPlotMainWindow(QMainWindow):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.splitter = QSplitter(self)
-        self.setCentralWidget(self.splitter)
+
         self.session_maker = session_maker
         self.path_view = PathHierarchyView(self.session_maker, self)
+        paths_dock = QDockWidget("Sequences", self)
+        paths_dock.setWidget(self.path_view)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
+        # self.dock_menu.addAction(paths_dock.toggleViewAction())
         self.loader = DataLoader(data_loader, session_maker, self)
+        loader_dock = QDockWidget("Watchlist", self)
+        loader_dock.setWidget(self.loader)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, loader_dock)
+
         self.path_view.sequence_double_clicked.connect(
             self.loader.add_sequence_to_watchlist
         )
         self.view = ErrorBarView(self)
-        self.splitter.addWidget(self.path_view)
-        self.splitter.addWidget(self.view)
-        self.splitter.addWidget(self.loader)
+        self.setCentralWidget(self.view)
         self.task: Optional[asyncio.Task] = None
 
     async def start(self):

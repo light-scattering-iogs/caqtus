@@ -36,8 +36,6 @@ class DataLoader(QWidget, Ui_Loader):
         self.watchlist: dict[PureSequencePath, SequenceLoadingInfo] = {}
         self.session_maker = session_maker
         self.process_chunk_size = 10
-        self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(1)
         self.shot_loader = shot_loader
 
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
@@ -133,7 +131,7 @@ class DataLoader(QWidget, Ui_Loader):
             with self.session_maker() as session:
                 for shot in shot_group:
                     await self.process_shot(shot, session)
-                self.update_progress_bar()
+                # self.update_progress_bar()
 
     async def process_shot(self, shot: Shot, session: ExperimentSession) -> None:
         new_data = await asyncio.to_thread(self.shot_loader, shot, session)
