@@ -5,9 +5,7 @@ from typing import Optional
 
 import attrs
 import matplotlib.style as mplstyle
-import numpy as np
 import polars
-import pyqtgraph
 import qtawesome
 from PySide6.QtCharts import QChartView, QScatterSeries, QValueAxis, QChart
 from PySide6.QtCore import QStringListModel, QPointF, Qt
@@ -24,16 +22,26 @@ class ScatterView(DataView, Ui_ScatterView):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setupUi(self)
+        self.chart_view = QChartView(self)
+        self.series = QScatterSeries(self.chart_view)
 
-        self.plot_widget = pyqtgraph.PlotWidget(self, background="white")
-        self.plot_widget.enableAutoRange()
-        self.plot_item = self.plot_widget.getPlotItem()
-        self.scatter_plot = pyqtgraph.ScatterPlotItem()
-        self.plot_item.addItem(self.scatter_plot)
+        self.series.setMarkerSize(5)
+        self.series.setUseOpenGL(True)
+        self.chart_view.chart().setTheme(QChart.ChartTheme.ChartThemeLight)
+        self.series.setMarkerShape(QScatterSeries.MarkerShape.MarkerShapePentagon)
+        self.chart_view.chart().legend().hide()
+
+        self.chart_view.chart().addSeries(self.series)
+        self.x_axis = QValueAxis(self)
+        self.y_axis = QValueAxis(self)
+        self.chart_view.chart().addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
+        self.chart_view.chart().addAxis(self.y_axis, Qt.AlignmentFlag.AlignLeft)
+        self.series.attachAxis(self.x_axis)
+        self.series.attachAxis(self.y_axis)
 
         layout = self.layout()
         assert isinstance(layout, QVBoxLayout)
-        layout.insertWidget(1, self.plot_widget)
+        layout.insertWidget(1, self.chart_view)
         self.settings_button.setIcon(qtawesome.icon("mdi6.cog"))
         self.apply_button.setIcon(qtawesome.icon("mdi6.check"))
         self.apply_button.clicked.connect(self.on_apply)
@@ -55,7 +63,8 @@ class ScatterView(DataView, Ui_ScatterView):
         self.y_column = y_column
 
     def clear(self) -> None:
-        self.scatter_plot.setData([], [])
+        self.series.clear()
+        self.chart_view.update()
 
     async def update_data(self, data: polars.DataFrame) -> None:
         column_names = data.columns
@@ -72,9 +81,9 @@ class ScatterView(DataView, Ui_ScatterView):
         to_plot = await asyncio.to_thread(
             self.update_plot, self.x_column, self.y_column, data
         )
-        self.scatter_plot.setData(to_plot.x_values, to_plot.y_values)
-        self.plot_item.setLabel("bottom", to_plot.x_label)
-        self.plot_item.setLabel("left", to_plot.y_label)
+        self.series.replace(to_plot.points)
+        self.x_axis.setRange(*to_plot.x_range)
+        self.y_axis.setRange(*to_plot.y_range)
 
     @staticmethod
     def update_plot(x_column: str, y_column: str, data: polars.DataFrame) -> PlotInfo:
@@ -82,32 +91,29 @@ class ScatterView(DataView, Ui_ScatterView):
         x_magnitude, x_unit = extract_unit(x_series)
         y_series = data[y_column]
         y_magnitude, y_unit = extract_unit(y_series)
-
-        if x_unit:
-            x_label = f"{x_column} [{x_unit:~}]"
-        else:
-            x_label = x_column
-        if y_unit:
-            y_label = f"{y_column} [{y_unit:~}]"
-        else:
-            y_label = y_column
-
+        new_points = [QPointF(x, y) for x, y in zip(x_magnitude, y_magnitude)]
         plot_info = PlotInfo(
-            x_values=np.array(x_magnitude),
-            y_values=np.array(y_magnitude),
+            points=new_points,
             x_range=(float(x_magnitude.min()), float(x_magnitude.max())),
             y_range=(float(y_magnitude.min()), float(y_magnitude.max())),
-            x_label=x_label,
-            y_label=y_label,
         )
+
+        # self.line.set_data(x_magnitude, y_magnitude)
+        # self.axis.relim()
+        # self.axis.autoscale_view()
+        # if x_unit:
+        #     self.axis.set_xlabel(f"{x_column} [{x_unit:~}]")
+        # else:
+        #     self.axis.set_xlabel(x_column)
+        # if y_unit:
+        #     self.axis.set_ylabel(f"{y_column} [{y_unit:~}]")
+        # else:
+        #     self.axis.set_ylabel(y_column)
         return plot_info
 
 
 @attrs.define
 class PlotInfo:
-    x_values: np.ndarray
-    y_values: np.ndarray
+    points: list[QPointF]
     x_range: tuple[float, float]
     y_range: tuple[float, float]
-    x_label: str
-    y_label: str
