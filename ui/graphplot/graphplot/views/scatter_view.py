@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 import asyncio
@@ -9,8 +10,7 @@ import numpy as np
 import polars
 import pyqtgraph
 import qtawesome
-from PySide6.QtCharts import QChartView, QScatterSeries, QValueAxis, QChart
-from PySide6.QtCore import QStringListModel, QPointF, Qt
+from PySide6.QtCore import QStringListModel
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
 
 from core.data_analysis.units import extract_unit
