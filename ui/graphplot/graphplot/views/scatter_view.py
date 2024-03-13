@@ -1,11 +1,9 @@
-
 from __future__ import annotations
 
 import asyncio
 from typing import Optional
 
 import attrs
-import matplotlib.style as mplstyle
 import numpy as np
 import polars
 import pyqtgraph
@@ -16,8 +14,6 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
 from core.data_analysis.units import extract_unit
 from graphplot.views.view import DataView
 from .scatter_view_ui import Ui_ScatterView
-
-mplstyle.use("fast")
 
 
 class ScatterView(DataView, Ui_ScatterView):
