@@ -11,6 +11,7 @@ from core.data_analysis.loading import DataImporter
 from core.session import ExperimentSessionMaker
 from graphplot.data_loading import DataLoader
 from graphplot.views import ScatterView
+from graphplot.views.error_bar_view import ErrorBarView
 from sequence_hierarchy import PathHierarchyView
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ class GraphPlotMainWindow(QMainWindow):
         self.path_view.sequence_double_clicked.connect(
             self.loader.add_sequence_to_watchlist
         )
-        self.view = ScatterView(self)
+        self.view = ErrorBarView(self)
         self.splitter.addWidget(self.path_view)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.loader)
