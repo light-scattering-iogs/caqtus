@@ -7,11 +7,13 @@ from PySide6.QtCore import (
     Signal,
     QModelIndex,
     QMimeData,
+    QEvent,
 )
 from PySide6.QtGui import (
     QStandardItemModel,
     QStandardItem,
     QPalette,
+    QFocusEvent,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -26,12 +28,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
 )
-
 from core.session import ParameterNamespace
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from exception_tree import ExceptionDialog
 from util import serialization
+
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
@@ -44,6 +46,13 @@ PARAMETER_VALUE_ROLE = Qt.UserRole + 2
 
 
 class ParametersEditor(QWidget):
+    """A widget that allows to edit a ParameterNamespace.
+
+    This widget presents a column view with the parameters and namespaces in each
+    column.
+    It also has a toolbar with buttons to add, remove, copy and paste parameters.
+    """
+
     # The argument is a ParameterNamespace, but this is not a valid type for the
     # Signal.
     parameters_edited = Signal(object)
@@ -427,6 +436,10 @@ class ParameterEditorDelegate(HTMLItemDelegate):
             model.setData(index, new_value, PARAMETER_VALUE_ROLE)
 
 
+# The editors below have an event filter to remove the focus from them when one of their
+# children loses the focus.
+# If we don't do this, the editor will keep the focus when the user clicks
+# outside of it, and the delegate will not be able to close the editor.
 class ParameterEditor(QWidget):
     def __init__(self):
         super().__init__()
@@ -448,6 +461,10 @@ class ParameterEditor(QWidget):
         self.setPalette(palette)
         self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
         self.value_editor.setStyleSheet(f"color: {VALUE_COLOR}")
+        self.name_editor.setPlaceholderText("Parameter name")
+        self.value_editor.setPlaceholderText("Parameter value")
+        self.name_editor.installEventFilter(self)
+        self.value_editor.installEventFilter(self)
 
     def set_parameter(self, name: DottedVariableName, value: Expression) -> None:
         self.name_editor.setText(str(name))
@@ -457,6 +474,15 @@ class ParameterEditor(QWidget):
         name = DottedVariableName(self.name_editor.text())
         value = Expression(self.value_editor.text())
         return name, value
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        watched_is_child = watched is self.name_editor or watched is self.value_editor
+        if watched_is_child and event.type() == QEvent.Type.FocusOut:
+            if QApplication.focusWidget() not in self.findChildren(QWidget):
+                QApplication.postEvent(self, QFocusEvent(event.type()))
+            return False
+
+        return super().eventFilter(watched, event)
 
 
 class NamespaceEditor(QWidget):
@@ -474,6 +500,8 @@ class NamespaceEditor(QWidget):
         self.setAutoFillBackground(True)
         self.setPalette(palette)
         self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.name_editor.setPlaceholderText("Namespace name")
+        self.name_editor.installEventFilter(self)
 
     def set_namespace(self, name: DottedVariableName) -> None:
         self.name_editor.setText(str(name))
@@ -481,3 +509,10 @@ class NamespaceEditor(QWidget):
     def get_namespace(self) -> DottedVariableName:
         name = DottedVariableName(self.name_editor.text())
         return name
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if watched is self.name_editor and event.type() == QEvent.Type.FocusOut:
+            QApplication.postEvent(self, QFocusEvent(event.type()))
+            return False
+
+        return super().eventFilter(watched, event)
