@@ -72,6 +72,11 @@ class ParameterNamespaceEditor(QWidget):
         self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.delegate = ParameterEditorDelegate(self)
         self.view.setItemDelegate(self.delegate)
+        self.view.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+            | QAbstractItemView.EditTrigger.DoubleClicked
+            | QAbstractItemView.EditTrigger.EditKeyPressed
+        )
 
         self.add_button = QToolButton(self)
         self.add_menu = QMenu(self)
