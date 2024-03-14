@@ -22,7 +22,7 @@ from core.session.shot import TimeLanes
 
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger
-from ..parameter_tables_editor import ParametersEditor
+from ..parameter_tables_editor import ParameterNamespaceEditor
 from ..sequence_iteration_editors import create_default_editor
 from ..timelanes_editor import (
     TimeLanesEditor,
@@ -113,7 +113,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             self,
         )
 
-        self.parameters_editor = ParametersEditor(self)
+        self.parameters_editor = ParameterNamespaceEditor(self)
 
         self.state_watcher_thread = self.StateWatcherThread(self)
         self.state_machine = QStateMachine(self)

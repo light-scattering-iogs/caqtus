@@ -45,7 +45,7 @@ PARAMETER_NAME_ROLE = Qt.UserRole + 1
 PARAMETER_VALUE_ROLE = Qt.UserRole + 2
 
 
-class ParametersEditor(QWidget):
+class ParameterNamespaceEditor(QWidget):
     """A widget that allows to edit a ParameterNamespace.
 
     This widget presents a column view with the parameters and namespaces in each

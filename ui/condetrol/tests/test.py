@@ -4,14 +4,14 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
-from condetrol.parameter_tables_editor import ParametersEditor
+from condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 import qdarkstyle
 
 app = QApplication(sys.argv)
 app.setStyleSheet(qdarkstyle.load_stylesheet())
-editor = ParametersEditor()
+editor = ParameterNamespaceEditor()
 editor.set_read_only(False)
 
 

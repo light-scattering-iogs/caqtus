@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QDockWidget,
     QApplication,
 )
-from condetrol.parameter_tables_editor import ParametersEditor
+from condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from core.experiment import SequenceInterruptedException
 from core.experiment.manager import ExperimentManager, Procedure
 from core.session import (
@@ -101,7 +101,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
         super().__init__(*args, **kwargs)
         self._path_view = EditablePathHierarchyView(session_maker, self)
-        self._global_parameters_editor = ParametersEditor()
+        self._global_parameters_editor = ParameterNamespaceEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.delegate_factory = lane_delegate_factory

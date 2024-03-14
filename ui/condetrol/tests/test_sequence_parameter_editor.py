@@ -3,11 +3,11 @@ from PySide6.QtGui import QDragEnterEvent
 from PySide6.QtTest import QTest
 from pytestqt.qtbot import QtBot
 
-from condetrol.parameter_tables_editor import ParametersEditor
+from condetrol.parameter_tables_editor import ParameterNamespaceEditor
 
 
 def test_0(qtbot: QtBot):
-    editor = ParametersEditor()
+    editor = ParameterNamespaceEditor()
     qtbot.addWidget(editor)
     editor.add_namespace_action.trigger()
     editor.add_parameter_action.trigger()
