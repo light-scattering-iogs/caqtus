@@ -37,6 +37,7 @@ class DataLoader(QWidget, Ui_Loader):
         self.session_maker = session_maker
         self.process_chunk_size = 10
         self.shot_loader = shot_loader
+        self.clear_button.clicked.connect(self.clear_watchlist)
 
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
@@ -51,6 +52,10 @@ class DataLoader(QWidget, Ui_Loader):
                 dataframe=empty_dataframe(),
             )
             self.sequence_list.addItem(str(sequence_path))
+
+    def clear_watchlist(self):
+        self.watchlist = {}
+        self.sequence_list.clear()
 
     def get_sequences_data(self) -> dict[PureSequencePath, polars.DataFrame]:
         return {path: info.dataframe for path, info in self.watchlist.items()}
@@ -106,7 +111,11 @@ class DataLoader(QWidget, Ui_Loader):
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(sequence)
                 return
-            if stats.start_time != self.watchlist[sequence].start_time:
+            try:
+                loading_info = self.watchlist[sequence]
+            except KeyError:
+                return
+            if stats.start_time != loading_info.start_time:
                 self.watchlist[sequence] = SequenceLoadingInfo(
                     start_time=stats.start_time,
                     number_completed_shots=stats.number_completed_shots,
@@ -121,7 +130,10 @@ class DataLoader(QWidget, Ui_Loader):
                 self.remove_sequence_from_watchlist(sequence)
                 return
 
-        processed_shots = self.watchlist[sequence].processed_shots
+        try:
+            processed_shots = self.watchlist[sequence].processed_shots
+        except KeyError:
+            return
         new_shots = sorted(
             (shot for shot in shots if shot.index not in processed_shots),
             key=lambda s: s.index,
@@ -135,7 +147,10 @@ class DataLoader(QWidget, Ui_Loader):
 
     async def process_shot(self, shot: Shot, session: ExperimentSession) -> None:
         new_data = await asyncio.to_thread(self.shot_loader, shot, session)
-        processing_info = self.watchlist[shot.sequence.path]
+        try:
+            processing_info = self.watchlist[shot.sequence.path]
+        except KeyError:
+            return
         total_data = processing_info.dataframe
         concatenated = polars.concat([total_data, new_data])
         processing_info.dataframe = concatenated
