@@ -2,6 +2,7 @@
 Imaging Source camera runtime class.
 
 Note that to import this package, the library tisgrabber_x64.dll must be installed
+https://www.theimagingsource.com/en-us/support/download/tisgrabberdll-3.4.0.51/
 """
 
 import ctypes
