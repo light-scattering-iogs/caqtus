@@ -10,6 +10,26 @@ from core.session.result import unwrap
 from .delegate import ProgressDelegate
 from .model import PathHierarchyModel
 
+class AsyncPathHierarchyView(QTreeView):
+    sequence_double_clicked = QtCore.Signal(PureSequencePath)
+
+    def __init__(self, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.session_maker = session_maker
+        self._model = PathHierarchyModel(session_maker, self)
+        self._proxy_model = QSortFilterProxyModel(self)
+        self._proxy_model.setSourceModel(self._model)
+        self.setModel(self._proxy_model)
+        self.setSortingEnabled(True)
+        self.header().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.header().customContextMenuRequested.connect(self.show_header_menu)
+        self.doubleClicked.connect(self.on_double_click)
+        self._model.dataChanged.connect(self.update)
+        self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
+        self.hideColumn(4)
+        self.setItemDelegateForColumn(1, ProgressDelegate(self))
+        self.setUniformRowHeights(True)
+
 
 class PathHierarchyView(QTreeView):
     sequence_double_clicked = QtCore.Signal(PureSequencePath)

@@ -12,7 +12,9 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
     QDateTime,
+    QObject,
 )
+from PySide6.QtGui import QStandardItemModel
 from anytree import NodeMixin
 from core.session import PureSequencePath, ExperimentSessionMaker, ExperimentSession
 from core.session.path_hierarchy import PathNotFoundError
@@ -75,6 +77,14 @@ class PathHierarchyItem(NodeMixin):
         return 0
 
 
+class AsyncPathHierarchyModel(QStandardItemModel):
+    def __init__(
+        self, session_maker: ExperimentSessionMaker, parent: Optional[QObject]
+    ):
+        super().__init__(rows=0, columns=5, parent=parent)
+        self._session_maker = session_maker
+
+
 class PathHierarchyModel(QAbstractItemModel):
     """A Qt tree model that provides data for a sequence hierarchy.
 
@@ -110,7 +120,7 @@ class PathHierarchyModel(QAbstractItemModel):
     def on_data_changed(self, index: QModelIndex):
         self.dataChanged.emit(
             self.index(index.row(), 0, index.parent()),
-            self.index(index.row(), self.columnCount(index)-1, index.parent()),
+            self.index(index.row(), self.columnCount(index) - 1, index.parent()),
         )
 
     def __enter__(self):
