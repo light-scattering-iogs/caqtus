@@ -28,12 +28,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
 )
+
 from core.session import ParameterNamespace
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from exception_tree import ExceptionDialog
 from util import serialization
-
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
@@ -59,24 +59,12 @@ class ParameterNamespaceEditor(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.view = ColumnView(self)
-        self.view.setResizeGripsVisible(True)
+        self.view = ParameterNamespaceView(self)
+
         self.tool_bar = QToolBar(self)
 
         self._model = ParameterNamespaceModel(self)
         self.view.setModel(self._model)
-        self.view.setDragEnabled(True)
-        self.view.setAcceptDrops(True)
-        self.view.setDropIndicatorShown(True)
-        self.view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.view.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.delegate = ParameterEditorDelegate(self)
-        self.view.setItemDelegate(self.delegate)
-        self.view.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-            | QAbstractItemView.EditTrigger.DoubleClicked
-            | QAbstractItemView.EditTrigger.EditKeyPressed
-        )
 
         self.add_button = QToolButton(self)
         self.add_menu = QMenu(self)
@@ -114,8 +102,7 @@ class ParameterNamespaceEditor(QWidget):
         self.tool_bar.addSeparator()
         self.tool_bar.addWidget(self.copy_to_clipboard_button)
         self.tool_bar.addWidget(self.paste_from_clipboard_button)
-        self.view.setSelectionMode(QColumnView.SelectionMode.SingleSelection)
-        self.view.setSelectionBehavior(QColumnView.SelectionBehavior.SelectItems)
+
         self.set_parameters(ParameterNamespace.empty())
 
     def setup_connections(self) -> None:
@@ -210,8 +197,8 @@ class ParameterNamespaceEditor(QWidget):
             self._set_parameters(parameters)
 
 
-class ColumnView(QColumnView):
-    """A QColumnView that does not show a preview widget."""
+class ParameterNamespaceView(QColumnView):
+    """A custom QColumnView used to display the values in a parameter namespace."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -223,6 +210,23 @@ class ColumnView(QColumnView):
         self.w.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setPreviewWidget(self.w)
         self.updatePreviewWidget.connect(self._on_update_preview_widget)
+
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.setResizeGripsVisible(True)
+
+        self.delegate = ParameterEditorDelegate(self)
+        self.setItemDelegate(self.delegate)
+        self.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+            | QAbstractItemView.EditTrigger.DoubleClicked
+            | QAbstractItemView.EditTrigger.EditKeyPressed
+        )
+        self.setSelectionMode(QColumnView.SelectionMode.SingleSelection)
+        self.setSelectionBehavior(QColumnView.SelectionBehavior.SelectItems)
 
     def _on_update_preview_widget(self, index):
         self.w.parentWidget().parentWidget().setMinimumWidth(0)
