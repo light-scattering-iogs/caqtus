@@ -120,6 +120,7 @@ class ErrorBarPlot(pyqtgraph.PlotWidget):
 
     async def update_data(self, data: polars.DataFrame) -> None:
         if data.is_empty():
+            self.clear()
             return
         average = await asyncio.to_thread(
             compute_stats_average, data, [self.y_column], [self.x_column]
