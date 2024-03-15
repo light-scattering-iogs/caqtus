@@ -11,8 +11,8 @@ python = "^3.11"
 
 numpy = "^1.24.2"
 attrs = "^23.1.0"
+core-device = {path = "../../../../core/core.device", develop = true}
 
-camera-runtime = {path = "../../camera/camera.runtime", develop = true}
 
 [tool.poetry.plugins."experiment_control.devices"]
 "ImagingSourceCameraDMK33GR0134" = "imaging_source.runtime:ImagingSourceCameraDMK33GR0134"

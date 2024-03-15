@@ -16,8 +16,8 @@ import numpy
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, in_, ge, le
+from core.device.camera import Camera, CameraTimeoutError
 
-from camera.runtime import Camera, CameraTimeoutError
 from .tisgrabber import declareFunctions, D, T, HGRABBER, IC_SUCCESS
 
 logger = logging.getLogger(__name__)
