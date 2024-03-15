@@ -147,11 +147,13 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setupUi(self)
         self.setCentralWidget(self.sequence_widget)
         paths_dock = QDockWidget("Sequences", self)
+        paths_dock.setObjectName("SequencesDock")
         paths_dock.setWidget(self._path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
         self.dock_menu.addAction(paths_dock.toggleViewAction())
         global_parameters_dock = QDockWidget("Global parameters", self)
         global_parameters_dock.setWidget(self._global_parameters_editor)
+        global_parameters_dock.setObjectName("GlobalParametersDock")
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, global_parameters_dock
         )
@@ -256,10 +258,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
         ui_settings = QSettings()
         state = ui_settings.value(f"{__name__}/state", defaultValue=None)
-        if isinstance(state, QByteArray):
+        if state is not None:
             self.restoreState(state)
         geometry = ui_settings.value(f"{__name__}/geometry", defaultValue=None)
-        if isinstance(geometry, QByteArray):
+        if geometry is not None:
             self.restoreGeometry(geometry)
 
     def save_window(self) -> None:
