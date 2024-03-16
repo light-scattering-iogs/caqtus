@@ -1,19 +1,23 @@
 import functools
+from typing import Optional
 
 from PySide6 import QtCore
 from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QTreeView, QMenu
-
+from PySide6.QtWidgets import QTreeView, QMenu, QWidget
 from core.session import ExperimentSessionMaker, PureSequencePath
 from core.session.result import unwrap
+
 from .delegate import ProgressDelegate
 from .model import PathHierarchyModel
+
 
 class AsyncPathHierarchyView(QTreeView):
     sequence_double_clicked = QtCore.Signal(PureSequencePath)
 
-    def __init__(self, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None):
+    def __init__(
+        self, session_maker: ExperimentSessionMaker, parent: Optional[QWidget] = None
+    ):
         super().__init__(parent)
         self.session_maker = session_maker
         self._model = PathHierarchyModel(session_maker, self)
@@ -21,7 +25,9 @@ class AsyncPathHierarchyView(QTreeView):
         self._proxy_model.setSourceModel(self._model)
         self.setModel(self._proxy_model)
         self.setSortingEnabled(True)
-        self.header().setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.header().setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.CustomContextMenu
+        )
         self.header().customContextMenuRequested.connect(self.show_header_menu)
         self.doubleClicked.connect(self.on_double_click)
         self._model.dataChanged.connect(self.update)
