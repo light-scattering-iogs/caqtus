@@ -15,6 +15,7 @@ core-session = {path = "../../core/core.session", develop = true}
 core-data-analysis = {path = "../../core/core.data_analysis", develop = true}
 matplotlib = "^3.8.3"
 pyqtgraph = "^0.13.4"
+qtutil = {path = "../qtutil", develop = true}
 
 
 
