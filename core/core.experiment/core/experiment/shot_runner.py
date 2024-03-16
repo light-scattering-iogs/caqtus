@@ -11,21 +11,37 @@ from util.concurrent import TaskGroup
 
 
 class ShotRunner(abc.ABC):
+    """Shot runners are responsible for running shots on the experiment.
+
+    This is an abstract base class.
+    It is meant to be subclassed for specific setups.
+    Subclasses must implement the :meth:`ShotRunner.run_shot` method.
+    """
+
     def __init__(self, devices: Mapping[DeviceName, Device]):
+        """Initialize the shot runner.
+
+        Args:
+            devices: A mapping containing the devices that the shot runner will use to
+            run shots.
+            The devices are not initialized yet.
+            They will be initialized when the shot runner is entered.
+        """
+
         self.devices = dict(devices)
         self.exit_stack = contextlib.ExitStack()
         self.thread_pool = concurrent.futures.ThreadPoolExecutor()
 
     def __enter__(self):
-        """Initialize the shot runner.
+        """Prepares the shot runner.
 
         The shot runner must initialize itself and acquire all necessary resources here.
         After this method is called, the shot runner must be ready to run shots.
 
         Typically, this method will initialize the required devices.
 
-        The base class implementation of this method enters its exit stack, initializes a thread pool, and enters the
-        context of each device.
+        The base class implementation of this method enters its exit stack,
+        initializes a thread pool, and enters the context of each device.
         """
 
         self.exit_stack.__enter__()
@@ -42,13 +58,27 @@ class ShotRunner(abc.ABC):
     def run_shot(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ) -> Mapping[DataLabel, Data]:
-        """Run the shot."""
+        """Run the shot.
+
+        This is the main method of the shot runner.
+        """
 
         raise NotImplementedError
 
     def update_device_parameters(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ):
+        """Update the parameters of the devices.
+
+        This method calls the :meth:`Device.update_parameters` method of each device
+        with the provided parameters.
+
+        Args:
+            device_parameters: A mapping matching device names to the parameters that
+            should be updated for each device.
+            The device names in the mapping must be a subset of the device names
+            provided to the shot runner at initialization.
+        """
         with TaskGroup(self.thread_pool, name="update devices") as g:
             for device_name, parameters in device_parameters.items():
                 g.create_task(
@@ -56,7 +86,13 @@ class ShotRunner(abc.ABC):
                 )
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """All device cleanups must be done here."""
+        """Shutdown the shot runner.
+
+        The shot runner must release all resources that it has acquired here.
+
+        The base class implementation of this method closes its exit stack, thus
+        exiting the context of each device.
+        """
 
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
