@@ -12,14 +12,6 @@ class Device(Protocol):
     subclass of Device.
     """
 
-    def __init__(self, **kwargs) -> None:
-        """The constructor of the class.
-
-        It is used to initialize the device parameters. No communication to the device
-        should be done here, it is only used to set the parameters."""
-
-        ...
-
     def get_name(self) -> DeviceName:
         """A unique name given to the device.
 
