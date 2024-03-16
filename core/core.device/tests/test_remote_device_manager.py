@@ -1,3 +1,4 @@
+import os
 from typing import Self
 
 from core.device import Device, DeviceName
@@ -23,7 +24,7 @@ class DeviceTest(Device):
         print("Exiting device")
 
     def __repr__(self):
-        return f"DeviceTest({self.name})"
+        return f"DeviceTest({self.name}, pid={os.getpid()})"
 
     def __getstate__(self):
         raise Exception("This object cannot be pickled")
@@ -37,8 +38,10 @@ Manager.register_device(DeviceTest)
 
 
 def test():
+    print(os.getpid())
     with Manager() as m:
         device = m.DeviceTest("test_device")
+        print(str(device))
         assert isinstance(device, DeviceProxy)
         with device as d:
             assert d.get_name() == "test_device"
