@@ -1,9 +1,10 @@
 import logging
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
 from tblib import pickling_support
 
+from .. import DeviceName
 from ..runtime import Device
 
 pickling_support.install()
@@ -45,3 +46,41 @@ class RemoteDeviceServer:
         server = manager.get_server()
         logger.info("Remote device server started")
         server.serve_forever()
+
+
+class RemoteDeviceManager(BaseManager):
+    @classmethod
+    def register_device(cls, device_type: type[Device]):
+        cls.register(
+            device_type.__name__,
+            device_type,
+            DeviceProxy,
+        )
+        cls.register("DeviceProxy", proxytype=DeviceProxy, create_method=False)
+
+
+class DeviceProxy(BaseProxy, Device):
+    _exposed_ = (
+        "__enter__",
+        "__exit__",
+        "__repr__",
+        "__str__",
+        "get_name",
+        "update_parameters",
+    )
+    _method_to_typeid_ = {"__enter__": "DeviceProxy"}
+
+    def __enter__(self):
+        return self._callmethod("__enter__")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
+
+    def __repr__(self) -> str:
+        return f'DeviceProxy(name="{self.get_name()}")'
+
+    def __str__(self) -> str:
+        return self._callmethod("__str__")  # type: ignore
+
+    def get_name(self) -> DeviceName:
+        return self._callmethod("get_name")  # type: ignore
