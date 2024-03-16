@@ -39,17 +39,38 @@ class ShotRunner(abc.ABC):
 
         Typically, this method will initialize the required devices.
 
-        The base class implementation of this method enters the context of each device.
+        The base class implementation of this method enters the context of all devices
+        concurrently and pushes them to the exit stack.
         """
 
         self.exit_stack.__enter__()
         try:
-            for device in self.devices.values():
-                self.exit_stack.enter_context(device)
+            asyncio.run(self._enter_async())
         except Exception as e:
+            # If an error occurs while initializing a device, we close the exit stack to
+            # ensure that all devices are exited.
             self.exit_stack.__exit__(type(e), e, e.__traceback__)
             raise
         return self
+
+    async def _enter_async(self):
+        # If a device raises an exception during initialization, it will not cancel the
+        # initialization of the other devices.
+        # This prevents a device from being entered without being pushed to the exit
+        # stack.
+        exceptions = await asyncio.gather(
+            *[self._enter_device(device) for device in self.devices.values()],
+            return_exceptions=True,
+        )
+        exceptions = [e for e in exceptions if e is not None]
+        if exceptions:
+            raise ExceptionGroup(
+                "Errors occurred while initializing devices", exceptions
+            )
+
+    async def _enter_device(self, device: Device) -> None:
+        await asyncio.to_thread(device.__enter__)
+        self.exit_stack.push(device)
 
     @abc.abstractmethod
     def run_shot(
