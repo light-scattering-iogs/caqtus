@@ -1,5 +1,5 @@
 import abc
-import concurrent.futures
+import asyncio
 import contextlib
 from collections.abc import Mapping
 from typing import Protocol, Any
@@ -7,7 +7,6 @@ from typing import Protocol, Any
 from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
 from core.session.shot import TimeLanes
 from core.types.data import DataLabel, Data
-from util.concurrent import TaskGroup
 
 
 class ShotRunner(abc.ABC):
@@ -31,7 +30,6 @@ class ShotRunner(abc.ABC):
 
         self.devices = dict(devices)
         self.exit_stack = contextlib.ExitStack()
-        self.thread_pool = concurrent.futures.ThreadPoolExecutor()
 
     def __enter__(self):
         """Prepares the shot runner.
@@ -41,12 +39,10 @@ class ShotRunner(abc.ABC):
 
         Typically, this method will initialize the required devices.
 
-        The base class implementation of this method enters its exit stack,
-        initializes a thread pool, and enters the context of each device.
+        The base class implementation of this method enters the context of each device.
         """
 
         self.exit_stack.__enter__()
-        self.exit_stack.enter_context(self.thread_pool)
         try:
             for device in self.devices.values():
                 self.exit_stack.enter_context(device)
@@ -81,10 +77,17 @@ class ShotRunner(abc.ABC):
             provided to the shot runner at initialization.
         """
 
-        with TaskGroup(self.thread_pool, name="update devices") as g:
+        asyncio.run(self._update_device_parameters_async(device_parameters))
+
+    async def _update_device_parameters_async(
+        self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
+    ):
+        async with asyncio.TaskGroup() as tg:
             for device_name, parameters in device_parameters.items():
-                g.create_task(
-                    update_device, device_name, self.devices[device_name], parameters
+                device = self.devices[device_name]
+
+                tg.create_task(
+                    asyncio.to_thread(update_device, device_name, device, parameters)
                 )
 
     def __exit__(self, exc_type, exc_value, traceback):
