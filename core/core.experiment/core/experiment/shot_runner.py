@@ -4,6 +4,7 @@ import contextlib
 from collections.abc import Mapping
 from typing import Protocol, Any
 
+import util.concurrent
 from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
 from core.session.shot import TimeLanes
 from core.types.data import DataLabel, Data
@@ -98,18 +99,29 @@ class ShotRunner(abc.ABC):
             provided to the shot runner at initialization.
         """
 
+        with util.concurrent.TaskGroup() as group:
+            for name, parameters in device_parameters.items():
+                group.create_task(update_device, name, self.devices[name], parameters)
+
         asyncio.run(self._update_device_parameters_async(device_parameters))
 
     async def _update_device_parameters_async(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ):
-        async with asyncio.TaskGroup() as tg:
-            for device_name, parameters in device_parameters.items():
-                device = self.devices[device_name]
-
-                tg.create_task(
-                    asyncio.to_thread(update_device, device_name, device, parameters)
-                )
+        # We don't use a TaskGroup here because if a device fails, it will cancel the
+        # other tasks, without verifying that the operations in threads are finished.
+        potential_exceptions = await asyncio.gather(
+            *[
+                asyncio.to_thread(update_device, name, self.devices[name], parameters)
+                for name, parameters in device_parameters.items()
+            ],
+            return_exceptions=True,
+        )
+        exceptions = [e for e in potential_exceptions if e is not None]
+        if exceptions:
+            raise ExceptionGroup(
+                "Errors occurred while updating device parameters", exceptions
+            )
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Shutdown the shot runner.
@@ -123,7 +135,9 @@ class ShotRunner(abc.ABC):
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
 
-def update_device(name: str, device: Device, parameters: Mapping[DeviceParameter, Any]):
+def update_device(
+    name: str, device: Device, parameters: Mapping[DeviceParameter, Any]
+) -> None:
     try:
         if parameters:
             device.update_parameters(**parameters)  # type: ignore
