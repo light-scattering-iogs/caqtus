@@ -8,6 +8,7 @@ import numpy as np
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
+from core.device import RuntimeDevice
 
 from core.device.camera.runtime import Camera, CameraTimeoutError
 from util import log_exception
@@ -19,7 +20,7 @@ logger.setLevel("DEBUG")
 
 
 @define(slots=False)
-class OrcaQuestCamera(Camera):
+class OrcaQuestCamera(Camera, RuntimeDevice):
     """
 
     Beware that not all roi values are allowed for this camera. In doubt, try to check if the ROI is valid using the
@@ -215,3 +216,13 @@ class OrcaQuestCamera(Camera):
             infos["driver version"] = camera.dev_getstring(DCAM_IDSTR.DRIVERVERSION)
             result.append(infos)
         return result
+
+    def close(self):
+        try:
+            if self.is_acquisition_in_progress():
+                self.stop_acquisition()
+        finally:
+            super().close()
+
+
+

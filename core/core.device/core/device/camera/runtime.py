@@ -8,11 +8,11 @@ import numpy
 from attrs import define, field
 from attrs.setters import frozen, validate, convert, pipe
 from attrs.validators import instance_of, deep_iterable
-
+from core.device import Device
 from core.types.image import Image, ImageLabel
 from util import log_exception
+
 from .configuration import RectangularROI
-from ..runtime import RuntimeDevice
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -22,8 +22,8 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-@define
-class Camera(RuntimeDevice, ABC):
+@define(slots=False)
+class Camera(Device, ABC):
     """Define the interface for a camera.
 
     This is an abstract class that must be subclassed to implement a specific camera.
@@ -191,13 +191,6 @@ class Camera(RuntimeDevice, ABC):
         """
 
         return self._pictures[self.picture_names.index(picture_name)]
-
-    def close(self):
-        try:
-            if self.is_acquisition_in_progress():
-                self.stop_acquisition()
-        finally:
-            super().close()
 
     def get_picture_names(self) -> tuple[ImageLabel, ...]:
         return self.picture_names
