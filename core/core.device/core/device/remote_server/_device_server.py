@@ -4,6 +4,7 @@ import logging
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
+from core.device.camera import Camera
 from core.device.sequencer import Sequencer
 from tblib import pickling_support
 
@@ -85,7 +86,7 @@ class DeviceProxy(BaseProxy, Device):
         "get_name",
         "update_parameters",
     )
-    _method_to_typeid_ = {"__enter__": "DeviceProxy"}
+    _method_to_typeid_ = {"__enter__": __name__}
 
     def get_name(self) -> DeviceName:
         return self._callmethod("get_name")  # type: ignore
@@ -114,7 +115,10 @@ class SequencerProxy(DeviceProxy, Sequencer):
         "has_sequence_finished",
         "initialize",
     )
-    _method_to_typeid_ = {"__enter__": "SequencerProxy"}
+    _method_to_typeid_ = {
+        **DeviceProxy._method_to_typeid_,
+        "__enter__": __name__,
+    }
 
     def start_sequence(self) -> None:
         return self._callmethod("start_sequence")
@@ -124,3 +128,30 @@ class SequencerProxy(DeviceProxy, Sequencer):
 
     def initialize(self) -> None:
         return self._callmethod("initialize")
+
+
+class CameraProxy(DeviceProxy, Camera):
+    """A proxy that exposes the methods of the :class:`Camera` interface."""
+
+    _exposed_ = DeviceProxy._exposed_ + (
+        "_is_acquisition_in_progress",
+        "_stop_acquisition",
+        "_start_acquisition",
+        "initialize",
+    )
+    _method_to_typeid_ = {
+        **DeviceProxy._method_to_typeid_,
+        "__enter__": __name__,
+    }
+
+    def _is_acquisition_in_progress(self) -> bool:
+        return self._callmethod("_is_acquisition_in_progress")  # type: ignore
+
+    def _stop_acquisition(self):
+        return self._callmethod("_stop_acquisition")
+
+    def initialize(self) -> None:
+        return self._callmethod("initialize")
+
+    def _start_acquisition(self, number_pictures: int):
+        return self._callmethod("_start_acquisition", (number_pictures,))
