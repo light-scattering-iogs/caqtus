@@ -154,9 +154,16 @@ class CameraProxy(DeviceProxy, Camera):
     """A proxy that exposes the methods of the :class:`Camera` interface."""
 
     _exposed_ = DeviceProxy._exposed_ + (
-        "_is_acquisition_in_progress",
-        "_stop_acquisition",
-        "_start_acquisition",
+        "start_acquisition",
+        "is_acquisition_in_progress",
+        "stop_acquisition",
+        "acquire_picture",
+        "acquire_all_pictures",
+        "read_picture",
+        "read_all_pictures",
+        "reset_acquisition",
+        "get_picture",
+        "get_picture_names",
         "initialize",
         "close",
     )
@@ -165,14 +172,44 @@ class CameraProxy(DeviceProxy, Camera):
         "__enter__": __name__,
     }
 
+    def _start_acquisition(self, number_pictures: int):
+        raise NotImplementedError
+
     def _is_acquisition_in_progress(self) -> bool:
-        return self._callmethod("_is_acquisition_in_progress")  # type: ignore
+        raise NotImplementedError
 
     def _stop_acquisition(self):
-        return self._callmethod("_stop_acquisition")
+        raise NotImplementedError
 
-    def _start_acquisition(self, number_pictures: int):
-        return self._callmethod("_start_acquisition", (number_pictures,))
+    def start_acquisition(self) -> None:
+        return self._callmethod("start_acquisition")
+
+    def is_acquisition_in_progress(self) -> bool:
+        return self._callmethod("is_acquisition_in_progress")
+
+    def stop_acquisition(self) -> None:
+        return self._callmethod("stop_acquisition")
+
+    def acquire_picture(self, picture_name: str) -> None:
+        return self._callmethod("acquire_picture", (picture_name,))
+
+    def acquire_all_pictures(self) -> None:
+        return self._callmethod("acquire_all_pictures")
+
+    def read_picture(self, picture_name: str) -> None:
+        return self._callmethod("read_picture", (picture_name,))
+
+    def read_all_pictures(self) -> None:
+        return self._callmethod("read_all_pictures")
+
+    def reset_acquisition(self) -> None:
+        return self._callmethod("reset_acquisition")
+
+    def get_picture(self, picture_name: str) -> None:
+        return self._callmethod("get_picture", (picture_name,))
+
+    def get_picture_names(self) -> None:
+        return self._callmethod("get_picture_names")
 
     def initialize(self) -> None:
         return self._callmethod("initialize")
