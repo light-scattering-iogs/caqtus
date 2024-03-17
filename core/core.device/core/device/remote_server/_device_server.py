@@ -129,6 +129,8 @@ class SequencerProxy(DeviceProxy, Sequencer):
     _exposed_ = DeviceProxy._exposed_ + (
         "start_sequence",
         "has_sequence_finished",
+        "wait_sequence_finished",
+        "get_trigger",
         "initialize",
         "close",
     )
@@ -142,6 +144,12 @@ class SequencerProxy(DeviceProxy, Sequencer):
 
     def has_sequence_finished(self) -> bool:
         return self._callmethod("has_sequence_finished")  # type: ignore
+
+    def wait_sequence_finished(self) -> None:
+        return self._callmethod("wait_sequence_finished")  # type: ignore
+
+    def get_trigger(self) -> None:
+        return self._callmethod("get_trigger")  # type: ignore
 
     def initialize(self) -> None:
         return self._callmethod("initialize")
