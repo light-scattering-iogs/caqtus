@@ -96,21 +96,32 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
     def update_parameters(self, timeout: float) -> None:
         self.timeout = timeout
 
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        if not ic.IC_StartLive(self._grabber_handle, 0):
+            error = RuntimeError(f"Failed to start live for {self}")
+            error.add_note("Check that the camera is not open by another program")
+            raise error
+        try:
+            yield self._acquire_pictures(exposures)
+        finally:
+            if ic.IC_StopLive(self._grabber_handle) != tis.IC_SUCCESS:
+                raise RuntimeError(f"Failed to stop live for {self}")
+
     def _set_trigger(self, external_trigger: bool):
         if (
             ic.IC_EnableTrigger(self._grabber_handle, int(external_trigger))
             != tis.IC_SUCCESS
         ):
             raise RuntimeError(
-                f"Failed to set trigger mode to {external_trigger} "
-                f"for {self.get_name()}"
+                f"Failed to set trigger mode to {external_trigger} for {self}"
             )
 
     def _set_format(self, format_: Literal["Y16", "Y800"]):
         if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[format_]):
-            raise RuntimeError("Failed to set format")
+            raise RuntimeError(f"Failed to set format for {self}")
 
-    def set_exposure(self, exposure: float):
+    def _set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(
             self._grabber_handle,
             tis.T("Exposure"),
@@ -118,30 +129,18 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
             ctypes.c_float(exposure),
         )
 
-    @contextlib.contextmanager
-    def acquire(self, exposures: list[float]):
-        if not ic.IC_StartLive(self._grabber_handle, 0):
-            error = RuntimeError(f"Failed to start live for {self.camera_name}")
-            error.add_note("Check that the camera is not open by another program")
-            raise error
-        try:
-            yield self._acquire_pictures(exposures)
-        finally:
-            if ic.IC_StopLive(self._grabber_handle) != tis.IC_SUCCESS:
-                raise RuntimeError(f"Failed to stop live for {self.camera_name}")
-
     def _acquire_pictures(self, exposures: list[float]) -> Generator[Image, None, None]:
         for exposure in exposures:
-            self.set_exposure(exposure)
-            self.snap_picture()
+            self._set_exposure(exposure)
+            self._snap_picture()
             im = self._read_picture_from_camera()
             yield im
 
-    def snap_picture(self) -> None:
-        timeout = int(self.timeout * 1e3) if not self.external_trigger else -1
+    def _snap_picture(self) -> None:
+        timeout = int(self.timeout * 1e3)
         result = ic.IC_SnapImage(self._grabber_handle, timeout)
         if result != tis.IC_SUCCESS:
-            raise CameraTimeoutError(f"Failed to acquire picture, error code: {result}")
+            raise CameraTimeoutError(f"Failed to acquire picture for {self}")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
         width = ctypes.c_long()

@@ -57,9 +57,8 @@ class Camera(Device, abc.ABC):
     ) -> contextlib.AbstractContextManager[Iterable[Image]]:
         """Acquire images with the given exposure times.
 
-        The result is a context manager that yields an iterable of images.
-        The number of images must be equal to the number of exposure times passed as
-        argument.
+        The result is a context manager that returns an iterable of images.
+        Each image in the iterable is acquired with the corresponding exposure time.
 
         This demonstrates how to use the context manager returned by this method:
 
