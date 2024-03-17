@@ -1,10 +1,10 @@
 import abc
-import asyncio
 import contextlib
 from collections.abc import Mapping
 from typing import Protocol, Any
 
-import util.concurrent
+import anyio
+import anyio.to_thread
 from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
 from core.session.shot import TimeLanes
 from core.types.data import DataLabel, Data
@@ -36,7 +36,8 @@ class ShotRunner(abc.ABC):
         """Prepares the shot runner.
 
         The shot runner must initialize itself and acquire all necessary resources here.
-        After this method is called, the shot runner must be ready to run shots.
+        After this method is called, the shot runner must be ready to have its
+        :meth:`run_shot` method called.
 
         Typically, this method will initialize the required devices.
 
@@ -46,7 +47,7 @@ class ShotRunner(abc.ABC):
 
         self.exit_stack.__enter__()
         try:
-            asyncio.run(self._enter_async())
+            anyio.run(self._enter_async, backend="trio")
         except Exception as e:
             # If an error occurs while initializing a device, we close the exit stack to
             # ensure that all devices are exited.
@@ -55,23 +56,14 @@ class ShotRunner(abc.ABC):
         return self
 
     async def _enter_async(self):
-        # If a device raises an exception during initialization, it will not cancel the
-        # initialization of the other devices.
-        # This prevents a device from being entered without being pushed to the exit
-        # stack.
-        exceptions = await asyncio.gather(
-            *[self._enter_device(device) for device in self.devices.values()],
-            return_exceptions=True,
-        )
-        exceptions = [e for e in exceptions if e is not None]
-        if exceptions:
-            raise ExceptionGroup(
-                "Errors occurred while initializing devices", exceptions
-            )
+        async with anyio.create_task_group() as tg:
+            for device in self.devices.values():
+                tg.start_soon(self._enter_device, device)
 
     async def _enter_device(self, device: Device) -> None:
-        await asyncio.to_thread(device.__enter__)
-        self.exit_stack.push(device)
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(device.__enter__)
+            self.exit_stack.push(device)
 
     @abc.abstractmethod
     def run_shot(
@@ -99,29 +91,19 @@ class ShotRunner(abc.ABC):
             provided to the shot runner at initialization.
         """
 
-        with util.concurrent.TaskGroup() as group:
-            for name, parameters in device_parameters.items():
-                group.create_task(update_device, name, self.devices[name], parameters)
-
-        asyncio.run(self._update_device_parameters_async(device_parameters))
+        anyio.run(
+            self._update_device_parameters_async, device_parameters, backend="trio"
+        )
 
     async def _update_device_parameters_async(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
     ):
-        # We don't use a TaskGroup here because if a device fails, it will cancel the
-        # other tasks, without verifying that the operations in threads are finished.
-        potential_exceptions = await asyncio.gather(
-            *[
-                asyncio.to_thread(update_device, name, self.devices[name], parameters)
-                for name, parameters in device_parameters.items()
-            ],
-            return_exceptions=True,
-        )
-        exceptions = [e for e in potential_exceptions if e is not None]
-        if exceptions:
-            raise ExceptionGroup(
-                "Errors occurred while updating device parameters", exceptions
-            )
+        async with anyio.create_task_group() as tg:
+            for name, parameters in device_parameters.items():
+                device = self.devices[name]
+                tg.start_soon(
+                    anyio.to_thread.run_sync, update_device, name, device, parameters
+                )
 
     def __exit__(self, exc_type, exc_value, traceback):
         """Shutdown the shot runner.

@@ -10,12 +10,13 @@ packages = [{include = "core"}]
 python = "^3.11"
 
 numpy = "^1.26.3"
+tblib = "^3.0.0"
+anyio = {extras = ["trio"], version = "^4.3.0"}
 
 core-session = {path = "../core.session", develop = true}
 core-types = {path = "../core.types", develop = true}
 core-device = {path = "../core.device", develop = true}
 core-compilation = {path = "../core.compilation", develop = true}
-tblib = "^3.0.0"
 
 
 [build-system]
