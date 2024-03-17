@@ -19,6 +19,9 @@ class Device(Protocol):
         This name must remain constant during the lifetime of the device.
         """
 
+    def __str__(self) -> str:
+        return self.get_name()
+
     def __enter__(self) -> Self:
         """Initiate the communication to the device.
 
