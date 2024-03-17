@@ -121,7 +121,7 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
                     raise RuntimeError(
                         f"Failed to allocate buffer for images: {self._read_last_error()}"
                     )
-                stack.callback(self._camera.buf_release)
+                self._add_closing_callback(self._camera.buf_release)
                 self._buffer_number_pictures = number_picture_in_buffer
             else:
                 if number_picture_in_buffer != self._buffer_number_pictures:
