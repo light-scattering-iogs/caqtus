@@ -54,14 +54,22 @@ class RemoteDeviceServer:
 
 class RemoteDeviceManager(BaseManager):
     @classmethod
-    def register_device(cls, device_type: type[Device], proxy_type: type[DeviceProxy]):
+    def register_device(
+        cls, device_type: str | type[Device], proxy_type: type[DeviceProxy]
+    ):
+        if isinstance(device_type, str):
+            cls.register(
+                typeid=device_type,
+                proxytype=proxy_type,
+            )
+        else:
+            cls.register(
+                typeid=device_type.__name__,
+                callable=device_type,
+                proxytype=proxy_type,
+            )
         cls.register(
-            device_type.__name__,
-            device_type,
-            proxy_type,
-        )
-        cls.register(
-            proxy_type._method_to_typeid_["__enter__"],
+            typeid=proxy_type._method_to_typeid_["__enter__"],
             proxytype=proxy_type,
             create_method=False,
         )
@@ -95,6 +103,7 @@ class DeviceProxy(BaseProxy, Device):
 
     def close(self) -> None:
         return self._callmethod("close")
+
     def get_name(self) -> DeviceName:
         return self._callmethod("get_name")  # type: ignore
 
