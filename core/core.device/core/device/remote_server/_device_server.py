@@ -78,7 +78,7 @@ class DeviceProxy(BaseProxy, Device):
     this one and add the methods you want to expose.
     """
 
-    _exposed_ = (
+    _exposed_: tuple[str, ...] = (
         "__enter__",
         "__exit__",
         "__repr__",
@@ -114,6 +114,7 @@ class SequencerProxy(DeviceProxy, Sequencer):
         "start_sequence",
         "has_sequence_finished",
         "initialize",
+        "close",
     )
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
@@ -129,6 +130,9 @@ class SequencerProxy(DeviceProxy, Sequencer):
     def initialize(self) -> None:
         return self._callmethod("initialize")
 
+    def close(self) -> None:
+        return self._callmethod("close")
+
 
 class CameraProxy(DeviceProxy, Camera):
     """A proxy that exposes the methods of the :class:`Camera` interface."""
@@ -138,6 +142,7 @@ class CameraProxy(DeviceProxy, Camera):
         "_stop_acquisition",
         "_start_acquisition",
         "initialize",
+        "close",
     )
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
@@ -150,8 +155,11 @@ class CameraProxy(DeviceProxy, Camera):
     def _stop_acquisition(self):
         return self._callmethod("_stop_acquisition")
 
+    def _start_acquisition(self, number_pictures: int):
+        return self._callmethod("_start_acquisition", (number_pictures,))
+
     def initialize(self) -> None:
         return self._callmethod("initialize")
 
-    def _start_acquisition(self, number_pictures: int):
-        return self._callmethod("_start_acquisition", (number_pictures,))
+    def close(self) -> None:
+        return self._callmethod("close")
