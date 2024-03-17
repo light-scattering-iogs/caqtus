@@ -2,15 +2,14 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 
 import attrs
+from core.device import Device
 
-
-from ..configuration import Trigger, SoftwareTrigger
+from ..configuration import Trigger
 from ..instructions import SequencerInstruction
-from ...runtime import RuntimeDevice
 
 
-@attrs.define
-class Sequencer(RuntimeDevice, ABC):
+@attrs.define(slots=False)
+class Sequencer(Device, ABC):
     """Base class for all sequencers.
 
     Fields:
@@ -24,7 +23,6 @@ class Sequencer(RuntimeDevice, ABC):
         on_setattr=attrs.setters.frozen, converter=int, validator=attrs.validators.ge(1)
     )
     trigger: Trigger = attrs.field(
-        factory=SoftwareTrigger,
         on_setattr=attrs.setters.frozen,
         validator=attrs.validators.instance_of(Trigger),
     )

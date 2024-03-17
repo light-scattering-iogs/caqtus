@@ -3,14 +3,15 @@ from contextlib import closing
 from functools import singledispatchmethod
 from typing import ClassVar
 
+import attrs
 import nidaqmx
 import nidaqmx.constants
 import nidaqmx.system
 import numpy
 import numpy as np
-from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
+from core.device import RuntimeDevice
 from core.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
 from core.device.sequencer.instructions import (
     SequencerInstruction,
@@ -26,8 +27,8 @@ logger.setLevel("DEBUG")
 ns = 1e-9
 
 
-@define(slots=False)
-class NI6738AnalogCard(Sequencer):
+@attrs.define(slots=False)
+class NI6738AnalogCard(Sequencer, RuntimeDevice):
     """Device class to program the NI6738 analog card.
 
     Fields:
@@ -39,13 +40,13 @@ class NI6738AnalogCard(Sequencer):
 
     channel_number: ClassVar[int] = 32
 
-    device_id: str = field(validator=instance_of(str), on_setattr=frozen)
-    time_step: int = field(validator=[instance_of(int), ge(2500)], on_setattr=frozen)
-    trigger: Trigger = field(
-        factory=ExternalClockOnChange, validator=instance_of(Trigger), on_setattr=frozen
+    time_step: int = attrs.field(
+        validator=[instance_of(int), ge(2500)], on_setattr=frozen
     )
+    device_id: str = attrs.field(validator=instance_of(str), on_setattr=frozen)
+    trigger: Trigger = attrs.field(validator=instance_of(Trigger), on_setattr=frozen)
 
-    _task: nidaqmx.Task = field(init=False)
+    _task: nidaqmx.Task = attrs.field(init=False)
 
     @classmethod
     def exposed_remote_methods(cls) -> tuple[str, ...]:

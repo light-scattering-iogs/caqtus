@@ -6,15 +6,7 @@ import attrs.setters
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge, le
-from pulsestreamer import (
-    PulseStreamer,
-    TriggerStart,
-    TriggerRearm,
-    Sequence as PulseStreamerSequence,
-    OutputState,
-    ClockSource,
-)
-
+from core.device import RuntimeDevice
 from core.device.sequencer import (
     Sequencer,
     Trigger,
@@ -28,14 +20,22 @@ from core.device.sequencer.instructions import (
     Concatenate,
     Repeat,
 )
+from pulsestreamer import (
+    PulseStreamer,
+    TriggerStart,
+    TriggerRearm,
+    Sequence as PulseStreamerSequence,
+    OutputState,
+    ClockSource,
+)
 
 logger = logging.getLogger(__name__)
 
 logger.setLevel(logging.DEBUG)
 
 
-@define
-class SwabianPulseStreamer(Sequencer):
+@define(slots=False)
+class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     """Device class to program the Swabian Pulse Streamer.
 
     Attributes:

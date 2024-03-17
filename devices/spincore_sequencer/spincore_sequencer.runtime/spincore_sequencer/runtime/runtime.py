@@ -8,6 +8,7 @@ import attrs.validators
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
+from core.device import RuntimeDevice
 from core.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
@@ -32,7 +33,7 @@ class SpincoreStatus(IntFlag):
 
 
 @define(slots=False)
-class SpincorePulseBlaster(Sequencer):
+class SpincorePulseBlaster(Sequencer, RuntimeDevice):
     """
 
     Fields:
