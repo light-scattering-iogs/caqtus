@@ -7,21 +7,20 @@ section SDK, install the IC Imaging Control C Library if you are using Windows.
 Untested on other platforms.
 """
 
+import contextlib
 import ctypes
 import logging
 import os
-import pathlib
-import threading
-from abc import ABC, abstractmethod
-from typing import Literal
+from collections.abc import Generator
+from typing import Literal, ClassVar
 
+import attrs
 import numpy
-from attrs import define, field
-from attrs.setters import frozen
-from attrs.validators import instance_of, in_, ge, le
+from core.device import RuntimeDevice
 from core.device.camera import Camera, CameraTimeoutError
+from core.types.image import Image
 
-from .tisgrabber import declareFunctions, D, T, HGRABBER, IC_SUCCESS
+from . import tisgrabber as tis
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -33,132 +32,115 @@ tisgrabber_path = (
 )
 
 ic = ctypes.cdll.LoadLibrary(tisgrabber_path)
-declareFunctions(ic)
+tis.declareFunctions(ic)
 
 ic.IC_InitLibrary(0)
 
 _MAP_FORMAT = {"Y16": 4, "Y800": 0}
 
 
-def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
-    height, width, bytes_per_pixel = image.shape
-    if format_ == "Y16":
-        new_image = numpy.zeros((height, width), dtype=numpy.uint16)
-        new_image[:, :] = image[:, :, 0] + image[:, :, 1] * 256
-    elif format_ == "Y800":
-        new_image = numpy.zeros((height, width), dtype=numpy.uint8)
-        new_image[:, :] = image[:, :, 0]
-    else:
-        raise NotImplementedError(f"Format {format_} not implemented")
-    return new_image
+@attrs.define(slots=False)
+class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
+    """Class to use an Imaging Source camera DMK33GR0134.
 
+    Warning:
+        This class only sets the camera exposure time, trigger and format.
+        Other settings such as brightness, contrast, sharpness, gamma, and gain are
+        not implemented and keep the value set before acquiring the camera.
 
-@define(slots=False)
-class ImagingSourceCamera(Camera, ABC):
-    """
-
-    Fields:
+    Attributes:
         camera_name: The name of the camera
+        format: The format of the camera.
+        Can be "Y16" or "Y800" respectively for 16-bit and 8-bit monochrome images.
     """
 
-    camera_name: str = field(validator=instance_of(str), on_setattr=frozen)
-    format: Literal["Y16", "Y800"] = field(
-        default="Y16", validator=in_(["Y16", "Y800"]), on_setattr=frozen
+    sensor_width: ClassVar[int] = 1280
+    sensor_height: ClassVar[int] = 960
+
+    camera_name: str = attrs.field(
+        validator=attrs.validators.instance_of(str), on_setattr=attrs.setters.frozen
+    )
+    format: Literal["Y16", "Y800"] = attrs.field(
+        validator=attrs.validators.in_(["Y16", "Y800"]), on_setattr=attrs.setters.frozen
     )
 
-    _grabber_handle: ctypes.POINTER(HGRABBER) = field(init=False)
-    _acquisition_thread: threading.Thread = field(init=False)
-    _temp_dir: pathlib.Path = field(init=False)
-    _settings_file: pathlib.Path = field(init=False)
+    _grabber_handle: ctypes.POINTER(tis.HGRABBER) = attrs.field(init=False)
+
+    @classmethod
+    def get_device_names(cls) -> list[str]:
+        """Return the names of the Imaging Source cameras connected to the computer."""
+
+        return [
+            tis.D(ic.IC_GetUniqueNamefromList(i))
+            for i in range(cls.get_device_counts())
+        ]
+
+    @classmethod
+    def get_device_counts(cls) -> int:
+        """Return the number of Imaging Source cameras connected to the computer."""
+
+        return ic.IC_GetDeviceCount()
 
     def initialize(self):
         super().initialize()
         self._grabber_handle = ic.IC_CreateGrabber()
-        self._add_closing_callback(ic.IC_ReleaseGrabber, self._grabber_handle)
+        self._close_stack.callback(ic.IC_ReleaseGrabber, self._grabber_handle)
 
-        ic.IC_OpenDevByUniqueName(self._grabber_handle, T(self.camera_name))
+        ic.IC_OpenDevByUniqueName(self._grabber_handle, tis.T(self.camera_name))
         if not ic.IC_IsDevValid(self._grabber_handle):
-            raise RuntimeError(f"{self.name}: camera {self.camera_name} not found")
-        self._add_closing_callback(
-            ic.IC_CloseDev, self._grabber_handle
-        )  # TODO: check if this is necessary
-        self._add_closing_callback(ic.IC_StopLive, self._grabber_handle)
+            raise RuntimeError(f"Camera {self.camera_name} not found")
 
-        logger.info(f"{self.name}: camera {self.camera_name} found")
+        self._set_format(self.format)
+        self._set_trigger(self.external_trigger)
 
-        self._setup_properties()
-        self._setup_trigger()
+    def update_parameters(self, timeout: float) -> None:
+        self.timeout = timeout
 
-        self.update_parameters(exposures=self.exposures, timeout=self.timeout)
-
-    @abstractmethod
-    def _setup_properties(self):
-        """Set up the properties of the camera after their reinitialization"""
-        ...
-
-    def _setup_trigger(self):
+    def _set_trigger(self, external_trigger: bool):
         if (
-            ic.IC_EnableTrigger(self._grabber_handle, int(self.external_trigger))
-            != IC_SUCCESS
+            ic.IC_EnableTrigger(self._grabber_handle, int(external_trigger))
+            != tis.IC_SUCCESS
         ):
-            raise RuntimeError(f"{self.name}: failed to set trigger mode")
-        logger.debug(f"{self.name}: trigger mode set to {self.external_trigger}")
-
-    def update_parameters(self, exposures: list[float], timeout: float) -> None:
-        """Update the exposures time of the camera"""
-
-        all_acquisitions_equal = all(exposures[0] == exposure for exposure in exposures)
-        logger.debug(f"{self.name}: all_acquisitions_equal = {all_acquisitions_equal}")
-
-        if not all_acquisitions_equal:
-            raise NotImplementedError(
-                f"Camera {self.name} does not support changing exposure"
+            raise RuntimeError(
+                f"Failed to set trigger mode to {external_trigger} "
+                f"for {self.get_name()}"
             )
 
-        super().update_parameters(exposures=exposures, timeout=timeout)
-        exposure = self.exposures[0]
-        self.set_exposure(exposure)
-        logger.debug(f"{self.name}: exposure set to {exposure}")
+    def _set_format(self, format_: Literal["Y16", "Y800"]):
+        if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[format_]):
+            raise RuntimeError("Failed to set format")
 
     def set_exposure(self, exposure: float):
         ic.IC_SetPropertyAbsoluteValue(
-            self._grabber_handle, T("Exposure"), T("Value"), ctypes.c_float(exposure)
+            self._grabber_handle,
+            tis.T("Exposure"),
+            tis.T("Value"),
+            ctypes.c_float(exposure),
         )
 
-    def _start_acquisition(self, number_pictures: int):
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
         if not ic.IC_StartLive(self._grabber_handle, 0):
-            raise RuntimeError(f"Failed to start live for {self.name}")
+            error = RuntimeError(f"Failed to start live for {self.camera_name}")
+            error.add_note("Check that the camera is not open by another program")
+            raise error
+        try:
+            yield self._acquire_pictures(exposures)
+        finally:
+            if ic.IC_StopLive(self._grabber_handle) != tis.IC_SUCCESS:
+                raise RuntimeError(f"Failed to stop live for {self.camera_name}")
 
-        def acquire_pictures():
-            for picture_number in range(number_pictures):
-                self._snap_picture(picture_number, self.timeout)
-                image = self._read_picture_from_camera()
-                self._pictures[picture_number] = image
+    def _acquire_pictures(self, exposures: list[float]) -> Generator[Image, None, None]:
+        for exposure in exposures:
+            self.set_exposure(exposure)
+            self.snap_picture()
+            im = self._read_picture_from_camera()
+            yield im
 
-        self._acquisition_thread = threading.Thread(target=acquire_pictures)
-        self._acquisition_thread.start()
-
-    def _is_acquisition_in_progress(self) -> bool:
-        if self._acquisition_thread is None:
-            return False
-        return self._acquisition_thread.is_alive()
-
-    def _stop_acquisition(self):
-        if self._acquisition_thread is not None:
-            self._acquisition_thread.join()
-            if ic.IC_StopLive(self._grabber_handle) != IC_SUCCESS:
-                raise RuntimeError(f"Failed to stop live for {self.name}")
-
-    def _snap_picture(self, picture_number: int, timeout: float) -> None:
-        logger.debug(f"Acquiring picture {picture_number} with timeout {timeout}...")
-        if self.external_trigger:
-            timeout = int(timeout * 1e3)
-        else:
-            timeout = -1
+    def snap_picture(self) -> None:
+        timeout = int(self.timeout * 1e3) if not self.external_trigger else -1
         result = ic.IC_SnapImage(self._grabber_handle, timeout)
-        if result == IC_SUCCESS:
-            logger.info(f"Picture {picture_number} acquired")
-        else:
+        if result != tis.IC_SUCCESS:
             raise CameraTimeoutError(f"Failed to acquire picture, error code: {result}")
 
     def _read_picture_from_camera(self) -> numpy.ndarray:
@@ -190,104 +172,68 @@ class ImagingSourceCamera(Camera, ABC):
         )
         return formatted_image[roi]
 
-    @classmethod
-    def get_device_counts(cls) -> int:
-        return ic.IC_GetDeviceCount()
 
-    @classmethod
-    def get_device_names(cls) -> list[str]:
-        return [
-            D(ic.IC_GetUniqueNamefromList(i)) for i in range(cls.get_device_counts())
-        ]
+def _reformat_image(image: numpy.ndarray, format_: str) -> numpy.ndarray:
+    height, width, bytes_per_pixel = image.shape
+    if format_ == "Y16":
+        new_image = numpy.zeros((height, width), dtype=numpy.uint16)
+        new_image[:, :] = image[:, :, 0] + image[:, :, 1] * 256
+    elif format_ == "Y800":
+        new_image = numpy.zeros((height, width), dtype=numpy.uint8)
+        new_image[:, :] = image[:, :, 0]
+    else:
+        raise NotImplementedError(f"Format {format_} not implemented")
+    return new_image
 
-    def save_state_to_file(self, file):
-        if (
-            ic.IC_SaveDeviceStateToFile(self._grabber_handle, T(str(file)))
-            != IC_SUCCESS
-        ):
-            raise RuntimeError(f"Failed to save state to file {file}")
+    # def save_state_to_file(self, file):
+    #     if (
+    #         ic.IC_SaveDeviceStateToFile(self._grabber_handle, T(str(file)))
+    #         != IC_SUCCESS
+    #     ):
+    #         raise RuntimeError(f"Failed to save state to file {file}")
 
-    def load_state_from_file(self, file):
-        if (
-            error := ic.IC_LoadDeviceStateFromFile(self._grabber_handle, T(str(file)))
-        ) != IC_SUCCESS:
-            raise RuntimeError(f"Failed to load state from file {file}: {error}")
+    # def load_state_from_file(self, file):
+    #     if (
+    #         error := ic.IC_LoadDeviceStateFromFile(self._grabber_handle, T(str(file)))
+    #     ) != IC_SUCCESS:
+    #         raise RuntimeError(f"Failed to load state from file {file}: {error}")
 
-    def reset_properties(self):
-        if (error := ic.IC_ResetProperties(self._grabber_handle)) != IC_SUCCESS:
-            pass  # not sure why, but the line above returns an error
-            # raise RuntimeError(f"Failed to reset properties for {self.name}: {error}")
+    # def reset_properties(self):
+    #     if (error := ic.IC_ResetProperties(self._grabber_handle)) != IC_SUCCESS:
+    #         pass  # not sure why, but the line above returns an error
+    #         # raise RuntimeError(f"Failed to reset properties for {self.name}: {error}")
 
-
-@define(slots=False)
-class ImagingSourceCameraDMK33GR0134(ImagingSourceCamera):
-    """ImagingSource camera DMK33GR0134
-
-    Fields:
-        brightness: Brightness of the camera
-        contrast: Contrast of the camera
-        sharpness: Sharpness of the camera
-        gamma: Gamma of the camera
-        gain: Gain of the camera, in dB
-    """
-
-    brightness: int = field(
-        default=0,
-        validator=(instance_of(int), in_(range(0, 4096))),
-        on_setattr=frozen,
-    )
-    contrast: int = field(
-        default=0,
-        validator=(instance_of(int), in_(range(-10, 31))),
-        on_setattr=frozen,
-    )
-    sharpness: int = field(
-        default=0,
-        validator=(instance_of(int), in_(range(0, 15))),
-        on_setattr=frozen,
-    )
-    gamma: float = field(
-        default=1.0,
-        validator=(instance_of(float), ge(0.01), le(5.0)),
-        on_setattr=frozen,
-    )
-    gain: float = field(
-        default=0,
-        validator=(instance_of(float), ge(0), le(18.04)),
-        on_setattr=frozen,
-    )
-
-    def _setup_properties(self):
-        if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[self.format]):
-            raise RuntimeError("Failed to set format")
-        if not ic.IC_SetPropertyValue(
-            self._grabber_handle, T("Brightness"), T("Value"), self.brightness
-        ):
-            raise RuntimeError("Failed to set brightness")
-        if not ic.IC_SetPropertyValue(
-            self._grabber_handle, T("Contrast"), T("Value"), self.contrast
-        ):
-            raise RuntimeError("Failed to set contrast")
-        if not ic.IC_SetPropertyValue(
-            self._grabber_handle, T("Sharpness"), T("Value"), self.sharpness
-        ):
-            raise RuntimeError("Failed to set sharpness")
-        if not ic.IC_SetPropertyAbsoluteValue(
-            self._grabber_handle, T("Gamma"), T("Value"), ctypes.c_float(self.gamma)
-        ):
-            raise RuntimeError("Failed to set gamma")
-        if not ic.IC_SetPropertySwitch(self._grabber_handle, T("Gain"), T("Auto"), 0):
-            raise RuntimeError("Failed to set gain to manual")
-        if not ic.IC_SetPropertyAbsoluteValue(
-            self._grabber_handle, T("Gain"), T("Value"), ctypes.c_float(self.gain)
-        ):
-            raise RuntimeError("Failed to set gain")
-        if not ic.IC_SetPropertySwitch(
-            self._grabber_handle, T("Exposure"), T("Auto"), 0
-        ):
-            raise RuntimeError("Failed to set exposure to manual")
-
-        if not ic.IC_SetPropertySwitch(
-            self._grabber_handle, T("Exposure"), T("Auto"), 0
-        ):
-            raise RuntimeError("Failed to set exposure to manual")
+    # def _setup_properties(self):
+    #     if not ic.IC_SetFormat(self._grabber_handle, _MAP_FORMAT[self.format]):
+    #         raise RuntimeError("Failed to set format")
+    #     if not ic.IC_SetPropertyValue(
+    #         self._grabber_handle, T("Brightness"), T("Value"), self.brightness
+    #     ):
+    #         raise RuntimeError("Failed to set brightness")
+    #     if not ic.IC_SetPropertyValue(
+    #         self._grabber_handle, T("Contrast"), T("Value"), self.contrast
+    #     ):
+    #         raise RuntimeError("Failed to set contrast")
+    #     if not ic.IC_SetPropertyValue(
+    #         self._grabber_handle, T("Sharpness"), T("Value"), self.sharpness
+    #     ):
+    #         raise RuntimeError("Failed to set sharpness")
+    #     if not ic.IC_SetPropertyAbsoluteValue(
+    #         self._grabber_handle, T("Gamma"), T("Value"), ctypes.c_float(self.gamma)
+    #     ):
+    #         raise RuntimeError("Failed to set gamma")
+    #     if not ic.IC_SetPropertySwitch(self._grabber_handle, T("Gain"), T("Auto"), 0):
+    #         raise RuntimeError("Failed to set gain to manual")
+    #     if not ic.IC_SetPropertyAbsoluteValue(
+    #         self._grabber_handle, T("Gain"), T("Value"), ctypes.c_float(self.gain)
+    #     ):
+    #         raise RuntimeError("Failed to set gain")
+    #     if not ic.IC_SetPropertySwitch(
+    #         self._grabber_handle, T("Exposure"), T("Auto"), 0
+    #     ):
+    #         raise RuntimeError("Failed to set exposure to manual")
+    #
+    #     if not ic.IC_SetPropertySwitch(
+    #         self._grabber_handle, T("Exposure"), T("Auto"), 0
+    #     ):
+    #         raise RuntimeError("Failed to set exposure to manual")

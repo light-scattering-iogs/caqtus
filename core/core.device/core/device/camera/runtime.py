@@ -38,6 +38,15 @@ class Camera(Device, abc.ABC):
     timeout: float = field(converter=float, on_setattr=convert)
     external_trigger: bool = field(validator=instance_of(bool), on_setattr=frozen)
 
+    @roi.validator  # type: ignore
+    def _validate_roi(self, _, value: RectangularROI):
+        if value.original_image_size != (self.sensor_width, self.sensor_height):
+            raise ValueError(
+                f"The original image size of the ROI {value.original_image_size} "
+                f"does not match the sensor size "
+                f"{self.sensor_width}x{self.sensor_height}"
+            )
+
     @abc.abstractmethod
     def update_parameters(self, timeout: float) -> None:
         raise NotImplementedError
