@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import logging
+from collections.abc import Iterator
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
 from core.device.camera import Camera
 from core.device.sequencer import Sequencer
+from core.types.image import Image
 from tblib import pickling_support
 
 from .. import DeviceName
@@ -71,6 +74,23 @@ class RemoteDeviceManager(BaseManager):
         cls.register(
             typeid=proxy_type._method_to_typeid_["__enter__"],
             proxytype=proxy_type,
+            create_method=False,
+        )
+
+    def __init_subclass__(cls):
+        cls.register(
+            typeid=ContextManagerProxy.__name__,
+            proxytype=ContextManagerProxy,
+            create_method=False,
+        )
+        cls.register(
+            typeid=IterableProxy.__name__,
+            proxytype=IterableProxy,
+            create_method=False,
+        )
+        cls.register(
+            typeid=IteratorProxy.__name__,
+            proxytype=IteratorProxy,
             create_method=False,
         )
 
@@ -142,61 +162,49 @@ class SequencerProxy(DeviceProxy, Sequencer):
         return self._callmethod("get_trigger")  # type: ignore
 
 
+class IteratorProxy(BaseProxy, Iterator):
+    """A proxy that transmit the calls to the underlying iterator."""
+
+    _exposed_ = ("__next__",)
+
+    def __next__(self):
+        return self._callmethod("__next__")
+
+
+class IterableProxy(BaseProxy, Iterable):
+    """A proxy that transmit the calls to the underlying iterable."""
+
+    _exposed_ = ("__iter__",)
+    _method_to_typeid_ = {"__iter__": IteratorProxy.__qualname__}
+
+    def __iter__(self):
+        return self._callmethod("__iter__")
+
+
+class ContextManagerProxy(BaseProxy, contextlib.AbstractContextManager):
+    """A proxy that transmit the calls to the underlying context manager."""
+
+    _exposed_ = ("__enter__", "__exit__")
+    _method_to_typeid_ = {"__enter__": IterableProxy.__qualname__}
+
+    def __enter__(self):
+        return self._callmethod("__enter__")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
+
+
 class CameraProxy(DeviceProxy, Camera):
     """A proxy that exposes the methods of the :class:`Camera` interface."""
 
-    _exposed_ = DeviceProxy._exposed_ + (
-        "start_acquisition",
-        "is_acquisition_in_progress",
-        "stop_acquisition",
-        "acquire_picture",
-        "acquire_all_pictures",
-        "read_picture",
-        "read_all_pictures",
-        "reset_acquisition",
-        "get_picture",
-        "get_picture_names",
-    )
+    _exposed_ = DeviceProxy._exposed_ + ("acquire",)
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
         "__enter__": __name__,
+        "acquire": ContextManagerProxy.__qualname__,
     }
 
-    def _start_acquisition(self, number_pictures: int):
-        raise NotImplementedError
-
-    def _is_acquisition_in_progress(self) -> bool:
-        raise NotImplementedError
-
-    def _stop_acquisition(self):
-        raise NotImplementedError
-
-    def start_acquisition(self) -> None:
-        return self._callmethod("start_acquisition")
-
-    def is_acquisition_in_progress(self) -> bool:
-        return self._callmethod("is_acquisition_in_progress")
-
-    def stop_acquisition(self) -> None:
-        return self._callmethod("stop_acquisition")
-
-    def acquire_picture(self, picture_name: str) -> None:
-        return self._callmethod("acquire_picture", (picture_name,))
-
-    def acquire_all_pictures(self) -> None:
-        return self._callmethod("acquire_all_pictures")
-
-    def read_picture(self, picture_name: str) -> None:
-        return self._callmethod("read_picture", (picture_name,))
-
-    def read_all_pictures(self) -> None:
-        return self._callmethod("read_all_pictures")
-
-    def reset_acquisition(self) -> None:
-        return self._callmethod("reset_acquisition")
-
-    def get_picture(self, picture_name: str) -> None:
-        return self._callmethod("get_picture", (picture_name,))
-
-    def get_picture_names(self) -> None:
-        return self._callmethod("get_picture_names")
+    def acquire(
+        self, exposure_times: list[float]
+    ) -> contextlib.AbstractContextManager[Iterable[Image]]:
+        return self._callmethod("acquire", (exposure_times,))  # type: ignore
