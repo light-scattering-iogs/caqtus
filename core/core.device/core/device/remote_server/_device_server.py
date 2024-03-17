@@ -93,16 +93,8 @@ class DeviceProxy(BaseProxy, Device):
         "__str__",
         "get_name",
         "update_parameters",
-        "initialize",
-        "close",
     )
     _method_to_typeid_ = {"__enter__": __name__}
-
-    def initialize(self) -> None:
-        return self._callmethod("initialize")
-
-    def close(self) -> None:
-        return self._callmethod("close")
 
     def get_name(self) -> DeviceName:
         return self._callmethod("get_name")  # type: ignore
@@ -131,8 +123,6 @@ class SequencerProxy(DeviceProxy, Sequencer):
         "has_sequence_finished",
         "wait_sequence_finished",
         "get_trigger",
-        "initialize",
-        "close",
     )
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
@@ -151,12 +141,6 @@ class SequencerProxy(DeviceProxy, Sequencer):
     def get_trigger(self) -> None:
         return self._callmethod("get_trigger")  # type: ignore
 
-    def initialize(self) -> None:
-        return self._callmethod("initialize")
-
-    def close(self) -> None:
-        return self._callmethod("close")
-
 
 class CameraProxy(DeviceProxy, Camera):
     """A proxy that exposes the methods of the :class:`Camera` interface."""
@@ -172,8 +156,6 @@ class CameraProxy(DeviceProxy, Camera):
         "reset_acquisition",
         "get_picture",
         "get_picture_names",
-        "initialize",
-        "close",
     )
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
@@ -218,9 +200,3 @@ class CameraProxy(DeviceProxy, Camera):
 
     def get_picture_names(self) -> None:
         return self._callmethod("get_picture_names")
-
-    def initialize(self) -> None:
-        return self._callmethod("initialize")
-
-    def close(self) -> None:
-        return self._callmethod("close")
