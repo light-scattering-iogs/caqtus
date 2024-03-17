@@ -1,7 +1,7 @@
 import contextlib
 import logging
 import time
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Optional
 
 from attrs import define, field
 from attrs.setters import frozen
@@ -35,7 +35,7 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
     camera_number: int = field(validator=instance_of(int), on_setattr=frozen)
 
     _camera: Dcam = field(init=False)
-    _buffer_number_pictures: int = field(init=False, default=0)
+    _buffer_number_pictures: Optional[int] = field(init=False, default=None)
 
     def _read_last_error(self) -> str:
         return DCAMERR(self._camera.lasterr()).name
@@ -116,11 +116,20 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
             number_pictures = len(exposures)
             # We can't allocate 0 pictures in the buffer, so we allocate at least 1
             number_picture_in_buffer = number_pictures if number_pictures else 1
-            if not self._camera.buf_alloc(number_picture_in_buffer):
-                raise RuntimeError(
-                    f"Failed to allocate buffer for images: {self._read_last_error()}"
-                )
-            stack.callback(self._camera.buf_release)
+            if self._buffer_number_pictures is None:
+                if not self._camera.buf_alloc(number_picture_in_buffer):
+                    raise RuntimeError(
+                        f"Failed to allocate buffer for images: {self._read_last_error()}"
+                    )
+                stack.callback(self._camera.buf_release)
+                self._buffer_number_pictures = number_picture_in_buffer
+            else:
+                if number_picture_in_buffer != self._buffer_number_pictures:
+                    raise ValueError(
+                        f"Can't change the number of pictures in the buffer from"
+                        f" {self._buffer_number_pictures} to {number_picture_in_buffer}"
+                    )
+
             if not self._camera.cap_start(bSequence=True):
                 raise RuntimeError(
                     f"Can't start acquisition for {self}: {self._read_last_error()}"
