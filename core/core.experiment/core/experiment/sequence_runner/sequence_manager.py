@@ -409,7 +409,7 @@ class SequenceManager(AbstractContextManager):
             except* exceptions_to_retry as e:
                 errors.extend(e.exceptions)
                 logger.warning(
-                    f"Attempt {attempt+1}/{number_of_attempts} failed with {e}"
+                    f"Attempt {attempt+1}/{number_of_attempts} failed", exc_info=e
                 )
             else:
                 return ShotData(
