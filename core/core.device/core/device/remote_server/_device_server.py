@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
@@ -50,13 +52,17 @@ class RemoteDeviceServer:
 
 class RemoteDeviceManager(BaseManager):
     @classmethod
-    def register_device(cls, device_type: type[Device]):
+    def register_device(cls, device_type: type[Device], proxy_type: type[DeviceProxy]):
         cls.register(
             device_type.__name__,
             device_type,
-            DeviceProxy,
+            proxy_type,
         )
-        cls.register("DeviceProxy", proxytype=DeviceProxy, create_method=False)
+        cls.register(
+            proxy_type._method_to_typeid_["__enter__"],
+            proxytype=proxy_type,
+            create_method=False,
+        )
 
 
 class DeviceProxy(BaseProxy, Device):

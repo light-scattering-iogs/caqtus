@@ -34,7 +34,7 @@ class Manager(RemoteDeviceManager):
     pass
 
 
-Manager.register_device(DeviceTest)
+Manager.register_device(DeviceTest, DeviceProxy)
 
 
 def test():
