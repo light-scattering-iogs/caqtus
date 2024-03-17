@@ -4,6 +4,7 @@ import logging
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
+from core.device.sequencer import Sequencer
 from tblib import pickling_support
 
 from .. import DeviceName
@@ -66,6 +67,16 @@ class RemoteDeviceManager(BaseManager):
 
 
 class DeviceProxy(BaseProxy, Device):
+    """Proxy for a device running in a different process.
+
+    Proxies of this type expose the methods defined in the :class:`Device` interface.
+    It means that if you have a proxy of this type, you can use it like a regular
+    device, and it will relay the calls to the underlying device running in a different
+    process.
+    If you want to expose more methods, you should create a new class that inherits from
+    this one and add the methods you want to expose.
+    """
+
     _exposed_ = (
         "__enter__",
         "__exit__",
@@ -76,8 +87,14 @@ class DeviceProxy(BaseProxy, Device):
     )
     _method_to_typeid_ = {"__enter__": "DeviceProxy"}
 
+    def get_name(self) -> DeviceName:
+        return self._callmethod("get_name")  # type: ignore
+
     def __enter__(self):
         return self._callmethod("__enter__")
+
+    def update_parameters(self, *args, **kwargs):
+        return self._callmethod("update_parameters", args, kwargs)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
@@ -88,5 +105,22 @@ class DeviceProxy(BaseProxy, Device):
     def __str__(self) -> str:
         return self._callmethod("__str__")  # type: ignore
 
-    def get_name(self) -> DeviceName:
-        return self._callmethod("get_name")  # type: ignore
+
+class SequencerProxy(DeviceProxy, Sequencer):
+    """A proxy that exposes the methods of the :class:`Sequencer` interface."""
+
+    _exposed_ = DeviceProxy._exposed_ + (
+        "start_sequence",
+        "has_sequence_finished",
+        "initialize",
+    )
+    _method_to_typeid_ = {"__enter__": "SequencerProxy"}
+
+    def start_sequence(self) -> None:
+        return self._callmethod("start_sequence")
+
+    def has_sequence_finished(self) -> bool:
+        return self._callmethod("has_sequence_finished")  # type: ignore
+
+    def initialize(self) -> None:
+        return self._callmethod("initialize")
