@@ -85,9 +85,16 @@ class DeviceProxy(BaseProxy, Device):
         "__str__",
         "get_name",
         "update_parameters",
+        "initialize",
+        "close",
     )
     _method_to_typeid_ = {"__enter__": __name__}
 
+    def initialize(self) -> None:
+        return self._callmethod("initialize")
+
+    def close(self) -> None:
+        return self._callmethod("close")
     def get_name(self) -> DeviceName:
         return self._callmethod("get_name")  # type: ignore
 
