@@ -78,17 +78,26 @@ class ShotRunner(abc.ABC):
 
     def update_device_parameters(
         self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
-    ):
+    ) -> None:
         """Update the parameters of the devices.
 
         This method calls the :meth:`Device.update_parameters` method of each device
         with the provided parameters.
+
+        The default implementation updates devices concurrently in separate threads to
+        reduce the total update time.
 
         Args:
             device_parameters: A mapping matching device names to the parameters that
             should be updated for each device.
             The device names in the mapping must be a subset of the device names
             provided to the shot runner at initialization.
+
+        Raises:
+            KeyError: If a device name in the mapping is not present in the shot runner
+            devices.
+            ExceptionGroup: If errors occur while updating some devices, they are
+            raised inside an exception group.
         """
 
         anyio.run(
