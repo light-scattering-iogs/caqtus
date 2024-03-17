@@ -9,9 +9,9 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
 from core.device import RuntimeDevice
-
 from core.device.camera.runtime import Camera, CameraTimeoutError
 from util import log_exception
+
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR
 
@@ -23,8 +23,8 @@ logger.setLevel("DEBUG")
 class OrcaQuestCamera(Camera, RuntimeDevice):
     """
 
-    Beware that not all roi values are allowed for this camera. In doubt, try to check if the ROI is valid using the
-    HCImageLive software.
+    Beware that not all roi values are allowed for this camera.
+    In doubt, try to check if the ROI is valid using the HCImageLive software.
 
     Fields:
         camera_number: The camera number used to identify the specific camera.
@@ -39,10 +39,6 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
     _camera: Dcam = field(init=False)
     _thread_pool_executor: ThreadPoolExecutor = field(init=False)
     _future: Optional[Future] = field(default=None, init=False)
-
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + ("list_properties",)
 
     def _read_last_error(self) -> str:
         return DCAMERR(self._camera.lasterr()).name
@@ -223,6 +219,3 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
                 self.stop_acquisition()
         finally:
             super().close()
-
-
-

@@ -76,10 +76,6 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
             )
         return value
 
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + ("run",)
-
     @log_exception(logger)
     def initialize(self) -> None:
         super().initialize()

@@ -134,25 +134,6 @@ class RuntimeDevice(Device, abc.ABC):
     def get_name(self) -> DeviceName:
         return self.name
 
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        """Returns methods usable when running a device on a remote server.
-
-        When running this device on a server, not all methods can be called by default,
-        but only those that are returned by this function.
-        """
-
-        # Here we add the methods required by the Device interface so that even a proxy
-        # to the device has the required methods.
-        return (
-            "__enter__",
-            "__exit__",
-            "initialize",
-            "close",
-            "update_parameters",
-            "get_name",
-        )
-
 
 class UninitializedDeviceError(Exception):
     """Raised when a device is used before being initialized"""

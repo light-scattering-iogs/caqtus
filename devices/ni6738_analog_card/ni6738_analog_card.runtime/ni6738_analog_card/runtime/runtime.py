@@ -48,10 +48,6 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     _task: nidaqmx.Task = attrs.field(init=False)
 
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + ("run", "stop")
-
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
         if not isinstance(value, ExternalClockOnChange):

@@ -176,7 +176,7 @@ class Camera(Device, ABC):
     def read_all_pictures(self) -> dict[ImageLabel, Image]:
         if not self.are_all_pictures_acquired():
             raise CameraTimeoutError(
-                f"Not all pictures have been acquired for camera {self.name}"
+                f"Not all pictures have been acquired for camera {self.get_name()}"
             )
         else:
             return {
@@ -194,21 +194,6 @@ class Camera(Device, ABC):
 
     def get_picture_names(self) -> tuple[ImageLabel, ...]:
         return self.picture_names
-
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + (
-            "start_acquisition",
-            "is_acquisition_in_progress",
-            "stop_acquisition",
-            "acquire_picture",
-            "acquire_all_pictures",
-            "read_picture",
-            "read_all_pictures",
-            "reset_acquisition",
-            "get_picture",
-            "get_picture_names",
-        )
 
     @property
     def number_pictures_to_acquire(self):

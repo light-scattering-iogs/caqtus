@@ -92,23 +92,6 @@ class Sequencer(Device, ABC):
     def get_trigger(self) -> Trigger:
         return self.trigger
 
-    @classmethod
-    def exposed_remote_methods(cls) -> tuple[str, ...]:
-        return super().exposed_remote_methods() + (
-            "start_sequence",
-            "has_sequence_finished",
-            "wait_sequence_finished",
-            "get_trigger",
-        )
-
-    def close(self) -> None:
-        try:
-            self.wait_sequence_finished()
-        except SequenceNotStartedError:
-            pass
-        finally:
-            super().close()
-
 
 class SequencerProgrammingError(RuntimeError):
     pass
