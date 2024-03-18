@@ -75,23 +75,6 @@ class RemoteDeviceManager(BaseManager):
             create_method=False,
         )
 
-    def __init_subclass__(cls):
-        cls.register(
-            typeid=ContextManagerProxy.__name__,
-            proxytype=ContextManagerProxy,
-            create_method=False,
-        )
-        cls.register(
-            typeid=IterableProxy.__name__,
-            proxytype=IterableProxy,
-            create_method=False,
-        )
-        cls.register(
-            typeid=IteratorProxy.__name__,
-            proxytype=IteratorProxy,
-            create_method=False,
-        )
-
 
 class DeviceProxy(BaseProxy, Device):
     """Proxy for a device running in a different process.
