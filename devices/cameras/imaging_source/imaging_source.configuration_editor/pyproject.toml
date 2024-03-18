@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "imaging-source-configuration-editor"
+version = "0.1.0"
+description = ""
+authors = ["Damien Bloch <damien.bloch@institutoptique>"]
+readme = "README.md"
+packages = [{include = "imaging_source"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+pyside6 = "^6.6.2"
+condetrol = {path = "../../../../ui/condetrol", develop = true}
+util = {path = "../../../../util", develop = true}
+imaging-source-configuration = {path = "../imaging_source.configuration", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
