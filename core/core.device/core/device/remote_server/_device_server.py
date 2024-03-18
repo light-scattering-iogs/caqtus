@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import contextlib
 import logging
-from collections.abc import Iterator
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
@@ -162,49 +160,24 @@ class SequencerProxy(DeviceProxy, Sequencer):
         return self._callmethod("get_trigger")  # type: ignore
 
 
-class IteratorProxy(BaseProxy, Iterator):
-    """A proxy that transmit the calls to the underlying iterator."""
-
-    _exposed_ = ("__next__",)
-
-    def __next__(self):
-        return self._callmethod("__next__")
-
-
-class IterableProxy(BaseProxy, Iterable):
-    """A proxy that transmit the calls to the underlying iterable."""
-
-    _exposed_ = ("__iter__",)
-    _method_to_typeid_ = {"__iter__": IteratorProxy.__qualname__}
-
-    def __iter__(self):
-        return self._callmethod("__iter__")
-
-
-class ContextManagerProxy(BaseProxy, contextlib.AbstractContextManager):
-    """A proxy that transmit the calls to the underlying context manager."""
-
-    _exposed_ = ("__enter__", "__exit__")
-    _method_to_typeid_ = {"__enter__": IterableProxy.__qualname__}
-
-    def __enter__(self):
-        return self._callmethod("__enter__")
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
-
-
 class CameraProxy(DeviceProxy, Camera):
     """A proxy that exposes the methods of the :class:`Camera` interface."""
 
-    _exposed_ = DeviceProxy._exposed_ + ("acquire",)
+    _exposed_ = DeviceProxy._exposed_ + (
+        "_start_acquisition",
+        "_read_image",
+        "_stop_acquisition",
+    )
     _method_to_typeid_ = {
         **DeviceProxy._method_to_typeid_,
         "__enter__": __name__,
-        "acquire": ContextManagerProxy.__qualname__,
     }
 
-    def acquire(
-        self, exposure_times: list[float]
-    ) -> contextlib.AbstractContextManager[Iterable[Image]]:
-        return self._callmethod("acquire", (exposure_times,))  # type: ignore
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        return self._callmethod("_start_acquisition", (exposures,))
+
+    def _read_image(self, exposure: float) -> Image:
+        return self._callmethod("_read_image", (exposure,))  # type: ignore
+
+    def _stop_acquisition(self) -> None:
+        return self._callmethod("_stop_acquisition")
