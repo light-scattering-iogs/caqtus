@@ -1,3 +1,3 @@
-from .configuration import ImagingSourceCameraDMK33GR0134Configuration
+from .configuration import ImagingSourceCameraConfiguration
 
-__all__ = ["ImagingSourceCameraDMK33GR0134Configuration"]
+__all__ = ["ImagingSourceCameraConfiguration"]
