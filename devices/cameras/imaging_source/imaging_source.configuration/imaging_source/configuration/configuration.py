@@ -30,6 +30,7 @@ class ImagingSourceCameraConfiguration(CameraConfiguration):
         extra = {
             DeviceParameter("camera_name"): self.camera_name,
             DeviceParameter("format"): self.format,
+            DeviceParameter("timeout"): 1,
         }
         return super().get_device_init_args() | extra
 
