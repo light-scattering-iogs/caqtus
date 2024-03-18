@@ -1,11 +1,16 @@
 import contextlib
 import os
+import time
 from typing import Self, Iterable
 
 from core.device import Device, DeviceName
 from core.device.camera import Camera
-from core.device.remote_server import RemoteDeviceManager, DeviceProxy, CameraProxy, \
-    SequencerProxy
+from core.device.remote_server import (
+    RemoteDeviceManager,
+    DeviceProxy,
+    CameraProxy,
+    SequencerProxy,
+)
 from core.device.sequencer import Sequencer
 from core.device.sequencer.instructions import SequencerInstruction
 from core.types.image import Image
@@ -45,6 +50,7 @@ class TestCamera(Camera):
     def acquire(
         self, exposures: list[float]
     ) -> contextlib.AbstractContextManager[Iterable[Image]]:
+        print(f"entered at {time.time()}")
         yield self.yield_images(exposures)
 
     def yield_images(self, exposures: list[float]) -> Iterable[Image]:
@@ -129,7 +135,7 @@ def test_2():
             roi=RectangularROI((100, 100), 0, 100, 0, 100),
         )
         with cam:
+            print(f"entering at {time.time()}")
             with cam.acquire([0.1, 0.2, 0.3]) as images:
                 for image in images:
                     pass
-
