@@ -1,7 +1,7 @@
 import abc
 import contextlib
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Generator
 from typing import ClassVar
 
 from attrs import define, field
@@ -52,9 +52,19 @@ class Camera(Device, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def acquire(
-        self, exposures: list[float]
-    ) -> contextlib.AbstractContextManager[Iterable[Image]]:
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _read_image(self, exposure: float) -> Image:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def _stop_acquisition(self) -> None:
+        raise NotImplementedError
+
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]) -> Generator[Iterable[Image]]:
         """Acquire images with the given exposure times.
 
         The result is a context manager that returns an iterable of images.
@@ -68,18 +78,20 @@ class Camera(Device, abc.ABC):
                     for image in images:
                         print(image)
 
-        There are two possible behaviors when implementing this method for a given
-        camera:
-        - The camera can gather all images and return them all in the end.
-        - The camera can yield images as they become available. This make it possible
-            to process images as they are acquired.
-
         Raises:
             CameraTimeoutError: If external trigger is enabled and the camera does not
                 receive a trigger signal within the timeout.
         """
 
-        raise NotImplementedError
+        self._start_acquisition(exposures)
+        try:
+            yield self._acquire_pictures(exposures)
+        finally:
+            self._stop_acquisition()
+
+    def _acquire_pictures(self, exposures: list[float]) -> Iterable[Image]:
+        for exposure in exposures:
+            yield self._read_image(exposure)
 
     def take_picture(self, exposure: float) -> Image:
         """Acquire a single image with the given exposure time."""

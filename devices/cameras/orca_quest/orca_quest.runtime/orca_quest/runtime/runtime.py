@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import time
 from typing import Any, ClassVar, Optional
@@ -105,43 +104,31 @@ class OrcaQuestCamera(Camera, RuntimeDevice):
                     f" {self._read_last_error()}"
                 )
 
-            self._read_last_error()
-
         if not self._camera.prop_setvalue(DCAM_IDPROP.SUBARRAYMODE, DCAMPROP.MODE.ON):
             raise RuntimeError(f"can't set subarray mode on: {self._read_last_error()}")
 
-    @contextlib.contextmanager
-    def acquire(self, exposures: list[float]):
-        with contextlib.ExitStack() as stack:
-            number_pictures = len(exposures)
-            # We can't allocate 0 pictures in the buffer, so we allocate at least 1
-            number_picture_in_buffer = number_pictures if number_pictures else 1
-            if self._buffer_number_pictures is None:
-                if not self._camera.buf_alloc(number_picture_in_buffer):
-                    raise RuntimeError(
-                        f"Failed to allocate buffer for images: {self._read_last_error()}"
-                    )
-                self._add_closing_callback(self._camera.buf_release)
-                self._buffer_number_pictures = number_picture_in_buffer
-            else:
-                if number_picture_in_buffer != self._buffer_number_pictures:
-                    raise ValueError(
-                        f"Can't change the number of pictures in the buffer from"
-                        f" {self._buffer_number_pictures} to {number_picture_in_buffer}"
-                    )
+        if not self._camera.buf_alloc(10):
+            raise RuntimeError(
+                f"Failed to allocate buffer for images: {self._read_last_error()}"
+            )
+        self._add_closing_callback(self._camera.buf_release)
 
-            if not self._camera.cap_start(bSequence=True):
-                raise RuntimeError(
-                    f"Can't start acquisition for {self}: {self._read_last_error()}"
-                )
-            stack.callback(self._camera.cap_stop)
-            yield self._acquire_pictures(exposures)
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        if not self._camera.cap_start(bSequence=True):
+            raise RuntimeError(
+                f"Can't start acquisition for {self}: {self._read_last_error()}"
+            )
 
-    def _acquire_pictures(self, exposures: list[float]):
+    def _read_image(self, exposure: float) -> Image:
         # Should change the exposure time if not in gated mode
         # self._camera.prop_setvalue(DCAM_IDPROP.EXPOSURETIME, new_exposure)
-        for _ in enumerate(exposures):
-            yield self._acquire_picture(self.timeout)
+        return self._acquire_picture(self.timeout)
+
+    def _stop_acquisition(self) -> None:
+        if not self._camera.cap_stop():
+            raise RuntimeError(
+                f"Failed to stop acquisition for {self}: {self._read_last_error()}"
+            )
 
     def list_properties(self) -> list:
         result = []
