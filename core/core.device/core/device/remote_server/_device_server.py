@@ -129,7 +129,7 @@ class DeviceProxy(BaseProxy, Device):
         return self._callmethod("__exit__", (exc_type, exc_val, exc_tb))
 
     def __repr__(self) -> str:
-        return f'DeviceProxy(name="{self.get_name()}")'
+        return f'{type(self).__name__}(name="{self.get_name()}")'
 
     def __str__(self) -> str:
         return self._callmethod("__str__")  # type: ignore
