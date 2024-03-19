@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLineEdit, QComboBox
 
 from condetrol.device_configuration_editors.camera_configuration_editor.editor import (
     CameraConfigurationEditor,
@@ -19,6 +19,9 @@ class ImagingSourceCameraConfigurationEditor(
 
         self._camera_name = QLineEdit()
         self.form.insertRow(0, "Camera name", self._camera_name)
+        self._format_combo_box = QComboBox()
+        self._format_combo_box.addItems(["Y800", "Y16"])
+        self.form.insertRow(1, "Format", self._format_combo_box)
         self.update_ui_from_config(self.device_config)
 
     def update_config_from_ui(
@@ -26,6 +29,7 @@ class ImagingSourceCameraConfigurationEditor(
     ) -> ImagingSourceCameraConfiguration:
         device_config = super().update_config_from_ui(device_config)
         device_config.camera_name = self._camera_name.text()
+        device_config.format = self._format_combo_box.currentText()
         return device_config
 
     def update_ui_from_config(
@@ -33,6 +37,7 @@ class ImagingSourceCameraConfigurationEditor(
     ) -> None:
         super().update_ui_from_config(device_config)
         self._camera_name.setText(device_config.camera_name)
+        self._format_combo_box.setCurrentText(device_config.format)
 
     @classmethod
     def get_default_configuration(cls) -> ImagingSourceCameraConfiguration:
