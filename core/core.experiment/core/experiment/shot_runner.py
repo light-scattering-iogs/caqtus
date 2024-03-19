@@ -5,6 +5,7 @@ from typing import Protocol, Any
 
 import anyio
 import anyio.to_thread
+
 from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
 from core.session.shot import TimeLanes
 from core.types.data import DataLabel, Data

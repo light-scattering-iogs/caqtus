@@ -448,11 +448,11 @@ class SingleShotCompiler:
         try:
             lane = self.lanes[device]
         except KeyError:
-            raise ValueError(
-                f"Asked to generate trigger for device '{device}', which is a "
-                f"camera, but there is no lane with this name to indicate how to "
-                f"take pictures"
-            )
+            # If there is no lane with the name of this camera, it probably means that
+            # the camera is not used in this shot, so instead of raising an error, we
+            # just return no trigger, but I don't know if it is the best option.
+            length = number_ticks(0, self.shot_duration, time_step * ns)
+            return Pattern([False]) * length
         if not isinstance(lane, CameraTimeLane):
             raise ValueError(
                 f"Asked to generate trigger for device '{device}', which is a "
