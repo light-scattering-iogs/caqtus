@@ -7,12 +7,10 @@ section SDK, install the IC Imaging Control C Library if you are using Windows.
 Untested on other platforms.
 """
 
-import contextlib
 import ctypes
 import logging
 import os
-from collections.abc import Generator
-from typing import Literal, ClassVar
+from typing import Literal, ClassVar, Optional
 
 import attrs
 import numpy
@@ -65,6 +63,7 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
     )
 
     _grabber_handle: ctypes.POINTER(tis.HGRABBER) = attrs.field(init=False)
+    _current_exposure: Optional[float] = attrs.field(init=False, default=None)
 
     @classmethod
     def get_device_names(cls) -> list[str]:
@@ -93,20 +92,34 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
         self._set_format(self.format)
         self._set_trigger(self.external_trigger)
 
-    def update_parameters(self, timeout: float) -> None:
-        self.timeout = timeout
+        self._start_live()
+        self._add_closing_callback(self._stop_live)
 
-    @contextlib.contextmanager
-    def acquire(self, exposures: list[float]):
+    def _start_live(self) -> None:
         if not ic.IC_StartLive(self._grabber_handle, 0):
             error = RuntimeError(f"Failed to start live for {self}")
             error.add_note("Check that the camera is not open by another program")
             raise error
-        try:
-            yield self._acquire_pictures(exposures)
-        finally:
-            if ic.IC_StopLive(self._grabber_handle) != tis.IC_SUCCESS:
-                raise RuntimeError(f"Failed to stop live for {self}")
+
+    def _stop_live(self) -> None:
+        if not ic.IC_StopLive(self._grabber_handle):
+            raise RuntimeError(f"Failed to stop live for {self}")
+
+    def update_parameters(self, timeout: float) -> None:
+        self.timeout = timeout
+
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        pass
+
+    def _read_image(self, exposure: float) -> Image:
+        if exposure != self._current_exposure:
+            self._set_exposure(exposure)
+            self._current_exposure = exposure
+        self._snap_picture()
+        return self._read_picture_from_camera()
+
+    def _stop_acquisition(self) -> None:
+        pass
 
     def _set_trigger(self, external_trigger: bool):
         if (
@@ -128,13 +141,6 @@ class ImagingSourceCameraDMK33GR0134(Camera, RuntimeDevice):
             tis.T("Value"),
             ctypes.c_float(exposure),
         )
-
-    def _acquire_pictures(self, exposures: list[float]) -> Generator[Image, None, None]:
-        for exposure in exposures:
-            self._set_exposure(exposure)
-            self._snap_picture()
-            im = self._read_picture_from_camera()
-            yield im
 
     def _snap_picture(self) -> None:
         timeout = int(self.timeout * 1e3)
