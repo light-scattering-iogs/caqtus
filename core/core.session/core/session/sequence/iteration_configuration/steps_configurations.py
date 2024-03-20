@@ -146,6 +146,9 @@ class StepsConfiguration(IterationConfiguration):
         result = sum_number_shots(child_number_shots)
         return result
 
+    def get_parameter_names(self) -> set[DottedVariableName]:
+        return set().union(*[get_parameter_names(step) for step in self.steps])
+
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
         return serialization.unstructure(steps_configuration, StepsConfiguration)
@@ -171,6 +174,20 @@ def expected_number_shots(step: Step) -> Optional[int]:
                 return num * sub_steps_number
         case ArangeLoop(_, _, _, _, sub_steps):
             return None
+        case _:
+            assert_never(step)
+
+
+def get_parameter_names(step: Step) -> set[DottedVariableName]:
+    match step:
+        case VariableDeclaration(variable=variable, value=_):
+            return {variable}
+        case ExecuteShot():
+            return set()
+        case ContainsSubSteps(sub_steps=sub_steps):
+            return set().union(
+                *[get_parameter_names(sub_step) for sub_step in sub_steps]
+            )
         case _:
             assert_never(step)
 
