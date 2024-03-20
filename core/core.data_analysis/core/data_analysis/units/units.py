@@ -84,6 +84,20 @@ def extract_unit(
     return magnitude, unit
 
 
+def extract_units(
+    dataframe: polars.DataFrame,
+) -> tuple[polars.DataFrame, Mapping[str, Optional[Unit]]]:
+    """Break a dataframe potentially containing quantities into its magnitude and unit components."""
+
+    column_units = {}
+    columns_magnitudes = {}
+    for column in dataframe.columns:
+        magnitude, unit = extract_unit(dataframe[column])
+        columns_magnitudes[column] = magnitude
+        column_units[column] = unit
+    return polars.DataFrame(columns_magnitudes), column_units
+
+
 def convert_to_unit(
     series: polars.Series, target_unit: Optional[Unit]
 ) -> polars.Series:
