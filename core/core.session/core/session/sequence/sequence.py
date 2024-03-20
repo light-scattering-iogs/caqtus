@@ -4,8 +4,9 @@ import datetime
 from typing import TYPE_CHECKING, Optional
 
 import attrs
-
 from core.device import DeviceName, DeviceConfigurationAttrs
+from core.types.variable_name import DottedVariableName
+
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
 from .state import State
@@ -137,6 +138,14 @@ class Sequence:
         device_configurations = session.sequences.get_device_configurations(self.path)
 
         return dict(device_configurations)
+
+    def get_local_parameters(
+        self, session: ExperimentSession
+    ) -> set[DottedVariableName]:
+        """Return the name of the parameters that are specifically set for this sequence."""
+
+        iterations = self.get_iteration_configuration(session)
+        return iterations.get_parameter_names()
 
     def __eq__(self, other):
         if isinstance(other, Sequence):
