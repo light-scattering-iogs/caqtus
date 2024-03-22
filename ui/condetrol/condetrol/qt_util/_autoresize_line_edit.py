@@ -1,5 +1,4 @@
 from PySide6.QtCore import QSize
-from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QLineEdit, QStyleOptionFrame, QStyle
 
 
@@ -7,12 +6,6 @@ class AutoResizeLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.textChanged.connect(self.resize_to_content)
-
-    def _resize_to_content(self):
-        font_metric = QFontMetrics(self.font())
-        pixel_width = font_metric.width(self.text())
-        self.setFixedWidth(pixel_width)
-        self.adjustSize()
 
     def resize_to_content(self):
         text = self.text()
