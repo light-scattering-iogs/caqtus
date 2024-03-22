@@ -43,7 +43,7 @@ class LoadShotParameters(CombinableLoader):
 
         if self.which == "all":
             pass
-        elif self.which == "locals":
+        elif self.which == "sequence":
             local_parameters = self._get_local_parameters(shot.sequence, session)
             parameters = {name: parameters[name] for name in local_parameters}
         elif self.which == "globals":
