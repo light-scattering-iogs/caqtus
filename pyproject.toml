@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus"
-version = "1.0.3"
+version = "1.0.4"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 license = "MIT"
@@ -14,6 +14,7 @@ caqtus-types = {path = "caqtus.types"}
 caqtus-device = {path = "caqtus.device"}
 caqtus-session = {path = "caqtus.session"}
 caqtus-analysis = {path = "caqtus.analysis"}
+caqtus-shot-compilation = {path = "caqtus.shot_compilation"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
