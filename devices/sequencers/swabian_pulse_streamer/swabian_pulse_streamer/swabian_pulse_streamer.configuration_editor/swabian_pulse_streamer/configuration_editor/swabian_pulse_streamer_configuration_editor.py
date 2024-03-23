@@ -5,7 +5,7 @@ from caqtus.device.sequencer.configuration import (
     Constant,
 )
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
-from caqtus.guicondetrol.device_configuration_editors.sequencer_configuration_editor import (
+from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
 from caqtus.types.expression import Expression
