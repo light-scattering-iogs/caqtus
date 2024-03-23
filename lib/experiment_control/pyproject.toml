@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "caqtus-utils"
+name = "experiment-control"
 version = "1.0.1"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
@@ -7,16 +7,17 @@ readme = "README.md"
 packages = [{include = "caqtus"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 
-attrs = "^23.2.0"
-cattrs = "^23.2.3"
-pyyaml = "^6.0.1"
 numpy = "^1.26.4"
+tblib = "^3.0.0"
+anyio = {extras = ["trio"], version = "^4.3.0"}
 
+device = {path = "../device"}
+session = {path = "../session"}
+shot-compilation = {path = "../shot_compilation"}
+types = {path = "../types"}
 
-[tool.poetry.group.test.dependencies]
-pytest = "^8.1.1"
 
 [build-system]
 requires = ["poetry-core"]

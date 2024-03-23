@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "caqtus-device"
+name = "shot-compilation"
 version = "1.0.0"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
@@ -10,17 +10,15 @@ packages = [{include = "caqtus"}]
 python = "^3.11"
 
 numpy = "^1.26.4"
-sympy = "^1.12"
-tblib = "^3.0.0"
-pydantic = "^2.6.4"
-caqtus-utils = {path = "../caqtus.utils"}
-caqtus-types = {path = "../caqtus.types"}
+python-benedict = "^0.33.2"
 
+device = {path = "../device"}
+session = {path = "../session"}
+types = {path = "../types"}
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
-hypothesis = "^6.99.12"
 
 [build-system]
 requires = ["poetry-core"]

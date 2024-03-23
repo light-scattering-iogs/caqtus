@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "caqtus-gui-common"
-version = "1.0.2"
+name = "gui-shotviewer"
+version = "1.0.0"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
@@ -10,9 +10,11 @@ packages = [{include = "caqtus"}]
 python = "^3.11, <3.13"
 
 pyside6 = "^6.6.2"
-anytree = "^2.12.1"
-caqtus-session = {path = "../../caqtus.session"}
-caqtus-types = {path = "../../caqtus.types"}
+pyqtgraph = "^0.13.4"
+
+gui-common = {path = "../gui.common"}
+analysis = {path = "../../analysis"}
+session = {path = "../../session"}
 
 
 [build-system]

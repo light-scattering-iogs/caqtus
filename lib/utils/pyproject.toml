@@ -1,19 +1,19 @@
 [tool.poetry]
-name = "caqtus-types"
-version = "1.0.2"
+name = "utils"
+version = "1.0.1"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
 packages = [{include = "caqtus"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 
-pint = "^0.23"
+attrs = "^23.2.0"
+cattrs = "^23.2.3"
+pyyaml = "^6.0.1"
 numpy = "^1.26.4"
-token-utils = "^0.1.8"
 
-caqtus-utils = {path = "../caqtus.utils"}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
