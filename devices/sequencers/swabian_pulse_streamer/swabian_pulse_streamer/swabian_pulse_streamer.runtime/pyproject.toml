@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "swabian-pulse-streamer-runtime"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
@@ -11,7 +11,8 @@ python = "^3.11"
 
 attrs = "^23.1.0"
 pulsestreamer = "^1.7.0"
-core-device = {path = "../../../core/core.device", develop = true}
+
+caqtus-device = {path = "../../../../../caqtus.device"}
 
 
 [tool.poetry.plugins."experiment_control.devices"]
