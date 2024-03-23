@@ -15,7 +15,6 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
-
 from core.session.shot import TimeLane
 from core.session.shot.timelane import TimeLanes
 from core.types.expression import Expression
@@ -287,6 +286,18 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         """Return a list of context menu actions for the lane header."""
 
         return []
+
+    def simplify(self) -> None:
+        """Simplify the lane by merging contiguous blocks of the same value."""
+
+        self.beginResetModel()
+        start = 0
+        for i in range(1, len(self._lane)):
+            if self._lane[i] != self._lane[start]:
+                self._lane[start : i] = self._lane[start]
+                start = i
+        self._lane[start:] = self._lane[start]
+        self.endResetModel()
 
 
 class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
@@ -645,3 +656,9 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
             return self._step_durations_model.index(index.column(), 0)
         else:
             return self._lane_models[index.row() - 2].index(index.column(), 0)
+
+    def simplify(self) -> None:
+        self.beginResetModel()
+        for lane_model in self._lane_models:
+            lane_model.simplify()
+        self.endResetModel()

@@ -5,11 +5,19 @@ from typing import Optional, Protocol
 
 from PySide6.QtCore import Signal, Qt, QModelIndex
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QTableView, QMenu, QStyledItemDelegate, QWidget
-
+from PySide6.QtWidgets import (
+    QTableView,
+    QMenu,
+    QStyledItemDelegate,
+    QWidget,
+    QVBoxLayout,
+    QToolBar,
+)
+from condetrol.icons import get_icon
 from core.device import DeviceConfigurationAttrs, DeviceName
 from core.session import ParameterNamespace
 from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
+
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
 
@@ -48,7 +56,49 @@ def default_lane_delegate_factory(
         return None
 
 
-class TimeLanesEditor(QTableView):
+class TimeLanesEditor(QWidget):
+    time_lanes_changed = Signal(TimeLanes)
+
+    def __init__(
+        self,
+        lane_model_factory: LaneModelFactory,
+        lane_delegate_factory: LaneDelegateFactory,
+        device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self.view = TimeLanesView(
+            lane_model_factory=lane_model_factory,
+            lane_delegate_factory=lane_delegate_factory,
+            device_configurations=device_configurations,
+            parent=self,
+        )
+        self.view.time_lanes_changed.connect(self.time_lanes_changed)
+        self.toolbar = QToolBar(self)
+        self.simplify_action = self.toolbar.addAction(
+            get_icon("simplify-timelanes", self.palette().buttonText().color()),
+            "Simplify",
+        )
+        self.simplify_action.triggered.connect(self.simplify_timelanes)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.view)
+        layout.addWidget(self.toolbar)
+        self.setLayout(layout)
+
+    def set_read_only(self, read_only: bool) -> None:
+        self.view.set_read_only(read_only)
+        self.toolbar.setEnabled(not read_only)
+
+    def set_time_lanes(self, time_lanes: TimeLanes) -> None:
+        self.view.set_time_lanes(time_lanes)
+
+    def simplify_timelanes(self):
+        self.view.simplify_timelanes()
+
+
+class TimeLanesView(QTableView):
     time_lanes_changed = Signal(TimeLanes)
 
     def __init__(
@@ -256,3 +306,6 @@ class TimeLanesEditor(QTableView):
             start = group[0][1]
             stop = group[-1][1]
             self._model.expand_step(step, row - 2, start, stop)
+
+    def simplify_timelanes(self):
+        self._model.simplify()
