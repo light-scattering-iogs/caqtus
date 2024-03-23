@@ -1,19 +1,19 @@
 [tool.poetry]
-name = "spincore-sequencer-runtime"
+name = "spincore-pulse-blaster-runtime"
 version = "0.1.0"
 description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 readme = "README.md"
-packages = [{include = "spincore_sequencer"}]
+packages = [{include = "spincore_pulse_blaster"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
-
 attrs = "^23.1.0"
 
-util = {path = "../../../util", develop = true}
-core-device = {path = "../../../core/core.device", develop = true}
+caqtus-utils = {path = "../../../../../caqtus.utils"}
+caqtus-device = {path = "../../../../../caqtus.device"}
+
 
 [tool.poetry.plugins."experiment_control.devices"]
 "SpincorePulseBlaster" = "spincore_sequencer.runtime:SpincorePulseBlaster"

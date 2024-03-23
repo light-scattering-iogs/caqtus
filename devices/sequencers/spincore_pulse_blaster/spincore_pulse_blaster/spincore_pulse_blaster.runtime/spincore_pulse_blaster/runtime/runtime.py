@@ -8,15 +8,15 @@ import attrs.validators
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-from core.device import RuntimeDevice
-from core.device.sequencer.instructions import (
+from caqtus.device import RuntimeDevice
+from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Repeat,
     Concatenate,
 )
-from core.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
-from util import log_exception
+from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
+from caqtus.utils import log_exception
 
 from . import spinapi
 from .spinapi import ns

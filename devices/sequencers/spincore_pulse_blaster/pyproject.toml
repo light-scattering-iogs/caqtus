@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "spincore-pulse-blaster"
+version = "1.0.0"
+description = ""
+authors = ["Dear <lechadoq@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+spincore-pulse-blaster-configuration = {path = "spincore_pulse_blaster/spincore_pulse_blaster.configuration"}
+spincore-pulse-blaster-runtime = {path = "spincore_pulse_blaster/spincore_pulse_blaster.runtime"}
+spincore-pulse-blaster-configuration-editor = {path = "spincore_pulse_blaster/spincore_pulse_blaster.configuration_editor"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

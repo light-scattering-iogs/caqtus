@@ -1,16 +1,16 @@
 [tool.poetry]
-name = "spincore-sequencer-configuration"
-version = "0.1.0"
+name = "spincore-pulse-blaster-configuration"
+version = "1.0.0"
 description = ""
 authors = ["Damien Bloch <bloc.dam@gmail.com>"]
 readme = "README.md"
-packages = [{include = "spincore_sequencer"}]
+packages = [{include = "spincore_pulse_blaster"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
-util = {path = "../../../util", develop = true}
-core-device = {path = "../../../core/core.device", develop = true}
+caqtus-device = {path = "../../../../../caqtus.device"}
+caqtus-utils = {path = "../../../../../caqtus.utils"}
 
 
 [build-system]
