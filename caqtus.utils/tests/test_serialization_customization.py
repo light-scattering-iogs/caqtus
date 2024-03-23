@@ -1,4 +1,4 @@
-from util import attrs, serialization
+from caqtus.utils import attrs, serialization
 
 
 def test() -> None:
