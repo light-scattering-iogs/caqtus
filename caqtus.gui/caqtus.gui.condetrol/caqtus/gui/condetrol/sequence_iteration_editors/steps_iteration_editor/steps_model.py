@@ -21,7 +21,7 @@ from caqtus.session.sequence.iteration_configuration import (
     LinspaceLoop,
     ContainsSubSteps,
 )
-from util import serialization
+from caqtus.utils import serialization
 
 
 class QABCMeta(type(QObject), ABCMeta):
