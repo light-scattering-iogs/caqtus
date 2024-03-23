@@ -11,8 +11,8 @@ python = "^3.11"
 
 attrs = "^23.1.0"
 
-caqtus-utils = {path = "../../../../../caqtus.utils"}
-caqtus-device = {path = "../../../../../caqtus.device"}
+caqtus-utils = {path = "../../../../../caqtus.utils/"}
+caqtus-device = {path = "../../../../../caqtus.device/"}
 
 
 [tool.poetry.plugins."experiment_control.devices"]

@@ -12,7 +12,7 @@ python = "^3.11"
 attrs = "^23.1.0"
 pulsestreamer = "^1.7.0"
 
-caqtus-device = {path = "../../../../../caqtus.device"}
+caqtus-device = {path = "../../../../../caqtus.device/"}
 
 
 [tool.poetry.plugins."experiment_control.devices"]

@@ -9,8 +9,8 @@ packages = [{include = "swabian_pulse_streamer"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-caqtus-device = {path = "../../../../../caqtus.device"}
-caqtus-utils = {path = "../../../../../caqtus.utils"}
+caqtus-device = {path = "../../../../../caqtus.device/"}
+caqtus-utils = {path = "../../../../../caqtus.utils/"}
 
 
 

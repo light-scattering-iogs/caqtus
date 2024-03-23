@@ -11,10 +11,10 @@ python = "^3.11, <3.13"
 
 pyside6 = "^6.6.1"
 
-swabian-pulse-streamer-configuration = {path = "../swabian_pulse_streamer.configuration"}
-caqtus-device = {path = "../../../../../caqtus.device"}
-caqtus-types = {path = "../../../../../caqtus.types"}
-caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol"}
+swabian-pulse-streamer-configuration = {path = "../swabian_pulse_streamer.configuration/"}
+caqtus-device = {path = "../../../../../caqtus.device/"}
+caqtus-types = {path = "../../../../../caqtus.types/"}
+caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol/"}
 
 
 [build-system]

@@ -8,9 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
 
-swabian-pulse-streamer-configuration = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.configuration"}
-swabian-pulse-streamer-configuration-editor = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.configuration_editor"}
-swabian-pulse-streamer-runtime = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.runtime"}
+swabian-pulse-streamer-configuration = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.configuration/"}
+swabian-pulse-streamer-configuration-editor = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.configuration_editor/"}
+swabian-pulse-streamer-runtime = {path = "./swabian_pulse_streamer/swabian_pulse_streamer.runtime/"}
 
 
 [build-system]
