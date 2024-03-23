@@ -17,9 +17,9 @@ analysis = {path = "lib/analysis/", develop = true}
 shot-compilation = {path = "lib/shot_compilation/", develop = true}
 experiment-control = {path = "lib/experiment_control/", develop = true}
 
-gui-condetrol = {path = "lib/caqtus.gui/gui.condetrol/", develop = true}
-gui-graphplot = {path = "lib/caqtus.gui/gui.graphplot/", develop = true}
-gui-shotviewer = {path = "lib/caqtus.gui/gui.shotviewer/", develop = true}
+gui-condetrol = {path = "lib/gui/gui.condetrol/", develop = true}
+gui-graphplot = {path = "lib/gui/gui.graphplot/", develop = true}
+gui-shotviewer = {path = "lib/gui/gui.shotviewer/", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]

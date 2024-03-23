@@ -4,7 +4,7 @@ version = "1.0.2"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
-packages = [{include = "caqtus"}]
+packages = [{include = "gui"}]
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
