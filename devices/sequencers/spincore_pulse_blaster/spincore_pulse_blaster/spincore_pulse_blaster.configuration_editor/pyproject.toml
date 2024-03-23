@@ -11,10 +11,10 @@ python = "^3.11, <3.13"
 
 pyside6 = "^6.6.1"
 
-spincore-pulse-blaster-configuration = {path = "../spincore_pulse_blaster.configuration/"}
-caqtus-device = {path = "../../../../../caqtus.device/"}
-caqtus-types = {path = "../../../../../caqtus.types/"}
-caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol/"}
+spincore-pulse-blaster-configuration = {path = "../spincore_pulse_blaster.configuration/", develop = true}
+caqtus-device = {path = "../../../../../caqtus.device/", develop = true}
+caqtus-types = {path = "../../../../../caqtus.types/", develop = true}
+caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol/", develop = true}
 
 
 [build-system]

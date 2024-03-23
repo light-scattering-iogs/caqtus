@@ -9,8 +9,8 @@ packages = [{include = "spincore_pulse_blaster"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-caqtus-device = {path = "../../../../../caqtus.device/"}
-caqtus-utils = {path = "../../../../../caqtus.utils/"}
+caqtus-device = {path = "../../../../../caqtus.device/", develop = true}
+caqtus-utils = {path = "../../../../../caqtus.utils/", develop = true}
 
 
 [build-system]
