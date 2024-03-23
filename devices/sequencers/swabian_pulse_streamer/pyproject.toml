@@ -8,9 +8,14 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
 
-swabian-pulse-streamer-configuration = {path = "./swabian_pulse_streamer/swabian_pulse_streamer_configuration/", develop = true}
-swabian-pulse-streamer-configuration-editor = {path = "./swabian_pulse_streamer/swabian_pulse_streamer_configuration_editor/", develop = true}
-swabian-pulse-streamer-runtime = {path = "./swabian_pulse_streamer/swabian_pulse_streamer_runtime/", develop = true}
+attrs = "^23.1.0"
+pulsestreamer = "^1.7.0"
+pyside6 = "^6.6.1"
+
+caqtus-device = {path = "../../../../../caqtus.device/", develop = true}
+caqtus-types = {path = "../../../../../caqtus.types/", develop = true}
+caqtus-utils = {path = "../../../../../caqtus.utils/", develop = true}
+caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol/", develop = true}
 
 
 [build-system]
