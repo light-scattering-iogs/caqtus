@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "caqtus"
+version = "1.0.14"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+caqtus-utils = {path = "lib/caqtus.utils", develop = true}
+caqtus-types = {path = "lib/caqtus.types/", develop = true}
+caqtus-device = {path = "lib/caqtus.device/", develop = true}
+caqtus-session = {path = "lib/caqtus.session/", develop = true}
+caqtus-analysis = {path = "lib/caqtus.analysis/", develop = true}
+caqtus-shot-compilation = {path = "lib/caqtus.shot_compilation/", develop = true}
+caqtus-experiment-control = {path = "lib/caqtus.experiment_control/", develop = true}
+
+caqtus-gui-condetrol = {path = "lib/caqtus.gui/caqtus.gui.condetrol/", develop = true}
+caqtus-gui-graphplot = {path = "lib/caqtus.gui/caqtus.gui.graphplot/", develop = true}
+caqtus-gui-shotviewer = {path = "lib/caqtus.gui/caqtus.gui.shotviewer/", develop = true}
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.3.0"
+mypy = "^1.9.0"
+pyright = "^1.1.355"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
