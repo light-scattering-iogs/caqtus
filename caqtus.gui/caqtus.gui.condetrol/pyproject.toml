@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus-gui-condetrol"
-version = "1.0.0"
+version = "1.0.1"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
@@ -16,6 +16,7 @@ caqtus-session = {path = "../../caqtus.session"}
 caqtus-device = {path = "../../caqtus.device"}
 caqtus-types = {path = "../../caqtus.types"}
 caqtus-experiment-control = {path = "../../caqtus.experiment_control"}
+caqtus-gui-common = {path = "../caqtus.gui.common"}
 
 
 [build-system]
