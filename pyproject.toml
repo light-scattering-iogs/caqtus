@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "caqtus"
+name = "caqtus-core"
 version = "1.0.14"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
