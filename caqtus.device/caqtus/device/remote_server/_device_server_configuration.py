@@ -1,7 +1,7 @@
 import attrs
 from pydantic import SecretStr
 
-from util import serialization
+from caqtus.utils import serialization
 
 
 def secret_str_converter(value: str | SecretStr) -> SecretStr:

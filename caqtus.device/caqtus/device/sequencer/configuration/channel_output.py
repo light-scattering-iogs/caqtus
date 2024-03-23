@@ -23,8 +23,8 @@ from typing import TypeGuard, Optional
 import attrs
 import numpy as np
 
-from core.types.expression import Expression
-from util import serialization
+from caqtus.types.expression import Expression
+from caqtus.utils import serialization
 from ...name import DeviceName
 
 

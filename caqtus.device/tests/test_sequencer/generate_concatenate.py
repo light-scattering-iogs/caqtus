@@ -1,5 +1,5 @@
 from hypothesis.strategies import composite, integers
-from core.device.sequencer.instructions import Concatenate
+from caqtus.device.sequencer.instructions import Concatenate
 
 from .generate_pattern import generate_pattern
 

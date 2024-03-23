@@ -1,8 +1,7 @@
-import numpy as np
+from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
 from hypothesis import given
-
-from core.device.sequencer.instructions import Pattern, stack_instructions, with_name
 from hypothesis.strategies import composite, integers
+
 from .generate_concatenate import generate_concatenate
 from .generate_pattern import generate_pattern
 

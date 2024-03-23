@@ -3,18 +3,18 @@ import os
 import time
 from typing import Self, Iterable
 
-from core.device import Device, DeviceName
-from core.device.camera import Camera
-from core.device.remote_server import (
+from caqtus.device import Device, DeviceName
+from caqtus.device.camera import Camera
+from caqtus.device.remote_server import (
     RemoteDeviceManager,
     DeviceProxy,
     CameraProxy,
     SequencerProxy,
 )
-from core.device.sequencer import Sequencer
-from core.device.sequencer.instructions import SequencerInstruction
-from core.types.image import Image
-from util.roi import RectangularROI
+from caqtus.device.sequencer import Sequencer
+from caqtus.device.sequencer.instructions import SequencerInstruction
+from caqtus.types.image import Image
+from caqtus.utils.roi import RectangularROI
 
 
 class DeviceTest(Device):

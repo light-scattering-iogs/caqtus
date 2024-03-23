@@ -3,7 +3,7 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from core.device.sequencer.instructions import (
+from caqtus.device.sequencer.instructions import (
     Pattern,
     Concatenate,
     Repeat,

@@ -7,8 +7,8 @@ from typing import ClassVar
 from attrs import define, field
 from attrs.setters import frozen, convert
 from attrs.validators import instance_of
-from core.device import Device
-from core.types.image import Image
+from caqtus.device import Device
+from caqtus.types.image import Image
 
 from .configuration import RectangularROI
 

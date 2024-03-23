@@ -4,9 +4,9 @@ import logging
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
-from core.device.camera import Camera
-from core.device.sequencer import Sequencer
-from core.types.image import Image
+from caqtus.device.camera import Camera
+from caqtus.device.sequencer import Sequencer
+from caqtus.types.image import Image
 from tblib import pickling_support
 
 from .. import DeviceName

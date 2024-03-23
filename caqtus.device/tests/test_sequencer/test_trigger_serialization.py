@@ -1,4 +1,4 @@
-from core.device.sequencer.configuration.trigger import (
+from caqtus.device.sequencer.configuration.trigger import (
     SoftwareTrigger,
     ExternalTriggerStart,
     TriggerEdge,
@@ -6,7 +6,7 @@ from core.device.sequencer.configuration.trigger import (
     ExternalClock,
     ExternalClockOnChange,
 )
-from util import serialization
+from caqtus.utils import serialization
 
 
 def test_trigger_serialization():

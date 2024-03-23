@@ -2,7 +2,7 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from core.device.sequencer.instructions import (
+from caqtus.device.sequencer.instructions import (
     Repeat,
     Pattern,
     stack_instructions,

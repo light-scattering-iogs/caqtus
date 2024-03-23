@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar
 
 import attrs
-from core.device import Device
+from caqtus.device.runtime import Device
 
 from ..configuration import Trigger
 from ..instructions import SequencerInstruction

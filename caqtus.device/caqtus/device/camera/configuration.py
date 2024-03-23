@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Any
 
 import attrs
-from util.roi import RectangularROI
+from caqtus.utils.roi import RectangularROI
 from ..configuration import DeviceConfigurationAttrs, DeviceParameter
 
 

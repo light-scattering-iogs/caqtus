@@ -3,7 +3,7 @@ from typing import TypeAlias, TypeGuard
 
 import attrs
 
-from util import serialization
+from caqtus.utils import serialization
 
 
 class TriggerEdge(Enum):

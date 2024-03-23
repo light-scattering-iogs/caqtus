@@ -22,7 +22,7 @@ from typing import (
 import numpy
 import numpy as np
 
-from util.itertools import pairwise
+from caqtus.utils.itertools import pairwise
 
 Length = NewType("Length", int)
 Width = NewType("Width", int)
