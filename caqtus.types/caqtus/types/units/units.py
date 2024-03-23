@@ -1,9 +1,13 @@
-from pathlib import Path
+import importlib.resources
 
 import pint
 
+units_definition_file = importlib.resources.files("caqtus.types.units").joinpath(
+    "units_definition.txt"
+)
+
 ureg = pint.UnitRegistry(
-    Path(__file__).parent / "units_definition.txt",
+    units_definition_file,
     autoconvert_offset_to_baseunit=True,
     cache_folder=":auto:",
 )
