@@ -5,8 +5,8 @@ from PySide6 import QtCore
 from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
-from core.session import ExperimentSessionMaker, PureSequencePath
-from core.session.result import unwrap
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session.result import unwrap
 
 from .delegate import ProgressDelegate
 from .model import PathHierarchyModel

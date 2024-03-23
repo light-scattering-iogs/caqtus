@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from core.session.sequence import State
-from core.session.sequence_collection import SequenceStats
+from caqtus.session.sequence import State
+from caqtus.session.sequence_collection import SequenceStats
 
 
 class ProgressDelegate(QStyledItemDelegate):

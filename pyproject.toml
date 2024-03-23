@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus"
-version = "1.0.10"
+version = "1.0.11"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 license = "MIT"

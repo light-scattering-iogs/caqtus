@@ -16,17 +16,17 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QStandardItemModel
 from anytree import NodeMixin
-from core.session import PureSequencePath, ExperimentSessionMaker, ExperimentSession
-from core.session.path_hierarchy import PathNotFoundError
-from core.session.result import unwrap, Failure
-from core.session.sequence import State
-from core.session.sequence_collection import (
+from caqtus.session import PureSequencePath, ExperimentSessionMaker, ExperimentSession
+from caqtus.session.path_hierarchy import PathNotFoundError
+from caqtus.session.result import unwrap, Failure
+from caqtus.session.sequence import State
+from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
 )
 from returns.result import Success
-from util import log_exception
+from caqtus.utils import log_exception
 
 from .logger import logger
 
