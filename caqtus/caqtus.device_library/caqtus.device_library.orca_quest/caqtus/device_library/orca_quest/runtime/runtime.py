@@ -5,10 +5,10 @@ from typing import Any, ClassVar, Optional
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
-from core.device import RuntimeDevice
-from core.device.camera.runtime import Camera, CameraTimeoutError
-from core.types.image import Image
-from util import log_exception
+from caqtus.device import RuntimeDevice
+from caqtus.device.camera.runtime import Camera, CameraTimeoutError
+from caqtus.types.image import Image
+from caqtus.utils import log_exception
 
 from .dcam import Dcamapi, Dcam, DCAM_IDSTR
 from .dcamapi4 import DCAM_IDPROP, DCAMPROP, DCAMERR

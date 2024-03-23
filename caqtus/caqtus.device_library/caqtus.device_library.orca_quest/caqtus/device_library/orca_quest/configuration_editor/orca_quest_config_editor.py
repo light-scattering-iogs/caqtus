@@ -4,7 +4,7 @@ from condetrol.device_configuration_editors.camera_configuration_editor.editor i
     CameraConfigurationEditor,
 )
 from orca_quest.configuration import OrcaQuestCameraConfiguration
-from util.roi import RectangularROI, Width, Height
+from caqtus.utils.roi import RectangularROI, Width, Height
 
 
 class OrcaQuestConfigurationEditor(
