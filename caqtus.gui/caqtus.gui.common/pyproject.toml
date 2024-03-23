@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "caqtus-gui-common"
+version = "1.0.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "caqtus"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+pyside6 = "^6.6.2"
+anytree = "^2.12.1"
+caqtus-session = {path = "../../caqtus.session"}
+caqtus-types = {path = "../../caqtus.types"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
