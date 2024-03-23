@@ -1,6 +1,6 @@
 import functools
 
-from core.device.sequencer.configuration import (
+from caqtus.device.sequencer.configuration import (
     ChannelConfiguration,
     ChannelOutput,
     LaneValues,

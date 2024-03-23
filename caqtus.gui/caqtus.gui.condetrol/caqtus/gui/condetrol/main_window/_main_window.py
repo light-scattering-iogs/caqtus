@@ -4,7 +4,7 @@ import copy
 from collections.abc import Mapping, Callable
 from typing import Optional, Literal
 
-from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, QByteArray, Qt
+from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -14,19 +14,19 @@ from PySide6.QtWidgets import (
     QDockWidget,
     QApplication,
 )
-from condetrol.parameter_tables_editor import ParameterNamespaceEditor
-from core.experiment import SequenceInterruptedException
-from core.experiment.manager import ExperimentManager, Procedure
-from core.session import (
+from caqtus.gui.common.exception_tree import ExceptionDialog
+from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     Sequence,
     ParameterNamespace,
 )
-from core.session.sequence import State
-from exception_tree import ExceptionDialog
-from waiting_widget import run_with_wip_widget
+from caqtus.session.sequence import State
 
+from caqtus.experiment_control import SequenceInterruptedException
+from caqtus.experiment_control.manager import ExperimentManager, Procedure
+from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -245,9 +245,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 device_name,
                 device_configuration,
             ) in new_device_configurations.items():
-                session.default_device_configurations[
-                    device_name
-                ] = device_configuration
+                session.default_device_configurations[device_name] = (
+                    device_configuration
+                )
 
     def closeEvent(self, a0):
         self.save_window()

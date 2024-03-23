@@ -4,6 +4,7 @@ import functools
 from collections.abc import Callable
 from typing import Optional, Any, TypeVar, Generic
 
+import caqtus.gui.common.qabc as qabc
 from PySide6.QtCore import (
     QAbstractTableModel,
     QObject,
@@ -15,10 +16,9 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
-from core.session.shot import TimeLane
-from core.session.shot.timelane import TimeLanes
-from core.types.expression import Expression
-from qabc import qabc
+from caqtus.session.shot import TimeLane
+from caqtus.session.shot.timelane import TimeLanes
+from caqtus.types.expression import Expression
 
 
 class TimeStepNameModel(QAbstractListModel):
@@ -294,7 +294,7 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         start = 0
         for i in range(1, len(self._lane)):
             if self._lane[i] != self._lane[start]:
-                self._lane[start : i] = self._lane[start]
+                self._lane[start:i] = self._lane[start]
                 start = i
         self._lane[start:] = self._lane[start]
         self.endResetModel()

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 
-from core.types.expression import Expression
+from caqtus.types.expression import Expression
 from .functional_block import FunctionalBlock
 
 

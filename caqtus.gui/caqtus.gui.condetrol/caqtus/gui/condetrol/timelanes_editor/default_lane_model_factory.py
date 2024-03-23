@@ -1,4 +1,9 @@
-from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
+from caqtus.session.shot import (
+    TimeLane,
+    DigitalTimeLane,
+    AnalogTimeLane,
+    CameraTimeLane,
+)
 
 from .analog_lane_model import AnalogTimeLaneModel
 from .camera_lane_model import CameraTimeLaneModel

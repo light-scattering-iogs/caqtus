@@ -2,9 +2,9 @@ import abc
 from collections.abc import Callable
 from typing import TypeVar, Generic, TypeAlias
 
-import qabc
+import caqtus.gui.common.qabc as qabc
 from PySide6.QtCore import Signal
-from core.session.sequence.iteration_configuration import IterationConfiguration
+from caqtus.session.sequence.iteration_configuration import IterationConfiguration
 
 T = TypeVar("T", bound=IterationConfiguration)
 

@@ -3,9 +3,9 @@ from typing import Optional, Any, assert_never
 from PySide6.QtCore import QObject, QModelIndex, Qt
 from PySide6.QtGui import QPalette
 
-from core.session.shot.timelane import CameraTimeLane, TakePicture
-from core.types.data import DataLabel
-from core.types.image import ImageLabel
+from caqtus.session.shot.timelane import CameraTimeLane, TakePicture
+from caqtus.types.data import DataLabel
+from caqtus.types.image import ImageLabel
 from .model import TimeLaneModel
 from ..icons import get_icon
 

@@ -2,10 +2,10 @@ import abc
 import copy
 from typing import Optional, Generic, TypeVar
 
-import qabc
+import caqtus.gui.common.qabc as qabc
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from core.device import DeviceConfigurationAttrs
+from caqtus.device import DeviceConfigurationAttrs
 
 T = TypeVar("T", bound=DeviceConfigurationAttrs)
 

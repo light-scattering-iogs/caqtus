@@ -6,10 +6,11 @@ from PySide6.QtWidgets import (
     QWidget,
     QFormLayout,
     QGraphicsProxyWidget,
-    QLineEdit, QLabel,
+    QLineEdit,
+    QLabel,
 )
 
-from core.types.expression import Expression
+from caqtus.types.expression import Expression
 from .functional_block import FunctionalBlock
 
 

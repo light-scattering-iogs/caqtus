@@ -6,19 +6,19 @@ import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
-from core.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
-from core.session._return_or_raise import unwrap
-from core.session.path_hierarchy import PathNotFoundError
-from core.session.sequence import State, Sequence
-from core.session.sequence.iteration_configuration import (
+from caqtus.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
+from caqtus.session._return_or_raise import unwrap
+from caqtus.session.path_hierarchy import PathNotFoundError
+from caqtus.session.sequence import State, Sequence
+from caqtus.session.sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )
-from core.session.sequence_collection import (
+from caqtus.session.sequence_collection import (
     PathIsNotSequenceError,
     SequenceNotEditableError,
 )
-from core.session.shot import TimeLanes
+from caqtus.session.shot import TimeLanes
 
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger

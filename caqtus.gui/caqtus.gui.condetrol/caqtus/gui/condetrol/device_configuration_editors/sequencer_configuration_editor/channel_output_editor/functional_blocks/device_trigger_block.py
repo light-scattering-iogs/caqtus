@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 
-from core.device import DeviceName
+from caqtus.device import DeviceName
 from .functional_block import FunctionalBlock
 
 

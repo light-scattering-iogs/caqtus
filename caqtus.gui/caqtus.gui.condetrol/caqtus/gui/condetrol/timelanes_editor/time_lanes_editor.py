@@ -13,11 +13,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QToolBar,
 )
-from condetrol.icons import get_icon
-from core.device import DeviceConfigurationAttrs, DeviceName
-from core.session import ParameterNamespace
-from core.session.shot import TimeLanes, TimeLane, DigitalTimeLane
+from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.session import ParameterNamespace
+from caqtus.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 
+from caqtus.gui.condetrol.icons import get_icon
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
 
@@ -25,8 +25,7 @@ from .model import TimeLanesModel, TimeLaneModel
 class LaneModelFactory(Protocol):
     """A factory for lane models."""
 
-    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]:
-        ...
+    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]: ...
 
 
 class LaneDelegateFactory(Protocol):
@@ -39,8 +38,7 @@ class LaneDelegateFactory(Protocol):
         device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
         sequence_parameters: ParameterNamespace,
         parent: QWidget,
-    ) -> Optional[QStyledItemDelegate]:
-        ...
+    ) -> Optional[QStyledItemDelegate]: ...
 
 
 def default_lane_delegate_factory(
@@ -125,9 +123,9 @@ class TimeLanesView(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
-        self._device_configurations: dict[
-            DeviceName, DeviceConfigurationAttrs
-        ] = device_configurations
+        self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = (
+            device_configurations
+        )
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,

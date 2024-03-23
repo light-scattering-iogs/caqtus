@@ -3,7 +3,7 @@ from typing import TypedDict, Optional, TypeVar, Generic
 
 from PySide6.QtGui import QValidator
 from PySide6.QtWidgets import QDialog
-from core.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfigurationAttrs, DeviceName
 
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .configurations_editor_ui import Ui_ConfigurationsEditor

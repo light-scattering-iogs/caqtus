@@ -5,15 +5,15 @@ from PySide6 import QtCore
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut, QAction
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
-from core.session.sequence.iteration_configuration import (
+from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
     VariableDeclaration,
     ExecuteShot,
     LinspaceLoop,
     ArangeLoop,
 )
-from core.types.expression import Expression
-from core.types.variable_name import DottedVariableName
+from caqtus.types.expression import Expression
+from caqtus.types.variable_name import DottedVariableName
 
 from .delegate import StepDelegate
 from .steps_model import StepsModel

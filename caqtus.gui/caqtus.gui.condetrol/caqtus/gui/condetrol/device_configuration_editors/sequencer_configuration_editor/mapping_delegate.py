@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 
-from core.device.sequencer.configuration import (
+from caqtus.device.sequencer.configuration import (
     OutputMapping,
     DigitalMapping,
     CalibratedAnalogMapping,

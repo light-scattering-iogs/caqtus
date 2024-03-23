@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QGraphicsLineItem,
 )
 
-from core.device.sequencer import ChannelConfiguration
+from caqtus.device.sequencer import ChannelConfiguration
 from .build_blocks import create_functional_blocks
 from .build_configuration import build_output, MissingInputError
 from .connection import (

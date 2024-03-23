@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QStyledItemDelegate, QDialog, QWidget, QVBoxLayout
-from core.device.sequencer import ChannelConfiguration
-from exception_tree import ExceptionDialog
+from caqtus.device.sequencer import ChannelConfiguration
+from caqtus.gui.common.exception_tree import ExceptionDialog
 
 from .channel_output_editor import ChannelOutputEditor, OutputConstructionError
 from .dialog_ui import Ui_ChannelOutputDialog

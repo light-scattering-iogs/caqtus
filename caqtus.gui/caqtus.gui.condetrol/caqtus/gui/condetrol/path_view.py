@@ -9,22 +9,22 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
 )
-from core.session import ExperimentSessionMaker, PureSequencePath
-from core.session.path import InvalidPathFormatError
-from core.session.path_hierarchy import PathHasChildrenError
-from core.session.result import unwrap
-from core.session.sequence import State
-from core.session.sequence.iteration_configuration import (
+from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
+from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session.path import InvalidPathFormatError
+from caqtus.session.path_hierarchy import PathHasChildrenError
+from caqtus.session.result import unwrap
+from caqtus.session.sequence import State
+from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
     ArangeLoop,
     ExecuteShot,
 )
-from core.session.sequence_collection import PathIsSequenceError
-from core.session.shot import TimeLanes
-from core.types.expression import Expression
-from core.types.variable_name import DottedVariableName
-from sequence_hierarchy import PathHierarchyView
-from waiting_widget import run_with_wip_widget
+from caqtus.session.sequence_collection import PathIsSequenceError
+from caqtus.session.shot import TimeLanes
+from caqtus.types.expression import Expression
+from caqtus.types.variable_name import DottedVariableName
 
 from ._temporary_widget import temporary_widget
 from .icons import get_icon

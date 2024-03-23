@@ -28,12 +28,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
 )
+from caqtus.gui.common.exception_tree import ExceptionDialog
+from caqtus.session import ParameterNamespace
+from caqtus.types.expression import Expression
+from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils import serialization
 
-from core.session import ParameterNamespace
-from core.types.expression import Expression
-from core.types.variable_name import DottedVariableName
-from exception_tree import ExceptionDialog
-from util import serialization
 from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger

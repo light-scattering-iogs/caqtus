@@ -1,7 +1,7 @@
 import functools
 from typing import TypeVar
 
-from core.session.sequence.iteration_configuration import (
+from caqtus.session.sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )

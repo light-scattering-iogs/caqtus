@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
 )
 
-from core.device.sequencer.configuration import CalibratedAnalogMapping
+from caqtus.device.sequencer.configuration import CalibratedAnalogMapping
 
 
 class CalibratedMappingEditor(QDialog):

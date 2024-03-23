@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTableView
-from core.device.sequencer.configuration import ChannelConfiguration
+from caqtus.device.sequencer.configuration import ChannelConfiguration
 
 from .channel_output_delegate import ChannelOutputDelegate
 from .channels_model import SequencerChannelsModel
