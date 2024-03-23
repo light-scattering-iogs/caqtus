@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "caqtus-gui-shotviewer"
+version = "1.0.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+readme = "README.md"
+packages = [{include = "caqtus"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+pyside6 = "^6.6.2"
+pyqtgraph = "^0.13.4"
+
+caqtus-gui-common = {path = "../caqtus.gui.common"}
+caqtus-analysis = {path = "../../caqtus.analysis"}
+caqtus-session = {path = "../../caqtus.session"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
