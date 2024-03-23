@@ -2,15 +2,15 @@ import logging
 from collections.abc import Mapping
 from typing import TypeVar, Any
 
-from core.device import (
+from caqtus.device import (
     DeviceName,
     DeviceConfigurationAttrs,
     DeviceParameter,
     get_configurations_by_type,
 )
-from core.device.camera import CameraConfiguration
-from core.session.shot import TimeLanes, TimeLane
-from core.session.shot.timelane import CameraTimeLane
+from caqtus.device.camera import CameraConfiguration
+from caqtus.session.shot import TimeLanes, TimeLane
+from caqtus.session.shot.timelane import CameraTimeLane
 from .camera_parameter_compiler import CamerasParameterCompiler
 from .sequencer_paramer_compiler import SequencerParameterCompiler
 from .shot_compiler import ShotCompiler

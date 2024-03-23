@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Protocol, Any
 
-from core.device import DeviceName, DeviceConfigurationAttrs, DeviceParameter
-from core.session.shot import TimeLanes
+from caqtus.device import DeviceName, DeviceConfigurationAttrs, DeviceParameter
+from caqtus.session.shot import TimeLanes
 from .variable_namespace import VariableNamespace
 
 

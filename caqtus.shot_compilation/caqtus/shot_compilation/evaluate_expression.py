@@ -1,8 +1,8 @@
 from collections.abc import Mapping
 from typing import Any
 
-from core.types.expression import Expression
-from core.types.variable_name import DottedVariableName
+from caqtus.types.expression import Expression
+from caqtus.types.variable_name import DottedVariableName
 from .unit_namespace import units
 
 

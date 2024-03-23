@@ -7,9 +7,9 @@ from typing import TypedDict, Optional
 
 import numpy as np
 
-from core.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
-from core.device.camera import CameraConfiguration
-from core.device.sequencer import (
+from caqtus.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
+from caqtus.device.camera import CameraConfiguration
+from caqtus.device.sequencer import (
     SequencerConfiguration,
     SoftwareTrigger,
     ChannelConfiguration,
@@ -17,8 +17,8 @@ from core.device.sequencer import (
     ExternalClockOnChange,
     ExternalTriggerStart,
 )
-from core.device.sequencer.configuration import Advance, Delay, TimeIndependentMapping
-from core.device.sequencer.configuration import (
+from caqtus.device.sequencer.configuration import Advance, Delay, TimeIndependentMapping
+from caqtus.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     Constant,
     LaneValues,
@@ -27,7 +27,7 @@ from core.device.sequencer.configuration import (
     CalibratedAnalogMapping,
     is_value_source,
 )
-from core.device.sequencer.instructions import (
+from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     with_name,
     stack_instructions,
@@ -36,11 +36,11 @@ from core.device.sequencer.instructions import (
     Concatenate,
     join,
 )
-from core.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
-from core.types.expression import Expression
-from core.types.parameter import add_unit, magnitude_in_unit
-from core.types.units import Unit
-from util import add_exc_note
+from caqtus.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
+from caqtus.types.expression import Expression
+from caqtus.types.parameter import add_unit, magnitude_in_unit
+from caqtus.types.units import Unit
+from caqtus.utils import add_exc_note
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds

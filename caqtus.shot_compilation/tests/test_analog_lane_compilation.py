@@ -1,10 +1,10 @@
 import numpy as np
 
-from core.compilation import VariableNamespace
-from core.compilation.lane_compilers import AnalogLaneCompiler
-from core.device.sequencer.instructions import Pattern
-from core.session.shot.timelane import AnalogTimeLane, Ramp
-from core.types.expression import Expression
+from caqtus.shot_compilation import VariableNamespace
+from caqtus.shot_compilation.lane_compilers import AnalogLaneCompiler
+from caqtus.device.sequencer.instructions import Pattern
+from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.types.expression import Expression
 
 
 def test_0():

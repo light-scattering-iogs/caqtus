@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
 import numpy as np
-from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
-from core.session.shot.timelane import DigitalTimeLane
-from core.types.expression import Expression
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
+from caqtus.session.shot.timelane import DigitalTimeLane
+from caqtus.types.expression import Expression
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds
 from .timing import number_ticks, ns

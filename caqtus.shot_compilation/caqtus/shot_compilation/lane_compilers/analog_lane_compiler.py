@@ -3,17 +3,17 @@ from typing import assert_never, Optional
 
 import numpy as np
 
-from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
-from core.session.shot.timelane import AnalogTimeLane, Ramp
-from core.types.expression import Expression
-from core.types.parameter import (
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
+from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.types.expression import Expression
+from caqtus.types.parameter import (
     AnalogValue,
     is_analog_value,
     is_quantity,
     magnitude_in_unit,
 )
-from core.types.units import ureg
-from core.types.variable_name import VariableName
+from caqtus.types.units import ureg
+from caqtus.types.variable_name import VariableName
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
 from ..unit_namespace import units

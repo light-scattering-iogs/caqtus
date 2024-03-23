@@ -1,10 +1,10 @@
 from collections.abc import Sequence, Mapping
 from typing import TypedDict
 
-from core.device import DeviceName
-from core.device.camera import CameraConfiguration
-from core.session.shot.timelane import CameraTimeLane
-from core.types.expression import Expression
+from caqtus.device import DeviceName
+from caqtus.device.camera import CameraConfiguration
+from caqtus.session.shot.timelane import CameraTimeLane
+from caqtus.types.expression import Expression
 from .variable_namespace import VariableNamespace
 from .lane_compilers import CameraLaneCompiler, evaluate_step_durations
 

@@ -1,9 +1,9 @@
-from core.compilation import VariableNamespace
-from core.compilation.lane_compilers import DigitalLaneCompiler
-from core.device.sequencer.instructions import Pattern
-from core.session.shot import DigitalTimeLane
-from core.types.expression import Expression
-from core.types.units import Quantity
+from caqtus.shot_compilation import VariableNamespace
+from caqtus.shot_compilation.lane_compilers import DigitalLaneCompiler
+from caqtus.device.sequencer.instructions import Pattern
+from caqtus.session.shot import DigitalTimeLane
+from caqtus.types.expression import Expression
+from caqtus.types.units import Quantity
 
 
 def test_0():

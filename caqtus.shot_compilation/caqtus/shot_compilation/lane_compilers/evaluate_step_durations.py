@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
-from core.types.expression import Expression
+from caqtus.types.expression import Expression
 from ..unit_namespace import units
 from ..variable_namespace import VariableNamespace
-from core.types.parameter import is_quantity, magnitude_in_unit
+from caqtus.types.parameter import is_quantity, magnitude_in_unit
 
 
 def evaluate_step_durations(

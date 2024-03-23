@@ -3,9 +3,9 @@ from typing import assert_never
 
 import numpy as np
 
-from core.device.sequencer.instructions import SequencerInstruction, Pattern, join
-from core.session.shot.timelane.camera_time_lane import CameraTimeLane, TakePicture
-from core.types.expression import Expression
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
+from caqtus.session.shot.timelane.camera_time_lane import CameraTimeLane, TakePicture
+from caqtus.types.expression import Expression
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, number_ticks, ns
 from ..variable_namespace import VariableNamespace

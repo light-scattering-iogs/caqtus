@@ -3,7 +3,7 @@ from typing import Optional, Generic, TypeVar
 
 from benedict import benedict  # type: ignore
 
-from core.types.variable_name import DottedVariableName
+from caqtus.types.variable_name import DottedVariableName
 
 T = TypeVar("T")
 

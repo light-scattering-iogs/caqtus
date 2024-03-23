@@ -1,9 +1,9 @@
 from collections.abc import Mapping
 from typing import Any
 
-from core.device import DeviceName, DeviceParameter
-from core.device.camera import CameraConfiguration
-from core.session.shot import CameraTimeLane
+from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device.camera import CameraConfiguration
+from caqtus.session.shot import CameraTimeLane
 
 
 def get_cameras_initialization_parameters(
