@@ -5,8 +5,7 @@ from collections.abc import Iterable
 from typing import Self, Any
 
 import attrs
-
-from util import serialization
+from caqtus.utils import serialization
 
 NAME = r"[^\W\d]\w*"
 VARIABLE_NAME_REGEX = re.compile(NAME)

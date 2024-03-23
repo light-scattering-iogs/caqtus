@@ -1,6 +1,6 @@
-from core.types.expression import Expression
-from core.types.units import ureg
-from core.types.variable_name import DottedVariableName
+from caqtus.types.expression import Expression
+from caqtus.types.units import ureg
+from caqtus.types.variable_name import DottedVariableName
 
 
 def test_degree_compilation():

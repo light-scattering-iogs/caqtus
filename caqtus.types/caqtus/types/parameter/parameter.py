@@ -1,6 +1,6 @@
 from typing import TypeGuard, Any
 
-from util import serialization
+from caqtus.utils import serialization
 from .analog_value import AnalogValue, is_analog_value, Quantity
 
 Parameter = AnalogValue | int | bool

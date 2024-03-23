@@ -6,7 +6,7 @@ from typing import Optional, Any
 
 import numpy
 import token_utils
-from util import serialization
+from caqtus.utils import serialization
 
 from ..variable_name import DottedVariableName, VariableName
 
@@ -181,7 +181,6 @@ class Expression:
 
         if self._implicit_multiplication:
             expr = add_implicit_multiplication(expr)
-
 
         return ast.parse(expr, mode="eval")
 
