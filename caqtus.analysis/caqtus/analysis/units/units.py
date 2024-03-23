@@ -1,12 +1,14 @@
-"""This module defines a custom dtype for polars dataframes that can be used to represent quantities with units. This
-dtype is called QuantityDType and is a struct with two fields: magnitude and units. This module also defines functions
+"""This module defines a custom dtype for polars dataframes that can be used to
+represent quantities with units. This
+dtype is called QuantityDType and is a struct with two fields: magnitude and units.
+This module also defines functions
 to add or remove units from series.
 """
 
 from typing import Optional, Mapping
 
 import polars
-from core.types.units import Unit, Quantity
+from caqtus.types.units import Unit, Quantity
 
 MAGNITUDE_FIELD = "magnitude"
 UNITS_FIELD = "units"
@@ -19,14 +21,15 @@ def is_quantity_dtype(dtype: polars.DataType) -> bool:
         dtype: the dtype to check.
 
     Returns:
-        True if the dtype is a polars.Struct with two fields, magnitude and units, False otherwise.
+        True if the dtype is a polars.Struct with two fields, magnitude and units,
+        False otherwise.
     """
 
     if isinstance(dtype, polars.Struct):
         if len(dtype.fields) == 2:
             if (
-                dtype.fields[0].name == MAGNITUDE_FIELD
-                and dtype.fields[1].name == UNITS_FIELD
+                    dtype.fields[0].name == MAGNITUDE_FIELD
+                    and dtype.fields[1].name == UNITS_FIELD
             ):
                 return True
     return False
@@ -40,8 +43,10 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
         unit: the unit to add. If None, the series is returned unchanged.
 
     Returns:
-        A new series with the unit added. If the unit is None, the series is returned unchanged and has the same dtype.
-        If the unit is not None, the series is returned with a quantity dtype having the unit as a categorical and
+        A new series with the unit added. If the unit is None, the series is returned
+        unchanged and has the same dtype.
+        If the unit is not None, the series is returned with a quantity dtype having
+        the unit as a categorical and
         the magnitude with the same dtype as the original series.
     """
 
@@ -61,12 +66,14 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
 
 
 def extract_unit(
-    series: polars.Series,
+        series: polars.Series,
 ) -> tuple[polars.Series, Optional[Unit]]:
     """Break the series into a magnitude series and a unit.
 
-    If the series has a quantity data type, this will attempt to convert all magnitudes to a given unit. It will then
-    return a series of magnitudes only and their unit. If the series is any other dtype, it will be returned unchanged.
+    If the series has a quantity data type, this will attempt to convert all
+    magnitudes to a given unit. It will then
+    return a series of magnitudes only and their unit. If the series is any other
+    dtype, it will be returned unchanged.
     """
 
     if is_quantity_dtype(series.dtype):
@@ -85,9 +92,10 @@ def extract_unit(
 
 
 def extract_units(
-    dataframe: polars.DataFrame,
+        dataframe: polars.DataFrame,
 ) -> tuple[polars.DataFrame, Mapping[str, Optional[Unit]]]:
-    """Break a dataframe potentially containing quantities into its magnitude and unit components."""
+    """Break a dataframe potentially containing quantities into its magnitude and
+    unit components."""
 
     column_units = {}
     columns_magnitudes = {}
@@ -99,25 +107,29 @@ def extract_units(
 
 
 def convert_to_unit(
-    series: polars.Series, target_unit: Optional[Unit]
+        series: polars.Series, target_unit: Optional[Unit]
 ) -> polars.Series:
     """Convert a series to a given unit.
 
     Args:
-        series: the series to convert. If it has a quantity dtype, target_unit must be not be None. If it has any other
+        series: the series to convert. If it has a quantity dtype, target_unit must
+        be not be None. If it has any other
             dtype, target_unit must be None.
         target_unit: the unit to convert to.
 
     Returns:
-        A new series with the same name as the original series. If unit is None, the series is returned unchanged. If
-        the series has a quantity dtype, the series is returned with the same dtype, but all magnitudes converted to
+        A new series with the same name as the original series. If unit is None,
+        the series is returned unchanged. If
+        the series has a quantity dtype, the series is returned with the same dtype,
+        but all magnitudes converted to
         the target unit.
     """
 
     if target_unit is None:
         if is_quantity_dtype(series.dtype):
             raise ValueError(
-                f"Series {series.name} is expressed in unit {extract_unit(series)[1]} and target_unit is None"
+                f"Series {series.name} is expressed in unit {extract_unit(series)[1]} "
+                f"and target_unit is None"
             )
         else:
             return series
@@ -125,7 +137,8 @@ def convert_to_unit(
     magnitudes, unit = extract_unit(series)
     if unit is None:
         raise ValueError(
-            f"Series {series.name} has no unit and needs to be converted to {target_unit:~}"
+            f"Series {series.name} has no unit and needs to be converted to "
+            f"{target_unit:~}"
         )
     else:
         quantity = Quantity(magnitudes.to_numpy(), unit).to(target_unit)
@@ -137,21 +150,24 @@ def magnitude_in_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Ser
 
     Args:
         series: the series to convert. It should have dtype QuantityDType.
-        unit: the unit to convert to. If None and the series has a not a quantity dtype, the series is returned
+        unit: the unit to convert to. If None and the series has a not a quantity
+        dtype, the series is returned
             unchanged.
 
     Raises:
         ValueError: if the series has a quantity dtype and unit is None.
 
     Returns:
-        A new series with the same name as the original series, with dtype Float64 and all magnitudes
+        A new series with the same name as the original series, with dtype Float64
+        and all magnitudes
         converted to the target unit.
     """
 
     if unit is None:
         if is_quantity_dtype(series.dtype):
             raise ValueError(
-                f"Series {series.name} is expressed in unit {extract_unit(series)[1]} and target_unit is None"
+                f"Series {series.name} is expressed in unit {extract_unit(series)[1]} "
+                f"and target_unit is None"
             )
         else:
             return series
@@ -161,7 +177,7 @@ def magnitude_in_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Ser
 
 
 def with_columns_expressed_in_units(
-    dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
+        dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
 ) -> polars.DataFrame:
     """Compute the magnitude of columns in a dataframe to given units.
 
@@ -170,7 +186,8 @@ def with_columns_expressed_in_units(
         column_units: a mapping from column names to units.
 
     Returns:
-        A new dataframe with the same columns as the original dataframe, but with all columns containing the magnitude
+        A new dataframe with the same columns as the original dataframe, but with all
+        columns containing the magnitude
         of the original columns in the requested units.
     """
 
@@ -183,16 +200,18 @@ def with_columns_expressed_in_units(
 
 
 def with_units_added_to_columns(
-    dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
+        dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
 ) -> polars.DataFrame:
     """Add units to columns in a dataframe.
 
     Args:
         dataframe: the dataframe to convert.
-        column_units: a mapping from column names to units. If the unit is None, the column is returned unchanged.
+        column_units: a mapping from column names to units. If the unit is None,
+        the column is returned unchanged.
 
     Returns:
-        A new dataframe with the same columns as the original dataframe, but with all columns containing the magnitude
+        A new dataframe with the same columns as the original dataframe, but with all
+        columns containing the magnitude
         of the original columns with the requested units.
     """
 

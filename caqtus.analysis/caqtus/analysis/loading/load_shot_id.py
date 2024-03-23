@@ -1,5 +1,5 @@
 import polars
-from core.session import ExperimentSession, Shot
+from caqtus.session import ExperimentSession, Shot
 
 from .combinable_importers import CombinableLoader
 

@@ -1,7 +1,7 @@
 import datetime
 from typing import Protocol, TypeVar, Optional
 
-from core.session import ExperimentSession, Sequence, PureSequencePath
+from caqtus.session import ExperimentSession, Sequence, PureSequencePath
 
 T = TypeVar("T", covariant=True)
 

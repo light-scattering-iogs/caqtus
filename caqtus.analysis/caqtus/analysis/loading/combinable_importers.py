@@ -3,7 +3,7 @@ from collections.abc import Sequence
 
 import polars
 
-from core.session import Shot, ExperimentSession
+from caqtus.session import Shot, ExperimentSession
 
 
 class CombinableLoader(abc.ABC):

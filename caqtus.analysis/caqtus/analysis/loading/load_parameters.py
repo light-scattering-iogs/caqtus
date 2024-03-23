@@ -3,8 +3,8 @@ from typing import Literal
 
 import attrs
 import polars
-from core.session import ExperimentSession, Shot, Sequence
-from core.types.parameter import is_analog_value, is_quantity
+from caqtus.session import ExperimentSession, Shot, Sequence
+from caqtus.types.parameter import is_analog_value, is_quantity
 
 from .combinable_importers import CombinableLoader
 from .sequence_cache import cache_per_sequence
@@ -22,12 +22,16 @@ class LoadShotParameters(CombinableLoader):
 
     Attributes:
         which: the parameters to load from a shot.
-        If it is "sequence", only the parameters defined at the sequence level are loaded.
-        If it is "globals", only the values of the global parameters at the time the sequence was launched are loaded.
-        Note that the values of the globals parameters will be constant for all shot of a given sequence, unless they
+        If it is "sequence", only the parameters defined at the sequence level are
+        loaded.
+        If it is "globals", only the values of the global parameters at the time the
+        sequence was launched are loaded.
+        Note that the values of the globals parameters will be constant for all shot
+        of a given sequence, unless they
         are overwritten by the sequence iteration.
         If "all", both sequence specific and global parameters are loaded.
-        If it is an iterable of strings, only the parameters with the given names are loaded.
+        If it is an iterable of strings, only the parameters with the given names are
+        loaded.
     """
 
     which: Literal["sequence", "all"] | Iterable[str] = "all"
