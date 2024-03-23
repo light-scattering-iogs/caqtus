@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "swabian-pulse-streamer-configuration"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Damien Bloch <damien.bloch@institutoptique>"]
 readme = "README.md"
@@ -9,8 +9,10 @@ packages = [{include = "swabian_pulse_streamer"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 
-util = {path = "../../../util", develop = true}
-core-device = {path = "../../../core/core.device", develop = true}
+caqtus-device = {path = "../../../../../caqtus.device"}
+caqtus-utils = {path = "../../../../../caqtus.utils"}
+
+
 
 
 [build-system]
