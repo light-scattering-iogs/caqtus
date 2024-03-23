@@ -9,17 +9,17 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
 
-caqtus-utils = {path = "caqtus.utils"}
-caqtus-types = {path = "caqtus.types/"}
-caqtus-device = {path = "caqtus.device/"}
-caqtus-session = {path = "caqtus.session/"}
-caqtus-analysis = {path = "caqtus.analysis/"}
-caqtus-shot-compilation = {path = "caqtus.shot_compilation/"}
-caqtus-experiment-control = {path = "caqtus.experiment_control/"}
+caqtus-utils = {path = "caqtus/caqtus.utils"}
+caqtus-types = {path = "caqtus/caqtus.types/"}
+caqtus-device = {path = "caqtus/caqtus.device/"}
+caqtus-session = {path = "caqtus/caqtus.session/"}
+caqtus-analysis = {path = "caqtus/caqtus.analysis/"}
+caqtus-shot-compilation = {path = "caqtus/caqtus.shot_compilation/"}
+caqtus-experiment-control = {path = "caqtus/caqtus.experiment_control/"}
 
-caqtus-gui-condetrol = {path = "caqtus.gui/caqtus.gui.condetrol/"}
-caqtus-gui-graphplot = {path = "caqtus.gui/caqtus.gui.graphplot/"}
-caqtus-gui-shotviewer = {path = "caqtus.gui/caqtus.gui.shotviewer/"}
+caqtus-gui-condetrol = {path = "caqtus/caqtus.gui/caqtus.gui.condetrol/"}
+caqtus-gui-graphplot = {path = "caqtus/caqtus.gui/caqtus.gui.graphplot/"}
+caqtus-gui-shotviewer = {path = "caqtus/caqtus.gui/caqtus.gui.shotviewer/"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
