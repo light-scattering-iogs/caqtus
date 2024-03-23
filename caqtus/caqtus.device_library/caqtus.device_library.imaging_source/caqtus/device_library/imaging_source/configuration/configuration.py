@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import attrs
-from core.device import DeviceParameter
-from core.device.camera.configuration import CameraConfiguration
-from util import serialization
+from caqtus.device import DeviceParameter
+from caqtus.device.camera.configuration import CameraConfiguration
+from caqtus.utils import serialization
 
 
 @attrs.define

@@ -14,9 +14,9 @@ from typing import Literal, ClassVar, Optional
 
 import attrs
 import numpy
-from core.device import RuntimeDevice
-from core.device.camera import Camera, CameraTimeoutError
-from core.types.image import Image
+from caqtus.device import RuntimeDevice
+from caqtus.device.camera import Camera, CameraTimeoutError
+from caqtus.types.image import Image
 
 from . import tisgrabber as tis
 

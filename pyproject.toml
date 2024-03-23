@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus"
-version = "1.0.13"
+version = "1.0.14"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 license = "MIT"
@@ -24,6 +24,7 @@ caqtus-gui-shotviewer = {path = "caqtus/caqtus.gui/caqtus.gui.shotviewer/", deve
 caqtus-device-library-swabian-pulse-streamer = {path = "caqtus/caqtus.device_library/caqtus.device_library.swabian_pulse_streamer", optional = true, develop = true}
 caqtus-device-library-spincore-pulse-blaster = {path = "caqtus/caqtus.device_library/caqtus.device_library.spincore_pulse_blaster", optional = true, develop = true}
 caqtus-device-library-orca-quest = {path = "caqtus/caqtus.device_library/caqtus.device_library.orca_quest", optional = true, develop = true}
+caqtus-device-library-imaging-source = {path = "caqtus/caqtus.device_library/caqtus.device_library.imaging_source", optional = true, develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"

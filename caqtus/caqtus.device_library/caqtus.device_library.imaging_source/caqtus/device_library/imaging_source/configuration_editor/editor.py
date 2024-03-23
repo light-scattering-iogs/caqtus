@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QLineEdit, QComboBox
+from caqtus.utils.roi import RectangularROI, Width, Height
 
-from condetrol.device_configuration_editors.camera_configuration_editor.editor import (
+from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor.editor import (
     CameraConfigurationEditor,
 )
-from imaging_source.configuration import ImagingSourceCameraConfiguration
-from util.roi import RectangularROI, Width, Height
+from ..configuration import ImagingSourceCameraConfiguration
 
 
 class ImagingSourceCameraConfigurationEditor(
