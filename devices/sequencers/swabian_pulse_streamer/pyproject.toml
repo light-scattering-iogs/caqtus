@@ -12,10 +12,10 @@ attrs = "^23.1.0"
 pulsestreamer = "^1.7.0"
 pyside6 = "^6.6.1"
 
-caqtus-device = {path = "../../../../../caqtus.device/", develop = true}
-caqtus-types = {path = "../../../../../caqtus.types/", develop = true}
-caqtus-utils = {path = "../../../../../caqtus.utils/", develop = true}
-caqtus-gui-condetrol = {path = "../../../../../caqtus.gui/caqtus.gui.condetrol/", develop = true}
+caqtus-device = {path = "../../../caqtus.device/", develop = true}
+caqtus-types = {path = "../../../caqtus.types/", develop = true}
+caqtus-utils = {path = "../../../caqtus.utils/", develop = true}
+caqtus-gui-condetrol = {path = "../../../caqtus.gui/caqtus.gui.condetrol/", develop = true}
 
 
 [build-system]
