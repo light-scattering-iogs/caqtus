@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Generic, TypeVar, Self
 
-from core.compilation import VariableNamespace
-from core.types.variable_name import DottedVariableName
+from caqtus.shot_compilation import VariableNamespace
+from caqtus.types.variable_name import DottedVariableName
 
 T = TypeVar("T")
 

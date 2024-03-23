@@ -3,16 +3,16 @@ from collections.abc import Iterable, Callable
 from typing import assert_never, Any
 
 import numpy
-from core.compilation import units
-from core.session import ParameterNamespace
-from core.session.sequence.iteration_configuration import (
+from caqtus.shot_compilation import units
+from caqtus.session import ParameterNamespace
+from caqtus.session.sequence.iteration_configuration import (
     Step,
     ArangeLoop,
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
 )
-from core.types.parameter import (
+from caqtus.types.parameter import (
     is_analog_value,
     AnalogValue,
     get_unit,
@@ -20,7 +20,7 @@ from core.types.parameter import (
     is_parameter,
     Parameter,
 )
-from core.types.parameter.analog_value import add_unit
+from caqtus.types.parameter.analog_value import add_unit
 
 from .sequence_manager import SequenceManager, SequenceInterruptedException
 from .step_context import StepContext

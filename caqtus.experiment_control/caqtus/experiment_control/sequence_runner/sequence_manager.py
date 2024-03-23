@@ -11,11 +11,11 @@ from contextlib import AbstractContextManager
 from typing import Optional, Any
 
 import attrs
-from core.compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
-from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
-from core.session import ExperimentSessionMaker, Sequence
-from core.session.sequence import State
-from core.types.data import DataLabel, Data
+from caqtus.shot_compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
+from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
+from caqtus.session import ExperimentSessionMaker, Sequence
+from caqtus.session.sequence import State
+from caqtus.types.data import DataLabel, Data
 from tblib import pickling_support
 from util.concurrent import TaskGroup
 

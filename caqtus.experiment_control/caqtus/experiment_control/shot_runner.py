@@ -6,9 +6,9 @@ from typing import Protocol, Any
 import anyio
 import anyio.to_thread
 
-from core.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
-from core.session.shot import TimeLanes
-from core.types.data import DataLabel, Data
+from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
+from caqtus.session.shot import TimeLanes
+from caqtus.types.data import DataLabel, Data
 
 
 class ShotRunner(abc.ABC):

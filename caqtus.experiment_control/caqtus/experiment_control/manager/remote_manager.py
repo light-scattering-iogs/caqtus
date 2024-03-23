@@ -7,10 +7,10 @@ from typing import Optional
 
 from tblib import pickling_support
 
-from core.compilation import ShotCompilerFactory
-from core.device import DeviceName, DeviceConfigurationAttrs
-from core.session import ExperimentSessionMaker, Sequence
-from core.session import PureSequencePath
+from caqtus.shot_compilation import ShotCompilerFactory
+from caqtus.device import DeviceName, DeviceConfigurationAttrs
+from caqtus.session import ExperimentSessionMaker, Sequence
+from caqtus.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory

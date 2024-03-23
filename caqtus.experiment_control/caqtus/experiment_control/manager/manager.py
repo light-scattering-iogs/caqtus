@@ -8,14 +8,14 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from core.compilation import ShotCompilerFactory
-from core.device import DeviceConfigurationAttrs, DeviceName
-from core.session import (
+from caqtus.shot_compilation import ShotCompilerFactory
+from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     Sequence,
 )
-from core.session.sequence.iteration_configuration import StepsConfiguration
+from caqtus.session.sequence.iteration_configuration import StepsConfiguration
 from util import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context
