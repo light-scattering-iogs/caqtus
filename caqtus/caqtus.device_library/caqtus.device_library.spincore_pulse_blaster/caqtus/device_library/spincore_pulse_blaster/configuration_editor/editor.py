@@ -10,7 +10,7 @@ from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_e
 )
 from caqtus.types.expression import Expression
 
-from spincore_pulse_blaster.configuration import SpincoreSequencerConfiguration
+from ..configuration import SpincoreSequencerConfiguration
 
 
 def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:

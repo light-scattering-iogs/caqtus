@@ -4,13 +4,13 @@ from caqtus.device.sequencer.configuration import (
     SoftwareTrigger,
     Constant,
 )
+from caqtus.types.expression import Expression
+
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
-from caqtus.types.expression import Expression
-
-from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
+from ..configuration import SwabianPulseStreamerConfiguration
 
 
 def get_default_swabian_configuration() -> SwabianPulseStreamerConfiguration:

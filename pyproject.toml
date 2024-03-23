@@ -22,6 +22,7 @@ caqtus-gui-graphplot = {path = "caqtus/caqtus.gui/caqtus.gui.graphplot/", develo
 caqtus-gui-shotviewer = {path = "caqtus/caqtus.gui/caqtus.gui.shotviewer/", develop = true}
 
 caqtus-device-library-swabian-pulse-streamer = {path = "caqtus/caqtus.device_library/caqtus.device_library.swabian_pulse_streamer", optional = true, develop = true}
+caqtus-device-library-spincore-pulse-blaster = {path = "caqtus/caqtus.device_library/caqtus.device_library.spincore_pulse_blaster", optional = true, develop = true}
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
