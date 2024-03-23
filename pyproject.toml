@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "caqtus"
+version = "1.0.0"
+description = ""
+authors = ["damien <damien.bloch@institutoptique.fr>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+caqtus-utils = {path = "caqtus.utils"}
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.3.0"
+mypy = "^1.9.0"
+pyright = "^1.1.355"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
