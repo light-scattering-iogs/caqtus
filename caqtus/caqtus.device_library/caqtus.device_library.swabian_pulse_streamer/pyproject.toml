@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "caqtus-device-library-swabian-pulse-streamer"
+version = "1.0.0"
+description = ""
+authors = ["Dear <lechadoq@gmail.com>"]
+readme = "README.md"
+packages = [{include = "caqtus"}]
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+attrs = "^23.2.0"
+pulsestreamer = "^1.7.0"
+pyside6 = "^6.6.2"
+
+caqtus-device = {path = "../../caqtus.device", develop = true}
+caqtus-utils = {path = "../../caqtus.utils", develop = true}
+caqtus-types = {path = "../../caqtus.types", develop = true}
+caqtus-gui-condetrol = {path = "../../caqtus.gui/caqtus.gui.condetrol", develop = true}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
