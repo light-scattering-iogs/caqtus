@@ -2,12 +2,12 @@ from typing import ClassVar, Any, Self
 
 import attrs
 
-from core.device import DeviceParameter
-from core.device.sequencer import (
+from caqtus.device import DeviceParameter
+from caqtus.device.sequencer import (
     SequencerConfiguration,
     DigitalChannelConfiguration,
 )
-from util import serialization
+from caqtus.utils import serialization
 
 
 @attrs.define

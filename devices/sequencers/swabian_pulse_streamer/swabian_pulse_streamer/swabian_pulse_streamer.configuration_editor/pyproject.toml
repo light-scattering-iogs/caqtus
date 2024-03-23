@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "swabian-pulse-streamer-configuration-editor"
-version = "0.1.0"
+version = "1.0.1"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"

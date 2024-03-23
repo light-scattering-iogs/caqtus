@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "swabian-pulse-streamer"
-version = "1.0.0"
+version = "1.0.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"

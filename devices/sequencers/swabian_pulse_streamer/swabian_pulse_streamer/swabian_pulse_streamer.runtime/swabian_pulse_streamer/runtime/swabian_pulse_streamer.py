@@ -6,15 +6,15 @@ import attrs.setters
 from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge, le
-from core.device import RuntimeDevice
-from core.device.sequencer import (
+from caqtus.device import RuntimeDevice
+from caqtus.device.sequencer import (
     Sequencer,
     Trigger,
     ExternalTriggerStart,
     TriggerEdge,
     SoftwareTrigger,
 )
-from core.device.sequencer.instructions import (
+from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Concatenate,
@@ -31,7 +31,6 @@ from pulsestreamer import (
 
 logger = logging.getLogger(__name__)
 
-logger.setLevel(logging.DEBUG)
 
 
 @define(slots=False)

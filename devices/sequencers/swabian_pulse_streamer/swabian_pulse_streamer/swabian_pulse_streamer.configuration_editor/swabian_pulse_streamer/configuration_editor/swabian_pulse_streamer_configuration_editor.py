@@ -1,15 +1,15 @@
 from PySide6.QtWidgets import QSpinBox, QFormLayout, QLineEdit
-
-from condetrol.device_configuration_editors import DeviceConfigurationEditor
-from condetrol.device_configuration_editors.sequencer_configuration_editor import (
-    SequencerChannelView,
-)
-from core.device.sequencer.configuration import (
+from caqtus.device.sequencer.configuration import (
     DigitalChannelConfiguration,
     SoftwareTrigger,
     Constant,
 )
-from core.types.expression import Expression
+from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
+from caqtus.guicondetrol.device_configuration_editors.sequencer_configuration_editor import (
+    SequencerChannelView,
+)
+from caqtus.types.expression import Expression
+
 from swabian_pulse_streamer.configuration import SwabianPulseStreamerConfiguration
 
 
