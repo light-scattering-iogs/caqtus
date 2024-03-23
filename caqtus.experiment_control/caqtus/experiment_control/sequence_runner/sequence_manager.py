@@ -17,7 +17,7 @@ from caqtus.session import ExperimentSessionMaker, Sequence
 from caqtus.session.sequence import State
 from caqtus.types.data import DataLabel, Data
 from tblib import pickling_support
-from util.concurrent import TaskGroup
+from caqtus.utils.concurrent import TaskGroup
 
 from ..shot_runner import ShotRunnerFactory, ShotRunner
 

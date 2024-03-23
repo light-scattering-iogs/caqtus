@@ -1,7 +1,7 @@
 """This module provides utilities functions to run shot on the experiment
 asynchronously.
 
-These functions can manipulate :class:`core.device.Device` objects.
+These functions can manipulate :class:`caqtus.device.Device` objects.
 However, the interface of the devices are typically synchronous: the methods that a
 device provides are blocking.
 This means that by default, it is only possible to talk to one device at a time.
@@ -10,6 +10,7 @@ To talk to multiple devices concurrently, we need to use asynchronous programmin
 The functions in this module use structured concurrency with the async/await syntax for
 this.
 """
+
 import contextlib
 from collections.abc import AsyncGenerator, AsyncIterable, Iterable, AsyncIterator
 from typing import Protocol, TypeVar
@@ -17,8 +18,8 @@ from typing import Protocol, TypeVar
 import anyio
 import anyio.to_thread
 
-from core.device.camera import Camera
-from core.types.image import Image
+from caqtus.device.camera import Camera
+from caqtus.types.image import Image
 
 
 class SequencedDevice(Protocol):
