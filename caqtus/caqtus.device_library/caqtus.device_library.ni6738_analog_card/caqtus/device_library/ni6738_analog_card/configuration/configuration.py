@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any, ClassVar, Type
 
 import attrs
-from core.device import DeviceParameter
-from core.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
-from util import serialization
+from caqtus.device import DeviceParameter
+from caqtus.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
+from caqtus.utils import serialization
 
 
 @attrs.define

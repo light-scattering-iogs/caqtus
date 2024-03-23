@@ -1,16 +1,16 @@
 from PySide6.QtWidgets import QSpinBox, QFormLayout, QLineEdit
-
-from condetrol.device_configuration_editors import DeviceConfigurationEditor
-from condetrol.device_configuration_editors.sequencer_configuration_editor import (
-    SequencerChannelView,
-)
-from core.device.sequencer.configuration import (
+from caqtus.device.sequencer.configuration import (
     AnalogChannelConfiguration,
     SoftwareTrigger,
     Constant,
 )
-from core.types.expression import Expression
-from ni6738_analog_card.configuration import NI6738SequencerConfiguration
+from caqtus.types.expression import Expression
+
+from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
+from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
+    SequencerChannelView
+)
+from ..configuration import (NI6738SequencerConfiguration)
 
 
 def get_default_ni6738_configuration() -> NI6738SequencerConfiguration:

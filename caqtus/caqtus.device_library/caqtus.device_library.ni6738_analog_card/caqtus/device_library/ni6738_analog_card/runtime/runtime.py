@@ -11,15 +11,16 @@ import numpy
 import numpy as np
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
-from core.device import RuntimeDevice
-from core.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, TriggerEdge
-from core.device.sequencer.instructions import (
+from caqtus.device import RuntimeDevice
+from caqtus.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, \
+    TriggerEdge
+from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Concatenate,
     Repeat,
 )
-from util import log_exception
+from caqtus.utils import log_exception
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
