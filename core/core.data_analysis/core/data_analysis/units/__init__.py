@@ -1,5 +1,6 @@
 from .units import (
     extract_unit,
+    extract_units,
     add_unit,
     convert_to_unit,
     magnitude_in_unit,
@@ -12,6 +13,7 @@ from .units import (
 
 __all__ = [
     "extract_unit",
+    "extract_units",
     "add_unit",
     "convert_to_unit",
     "magnitude_in_unit",

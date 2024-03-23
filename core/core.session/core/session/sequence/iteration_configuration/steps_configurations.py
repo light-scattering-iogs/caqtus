@@ -4,10 +4,10 @@ from collections.abc import Iterable
 from typing import Optional, TypeAlias, TypeGuard, assert_never
 
 import attrs
-
 from core.types.expression import Expression
 from core.types.variable_name import DottedVariableName
 from util import serialization
+
 from .iteration_configuration import IterationConfiguration
 
 
@@ -99,20 +99,6 @@ class ArangeLoop(ContainsSubSteps):
 
 
 @attrs.define
-class ImportConstantTable:
-    table: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-    alias: Optional[str] = attrs.field(
-        converter=attrs.converters.optional(str), on_setattr=attrs.setters.convert
-    )
-
-    def __str__(self):
-        if self.alias is None:
-            return f"import {self.table}"
-        else:
-            return f"import {self.table} as {self.alias}"
-
-
-@attrs.define
 class ExecuteShot:
     pass
 
@@ -130,9 +116,7 @@ serialization.register_unstructure_hook(ExecuteShot, unstructure_hook)
 serialization.register_structure_hook(ExecuteShot, structure_hook)
 
 
-Step: TypeAlias = (
-    ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop | ImportConstantTable
-)
+Step: TypeAlias = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
 
 
 def is_step(step) -> TypeGuard[Step]:
@@ -143,7 +127,6 @@ def is_step(step) -> TypeGuard[Step]:
             VariableDeclaration,
             LinspaceLoop,
             ArangeLoop,
-            ImportConstantTable,
         ),
     )
 
@@ -162,6 +145,9 @@ class StepsConfiguration(IterationConfiguration):
         child_number_shots = [expected_number_shots(step) for step in self.steps]
         result = sum_number_shots(child_number_shots)
         return result
+
+    def get_parameter_names(self) -> set[DottedVariableName]:
+        return set().union(*[get_parameter_names(step) for step in self.steps])
 
     @classmethod
     def dump(cls, steps_configuration: StepsConfiguration) -> serialization.JSON:
@@ -188,8 +174,20 @@ def expected_number_shots(step: Step) -> Optional[int]:
                 return num * sub_steps_number
         case ArangeLoop(_, _, _, _, sub_steps):
             return None
-        case ImportConstantTable():
-            return 0
+        case _:
+            assert_never(step)
+
+
+def get_parameter_names(step: Step) -> set[DottedVariableName]:
+    match step:
+        case VariableDeclaration(variable=variable, value=_):
+            return {variable}
+        case ExecuteShot():
+            return set()
+        case ContainsSubSteps(sub_steps=sub_steps):
+            return set().union(
+                *[get_parameter_names(sub_step) for sub_step in sub_steps]
+            )
         case _:
             assert_never(step)
 

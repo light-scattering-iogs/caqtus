@@ -1,6 +1,8 @@
 import abc
 from typing import Optional
 
+from core.types.variable_name import DottedVariableName
+
 
 class IterationConfiguration(abc.ABC):
     """Defines how parameters should be iterated over for a sequence.
@@ -18,6 +20,17 @@ class IterationConfiguration(abc.ABC):
         If the number of shots cannot be determined ahead of time, this method should
         return None.
         In doubt, the method should return None and not a wrong guess.
+        """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_parameter_names(self) -> set[DottedVariableName]:
+        """Return the names of the parameters that are iterated over.
+
+        This method must return the name of the parameters whose values are changed
+        during the iteration.
+        The iteration must set the values of all these parameters before each shot.
         """
 
         raise NotImplementedError

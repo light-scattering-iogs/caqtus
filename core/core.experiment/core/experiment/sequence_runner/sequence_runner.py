@@ -3,7 +3,6 @@ from collections.abc import Iterable, Callable
 from typing import assert_never, Any
 
 import numpy
-
 from core.compilation import units
 from core.session import ParameterNamespace
 from core.session.sequence.iteration_configuration import (
@@ -12,7 +11,6 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
-    ImportConstantTable,
 )
 from core.types.parameter import (
     is_analog_value,
@@ -23,7 +21,7 @@ from core.types.parameter import (
     Parameter,
 )
 from core.types.parameter.analog_value import add_unit
-from core.types.variable_name import DottedVariableName
+
 from .sequence_manager import SequenceManager, SequenceInterruptedException
 from .step_context import StepContext
 
@@ -176,31 +174,6 @@ class StepSequenceRunner:
             context = context.update_variable(variable_name, value_with_unit)
             for step in linspace_loop.sub_steps:
                 context = self.run_step(step, context)
-        return context
-
-    @run_step.register
-    @wrap_error
-    def _(
-        self, import_constant_table: ImportConstantTable, context: StepContext
-    ) -> StepContext:
-        """Import a constant table into the context."""
-
-        table_name = import_constant_table.table
-        if table_name not in self._constant_tables:
-            exception = ValueError(f"Constant table <{table_name}> is not available.")
-            exception.add_note(
-                f"Available tables are <{', '.join(self._constant_tables)}>"
-            )
-            raise exception
-        table = self._constant_tables[table_name]
-        namespace = import_constant_table.alias or table_name
-        table_context = StepContext()
-        for declaration in table:
-            table_context = self.run_step(declaration, table_context)
-        for name, value in table_context.variables.to_flat_dict().items():
-            context = context.update_variable(
-                DottedVariableName(f"{namespace}.{name}"), value
-            )
         return context
 
     @run_step.register

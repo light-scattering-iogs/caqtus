@@ -12,7 +12,6 @@ from PySide6.QtCore import (
     QObject,
 )
 from anytree import NodeMixin
-
 from core.session.sequence.iteration_configuration import (
     StepsConfiguration,
     Step,
@@ -20,7 +19,6 @@ from core.session.sequence.iteration_configuration import (
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
-    ImportConstantTable,
     ContainsSubSteps,
 )
 from util import serialization
@@ -82,11 +80,6 @@ class StepsItem(NodeMixin):
     @classmethod
     def _(cls, step: LinspaceLoop):
         return cls(step, children=[cls.construct(step) for step in step.sub_steps])
-
-    @construct.register
-    @classmethod
-    def _(cls, step: ImportConstantTable):
-        return cls(step)
 
 
 class StepsModel(QAbstractItemModel):

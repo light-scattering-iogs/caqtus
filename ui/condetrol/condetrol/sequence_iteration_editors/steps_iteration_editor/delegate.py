@@ -14,18 +14,17 @@ from PySide6.QtWidgets import (
     QWidget,
     QStyleOptionViewItem,
 )
-
 from core.session.sequence.iteration_configuration import (
     Step,
     VariableDeclaration,
     LinspaceLoop,
     ArangeLoop,
-    ImportConstantTable,
     ExecuteShot,
 )
 from core.types.expression import EXPRESSION_REGEX
 from core.types.expression import Expression
 from core.types.variable_name import DOTTED_VARIABLE_NAME_REGEX, DottedVariableName
+
 from ...qt_util import AutoResizeLineEdit
 
 VARIABLE_DECLARATION_REGEX = re.compile(
@@ -90,20 +89,6 @@ def to_str(step: Step) -> str:
                 f"<span style='color:{val_col}'>{num}</span> "
                 f"<span style='color:{hl}'>steps:</span>"
             )
-        case ImportConstantTable(table, alias):
-            if alias is None:
-                return (
-                    f"<span style='color:{hl}'>import</span> "
-                    f"<span style='color:{text_col}'>{table}</span>"
-                )
-            else:
-                return (
-                    f"<span style='color:{hl}'>import</span> "
-                    f"<span style='color:{text_col}'> {table}</span> "
-                    f"<span style='color:{hl}'>as</span> "
-                    f"<span style='color:{text_col}'>{alias}</span>"
-                )
-
         case _:
             assert_never(step)
 
@@ -162,13 +147,6 @@ class StepDelegate(QStyledItemDelegate):
                 text = f"for {variable} = {start} to {stop} with {step} spacing:"
                 editor.setValidator(ArangeLoopValidator())
                 editor.setText(text)
-            case ImportConstantTable(table, alias):
-                if alias is None:
-                    text = f"import {table}"
-                else:
-                    text = f"import {table} as {alias}"
-                editor.setValidator(ImportConstantTableValidator())
-                editor.setText(text)
             case _:
                 raise ValueError(f"Can't set editor data for {data}")
 
@@ -185,16 +163,6 @@ class StepDelegate(QStyledItemDelegate):
         previous_data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         text = editor.text()
         match previous_data:
-            case ImportConstantTable():
-                match = IMPORT_CONSTANT_TABLE_REGEX.fullmatch(text)
-                if match:
-                    new_attributes = {
-                        "table": DottedVariableName(match.group("table")),
-                        "alias": DottedVariableName(match.group("alias"))
-                        if match.group("alias")
-                        else None,
-                    }
-                    model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case VariableDeclaration():
                 match = VARIABLE_DECLARATION_REGEX.fullmatch(text)
                 if match:
