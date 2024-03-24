@@ -210,16 +210,18 @@ class TimeLanesView(QTableView):
 
         self._model.dataChanged.connect(self.on_data_changed)
         self._model.rowsInserted.connect(self.on_time_lanes_changed)
-        self._model.rowsInserted.connect(self.update_delegates)
         self._model.rowsRemoved.connect(self.on_time_lanes_changed)
         self._model.columnsInserted.connect(self.on_time_lanes_changed)
         self._model.columnsRemoved.connect(self.on_time_lanes_changed)
-
-        self._model.modelReset.connect(self.update_spans)
         self._model.modelReset.connect(self.on_time_lanes_changed)
+
+        # only need to update the lane delegates when the rows change
+        self._model.rowsInserted.connect(self.update_delegates)
+        self._model.rowsRemoved.connect(self.update_delegates)
         self._model.modelReset.connect(self.update_delegates)
 
     def on_time_lanes_changed(self):
+        self.update_spans()
         self.time_lanes_changed.emit(self.get_time_lanes())
 
     def on_data_changed(self, top_left: QModelIndex, bottom_right: QModelIndex):
