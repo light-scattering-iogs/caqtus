@@ -55,6 +55,8 @@ def default_lane_delegate_factory(
 
 
 class TimeLanesEditor(QWidget):
+    """A widget for editing the time lanes of a sequence."""
+
     time_lanes_changed = Signal(TimeLanes)
 
     def __init__(
@@ -86,6 +88,11 @@ class TimeLanesEditor(QWidget):
         self.setLayout(layout)
 
     def set_read_only(self, read_only: bool) -> None:
+        """Set the editor to read-only mode.
+
+        In read-only mode, the user cannot edit the time lanes.
+        """
+
         self.view.set_read_only(read_only)
         self.toolbar.setEnabled(not read_only)
 
