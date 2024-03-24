@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "orca-quest"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"

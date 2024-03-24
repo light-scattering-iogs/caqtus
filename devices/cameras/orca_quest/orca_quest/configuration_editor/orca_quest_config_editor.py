@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QSpinBox
 
-from condetrol.device_configuration_editors.camera_configuration_editor.editor import (
+from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor.editor import (
     CameraConfigurationEditor,
 )
-from orca_quest.configuration import OrcaQuestCameraConfiguration
 from caqtus.utils.roi import RectangularROI, Width, Height
+from ..configuration import OrcaQuestCameraConfiguration
 
 
 class OrcaQuestConfigurationEditor(
