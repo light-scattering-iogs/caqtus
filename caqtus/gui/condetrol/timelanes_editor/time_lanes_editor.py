@@ -84,7 +84,7 @@ class TimeLanesEditor(QWidget):
             get_icon("simplify-timelanes", self.palette().buttonText().color()),
             "Simplify",
         )
-        self.simplify_action.triggered.connect(self.simplify_timelanes)
+        self.simplify_action.triggered.connect(self._simplify_timelanes)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -110,7 +110,7 @@ class TimeLanesEditor(QWidget):
         with block_signals(self):
             self.view.set_time_lanes(time_lanes)
 
-    def simplify_timelanes(self):
+    def _simplify_timelanes(self):
         self.view.simplify_timelanes()
 
 
