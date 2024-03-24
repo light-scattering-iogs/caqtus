@@ -16,7 +16,7 @@ class DigitalTimeLaneModel(ColoredTimeLaneModel[DigitalTimeLane, None]):
         if self._brush is None:
             # If no brush is set the button will be invisible, so we pick the
             # base color from the palette as default.
-            color = QPalette().base().color()
+            color = QPalette().text().color()
             self._brush = QBrush(color)
 
     def data(

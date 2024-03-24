@@ -4,7 +4,6 @@ import functools
 from collections.abc import Callable
 from typing import Optional, Any, TypeVar, Generic
 
-import caqtus.gui.common.qabc as qabc
 from PySide6.QtCore import (
     QAbstractTableModel,
     QObject,
@@ -16,6 +15,8 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
+
+import caqtus.gui.common.qabc as qabc
 from caqtus.session.shot import TimeLane
 from caqtus.session.shot.timelane import TimeLanes
 from caqtus.types.expression import Expression
