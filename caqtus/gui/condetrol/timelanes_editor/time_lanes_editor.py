@@ -44,7 +44,7 @@ class LaneDelegateFactory(Protocol):
 def default_lane_delegate_factory(
     lane_name: str,
     lane: TimeLane,
-    device_configurations: Mapping[str, DeviceConfigurationAttrs],
+    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
     sequence_parameters: ParameterNamespace,
     parent: QWidget,
 ) -> Optional[QStyledItemDelegate]:
