@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QToolBar,
     QDialog,
+    QMessageBox,
 )
 
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
@@ -105,6 +106,7 @@ class TimeLanesEditor(QWidget):
 
         self._add_lane_dialog = AddLaneDialog(self)
         self._add_lane_dialog.set_lane_types(lane_factories)
+        self._lane_factories = lane_factories
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
@@ -128,11 +130,22 @@ class TimeLanesEditor(QWidget):
         self.view.simplify_timelanes()
 
     def _on_add_lane_triggered(self) -> None:
-        self._add_lane_dialog.show()
         if self._add_lane_dialog.exec() == QDialog.DialogCode.Accepted:
             lane_name = self._add_lane_dialog.get_lane_name()
             lane_type = self._add_lane_dialog.get_lane_type()
-            # self.view.model().add_lane(lane_name, lane_type)
+            if not lane_name:
+                return
+            if lane_name in self.view.get_time_lanes().lanes:
+                QMessageBox.warning(
+                    self,
+                    "Lane already exists",
+                    f"Can't add the lane <i>{lane_name}</i> because there is already "
+                    "a lane with this name.",
+                )
+            else:
+                lane_factory = self._lane_factories[lane_type]
+                lane = lane_factory(self.view.model().columnCount())
+                self.view.add_lane(lane_name, lane)
 
 
 class TimeLanesView(QTableView):
@@ -346,3 +359,6 @@ class TimeLanesView(QTableView):
 
     def simplify_timelanes(self):
         self._model.simplify()
+
+    def add_lane(self, lane_name: str, lane: TimeLane):
+        self._model.insert_time_lane(lane_name, lane)

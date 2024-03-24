@@ -482,14 +482,18 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
                 lane_index + 2,
             )
 
-    def insert_timelane(self, index: int, name: str, timelane: TimeLane):
+    def insert_time_lane(
+        self, name: str, timelane: TimeLane, index: Optional[int] = None
+    ):
         if self._read_only:
             return
+        if index is None:
+            index = len(self._lane_models)
         if not (0 <= index <= len(self._lane_models)):
             raise IndexError(f"Index {index} is out of range")
         if len(timelane) != self.columnCount():
             raise ValueError(
-                f"Length of timelane ({len(timelane)}) does not match "
+                f"Length of time lane ({len(timelane)}) does not match "
                 f"number of columns ({self.columnCount()})"
             )
         already_used_names = {
