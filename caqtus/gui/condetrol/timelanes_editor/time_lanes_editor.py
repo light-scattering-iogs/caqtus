@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QToolBar,
+    QToolButton,
 )
 
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
@@ -80,6 +81,8 @@ class TimeLanesEditor(QWidget):
         )
         self.view.time_lanes_changed.connect(self.time_lanes_edited)
         self.toolbar = QToolBar(self)
+
+        self.toolbar.addWidget(self._create_add_lane_button())
         self.simplify_action = self.toolbar.addAction(
             get_icon("simplify-timelanes", self.palette().buttonText().color()),
             "Simplify",
@@ -88,9 +91,19 @@ class TimeLanesEditor(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self.view)
         layout.addWidget(self.toolbar)
+        layout.addWidget(self.view)
         self.setLayout(layout)
+
+    def _create_add_lane_button(self) -> QToolButton:
+        add_lane_button = QToolButton(self)
+        add_lane_button.setIcon(get_icon("plus", self.palette().buttonText().color()))
+        add_lane_button.setToolTip("Add lane")
+        add_lane_menu = QMenu(add_lane_button)
+        add_lane_button.setMenu(add_lane_menu)
+        add_lane_menu.addAction("Digital").triggered.connect(lambda: print("Digital"))
+        add_lane_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        return add_lane_button
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
