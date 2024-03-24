@@ -13,11 +13,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QToolBar,
 )
+
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.gui.condetrol.icons import get_icon
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane, DigitalTimeLane
-
-from caqtus.gui.condetrol.icons import get_icon
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
 
