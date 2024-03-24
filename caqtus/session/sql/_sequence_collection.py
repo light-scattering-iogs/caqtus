@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Optional
 import attrs
 import numpy as np
 import sqlalchemy.orm
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import func, select
+
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from caqtus.session.shot.timelane import AnalogTimeLane
 from caqtus.types.data import DataLabel, Data, is_data
@@ -15,11 +19,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import func, select
 from caqtus.utils import serialization
-
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -206,7 +206,7 @@ class SQLSequenceCollection(SequenceCollection):
     def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
         sequence = unwrap(self._query_sequence_model(path))
 
-        if sequence.state in (State.DRAFT, State.PREPARING):
+        if sequence.state == State.DRAFT:
             raise RuntimeError("Sequence has not been prepared yet")
 
         parameters_content = sequence.parameters.content
@@ -369,7 +369,7 @@ class SQLSequenceCollection(SequenceCollection):
         self, path: PureSequencePath
     ) -> dict[DeviceName, DeviceConfigurationAttrs]:
         sequence = unwrap(self._query_sequence_model(path))
-        if sequence.state in (State.DRAFT, State.PREPARING):
+        if sequence.state == State.DRAFT:
             raise RuntimeError("Sequence has not been prepared yet")
 
         device_configurations = {}

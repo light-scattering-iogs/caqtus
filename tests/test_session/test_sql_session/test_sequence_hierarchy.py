@@ -2,6 +2,8 @@ import datetime
 
 import numpy as np
 import pytest
+from hypothesis import given
+
 from caqtus.device import DeviceName
 from caqtus.session import (
     BoundSequencePath,
@@ -20,8 +22,6 @@ from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
-from hypothesis import given
-
 from .session_maker import get_session_maker, DummyConfiguration
 from ..generate_path import path
 from ..steps_iteration import steps_configuration
@@ -93,27 +93,21 @@ def test_deletion_1(empty_session):
 def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.exists(session)
         assert session.sequences.is_sequence(p)
         with pytest.raises(PathIsSequenceError):
-            session.sequences.create(
-                p, ParameterNamespace.empty(), steps_configuration, time_lanes
-            )
+            session.sequences.create(p, steps_configuration, time_lanes)
 
         assert not unwrap(session.sequences.is_sequence(p.parent))
 
 
 def test_sequence_deletion(
-        empty_session, steps_configuration: StepsConfiguration, time_lanes
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert sequence.exists(session)
@@ -129,13 +123,11 @@ def time_lanes():
 
 
 def test_iteration_save(
-        empty_session, steps_configuration: StepsConfiguration, time_lanes
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.get_iteration_configuration(session) == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
@@ -149,9 +141,7 @@ def test_iteration_save(
 def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
     with session:
@@ -160,20 +150,18 @@ def test_start_date(empty_session, steps_configuration: StepsConfiguration, time
         assert d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None
         now = datetime.datetime.now(tz=datetime.timezone.utc)
         assert (
-                now - datetime.timedelta(seconds=10)
-                < d
-                < now + datetime.timedelta(seconds=10)
+            now - datetime.timedelta(seconds=10)
+            < d
+            < now + datetime.timedelta(seconds=10)
         )
 
 
 def test_shot_creation(
-        empty_session, steps_configuration: StepsConfiguration, time_lanes
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {
@@ -207,13 +195,11 @@ def test_shot_creation(
 
 
 def test_data_not_existing(
-        empty_session, steps_configuration: StepsConfiguration, time_lanes
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {}
@@ -247,16 +233,14 @@ def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             ),
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(
-            p, ParameterNamespace([]), steps_configuration, time_lanes
-        )
-        session.sequences.set_parameters(p, parameters)
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
 
         session.sequences.set_state(p, State.PREPARING)
+        session.sequences.set_global_parameters(p, parameters)
         session.sequences.set_device_configurations(p, device_configurations)
 
     with session:
-        s = sequence.get_parameters(session)
+        s = sequence.get_global_parameters(session)
         d = session.sequences.get_device_configurations(p)
     assert s == parameters
     assert d == device_configurations
@@ -270,9 +254,7 @@ def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             )
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(
-            p, ParameterNamespace.empty(), steps_configuration, time_lanes
-        )
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_device_configurations(p, configurations)
 

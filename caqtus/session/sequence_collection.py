@@ -106,7 +106,8 @@ class SequenceCollection(Protocol):
         """Get the global parameters that were used by this sequence.
 
         Raises:
-            RuntimeError: If the sequence has not been prepared yet.
+            RuntimeError: If the sequence is in draft mode, since the global parameters
+            are only set once the sequence has entered the PREPARING state.
         """
 
         raise NotImplementedError
@@ -159,7 +160,13 @@ class SequenceCollection(Protocol):
     def get_device_configurations(
         self, path: PureSequencePath
     ) -> Mapping[DeviceName, DeviceConfigurationAttrs]:
-        """Get the device configurations that are used by this sequence."""
+        """Get the device configurations that are used by this sequence.
+
+        Raises:
+            RuntimeError: If the sequence is in draft mode, since the device
+            configurations are only set once the sequence has entered the PREPARING
+            state.
+        """
 
         raise NotImplementedError
 

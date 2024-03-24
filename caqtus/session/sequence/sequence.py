@@ -4,9 +4,9 @@ import datetime
 from typing import TYPE_CHECKING, Optional
 
 import attrs
+
 from caqtus.device import DeviceName, DeviceConfigurationAttrs
 from caqtus.types.variable_name import DottedVariableName
-
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
 from .state import State
@@ -53,17 +53,10 @@ class Sequence:
 
         return unwrap(session.sequences.get_state(self.path))
 
-    def get_parameters(self, session: ExperimentSession) -> ParameterNamespace:
+    def get_global_parameters(self, session: ExperimentSession) -> ParameterNamespace:
         """Return a copy of the parameter tables set for this sequence."""
 
-        return session.sequences.get_parameters(self.path)
-
-    def set_parameters(
-        self, parameters: ParameterNamespace, session: ExperimentSession
-    ) -> None:
-        """Set the parameters for this sequence."""
-
-        session.sequences.set_parameters(self.path, parameters)
+        return session.sequences.get_global_parameters(self.path)
 
     def get_iteration_configuration(
         self, session: ExperimentSession
