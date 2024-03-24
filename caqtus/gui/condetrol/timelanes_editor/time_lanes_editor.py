@@ -57,6 +57,10 @@ def default_lane_delegate_factory(
         return None
 
 
+class LaneFactory(Protocol):
+    def __call__(self, number_steps: int) -> TimeLane: ...
+
+
 class TimeLanesEditor(QWidget):
     """A widget for editing the time lanes of a sequence.
 
@@ -68,6 +72,7 @@ class TimeLanesEditor(QWidget):
 
     def __init__(
         self,
+        lane_factories: Mapping[str, LaneFactory],
         lane_model_factory: LaneModelFactory,
         lane_delegate_factory: LaneDelegateFactory,
         device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
@@ -99,6 +104,7 @@ class TimeLanesEditor(QWidget):
         self.setLayout(layout)
 
         self._add_lane_dialog = AddLaneDialog(self)
+        self._add_lane_dialog.set_lane_types(lane_factories)
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.

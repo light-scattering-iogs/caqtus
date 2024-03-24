@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from typing import Optional
 
 from PySide6.QtWidgets import QDialog, QWidget
@@ -18,3 +19,7 @@ class AddLaneDialog(QDialog, Ui_AddLaneDialog):
 
     def get_lane_type(self) -> str:
         return self.lane_type_combobox.currentText()
+
+    def set_lane_types(self, lane_types: Iterable[str]) -> None:
+        self.lane_type_combobox.clear()
+        self.lane_type_combobox.addItems(lane_types)
