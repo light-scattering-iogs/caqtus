@@ -14,8 +14,12 @@ from PySide6.QtWidgets import (
     QDockWidget,
     QApplication,
 )
+
+from caqtus.experiment_control import SequenceInterruptedException
+from caqtus.experiment_control.manager import ExperimentManager, Procedure
 from caqtus.gui.common.exception_tree import ExceptionDialog
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -23,10 +27,6 @@ from caqtus.session import (
     ParameterNamespace,
 )
 from caqtus.session.sequence import State
-
-from caqtus.experiment_control import SequenceInterruptedException
-from caqtus.experiment_control.manager import ExperimentManager, Procedure
-from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationEditInfo,
@@ -36,12 +36,7 @@ from ..icons import get_icon
 from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
-from ..timelanes_editor import (
-    LaneDelegateFactory,
-    default_lane_delegate_factory,
-    LaneModelFactory,
-    default_lane_model_factory,
-)
+from ..timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
 
 
 # noinspection PyTypeChecker
@@ -68,8 +63,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         connect_to_experiment_manager: Callable[
             [], ExperimentManager
         ] = default_connect_to_experiment_manager,
-        model_factory: LaneModelFactory = default_lane_model_factory,
-        lane_delegate_factory: LaneDelegateFactory = default_lane_delegate_factory,
+        time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
         *args,
         **kwargs,
     ):
@@ -93,8 +87,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             ExperimentManager.
             When the user starts a sequence in the GUI, it will call this function to
             connect to the experiment manager and submit the sequence to the manager.
-            model_factory: A factory for lane models.
-            lane_delegate_factory: A factory for lane delegates.
+            time_lanes_plugin: The plugin to use for customizing the time lane editor.
             *args: Positional arguments for QMainWindow.
             **kwargs: Keyword arguments for QMainWindow.
         """
@@ -104,14 +97,12 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._global_parameters_editor = ParameterNamespaceEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
-        self.delegate_factory = lane_delegate_factory
-        self.model_factory = model_factory
         if device_configuration_editors is None:
             device_configuration_editors = {}
         self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.sequence_widget = SequenceWidget(
-            self.session_maker, self.model_factory, self.delegate_factory, parent=self
+            self.session_maker, time_lanes_plugin, parent=self
         )
         self.status_widget = IconLabel(icon_position="left")
         self.setup_ui()

@@ -6,6 +6,7 @@ import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget
+
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
@@ -19,15 +20,13 @@ from caqtus.session.sequence_collection import (
     SequenceNotEditableError,
 )
 from caqtus.session.shot import TimeLanes
-
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..logger import logger
 from ..parameter_tables_editor import ParameterNamespaceEditor
 from ..sequence_iteration_editors import create_default_editor
 from ..timelanes_editor import (
     TimeLanesEditor,
-    LaneDelegateFactory,
-    LaneModelFactory,
+    TimeLanesPlugin,
 )
 
 
@@ -72,8 +71,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        lane_model_factory: LaneModelFactory,
-        lane_delegate_factory: LaneDelegateFactory,
+        time_lanes_plugin: TimeLanesPlugin,
         parent: Optional[QWidget] = None,
     ):
         """Initializes the sequence widget.
@@ -83,32 +81,18 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         Args:
             session_maker: It is used to connect to the storage system in which to look
             for the sequence.
-            lane_model_factory: A factory function that returns a lane model for a
-            given lane.
-            This is used to customize how a lane should be displayed and edited.
-            When the timelanes editor needs to display a lane, the factory is called
-            with the lane as argument.
-            The factory should return a subclass of TimeLaneModel that is used as the
-            model for the lane row.
-            lane_delegate_factory: A factory function that returns a lane delegate for
-            a given lane.
-            It can optionally return a QStyledItemDelegate that is used to further
-            customize how a lane should be displayed and edited.
             parent: The parent widget.
         """
 
         super().__init__(parent)
         self.setupUi(self)
         self.session_maker = session_maker
-        self.lane_model_factory = lane_model_factory
-        self.lane_delegate_factory = lane_delegate_factory
 
         with self.session_maker() as session:
             device_configurations = dict(session.default_device_configurations)
 
         self.time_lanes_editor = TimeLanesEditor(
-            lane_model_factory,
-            lane_delegate_factory,
+            time_lanes_plugin,
             device_configurations,
             self,
         )

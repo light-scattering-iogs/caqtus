@@ -1,5 +1,5 @@
 from .digital_lane_model import DigitalTimeLaneModel
-from .lane_customization import default_time_lanes_plugin
+from .lane_customization import default_time_lanes_plugin, TimeLanesPlugin
 from .model import TimeLanesModel
 from .time_lanes_editor import (
     TimeLanesEditor,
@@ -14,4 +14,5 @@ __all__ = [
     "DigitalTimeLaneModel",
     "LaneDelegateFactory",
     "default_time_lanes_plugin",
+    "TimeLanesPlugin",
 ]

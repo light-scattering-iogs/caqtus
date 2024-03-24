@@ -46,6 +46,16 @@ class LaneDelegateFactory(Protocol):
 
 @attrs.define
 class TimeLanesPlugin:
+    """Specify how the display and edit time lanes.
+
+    Attributes:
+        lane_factories: A mapping from type of lanes to lane factories.
+        When the user wants to add a new lane, they can choose from the keys of this
+        mapping and the corresponding factory will be called to create the lane.
+        lane_model_factory: A factory for lane models.
+        lane_delegate_factory: A factory for lane delegates.
+    """
+
     lane_factories: Mapping[str, LaneFactory]
     lane_model_factory: LaneModelFactory
     lane_delegate_factory: LaneDelegateFactory
