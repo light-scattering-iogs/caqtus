@@ -1,7 +1,6 @@
-import contextlib
 import os
 import time
-from typing import Self, Iterable
+from typing import Self
 
 from caqtus.device import Device, DeviceName
 from caqtus.device.camera import Camera
@@ -46,16 +45,14 @@ class CameraTest(Camera):
     sensor_width = 100
     sensor_height = 100
 
-    @contextlib.contextmanager
-    def acquire(
-        self, exposures: list[float]
-    ) -> contextlib.AbstractContextManager[Iterable[Image]]:
-        print(f"entered at {time.time()}")
-        yield self.yield_images(exposures)
+    def _read_image(self, exposure: float) -> Image:
+        pass
 
-    def yield_images(self, exposures: list[float]) -> Iterable[Image]:
-        for _ in range(len(exposures)):
-            yield None
+    def _stop_acquisition(self) -> None:
+        pass
+
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        pass
 
     def update_parameters(self, timeout: float) -> None:
         pass
@@ -129,7 +126,7 @@ def test_1():
 
 def test_2():
     with Manager() as m:
-        cam = m.TestCamera(
+        cam = m.CameraTest(
             timeout=1,
             external_trigger=False,
             roi=RectangularROI((100, 100), 0, 100, 0, 100),
