@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "orca-quest"
+version = "0.1.0"
+description = ""
+authors = ["Dear <lechadoq@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+caqtus = {git = "https://github.com/damienBloch/caqtus.git", rev = "namespace_refactor"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

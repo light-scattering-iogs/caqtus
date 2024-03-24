@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "ni6738-analog-card"
+version = "0.1.0"
+description = ""
+authors = ["Dear <lechadoq@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11, <3.13"
+
+nidaqmx = "^0.6.5"
+
+caqtus = {git = "https://github.com/damienBloch/caqtus.git", rev = "namespace_refactor"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
