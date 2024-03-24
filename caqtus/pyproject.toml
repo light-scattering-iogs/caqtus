@@ -26,6 +26,10 @@ cattrs = "^23.2.3"
 pyyaml = "^6.0.1"
 
 
+[tool.poetry.group.test.dependencies]
+pytest = "^8.1.1"
+hypothesis = "^6.99.12"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
