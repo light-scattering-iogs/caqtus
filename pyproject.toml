@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "caqtus"
+name = "core"
 version = "1.0.14"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
@@ -9,17 +9,17 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
 
-utils = {path = "lib/utils", develop = true}
-types = {path = "lib/types/", develop = true}
-device = {path = "lib/device/", develop = true}
-session = {path = "lib/session/", develop = true}
-analysis = {path = "lib/analysis/", develop = true}
-shot-compilation = {path = "lib/shot_compilation/", develop = true}
-experiment-control = {path = "lib/experiment_control/", develop = true}
+caqtus-utils = {path = "core/caqtus.utils", develop = true}
+caqtus-types = {path = "lib/caqtus.types", develop = true}
+caqtus-device = {path = "lib/caqtus.device", develop = true}
+caqtus-session = {path = "lib/caqtus.session", develop = true}
+caqtus-analysis = {path = "lib/caqtus.analysis", develop = true}
+caqtus--compilation = {path = "lib/caqtus.shot_compilation", develop = true}
+caqtus-experiment-control = {path = "lib/caqtus.experiment_control", develop = true}
 
-gui-condetrol = {path = "lib/gui/gui.condetrol/", develop = true}
-gui-graphplot = {path = "lib/gui/gui.graphplot/", develop = true}
-gui-shotviewer = {path = "lib/gui/gui.shotviewer/", develop = true}
+#gui-condetrol = {path = "lib/gui/gui.condetrol/", develop = true}
+#gui-graphplot = {path = "lib/gui/gui.graphplot/", develop = true}
+#gui-shotviewer = {path = "lib/gui/gui.shotviewer/", develop = true}
 
 
 [tool.poetry.group.dev.dependencies]
