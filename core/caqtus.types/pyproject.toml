@@ -1,26 +1,22 @@
 [tool.poetry]
-name = "device"
-version = "1.0.0"
+name = "caqtus-types"
+version = "1.0.2"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
+packages = [{include = "caqtus"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
+pint = "^0.23"
 numpy = "^1.26.4"
-sympy = "^1.12"
-tblib = "^3.0.0"
-pydantic = "^2.6.4"
+token-utils = "^0.1.8"
 
-utils = {path = "../utils"}
-types = {path = "../types"}
-
-
+caqtus-utils = {path = "../caqtus.utils"}
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
-hypothesis = "^6.99.12"
 
 [build-system]
 requires = ["poetry-core"]

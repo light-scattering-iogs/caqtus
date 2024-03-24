@@ -1,25 +1,24 @@
 [tool.poetry]
-name = "session"
+name = "caqtus-shot-compilation"
 version = "1.0.0"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
+packages = [{include = "caqtus"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 
-sqlalchemy = "^2.0.28"
-sqlalchemy-utils = "^0.41.1"
-returns = "^0.22.0"
+numpy = "^1.26.4"
+python-benedict = "^0.33.2"
 
-utils = {path = "../utils"}
-types = {path = "../types"}
-device = {path = "../device"}
+caqtus-device = {path = "../caqtus.device"}
+caqtus-session = {path = "../caqtus.session"}
+caqtus-types = {path = "../caqtus.types"}
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
-hypothesis = "^6.99.12"
 
 [build-system]
 requires = ["poetry-core"]

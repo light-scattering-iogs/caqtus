@@ -1,9 +1,10 @@
 [tool.poetry]
-name = "utils"
+name = "caqtus-utils"
 version = "1.0.1"
 description = ""
 authors = ["damien <damien.bloch@institutoptique.fr>"]
 readme = "README.md"
+packages = [{include = "caqtus"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
