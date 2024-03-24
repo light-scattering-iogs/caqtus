@@ -42,7 +42,7 @@ class DeviceTest(Device):
         raise Exception("This object cannot be pickled")
 
 
-class TestCamera(Camera):
+class CameraTest(Camera):
     sensor_width = 100
     sensor_height = 100
 
@@ -61,7 +61,7 @@ class TestCamera(Camera):
         pass
 
 
-class TestSequencer(Sequencer):
+class SequencerTest(Sequencer):
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         pass
 
@@ -103,9 +103,9 @@ class Manager(RemoteDeviceManager):
 Manager.register_device(DeviceTest, DeviceProxy)
 Manager.register_device(T1, T1Proxy)
 Manager.register_device(T2, T2Proxy)
-Manager.register_device(TestCamera, CameraProxy)
-Manager.register_device(TestSequencer, SequencerProxy)
-Manager.register_device(TestSequencer, SequencerProxy)
+Manager.register_device(CameraTest, CameraProxy)
+Manager.register_device(SequencerTest, SequencerProxy)
+Manager.register_device(SequencerTest, SequencerProxy)
 
 
 def test_0():

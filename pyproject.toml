@@ -36,13 +36,14 @@ pyqtgraph = {version = "^0.13.4", optional = true}
 
 
 [tool.poetry.extras]
-gui = ["pyside6", "anytree", "qtawesome"]
+gui = ["pyside6", "anytree", "qtawesome", "pyqtgraph"]
 sql = ["sqlalchemy", "sqlalchemy-utils"]
 
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
 hypothesis = "^6.99.12"
+pytest-qt = "^4.4.0"
 
 
 [tool.poetry.group.doc.dependencies]
