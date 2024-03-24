@@ -1,14 +1,12 @@
 import functools
 import itertools
-from collections.abc import Mapping
-from typing import Optional, Protocol
+from typing import Optional
 
 from PySide6.QtCore import Signal, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QTableView,
     QMenu,
-    QStyledItemDelegate,
     QWidget,
     QVBoxLayout,
     QToolBar,
@@ -19,47 +17,15 @@ from PySide6.QtWidgets import (
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
 from caqtus.session import ParameterNamespace
-from caqtus.session.shot import TimeLanes, TimeLane, DigitalTimeLane
+from caqtus.session.shot import TimeLanes, TimeLane
 from .add_lane_dialog import AddLaneDialog
-from .digital_lane_delegate import DigitalTimeLaneDelegate
-from .model import TimeLanesModel, TimeLaneModel
+from .lane_customization import (
+    TimeLanesPlugin,
+    LaneModelFactory,
+    LaneDelegateFactory,
+)
+from .model import TimeLanesModel
 from ...common.qtutil import block_signals
-
-
-class LaneModelFactory(Protocol):
-    """A factory for lane models."""
-
-    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]: ...
-
-
-class LaneDelegateFactory(Protocol):
-    """A factory for lane delegates."""
-
-    def __call__(
-        self,
-        lane_name: str,
-        lane: TimeLane,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-        sequence_parameters: ParameterNamespace,
-        parent: QWidget,
-    ) -> Optional[QStyledItemDelegate]: ...
-
-
-def default_lane_delegate_factory(
-    lane_name: str,
-    lane: TimeLane,
-    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-    sequence_parameters: ParameterNamespace,
-    parent: QWidget,
-) -> Optional[QStyledItemDelegate]:
-    if isinstance(lane, DigitalTimeLane):
-        return DigitalTimeLaneDelegate(parent)
-    else:
-        return None
-
-
-class LaneFactory(Protocol):
-    def __call__(self, number_steps: int) -> TimeLane: ...
 
 
 class TimeLanesEditor(QWidget):
@@ -73,16 +39,14 @@ class TimeLanesEditor(QWidget):
 
     def __init__(
         self,
-        lane_factories: Mapping[str, LaneFactory],
-        lane_model_factory: LaneModelFactory,
-        lane_delegate_factory: LaneDelegateFactory,
+        time_lane_customization: TimeLanesPlugin,
         device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.view = TimeLanesView(
-            lane_model_factory=lane_model_factory,
-            lane_delegate_factory=lane_delegate_factory,
+            lane_model_factory=time_lane_customization.lane_model_factory,
+            lane_delegate_factory=time_lane_customization.lane_delegate_factory,
             device_configurations=device_configurations,
             parent=self,
         )
@@ -105,8 +69,10 @@ class TimeLanesEditor(QWidget):
         self.setLayout(layout)
 
         self._add_lane_dialog = AddLaneDialog(self)
-        self._add_lane_dialog.set_lane_types(lane_factories)
-        self._lane_factories = lane_factories
+        self._add_lane_dialog.set_lane_types(
+            time_lane_customization.lane_factories.keys()
+        )
+        self._lane_factories = time_lane_customization.lane_factories
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
