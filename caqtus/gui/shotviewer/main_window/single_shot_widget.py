@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import Shot, Sequence
 from pyqtgraph.dockarea import DockArea, Dock
-from sequence_hierarchy import PathHierarchyView
+from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
 from caqtus.utils import serialization
 from caqtus.utils.concurrent import BackgroundScheduler
 

@@ -4,8 +4,9 @@ from abc import abstractmethod
 from typing import Optional, TypeVar, Generic, Callable, NewType
 
 import attrs
-import qabc
 from PySide6.QtWidgets import QWidget
+
+import caqtus.gui.common.qabc as qabc
 from caqtus.session.sequence import Shot
 from caqtus.utils.serialization import JSON
 
