@@ -8,9 +8,9 @@ import polars
 import pyqtgraph
 from PyQt6 import QtGui, QtCore
 from PyQt6.QtWidgets import QWidget
-from core.data_analysis.stats import compute_stats_average, get_nominal_value, get_error
-from core.data_analysis.units import extract_unit
-from core.types.units import dimensionless, Unit
+from caqtus.analysis.stats import compute_stats_average, get_nominal_value, get_error
+from caqtus.analysis.units import extract_unit
+from caqtus.types.units import dimensionless, Unit
 from pyqtgraph import PlotWidget
 
 from .errorbar_visualizer_ui import Ui_ErrorBarVisualizerCreator

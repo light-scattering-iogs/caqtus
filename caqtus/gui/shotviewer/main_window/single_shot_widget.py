@@ -12,12 +12,12 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QSizePolicy,
 )
-from core.session import ExperimentSessionMaker, PureSequencePath
-from core.session.sequence import Shot, Sequence
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session.sequence import Shot, Sequence
 from pyqtgraph.dockarea import DockArea, Dock
 from sequence_hierarchy import PathHierarchyView
-from util import serialization
-from util.concurrent import BackgroundScheduler
+from caqtus.utils import serialization
+from caqtus.utils.concurrent import BackgroundScheduler
 
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace

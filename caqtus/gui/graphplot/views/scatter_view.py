@@ -11,7 +11,7 @@ import qtawesome
 from PySide6.QtCore import QStringListModel
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
 
-from core.data_analysis.units import extract_unit
+from caqtus.analysis.units import extract_unit
 from graphplot.views.view import DataView
 from .scatter_view_ui import Ui_ScatterView
 

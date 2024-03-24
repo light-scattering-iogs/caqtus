@@ -8,8 +8,8 @@ import qtawesome
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 
-from core.data_analysis.loading import DataImporter
-from core.session import ExperimentSessionMaker
+from caqtus.analysis.loading import DataImporter
+from caqtus.session import ExperimentSessionMaker
 from graphplot.data_loading import DataLoader
 from graphplot.views.error_bar_view import ErrorBarView
 from sequence_hierarchy import PathHierarchyView

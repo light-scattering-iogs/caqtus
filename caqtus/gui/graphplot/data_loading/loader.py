@@ -9,17 +9,17 @@ import polars
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
-from core.data_analysis.loading import DataImporter
-from core.session import (
+from caqtus.analysis.loading import DataImporter
+from caqtus.session import (
     PureSequencePath,
     ExperimentSessionMaker,
     ExperimentSession,
     Shot,
 )
-from core.session._return_or_raise import unwrap
-from core.session.path_hierarchy import PathNotFoundError
-from core.session.sequence_collection import PathIsNotSequenceError
-from util.itertools import batched
+from caqtus.session._return_or_raise import unwrap
+from caqtus.session.path_hierarchy import PathNotFoundError
+from caqtus.session.sequence_collection import PathIsNotSequenceError
+from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 
 

@@ -6,8 +6,8 @@ from typing import Optional, TypeVar, Generic, Callable, NewType
 import attrs
 import qabc
 from PySide6.QtWidgets import QWidget
-from core.session.sequence import Shot
-from util.serialization import JSON
+from caqtus.session.sequence import Shot
+from caqtus.utils.serialization import JSON
 
 
 class ShotView(QWidget, metaclass=qabc.QABCMeta):

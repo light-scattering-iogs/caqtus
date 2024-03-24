@@ -6,10 +6,10 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtWidgets import QWidget, QTableView, QVBoxLayout
 
 from analyza.loading.importers import ParametersImporter
-from core.session import ExperimentSession, get_standard_experiment_session
-from core.session.sequence import Shot
-from core.types import Parameter
-from util import attrs, serialization
+from caqtus.session import ExperimentSession, get_standard_experiment_session
+from caqtus.session.sequence import Shot
+from caqtus.types import Parameter
+from caqtus.utils import attrs, serialization
 from ..single_shot_view import ShotView
 
 ParameterName = str

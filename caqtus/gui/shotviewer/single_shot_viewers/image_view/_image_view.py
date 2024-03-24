@@ -9,10 +9,10 @@ import pyqtgraph
 from PySide6.QtCore import QThread, Signal, QTimer
 from PySide6.QtWidgets import QDialog
 from PySide6.QtWidgets import QWidget
-from core.device import DeviceName
-from core.session import Shot, ExperimentSessionMaker
-from core.types.image import ImageLabel, Image
-from util import serialization
+from caqtus.device import DeviceName
+from caqtus.session import Shot, ExperimentSessionMaker
+from caqtus.types.image import ImageLabel, Image
+from caqtus.utils import serialization
 
 from .image_view_dialog_ui import Ui_ImageViewDialog
 from ..single_shot_view import ShotView

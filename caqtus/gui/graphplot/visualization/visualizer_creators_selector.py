@@ -3,7 +3,7 @@ from typing import Mapping
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
 
-from util.itertools import first
+from caqtus.utils.itertools import first
 from .visualizer_creator import DataView, ViewCreator
 from .visualizer_creators_selector_ui import Ui_VisualizerCreatorSelector
 

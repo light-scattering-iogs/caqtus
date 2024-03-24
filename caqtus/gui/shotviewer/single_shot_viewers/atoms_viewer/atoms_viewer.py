@@ -6,9 +6,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationTool
 from matplotlib.figure import Figure
 
 from analyza.loading.importers import AtomImporter2D
-from core.session import ExperimentSession, get_standard_experiment_session
-from core.session.sequence import Shot
-from util import attrs, serialization
+from caqtus.session import ExperimentSession, get_standard_experiment_session
+from caqtus.session.sequence import Shot
+from caqtus.utils import attrs, serialization
 from ..single_shot_view import ShotView
 
 

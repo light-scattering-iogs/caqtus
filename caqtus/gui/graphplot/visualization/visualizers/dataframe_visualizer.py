@@ -5,8 +5,8 @@ from typing import Optional, Any
 import polars
 from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PyQt6.QtWidgets import QTableView
-from core.data_analysis.units import is_quantity_dtype
-from core.types.units import Quantity
+from caqtus.analysis.units import is_quantity_dtype
+from caqtus.types.units import Quantity
 
 from ..visualizer_creator import ViewCreator, DataView
 
