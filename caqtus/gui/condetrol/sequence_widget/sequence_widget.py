@@ -234,7 +234,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.sequence_not_editable_set.emit(sequence_info)
 
     def setup_connections(self):
-        self.time_lanes_editor.time_lanes_changed.connect(self.on_time_lanes_edited)
+        self.time_lanes_editor.time_lanes_edited.connect(self.on_time_lanes_edited)
         self.state_watcher_thread.change_detected.connect(self.set_sequence)
 
     def on_sequence_iteration_edited(self, iterations: IterationConfiguration):

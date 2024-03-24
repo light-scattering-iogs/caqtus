@@ -20,6 +20,7 @@ from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane, DigitalTimeLane
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
+from ...common.qtutil import block_signals
 
 
 class LaneModelFactory(Protocol):
@@ -55,9 +56,13 @@ def default_lane_delegate_factory(
 
 
 class TimeLanesEditor(QWidget):
-    """A widget for editing the time lanes of a sequence."""
+    """A widget for editing the time lanes of a sequence.
 
-    time_lanes_changed = Signal(TimeLanes)
+    Signals:
+        time_lanes_edited: Emitted when the user edits the time lanes.
+    """
+
+    time_lanes_edited = Signal(TimeLanes)
 
     def __init__(
         self,
@@ -73,7 +78,7 @@ class TimeLanesEditor(QWidget):
             device_configurations=device_configurations,
             parent=self,
         )
-        self.view.time_lanes_changed.connect(self.time_lanes_changed)
+        self.view.time_lanes_changed.connect(self.time_lanes_edited)
         self.toolbar = QToolBar(self)
         self.simplify_action = self.toolbar.addAction(
             get_icon("simplify-timelanes", self.palette().buttonText().color()),
@@ -97,7 +102,13 @@ class TimeLanesEditor(QWidget):
         self.toolbar.setEnabled(not read_only)
 
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
-        self.view.set_time_lanes(time_lanes)
+        """Set the time lanes to be edited.
+
+        The signal time_lanes_edited is not emitted when this method is called.
+        """
+
+        with block_signals(self):
+            self.view.set_time_lanes(time_lanes)
 
     def simplify_timelanes(self):
         self.view.simplify_timelanes()
