@@ -165,6 +165,10 @@ class TimeLanesView(QTableView):
         # self.setSelectionBehavior(QTableView.SelectionBehavior.SelectItems)
         self.setSelectionMode(QTableView.SelectionMode.ContiguousSelection)
 
+        # We disable the auto-scrolling because it is annoying when the view jumps
+        # around on its own while the user is trying to edit the time lanes.
+        self.setAutoScroll(False)
+
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
             self.show_steps_context_menu
