@@ -64,8 +64,8 @@ class TimeLanesEditor(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self.toolbar)
         layout.addWidget(self.view)
+        layout.addWidget(self.toolbar)
         self.setLayout(layout)
 
         self._add_lane_dialog = AddLaneDialog(self)
