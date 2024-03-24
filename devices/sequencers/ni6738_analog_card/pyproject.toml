@@ -10,7 +10,7 @@ python = "^3.11, <3.13"
 
 nidaqmx = "^0.6.5"
 
-caqtus = {git = "https://github.com/damienBloch/caqtus.git", rev = "namespace_refactor", extras = ["gui"]}
+caqtus = {git = "https://github.com/damienBloch/caqtus.git", extras = ["gui"]}
 
 
 [build-system]
