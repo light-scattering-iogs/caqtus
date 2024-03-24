@@ -12,13 +12,14 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QToolBar,
-    QToolButton,
+    QDialog,
 )
 
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane, DigitalTimeLane
+from .add_lane_dialog import AddLaneDialog
 from .digital_lane_delegate import DigitalTimeLaneDelegate
 from .model import TimeLanesModel, TimeLaneModel
 from ...common.qtutil import block_signals
@@ -81,8 +82,10 @@ class TimeLanesEditor(QWidget):
         )
         self.view.time_lanes_changed.connect(self.time_lanes_edited)
         self.toolbar = QToolBar(self)
-
-        self.toolbar.addWidget(self._create_add_lane_button())
+        self.add_lane_action = self.toolbar.addAction(
+            get_icon("add-time-lane", self.palette().buttonText().color()), "Add lane"
+        )
+        self.add_lane_action.triggered.connect(self._on_add_lane_triggered)
         self.simplify_action = self.toolbar.addAction(
             get_icon("simplify-timelanes", self.palette().buttonText().color()),
             "Simplify",
@@ -95,15 +98,7 @@ class TimeLanesEditor(QWidget):
         layout.addWidget(self.view)
         self.setLayout(layout)
 
-    def _create_add_lane_button(self) -> QToolButton:
-        add_lane_button = QToolButton(self)
-        add_lane_button.setIcon(get_icon("plus", self.palette().buttonText().color()))
-        add_lane_button.setToolTip("Add lane")
-        add_lane_menu = QMenu(add_lane_button)
-        add_lane_button.setMenu(add_lane_menu)
-        add_lane_menu.addAction("Digital").triggered.connect(lambda: print("Digital"))
-        add_lane_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        return add_lane_button
+        self._add_lane_dialog = AddLaneDialog(self)
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
@@ -125,6 +120,13 @@ class TimeLanesEditor(QWidget):
 
     def _simplify_timelanes(self):
         self.view.simplify_timelanes()
+
+    def _on_add_lane_triggered(self) -> None:
+        self._add_lane_dialog.show()
+        if self._add_lane_dialog.exec() == QDialog.DialogCode.Accepted:
+            lane_name = self._add_lane_dialog.get_lane_name()
+            lane_type = self._add_lane_dialog.get_lane_type()
+            # self.view.model().add_lane(lane_name, lane_type)
 
 
 class TimeLanesView(QTableView):

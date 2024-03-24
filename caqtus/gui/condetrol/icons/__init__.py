@@ -17,6 +17,7 @@ def get_icon(name: str, color=None) -> QIcon:
         "copy": "mdi6.content-copy",
         "paste": "mdi6.content-paste",
         "simplify-timelanes": "mdi6.table-merge-cells",
+        "add-time-lane": "mdi6.table-row-plus-after",
     }
 
     icon = qtawesome.icon(ids[name], color=color)
