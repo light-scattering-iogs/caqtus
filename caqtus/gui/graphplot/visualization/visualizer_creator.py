@@ -6,7 +6,7 @@ from typing import Optional
 import polars
 from PyQt6.QtWidgets import QWidget
 
-import qabc
+import caqtus.gui.common.qabc as qabc
 
 
 class ViewCreator(qabc.QABC):
