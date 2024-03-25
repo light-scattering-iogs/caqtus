@@ -12,10 +12,10 @@ from PySide6.QtCore import QStringListModel, QTimer, Qt
 from PySide6.QtGui import QPen, QFont
 from PySide6.QtWidgets import QWidget, QDialog, QCompleter
 
-from condetrol._temporary_widget import temporary_widget
 from caqtus.analysis.stats import compute_stats_average, get_nominal_value, get_error
 from caqtus.analysis.units import extract_unit
-from graphplot.views.view import DataView
+from caqtus.gui.condetrol._temporary_widget import temporary_widget
+from caqtus.gui.graphplot.views.view import DataView
 from .error_bar_view_ui import Ui_ErrorBarView
 from .settings_dialog_ui import Ui_SettingsDialog
 
