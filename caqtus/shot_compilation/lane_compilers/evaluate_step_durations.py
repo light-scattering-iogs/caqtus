@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import is_quantity, magnitude_in_unit
 from ..unit_namespace import units
 from ..variable_namespace import VariableNamespace
-from caqtus.types.parameter import is_quantity, magnitude_in_unit
 
 
 def evaluate_step_durations(
@@ -21,9 +21,11 @@ def evaluate_step_durations(
 
     result = []
 
+    all_variables = variables | units
+
     for name, duration in steps:
         try:
-            evaluated = duration.evaluate(variables | units)
+            evaluated = duration.evaluate(all_variables)
         except Exception as e:
             raise ValueError(
                 f"Couldn't evaluate duration <{duration}> of step <{name}>"
