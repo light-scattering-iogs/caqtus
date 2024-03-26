@@ -3,11 +3,12 @@ from .sequence_manager import (
     ShotRetryConfig,
     SequenceInterruptedException,
 )
-from .sequence_runner import StepSequenceRunner
+from .sequence_runner import StepSequenceRunner, walk_steps
 
 __all__ = [
     "SequenceManager",
     "StepSequenceRunner",
     "ShotRetryConfig",
     "SequenceInterruptedException",
+    "walk_steps",
 ]

@@ -1,9 +1,9 @@
 import functools
-from collections.abc import Iterable, Callable
-from typing import assert_never, Any
+from collections.abc import Iterable, Callable, Generator
+from typing import assert_never, TypeVar
 
 import numpy
-from caqtus.shot_compilation import units
+
 from caqtus.session import ParameterNamespace
 from caqtus.session.sequence.iteration_configuration import (
     Step,
@@ -12,6 +12,7 @@ from caqtus.session.sequence.iteration_configuration import (
     VariableDeclaration,
     LinspaceLoop,
 )
+from caqtus.shot_compilation import units
 from caqtus.types.parameter import (
     is_analog_value,
     AnalogValue,
@@ -21,25 +22,43 @@ from caqtus.types.parameter import (
     Parameter,
 )
 from caqtus.types.parameter.analog_value import add_unit
-
-from .sequence_manager import SequenceManager, SequenceInterruptedException
+from .sequence_manager import SequenceManager
 from .step_context import StepContext
 
+S = TypeVar("S", bound=Step)
 
-def wrap_error(function: Callable[[Any, Step, StepContext], StepContext]):
+
+def wrap_error(
+    function: Callable[[S, StepContext], Generator[StepContext, None, StepContext]]
+) -> Callable[[S, StepContext], Generator[StepContext, None, StepContext]]:
     """Wrap a function that evaluates a step to raise nicer errors for the user."""
 
     @functools.wraps(function)
-    def wrapper(self, step: Step, context: StepContext):
+    def wrapper(step: S, context: StepContext):
         try:
-            return function(self, step, context)
-        except SequenceInterruptedException:
-            # Don't want to add user context to this exception
-            raise
+            return function(step, context)
         except Exception as e:
             raise StepEvaluationError(f"Error while evaluating step <{step}>") from e
 
     return wrapper
+
+
+def walk_steps(
+    steps: Iterable[Step], initial_context: StepContext
+) -> Iterable[StepContext]:
+    """Execute a sequence of steps on the experiment.
+
+    This function will recursively execute each step in the sequence passed as
+    argument.
+    Before executing the sequence, an empty context is initialized.
+    The context holds the value of the parameters at a given point in the sequence.
+    Each step has the possibility to update the context with new values.
+    """
+
+    context = initial_context
+
+    for step in steps:
+        context = yield from walk_step(step, context)
 
 
 class StepSequenceRunner:
@@ -65,131 +84,139 @@ class StepSequenceRunner:
         Each step has the possibility to update the context with new values.
         """
 
-        context = initial_context
+        for context in walk_steps(steps, initial_context):
+            self._sequence_manager.schedule_shot(context.variables)
 
-        for step in steps:
-            context = self.run_step(step, context)
 
-    @functools.singledispatchmethod
-    @wrap_error
-    def run_step(self, step: Step, context: StepContext) -> StepContext:
-        """Execute a given step of the sequence
+@functools.singledispatch
+@wrap_error
+def walk_step(
+    step: Step, context: StepContext
+) -> Generator[StepContext, None, StepContext]:
+    """Iterates over the steps of a sequence.
 
-        This function is implemented for each Step type.
+    Args:
+        step: the step of the sequence currently executed
+        context: Contains the values of the variables before this step.
 
-        Args:
-            step: the step of the sequence currently executed
-            context: Contains the values of the variables before this step.
+    Yields:
+        The context for every shot encountered while walking the steps.
 
-        Returns:
-            A new context object that contains the values of the variables after this
-            step.
-            This context object must be a new object.
-        """
+    Returns:
+        The context after the step passed in argument has been executed.
+    """
 
-        return assert_never(step)
+    return assert_never(step)  # type: ignore
 
-    @run_step.register
-    @wrap_error
-    def _(
-        self,
-        declaration: VariableDeclaration,
-        context: StepContext,
-    ) -> StepContext:
-        """Execute a VariableDeclaration step.
 
-        This step updates the context passed with the value of the variable declared.
-        """
+# noinspection PyUnreachableCode
+@walk_step.register
+@wrap_error
+def _(
+    declaration: VariableDeclaration,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Execute a VariableDeclaration step.
 
-        value = declaration.value.evaluate(context.variables | units)
-        if not is_parameter(value):
-            raise TypeError(
-                f"Value of variable declaration <{declaration}> has type "
-                f"{type(value)}, which is not a valid parameter type."
-            )
-        return context.update_variable(declaration.variable, value)
+    This step updates the context passed with the value of the variable declared.
+    """
 
-    @run_step.register
-    @wrap_error
-    def _(
-        self,
-        arange_loop: ArangeLoop,
-        context: StepContext,
-    ):
-        """Loop over a variable in a numpy arange like loop.
+    # This code is unreachable, but it is kept here to make the function a generator.
+    if False:
+        yield context
 
-        This function will loop over the variable defined in the arange loop and execute
-        the sub steps for each value of the variable.
+    value = declaration.value.evaluate(context.variables | units)
+    if not is_parameter(value):
+        raise TypeError(
+            f"Value of variable declaration <{declaration}> has type "
+            f"{type(value)}, which is not a valid parameter type."
+        )
+    return context.update_variable(declaration.variable, value)
 
-        Returns:
-            A new context object containing the value of the arange loop variable after
-            the last iteration, plus the values of the variables defined in the sub
-            steps.
-        """
 
-        start, stop, step = evaluate_arange_loop_parameters(arange_loop, context)
+@walk_step.register
+@wrap_error
+def _(
+    arange_loop: ArangeLoop,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Loop over a variable in a numpy arange like loop.
 
-        unit = get_unit(start)
-        start_magnitude = magnitude_in_unit(start, unit)
-        stop_magnitude = magnitude_in_unit(stop, unit)
-        step_magnitude = magnitude_in_unit(step, unit)
+    This function will loop over the variable defined in the arange loop and execute
+    the sub steps for each value of the variable.
 
-        variable_name = arange_loop.variable
-        for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
-            # val.item() is used to convert numpy scalar to python scalar
-            value_with_unit = add_unit(value.item(), unit)
-            context = context.update_variable(variable_name, value_with_unit)
-            for step in arange_loop.sub_steps:
-                context = self.run_step(step, context)
-        return context
+    Returns:
+        A new context object containing the value of the arange loop variable after
+        the last iteration, plus the values of the variables defined in the sub
+        steps.
+    """
 
-    @run_step.register
-    @wrap_error
-    def _(
-        self,
-        linspace_loop: LinspaceLoop,
-        context: StepContext,
-    ):
-        """Loop over a variable in a numpy linspace like loop.
+    start, stop, step = evaluate_arange_loop_parameters(arange_loop, context)
 
-        This function will loop over the variable defined in the linspace loop and
-        execute the sub steps for each value of the variable.
+    unit = get_unit(start)
+    start_magnitude = magnitude_in_unit(start, unit)
+    stop_magnitude = magnitude_in_unit(stop, unit)
+    step_magnitude = magnitude_in_unit(step, unit)
 
-        Returns:
-            A new context object containing the value of the linspace loop variable
-            after the last iteration, plus the values of the variables defined in the
-            sub steps.
-        """
+    variable_name = arange_loop.variable
+    for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
+        # val.item() is used to convert numpy scalar to python scalar
+        value_with_unit = add_unit(value.item(), unit)
+        context = context.update_variable(variable_name, value_with_unit)
+        for step in arange_loop.sub_steps:
+            context = yield from walk_step(step, context)
+    return context
 
-        start, stop, num = evaluate_linspace_loop_parameters(linspace_loop, context)
 
-        unit = get_unit(start)
-        start_magnitude = magnitude_in_unit(start, unit)
-        stop_magnitude = magnitude_in_unit(stop, unit)
+@walk_step.register
+@wrap_error
+def _(
+    linspace_loop: LinspaceLoop,
+    context: StepContext,
+) -> Generator[StepContext, None, StepContext]:
+    """Loop over a variable in a numpy linspace like loop.
 
-        variable_name = linspace_loop.variable
-        for value in numpy.linspace(start_magnitude, stop_magnitude, num):
-            # val.item() is used to convert numpy scalar to python scalar
-            value_with_unit = add_unit(value.item(), unit)
-            context = context.update_variable(variable_name, value_with_unit)
-            for step in linspace_loop.sub_steps:
-                context = self.run_step(step, context)
-        return context
+    This function will loop over the variable defined in the linspace loop and
+    execute the sub steps for each value of the variable.
 
-    @run_step.register
-    @wrap_error
-    def _(self, shot: ExecuteShot, context: StepContext) -> StepContext:
-        """Schedule a shot to be run.
+    Returns:
+        A new context object containing the value of the linspace loop variable
+        after the last iteration, plus the values of the variables defined in the
+        sub steps.
+    """
 
-        This function schedule to run a shot on the experiment with the parameters
-        defined in the context at this point.
+    start, stop, num = evaluate_linspace_loop_parameters(linspace_loop, context)
 
-        Returns:
-            The context passed as argument unchanged.
-        """
+    unit = get_unit(start)
+    start_magnitude = magnitude_in_unit(start, unit)
+    stop_magnitude = magnitude_in_unit(stop, unit)
 
-        self._sequence_manager.schedule_shot(context.variables)
-        return context
+    variable_name = linspace_loop.variable
+    for value in numpy.linspace(start_magnitude, stop_magnitude, num):
+        # val.item() is used to convert numpy scalar to python scalar
+        value_with_unit = add_unit(value.item(), unit)
+        context = context.update_variable(variable_name, value_with_unit)
+        for step in linspace_loop.sub_steps:
+            context = yield from walk_step(step, context)
+    return context
+
+
+@walk_step.register
+@wrap_error
+def _(
+    shot: ExecuteShot, context: StepContext
+) -> Generator[StepContext, None, StepContext]:
+    """Schedule a shot to be run.
+
+    This function schedule to run a shot on the experiment with the parameters
+    defined in the context at this point.
+
+    Returns:
+        The context passed as argument unchanged.
+    """
+
+    yield context
+    return context
 
 
 def evaluate_arange_loop_parameters(
