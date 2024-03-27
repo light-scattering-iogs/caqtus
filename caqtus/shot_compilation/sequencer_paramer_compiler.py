@@ -44,7 +44,7 @@ from caqtus.utils import add_exc_note
 from .lane_compilers import DigitalLaneCompiler, AnalogLaneCompiler, CameraLaneCompiler
 from .lane_compilers import evaluate_step_durations
 from .lane_compilers.timing import number_ticks, ns, get_step_bounds
-from .unit_namespace import units
+from caqtus.types.units.unit_namespace import units
 from .variable_namespace import VariableNamespace
 
 logger = logging.getLogger(__name__)

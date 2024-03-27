@@ -3,7 +3,7 @@ from typing import Any
 
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
-from .unit_namespace import units
+from caqtus.types.units.unit_namespace import units
 
 
 def evaluate_expression(

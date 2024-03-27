@@ -7,7 +7,7 @@ from caqtus.types.expression import Expression
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds
 from .timing import number_ticks, ns
-from ..unit_namespace import units
+from caqtus.types.units.unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 

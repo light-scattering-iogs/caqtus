@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence, Mapping
 from typing import Union, Any, Self
 
-from caqtus.shot_compilation.unit_namespace import units
+from caqtus.types.units.unit_namespace import units
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter, is_parameter
 from caqtus.types.variable_name import DottedVariableName

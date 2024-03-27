@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from .unit_namespace import units
 from .units import (
     ureg,
     unit_registry,
@@ -33,4 +34,5 @@ __all__ = [
     "CURRENT_UNITS",
     "VOLTAGE_UNITS",
     "UNITS",
+    "units",
 ]

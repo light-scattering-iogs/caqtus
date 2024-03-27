@@ -16,7 +16,7 @@ from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
-from ..unit_namespace import units
+from caqtus.types.units.unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 TIME_VARIABLE = VariableName("t")
