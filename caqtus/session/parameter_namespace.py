@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence, Mapping
 from typing import Union, Any, Self
 
-from caqtus.types.units.unit_namespace import units
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter, is_parameter
 from caqtus.types.variable_name import DottedVariableName
@@ -156,6 +155,26 @@ class ParameterNamespace:
             results[name] = value
 
         return results
+
+    def replace(self, parameter: DottedVariableName, expression: Expression) -> None:
+        """Replace all occurrences of the parameter with the given value."""
+
+        parameter_parts = parameter.individual_names
+
+        for index, (name, value) in enumerate(self._content):
+            name_parts = name.individual_names
+            if len(name_parts) > len(parameter_parts):
+                continue
+            if parameter_parts[: len(name_parts)] == name_parts:
+                remainder = parameter_parts[len(name_parts) :]
+                if remainder:
+                    if isinstance(value, ParameterNamespace):
+                        value.replace(
+                            DottedVariableName.from_individual_names(remainder),
+                            expression,
+                        )
+                else:
+                    self._content[index] = (name, expression)
 
 
 def union_structure_hook(value, _) -> Expression | ParameterNamespace:

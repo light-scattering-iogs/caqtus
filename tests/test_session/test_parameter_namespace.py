@@ -82,3 +82,15 @@ def test_evaluation_units():
     namespace = ParameterNamespace.from_mapping({"a": Expression("1 kHz")})
     values = namespace.evaluate()
     assert values == {DottedVariableName("a"): 1 * ureg.kHz}
+
+
+def test_replace():
+    namespace = ParameterNamespace.from_mapping({"a.b": Expression("1")})
+    namespace.replace(DottedVariableName("a.b"), Expression("2"))
+    assert namespace.evaluate()[DottedVariableName("a.b")] == 2
+
+
+def test_replace_():
+    namespace = ParameterNamespace.from_mapping({"a": {"b": Expression("1")}})
+    namespace.replace(DottedVariableName("a.b"), Expression("2"))
+    assert namespace.evaluate()[DottedVariableName("a.b")] == 2
