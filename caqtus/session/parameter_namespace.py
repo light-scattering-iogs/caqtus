@@ -139,11 +139,15 @@ class ParameterNamespace:
     def evaluate(self) -> dict[DottedVariableName, Parameter]:
         """Evaluate the values in the namespace.
 
-
+        Each expression is evaluated within the context of the parameters evaluated
+        before.
+        If two declarations have the same parameter name, the last value will overwrite
+        the first one.
         """
+
         results: dict[DottedVariableName, Parameter] = {}
         for name, expression in self.flatten():
-            value = expression.evaluate(results | units)
+            value = expression.evaluate(results)
             if not is_parameter(value):
                 raise TypeError(
                     f"Expression <{expression}> for parameter <{name}> does not "

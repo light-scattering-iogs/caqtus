@@ -1,5 +1,6 @@
 from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
+from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 
@@ -75,3 +76,9 @@ def test_evaluation():
     )
     values = namespace.evaluate()
     assert values == {DottedVariableName("a"): 1, DottedVariableName("b"): 2}
+
+
+def test_evaluation_units():
+    namespace = ParameterNamespace.from_mapping({"a": Expression("1 kHz")})
+    values = namespace.evaluate()
+    assert values == {DottedVariableName("a"): 1 * ureg.kHz}

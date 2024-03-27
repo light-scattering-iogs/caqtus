@@ -50,7 +50,7 @@ BUILTINS = {
     "min": min,
     "Enabled": True,
     "Disabled": False,
-} | units
+} | {str(name): value for name, value in units.items()}
 
 
 class Expression:
