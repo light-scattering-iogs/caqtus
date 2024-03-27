@@ -6,8 +6,9 @@ from typing import Optional, Any
 
 import numpy
 import token_utils
-from caqtus.utils import serialization
 
+from caqtus.utils import serialization
+from ..units import units
 from ..variable_name import DottedVariableName, VariableName
 
 EXPRESSION_REGEX = re.compile(".*")
@@ -49,7 +50,7 @@ BUILTINS = {
     "min": min,
     "Enabled": True,
     "Disabled": False,
-}
+} | units
 
 
 class Expression:
