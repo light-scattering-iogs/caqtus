@@ -62,7 +62,6 @@ class Expression:
     def __init__(
         self,
         body: str,
-        builtins: Optional[dict[str, Any]] = None,
         implicit_multiplication: bool = True,
         allow_percentage: bool = True,
         allow_degree: bool = True,
@@ -72,9 +71,6 @@ class Expression:
         Args:
             body: the expression body. This is a string expression that must follow the
             specifications of the python syntax.
-            builtins: a dictionary of builtin functions and constants that can be used
-            in the expression. They will be available in the expression namespace, but
-            are not included in the upstream variables.
             implicit_multiplication: if True, the expression will be parsed to allow
             implicit multiplication, even though it is not regular python. For example,
             'a b' will be parsed as 'a * b'. If set to False, a syntax error will be
@@ -88,10 +84,7 @@ class Expression:
             and evaluating the expression will raise a SyntaxError.
         """
 
-        if builtins is None:
-            builtins = BUILTINS
         self.body = body
-        self._builtins = builtins
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
         self._allow_degree = allow_degree
@@ -144,7 +137,7 @@ class Expression:
 
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         try:
-            value = eval(self.code, {"__builtins__": self._builtins}, variables)
+            value = eval(self.code, {"__builtins__": BUILTINS}, variables)
         except Exception as error:
             raise EvaluationError(f"Could not evaluate <{self.body}>") from error
         return value
@@ -155,12 +148,10 @@ class Expression:
 
         variables = set()
 
-        builtins = self._builtins
-
         class FindNameVisitor(ast.NodeVisitor):
             def visit_Name(self, node: ast.Name):
                 if isinstance(node.ctx, ast.Load):
-                    if node.id not in builtins:
+                    if node.id not in BUILTINS:
                         variables.add(VariableName(node.id))
 
         FindNameVisitor().visit(self._ast)
