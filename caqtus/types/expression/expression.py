@@ -201,6 +201,18 @@ class Expression:
         else:
             raise TypeError("Expression must be a string or Expression object")
 
+    def __getstate__(self):
+        return {
+            "body": self.body,
+            "implicit_multiplication": self._implicit_multiplication,
+            "allow_percentage": self._allow_percentage,
+            "allow_degree": self._allow_degree,
+            "cache_evaluation": self._cache_evaluation,
+        }
+
+    def __setstate__(self, state):
+        self.__init__(**state)
+
 
 serialization.register_unstructure_hook(Expression, lambda expr: expr.body)
 serialization.register_structure_hook(Expression, lambda body, _: Expression(body))
