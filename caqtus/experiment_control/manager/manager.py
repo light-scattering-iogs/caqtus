@@ -8,14 +8,15 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from caqtus.shot_compilation import ShotCompilerFactory
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     Sequence,
+    ParameterNamespace,
 )
 from caqtus.session.sequence.iteration_configuration import StepsConfiguration
+from caqtus.shot_compilation import ShotCompilerFactory
 from caqtus.utils import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context
@@ -100,6 +101,7 @@ class Procedure(AbstractContextManager, abc.ABC):
     def start_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -114,6 +116,9 @@ class Procedure(AbstractContextManager, abc.ABC):
 
         Args:
             sequence: the sequence to run.
+            global_parameters: The parameters to set for this sequence.
+            If nothing is passed, it will take the current global parameters from the
+            session.
             device_configurations: the device configurations to use for running this
             sequence.
             If None, this will use the session default device configurations.
@@ -143,6 +148,7 @@ class Procedure(AbstractContextManager, abc.ABC):
     def run_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -159,7 +165,7 @@ class Procedure(AbstractContextManager, abc.ABC):
             Exception: if an exception occurs while running the sequence.
         """
 
-        self.start_sequence(sequence, device_configurations)
+        self.start_sequence(sequence, global_parameters, device_configurations)
         if exception := self.exception():
             raise exception
 
@@ -286,6 +292,7 @@ class BoundProcedure(Procedure):
     def start_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -305,6 +312,7 @@ class BoundProcedure(Procedure):
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence,
+            global_parameters,
             device_configurations,
         )
         self._sequences.append(sequence)
@@ -323,6 +331,7 @@ class BoundProcedure(Procedure):
     def _run_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -337,6 +346,7 @@ class BoundProcedure(Procedure):
             self._shot_runner_factory,
             self._must_interrupt,
             self._shot_retry_config,
+            global_parameters,
             device_configurations,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):

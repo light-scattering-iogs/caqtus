@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import contextlib
+import copy
 import datetime
 import logging
 import queue
@@ -11,14 +12,14 @@ from contextlib import AbstractContextManager
 from typing import Optional, Any
 
 import attrs
-from caqtus.shot_compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
-from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
-from caqtus.session import ExperimentSessionMaker, Sequence
-from caqtus.session.sequence import State
-from caqtus.types.data import DataLabel, Data
 from tblib import pickling_support
-from caqtus.utils.concurrent import TaskGroup
 
+from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
+from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
+from caqtus.session.sequence import State
+from caqtus.shot_compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
+from caqtus.types.data import DataLabel, Data
+from caqtus.utils.concurrent import TaskGroup
 from ..shot_runner import ShotRunnerFactory, ShotRunner
 
 pickling_support.install()
@@ -127,6 +128,7 @@ class SequenceManager(AbstractContextManager):
         shot_runner_factory: ShotRunnerFactory,
         interruption_event: threading.Event,
         shot_retry_config: Optional[ShotRetryConfig] = None,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -140,7 +142,10 @@ class SequenceManager(AbstractContextManager):
                 self.device_configurations = dict(session.default_device_configurations)
             else:
                 self.device_configurations = dict(device_configurations)
-            self.sequence_parameters = session.get_global_parameters()
+            if global_parameters is None:
+                self.sequence_parameters = session.get_global_parameters()
+            else:
+                self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
         self.shot_compiler_factory = shot_compiler_factory
         self.shot_runner_factory = shot_runner_factory

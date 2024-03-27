@@ -7,10 +7,10 @@ from typing import Optional
 
 from tblib import pickling_support
 
-from caqtus.shot_compilation import ShotCompilerFactory
 from caqtus.device import DeviceName, DeviceConfigurationAttrs
-from caqtus.session import ExperimentSessionMaker, Sequence
+from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session import PureSequencePath
+from caqtus.shot_compilation import ShotCompilerFactory
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ..shot_runner import ShotRunnerFactory
@@ -93,13 +93,14 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     def start_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
     ) -> None:
         return self._callmethod(
             "start_sequence",
-            (sequence, device_configurations),
+            (sequence, global_parameters, device_configurations),
         )
 
     def interrupt_sequence(self) -> bool:
@@ -108,6 +109,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
     def run_sequence(
         self,
         sequence: Sequence,
+        global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfigurationAttrs]
         ] = None,
@@ -117,7 +119,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         # the sequence to finish.
         # This means that we can't even raise KeyboardInterrupt while waiting for the
         # method to return.
-        self.start_sequence(sequence, device_configurations)
+        self.start_sequence(sequence, global_parameters, device_configurations)
         while self.is_running_sequence():
             time.sleep(10e-3)
         if exception := self.exception():
