@@ -13,7 +13,15 @@ MappingNamespace = Mapping[
 
 
 class ParameterNamespace:
-    """A nested namespace of parameters."""
+    """A nested namespace of user parameters.
+
+    Objects of this class map from a variable name of type
+    :py:class:`DottedVariableName` to either an unevaluated expression
+    (:py:class:`Expression`) or another :py:class:`ParameterNamespace`.
+
+    Objects of this class are not per-say a mapping, because the variable names have a
+    definition order and can be duplicates.
+    """
 
     def __init__(
         self,

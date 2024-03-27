@@ -19,6 +19,11 @@ Each sequence stores the configuration needed to run it on the experiment.
 Data from a shot can be accessed through the :py:class:`core.session.Shot` class.
 It contains the specific values of the parameters used to run it and the data acquired using this set of parameters.
 
+Global parameters
+-----------------
+
+A session contains a unique and global set of user parameters that are shared across all sequences.
+
 API reference
 -------------
 
