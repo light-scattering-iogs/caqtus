@@ -16,7 +16,6 @@ from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
-from caqtus.types.units.unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 TIME_VARIABLE = VariableName("t")
@@ -80,7 +79,7 @@ class AnalogLaneCompiler:
             cell_stop_time = step_bounds[cell_stop_index]
             if isinstance(cell_value, Expression):
                 instruction = self._compile_expression_cell(
-                    variables | units,
+                    variables,
                     cell_value,
                     cell_start_time,
                     cell_stop_time,
@@ -135,12 +134,12 @@ class AnalogLaneCompiler:
             step_bounds[self.lane.get_bounds(start_index - 1)[1]]
             - step_bounds[self.lane.get_bounds(start_index - 1)[0]]
         )
-        v = variables | units | {TIME_VARIABLE: previous_step_duration * ureg.s}
+        v = variables | {TIME_VARIABLE: previous_step_duration * ureg.s}
         ramp_start = self._evaluate_expression(self.lane[start_index - 1], v)
         if is_quantity(ramp_start):
             ramp_start = ramp_start.to_base_units()
 
-        v = variables | units | {TIME_VARIABLE: 0.0 * ureg.s}
+        v = variables | {TIME_VARIABLE: 0.0 * ureg.s}
         ramp_end = self._evaluate_expression(self.lane[stop_index], v)
         if is_quantity(ramp_end):
             ramp_end = ramp_end.to_base_units()
@@ -152,9 +151,11 @@ class AnalogLaneCompiler:
         return Pattern(magnitude_in_unit(result, self.unit), dtype=np.float64)
 
     @staticmethod
-    def _evaluate_expression(expression: Expression, variables) -> AnalogValue:
+    def _evaluate_expression(
+        expression: Expression, variables: VariableNamespace
+    ) -> AnalogValue:
         try:
-            value = expression.evaluate(variables | units)
+            value = expression.evaluate(variables.dict())
         except Exception as e:
             raise ValueError(f"Could not evaluate expression <{expression}>") from e
         if not is_analog_value(value):

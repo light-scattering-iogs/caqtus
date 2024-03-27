@@ -21,7 +21,7 @@ def evaluate_step_durations(
 
     result = []
 
-    all_variables = variables | units
+    all_variables = variables.dict()
 
     for name, duration in steps:
         try:

@@ -247,7 +247,7 @@ class SingleShotCompiler:
             + append
         )
         expression = output_.value
-        value = expression.evaluate(self.variables | units)
+        value = expression.evaluate(self.variables)
         magnitude = magnitude_in_unit(value, required_unit)
         return Pattern([magnitude]) * length
 
@@ -702,6 +702,6 @@ def _evaluate_expression_in_unit(
     required_unit: Optional[Unit],
     variables: VariableNamespace,
 ) -> np.floating:
-    value = expression.evaluate(variables | units)
+    value = expression.evaluate(variables.dict())
     magnitude = magnitude_in_unit(value, required_unit)
     return magnitude

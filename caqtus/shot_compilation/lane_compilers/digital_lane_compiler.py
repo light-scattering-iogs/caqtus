@@ -1,13 +1,13 @@
 from collections.abc import Sequence
 
 import numpy as np
+
 from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from caqtus.session.shot.timelane import DigitalTimeLane
 from caqtus.types.expression import Expression
 from .evaluate_step_durations import evaluate_step_durations
 from .timing import get_step_bounds
 from .timing import number_ticks, ns
-from caqtus.types.units.unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 
@@ -50,7 +50,7 @@ class DigitalLaneCompiler:
             if isinstance(cell_value, bool):
                 instructions.append(self.get_constant_instruction(cell_value, length))
             elif isinstance(cell_value, Expression):
-                value = cell_value.evaluate(variables | units)
+                value = cell_value.evaluate(variables.dict())
                 if not isinstance(value, bool):
                     raise TypeError(
                         f"Expression {cell_value} does not evaluate to bool, but to"

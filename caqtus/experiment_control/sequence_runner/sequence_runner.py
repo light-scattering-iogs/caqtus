@@ -125,7 +125,7 @@ def _(
     if False:
         yield context
 
-    value = declaration.value.evaluate(context.variables | units)
+    value = declaration.value.evaluate(context.variables.dict())
     if not is_parameter(value):
         raise TypeError(
             f"Value of variable declaration <{declaration}> has type "
@@ -223,7 +223,7 @@ def evaluate_arange_loop_parameters(
     arange_loop: ArangeLoop,
     context: StepContext,
 ) -> tuple[AnalogValue, AnalogValue, AnalogValue]:
-    variables = context.variables | units
+    variables = context.variables.dict()
 
     start = arange_loop.start.evaluate(variables)
     if not is_analog_value(start):
@@ -241,7 +241,7 @@ def evaluate_linspace_loop_parameters(
     linspace_loop: LinspaceLoop,
     context: StepContext,
 ) -> tuple[AnalogValue, AnalogValue, int]:
-    variables = context.variables | units
+    variables = context.variables.dict()
 
     start = linspace_loop.start.evaluate(variables)
     if not is_analog_value(start):
@@ -267,7 +267,7 @@ def evaluate_initial_context(parameters: ParameterNamespace) -> StepContext:
     context = StepContext[Parameter]()
 
     for name, expression in flat_parameters:
-        value = expression.evaluate(units)  # type: ignore
+        value = expression.evaluate({})
         if not is_parameter(value):
             raise TypeError(
                 f"Expression <{expression}> for parameter <{name}> does not evaluate "
