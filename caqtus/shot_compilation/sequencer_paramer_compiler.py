@@ -247,7 +247,7 @@ class SingleShotCompiler:
             + append
         )
         expression = output_.value
-        value = expression.evaluate(self.variables)
+        value = expression.evaluate(self.variables.dict())
         magnitude = magnitude_in_unit(value, required_unit)
         return Pattern([magnitude]) * length
 
