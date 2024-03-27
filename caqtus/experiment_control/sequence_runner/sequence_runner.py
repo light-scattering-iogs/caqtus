@@ -46,7 +46,7 @@ def wrap_error(
 def walk_steps(
     steps: Iterable[Step], initial_context: StepContext
 ) -> Iterable[StepContext]:
-    """Execute a sequence of steps on the experiment.
+    """Yields the context for each shot defined by the steps.
 
     This function will recursively execute each step in the sequence passed as
     argument.
