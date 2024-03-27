@@ -14,28 +14,28 @@ All timelane objects are subclasses of the abstract class :class:`core.session.s
 
 The core project provides the following timelanes:
 
-- :class:`core.session.shot.DigitalTimeLane`
-- :class:`core.session.shot.AnalogTimeLane`
-- :class:`core.session.shot.CameraTimeLane`
+- :class:`caqtus.session.shot.DigitalTimeLane`
+- :class:`caqtus.session.shot.AnalogTimeLane`
+- :class:`caqtus.session.shot.CameraTimeLane`
 
-More lanes can be added by the user by subclassing :class:`core.session.shot.TimeLane`.
+More lanes can be added by the user by subclassing :class:`caqtus.session.shot.TimeLane`.
 See :ref:`How to add a lane` for more information.
 
-Timelanes can directly represent the output of a device's channel, for example by having a :class:`core.session.shot.DigitalTimeLane` object to indicate when a digital channel controlling a shutter or an AOM should be high or low.
+Timelanes can directly represent the output of a device's channel, for example by having a :class:`caqtus.session.shot.DigitalTimeLane` object to indicate when a digital channel controlling a shutter or an AOM should be high or low.
 But, they can also represent more abstract concepts.
-For example a :class:`core.session.shot.DialTimeLane` object can represent the loading of a MOT, where several digital channels are high at the same time, and some analog channels take a specific value.
+For example a :class:`caqtus.session.shot.DialTimeLane` object can represent the loading of a MOT, where several digital channels are high at the same time, and some analog channels take a specific value.
 
 API reference
 -------------
 
-.. autoclass:: core.session.shot.TimeLanes
+.. autoclass:: caqtus.session.shot.TimeLanes
 
-.. autoclass:: core.session.shot.TimeLane
+.. autoclass:: caqtus.session.shot.TimeLane
 
-.. autoclass:: core.session.shot.DigitalTimeLane
+.. autoclass:: caqtus.session.shot.DigitalTimeLane
 
-.. autoclass:: core.session.shot.AnalogTimeLane
+.. autoclass:: caqtus.session.shot.AnalogTimeLane
 
-.. autoclass:: core.session.shot.CameraTimeLane
+.. autoclass:: caqtus.session.shot.CameraTimeLane
 
 

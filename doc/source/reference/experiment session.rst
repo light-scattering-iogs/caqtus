@@ -22,5 +22,5 @@ It contains the specific values of the parameters used to run it and the data ac
 API reference
 -------------
 
-.. automodule:: core.session
+.. automodule:: caqtus.session
     :members:
