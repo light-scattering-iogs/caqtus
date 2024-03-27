@@ -67,3 +67,11 @@ def test_get():
         }
     )
     assert namespace.get(DottedVariableName("a.b")) == Expression("2")
+
+
+def test_evaluation():
+    namespace = ParameterNamespace.from_mapping(
+        {"a": Expression("1"), "b": Expression("2 * a")}
+    )
+    values = namespace.evaluate()
+    assert values == {DottedVariableName("a"): 1, DottedVariableName("b"): 2}

@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence, Mapping
 from typing import Union, Any, Self
 
+from caqtus.shot_compilation.unit_namespace import units
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import Parameter, is_parameter
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 
@@ -133,6 +135,23 @@ class ParameterNamespace:
 
     def __delitem__(self, item: int) -> None:
         del self._content[item]
+
+    def evaluate(self) -> dict[DottedVariableName, Parameter]:
+        """Evaluate the values in the namespace.
+
+
+        """
+        results: dict[DottedVariableName, Parameter] = {}
+        for name, expression in self.flatten():
+            value = expression.evaluate(results | units)
+            if not is_parameter(value):
+                raise TypeError(
+                    f"Expression <{expression}> for parameter <{name}> does not "
+                    f"evaluate to a valid parameter type, got <{type(value)}>."
+                )
+            results[name] = value
+
+        return results
 
 
 def union_structure_hook(value, _) -> Expression | ParameterNamespace:
