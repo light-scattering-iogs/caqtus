@@ -82,7 +82,10 @@ class ParameterNamespace:
         return iter(self._content)
 
     def flatten(self) -> Iterable[tuple[DottedVariableName, Expression]]:
-        """Return an iterable of flat key-value pairs in the namespace."""
+        """Return an iterable of flat key-value pairs in the namespace.
+
+        The values are iterated over in their definition order in the namespace.
+        """
 
         for key, value in self._content:
             if isinstance(value, ParameterNamespace):
@@ -93,6 +96,21 @@ class ParameterNamespace:
                     yield k, sub_value
             else:
                 yield key, value
+
+    def get(self, parameter: DottedVariableName) -> Expression:
+        """Return the expression associated with a parameter name.
+
+        In case the parameter is defined several times in the namespace, it will return
+        the last definition.
+
+        Raises:
+            KeyError, if the parameter is not present in the namespace.
+        """
+
+        for name, expression in reversed(list(self.flatten())):
+            if name == parameter:
+                return expression
+        raise KeyError(parameter)
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self._content})"

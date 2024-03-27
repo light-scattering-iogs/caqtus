@@ -57,3 +57,13 @@ def test_serialization():
     )
     unstructured = serialization.unstructure(namespace)
     assert serialization.structure(unstructured, ParameterNamespace) == namespace
+
+
+def test_get():
+    namespace = ParameterNamespace.from_mapping(
+        {
+            "a.b": Expression("1"),
+            "a": {"b": Expression("2")},
+        }
+    )
+    assert namespace.get(DottedVariableName("a.b")) == Expression("2")
