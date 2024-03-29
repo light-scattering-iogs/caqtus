@@ -116,11 +116,10 @@ class Sequence:
         if isinstance(target_path, str):
             target_path = PureSequencePath(target_path)
 
-        parameters = self.get_parameters(session)
         iteration_configuration = self.get_iteration_configuration(session)
         time_lanes = self.get_time_lanes(session)
         return session.sequences.create(
-            target_path, parameters, iteration_configuration, time_lanes
+            target_path, iteration_configuration, time_lanes
         )
 
     def get_device_configurations(
