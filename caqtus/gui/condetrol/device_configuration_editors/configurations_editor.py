@@ -174,6 +174,7 @@ class DeviceConfigurationsView(QColumnView):
 
         index = self.currentIndex()
         if index.isValid():
+            index = self._sorted_model.mapToSource(index)
             self._model.removeRow(index.row())
             self._device_configurations.pop(index.row())
             self._previous_index = None
@@ -183,6 +184,7 @@ class DeviceConfigurationsView(QColumnView):
                 self.setPreviewWidget(QWidget())
 
     def _update_preview_widget(self, index) -> None:
+        index = self._sorted_model.mapToSource(index)
         if self._previous_index is not None:
             previous_editor = self.previewWidget()
             assert isinstance(previous_editor, DeviceConfigurationEditor)
