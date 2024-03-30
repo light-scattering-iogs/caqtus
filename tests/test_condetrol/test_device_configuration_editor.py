@@ -2,10 +2,12 @@ from PySide6.QtCore import Qt
 from pytestqt.qtbot import QtBot
 
 from caqtus.device import DeviceName
+from caqtus.gui.condetrol.device_configuration_editors import (
+    DeviceConfigurationsDialog,
+    default_device_configuration_plugin,
+)
 from caqtus.gui.condetrol.device_configuration_editors.configurations_editor import (
     DeviceConfigurationsView,
-    default_device_editor_factory,
-    DeviceConfigurationsDialog,
 )
 from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (
     DefaultDeviceConfigurationEditor,
@@ -18,7 +20,9 @@ def test_edit(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    view = DeviceConfigurationsView(default_device_editor_factory, parent=None)
+    view = DeviceConfigurationsView(
+        default_device_configuration_plugin.editor_factory, parent=None
+    )
     view.set_device_configurations(device_configurations)
     qtbot.addWidget(view)
 
@@ -38,7 +42,9 @@ def test_edit_1(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    view = DeviceConfigurationsView(default_device_editor_factory, parent=None)
+    view = DeviceConfigurationsView(
+        default_device_configuration_plugin.editor_factory, parent=None
+    )
     view.set_device_configurations(device_configurations)
     qtbot.addWidget(view)
 
@@ -58,7 +64,9 @@ def test_name_edit(qtbot: QtBot):
     device_configurations = {
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
     }
-    view = DeviceConfigurationsView(default_device_editor_factory, parent=None)
+    view = DeviceConfigurationsView(
+        default_device_configuration_plugin.editor_factory, parent=None
+    )
     view.set_device_configurations(device_configurations)
     qtbot.addWidget(view)
 
@@ -86,7 +94,9 @@ def test_name_edit(qtbot: QtBot):
 
 def test_add_config(qtbot: QtBot):
     config = MockDeviceConfiguration(remote_server="default")
-    view = DeviceConfigurationsView(default_device_editor_factory, parent=None)
+    view = DeviceConfigurationsView(
+        default_device_configuration_plugin.editor_factory, parent=None
+    )
     qtbot.addWidget(view)
     view.add_configuration(DeviceName("Device 1"), config)
     assert view.get_device_configurations() == {DeviceName("Device 1"): config}
@@ -104,8 +114,7 @@ def test_add_config(qtbot: QtBot):
 
 def test_dialog(qtbot: QtBot):
     dialog = DeviceConfigurationsDialog(
-        default_device_editor_factory,
-        {"Device": lambda: MockDeviceConfiguration("default")},
+        default_device_configuration_plugin,
         parent=None,
     )
     qtbot.addWidget(dialog)
