@@ -119,6 +119,14 @@ class DeviceConfigurationsView(QColumnView):
         self._device_configurations.append(device_configuration)
         self._model.setStringList(self._model.stringList() + [device_name])
 
+    def delete_selected_configuration(self) -> None:
+        """Delete the configuration that is currently selected in the view."""
+
+        index = self.currentIndex()
+        if index.isValid():
+            self._device_configurations.pop(index.row())
+            self._model.removeRow(index.row())
+
     def _update_preview_widget(self, index) -> None:
         if self._previous_index is not None:
             previous_editor = self.previewWidget()
