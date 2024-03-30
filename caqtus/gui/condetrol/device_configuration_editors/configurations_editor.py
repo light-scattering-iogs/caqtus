@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Mapping, Iterable, Callable
-from typing import TypedDict, Optional, TypeVar, Generic
+from typing import Optional, TypeVar
 
 from PySide6.QtCore import QStringListModel, QSortFilterProxyModel
 from PySide6.QtWidgets import (
@@ -20,22 +20,76 @@ from .device_configuration_editor import (
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from ..icons import get_icon
 
-T = TypeVar("T", bound=DeviceConfigurationAttrs)
-
-
-class DeviceConfigurationEditInfo(TypedDict, Generic[T]):
-    editor_type: type[DeviceConfigurationEditor[T]]
-
-
 C = TypeVar("C", bound=DeviceConfigurationAttrs)
 
 DeviceConfigurationEditorFactory = Callable[[C], DeviceConfigurationEditor[C]]
 
 
-def default_device_editor_factory(
-    device_configuration: C,
-) -> DeviceConfigurationEditor[C]:
-    return DefaultDeviceConfigurationEditor(device_configuration)
+DeviceConfigurationFactory = Callable[[], DeviceConfigurationAttrs]
+
+
+class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
+    """A dialog for displaying and editing a collection of device configurations."""
+
+    def __init__(
+        self,
+        device_editor_factory: DeviceConfigurationEditorFactory,
+        device_configuration_factories: Mapping[str, DeviceConfigurationFactory],
+        parent: Optional[QWidget] = None,
+    ):
+        """Initialize the dialog.
+
+        Args:
+            device_editor_factory: A factory function that creates an editor for a
+            device configuration.
+            See :class:`DeviceConfigurationsView` for more information.
+            device_configuration_factories: A mapping from device types to factory
+            functions that create device configurations of that type.
+            When the user adds a new device configuration, the dialog will present a
+            list of device types to choose from.
+            When the user selects a device type, the dialog will call the factory
+            function for that type to create a new device configuration.
+            parent: The parent widget.
+        """
+
+        super().__init__(parent)
+        self._configs_view = DeviceConfigurationsView(device_editor_factory, self)
+
+        self.add_device_dialog = AddDeviceDialog(
+            device_configuration_factories.keys(), self
+        )
+        self.device_configuration_factories = device_configuration_factories
+
+        self.setup_ui()
+        self.setup_connections()
+
+    def setup_ui(self):
+        self.setupUi(self)
+        layout = self.layout()
+        assert isinstance(layout, QVBoxLayout)
+        layout.insertWidget(0, self._configs_view, 1)
+        self.add_device_button.setIcon(get_icon("plus"))
+        self.remove_device_button.setIcon(get_icon("minus"))
+
+    def setup_connections(self):
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.add_device_button.clicked.connect(self._on_add_configuration)
+        self.remove_device_button.clicked.connect(
+            self._configs_view.delete_selected_configuration
+        )
+
+    def _on_add_configuration(self) -> None:
+        result = self.add_device_dialog.exec()
+        if result is not None:
+            device_name, device_type = result
+            if not device_name:
+                return
+            device_configuration = self.device_configuration_factories[device_type]()
+            self._configs_view.add_configuration(device_name, device_configuration)
+
+    def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
+        return self._configs_view.get_device_configurations()
 
 
 class DeviceConfigurationsView(QColumnView):
@@ -155,73 +209,6 @@ class DeviceConfigurationsView(QColumnView):
         self.setPreviewWidget(previous_editor)
 
 
-DeviceConfigurationFactory = Callable[[], DeviceConfigurationAttrs]
-
-
-class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
-    """A dialog for displaying and editing a collection of device configurations."""
-
-    def __init__(
-        self,
-        device_editor_factory: DeviceConfigurationEditorFactory,
-        device_configuration_factories: Mapping[str, DeviceConfigurationFactory],
-        parent: Optional[QWidget] = None,
-    ):
-        """Initialize the dialog.
-
-        Args:
-            device_editor_factory: A factory function that creates an editor for a
-            device configuration.
-            See :class:`DeviceConfigurationsView` for more information.
-            device_configuration_factories: A mapping from device types to factory
-            functions that create device configurations of that type.
-            When the user adds a new device configuration, the dialog will present a
-            list of device types to choose from.
-            When the user selects a device type, the dialog will call the factory
-            function for that type to create a new device configuration.
-            parent: The parent widget.
-        """
-
-        super().__init__(parent)
-        self._configs_view = DeviceConfigurationsView(device_editor_factory, self)
-
-        self.add_device_dialog = AddDeviceDialog(
-            device_configuration_factories.keys(), self
-        )
-        self.device_configuration_factories = device_configuration_factories
-
-        self.setup_ui()
-        self.setup_connections()
-
-    def setup_ui(self):
-        self.setupUi(self)
-        layout = self.layout()
-        assert isinstance(layout, QVBoxLayout)
-        layout.insertWidget(0, self._configs_view, 1)
-        self.add_device_button.setIcon(get_icon("plus"))
-        self.remove_device_button.setIcon(get_icon("minus"))
-
-    def setup_connections(self):
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.add_device_button.clicked.connect(self._on_add_configuration)
-        self.remove_device_button.clicked.connect(
-            self._configs_view.delete_selected_configuration
-        )
-
-    def _on_add_configuration(self) -> None:
-        result = self.add_device_dialog.exec()
-        if result is not None:
-            device_name, device_type = result
-            if not device_name:
-                return
-            device_configuration = self.device_configuration_factories[device_type]()
-            self._configs_view.add_configuration(device_name, device_configuration)
-
-    def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
-        return self._configs_view.get_device_configurations()
-
-
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
     def __init__(self, device_types: Iterable[str], parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -254,3 +241,9 @@ class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
             device_type = self.device_type_combo_box.currentText()
             return device_name, device_type
         return None
+
+
+def default_device_editor_factory(
+    device_configuration: C,
+) -> DeviceConfigurationEditor[C]:
+    return DefaultDeviceConfigurationEditor(device_configuration)
