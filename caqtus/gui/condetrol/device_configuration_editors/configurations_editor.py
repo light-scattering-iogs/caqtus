@@ -100,6 +100,25 @@ class DeviceConfigurationsView(QColumnView):
             )
         }
 
+    def add_configuration(
+        self, device_name: DeviceName, device_configuration: DeviceConfigurationAttrs
+    ) -> None:
+        """Add a device configuration to the view.
+
+        The view will copy the configuration and store it internally, so external
+        changes to the configuration will not affect the view.
+        """
+
+        if not isinstance(device_configuration, DeviceConfigurationAttrs):
+            raise TypeError(
+                f"Expected a DeviceConfigurationAttrs, got {type(device_configuration)}"
+            )
+
+        device_configuration = copy.deepcopy(device_configuration)
+
+        self._device_configurations.append(device_configuration)
+        self._model.setStringList(self._model.stringList() + [device_name])
+
     def _update_preview_widget(self, index) -> None:
         if self._previous_index is not None:
             previous_editor = self.previewWidget()

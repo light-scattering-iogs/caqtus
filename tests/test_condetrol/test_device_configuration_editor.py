@@ -81,3 +81,21 @@ def test_name_edit(qtbot: QtBot):
         view.get_device_configurations()[DeviceName("New Name")]
         == device_configurations[DeviceName("Device 1")]
     )
+
+
+def test_add_config(qtbot: QtBot):
+    config = MockDeviceConfiguration(remote_server="default")
+    view = DeviceConfigurationsView(default_device_editor_factory, parent=None)
+    qtbot.addWidget(view)
+    view.add_configuration(DeviceName("Device 1"), config)
+    assert view.get_device_configurations() == {DeviceName("Device 1"): config}
+    view.add_configuration(DeviceName("Device 2"), config)
+    assert view.get_device_configurations() == {
+        DeviceName("Device 1"): config,
+        DeviceName("Device 2"): config,
+    }
+    view.add_configuration(DeviceName("Device 1"), config)
+    assert view.get_device_configurations() == {
+        DeviceName("Device 1"): config,
+        DeviceName("Device 2"): config,
+    }
