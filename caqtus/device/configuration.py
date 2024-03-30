@@ -1,11 +1,13 @@
 from abc import abstractmethod, ABC
 from collections.abc import Mapping
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Optional, NewType
 
 import attrs
 
 from .name import DeviceName
 from .parameter import DeviceParameter
+
+DeviceServerName = NewType("DeviceServerName", str)
 
 
 @attrs.define
@@ -17,9 +19,17 @@ class DeviceConfigurationAttrs(ABC):
     change often between sequences. Subclasses of this class are associated with a
     given subclass of RuntimeDevice. Subclasses of this class typically should hold
     information to connect to the device, such as the IP address, port, etc.
+
+    Attributes:
+        remote_server: The name of the computer on which the device should be
+        instantiated.
+        If None, the device should be instantiated in the local process controlling
+        the experiment.
     """
 
-    remote_server: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+    remote_server: Optional[DeviceServerName] = attrs.field(
+        converter=attrs.converters.optional(str), on_setattr=attrs.setters.convert
+    )
 
     @abstractmethod
     def get_device_type(self) -> str:
