@@ -103,7 +103,11 @@ def test_add_config(qtbot: QtBot):
 
 
 def test_dialog(qtbot: QtBot):
-    dialog = DeviceConfigurationsDialog(default_device_editor_factory, parent=None)
+    dialog = DeviceConfigurationsDialog(
+        default_device_editor_factory,
+        {"Device": lambda: MockDeviceConfiguration("default")},
+        parent=None,
+    )
     qtbot.addWidget(dialog)
     dialog.show()
     qtbot.stop()

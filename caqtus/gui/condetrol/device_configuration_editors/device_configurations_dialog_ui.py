@@ -23,7 +23,7 @@ class Ui_DeviceConfigurationsDialog(object):
     def setupUi(self, DeviceConfigurationsDialog):
         if not DeviceConfigurationsDialog.objectName():
             DeviceConfigurationsDialog.setObjectName(u"DeviceConfigurationsDialog")
-        DeviceConfigurationsDialog.resize(658, 319)
+        DeviceConfigurationsDialog.resize(620, 319)
         self.verticalLayout = QVBoxLayout(DeviceConfigurationsDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.horizontalLayout = QHBoxLayout()
@@ -42,7 +42,7 @@ class Ui_DeviceConfigurationsDialog(object):
         self.buttonBox = QDialogButtonBox(DeviceConfigurationsDialog)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Save)
 
         self.horizontalLayout.addWidget(self.buttonBox)
 
