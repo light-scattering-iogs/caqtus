@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
 )
+
+from caqtus.gui.common.qtutil import temporary_widget
 from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
@@ -25,8 +27,6 @@ from caqtus.session.sequence_collection import PathIsSequenceError
 from caqtus.session.shot import TimeLanes
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
-
-from ._temporary_widget import temporary_widget
 from .icons import get_icon
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(

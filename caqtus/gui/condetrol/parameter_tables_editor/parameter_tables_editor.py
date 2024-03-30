@@ -30,12 +30,11 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.gui.common.exception_tree import ExceptionDialog
-from caqtus.gui.common.qtutil import block_signals
+from caqtus.gui.common.qtutil import block_signals, temporary_widget
 from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from .._temporary_widget import temporary_widget
 from ..icons import get_icon
 from ..logger import logger
 from ..qt_util import HTMLItemDelegate, AutoResizeLineEdit

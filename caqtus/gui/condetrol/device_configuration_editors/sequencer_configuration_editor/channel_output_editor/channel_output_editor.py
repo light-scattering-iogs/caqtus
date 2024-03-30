@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device.sequencer import ChannelConfiguration
+from caqtus.gui.common.qtutil import temporary_widget
 from .build_blocks import create_functional_blocks
 from .build_configuration import build_output, MissingInputError
 from .connection import (
@@ -31,7 +32,6 @@ from .functional_blocks import (
     AdvanceBlock,
     DelayBlock,
 )
-from ...._temporary_widget import temporary_widget
 
 
 class ChannelOutputEditor(QGraphicsView):
