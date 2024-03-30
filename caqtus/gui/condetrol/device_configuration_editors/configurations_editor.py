@@ -132,6 +132,10 @@ class DeviceConfigurationsView(QColumnView):
             self._model.removeRow(index.row())
             self._device_configurations.pop(index.row())
             self._previous_index = None
+            # This is necessary to hide the preview widget when there are no
+            # configurations left.
+            if not self._device_configurations:
+                self.setPreviewWidget(QWidget())
 
     def _update_preview_widget(self, index) -> None:
         if self._previous_index is not None:
