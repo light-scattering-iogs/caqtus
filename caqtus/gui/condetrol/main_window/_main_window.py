@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from caqtus.experiment_control import SequenceInterruptedException
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
 from caqtus.gui.common.exception_tree import ExceptionDialog
+from caqtus.gui.common.qtutil import temporary_widget
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import (
@@ -222,12 +223,16 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def open_device_configurations_editor(self):
         with self.session_maker() as session:
             previous_device_configurations = dict(session.default_device_configurations)
-        configurations_editor = ConfigurationsEditor(
-            copy.deepcopy(previous_device_configurations),
-            self.device_configuration_edit_infos,
-        )
-        configurations_editor.exec()
-        new_device_configurations = dict(configurations_editor.device_configurations)
+        with temporary_widget(
+            ConfigurationsEditor(
+                copy.deepcopy(previous_device_configurations),
+                self.device_configuration_edit_infos,
+            )
+        ) as configurations_editor:
+            configurations_editor.exec()
+            new_device_configurations = dict(
+                configurations_editor.device_configurations
+            )
         with self.session_maker() as session:
             for device_name in session.default_device_configurations:
                 if device_name not in new_device_configurations:
@@ -236,9 +241,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 device_name,
                 device_configuration,
             ) in new_device_configurations.items():
-                session.default_device_configurations[device_name] = (
-                    device_configuration
-                )
+                session.default_device_configurations[
+                    device_name
+                ] = device_configuration
 
     def closeEvent(self, a0):
         self.save_window()
