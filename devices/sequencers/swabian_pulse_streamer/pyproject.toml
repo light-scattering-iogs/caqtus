@@ -10,7 +10,7 @@ python = "^3.11, <3.13"
 
 pulsestreamer = "^1.7.0"
 
-caqtus = {git = "https://github.com/damienBloch/caqtus.git", extras = ["gui"]}
+caqtus = {git = "https://github.com/damienBloch/caqtus.git"}
 
 
 [build-system]
