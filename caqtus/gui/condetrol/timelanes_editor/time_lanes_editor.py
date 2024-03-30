@@ -25,7 +25,7 @@ from .lane_customization import (
     LaneDelegateFactory,
 )
 from .model import TimeLanesModel
-from ...common.qtutil import block_signals
+from caqtus.gui.qtutil import block_signals
 
 
 class TimeLanesEditor(QWidget):
@@ -141,9 +141,9 @@ class TimeLanesView(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
-        self._device_configurations: dict[DeviceName, DeviceConfigurationAttrs] = (
-            device_configurations
-        )
+        self._device_configurations: dict[
+            DeviceName, DeviceConfigurationAttrs
+        ] = device_configurations
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,

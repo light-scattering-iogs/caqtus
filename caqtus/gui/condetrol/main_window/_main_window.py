@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from caqtus.experiment_control import SequenceInterruptedException
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
 from caqtus.gui.common.exception_tree import ExceptionDialog
-from caqtus.gui.common.qtutil import temporary_widget
+from caqtus.gui.qtutil import temporary_widget
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import (

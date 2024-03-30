@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.gui.common.exception_tree import ExceptionDialog
-from caqtus.gui.common.qtutil import block_signals, temporary_widget
+from caqtus.gui.qtutil import block_signals, temporary_widget
 from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device.sequencer import ChannelConfiguration
-from caqtus.gui.common.qtutil import temporary_widget
+from caqtus.gui.qtutil import temporary_widget
 from .build_blocks import create_functional_blocks
 from .build_configuration import build_output, MissingInputError
 from .connection import (
