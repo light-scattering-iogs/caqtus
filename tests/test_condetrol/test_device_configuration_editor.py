@@ -76,7 +76,7 @@ def test_name_edit(qtbot: QtBot):
     )
     qtbot.keyClicks(view.focusWidget(), "New Name")
     qtbot.keyClick(view.focusWidget(), Qt.Key_Return)
-    qtbot.wait_until(lambda: view.model().stringList() == ["New Name"])
+    qtbot.wait_until(lambda: view._model.stringList() == ["New Name"])
     assert (
         view.get_device_configurations()[DeviceName("New Name")]
         == device_configurations[DeviceName("Device 1")]

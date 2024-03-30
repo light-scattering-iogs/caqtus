@@ -2,7 +2,7 @@ import copy
 from collections.abc import Mapping, Iterable, Callable
 from typing import TypedDict, Optional, TypeVar, Generic
 
-from PySide6.QtCore import QStringListModel
+from PySide6.QtCore import QStringListModel, QSortFilterProxyModel
 from PySide6.QtGui import QValidator
 from PySide6.QtWidgets import QDialog, QWidget, QColumnView
 
@@ -58,10 +58,14 @@ class DeviceConfigurationsView(QColumnView):
 
         super().__init__(parent)
 
-        self._model = QStringListModel(self)
         self._device_configurations = []
         self._device_editor_factory = device_editor_factory
-        self.setModel(self._model)
+
+        self._model = QStringListModel(self)
+        self._sorted_model = QSortFilterProxyModel(self)
+        self._sorted_model.setSourceModel(self._model)
+        self._sorted_model.sort(0)
+        self.setModel(self._sorted_model)
         self.updatePreviewWidget.connect(self._update_preview_widget)
         self._previous_index: Optional[int] = None
 
