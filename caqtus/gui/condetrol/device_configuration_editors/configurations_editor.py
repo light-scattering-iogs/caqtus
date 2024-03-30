@@ -30,9 +30,7 @@ DeviceConfigurationEditorFactory = Callable[[C], DeviceConfigurationEditor[C]]
 def default_device_editor_factory(
     device_configuration: C,
 ) -> DeviceConfigurationEditor[C]:
-    editor = DefaultDeviceConfigurationEditor()
-    editor.set_configuration(device_configuration)
-    return editor
+    return DefaultDeviceConfigurationEditor(device_configuration)
 
 
 class DeviceConfigurationsView(QColumnView):
