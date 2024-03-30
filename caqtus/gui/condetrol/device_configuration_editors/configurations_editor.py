@@ -129,8 +129,9 @@ class DeviceConfigurationsView(QColumnView):
 
         index = self.currentIndex()
         if index.isValid():
-            self._device_configurations.pop(index.row())
             self._model.removeRow(index.row())
+            self._device_configurations.pop(index.row())
+            self._previous_index = None
 
     def _update_preview_widget(self, index) -> None:
         if self._previous_index is not None:
@@ -199,8 +200,10 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
     def setup_connections(self):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        # noinspection PyUnresolvedReferences
         self.add_device_button.clicked.connect(self._on_add_configuration)
+        self.remove_device_button.clicked.connect(
+            self._configs_view.delete_selected_configuration
+        )
 
     def _on_add_configuration(self) -> None:
         result = self.add_device_dialog.exec()
