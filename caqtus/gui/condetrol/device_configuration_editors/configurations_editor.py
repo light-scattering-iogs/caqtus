@@ -1,10 +1,11 @@
-from collections.abc import Mapping, Iterable
+from collections.abc import Mapping, Iterable, Callable
 from typing import TypedDict, Optional, TypeVar, Generic
 
+from PySide6.QtCore import QStringListModel
 from PySide6.QtGui import QValidator
-from PySide6.QtWidgets import QDialog
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from PySide6.QtWidgets import QDialog, QWidget, QColumnView
 
+from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .configurations_editor_ui import Ui_ConfigurationsEditor
 from .device_configuration_editor import (
@@ -18,6 +19,53 @@ T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
 class DeviceConfigurationEditInfo(TypedDict, Generic[T]):
     editor_type: type[DeviceConfigurationEditor[T]]
+
+
+C = TypeVar("C", bound=DeviceConfigurationAttrs)
+
+DeviceConfigurationEditorFactory = Callable[[C], DeviceConfigurationEditor[C]]
+
+
+def default_device_editor_factory(
+    device_configuration: C,
+) -> DeviceConfigurationEditor[C]:
+    editor = DefaultDeviceConfigurationEditor()
+    editor.set_configuration(device_configuration)
+    return editor
+
+
+class DeviceConfigurationsView(QColumnView):
+    """View for displaying a collection of device configurations."""
+
+    def __init__(
+        self,
+        device_editor_factory: DeviceConfigurationEditorFactory,
+        parent: Optional[QWidget] = None,
+    ):
+        """Initialize the view.
+
+        Args:
+            device_editor_factory: A factory function that creates an editor for a
+            device configuration.
+            When the configuration of a device is selected, the view will call this
+            function with the configuration as an argument to create an editor.
+            When the view needs to read the configuration from the editor, it will call
+            the :meth:`DeviceConfigurationEditor.get_configuration` method of the
+            editor.
+            parent: The parent widget.
+        """
+        super().__init__(parent)
+
+        self._model = QStringListModel(self)
+        self._device_configurations = {}
+        self._device_editor_factory = device_editor_factory
+        self.setModel(self._model)
+
+    def set_device_configurations(
+        self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
+    ) -> None:
+        self._device_configurations = dict(device_configurations)
+        self._model.setStringList(list(device_configurations.keys()))
 
 
 class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
