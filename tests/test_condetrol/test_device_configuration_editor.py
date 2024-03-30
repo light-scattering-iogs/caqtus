@@ -5,6 +5,7 @@ from caqtus.device import DeviceName
 from caqtus.gui.condetrol.device_configuration_editors.configurations_editor import (
     DeviceConfigurationsView,
     default_device_editor_factory,
+    DeviceConfigurationsDialog,
 )
 from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (
     DefaultDeviceConfigurationEditor,
@@ -99,3 +100,10 @@ def test_add_config(qtbot: QtBot):
         DeviceName("Device 1"): config,
         DeviceName("Device 2"): config,
     }
+
+
+def test_dialog(qtbot: QtBot):
+    dialog = DeviceConfigurationsDialog(default_device_editor_factory, parent=None)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.stop()

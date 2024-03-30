@@ -4,16 +4,16 @@ from typing import TypedDict, Optional, TypeVar, Generic
 
 from PySide6.QtCore import QStringListModel, QSortFilterProxyModel
 from PySide6.QtGui import QValidator
-from PySide6.QtWidgets import QDialog, QWidget, QColumnView
+from PySide6.QtWidgets import QDialog, QWidget, QColumnView, QVBoxLayout
 
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
 from .add_device_dialog_ui import Ui_AddDeviceDialog
-from .configurations_editor_ui import Ui_ConfigurationsEditor
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
     DefaultDeviceConfigurationEditor,
 )
-from ..save_geometry_dialog import SaveGeometryDialog
+from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
+from ..icons import get_icon
 
 T = TypeVar("T", bound=DeviceConfigurationAttrs)
 
@@ -145,39 +145,29 @@ class DeviceConfigurationsView(QColumnView):
         self.setPreviewWidget(previous_editor)
 
 
-class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
+class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
     def __init__(
         self,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
-        device_configuration_edit_info: Mapping[str, DeviceConfigurationEditInfo],
-        *args,
-        **kwargs,
+        config_editor_factory: DeviceConfigurationEditorFactory,
+        parent: Optional[QWidget] = None,
     ):
-        super().__init__(*args, **kwargs)
-        self.device_configurations = device_configurations
-        self.device_configuration_edit_info = device_configuration_edit_info
+        super().__init__(parent)
+        self._configs_view = DeviceConfigurationsView(config_editor_factory, self)
 
         self.setup_ui()
         self.setup_connections()
 
     def setup_ui(self):
         self.setupUi(self)
-        self.tab_widget.clear()
-        self.tab_widget.setTabsClosable(True)
-        self.tab_widget.tabCloseRequested.connect(self.tab_widget.removeTab)
-        self.tab_widget.setMovable(True)
-        for device_name, device_configuration in self.device_configurations.items():
-            type_name = type(device_configuration).__qualname__
-            if type_name not in self.device_configuration_edit_info:
-                device_configuration_editor = DefaultDeviceConfigurationEditor()
-            else:
-                device_configuration_editor = self.device_configuration_edit_info[
-                    type_name
-                ]["editor_type"]()
-            self.tab_widget.addTab(device_configuration_editor, device_name)
-            device_configuration_editor.set_configuration(device_configuration)
+        layout = self.layout()
+        assert isinstance(layout, QVBoxLayout)
+        layout.insertWidget(0, self._configs_view, 1)
+        self.add_device_button.setIcon(get_icon("plus"))
+        self.remove_device_button.setIcon(get_icon("minus"))
 
     def setup_connections(self):
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
         # noinspection PyUnresolvedReferences
         self.add_device_button.clicked.connect(self.add_configuration)
 
