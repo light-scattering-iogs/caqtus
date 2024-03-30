@@ -11,6 +11,7 @@ from tests.test_condetrol.mock_device_configuration import MockDeviceConfigurati
 def test(qtbot: QtBot):
     device_configurations = {
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
+        DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
     editor = DeviceConfigurationsView(default_device_editor_factory, parent=None)
     editor.set_device_configurations(device_configurations)

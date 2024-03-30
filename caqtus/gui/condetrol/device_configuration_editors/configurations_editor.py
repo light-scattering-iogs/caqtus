@@ -57,15 +57,34 @@ class DeviceConfigurationsView(QColumnView):
         super().__init__(parent)
 
         self._model = QStringListModel(self)
-        self._device_configurations = {}
+        self._device_configurations = []
         self._device_editor_factory = device_editor_factory
         self.setModel(self._model)
+        self.updatePreviewWidget.connect(self.update_preview_widget)
+        self._previous_index: Optional[int] = None
 
     def set_device_configurations(
         self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
     ) -> None:
-        self._device_configurations = dict(device_configurations)
+        self._device_configurations = list(device_configurations.values())
         self._model.setStringList(list(device_configurations.keys()))
+
+    def update_preview_widget(self, index):
+        if self._previous_index is not None:
+            config_editor = self.previewWidget()
+            assert isinstance(config_editor, DeviceConfigurationEditor)
+            previous_config = config_editor.get_configuration()
+            self._device_configurations[self._previous_index] = previous_config
+            config_editor.deleteLater()
+        self._previous_index = index.row()
+        new_config = self._device_configurations[index.row()]
+        editor = self._device_editor_factory(new_config)
+        if not isinstance(editor, DeviceConfigurationEditor):
+            raise TypeError(
+                f"Expected a DeviceConfigurationEditor, got {type(editor).__name__}"
+            )
+        config_editor = editor
+        self.setPreviewWidget(config_editor)
 
 
 class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
