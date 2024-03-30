@@ -91,6 +91,11 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
         return self._configs_view.get_device_configurations()
 
+    def set_device_configurations(
+        self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
+    ) -> None:
+        self._configs_view.set_device_configurations(device_configurations)
+
 
 class DeviceConfigurationsView(QColumnView):
     """View for displaying a collection of device configurations."""
