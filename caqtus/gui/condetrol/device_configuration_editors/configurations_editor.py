@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Mapping, Iterable, Callable
 from typing import TypedDict, Optional, TypeVar, Generic
 
@@ -48,43 +49,71 @@ class DeviceConfigurationsView(QColumnView):
             device_editor_factory: A factory function that creates an editor for a
             device configuration.
             When the configuration of a device is selected, the view will call this
-            function with the configuration as an argument to create an editor.
+            function with the configuration as an argument to create an editor for it.
             When the view needs to read the configuration from the editor, it will call
-            the :meth:`DeviceConfigurationEditor.get_configuration` method of the
-            editor.
+            the method :meth:get_configuration` of the editor.
+            Configuration passed to and read from the editor are copies of what is
+            stored in the view, so changes to the configuration in the editor will not
+            affect the view until the view reads the configuration from the editor.
             parent: The parent widget.
         """
+
         super().__init__(parent)
 
         self._model = QStringListModel(self)
         self._device_configurations = []
         self._device_editor_factory = device_editor_factory
         self.setModel(self._model)
-        self.updatePreviewWidget.connect(self.update_preview_widget)
+        self.updatePreviewWidget.connect(self._update_preview_widget)
         self._previous_index: Optional[int] = None
 
     def set_device_configurations(
         self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
     ) -> None:
+        """Set the device configurations to display.
+
+        The view will copy the configurations and store them internally, so external
+        changes to the configurations will not affect the view.
+        """
+
+        device_configurations = copy.deepcopy(dict(device_configurations))
+
         self._device_configurations = list(device_configurations.values())
         self._model.setStringList(list(device_configurations.keys()))
 
-    def update_preview_widget(self, index):
+    def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
+        """Return a copy of the configurations currently displayed in the view."""
+
+        # We first need to read the changes from the currently displayed editor before
+        # returning the configurations.
         if self._previous_index is not None:
             config_editor = self.previewWidget()
             assert isinstance(config_editor, DeviceConfigurationEditor)
-            previous_config = config_editor.get_configuration()
+            previous_config = copy.deepcopy(config_editor.get_configuration())
             self._device_configurations[self._previous_index] = previous_config
-            config_editor.deleteLater()
-        self._previous_index = index.row()
-        new_config = self._device_configurations[index.row()]
-        editor = self._device_editor_factory(new_config)
-        if not isinstance(editor, DeviceConfigurationEditor):
-            raise TypeError(
-                f"Expected a DeviceConfigurationEditor, got {type(editor).__name__}"
+        return {
+            device_name: device_configuration
+            for device_name, device_configuration in zip(
+                self._model.stringList(), self._device_configurations
             )
-        config_editor = editor
-        self.setPreviewWidget(config_editor)
+        }
+
+    def _update_preview_widget(self, index) -> None:
+        if self._previous_index is not None:
+            previous_editor = self.previewWidget()
+            assert isinstance(previous_editor, DeviceConfigurationEditor)
+            previous_config = copy.deepcopy(previous_editor.get_configuration())
+            self._device_configurations[self._previous_index] = previous_config
+            previous_editor.deleteLater()
+        self._previous_index = index.row()
+        new_config = copy.deepcopy(self._device_configurations[index.row()])
+        new_editor = self._device_editor_factory(new_config)
+        if not isinstance(new_editor, DeviceConfigurationEditor):
+            raise TypeError(
+                f"Expected a DeviceConfigurationEditor, got {type(new_editor)}"
+            )
+        previous_editor = new_editor
+        self.setPreviewWidget(previous_editor)
 
 
 class ConfigurationsEditor(SaveGeometryDialog, Ui_ConfigurationsEditor):
