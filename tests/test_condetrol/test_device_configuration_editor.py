@@ -109,5 +109,3 @@ def test_dialog(qtbot: QtBot):
         parent=None,
     )
     qtbot.addWidget(dialog)
-    dialog.show()
-    qtbot.stop()
