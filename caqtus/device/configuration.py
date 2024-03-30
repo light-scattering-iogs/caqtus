@@ -28,7 +28,6 @@ class DeviceConfigurationAttrs(ABC):
     """
 
     remote_server: Optional[DeviceServerName] = attrs.field(
-        default=None,
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
