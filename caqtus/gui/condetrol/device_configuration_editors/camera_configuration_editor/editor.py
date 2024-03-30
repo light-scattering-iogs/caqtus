@@ -2,7 +2,7 @@ import abc
 import copy
 from typing import TypeVar
 
-import caqtus.gui.common.qabc as qabc
+import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device.camera.configuration import CameraConfiguration
 
 from .editor_ui import Ui_CameraConfigurationEditor

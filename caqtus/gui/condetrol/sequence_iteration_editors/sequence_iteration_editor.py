@@ -2,7 +2,7 @@ import abc
 from collections.abc import Callable
 from typing import TypeVar, Generic, TypeAlias
 
-import caqtus.gui.common.qabc as qabc
+import caqtus.gui.qtutil.qabc as qabc
 from PySide6.QtCore import Signal
 from caqtus.session.sequence.iteration_configuration import IterationConfiguration
 

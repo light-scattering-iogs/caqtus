@@ -16,7 +16,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
 
-import caqtus.gui.common.qabc as qabc
+import caqtus.gui.qtutil.qabc as qabc
 from caqtus.session.shot import TimeLane
 from caqtus.session.shot.timelane import TimeLanes
 from caqtus.types.expression import Expression

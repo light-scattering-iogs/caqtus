@@ -2,7 +2,7 @@ import abc
 import copy
 from typing import Optional, Generic, TypeVar
 
-import caqtus.gui.common.qabc as qabc
+import caqtus.gui.qtutil.qabc as qabc
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 from caqtus.device import DeviceConfigurationAttrs

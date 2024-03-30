@@ -3,7 +3,7 @@ import abc
 import polars
 from PySide6.QtWidgets import QWidget
 
-from caqtus.gui.common.qabc import QABCMeta
+from caqtus.gui.qtutil.qabc import QABCMeta
 
 
 class DataView(QWidget, metaclass=QABCMeta):
