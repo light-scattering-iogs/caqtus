@@ -1,7 +1,6 @@
 import asyncio
 import contextlib
-import copy
-from collections.abc import Mapping, Callable
+from collections.abc import Callable
 from typing import Optional, Literal
 
 from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
@@ -13,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QDockWidget,
     QApplication,
+    QDialog,
 )
 
 from caqtus.experiment_control import SequenceInterruptedException
@@ -20,7 +20,6 @@ from caqtus.experiment_control.manager import ExperimentManager, Procedure
 from caqtus.gui.common.exception_tree import ExceptionDialog
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
-from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -30,7 +29,9 @@ from caqtus.session import (
 from caqtus.session.sequence import State
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
-    DeviceConfigurationEditInfo,
+    DeviceConfigurationsDialog,
+    DeviceConfigurationsPlugin,
+    default_device_configuration_plugin,
 )
 from ..icons import get_icon
 from ..logger import logger
@@ -57,13 +58,11 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        device_configuration_editors: (
-            Mapping[str, DeviceConfigurationEditInfo] | None
-        ) = None,
         connect_to_experiment_manager: Callable[
             [], ExperimentManager
         ] = default_connect_to_experiment_manager,
         time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
+        device_configurations_plugin: DeviceConfigurationsPlugin = default_device_configuration_plugin,
         *args,
         **kwargs,
     ):
@@ -73,21 +72,13 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             session_maker: A callable that returns an ExperimentSession.
             This is used to access the storage in which to look for sequences to display
             and edit.
-            device_configuration_editors: Contains the editors to use to display and
-            edit a given device configurations.
-            This must be a mapping from strings corresponding to device configuration
-            types to device configuration editors.
-            When the GUI needs to display an editor for a device configurations, it
-            will look up this mapping for an editor matching the configurations type.
-            If the configuration type cannot be found in this mapping, the configuration
-            editor will just contain a message suggesting to register an editor.
-            If you want to be able to edit a device configuration in the GUI, you need
-            to have the key corresponding to the configuration type in this mapping.
-            connect_to_experiment_manager: A callable that returns an
-            ExperimentManager.
-            When the user starts a sequence in the GUI, it will call this function to
-            connect to the experiment manager and submit the sequence to the manager.
+            connect_to_experiment_manager: A callable that is called to connect to an
+            experiment manager in charge of running sequences.
+            This is used to submit sequences to the manager when the user starts them
+            in the GUI.
             time_lanes_plugin: The plugin to use for customizing the time lane editor.
+            device_configurations_plugin: A plugin that provides a way to create,
+            display and edit the device configurations.
             *args: Positional arguments for QMainWindow.
             **kwargs: Keyword arguments for QMainWindow.
         """
@@ -97,14 +88,14 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._global_parameters_editor = ParameterNamespaceEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
-        if device_configuration_editors is None:
-            device_configuration_editors = {}
-        self.device_configuration_edit_infos = device_configuration_editors
         self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.sequence_widget = SequenceWidget(
             self.session_maker, time_lanes_plugin, parent=self
         )
         self.status_widget = IconLabel(icon_position="left")
+        self.device_configurations_dialog = DeviceConfigurationsDialog(
+            device_configurations_plugin, parent=self
+        )
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
@@ -219,30 +210,29 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             exception,
         )
 
-    def open_device_configurations_editor(self):
+    def open_device_configurations_editor(self) -> None:
+        """Open a dialog to edit the default device configurations."""
+
         with self.session_maker() as session:
             previous_device_configurations = dict(session.default_device_configurations)
-        with temporary_widget(
-            ConfigurationsEditor(
-                copy.deepcopy(previous_device_configurations),
-                self.device_configuration_edit_infos,
+        self.device_configurations_dialog.set_device_configurations(
+            previous_device_configurations
+        )
+        if self.device_configurations_dialog.exec() == QDialog.DialogCode.Accepted:
+            new_device_configurations = (
+                self.device_configurations_dialog.get_device_configurations()
             )
-        ) as configurations_editor:
-            configurations_editor.exec()
-            new_device_configurations = dict(
-                configurations_editor.device_configurations
-            )
-        with self.session_maker() as session:
-            for device_name in session.default_device_configurations:
-                if device_name not in new_device_configurations:
-                    del session.default_device_configurations[device_name]
-            for (
-                device_name,
-                device_configuration,
-            ) in new_device_configurations.items():
-                session.default_device_configurations[
-                    device_name
-                ] = device_configuration
+            with self.session_maker() as session:
+                for device_name in session.default_device_configurations:
+                    if device_name not in new_device_configurations:
+                        del session.default_device_configurations[device_name]
+                for (
+                    device_name,
+                    device_configuration,
+                ) in new_device_configurations.items():
+                    session.default_device_configurations[
+                        device_name
+                    ] = device_configuration
 
     def closeEvent(self, a0):
         self.save_window()

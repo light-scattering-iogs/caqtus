@@ -1,6 +1,6 @@
 import copy
-from collections.abc import Mapping, Iterable, Callable
-from typing import Optional, TypeVar
+from collections.abc import Mapping, Iterable
+from typing import Optional
 
 from PySide6.QtCore import QStringListModel, QSortFilterProxyModel
 from PySide6.QtWidgets import (
@@ -12,20 +12,16 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from ._device_configurations_plugin import (
+    DeviceConfigurationsPlugin,
+    DeviceConfigurationEditorFactory,
+)
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
-    DefaultDeviceConfigurationEditor,
 )
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from ..icons import get_icon
-
-C = TypeVar("C", bound=DeviceConfigurationAttrs)
-
-DeviceConfigurationEditorFactory = Callable[[C], DeviceConfigurationEditor[C]]
-
-
-DeviceConfigurationFactory = Callable[[], DeviceConfigurationAttrs]
 
 
 class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
@@ -33,32 +29,22 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
 
     def __init__(
         self,
-        device_editor_factory: DeviceConfigurationEditorFactory,
-        device_configuration_factories: Mapping[str, DeviceConfigurationFactory],
+        device_configurations_plugin: DeviceConfigurationsPlugin,
         parent: Optional[QWidget] = None,
     ):
-        """Initialize the dialog.
-
-        Args:
-            device_editor_factory: A factory function that creates an editor for a
-            device configuration.
-            See :class:`DeviceConfigurationsView` for more information.
-            device_configuration_factories: A mapping from device types to factory
-            functions that create device configurations of that type.
-            When the user adds a new device configuration, the dialog will present a
-            list of device types to choose from.
-            When the user selects a device type, the dialog will call the factory
-            function for that type to create a new device configuration.
-            parent: The parent widget.
-        """
+        """Initialize the dialog."""
 
         super().__init__(parent)
-        self._configs_view = DeviceConfigurationsView(device_editor_factory, self)
+        self._configs_view = DeviceConfigurationsView(
+            device_configurations_plugin.editor_factory, self
+        )
 
         self.add_device_dialog = AddDeviceDialog(
-            device_configuration_factories.keys(), self
+            device_configurations_plugin.configuration_factories, self
         )
-        self.device_configuration_factories = device_configuration_factories
+        self.device_configuration_factories = (
+            device_configurations_plugin.configuration_factories
+        )
 
         self.setup_ui()
         self.setup_connections()
@@ -246,9 +232,3 @@ class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
             device_type = self.device_type_combo_box.currentText()
             return device_name, device_type
         return None
-
-
-def default_device_editor_factory(
-    device_configuration: C,
-) -> DeviceConfigurationEditor[C]:
-    return DefaultDeviceConfigurationEditor(device_configuration)
