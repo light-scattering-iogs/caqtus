@@ -1,6 +1,8 @@
 Starting Condetrol
 ==================
 
+After :ref:`installing the caqtus package <howto_install>`, you can start using it.
+
 Condetrol is the main window of the application.
 It lets you create, display, edit and launch sequences on the setup.
 
