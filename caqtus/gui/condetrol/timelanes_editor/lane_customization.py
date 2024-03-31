@@ -1,5 +1,7 @@
-from collections.abc import Mapping
-from typing import Protocol, Optional
+from __future__ import annotations
+
+from collections.abc import Mapping, Callable
+from typing import Protocol, Optional, TypeAlias
 
 import attrs
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
@@ -20,17 +22,9 @@ from .analog_lane_model import AnalogTimeLaneModel
 from .camera_lane_model import CameraTimeLaneModel
 from .digital_lane_model import DigitalTimeLaneModel
 
+LaneFactory: TypeAlias = Callable[[int], TimeLane]
 
-class LaneFactory(Protocol):
-    def __call__(self, number_steps: int) -> TimeLane:
-        ...
-
-
-class LaneModelFactory(Protocol):
-    """A factory for lane models."""
-
-    def __call__(self, lane: TimeLane) -> type[TimeLaneModel]:
-        ...
+LaneModelFactory: TypeAlias = Callable[[TimeLane], type[TimeLaneModel]]
 
 
 class LaneDelegateFactory(Protocol):
@@ -44,33 +38,37 @@ class LaneDelegateFactory(Protocol):
         sequence_parameters: ParameterNamespace,
         parent: QWidget,
     ) -> Optional[QStyledItemDelegate]:
+        """Create a delegate for the lane passed as argument."""
         ...
 
 
 @attrs.define
 class TimeLanesPlugin:
-    """Specify how the display and edit time lanes."""
+    """Allows to customize how lanes are used in the time lane's editor.
+
+    Parameters
+    ----------
+    lane_factories
+        A mapping from type of lanes to lane factories.
+        When the user wants to add a new lane, they can choose from the keys of this
+        mapping and the corresponding factory will be called to create the lane.
+        The factory should take an integer as argument and return a new lane with that
+        number of steps.
+    lane_model_factory
+        A factory for lane models.
+        When a lane needs to be displayed, this function will be called with the lane as
+        argument and the returned :class:`TimeLaneModel` will be used to provide the
+        data from the lane to the view.
+    lane_delegate_factory
+        A factory for lane delegates.
+        When a lane needs to be displayed, this function will be called and the delegate
+        returned will be used to paint the lane cells in the view and to provide editing
+        capabilities.
+    """
 
     lane_factories: Mapping[str, LaneFactory]
-    """
-    A mapping from type of lanes to lane factories.
-    When the user wants to add a new lane, they can choose from the keys of this
-    mapping and the corresponding factory will be called to create the lane.
-    """
-
     lane_model_factory: LaneModelFactory
-    """A factory for lane models.
-    When a lane needs to be displayed, this function will be called with the lane as 
-    argument and the returned :class:`TimeLaneModel` will be used to provide the data
-    from the lane to the view.
-    """
-
     lane_delegate_factory: LaneDelegateFactory
-    """A factory for lane delegates.
-    When a lane needs to be displayed, this function will be called and the delegate
-    returned will be used to paint the lane cells in the view and to provide editing
-    capabilities.
-    """
 
 
 def default_lane_delegate_factory(

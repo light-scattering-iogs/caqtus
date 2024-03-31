@@ -17,11 +17,14 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_rtd_theme",
 ]
 
 autodoc_typehints = "description"
 autodoc_preserve_defaults = True
 maximum_signature_line_length = 80
+
+autodoc_type_aliases = {"LaneFactory": "LaneFactory"}
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -35,5 +38,5 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
+html_theme = "sphinx_rtd_theme"
 html_static_path = []

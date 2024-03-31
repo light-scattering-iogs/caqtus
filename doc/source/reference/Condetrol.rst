@@ -21,5 +21,14 @@ caqtus.gui.condetrol.timelanes_editor
 .. autoclass:: caqtus.gui.condetrol.timelanes_editor.TimeLanesPlugin
     :members:
 
+.. autodata:: caqtus.gui.condetrol.timelanes_editor.LaneFactory
+
+.. autodata:: caqtus.gui.condetrol.timelanes_editor.LaneModelFactory
+
+.. autoclass:: caqtus.gui.condetrol.timelanes_editor.LaneDelegateFactory
+    :special-members: __call__
+
+
+
 
 
