@@ -54,6 +54,26 @@ def default_connect_to_experiment_manager() -> ExperimentManager:
 
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
+    """The main window of the Condetrol GUI.
+
+    Parameters
+    ----------
+    session_maker
+        A callable that returns an ExperimentSession.
+        This is used to access the storage in which to look for sequences to display
+        and edit.
+    connect_to_experiment_manager
+        A callable that is called to connect to an experiment manager in charge of
+        running sequences.
+        This is used to submit sequences to the manager when the user starts them
+        in the GUI.
+    time_lanes_plugin
+        The plugin to use for customizing the time lane editor.
+    device_configurations_plugin
+        A plugin that provides a way to create, display and edit the device
+        configurations.
+    """
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -61,21 +81,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         time_lanes_plugin: TimeLanesPlugin,
         device_configurations_plugin: DeviceConfigurationsPlugin,
     ):
-        """Initialize the main window.
-
-        Args:
-            session_maker: A callable that returns an ExperimentSession.
-            This is used to access the storage in which to look for sequences to display
-            and edit.
-            connect_to_experiment_manager: A callable that is called to connect to an
-            experiment manager in charge of running sequences.
-            This is used to submit sequences to the manager when the user starts them
-            in the GUI.
-            time_lanes_plugin: The plugin to use for customizing the time lane editor.
-            device_configurations_plugin: A plugin that provides a way to create,
-            display and edit the device configurations.
-        """
-
         super().__init__()
         self._path_view = EditablePathHierarchyView(session_maker, self)
         self._global_parameters_editor = ParameterNamespaceEditor()

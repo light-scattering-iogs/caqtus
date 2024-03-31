@@ -13,9 +13,12 @@ author = "Caqtus"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinxcontrib.plantuml"]
+extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
 
 autodoc_typehints = "signature"
+maximum_signature_line_length = 80
+
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 templates_path = ["_templates"]
 exclude_patterns = []

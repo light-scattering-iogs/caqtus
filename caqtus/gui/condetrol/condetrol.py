@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 
 import qtawesome
@@ -16,6 +18,12 @@ from ..qtutil import QtAsyncio
 
 
 class Condetrol:
+    """A utility class to launch the Condetrol GUI.
+
+
+    The parameters are the same as for :class:`CondetrolMainWindow`.
+    """
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -24,7 +32,7 @@ class Condetrol:
         ] = default_connect_to_experiment_manager,
         time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
         device_configurations_plugin: DeviceConfigurationsPlugin = default_device_configuration_plugin,
-    ) -> None:
+    ):
         app = QApplication.instance()
         if app is None:
             self.app = QApplication([])
@@ -45,6 +53,11 @@ class Condetrol:
         )
 
     def run(self) -> None:
+        """Launch the Condetrol GUI.
+
+        This method will block until the GUI is closed by the user.
+        """
+
         with self.window:
             self.window.show()
             QtAsyncio.run(self.window.run_async())
