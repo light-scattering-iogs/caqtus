@@ -1,6 +1,7 @@
 import pytest
 import sqlalchemy
 from PySide6.QtCore import QTimer
+from pytestqt.qtbot import QtBot
 
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import (

@@ -25,11 +25,18 @@ class Condetrol:
         time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
         device_configurations_plugin: DeviceConfigurationsPlugin = default_device_configuration_plugin,
     ) -> None:
-        self.app = QApplication([])
-        self.app.setOrganizationName("Caqtus")
-        self.app.setApplicationName("Condetrol")
-        self.app.setWindowIcon(qtawesome.icon("mdi6.cactus", size=64, color="green"))
-        self.app.setStyle("Fusion")
+        app = QApplication.instance()
+        if app is None:
+            self.app = QApplication([])
+            self.app.setOrganizationName("Caqtus")
+            self.app.setApplicationName("Condetrol")
+            self.app.setWindowIcon(
+                qtawesome.icon("mdi6.cactus", size=64, color="green")
+            )
+            self.app.setStyle("Fusion")
+        else:
+            self.app = app
+
         self.window = CondetrolMainWindow(
             session_maker=session_maker,
             connect_to_experiment_manager=connect_to_experiment_manager,
