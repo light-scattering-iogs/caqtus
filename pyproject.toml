@@ -4,6 +4,7 @@ version = "0.14.0"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.11, <3.13"
@@ -57,6 +58,7 @@ black = "^24.3.0"
 mypy = "^1.9.0"
 pyright = "^1.1.355"
 coverage = "^7.4.4"
+licensecheck = "^2024.1.4"
 
 [build-system]
 requires = ["poetry-core"]
