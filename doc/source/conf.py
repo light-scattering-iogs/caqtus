@@ -13,9 +13,14 @@ author = "Caqtus"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
+extensions = [
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+]
 
 autodoc_typehints = "description"
+autodoc_preserve_defaults = True
 maximum_signature_line_length = 80
 
 intersphinx_mapping = {

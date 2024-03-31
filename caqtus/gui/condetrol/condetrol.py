@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Callable
 
 import qtawesome
@@ -12,16 +10,33 @@ from .device_configuration_editors import (
     default_device_configuration_plugin,
 )
 from .main_window import CondetrolMainWindow
-from .main_window._main_window import default_connect_to_experiment_manager
 from .timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
 from ..qtutil import QtAsyncio
+
+
+# noinspection PyTypeChecker
+def default_connect_to_experiment_manager() -> ExperimentManager:
+    """Raise an error when trying to connect to an experiment manager."""
+
+    error = NotImplementedError("Not implemented.")
+    error.add_note(
+        f"You need to provide a function to connect to the experiment "
+        f"manager when initializing the main window."
+    )
+    error.add_note(
+        "It is not possible to run sequences without connecting to an experiment "
+        "manager."
+    )
+    raise error
 
 
 class Condetrol:
     """A utility class to launch the Condetrol GUI.
 
+    This class is a convenience wrapper around the :class:`CondetrolMainWindow` class.
+    It sets up the application and launches the main window.
 
-    The parameters are the same as for :class:`CondetrolMainWindow`.
+    See :class:`CondetrolMainWindow` for more information on the parameters.
     """
 
     def __init__(

@@ -12,12 +12,14 @@ caqtus.gui.condetrol
 .. autoclass:: caqtus.gui.condetrol.CondetrolMainWindow
     :members:
 
+.. autofunction:: caqtus.gui.condetrol.default_connect_to_experiment_manager
+
 caqtus.gui.condetrol.timelanes_editor
 -------------------------------------
 
-.. automodule:: caqtus.gui.condetrol.timelanes_editor
+
+.. autoclass:: caqtus.gui.condetrol.timelanes_editor.TimeLanesPlugin
     :members:
-    :noindex:
 
 
 

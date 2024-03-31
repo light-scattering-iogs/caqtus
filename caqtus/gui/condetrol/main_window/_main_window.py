@@ -39,20 +39,6 @@ from ..sequence_widget import SequenceWidget
 from ..timelanes_editor import TimeLanesPlugin
 
 
-# noinspection PyTypeChecker
-def default_connect_to_experiment_manager() -> ExperimentManager:
-    error = NotImplementedError("Not implemented.")
-    error.add_note(
-        f"You need to provide a function to connect to the experiment "
-        f"manager when initializing the main window."
-    )
-    error.add_note(
-        "It is not possible to run sequences without connecting to an experiment "
-        "manager."
-    )
-    raise error
-
-
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     """The main window of the Condetrol GUI.
 
@@ -108,7 +94,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self._exit_stack.__exit__(exc_type, exc_value, exc_tb)
 
-    async def run_async(self):
+    async def run_async(self) -> None:
+        """Run the main window asynchronously."""
+
         async def shutdown_on_exception(coro):
             try:
                 await coro
@@ -209,8 +197,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
 
     def open_device_configurations_editor(self) -> None:
-        """Open a dialog to edit the default device configurations."""
-
         with self.session_maker() as session:
             previous_device_configurations = dict(session.default_device_configurations)
         self.device_configurations_dialog.set_device_configurations(
@@ -237,8 +223,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         super().closeEvent(a0)
 
     def restore_window(self) -> None:
-        """Restore the window state and geometry from the app settings."""
-
         ui_settings = QSettings()
         state = ui_settings.value(f"{__name__}/state", defaultValue=None)
         if state is not None:
@@ -248,8 +232,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             self.restoreGeometry(geometry)
 
     def save_window(self) -> None:
-        """Save the window state and geometry to the app settings."""
-
         ui_settings = QSettings()
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
