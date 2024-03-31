@@ -33,5 +33,4 @@ All the sequences that you create and the data generated while running them will
 While storing everything in a single file is convenient, it is not the best long-term solution.
 In particular, if you start generating several gigabytes of data, this will become a limit.
 In addition, it is difficult to access the data from multiple computers.
-If you plan to start using the application extensively, you should consider setting up a SQL server instead.
-
+If you plan to start using the application extensively, you should consider :ref:`setting up a SQL server <howto set up a sql server>` instead.
