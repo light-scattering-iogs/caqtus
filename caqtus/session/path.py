@@ -25,11 +25,14 @@ _PATH_REGEX = re.compile(f"^\\{_PATH_SEPARATOR}|(\\{_PATH_SEPARATOR}{_PATH_NAME}
 
 
 class PureSequencePath:
-    """A path in the sequence hierarchy.
+    """Represent a path in the sequence hierarchy.
 
-    A path is a string of names separated by backslashes "\"
+    A path is a string of names separated by backslashes "\".
     For example, "\foo\bar" is a path with two names, "foo" and "bar".
     The root path is the single backslash "\".
+
+    All methods of this class are "pure" in the sense that they do not interact with the
+    storage system.
     """
 
     __slots__ = ("_parts", "_str")
