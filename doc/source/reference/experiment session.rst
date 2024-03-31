@@ -27,5 +27,13 @@ A session contains a unique and global set of user parameters that are shared ac
 API reference
 -------------
 
-.. automodule:: caqtus.session
+.. autoclass:: caqtus.session.ExperimentSession
     :members:
+
+.. autoclass:: caqtus.session.ExperimentSessionMaker
+    :members:
+    :special-members: __call__
+
+.. autoclass:: caqtus.session.sql.SQLExperimentSessionMaker
+    :members:
+

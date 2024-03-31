@@ -1,3 +1,5 @@
+from typing import Self
+
 import sqlalchemy
 import sqlalchemy.orm
 from sqlalchemy import text
@@ -32,6 +34,22 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._serializer = serializer
+
+    @classmethod
+    def from_url(
+        cls,
+        url: str | sqlalchemy.URL,
+        serializer: Serializer = default_serializer,
+    ) -> Self:
+        """Create a new SQLExperimentSessionMaker from a database url.
+
+        Args:
+            url: The database url to connect to.
+            serializer: The serializer to use to store data in the database.
+        """
+
+        engine = sqlalchemy.create_engine(url)
+        return cls(engine, serializer)
 
     def create_tables(self) -> None:
         """Create the tables in the database.

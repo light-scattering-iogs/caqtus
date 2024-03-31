@@ -3,6 +3,11 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../caqtus/"))
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -29,6 +34,7 @@ autodoc_type_aliases = {"LaneFactory": "LaneFactory"}
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "PySide6": ("https://doc.qt.io/qtforpython-6", "Pyside6/PySide6.inv"),
+    "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
 templates_path = ["_templates"]

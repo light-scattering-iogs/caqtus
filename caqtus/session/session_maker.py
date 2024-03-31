@@ -7,4 +7,5 @@ class ExperimentSessionMaker(Protocol):
     """Used to create a new experiment session with predefined parameters."""
 
     def __call__(self) -> ExperimentSession:
+        """Create a new experiment session."""
         ...
