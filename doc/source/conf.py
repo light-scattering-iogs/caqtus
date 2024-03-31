@@ -15,10 +15,13 @@ author = "Caqtus"
 
 extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
 
-autodoc_typehints = "signature"
+autodoc_typehints = "description"
 maximum_signature_line_length = 80
 
-intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "PySide6": ("https://doc.qt.io/qtforpython-6", "Pyside6/PySide6.inv"),
+}
 
 templates_path = ["_templates"]
 exclude_patterns = []

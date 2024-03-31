@@ -1,6 +1,6 @@
-from .condetrol import Condetrol
-from .main_window import CondetrolMainWindow
 from .timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
+from .main_window import CondetrolMainWindow
+from .condetrol import Condetrol
 
 __all__ = [
     "Condetrol",

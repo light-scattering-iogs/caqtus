@@ -45,6 +45,9 @@ pytest-qt = "^4.4.0"
 [tool.poetry.group.doc.dependencies]
 sphinx = "^7.2.6"
 sphinxcontrib-plantuml = "^0.29"
+sphinx-autoapi = "^3.0.0"
+requests = "^2.31.0"
+sphobjinv = "^2.3.1"
 
 
 [tool.poetry.group.dev.dependencies]
