@@ -28,6 +28,9 @@ caqtus.gui.condetrol.timelanes_editor
 .. autoclass:: caqtus.gui.condetrol.timelanes_editor.LaneDelegateFactory
     :special-members: __call__
 
+.. autoclass:: caqtus.gui.condetrol.timelanes_editor.TimeLaneModel
+    :members:
+
 
 
 

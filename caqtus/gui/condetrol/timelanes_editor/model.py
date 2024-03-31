@@ -170,8 +170,11 @@ O = TypeVar("O", bound=Any)
 class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
     """An abstract list model to represent a time lane.
 
-    This class is meant to be subclassed for each lane type that needs to be
-    represented in the timelanes editor.
+    This class inherits from :class:`PySide6.QtCore.QAbstractListModel` and can be
+    used to represent a lane in the timelanes editor.
+
+    It is meant to be subclassed for each lane type that needs to be represented in
+    the timelanes editor.
     Some common methods are implemented here, but subclasses will need to implement at
     least the abstract methods: :meth:`data`, :meth:`setData`, :meth:`insertRow`.
     In addition, subclasses may want to override :meth:`flags` to change the item flags
@@ -198,16 +201,28 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        """Return the number of steps in the lane."""
+
         return len(self._lane)
 
     @abc.abstractmethod
     def data(
         self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Any:
+        """Return the data for the given index and role.
+
+        See :meth:`PySide6.QtCore.QAbstractItemModel.data` for more information.
+        """
+
         return None
 
     @abc.abstractmethod
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        """Set the data for the given index and role.
+
+        See :meth:`PySide6.QtCore.QAbstractItemModel.setData` for more information.
+        """
+
         raise NotImplementedError
 
     def headerData(
@@ -227,6 +242,12 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
             return font
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        """Return the flags for the given index.
+
+        By default, the flags are set to `ItemIsEnabled`, `ItemIsEditable`, and
+        `ItemIsSelectable`.
+        """
+
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         return (
