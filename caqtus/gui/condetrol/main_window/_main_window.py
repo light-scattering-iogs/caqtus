@@ -31,13 +31,12 @@ from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationsDialog,
     DeviceConfigurationsPlugin,
-    default_device_configuration_plugin,
 )
 from ..icons import get_icon
 from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
-from ..timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
+from ..timelanes_editor import TimeLanesPlugin
 
 
 # noinspection PyTypeChecker
@@ -58,13 +57,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        connect_to_experiment_manager: Callable[
-            [], ExperimentManager
-        ] = default_connect_to_experiment_manager,
-        time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
-        device_configurations_plugin: DeviceConfigurationsPlugin = default_device_configuration_plugin,
-        *args,
-        **kwargs,
+        connect_to_experiment_manager: Callable[[], ExperimentManager],
+        time_lanes_plugin: TimeLanesPlugin,
+        device_configurations_plugin: DeviceConfigurationsPlugin,
     ):
         """Initialize the main window.
 
@@ -79,11 +74,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             time_lanes_plugin: The plugin to use for customizing the time lane editor.
             device_configurations_plugin: A plugin that provides a way to create,
             display and edit the device configurations.
-            *args: Positional arguments for QMainWindow.
-            **kwargs: Keyword arguments for QMainWindow.
         """
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self._path_view = EditablePathHierarchyView(session_maker, self)
         self._global_parameters_editor = ParameterNamespaceEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
