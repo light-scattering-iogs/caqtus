@@ -1,8 +1,8 @@
 import pytest
 
-from caqtus.gui.condetrol import default_time_lanes_plugin
 from caqtus.gui.condetrol.timelanes_editor import (
     TimeLanesModel,
+    default_time_lanes_plugin,
 )
 from caqtus.session.shot import DigitalTimeLane
 
