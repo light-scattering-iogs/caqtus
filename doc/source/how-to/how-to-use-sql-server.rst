@@ -16,7 +16,7 @@ Other machines can access the database remotely without needing to install the s
 
 #. Install PostgreSQL server
 
-   #. Download the `installer <https://www.postgresql.org/download/>`_.
+   #. Download the `PostgresSQL installer <https://www.postgresql.org/download/>`_.
 
    #. Launch the installer.
 
@@ -74,7 +74,80 @@ If you want to access the database from another machine, you will need to open t
 MySQL
 -----
 
-TODO
+On the computer that will host the database, it is necessary to set up a MySQL server.
+Other machines can access the database remotely without needing to install the server.
+
+#. Install MySQL server
+
+   #. Download the `MySQL installer <https://dev.mysql.com/downloads/installer/>`_.
+
+   #. Launch the installer.
+
+   #. Choose to install MySQL Server only.
+
+   #. Run the installer.
+
+   #. Configure the server. Default settings are recommended.
+
+   #. Choose a password for the root user. This is the user that has all the rights on the databases.
+
+   #. (Optional) Create new users and set up their rights.
+
+   #. Configure the server to start automatically.
+
+#. Create the database
+
+   #. Open MySQL command line client.
+
+   #. Connect to the server with the root user. This will ask for the password.
+
+   #. Create a new database with the following command:
+
+      .. code-block:: sql
+
+        CREATE DATABASE database_name;
+
+   #. (Optional) Create a new user with the following command:
+
+      .. code-block:: sql
+
+        CREATE USER 'user'@'localhost' IDENTIFIED BY 'password';
+
+   #. (Optional) Grant the user access to the database with the following command:
+
+      .. code-block:: sql
+
+        GRANT ALL PRIVILEGES ON database_name.* TO 'user'@'localhost';
+
+      If you want to access the database from another machine, you will need to replace 'localhost' with the IP address of the machine that will access the database.
+
+#. Create the tables
+
+   #. Install the pymysql package. This can be done with the following command:
+
+      .. code-block:: bash
+
+        pip install pymysql
+
+   #. Use the following script to create a session maker that can connect to the database and create the tables.
+
+      .. code-block:: python
+
+        from caqtus.session.sql import SQLExperimentSessionMaker
+
+        # Replace user, password, server_ip (can be localhost) and database with the appropriate values
+        session_maker = SQLExperimentSessionMaker.from_url(
+            "mysql+pymysql://user:password@server_ip/database"
+        )
+
+        session_maker.create_tables()
+
+At this point, the database is ready to be used.
+You can use the session maker to interact with the database.
+It is not necessary to create the tables every time you want to use the database.
+
+
+
 
 SQLite
 ------

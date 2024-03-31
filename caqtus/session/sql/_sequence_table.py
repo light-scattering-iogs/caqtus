@@ -4,7 +4,7 @@ import datetime
 from typing import Optional
 
 import sqlalchemy
-from sqlalchemy import ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import ForeignKey, DateTime, UniqueConstraint, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._path_table import SQLSequencePath
@@ -116,8 +116,8 @@ class SQLDeviceConfiguration(Base):
         ForeignKey(SQLSequence.id_, ondelete="CASCADE")
     )
     sequence: Mapped[SQLSequence] = relationship(back_populates="device_configurations")
-    name: Mapped[str] = mapped_column()
-    device_type: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(String(255))
+    device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
 
     __table_args__ = (

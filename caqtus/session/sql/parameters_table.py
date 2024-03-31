@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlalchemy
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ._table_base import Base
@@ -14,5 +15,5 @@ from ._table_base import Base
 class SQLParameters(Base):
     __tablename__ = "parameters"
 
-    name: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
     content = mapped_column(sqlalchemy.types.JSON)

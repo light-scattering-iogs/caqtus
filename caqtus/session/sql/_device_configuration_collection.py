@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import attrs
 import sqlalchemy
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from ._table_base import Base
@@ -18,8 +19,8 @@ if TYPE_CHECKING:
 class SQLDefaultDeviceConfiguration(Base):
     __tablename__ = "default_device_configurations"
 
-    name: Mapped[str] = mapped_column(primary_key=True)
-    device_type: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
+    device_type: Mapped[str] = mapped_column(String(255))
     content = mapped_column(sqlalchemy.types.JSON)
 
 

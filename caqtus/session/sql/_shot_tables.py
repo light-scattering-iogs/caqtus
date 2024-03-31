@@ -1,7 +1,7 @@
 import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import UniqueConstraint, ForeignKey, JSON, LargeBinary, DateTime
+from sqlalchemy import UniqueConstraint, ForeignKey, JSON, LargeBinary, DateTime, String
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from ._table_base import Base
@@ -77,7 +77,7 @@ class SQLStructuredShotData(Base):
         index=True,
     )
     shot: Mapped[SQLShot] = relationship(back_populates="structured_data")
-    label: Mapped[str] = mapped_column()
+    label: Mapped[str] = mapped_column(String(255))
     content = mapped_column(JSON)
 
 
@@ -92,7 +92,7 @@ class SQLShotArray(Base):
         index=True,
     )
     shot: Mapped[SQLShot] = relationship(back_populates="array_data")
-    label: Mapped[str] = mapped_column()
-    dtype: Mapped[str] = mapped_column()
+    label: Mapped[str] = mapped_column(String(255))
+    dtype: Mapped[str] = mapped_column(String(255))
     shape = mapped_column(JSON)
     bytes_ = mapped_column(LargeBinary, name="bytes")  # stored in C-order

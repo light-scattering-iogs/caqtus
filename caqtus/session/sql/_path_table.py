@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy import ForeignKey, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._table_base import Base
@@ -16,7 +16,7 @@ class SQLSequencePath(Base):
     __tablename__ = "path"
 
     id_: Mapped[int] = mapped_column(name="id", primary_key=True, index=True)
-    path: Mapped[str] = mapped_column(index=True, unique=True)
+    path: Mapped[str] = mapped_column(String(255), index=True, unique=True)
     parent_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("path.id", ondelete="CASCADE"), index=True
     )
