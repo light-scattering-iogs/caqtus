@@ -1,7 +1,9 @@
 import sqlalchemy
 import sqlalchemy.orm
+from sqlalchemy import text
 
 from ._experiment_session import SQLExperimentSession, Serializer, default_serializer
+from ._table_base import create_tables
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
 
@@ -21,9 +23,24 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         engine: sqlalchemy.Engine,
         serializer: Serializer = default_serializer,
     ) -> None:
+        # By default, sqlite does not enforce foreign key constraints, so we need to
+        # enable it explicitly.
+        if engine.url.drivername == "sqlite":
+            with engine.connect() as connection:
+                connection.execute(text("pragma foreign_keys=on"))
+
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._serializer = serializer
+
+    def create_tables(self) -> None:
+        """Create the tables in the database.
+
+        This method is useful the first time the database is created.
+        It will create missing tables and ignore existing ones.
+        """
+
+        create_tables(self._engine)
 
     def __call__(self) -> ExperimentSession:
         """Create a new ExperimentSession with the engine used at initialization."""
