@@ -6,24 +6,23 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'experiment-control'
-copyright = '2023, Caqtus'
-author = 'Caqtus'
+project = "experiment-control"
+copyright = "2023, Caqtus"
+author = "Caqtus"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc']
+extensions = ["sphinx.ext.napoleon", "sphinx.ext.autodoc", "sphinxcontrib.plantuml"]
 
-autodoc_typehints = 'signature'
+autodoc_typehints = "signature"
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
-
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = "alabaster"
 html_static_path = []
