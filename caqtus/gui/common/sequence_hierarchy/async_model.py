@@ -85,7 +85,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         if parent_item is None:
             return QModelIndex()
         return (
-            self.createIndex(parent_item.row(), index.column(), parent_item)
+            self.createIndex(parent_item.row(), 0, parent_item)
             if parent_item is not self.tree.invisibleRootItem()
             else QModelIndex()
         )
@@ -105,6 +105,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         return result
 
     def rowCount(self, parent=QModelIndex()):
+        if parent.column() > 0:
+            return 0
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         match node_data:
