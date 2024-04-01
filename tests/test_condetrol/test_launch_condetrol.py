@@ -1,7 +1,5 @@
 import pytest
-import sqlalchemy
 from PySide6.QtCore import QTimer
-from pytestqt.qtbot import QtBot
 
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import (
@@ -14,10 +12,9 @@ from caqtus.session.sql import (
 @pytest.fixture
 def session_maker(tmp_path):
     url = f"sqlite:///{tmp_path / 'database.db'}"
-    engine = sqlalchemy.create_engine(url)
 
-    session_maker = SQLExperimentSessionMaker(
-        engine,
+    session_maker = SQLExperimentSessionMaker.from_url(
+        url,
         serializer=Serializer(
             device_configuration_serializers={},
             sequence_serializer=default_sequence_serializer,

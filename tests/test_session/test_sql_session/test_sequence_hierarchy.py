@@ -41,6 +41,16 @@ def test_2(session_maker):
             created_path.delete()
 
 
+def test_3(session_maker):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b")
+        session.paths.create_path(p)
+    with session_maker() as session:
+        session.paths.delete_path(p)
+    with session_maker() as session:
+        session.paths.create_path(p)
+
+
 @given(p=path)
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_creation_1(p, session_maker):
@@ -118,6 +128,26 @@ def test_sequence_deletion(
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
+        assert sequence.exists(session)
+
+
+def test_sequence_deletion_1(
+    empty_session, steps_configuration: StepsConfiguration, time_lanes
+):
+    # This test checks mostly that foreign keys are set up correctly.
+    # If a sequence path is deleted, it should delete all sequence information and
+    # creating a new sequence with the same path should work.
+    # Otherwise, the sequence information would be orphaned and creating a new sequence
+    # with the same path would fail.
+    with empty_session as session:
+        p = PureSequencePath(r"\test")
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        assert sequence.exists(session)
+    with empty_session as session:
+        session.paths.delete_path(p, delete_sequences=True)
+        assert not sequence.exists(session)
+    with empty_session as session:
+        sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.exists(session)
 
 
