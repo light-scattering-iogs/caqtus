@@ -200,6 +200,23 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     def columnCount(self, parent=QModelIndex()):
         return 5
 
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal:
+                if section == 0:
+                    return "Name"
+                elif section == 1:
+                    return "Status"
+                elif section == 2:
+                    return "Progress"
+                elif section == 3:
+                    return "Duration"
+                elif section == 4:
+                    return "Date created"
+            else:
+                return section
+        return None
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Get the data for a specific index in the model.
 
