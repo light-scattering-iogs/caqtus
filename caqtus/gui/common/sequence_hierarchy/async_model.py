@@ -11,7 +11,11 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
-from caqtus.session.sequence_collection import PathIsSequenceError, SequenceStats
+from caqtus.session.sequence_collection import (
+    PathIsSequenceError,
+    SequenceStats,
+    PathIsNotSequenceError,
+)
 
 NODE_DATA_ROLE = Qt.UserRole + 1
 
@@ -194,7 +198,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         return item
 
     def columnCount(self, parent=QModelIndex()):
-        return 1
+        return 5
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Get the data for a specific index in the model.
@@ -250,6 +254,40 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     async def update_from_session(self) -> None:
         await self.prune()
         await self.add_new_paths()
+        for row in range(self.rowCount()):
+            await self.update_stats(self.index(row, 0))
+
+    async def update_stats(self, index: QModelIndex = QModelIndex()) -> None:
+        """Update the stats of sequences and folders in the model from the session."""
+
+        item = self._get_item(index)
+        data = get_item_data(item)
+        change_detected = False
+        with self.session_maker() as session:
+            try:
+                creation_date = session.paths.get_path_creation_date(data.path)
+            except PathNotFoundError:
+                self.handle_path_was_deleted(index)
+                return
+            if creation_date != data.creation_date:
+                data.creation_date = creation_date
+                change_detected = True
+            if isinstance(data, SequenceNode):
+                try:
+                    stats = unwrap(session.sequences.get_stats(data.path))
+                except PathIsNotSequenceError:
+                    self.handle_sequence_became_folder(index, session)
+                    return
+                if stats != data.stats:
+                    data.stats = stats
+                    change_detected = True
+        if change_detected:
+            top_left = self.sibling(0, 0, index)
+            bottom_right = self.sibling(self.columnCount(), 0, index)
+            self.dataChanged.emit(top_left, bottom_right)
+        if isinstance(data, FolderNode):
+            for row in range(item.rowCount()):
+                await self.update_stats(self.index(row, 0, index))
 
     async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
         """Removes items from the model that no longer exist in the session."""
@@ -342,3 +380,17 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.beginRemoveRows(parent, index.row(), index.row())
         grandparent_item.removeRow(index.row())
         self.endRemoveRows()
+
+    def handle_sequence_became_folder(
+        self, index: QModelIndex, session: ExperimentSession
+    ):
+        item = self._get_item(index)
+        data = get_item_data(item)
+        creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+        assert item.rowCount() == 0
+        item.setData(
+            FolderNode(
+                path=data.path, has_fetched_children=False, creation_date=creation_date
+            ),
+            NODE_DATA_ROLE,
+        )
