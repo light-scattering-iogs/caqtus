@@ -26,23 +26,3 @@ def test_1(session_maker, qtmodeltester: ModelTester):
     assert model.data(child, Qt.ItemDataRole.DisplayRole) == "test"
     child = model.index(0, 0, child)
     assert model.data(child, Qt.ItemDataRole.DisplayRole) == "test2"
-
-
-class AsyncioHelper(QObject):
-    finished = Signal()
-
-    def __init__(self):
-        super().__init__()
-
-    def start(self, coro):
-        self.awaitable = coro
-        timer = QTimer(self)
-        timer.singleShot(0, self.run)
-
-    def run(self):
-        async def wrapped():
-            await self.awaitable
-            self.finished.emit()
-
-        event_loop = asyncio.get_event_loop()
-        asyncio.ensure_future(wrapped(), loop=event_loop)
