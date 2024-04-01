@@ -31,7 +31,6 @@ class AsyncPathHierarchyView(QTreeView):
         )
         self.header().customContextMenuRequested.connect(self.show_header_menu)
         self.doubleClicked.connect(self.on_double_click)
-        # self._model.dataChanged.connect(self.update)
         self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
         self.hideColumn(4)
         self.setItemDelegateForColumn(1, ProgressDelegate(self))

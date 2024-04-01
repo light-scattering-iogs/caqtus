@@ -400,6 +400,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         )
         item.removeRows(0, item.rowCount())
         self.endRemoveRows()
+        self.emit_index_updated(index)
 
     def handle_path_was_deleted(self, index: QModelIndex):
         parent = self.parent(index)
@@ -420,4 +421,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 path=data.path, has_fetched_children=False, creation_date=creation_date
             ),
             NODE_DATA_ROLE,
+        )
+        self.emit_index_updated(index)
+
+    def emit_index_updated(self, index: QModelIndex) -> None:
+        self.dataChanged.emit(
+            index.siblingAtColumn(0),
+            index.siblingAtColumn(self.columnCount() - 1),
+            [Qt.ItemDataRole.DisplayRole],
         )
