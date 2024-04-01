@@ -12,10 +12,10 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
     QDateTime,
-    QObject,
 )
-from PySide6.QtGui import QStandardItemModel
 from anytree import NodeMixin
+from returns.result import Success
+
 from caqtus.session import PureSequencePath, ExperimentSessionMaker, ExperimentSession
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap, Failure
@@ -25,9 +25,7 @@ from caqtus.session.sequence_collection import (
     SequenceStats,
     PathIsNotSequenceError,
 )
-from returns.result import Success
 from caqtus.utils import log_exception
-
 from .logger import logger
 
 
@@ -75,14 +73,6 @@ class PathHierarchyItem(NodeMixin):
         if self.parent:
             return self.parent.children.index(self)
         return 0
-
-
-class AsyncPathHierarchyModel(QStandardItemModel):
-    def __init__(
-        self, session_maker: ExperimentSessionMaker, parent: Optional[QObject]
-    ):
-        super().__init__(rows=0, columns=5, parent=parent)
-        self._session_maker = session_maker
 
 
 class PathHierarchyModel(QAbstractItemModel):
