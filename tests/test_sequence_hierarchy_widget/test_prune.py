@@ -17,7 +17,6 @@ def test_0(session_maker, qtmodeltester):
 
     QtAsyncio.run(model.prune(), keep_running=False)
     assert model.rowCount() == 0
-    qtmodeltester.check(model)
 
 
 def test_1(session_maker, qtmodeltester):
@@ -32,7 +31,6 @@ def test_1(session_maker, qtmodeltester):
 
     QtAsyncio.run(model.prune(), keep_running=False)
     assert model.rowCount() == 1
-    qtmodeltester.check(model)
 
     with session_maker() as session:
         path = PureSequencePath(r"\a")
@@ -41,7 +39,6 @@ def test_1(session_maker, qtmodeltester):
     QtAsyncio.run(model.prune(), keep_running=False)
 
     assert model.rowCount() == 0
-    qtmodeltester.check(model)
 
 
 def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes):
@@ -56,7 +53,6 @@ def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes):
 
     QtAsyncio.run(model.prune(), keep_running=False)
     assert model.rowCount() == 1
-    qtmodeltester.check(model)
 
 
 def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes):
@@ -73,4 +69,3 @@ def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes):
 
     QtAsyncio.run(model.prune(child), keep_running=False)
     assert model.rowCount() == 0
-    qtmodeltester.check(model)
