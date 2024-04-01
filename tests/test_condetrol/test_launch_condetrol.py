@@ -27,5 +27,5 @@ def session_maker(tmp_path):
 def test_condetrol(session_maker):
     condetrol = Condetrol(session_maker=session_maker)
     timer = QTimer(condetrol.window)
-    # timer.singleShot(0, condetrol.window.close)
+    timer.singleShot(0, condetrol.window.close)
     condetrol.run()

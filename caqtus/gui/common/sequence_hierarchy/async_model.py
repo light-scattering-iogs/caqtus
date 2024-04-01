@@ -166,7 +166,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     for child_path in children:
                         child_item = self._build_item(child_path, session)
                         parent_item.appendRow(child_item)
-                        node_data.has_fetched_children = True
+                    node_data.has_fetched_children = True
                     self.endInsertRows()
 
     @staticmethod
@@ -308,6 +308,18 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         get_item_data(parent_item.child(row)).path
                         for row in range(parent_item.rowCount())
                     }
+                    new_paths = child_paths - already_added_paths
+                    self.beginInsertRows(
+                        parent,
+                        parent_item.rowCount(),
+                        parent_item.rowCount() + len(new_paths) - 1,
+                    )
+                    for child_path in new_paths:
+                        child_item = self._build_item(child_path, session)
+                        parent_item.appendRow(child_item)
+                    self.endInsertRows()
+                for row in range(self.rowCount(parent)):
+                    await self.add_new_paths(self.index(row, 0, parent))
 
     def handle_folder_became_sequence(
         self, index: QModelIndex, session: ExperimentSession
