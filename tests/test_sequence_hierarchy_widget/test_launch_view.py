@@ -20,4 +20,4 @@ def test_0(session_maker, qtmodeltester: ModelTester, qtbot: QtBot):
 
     view.show()
     qtbot.addWidget(view)
-    qtbot.stop()
+    # qtbot.stop()

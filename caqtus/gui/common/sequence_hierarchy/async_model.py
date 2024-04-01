@@ -249,6 +249,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     async def update_from_session(self) -> None:
         await self.prune()
+        await self.add_new_paths()
 
     async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
         """Removes items from the model that no longer exist in the session."""
@@ -262,26 +263,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             try:
                 child_paths = unwrap(children_result)
             except PathIsSequenceError:
-                stats = unwrap(session.sequences.get_stats(parent_data.path))
-                creation_date = unwrap(
-                    session.paths.get_path_creation_date(parent_data.path)
-                )
-                self.beginRemoveRows(parent, 0, parent_item.rowCount() - 1)
-                parent_item.setData(
-                    SequenceNode(
-                        path=parent_data.path, stats=stats, creation_date=creation_date
-                    ),
-                    NODE_DATA_ROLE,
-                )
-                parent_item.removeRows(0, parent_item.rowCount())
-                self.endRemoveRows()
+                self.handle_folder_became_sequence(parent, session)
                 return
             except PathNotFoundError:
-                grandparent = self.parent(parent)
-                grandparent_item = self._get_item(grandparent)
-                self.beginRemoveRows(grandparent, parent.row(), parent.row())
-                grandparent_item.removeRow(parent.row())
-                self.endRemoveRows()
+                self.handle_path_was_deleted(parent)
                 return
 
         # Need to remove children in reverse order to avoid invalidating rows
@@ -295,3 +280,53 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 self.endRemoveRows()
             else:
                 await self.prune(child)
+
+    async def add_new_paths(self, parent: QModelIndex = QModelIndex()) -> None:
+        """Add new paths to the model that have been added to the session."""
+
+        parent_item = self._get_item(parent)
+        parent_data = get_item_data(parent_item)
+        match parent_data:
+            case SequenceNode():
+                return
+            case FolderNode(has_fetched_children=False):
+                return
+            case FolderNode(path=parent_path, has_fetched_children=True):
+                with self.session_maker() as session:
+                    children_result = await asyncio.to_thread(
+                        session.paths.get_children, parent_path
+                    )
+                    try:
+                        child_paths = unwrap(children_result)
+                    except PathIsSequenceError:
+                        self.handle_folder_became_sequence(parent, session)
+                        return
+                    except PathNotFoundError:
+                        self.handle_path_was_deleted(parent)
+                        return
+                    already_added_paths = {
+                        get_item_data(parent_item.child(row)).path
+                        for row in range(parent_item.rowCount())
+                    }
+
+    def handle_folder_became_sequence(
+        self, index: QModelIndex, session: ExperimentSession
+    ):
+        item = self._get_item(index)
+        data = get_item_data(item)
+        stats = unwrap(session.sequences.get_stats(data.path))
+        creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+        self.beginRemoveRows(index, 0, item.rowCount() - 1)
+        item.setData(
+            SequenceNode(path=data.path, stats=stats, creation_date=creation_date),
+            NODE_DATA_ROLE,
+        )
+        item.removeRows(0, item.rowCount())
+        self.endRemoveRows()
+
+    def handle_path_was_deleted(self, index: QModelIndex):
+        parent = self.parent(index)
+        grandparent_item = self._get_item(parent)
+        self.beginRemoveRows(parent, index.row(), index.row())
+        grandparent_item.removeRow(index.row())
+        self.endRemoveRows()
