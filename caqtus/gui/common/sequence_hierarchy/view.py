@@ -5,6 +5,7 @@ from PySide6 import QtCore
 from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
+from typing_extensions import deprecated
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.result import unwrap
@@ -62,6 +63,7 @@ class AsyncPathHierarchyView(QTreeView):
             self.sequence_double_clicked.emit(path)
 
 
+@deprecated("Use AsyncPathHierarchyView instead.")
 class PathHierarchyView(QTreeView):
     sequence_double_clicked = QtCore.Signal(PureSequencePath)
 

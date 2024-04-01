@@ -27,6 +27,7 @@ from caqtus.session.sequence_collection import (
 )
 from caqtus.utils import log_exception
 from .logger import logger
+from typing_extensions import deprecated
 
 
 class PathHierarchyItem(NodeMixin):
@@ -75,6 +76,7 @@ class PathHierarchyItem(NodeMixin):
         return 0
 
 
+@deprecated("Use AsyncPathHierarchyModel instead")
 class PathHierarchyModel(QAbstractItemModel):
     """A Qt tree model that provides data for a sequence hierarchy.
 
