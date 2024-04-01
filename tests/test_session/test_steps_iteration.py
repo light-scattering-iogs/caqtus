@@ -5,7 +5,7 @@ from caqtus.session.sequence.iteration_configuration import (
 )
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
-from .steps_iteration import steps_configuration
+from tests.fixtures.steps_iteration import steps_configuration
 
 
 def test_serialization(steps_configuration: StepsConfiguration):

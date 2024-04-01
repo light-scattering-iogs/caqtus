@@ -16,14 +16,14 @@ from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
 )
 from caqtus.session.sequence_collection import PathIsSequenceError
-from caqtus.session.shot import TimeLanes
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
+from tests.fixtures.steps_iteration import steps_configuration
 from .session_maker import session_maker, DummyConfiguration
 from ..generate_path import path
-from ..steps_iteration import steps_configuration
+from ...fixtures.time_lanes import time_lanes
 
 
 @pytest.fixture(scope="function")
@@ -149,15 +149,6 @@ def test_sequence_deletion_1(
     with empty_session as session:
         sequence = session.sequences.create(p, steps_configuration, time_lanes)
         assert sequence.exists(session)
-
-
-@pytest.fixture
-def time_lanes():
-    return TimeLanes(
-        step_names=["step1", "step2"],
-        step_durations=[Expression("1 ms"), Expression("2 ms")],
-        lanes={},
-    )
 
 
 def test_iteration_save(
