@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import asyncio
-from typing import Optional, assert_never, TypeGuard
+from typing import Optional, TypeGuard
 
 import attrs
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt
@@ -16,6 +18,12 @@ IS_SEQUENCE = Qt.UserRole + 3
 SEQUENCE_STATS = Qt.UserRole + 4
 
 NODE_DATA_ROLE = Qt.UserRole + 5
+
+
+def get_item_data(item: QStandardItem) -> Node:
+    data = item.data(NODE_DATA_ROLE)
+    assert is_node(data)
+    return data
 
 
 @attrs.define
@@ -87,8 +95,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def rowCount(self, parent=QModelIndex()):
         parent_item = self._get_item(parent)
-        node_data = parent_item.data(NODE_DATA_ROLE)
-        assert is_node(node_data)
+        node_data = get_item_data(parent_item)
         match node_data:
             case SequenceNode():
                 return 0
@@ -96,13 +103,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 return parent_item.rowCount()
             case FolderNode(has_fetched_children=False):
                 return 0
-            case _:
-                assert_never(node_data)
 
     def hasChildren(self, parent=QModelIndex()) -> bool:
         parent_item = self._get_item(parent)
-        node_data = parent_item.data(NODE_DATA_ROLE)
-        assert is_node(node_data)
+        node_data = get_item_data(parent_item)
         match node_data:
             case SequenceNode():
                 return False
@@ -113,8 +117,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def canFetchMore(self, parent) -> bool:
         parent_item = self._get_item(parent)
-        node_data = parent_item.data(NODE_DATA_ROLE)
-        assert is_node(node_data)
+        node_data = get_item_data(parent_item)
         match node_data:
             case SequenceNode():
                 return False
@@ -123,8 +126,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def fetchMore(self, parent):
         parent_item = self._get_item(parent)
-        node_data = parent_item.data(NODE_DATA_ROLE)
-        assert is_node(node_data)
+        node_data = get_item_data(parent_item)
         match node_data:
             case SequenceNode():
                 return
