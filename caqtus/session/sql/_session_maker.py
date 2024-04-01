@@ -1,13 +1,24 @@
+from sqlite3 import Connection as SQLite3Connection
 from typing import Self
 
 import sqlalchemy
 import sqlalchemy.orm
-from sqlalchemy import text
+from sqlalchemy import event, Engine
 
 from ._experiment_session import SQLExperimentSession, Serializer, default_serializer
 from ._table_base import create_tables
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
+
+
+# We need to enable foreign key constraints for sqlite databases and not for other
+# types of databases.
+@event.listens_for(Engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    if isinstance(dbapi_connection, SQLite3Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON;")
+        cursor.close()
 
 
 class SQLExperimentSessionMaker(ExperimentSessionMaker):
@@ -25,12 +36,6 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         engine: sqlalchemy.Engine,
         serializer: Serializer = default_serializer,
     ) -> None:
-        # By default, sqlite does not enforce foreign key constraints, so we need to
-        # enable it explicitly.
-        if engine.url.drivername == "sqlite":
-            with engine.connect() as connection:
-                connection.execute(text("pragma foreign_keys=on"))
-
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._serializer = serializer
