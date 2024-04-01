@@ -189,33 +189,38 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         await self.prune()
 
     async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
+        """Removes items from the model that no longer exist in the session."""
+
         parent_item = self._get_item(parent)
-        parent_path = parent_item.data(FULL_PATH)
+        parent_data = get_item_data(parent_item)
         with self.session_maker() as session:
             children_result = await asyncio.to_thread(
-                session.paths.get_children, parent_path
+                session.paths.get_children, parent_data.path
             )
-        try:
-            child_paths = unwrap(children_result)
-        except PathIsSequenceError:
-            self.beginRemoveRows(parent, 0, parent_item.rowCount() - 1)
-            parent_item.setData(True, IS_SEQUENCE)
-            parent_item.removeRows(0, parent_item.rowCount())
-            self.endRemoveRows()
-            return
-        except PathNotFoundError:
-            grandparent = self.parent(parent)
-            grandparent_item = self._get_item(grandparent)
-            self.beginRemoveRows(grandparent, parent.row(), parent.row())
-            grandparent_item.removeRow(parent.row())
-            self.endRemoveRows()
-            return
+            try:
+                child_paths = unwrap(children_result)
+            except PathIsSequenceError:
+                stats = unwrap(session.sequences.get_stats(parent_data.path))
+                self.beginRemoveRows(parent, 0, parent_item.rowCount() - 1)
+                parent_item.setData(
+                    SequenceNode(path=parent_data.path, stats=stats), NODE_DATA_ROLE
+                )
+                parent_item.removeRows(0, parent_item.rowCount())
+                self.endRemoveRows()
+                return
+            except PathNotFoundError:
+                grandparent = self.parent(parent)
+                grandparent_item = self._get_item(grandparent)
+                self.beginRemoveRows(grandparent, parent.row(), parent.row())
+                grandparent_item.removeRow(parent.row())
+                self.endRemoveRows()
+                return
 
         # Need to remove children in reverse order to avoid invalidating rows
         for row in reversed(range(self.rowCount(parent))):
             child = self.index(row, 0, parent)
             child_item = self._get_item(child)
-            child_path = child_item.data(FULL_PATH)
+            child_path = get_item_data(child_item).path
             if child_path not in child_paths:
                 self.beginRemoveRows(parent, row, row)
                 parent_item.removeRow(row)
