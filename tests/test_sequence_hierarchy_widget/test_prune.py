@@ -57,3 +57,20 @@ def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes):
     QtAsyncio.run(model.prune(), keep_running=False)
     assert model.rowCount() == 1
     qtmodeltester.check(model)
+
+
+def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes):
+    model = AsyncPathHierarchyModel(session_maker)
+    with session_maker() as session:
+        path = PureSequencePath(r"\a")
+        session.paths.create_path(path)
+    qtmodeltester.check(model)
+
+    child = model.index(0, 0)
+
+    with session_maker() as session:
+        session.paths.delete_path(path)
+
+    QtAsyncio.run(model.prune(child), keep_running=False)
+    assert model.rowCount() == 0
+    qtmodeltester.check(model)

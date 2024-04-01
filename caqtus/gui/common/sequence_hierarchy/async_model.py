@@ -138,7 +138,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             self.endRemoveRows()
             return
         except PathNotFoundError:
-            # We let the grandparent handle the removal of the parent
+            grandparent = self.parent(parent)
+            grandparent_item = self._get_item(grandparent)
+            self.beginRemoveRows(grandparent, parent.row(), parent.row())
+            grandparent_item.removeRow(parent.row())
+            self.endRemoveRows()
             return
 
         # Need to remove children in reverse order to avoid invalidating rows
