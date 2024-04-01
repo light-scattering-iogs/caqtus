@@ -5,9 +5,10 @@ from PySide6 import QtCore
 from PySide6.QtCore import QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
+
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.result import unwrap
-
+from .async_model import AsyncPathHierarchyModel
 from .delegate import ProgressDelegate
 from .model import PathHierarchyModel
 
@@ -20,7 +21,7 @@ class AsyncPathHierarchyView(QTreeView):
     ):
         super().__init__(parent)
         self.session_maker = session_maker
-        self._model = PathHierarchyModel(session_maker, self)
+        self._model = AsyncPathHierarchyModel(session_maker, self)
         self._proxy_model = QSortFilterProxyModel(self)
         self._proxy_model.setSourceModel(self._model)
         self.setModel(self._proxy_model)
@@ -28,9 +29,9 @@ class AsyncPathHierarchyView(QTreeView):
         self.header().setContextMenuPolicy(
             QtCore.Qt.ContextMenuPolicy.CustomContextMenu
         )
-        self.header().customContextMenuRequested.connect(self.show_header_menu)
-        self.doubleClicked.connect(self.on_double_click)
-        self._model.dataChanged.connect(self.update)
+        # self.header().customContextMenuRequested.connect(self.show_header_menu)
+        # self.doubleClicked.connect(self.on_double_click)
+        # self._model.dataChanged.connect(self.update)
         self.sortByColumn(4, QtCore.Qt.SortOrder.AscendingOrder)
         self.hideColumn(4)
         self.setItemDelegateForColumn(1, ProgressDelegate(self))

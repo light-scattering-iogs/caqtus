@@ -11,7 +11,10 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.gui.qtutil import temporary_widget
-from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
+from caqtus.gui.common.sequence_hierarchy import (
+    PathHierarchyView,
+    AsyncPathHierarchyView,
+)
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.path import InvalidPathFormatError
@@ -48,7 +51,7 @@ DEFAULT_TIME_LANES = TimeLanes(
 )
 
 
-class EditablePathHierarchyView(PathHierarchyView):
+class EditablePathHierarchyView(AsyncPathHierarchyView):
     sequence_start_requested = QtCore.Signal(PureSequencePath)
     sequence_interrupt_requested = QtCore.Signal(PureSequencePath)
 
@@ -60,6 +63,9 @@ class EditablePathHierarchyView(PathHierarchyView):
         super().__init__(session_maker, parent)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
+
+    async def run_async(self) -> None:
+        await self._model.watch_session()
 
     def show_context_menu(self, pos):
         index = self.indexAt(pos)

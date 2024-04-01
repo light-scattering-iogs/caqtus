@@ -86,6 +86,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else QModelIndex()
         )
 
+    def get_path(self, index: QModelIndex) -> PureSequencePath:
+        item = self._get_item(index)
+        node_data = get_item_data(item)
+        return node_data.path
+
     def _get_item(self, index) -> QStandardItem:
         result = (
             index.internalPointer()

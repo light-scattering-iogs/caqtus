@@ -87,7 +87,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     def __enter__(self):
         self._exit_stack.__enter__()
-        self._exit_stack.enter_context(self._path_view)
         self._exit_stack.enter_context(self.sequence_widget)
         return self
 
@@ -97,18 +96,18 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
 
-        async def shutdown_on_exception(coro):
-            try:
-                await coro
-            except Exception as e:
-                logger.critical(
-                    "Unhandled exception in the main window's event loop.",
-                    exc_info=e,
-                )
-                QApplication.quit()
+        # async def shutdown_on_exception(coro):
+        #     try:
+        #         await coro
+        #     except Exception as e:
+        #         logger.critical(
+        #             "Unhandled exception in the main window's event loop.",
+        #             exc_info=e,
+        #         )
+        #         QApplication.quit()
 
-        await asyncio.create_task(
-            shutdown_on_exception(self._monitor_global_parameters())
+        await asyncio.gather(
+            self._path_view.run_async(), self._monitor_global_parameters()
         )
 
     def setup_ui(self):
