@@ -91,7 +91,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             return
         if parent_item.data(HAS_FETCHED_CHILDREN):
             return
-
+        assert parent_item.rowCount() == 0
         parent_path = parent_item.data(FULL_PATH)
         with self.session_maker() as session:
             children_result = session.paths.get_children(parent_path)
