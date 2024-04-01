@@ -299,8 +299,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     data.stats = stats
                     change_detected = True
         if change_detected:
-            top_left = self.sibling(0, 0, index)
-            bottom_right = self.sibling(self.columnCount(), 0, index)
+            top_left = self.sibling(index.row(), 0, index)
+            bottom_right = self.sibling(index.row(), self.columnCount() - 1, index)
             self.dataChanged.emit(top_left, bottom_right)
         if isinstance(data, FolderNode):
             for row in range(item.rowCount()):
