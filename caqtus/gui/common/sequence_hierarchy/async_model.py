@@ -8,9 +8,9 @@ from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence_collection import PathIsSequenceError
 
-FULL_PATH_ROLE = Qt.UserRole + 1
+FULL_PATH = Qt.UserRole + 1
 HAS_FETCHED_CHILDREN = Qt.UserRole + 2
-PATH_IS_SEQUENCE_ROLE = Qt.UserRole + 3
+IS_SEQUENCE = Qt.UserRole + 3
 
 
 class AsyncPathHierarchyModel(QAbstractItemModel):
@@ -22,8 +22,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         self.tree = QStandardItemModel(self)
         self.tree.invisibleRootItem().setData(False, HAS_FETCHED_CHILDREN)
-        self.tree.invisibleRootItem().setData(PureSequencePath.root(), FULL_PATH_ROLE)
-        self.tree.invisibleRootItem().setData(False, PATH_IS_SEQUENCE_ROLE)
+        self.tree.invisibleRootItem().setData(PureSequencePath.root(), FULL_PATH)
+        self.tree.invisibleRootItem().setData(False, IS_SEQUENCE)
 
     def index(self, row, column, parent=QModelIndex()):
         if not self.hasIndex(row, column, parent):
@@ -62,7 +62,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def rowCount(self, parent=QModelIndex()):
         parent_item = self._get_item(parent)
-        if parent_item.data(PATH_IS_SEQUENCE_ROLE):
+        if parent_item.data(IS_SEQUENCE):
             return 0
         if parent_item.data(HAS_FETCHED_CHILDREN):
             return parent_item.rowCount()
@@ -71,7 +71,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def hasChildren(self, parent=QModelIndex()) -> bool:
         parent_item = self._get_item(parent)
-        if parent_item.data(PATH_IS_SEQUENCE_ROLE):
+        if parent_item.data(IS_SEQUENCE):
             return False
         if parent_item.data(HAS_FETCHED_CHILDREN):
             return parent_item.rowCount() > 0
@@ -80,24 +80,24 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def canFetchMore(self, parent) -> bool:
         parent_item = self._get_item(parent)
-        if parent_item.data(PATH_IS_SEQUENCE_ROLE):
+        if parent_item.data(IS_SEQUENCE):
             return False
         return not parent_item.data(HAS_FETCHED_CHILDREN)
 
     def fetchMore(self, parent):
         parent_item = self._get_item(parent)
-        if parent_item.data(PATH_IS_SEQUENCE_ROLE):
+        if parent_item.data(IS_SEQUENCE):
             return
         if parent_item.data(HAS_FETCHED_CHILDREN):
             return
 
-        parent_path = parent_item.data(FULL_PATH_ROLE)
+        parent_path = parent_item.data(FULL_PATH)
         with self.session_maker() as session:
             children_result = session.paths.get_children(parent_path)
         try:
             children = unwrap(children_result)
         except PathIsSequenceError:
-            parent_item.setData(True, PATH_IS_SEQUENCE_ROLE)
+            parent_item.setData(True, IS_SEQUENCE)
         except PathNotFoundError:
             pass
         else:
@@ -105,9 +105,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             for child_path in children:
                 child_item = QStandardItem()
                 child_item.setData(child_path.name, Qt.DisplayRole)
-                child_item.setData(child_path, FULL_PATH_ROLE)
+                child_item.setData(child_path, FULL_PATH)
                 child_item.setData(False, HAS_FETCHED_CHILDREN)
-                child_item.setData(False, PATH_IS_SEQUENCE_ROLE)
+                child_item.setData(False, IS_SEQUENCE)
                 parent_item.appendRow(child_item)
                 parent_item.setData(True, HAS_FETCHED_CHILDREN)
             self.endInsertRows()
