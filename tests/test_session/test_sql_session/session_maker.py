@@ -1,12 +1,11 @@
 from typing import Any
 
 import attrs
-import sqlalchemy
+import pytest
+
 from caqtus.device import DeviceConfigurationAttrs, DeviceParameter
-from caqtus.session import ExperimentSessionMaker
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
-    create_tables,
     default_sequence_serializer,
     Serializer,
     DeviceConfigurationSerializer,
@@ -40,14 +39,12 @@ def load(configuration: JSON) -> DummyConfiguration:
     return serialization.structure(configuration, DummyConfiguration)
 
 
-def get_session_maker() -> ExperimentSessionMaker:
-    url = "sqlite:///:memory:"
-    engine = sqlalchemy.create_engine(url)
+@pytest.fixture(scope="function")
+def session_maker(tmp_path) -> SQLExperimentSessionMaker:
+    url = f"sqlite:///{tmp_path / 'database.db'}"
 
-    create_tables(engine)
-
-    session_maker = SQLExperimentSessionMaker(
-        engine,
+    session_maker = SQLExperimentSessionMaker.from_url(
+        url,
         serializer=Serializer(
             device_configuration_serializers={
                 "DummyConfiguration": DeviceConfigurationSerializer(
@@ -57,4 +54,5 @@ def get_session_maker() -> ExperimentSessionMaker:
             sequence_serializer=default_sequence_serializer,
         ),
     )
+    session_maker.create_tables()
     return session_maker

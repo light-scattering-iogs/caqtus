@@ -2,13 +2,12 @@ import datetime
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import given, HealthCheck, settings
 
 from caqtus.device import DeviceName
 from caqtus.session import (
     BoundSequencePath,
     PureSequencePath,
-    ExperimentSession,
     ParameterNamespace,
 )
 from caqtus.session.result import unwrap
@@ -22,27 +21,36 @@ from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
-from .session_maker import get_session_maker, DummyConfiguration
+from .session_maker import session_maker, DummyConfiguration
 from ..generate_path import path
 from ..steps_iteration import steps_configuration
 
 
-def create_empty_session() -> ExperimentSession:
-    return get_session_maker()()
-
-
 @pytest.fixture(scope="function")
-def empty_session():
-    return create_empty_session()
+def empty_session(session_maker):
+    return session_maker()
 
 
-@given(path)
-def test_creation_1(p):
-    with create_empty_session() as session:
-        bound_path = BoundSequencePath(p, session)
-        bound_path.create()
+def test_2(session_maker):
+    with session_maker() as session:
+        bound_path = BoundSequencePath(PureSequencePath.from_parts(["0", "0"]), session)
+        created_paths = bound_path.create()
         for ancestor in bound_path.get_ancestors():
             assert session.paths.does_path_exists(ancestor)
+        for created_path in reversed(created_paths):
+            created_path.delete()
+
+
+@given(p=path)
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+def test_creation_1(p, session_maker):
+    with session_maker() as session:
+        bound_path = BoundSequencePath(p, session)
+        created_paths = bound_path.create()
+        for ancestor in bound_path.get_ancestors():
+            assert session.paths.does_path_exists(ancestor)
+        for created_path in reversed(created_paths):
+            created_path.delete()
 
 
 def test_creation_2(empty_session):

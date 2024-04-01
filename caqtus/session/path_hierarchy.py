@@ -45,6 +45,7 @@ class PathHierarchy(Protocol):
             A list of the paths that were created if the path was created successfully
             or PathIsSequenceError if the path or one of its ancestors is a sequence.
             No path is created if any of the ancestors is a sequence.
+            The list is ordered from parent to child.
         """
 
         raise NotImplementedError

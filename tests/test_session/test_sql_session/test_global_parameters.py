@@ -1,11 +1,10 @@
 from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
 
-from .session_maker import get_session_maker
+from .session_maker import session_maker
 
 
-def test_0():
-    session_maker = get_session_maker()
+def test_0(session_maker):
     with session_maker() as session:
         assert session.get_global_parameters() == ParameterNamespace.empty()
         params_1 = ParameterNamespace.from_mapping(
