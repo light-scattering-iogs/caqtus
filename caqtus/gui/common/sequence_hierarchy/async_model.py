@@ -293,8 +293,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         data = get_item_data(item)
         change_detected = False
         with self.session_maker() as session:
+            creation_date_result = await asyncio.to_thread(
+                session.paths.get_path_creation_date, data.path
+            )
             try:
-                creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+                creation_date = unwrap(creation_date_result)
             except PathNotFoundError:
                 self.handle_path_was_deleted(index)
                 return
@@ -302,8 +305,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 data.creation_date = creation_date
                 change_detected = True
             if isinstance(data, SequenceNode):
+                sequence_stats_result = await asyncio.to_thread(
+                    session.sequences.get_stats, data.path
+                )
                 try:
-                    stats = unwrap(session.sequences.get_stats(data.path))
+                    stats = unwrap(sequence_stats_result)
                 except PathIsNotSequenceError:
                     self.handle_sequence_became_folder(index, session)
                     return
