@@ -12,12 +12,7 @@ from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence_collection import PathIsSequenceError, SequenceStats
 
-FULL_PATH = Qt.UserRole + 1
-HAS_FETCHED_CHILDREN = Qt.UserRole + 2
-IS_SEQUENCE = Qt.UserRole + 3
-SEQUENCE_STATS = Qt.UserRole + 4
-
-NODE_DATA_ROLE = Qt.UserRole + 5
+NODE_DATA_ROLE = Qt.UserRole + 1
 
 
 def get_item_data(item: QStandardItem) -> Node:
