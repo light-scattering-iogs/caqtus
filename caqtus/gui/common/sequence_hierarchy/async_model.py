@@ -122,6 +122,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         item = self._get_item(index)
         return item.data(role)
 
+    async def watch_session(self) -> None:
+        while True:
+            await self.update_from_session()
+            await asyncio.sleep(50e-3)
+
+    async def update_from_session(self) -> None:
+        await self.prune()
+
     async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
         parent_item = self._get_item(parent)
         parent_path = parent_item.data(FULL_PATH)
