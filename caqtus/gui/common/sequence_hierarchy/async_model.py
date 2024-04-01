@@ -4,7 +4,7 @@ from typing import Optional
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence_collection import PathIsSequenceError
@@ -95,23 +95,32 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         parent_path = parent_item.data(FULL_PATH)
         with self.session_maker() as session:
             children_result = session.paths.get_children(parent_path)
-        try:
-            children = unwrap(children_result)
-        except PathIsSequenceError:
-            parent_item.setData(True, IS_SEQUENCE)
-        except PathNotFoundError:
-            pass
-        else:
-            self.beginInsertRows(parent, 0, len(children) - 1)
-            for child_path in children:
-                child_item = QStandardItem()
-                child_item.setData(child_path.name, Qt.DisplayRole)
-                child_item.setData(child_path, FULL_PATH)
-                child_item.setData(False, HAS_FETCHED_CHILDREN)
-                child_item.setData(False, IS_SEQUENCE)
-                parent_item.appendRow(child_item)
-                parent_item.setData(True, HAS_FETCHED_CHILDREN)
-            self.endInsertRows()
+            try:
+                children = unwrap(children_result)
+            except PathIsSequenceError:
+                parent_item.setData(True, IS_SEQUENCE)
+            except PathNotFoundError:
+                pass
+            else:
+                self.beginInsertRows(parent, 0, len(children) - 1)
+                for child_path in children:
+                    child_item = self._build_item(child_path, session)
+                    parent_item.appendRow(child_item)
+                    parent_item.setData(True, HAS_FETCHED_CHILDREN)
+                self.endInsertRows()
+
+    @staticmethod
+    def _build_item(
+        path: PureSequencePath, session: ExperimentSession
+    ) -> QStandardItem:
+        assert session.paths.does_path_exists(path)
+        item = QStandardItem()
+        item.setData(path.name, Qt.DisplayRole)
+        item.setData(path, FULL_PATH)
+        is_sequence = unwrap(session.sequences.is_sequence(path))
+        item.setData(is_sequence, IS_SEQUENCE)
+        item.setData(False, HAS_FETCHED_CHILDREN)
+        return item
 
     def columnCount(self, parent=QModelIndex()):
         return 1
