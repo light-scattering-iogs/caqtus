@@ -90,6 +90,16 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else QModelIndex()
         )
 
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        if not index.isValid():
+            return Qt.ItemFlag.NoItemFlags
+        item = self._get_item(index)
+        node_data = get_item_data(item)
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        if isinstance(node_data, SequenceNode):
+            flags |= Qt.ItemFlag.ItemNeverHasChildren
+        return flags
+
     def get_path(self, index: QModelIndex) -> PureSequencePath:
         item = self._get_item(index)
         node_data = get_item_data(item)
