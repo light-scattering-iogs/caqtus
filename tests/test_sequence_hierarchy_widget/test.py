@@ -1,6 +1,4 @@
-import asyncio
-
-from PySide6.QtCore import Qt, QObject, QTimer, Signal
+from PySide6.QtCore import Qt
 from pytestqt.modeltest import ModelTester
 
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyModel

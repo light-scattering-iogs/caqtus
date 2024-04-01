@@ -1,17 +1,40 @@
 import asyncio
-from typing import Optional
+from typing import Optional, assert_never, TypeGuard
 
+import attrs
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
-from caqtus.session.sequence_collection import PathIsSequenceError
+from caqtus.session.sequence_collection import PathIsSequenceError, SequenceStats
 
 FULL_PATH = Qt.UserRole + 1
 HAS_FETCHED_CHILDREN = Qt.UserRole + 2
 IS_SEQUENCE = Qt.UserRole + 3
+SEQUENCE_STATS = Qt.UserRole + 4
+
+NODE_DATA_ROLE = Qt.UserRole + 5
+
+
+@attrs.define
+class FolderNode:
+    path: PureSequencePath
+    has_fetched_children: bool = False
+
+
+@attrs.define
+class SequenceNode:
+    path: PureSequencePath
+    stats: SequenceStats
+
+
+Node = FolderNode | SequenceNode
+
+
+def is_node(value) -> TypeGuard[Node]:
+    return isinstance(value, (FolderNode, SequenceNode))
 
 
 class AsyncPathHierarchyModel(QAbstractItemModel):
@@ -22,9 +45,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.session_maker = session_maker
 
         self.tree = QStandardItemModel(self)
-        self.tree.invisibleRootItem().setData(False, HAS_FETCHED_CHILDREN)
-        self.tree.invisibleRootItem().setData(PureSequencePath.root(), FULL_PATH)
-        self.tree.invisibleRootItem().setData(False, IS_SEQUENCE)
+        self.tree.invisibleRootItem().setData(
+            FolderNode(path=PureSequencePath.root(), has_fetched_children=False),
+            NODE_DATA_ROLE,
+        )
 
     def index(self, row, column, parent=QModelIndex()):
         if not self.hasIndex(row, column, parent):
@@ -63,51 +87,70 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def rowCount(self, parent=QModelIndex()):
         parent_item = self._get_item(parent)
-        if parent_item.data(IS_SEQUENCE):
-            return 0
-        if parent_item.data(HAS_FETCHED_CHILDREN):
-            return parent_item.rowCount()
-        else:
-            return 0
+        node_data = parent_item.data(NODE_DATA_ROLE)
+        assert is_node(node_data)
+        match node_data:
+            case SequenceNode():
+                return 0
+            case FolderNode(has_fetched_children=True):
+                return parent_item.rowCount()
+            case FolderNode(has_fetched_children=False):
+                return 0
+            case _:
+                assert_never(node_data)
 
     def hasChildren(self, parent=QModelIndex()) -> bool:
         parent_item = self._get_item(parent)
-        if parent_item.data(IS_SEQUENCE):
-            return False
-        if parent_item.data(HAS_FETCHED_CHILDREN):
-            return parent_item.rowCount() > 0
-        else:
-            return True
+        node_data = parent_item.data(NODE_DATA_ROLE)
+        assert is_node(node_data)
+        match node_data:
+            case SequenceNode():
+                return False
+            case FolderNode(has_fetched_children=True):
+                return parent_item.rowCount() > 0
+            case FolderNode(has_fetched_children=False):
+                return True
 
     def canFetchMore(self, parent) -> bool:
         parent_item = self._get_item(parent)
-        if parent_item.data(IS_SEQUENCE):
-            return False
-        return not parent_item.data(HAS_FETCHED_CHILDREN)
+        node_data = parent_item.data(NODE_DATA_ROLE)
+        assert is_node(node_data)
+        match node_data:
+            case SequenceNode():
+                return False
+            case FolderNode(has_fetched_children=already_fetched):
+                return not already_fetched
 
     def fetchMore(self, parent):
         parent_item = self._get_item(parent)
-        if parent_item.data(IS_SEQUENCE):
-            return
-        if parent_item.data(HAS_FETCHED_CHILDREN):
-            return
-        assert parent_item.rowCount() == 0
-        parent_path = parent_item.data(FULL_PATH)
-        with self.session_maker() as session:
-            children_result = session.paths.get_children(parent_path)
-            try:
-                children = unwrap(children_result)
-            except PathIsSequenceError:
-                parent_item.setData(True, IS_SEQUENCE)
-            except PathNotFoundError:
-                pass
-            else:
-                self.beginInsertRows(parent, 0, len(children) - 1)
-                for child_path in children:
-                    child_item = self._build_item(child_path, session)
-                    parent_item.appendRow(child_item)
-                    parent_item.setData(True, HAS_FETCHED_CHILDREN)
-                self.endInsertRows()
+        node_data = parent_item.data(NODE_DATA_ROLE)
+        assert is_node(node_data)
+        match node_data:
+            case SequenceNode():
+                return
+            case FolderNode(has_fetched_children=True):
+                return
+            case FolderNode(path=parent_path, has_fetched_children=False):
+                assert parent_item.rowCount() == 0
+                with self.session_maker() as session:
+                    children_result = session.paths.get_children(parent_path)
+                    try:
+                        children = unwrap(children_result)
+                    except PathIsSequenceError:
+                        stats = unwrap(session.sequences.get_stats(parent_path))
+                        parent_item.setData(
+                            SequenceNode(path=parent_path, stats=stats), NODE_DATA_ROLE
+                        )
+                        return
+                    except PathNotFoundError:
+                        node_data.has_fetched_children = True
+                        return
+                    self.beginInsertRows(parent, 0, len(children) - 1)
+                    for child_path in children:
+                        child_item = self._build_item(child_path, session)
+                        parent_item.appendRow(child_item)
+                        node_data.has_fetched_children = True
+                    self.endInsertRows()
 
     @staticmethod
     def _build_item(
@@ -116,10 +159,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert session.paths.does_path_exists(path)
         item = QStandardItem()
         item.setData(path.name, Qt.DisplayRole)
-        item.setData(path, FULL_PATH)
         is_sequence = unwrap(session.sequences.is_sequence(path))
-        item.setData(is_sequence, IS_SEQUENCE)
-        item.setData(False, HAS_FETCHED_CHILDREN)
+        if is_sequence:
+            stats = unwrap(session.sequences.get_stats(path))
+            item.setData(SequenceNode(path=path, stats=stats), NODE_DATA_ROLE)
+        else:
+            item.setData(
+                FolderNode(path=path, has_fetched_children=False), NODE_DATA_ROLE
+            )
         return item
 
     def columnCount(self, parent=QModelIndex()):
