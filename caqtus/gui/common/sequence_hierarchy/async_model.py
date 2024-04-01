@@ -5,7 +5,7 @@ import datetime
 from typing import Optional, TypeGuard
 
 import attrs
-from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt
+from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt, QDateTime
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
@@ -273,7 +273,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         elif index.column() == 3:
             return None
         elif index.column() == 4:
-            return node_data.creation_date
+            return QDateTime(node_data.creation_date.astimezone(None))  # type: ignore
 
     async def watch_session(self) -> None:
         while True:
@@ -294,7 +294,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         change_detected = False
         with self.session_maker() as session:
             try:
-                creation_date = session.paths.get_path_creation_date(data.path)
+                creation_date = unwrap(session.paths.get_path_creation_date(data.path))
             except PathNotFoundError:
                 self.handle_path_was_deleted(index)
                 return
