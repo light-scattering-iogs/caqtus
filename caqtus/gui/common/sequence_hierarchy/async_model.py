@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional
 
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt
@@ -120,3 +121,34 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             return None
         item = self._get_item(index)
         return item.data(role)
+
+    async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
+        parent_item = self._get_item(parent)
+        parent_path = parent_item.data(FULL_PATH)
+        with self.session_maker() as session:
+            children_result = await asyncio.to_thread(
+                session.paths.get_children, parent_path
+            )
+        try:
+            child_paths = unwrap(children_result)
+        except PathIsSequenceError:
+            self.beginRemoveRows(parent, 0, parent_item.rowCount() - 1)
+            parent_item.setData(True, IS_SEQUENCE)
+            parent_item.removeRows(0, parent_item.rowCount())
+            self.endRemoveRows()
+            return
+        except PathNotFoundError:
+            # We let the grandparent handle the removal of the parent
+            return
+
+        # Need to remove children in reverse order to avoid invalidating rows
+        for row in reversed(range(self.rowCount(parent))):
+            child = self.index(row, 0, parent)
+            child_item = self._get_item(child)
+            child_path = child_item.data(FULL_PATH)
+            if child_path not in child_paths:
+                self.beginRemoveRows(parent, row, row)
+                parent_item.removeRow(row)
+                self.endRemoveRows()
+            else:
+                await self.prune(child)

@@ -1,4 +1,6 @@
-from PySide6.QtCore import Qt
+import asyncio
+
+from PySide6.QtCore import Qt, QObject, QTimer, Signal
 from pytestqt.modeltest import ModelTester
 
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyModel
@@ -26,14 +28,21 @@ def test_1(session_maker, qtmodeltester: ModelTester):
     assert model.data(child, Qt.ItemDataRole.DisplayRole) == "test2"
 
 
-# def test_2(session_maker, qtbot: QtBot):
-#     with session_maker() as session:
-#         for i in range(1000):
-#             session.paths.create_path(PureSequencePath(rf"\test\a\test{i}"))
-#     model = AsyncPathHierarchyModel(session_maker)
-#     view = QTreeView()
-#     qtbot.addWidget(view)
-#     view.setModel(model)
-#     view.show()
-#
-#     qtbot.stop()
+class AsyncioHelper(QObject):
+    finished = Signal()
+
+    def __init__(self):
+        super().__init__()
+
+    def start(self, coro):
+        self.awaitable = coro
+        timer = QTimer(self)
+        timer.singleShot(0, self.run)
+
+    def run(self):
+        async def wrapped():
+            await self.awaitable
+            self.finished.emit()
+
+        event_loop = asyncio.get_event_loop()
+        asyncio.ensure_future(wrapped(), loop=event_loop)
