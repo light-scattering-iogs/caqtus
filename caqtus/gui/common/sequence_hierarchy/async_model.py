@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 from typing import Optional, TypeGuard
 
 import attrs
@@ -24,13 +25,15 @@ def get_item_data(item: QStandardItem) -> Node:
 @attrs.define
 class FolderNode:
     path: PureSequencePath
-    has_fetched_children: bool = False
+    has_fetched_children: bool
+    creation_date: datetime.datetime
 
 
 @attrs.define
 class SequenceNode:
     path: PureSequencePath
     stats: SequenceStats
+    creation_date: datetime.datetime
 
 
 Node = FolderNode | SequenceNode
@@ -49,7 +52,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         self.tree = QStandardItemModel(self)
         self.tree.invisibleRootItem().setData(
-            FolderNode(path=PureSequencePath.root(), has_fetched_children=False),
+            FolderNode(
+                path=PureSequencePath.root(),
+                has_fetched_children=False,
+                creation_date=datetime.datetime.min,
+            ),
             NODE_DATA_ROLE,
         )
 
@@ -135,8 +142,16 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         children = unwrap(children_result)
                     except PathIsSequenceError:
                         stats = unwrap(session.sequences.get_stats(parent_path))
+                        creation_date = unwrap(
+                            session.paths.get_path_creation_date(parent_path)
+                        )
                         parent_item.setData(
-                            SequenceNode(path=parent_path, stats=stats), NODE_DATA_ROLE
+                            SequenceNode(
+                                path=parent_path,
+                                stats=stats,
+                                creation_date=creation_date,
+                            ),
+                            NODE_DATA_ROLE,
                         )
                         return
                     except PathNotFoundError:
@@ -157,12 +172,19 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         item = QStandardItem()
         item.setData(path.name, Qt.DisplayRole)
         is_sequence = unwrap(session.sequences.is_sequence(path))
+        creation_date = unwrap(session.paths.get_path_creation_date(path))
         if is_sequence:
             stats = unwrap(session.sequences.get_stats(path))
-            item.setData(SequenceNode(path=path, stats=stats), NODE_DATA_ROLE)
+            item.setData(
+                SequenceNode(path=path, stats=stats, creation_date=creation_date),
+                NODE_DATA_ROLE,
+            )
         else:
             item.setData(
-                FolderNode(path=path, has_fetched_children=False), NODE_DATA_ROLE
+                FolderNode(
+                    path=path, has_fetched_children=False, creation_date=creation_date
+                ),
+                NODE_DATA_ROLE,
             )
         return item
 
@@ -170,10 +192,50 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         return 1
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
+        """Get the data for a specific index in the model.
+
+        The displayed data returned for each column is as follows:
+        0: Name
+        A string with the name of the folder or sequence.
+        1: Status
+        The status of the sequence.
+        It is None for folders and a SequenceStats object for sequences.
+        2: Progress
+        A string representing the number of completed shots and the total
+        number of shots of the sequence.
+        It is None for folders.
+        3: Duration
+        A string representing the elapsed and remaining time of the
+        sequence.
+        It is None for folders.
+        4: Date created
+        A QDateTime object representing the date and time when the
+        sequence or folder was created.
+        """
+
+        if not index.isValid() or role != Qt.ItemDataRole.DisplayRole:
             return None
         item = self._get_item(index)
-        return item.data(role)
+        node_data = get_item_data(item)
+        if index.column() == 0:
+            return node_data.path.name
+        elif index.column() == 1:
+            if isinstance(node_data, SequenceNode):
+                return node_data.stats
+            else:
+                return None
+        elif index.column() == 2:
+            if isinstance(node_data, SequenceNode):
+                return (
+                    f"{node_data.stats.number_completed_shots}"
+                    f"/{node_data.stats.expected_number_shots}"
+                )
+            else:
+                return None
+        elif index.column() == 3:
+            return None
+        elif index.column() == 4:
+            return node_data.creation_date
 
     async def watch_session(self) -> None:
         while True:
@@ -196,9 +258,15 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 child_paths = unwrap(children_result)
             except PathIsSequenceError:
                 stats = unwrap(session.sequences.get_stats(parent_data.path))
+                creation_date = unwrap(
+                    session.paths.get_path_creation_date(parent_data.path)
+                )
                 self.beginRemoveRows(parent, 0, parent_item.rowCount() - 1)
                 parent_item.setData(
-                    SequenceNode(path=parent_data.path, stats=stats), NODE_DATA_ROLE
+                    SequenceNode(
+                        path=parent_data.path, stats=stats, creation_date=creation_date
+                    ),
+                    NODE_DATA_ROLE,
                 )
                 parent_item.removeRows(0, parent_item.rowCount())
                 self.endRemoveRows()
