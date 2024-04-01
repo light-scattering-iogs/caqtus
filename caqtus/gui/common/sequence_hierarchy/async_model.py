@@ -162,21 +162,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     try:
                         children = unwrap(children_result)
                     except PathIsSequenceError:
-                        stats = unwrap(session.sequences.get_stats(parent_path))
-                        creation_date = unwrap(
-                            session.paths.get_path_creation_date(parent_path)
-                        )
-                        parent_item.setData(
-                            SequenceNode(
-                                path=parent_path,
-                                stats=stats,
-                                creation_date=creation_date,
-                            ),
-                            NODE_DATA_ROLE,
-                        )
+                        self.handle_folder_became_sequence(parent, session)
                         return
                     except PathNotFoundError:
-                        node_data.has_fetched_children = True
+                        self.handle_path_was_deleted(parent)
                         return
                     self.beginInsertRows(parent, 0, len(children) - 1)
                     for child_path in children:
@@ -278,7 +267,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     async def watch_session(self) -> None:
         while True:
             await self.update_from_session()
-            await asyncio.sleep(50e-3)
+            await asyncio.sleep(0)
 
     async def update_from_session(self) -> None:
         await self.prune()
@@ -286,8 +275,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         for row in range(self.rowCount()):
             await self.update_stats(self.index(row, 0))
 
-    async def update_stats(self, index: QModelIndex = QModelIndex()) -> None:
+    async def update_stats(self, index: QModelIndex) -> None:
         """Update the stats of sequences and folders in the model from the session."""
+
+        if not index.isValid():
+            raise ValueError("Invalid index")
 
         item = self._get_item(index)
         data = get_item_data(item)
@@ -317,9 +309,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     data.stats = stats
                     change_detected = True
         if change_detected:
-            top_left = self.sibling(index.row(), 0, index)
-            bottom_right = self.sibling(index.row(), self.columnCount() - 1, index)
-            self.dataChanged.emit(top_left, bottom_right)
+            top_left = index.siblingAtColumn(0)
+            bottom_right = index.siblingAtColumn(self.columnCount() - 1)
+            self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
         if isinstance(data, FolderNode):
             for row in range(item.rowCount()):
                 await self.update_stats(self.index(row, 0, index))
