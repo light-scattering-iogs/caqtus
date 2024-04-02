@@ -1,7 +1,7 @@
 from typing import runtime_checkable, Protocol, Self
 
 from ..name import DeviceName
-from ...types.data import Data
+from ...types.data import Data, DataLabel
 
 
 @runtime_checkable
@@ -53,7 +53,7 @@ class Device(Protocol):
 class AcquisitionDevice(Protocol):
     """Defines the interface that a device must satisfy to provide data."""
 
-    def get_data(self) -> Data:
+    def get_data(self) -> dict[DataLabel, Data]:
         """Return the data produced by the device."""
 
         ...
