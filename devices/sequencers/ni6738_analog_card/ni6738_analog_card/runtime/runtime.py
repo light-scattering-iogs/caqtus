@@ -14,8 +14,12 @@ from attrs.setters import frozen
 from attrs.validators import instance_of, ge
 
 from caqtus.device import RuntimeDevice
-from caqtus.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, \
-    TriggerEdge
+from caqtus.device.sequencer import (
+    Sequencer,
+    Trigger,
+    ExternalClockOnChange,
+    TriggerEdge,
+)
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
@@ -140,11 +144,12 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
     @log_exception(logger)
     def has_sequence_finished(self) -> bool:
         super().has_sequence_finished()
+        error = None
         try:
             return self._task.is_task_done()
         except nidaqmx.errors.DaqError as e:
             error = RuntimeError(str(e))
-            error.__context__ = None
+        if error:
             raise error
 
     @singledispatchmethod
