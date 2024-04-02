@@ -143,7 +143,9 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         try:
             return self._task.is_task_done()
         except nidaqmx.errors.DaqError as e:
-            raise RuntimeError(str(e))
+            error = RuntimeError(str(e))
+            error.__context__ = None
+            raise error
 
     @singledispatchmethod
     def _values_from_instruction(
