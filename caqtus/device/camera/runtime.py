@@ -2,14 +2,14 @@ import abc
 import contextlib
 import logging
 from collections.abc import Iterable, Generator
-from typing import ClassVar
+from typing import ClassVar, ParamSpec, Generic
 
 from attrs import define, field
 from attrs.setters import frozen, convert
 from attrs.validators import instance_of
+
 from caqtus.device import Device
 from caqtus.types.image import Image
-
 from .configuration import RectangularROI
 
 logger = logging.getLogger(__name__)
@@ -19,8 +19,11 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
+P = ParamSpec("P")
+
+
 @define(slots=False)
-class Camera(Device, abc.ABC):
+class Camera(Device, abc.ABC, Generic[P]):
     """Define the interface for a camera.
 
     This is an abstract class that must be subclassed to implement a specific camera.
@@ -48,7 +51,9 @@ class Camera(Device, abc.ABC):
             )
 
     @abc.abstractmethod
-    def update_parameters(self, timeout: float) -> None:
+    def update_parameters(
+        self, timeout: float, *args: P.args, **kwargs: P.kwargs
+    ) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -64,7 +69,7 @@ class Camera(Device, abc.ABC):
         raise NotImplementedError
 
     @contextlib.contextmanager
-    def acquire(self, exposures: list[float]) -> Generator[Iterable[Image]]:
+    def acquire(self, exposures: list[float]) -> Generator[Iterable[Image], None, None]:
         """Acquire images with the given exposure times.
 
         The result is a context manager that returns an iterable of images.

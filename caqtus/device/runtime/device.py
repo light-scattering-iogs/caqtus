@@ -1,11 +1,13 @@
-from typing import runtime_checkable, Protocol, Self
+from typing import runtime_checkable, Protocol, Self, ParamSpec
 
 from ..name import DeviceName
 from ...types.data import Data, DataLabel
 
+P = ParamSpec("P")
+
 
 @runtime_checkable
-class Device(Protocol):
+class Device(Protocol[P]):
     """Defines the interface that a device must satisfy.
 
     This is a runtime checkable protocol so that we can test at runtime is an object has
@@ -20,6 +22,8 @@ class Device(Protocol):
         This name must remain constant during the lifetime of the device.
         """
 
+        ...
+
     def __str__(self) -> str:
         return self.get_name()
 
@@ -31,7 +35,7 @@ class Device(Protocol):
 
         ...
 
-    def update_parameters(self, *_, **kwargs) -> None:
+    def update_parameters(self, *args: P.args, **kwargs: P.kwargs) -> None:
         """Apply new values for some parameters of the device.
 
         This method is meant to be reimplemented for each specific device.
