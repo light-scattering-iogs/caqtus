@@ -96,7 +96,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
 
     @log_exception(logger)
     @wrap_nidaqmx_error
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, sequence: SequencerInstruction) -> None:
         """Write a sequence of voltages to the analog card."""
 
         self._stop_task()

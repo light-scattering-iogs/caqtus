@@ -1,15 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar
+from typing import ClassVar, ParamSpec, Generic
 
 import attrs
-from caqtus.device.runtime import Device
 
+from caqtus.device.runtime import Device
 from ..configuration import Trigger
 from ..instructions import SequencerInstruction
 
+P = ParamSpec("P")
+
 
 @attrs.define(slots=False)
-class Sequencer(Device, ABC):
+class Sequencer(Device, ABC, Generic[P]):
     """Base class for all sequencers.
 
     Fields:
@@ -31,7 +33,9 @@ class Sequencer(Device, ABC):
     _sequence_started: bool = attrs.field(default=False, init=False)
 
     @abstractmethod
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(
+        self, sequence: SequencerInstruction, *args: P.args, **kwargs: P.kwargs
+    ) -> None:
         """Update the parameters of the sequencer.
 
         To be subclassed by the specific sequencer implementation.

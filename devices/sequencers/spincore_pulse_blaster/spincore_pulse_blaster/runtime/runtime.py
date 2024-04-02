@@ -102,7 +102,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
         spinapi.pb_core_clock(1e3 / self.clock_cycle)
 
     @log_exception(logger)
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
+    def update_parameters(self, sequence: SequencerInstruction) -> None:
         sequence_duration = len(sequence) * self.time_step * 1e-9
         logger.debug(f"{sequence_duration=}")
         if spinapi.pb_start_programming(spinapi.PULSE_PROGRAM) != 0:

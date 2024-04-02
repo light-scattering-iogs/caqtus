@@ -32,7 +32,6 @@ from pulsestreamer import (
 logger = logging.getLogger(__name__)
 
 
-
 @define(slots=False)
 class SwabianPulseStreamer(Sequencer, RuntimeDevice):
     """Device class to program the Swabian Pulse Streamer.
@@ -101,8 +100,8 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
             raise ValueError("Only supports software trigger.")
         self._pulse_streamer.setTrigger(start, TriggerRearm.MANUAL)
 
-    def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
-        super().update_parameters(sequence=sequence, **kwargs)
+    def update_parameters(self, sequence: SequencerInstruction) -> None:
+        super().update_parameters(sequence=sequence)
         self._sequence = self._construct_pulse_streamer_sequence(sequence)
         last_values = sequence[-1]
         enabled_output = [

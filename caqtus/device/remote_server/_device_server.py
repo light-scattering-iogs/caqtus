@@ -4,11 +4,11 @@ import logging
 from multiprocessing.managers import BaseManager, BaseProxy
 from typing import Iterable
 
-from caqtus.device.camera import Camera
-from caqtus.device.sequencer import Sequencer
-from caqtus.types.image import Image
 from tblib import pickling_support
 
+from caqtus.device.camera import Camera
+from caqtus.device.sequencer import Sequencer, Trigger
+from caqtus.types.image import Image
 from .. import DeviceName
 from ..runtime import Device
 
@@ -139,7 +139,7 @@ class SequencerProxy(DeviceProxy, Sequencer):
     def wait_sequence_finished(self) -> None:
         return self._callmethod("wait_sequence_finished")  # type: ignore
 
-    def get_trigger(self) -> None:
+    def get_trigger(self) -> Trigger:
         return self._callmethod("get_trigger")  # type: ignore
 
 
