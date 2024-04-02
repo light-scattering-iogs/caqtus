@@ -6,11 +6,13 @@ from typing import ClassVar
 import attrs
 import nidaqmx
 import nidaqmx.constants
+import nidaqmx.errors
 import nidaqmx.system
 import numpy
 import numpy as np
 from attrs.setters import frozen
 from attrs.validators import instance_of, ge
+
 from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer import Sequencer, Trigger, ExternalClockOnChange, \
     TriggerEdge
@@ -138,7 +140,10 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
     @log_exception(logger)
     def has_sequence_finished(self) -> bool:
         super().has_sequence_finished()
-        return self._task.is_task_done()
+        try:
+            return self._task.is_task_done()
+        except nidaqmx.errors.DaqError as e:
+            raise RuntimeError(str(e))
 
     @singledispatchmethod
     def _values_from_instruction(

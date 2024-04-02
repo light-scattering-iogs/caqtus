@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ni6738-analog-card"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
