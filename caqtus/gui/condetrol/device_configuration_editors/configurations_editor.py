@@ -67,8 +67,11 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
 
     def _on_add_configuration(self) -> None:
         result = self.add_device_dialog.exec()
-        if result is not None:
-            device_name, device_type = result
+        if result == QDialog.DialogCode.Accepted:
+            device_name, device_type = (
+                self.add_device_dialog.device_name_line_edit.text(),
+                self.add_device_dialog.device_type_combo_box.currentText(),
+            )
             if not device_name:
                 return
             device_configuration = self.device_configuration_factories[device_type]()
@@ -224,13 +227,3 @@ class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
         self.setupUi(self)
         for device_type in device_types:
             self.device_type_combo_box.addItem(device_type)
-
-    def exec(self) -> Optional[tuple[DeviceName, str]]:
-        result = super().exec()
-        if result == QDialog.DialogCode.Accepted:
-            if not self.device_name_line_edit.hasAcceptableInput():
-                return None
-            device_name = self.device_name_line_edit.text()
-            device_type = self.device_type_combo_box.currentText()
-            return device_name, device_type
-        return None
