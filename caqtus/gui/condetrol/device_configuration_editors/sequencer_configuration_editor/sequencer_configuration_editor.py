@@ -17,6 +17,7 @@ class SequencerConfigurationEditor(DefaultDeviceConfigurationEditor[S], Generic[
         self.time_step_spinbox.setRange(0, 100000)
         self.time_step_spinbox.setSuffix(" ns")
         self.form.addRow("Time step", self.time_step_spinbox)
+        self.time_step_spinbox.setValue(self.device_configuration.time_step)
 
         self._channels_view = SequencerChannelView(self.device_configuration.channels)
         self.form.addRow("Channels", self._channels_view)
