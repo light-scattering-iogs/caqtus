@@ -34,6 +34,19 @@ logger.setLevel("DEBUG")
 ns = 1e-9
 
 
+def wrap_nidaqmx_error(f):
+    def wrapper(*args, **kwargs):
+        error = None
+        try:
+            return f(*args, **kwargs)
+        except nidaqmx.errors.DaqError as e:
+            error = RuntimeError(str(e))
+        if error:
+            raise error
+
+    return wrapper
+
+
 @attrs.define(slots=False)
 class NI6738AnalogCard(Sequencer, RuntimeDevice):
     """Device class to program the NI6738 analog card.
@@ -63,6 +76,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
             raise NotImplementedError(f"Trigger edge {value.edge} is not implemented")
 
     @log_exception(logger)
+    @wrap_nidaqmx_error
     def initialize(self) -> None:
         super().initialize()
         system = nidaqmx.system.System.local()
@@ -70,7 +84,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
             raise ConnectionError(f"Could not find device {self.device_id}")
 
         self._task = self._enter_context(closing(nidaqmx.Task()))
-        self._add_closing_callback(self._task.stop)
+        self._add_closing_callback(wrap_nidaqmx_error(self._task.stop))
 
         for ch in range(self.channel_number):
             self._task.ao_channels.add_ao_voltage_chan(
@@ -81,6 +95,7 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
             )
 
     @log_exception(logger)
+    @wrap_nidaqmx_error
     def update_parameters(self, *_, sequence: SequencerInstruction, **kwargs) -> None:
         """Write a sequence of voltages to the analog card."""
 
@@ -137,20 +152,16 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         self._task.timing.samp_clk_dig_fltr_enable = True
 
     @log_exception(logger)
+    @wrap_nidaqmx_error
     def start_sequence(self) -> None:
         super().start_sequence()
         self._task.start()
 
     @log_exception(logger)
+    @wrap_nidaqmx_error
     def has_sequence_finished(self) -> bool:
         super().has_sequence_finished()
-        error = None
-        try:
-            return self._task.is_task_done()
-        except nidaqmx.errors.DaqError as e:
-            error = RuntimeError(str(e))
-        if error:
-            raise error
+        return self._task.is_task_done()
 
     @singledispatchmethod
     def _values_from_instruction(
