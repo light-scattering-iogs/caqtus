@@ -1,6 +1,7 @@
 from typing import runtime_checkable, Protocol, Self
 
 from ..name import DeviceName
+from ...types.data import Data
 
 
 @runtime_checkable
@@ -44,5 +45,15 @@ class Device(Protocol):
 
         Used to terminate communication to the device and free the associated resources.
         """
+
+        ...
+
+
+@runtime_checkable
+class AcquisitionDevice(Protocol):
+    """Defines the interface that a device must satisfy to provide data."""
+
+    def get_data(self) -> Data:
+        """Return the data produced by the device."""
 
         ...
