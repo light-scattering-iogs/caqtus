@@ -8,7 +8,6 @@ import attrs
 
 from caqtus.device.configuration._get_generic_map import get_generic_map
 from caqtus.device.name import DeviceName
-from caqtus.device.parameter import DeviceParameter
 from caqtus.device.runtime import Device
 
 DeviceServerName = NewType("DeviceServerName", str)
@@ -45,7 +44,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     )
 
     @abc.abstractmethod
-    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
+    def get_device_init_args(self, *args, **kwargs) -> Mapping[str, Any]:
         """Return the arguments that should be passed to the device's constructor."""
 
         return {}
@@ -72,7 +71,14 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
             return device_type.__name__
 
     @abc.abstractmethod
-    def compile_device_shot_parameters(self):
+    def compile_device_shot_parameters(self) -> Mapping[str, Any]:
+        """Compute the parameters that should be applied to the device for a shot.
+
+        The parameters returned by this method will be passed to the method
+        :meth:`Device.update_parameters` of the related device before the shot is run.
+        The keys in the return mapping must match the arguments of this methods.
+        """
+
         ...
 
 
