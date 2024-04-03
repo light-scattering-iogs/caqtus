@@ -47,7 +47,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     def get_device_init_args(self, *args, **kwargs) -> Mapping[str, Any]:
         """Return the arguments that should be passed to the device's constructor."""
 
-        return {}
+        raise NotImplementedError
 
     def get_device_type(self) -> str:
         """Return the runtime type of the device.
@@ -79,7 +79,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
         The keys in the return mapping must match the arguments of this methods.
         """
 
-        ...
+        raise NotImplementedError
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
