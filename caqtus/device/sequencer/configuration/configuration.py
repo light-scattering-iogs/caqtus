@@ -5,7 +5,7 @@ import attrs
 
 from .channel_output import ChannelOutput, is_channel_output
 from .trigger import Trigger, is_trigger
-from ...configuration import DeviceConfigurationAttrs, DeviceParameter
+from ...configuration import DeviceConfiguration, DeviceParameter
 
 
 def validate_channel_output(instance, attribute, value):
@@ -64,7 +64,7 @@ def validate_trigger(instance, attribute, value):
 
 
 @attrs.define
-class SequencerConfiguration(DeviceConfigurationAttrs, ABC):
+class SequencerConfiguration(DeviceConfiguration, ABC):
     """Holds the static configuration of a sequencer device.
 
     Fields:

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Protocol, Optional
 
 import attrs
-from caqtus.device import DeviceName, DeviceConfigurationAttrs
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
@@ -146,7 +146,7 @@ class SequenceCollection(Protocol):
     def set_device_configurations(
         self,
         path: PureSequencePath,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ) -> None:
         """Set the device configurations that should be used by this sequence.
 
@@ -159,7 +159,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_device_configurations(
         self, path: PureSequencePath
-    ) -> Mapping[DeviceName, DeviceConfigurationAttrs]:
+    ) -> Mapping[DeviceName, DeviceConfiguration]:
         """Get the device configurations that are used by this sequence.
 
         Raises:

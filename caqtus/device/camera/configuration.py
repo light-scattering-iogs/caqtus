@@ -3,11 +3,11 @@ from typing import Any
 
 import attrs
 from caqtus.utils.roi import RectangularROI
-from ..configuration import DeviceConfigurationAttrs, DeviceParameter
+from ..configuration import DeviceConfiguration, DeviceParameter
 
 
 @attrs.define
-class CameraConfiguration(DeviceConfigurationAttrs, ABC):
+class CameraConfiguration(DeviceConfiguration, ABC):
     """Contains static information to initialize a camera.
 
     This class is meant to be subclassed to add device-specific attributes.

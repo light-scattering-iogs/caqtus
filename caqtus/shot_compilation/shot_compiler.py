@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import Protocol, Any
 
-from caqtus.device import DeviceName, DeviceConfigurationAttrs, DeviceParameter
+from caqtus.device import DeviceName, DeviceConfiguration, DeviceParameter
 from caqtus.session.shot import TimeLanes
 from .variable_namespace import VariableNamespace
 
@@ -26,7 +26,7 @@ class ShotCompilerFactory(Protocol):
     def __call__(
         self,
         shot_timelanes: TimeLanes,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ) -> ShotCompiler:
         """Create a shot compiler.
 

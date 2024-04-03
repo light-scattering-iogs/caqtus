@@ -3,7 +3,7 @@ from typing import Any
 import attrs
 import pytest
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceParameter
+from caqtus.device import DeviceConfiguration, DeviceParameter
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
     default_sequence_serializer,
@@ -15,7 +15,7 @@ from caqtus.utils.serialization import JSON
 
 
 @attrs.define
-class DummyConfiguration(DeviceConfigurationAttrs):
+class DummyConfiguration(DeviceConfiguration):
     """Dummy configuration to test the device configuration collection."""
 
     a: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)

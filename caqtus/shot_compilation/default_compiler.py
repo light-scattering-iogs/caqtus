@@ -4,7 +4,7 @@ from typing import TypeVar, Any
 
 from caqtus.device import (
     DeviceName,
-    DeviceConfigurationAttrs,
+    DeviceConfiguration,
     DeviceParameter,
     get_configurations_by_type,
 )
@@ -29,7 +29,7 @@ class DefaultShotCompiler(ShotCompiler):
     def __init__(
         self,
         shot_timelanes: TimeLanes,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ):
         self.camera_compiler = CamerasParameterCompiler(
             shot_timelanes.step_names,
@@ -63,11 +63,11 @@ def get_lanes_with_type(
     return {name: lane for name, lane in lanes.items() if isinstance(lane, lane_type)}
 
 
-_D = TypeVar("_D", bound=DeviceConfigurationAttrs)
+_D = TypeVar("_D", bound=DeviceConfiguration)
 
 
 def get_device_configurations_with_type(
-    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+    device_configurations: Mapping[DeviceName, DeviceConfiguration],
     device_type: type[_D],
 ) -> Mapping[DeviceName, _D]:
     return {

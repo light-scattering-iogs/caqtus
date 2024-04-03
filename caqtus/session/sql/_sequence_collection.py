@@ -12,7 +12,7 @@ from returns.result import Result
 from returns.result import Success, Failure
 from sqlalchemy import func, select
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session.shot.timelane import AnalogTimeLane
 from caqtus.types.data import DataLabel, Data, is_data
 from caqtus.types.expression import Expression
@@ -345,7 +345,7 @@ class SQLSequenceCollection(SequenceCollection):
     def set_device_configurations(
         self,
         path: PureSequencePath,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ) -> None:
         sequence = unwrap(self._query_sequence_model(path))
         if sequence.state != State.PREPARING:
@@ -367,7 +367,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_device_configurations(
         self, path: PureSequencePath
-    ) -> dict[DeviceName, DeviceConfigurationAttrs]:
+    ) -> dict[DeviceName, DeviceConfiguration]:
         sequence = unwrap(self._query_sequence_model(path))
         if sequence.state == State.DRAFT:
             raise RuntimeError("Sequence has not been prepared yet")

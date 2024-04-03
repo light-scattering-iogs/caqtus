@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
 )
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from ._device_configurations_plugin import (
     DeviceConfigurationsPlugin,
     DeviceConfigurationEditorFactory,
@@ -77,11 +77,11 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
             device_configuration = self.device_configuration_factories[device_type]()
             self._configs_view.add_configuration(device_name, device_configuration)
 
-    def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
+    def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         return self._configs_view.get_device_configurations()
 
     def set_device_configurations(
-        self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
+        self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
     ) -> None:
         self._configs_view.set_device_configurations(device_configurations)
 
@@ -123,7 +123,7 @@ class DeviceConfigurationsView(QColumnView):
         self._previous_index: Optional[int] = None
 
     def set_device_configurations(
-        self, device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs]
+        self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
     ) -> None:
         """Set the device configurations to display.
 
@@ -136,7 +136,7 @@ class DeviceConfigurationsView(QColumnView):
         self._device_configurations = list(device_configurations.values())
         self._model.setStringList(list(device_configurations.keys()))
 
-    def get_device_configurations(self) -> dict[DeviceName, DeviceConfigurationAttrs]:
+    def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         """Return a copy of the configurations currently displayed in the view."""
 
         # We first need to read the changes from the currently displayed editor before
@@ -154,7 +154,7 @@ class DeviceConfigurationsView(QColumnView):
         }
 
     def add_configuration(
-        self, device_name: DeviceName, device_configuration: DeviceConfigurationAttrs
+        self, device_name: DeviceName, device_configuration: DeviceConfiguration
     ) -> None:
         """Add a device configuration to the view.
 
@@ -162,7 +162,7 @@ class DeviceConfigurationsView(QColumnView):
         changes to the configuration will not affect the view.
         """
 
-        if not isinstance(device_configuration, DeviceConfigurationAttrs):
+        if not isinstance(device_configuration, DeviceConfiguration):
             raise TypeError(
                 f"Expected a DeviceConfigurationAttrs, got {type(device_configuration)}"
             )

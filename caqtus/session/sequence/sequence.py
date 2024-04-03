@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 import attrs
 
-from caqtus.device import DeviceName, DeviceConfigurationAttrs
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.variable_name import DottedVariableName
 from .iteration_configuration import IterationConfiguration
 from .shot import Shot
@@ -124,7 +124,7 @@ class Sequence:
 
     def get_device_configurations(
         self, session: ExperimentSession
-    ) -> dict[DeviceName, DeviceConfigurationAttrs]:
+    ) -> dict[DeviceName, DeviceConfiguration]:
         """Return the device configurations used when the sequence was launched."""
 
         device_configurations = session.sequences.get_device_configurations(self.path)

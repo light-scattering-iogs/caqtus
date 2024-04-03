@@ -11,7 +11,7 @@ DeviceServerName = NewType("DeviceServerName", str)
 
 
 @attrs.define
-class DeviceConfigurationAttrs(ABC):
+class DeviceConfiguration(ABC):
     """Handle the static experiment wide configuration of a device.
 
     This class is used to store the persistent configuration of a device. The
@@ -56,11 +56,11 @@ class DeviceConfigurationAttrs(ABC):
         return {}
 
 
-DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfigurationAttrs)
+DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
 
 
 def get_configurations_by_type(
-    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+    device_configurations: Mapping[DeviceName, DeviceConfiguration],
     device_type: type[DeviceConfigType],
 ) -> dict[DeviceName, DeviceConfigType]:
     return {

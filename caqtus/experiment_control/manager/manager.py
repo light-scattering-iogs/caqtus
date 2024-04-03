@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -103,7 +103,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         """Start running the sequence on the setup.
@@ -150,7 +150,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         """Run a sequence on the setup.
@@ -294,7 +294,7 @@ class BoundProcedure(Procedure):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         if not self.is_active():
@@ -333,7 +333,7 @@ class BoundProcedure(Procedure):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         with self._session_maker() as session:

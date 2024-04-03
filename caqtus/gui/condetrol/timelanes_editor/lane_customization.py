@@ -6,7 +6,7 @@ from typing import Protocol, Optional, TypeAlias
 import attrs
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol.timelanes_editor.digital_lane_delegate import (
     DigitalTimeLaneDelegate,
 )
@@ -34,7 +34,7 @@ class LaneDelegateFactory(Protocol):
         self,
         lane_name: str,
         lane: TimeLane,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
         sequence_parameters: ParameterNamespace,
         parent: QWidget,
     ) -> Optional[QStyledItemDelegate]:
@@ -74,7 +74,7 @@ class TimeLanesPlugin:
 def default_lane_delegate_factory(
     lane_name: str,
     lane: TimeLane,
-    device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+    device_configurations: Mapping[DeviceName, DeviceConfiguration],
     sequence_parameters: ParameterNamespace,
     parent: QWidget,
 ) -> Optional[QStyledItemDelegate]:

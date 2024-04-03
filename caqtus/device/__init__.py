@@ -1,11 +1,11 @@
 from .name import DeviceName
-from .configuration import DeviceConfigurationAttrs, get_configurations_by_type
+from .configuration import DeviceConfiguration, get_configurations_by_type
 from .parameter import DeviceParameter
 from .runtime import Device, RuntimeDevice
 
 __all__ = [
     "DeviceName",
-    "DeviceConfigurationAttrs",
+    "DeviceConfiguration",
     "DeviceParameter",
     "Device",
     "RuntimeDevice",
