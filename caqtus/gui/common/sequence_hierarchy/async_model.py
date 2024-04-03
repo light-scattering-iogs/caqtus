@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import asyncio
 import datetime
 from typing import Optional, TypeGuard
@@ -11,6 +12,7 @@ from PySide6.QtGui import QStandardItemModel, QStandardItem
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
+from caqtus.session.sequence import State
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
@@ -34,10 +36,11 @@ class FolderNode:
 
 
 @attrs.define
-class SequenceNode:
+class SequenceNode(abc.ABC):
     path: PureSequencePath
     stats: SequenceStats
     creation_date: datetime.datetime
+    last_query_time: datetime.datetime
 
 
 Node = FolderNode | SequenceNode
@@ -186,7 +189,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         if is_sequence:
             stats = unwrap(session.sequences.get_stats(path))
             item.setData(
-                SequenceNode(path=path, stats=stats, creation_date=creation_date),
+                SequenceNode(
+                    path=path,
+                    stats=stats,
+                    creation_date=creation_date,
+                    last_query_time=datetime.datetime.now(tz=datetime.timezone.utc),
+                ),
                 NODE_DATA_ROLE,
             )
         else:
@@ -260,7 +268,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else:
                 return None
         elif index.column() == 3:
-            return None
+            if isinstance(node_data, SequenceNode):
+                return format_duration(node_data.stats, node_data.last_query_time)
+            else:
+                return None
         elif index.column() == 4:
             return QDateTime(node_data.creation_date.astimezone(None))  # type: ignore
 
@@ -307,6 +318,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     return
                 if stats != data.stats:
                     data.stats = stats
+                    data.last_query_time = datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    )
                     change_detected = True
         if change_detected:
             top_left = index.siblingAtColumn(0)
@@ -395,7 +409,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         creation_date = unwrap(session.paths.get_path_creation_date(data.path))
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
-            SequenceNode(path=data.path, stats=stats, creation_date=creation_date),
+            SequenceNode(
+                path=data.path,
+                stats=stats,
+                creation_date=creation_date,
+                last_query_time=datetime.datetime.now(tz=datetime.timezone.utc),
+            ),
             NODE_DATA_ROLE,
         )
         item.removeRows(0, item.rowCount())
@@ -430,3 +449,60 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             index.siblingAtColumn(self.columnCount() - 1),
             [Qt.ItemDataRole.DisplayRole],
         )
+
+
+def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
+    if stats.state == State.DRAFT or stats.state == State.PREPARING:
+        return f"--/--"
+    elif stats.state == State.RUNNING:
+        running_duration = updated_time - stats.start_time
+        if stats.expected_number_shots is None or stats.number_completed_shots == 0:
+            remaining = "--"
+        else:
+            remaining = (
+                running_duration
+                / stats.number_completed_shots
+                * (stats.expected_number_shots - stats.number_completed_shots)
+            )
+        if isinstance(remaining, datetime.timedelta):
+            total = remaining + running_duration
+            remaining = _format_seconds(total.total_seconds())
+        running_duration = _format_seconds(running_duration.total_seconds())
+        return f"{running_duration}/{remaining}"
+    elif (
+        stats.state == State.FINISHED
+        or stats.state == State.CRASHED
+        or stats.state == State.INTERRUPTED
+    ):
+        try:
+            total_duration = stats.stop_time - stats.start_time
+            total_duration = _format_seconds(total_duration.total_seconds())
+            return total_duration
+        except TypeError:
+            return ""
+
+
+def _format_seconds(seconds: float) -> str:
+    """Format seconds into a string.
+
+    Args:
+        seconds: Seconds to format.
+
+    Returns:
+        Formatted string.
+    """
+
+    seconds = int(seconds)
+    result = [f"{seconds % 60}s"]
+
+    minutes = seconds // 60
+    if minutes > 0:
+        result.append(f"{minutes % 60}m")
+        hours = minutes // 60
+        if hours > 0:
+            result.append(f"{hours % 24}h")
+            days = hours // 24
+            if days > 0:
+                result.append(f"{days}d")
+
+    return ":".join(reversed(result))
