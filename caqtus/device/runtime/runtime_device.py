@@ -4,7 +4,7 @@ from typing import ClassVar, Optional, TypeVar, Self
 
 import attrs
 
-from .device import Device
+from ._device import Device
 from ..name import DeviceName
 
 _T = TypeVar("_T")

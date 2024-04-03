@@ -1,6 +1,15 @@
 Device
 ======
 
+caqtus.device.runtime
+---------------------
+
+.. automodule:: caqtus.device.runtime
+
+.. autoclass:: caqtus.device.runtime.Device
+    :members:
+    :special-members: __enter__, __exit__
+
 caqtus.device.configuration
 ---------------------------
 
