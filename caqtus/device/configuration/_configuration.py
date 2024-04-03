@@ -45,9 +45,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     )
 
     @abc.abstractmethod
-    def get_device_init_args(
-        self, name: DeviceName, *args, **kwargs
-    ) -> Mapping[DeviceParameter, Any]:
+    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
         """Return the arguments that should be passed to the device's constructor."""
 
         return {}
