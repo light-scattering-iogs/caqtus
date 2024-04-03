@@ -1,10 +1,10 @@
 import abc
 from collections.abc import MutableMapping
 
-from caqtus.device import DeviceName, DeviceConfigurationAttrs
+from caqtus.device import DeviceName, DeviceConfiguration
 
 
 class DeviceConfigurationCollection(
-    MutableMapping[DeviceName, DeviceConfigurationAttrs], abc.ABC
+    MutableMapping[DeviceName, DeviceConfiguration], abc.ABC
 ):
     pass

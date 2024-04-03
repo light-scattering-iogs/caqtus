@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane
@@ -40,7 +40,7 @@ class TimeLanesEditor(QWidget):
     def __init__(
         self,
         time_lane_customization: TimeLanesPlugin,
-        device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -121,7 +121,7 @@ class TimeLanesView(QTableView):
         self,
         lane_model_factory: LaneModelFactory,
         lane_delegate_factory: LaneDelegateFactory,
-        device_configurations: dict[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):
         """A widget for editing time lanes.
@@ -142,7 +142,7 @@ class TimeLanesView(QTableView):
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
         self._device_configurations: dict[
-            DeviceName, DeviceConfigurationAttrs
+            DeviceName, DeviceConfiguration
         ] = device_configurations
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(

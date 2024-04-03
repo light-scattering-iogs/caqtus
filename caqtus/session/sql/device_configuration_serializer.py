@@ -2,10 +2,10 @@ from collections.abc import Callable
 from typing import Generic, TypeVar
 
 import attrs
-from caqtus.device import DeviceConfigurationAttrs
+from caqtus.device import DeviceConfiguration
 from caqtus.utils.serialization import JSON
 
-T = TypeVar("T", bound=DeviceConfigurationAttrs)
+T = TypeVar("T", bound=DeviceConfiguration)
 
 
 @attrs.define

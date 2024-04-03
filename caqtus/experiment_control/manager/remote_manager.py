@@ -7,7 +7,7 @@ from typing import Optional
 
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceConfigurationAttrs
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session import PureSequencePath
 from caqtus.shot_compilation import ShotCompilerFactory
@@ -95,7 +95,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         return self._callmethod(
@@ -111,7 +111,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         sequence: Sequence,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         # Here we can't just call the remote method `run_sequence`.

@@ -3,17 +3,17 @@ from typing import TypeVar
 
 import attrs
 
-from caqtus.device import DeviceConfigurationAttrs
+from caqtus.device import DeviceConfiguration
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
     DefaultDeviceConfigurationEditor,
 )
 
-C = TypeVar("C", bound=DeviceConfigurationAttrs)
+C = TypeVar("C", bound=DeviceConfiguration)
 
 DeviceConfigurationEditorFactory = Callable[[C], DeviceConfigurationEditor[C]]
 
-DeviceConfigurationFactory = Callable[[], DeviceConfigurationAttrs]
+DeviceConfigurationFactory = Callable[[], DeviceConfiguration]
 
 
 @attrs.define

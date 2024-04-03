@@ -4,10 +4,10 @@ from typing import Optional, Generic, TypeVar
 from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit
 
 import caqtus.gui.qtutil.qabc as qabc
-from caqtus.device import DeviceConfigurationAttrs
+from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
 
-T = TypeVar("T", bound=DeviceConfigurationAttrs)
+T = TypeVar("T", bound=DeviceConfiguration)
 
 
 class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):

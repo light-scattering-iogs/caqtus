@@ -6,7 +6,7 @@ from typing import Protocol, Any
 import anyio
 import anyio.to_thread
 
-from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs, Device
+from caqtus.device import DeviceName, DeviceParameter, DeviceConfiguration, Device
 from caqtus.session.shot import TimeLanes
 from caqtus.types.data import DataLabel, Data
 
@@ -141,6 +141,6 @@ class ShotRunnerFactory(Protocol):
     def __call__(
         self,
         shot_timelanes: TimeLanes,
-        device_configurations: Mapping[DeviceName, DeviceConfigurationAttrs],
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ) -> ShotRunner:
         ...

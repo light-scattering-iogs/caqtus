@@ -1,9 +1,9 @@
 from typing import Any
 
-from caqtus.device import DeviceConfigurationAttrs, DeviceParameter
+from caqtus.device import DeviceConfiguration, DeviceParameter
 
 
-class MockDeviceConfiguration(DeviceConfigurationAttrs):
+class MockDeviceConfiguration(DeviceConfiguration):
     def get_device_type(self) -> str:
         raise NotImplementedError
 

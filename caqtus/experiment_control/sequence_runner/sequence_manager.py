@@ -14,7 +14,7 @@ from typing import Optional, Any
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceParameter, DeviceConfigurationAttrs
+from caqtus.device import DeviceName, DeviceParameter, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
@@ -130,7 +130,7 @@ class SequenceManager(AbstractContextManager):
         shot_retry_config: Optional[ShotRetryConfig] = None,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfigurationAttrs]
+            Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         self._session_maker = session_maker

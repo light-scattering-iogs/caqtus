@@ -7,7 +7,7 @@ from typing import TypedDict, Optional
 
 import numpy as np
 
-from caqtus.device import DeviceName, DeviceConfigurationAttrs, get_configurations_by_type
+from caqtus.device import DeviceName, DeviceConfiguration, get_configurations_by_type
 from caqtus.device.camera import CameraConfiguration
 from caqtus.device.sequencer import (
     SequencerConfiguration,
@@ -57,7 +57,7 @@ class SequencerParameterCompiler:
         step_names: Sequence[str],
         step_durations: Sequence[Expression],
         lanes: Mapping[str, TimeLane],
-        devices: Mapping[DeviceName, DeviceConfigurationAttrs],
+        devices: Mapping[DeviceName, DeviceConfiguration],
     ):
         self.steps = list(zip(step_names, step_durations))
         self.lanes = lanes
@@ -89,7 +89,7 @@ class SingleShotCompiler:
         step_durations: Sequence[Expression],
         lanes: Mapping[str, TimeLane],
         sequencer_configurations: Mapping[DeviceName, SequencerConfiguration],
-        devices: Mapping[DeviceName, DeviceConfigurationAttrs],
+        devices: Mapping[DeviceName, DeviceConfiguration],
         root_sequencer: DeviceName,
         variables: VariableNamespace,
     ):
