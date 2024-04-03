@@ -1,14 +1,17 @@
 """This module contains the :class:`DeviceConfiguration` class."""
 
 import abc
-from collections.abc import Mapping
-from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef
+from collections.abc import Mapping, Set
+from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef, TYPE_CHECKING
 
 import attrs
 
 from caqtus.device.configuration._get_generic_map import get_generic_map
 from caqtus.device.name import DeviceName
 from caqtus.device.runtime import Device
+
+if TYPE_CHECKING:
+    from caqtus.shot_compilation import SequenceContext, ShotContext
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -71,15 +74,35 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
             return device_type.__name__
 
     @abc.abstractmethod
-    def compile_device_shot_parameters(self) -> Mapping[str, Any]:
+    def compile_device_shot_parameters(
+        self,
+        sequence_context: SequenceContext,
+        shot_context: ShotContext,
+        already_compiled: Mapping[DeviceName, Mapping[str, Any]],
+    ) -> Mapping[str, Any]:
         """Compute the parameters that should be applied to the device for a shot.
 
         The parameters returned by this method will be passed to the method
         :meth:`Device.update_parameters` of the related device before the shot is run.
-        The keys in the return mapping must match the arguments of this methods.
+        The keys in the return mapping must match the arguments of this method.
+
+        Args:
+            sequence_context: Contains the information about the sequence being run.
+            shot_context: Contains the information about the shot being run.
+            already_compiled: Contains the parameters of devices that have already been
+                compiled for the current shot.
+                If a device is listed by the current device's
+                :meth:`shot_compilation_dependencies` and if this other device is
+                being used in the current shot, its parameters will be available in this
+                mapping.
         """
 
         raise NotImplementedError
+
+    def shot_compilation_dependencies(self) -> Set[DeviceName]:
+        """Return the devices whose parameters must be compiled before this device."""
+
+        return set()
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
