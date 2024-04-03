@@ -47,8 +47,14 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     )
 
     @abc.abstractmethod
-    def get_device_init_args(self, *args, **kwargs) -> Mapping[str, Any]:
-        """Return the arguments that should be passed to the device's constructor."""
+    def get_device_init_args(
+        self, device_name: DeviceName, sequence_context: SequenceContext
+    ) -> Mapping[str, Any]:
+        """Return the arguments that should be passed to the device's constructor.
+
+        Raises:
+            DeviceNotUsed: If the device is not used in the current sequence.
+        """
 
         raise NotImplementedError
 
@@ -120,3 +126,9 @@ def get_configurations_by_type(
         for name, configuration in device_configurations.items()
         if isinstance(configuration, device_type)
     }
+
+
+class DeviceNotUsedException(Exception):
+    """Raised when a device is not used in a sequence."""
+
+    pass
