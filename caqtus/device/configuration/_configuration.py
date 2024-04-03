@@ -53,7 +53,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
         """Return the arguments that should be passed to the device's constructor.
 
         Raises:
-            DeviceNotUsed: If the device is not used in the current sequence.
+            DeviceNotUsedException: If the device is not used in the current sequence.
         """
 
         raise NotImplementedError

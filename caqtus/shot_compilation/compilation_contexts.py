@@ -29,4 +29,10 @@ class SequenceContext:
         raise NotImplementedError
 
     def get_lane(self, name: str) -> TimeLane:
+        """Returns the time lane with the given name.
+
+        raises:
+            KeyError: If no lane with the given name is not found in the sequence
+            context.
+        """
         raise NotImplementedError
