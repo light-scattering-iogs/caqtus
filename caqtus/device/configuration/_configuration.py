@@ -76,6 +76,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     @abc.abstractmethod
     def compile_device_shot_parameters(
         self,
+        device_name: DeviceName,
         sequence_context: SequenceContext,
         shot_context: ShotContext,
         already_compiled: Mapping[DeviceName, Mapping[str, Any]],
@@ -87,6 +88,8 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
         The keys in the return mapping must match the arguments of this method.
 
         Args:
+            device_name: The name of the device for which the parameters are being
+                compiled.
             sequence_context: Contains the information about the sequence being run.
             shot_context: Contains the information about the shot being run.
             already_compiled: Contains the parameters of devices that have already been

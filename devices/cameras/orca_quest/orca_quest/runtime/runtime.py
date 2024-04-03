@@ -6,7 +6,7 @@ from attrs import define, field
 from attrs.setters import frozen
 from attrs.validators import instance_of
 from caqtus.device import RuntimeDevice
-from caqtus.device.camera.runtime import Camera, CameraTimeoutError
+from caqtus.device.camera import Camera, CameraTimeoutError
 from caqtus.types.image import Image
 from caqtus.utils import log_exception
 

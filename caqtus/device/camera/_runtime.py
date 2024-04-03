@@ -10,7 +10,7 @@ from attrs.validators import instance_of
 
 from caqtus.device import Device
 from caqtus.types.image import Image
-from .configuration import RectangularROI
+from ._configuration import RectangularROI
 
 logger = logging.getLogger(__name__)
 
