@@ -36,7 +36,12 @@ from caqtus.device.sequencer.instructions import (
     Concatenate,
     join,
 )
-from caqtus.session.shot import TimeLane, DigitalTimeLane, AnalogTimeLane, CameraTimeLane
+from caqtus.session.shot import (
+    TimeLane,
+    DigitalTimeLane,
+    AnalogTimeLane,
+    CameraTimeLane,
+)
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import add_unit, magnitude_in_unit
 from caqtus.types.units import Unit
