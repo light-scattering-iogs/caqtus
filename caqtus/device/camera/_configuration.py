@@ -7,7 +7,7 @@ from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils.roi import RectangularROI
 from ._runtime import Camera
 from .. import DeviceName
-from ..configuration import DeviceConfiguration
+from ..configuration import DeviceConfiguration, DeviceNotUsedException
 from ...session.shot import CameraTimeLane, TakePicture
 
 CameraType = TypeVar("CameraType", bound=Camera)
@@ -37,7 +37,13 @@ class CameraConfiguration(DeviceConfiguration, ABC):
         on_setattr=attrs.setters.validate,
     )
 
-    def get_device_init_args(self) -> CameraInitParams:
+    def get_device_init_args(
+        self, device_name: DeviceName, sequence_context: SequenceContext
+    ) -> CameraInitParams:
+        try:
+            sequence_context.get_lane(device_name)
+        except KeyError:
+            raise DeviceNotUsedException(device_name)
         return CameraInitParams(roi=self.roi, external_trigger=True, timeout=1.0)
 
     def compile_device_shot_parameters(
