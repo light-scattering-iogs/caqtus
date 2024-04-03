@@ -193,7 +193,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     path=path,
                     stats=stats,
                     creation_date=creation_date,
-                    last_query_time=datetime.datetime.now(tz=datetime.timezone.utc),
+                    last_query_time=get_update_date(),
                 ),
                 NODE_DATA_ROLE,
             )
@@ -318,9 +318,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     return
                 if stats != data.stats:
                     data.stats = stats
-                    data.last_query_time = datetime.datetime.now(
-                        tz=datetime.timezone.utc
-                    )
+                    data.last_query_time = get_update_date()
                     change_detected = True
         if change_detected:
             top_left = index.siblingAtColumn(0)
@@ -413,7 +411,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 path=data.path,
                 stats=stats,
                 creation_date=creation_date,
-                last_query_time=datetime.datetime.now(tz=datetime.timezone.utc),
+                last_query_time=get_update_date(),
             ),
             NODE_DATA_ROLE,
         )
@@ -506,3 +504,7 @@ def _format_seconds(seconds: float) -> str:
                 result.append(f"{days}d")
 
     return ":".join(reversed(result))
+
+
+def get_update_date() -> datetime.datetime:
+    return datetime.datetime.now(tz=datetime.timezone.utc).replace(microsecond=0)
