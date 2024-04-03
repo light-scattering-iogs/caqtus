@@ -5,7 +5,7 @@ from typing import Any
 import attrs
 
 from caqtus.device import DeviceParameter
-from caqtus.device.camera.configuration import CameraConfiguration
+from caqtus.device.camera import CameraConfiguration
 from caqtus.utils import serialization
 
 
