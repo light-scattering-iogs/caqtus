@@ -1,6 +1,6 @@
 import importlib.metadata
 
-from .device import Device
+from ._device import Device
 
 
 def load_installed_devices() -> dict[str, type[Device]]:

@@ -8,11 +8,13 @@ P = ParamSpec("P")
 
 @runtime_checkable
 class Device(Protocol[P]):
-    """Defines the interface that a device must satisfy.
+    """Wraps a low-level instrument that can be controlled during an experiment.
 
-    This is a runtime checkable protocol so that we can test at runtime is an object has
-    all the required methods and implement this interface, even if it not a direct
-    subclass of Device.
+    This abstract class defines the necessary methods that a device must implement to be
+    used in an experiment.
+
+
+
     """
 
     def get_name(self) -> DeviceName:
@@ -28,19 +30,17 @@ class Device(Protocol[P]):
         return self.get_name()
 
     def __enter__(self) -> Self:
-        """Initiate the communication to the device.
+        """Initialize the device.
 
-        Starts the device and acquire the necessary resources.
+        Used to establish communication to the device and allocate the necessary
+        resources.
+        No initialization should be done in the constructor.
         """
 
         ...
 
     def update_parameters(self, *args: P.args, **kwargs: P.kwargs) -> None:
-        """Apply new values for some parameters of the device.
-
-        This method is meant to be reimplemented for each specific device.
-        It can be called as many times as needed.
-        """
+        """Apply new values for some parameters of the device."""
 
         ...
 
