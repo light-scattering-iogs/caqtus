@@ -1,17 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar, ParamSpec, Generic
+from typing import ClassVar
 
 import attrs
 
 from caqtus.device.runtime import Device
-from ..configuration import Trigger
+from ..configuration import Trigger, is_trigger
 from ..instructions import SequencerInstruction
-
-P = ParamSpec("P")
 
 
 @attrs.define(slots=False)
-class Sequencer(Device, ABC, Generic[P]):
+class Sequencer(Device, ABC):
     """Base class for all sequencers.
 
     Fields:
@@ -32,14 +30,16 @@ class Sequencer(Device, ABC, Generic[P]):
     _sequence_programmed: bool = attrs.field(default=False, init=False)
     _sequence_started: bool = attrs.field(default=False, init=False)
 
+    @trigger.validator  # type: ignore
+    def _validate_trigger(self, _, value):
+        if not is_trigger(value):
+            raise ValueError(f"Invalid trigger {value}")
+
     @abstractmethod
     def update_parameters(
-        self, sequence: SequencerInstruction, *args: P.args, **kwargs: P.kwargs
+        self, sequence: SequencerInstruction, *args, **kwargs
     ) -> None:
         """Update the parameters of the sequencer.
-
-        To be subclassed by the specific sequencer implementation.
-        The base class implementation sets _sequence_programmed to True.
 
         Args:
             sequence: The sequence to be programmed into the sequencer.
@@ -47,7 +47,7 @@ class Sequencer(Device, ABC, Generic[P]):
 
         if sequence.width != self.channel_number:
             raise ValueError(
-                f"Invalid number of channels. Expected {self.channel_number}, got"
+                f"Invalid number of channels, expected {self.channel_number} but got"
                 f" {sequence.width}."
             )
 

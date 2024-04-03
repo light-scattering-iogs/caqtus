@@ -1,5 +1,4 @@
 import abc
-from abc import abstractmethod
 from contextlib import ExitStack, AbstractContextManager
 from typing import ClassVar, Optional, TypeVar, Self
 
@@ -77,19 +76,6 @@ class RuntimeDevice(Device, abc.ABC):
                 f"before entering context managers."
             )
         return self._close_stack.enter_context(cm)
-
-    @abstractmethod
-    def update_parameters(self, *_, **kwargs) -> None:
-        """Apply new values for some parameters of the device.
-
-        This method is meant to be reimplemented for each specific device.
-        It can be called as many times as needed.
-        The base class implementation updates the device attributes with the new values
-        passed as keyword arguments.
-        """
-
-        for name, value in kwargs.items():
-            setattr(self, name, value)
 
     def close(self) -> None:
         """Close the communication to the device and free the resources used.

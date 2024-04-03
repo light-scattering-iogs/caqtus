@@ -25,6 +25,7 @@ from .trigger import (
     ExternalClock,
     ExternalClockOnChange,
     TriggerEdge,
+    is_trigger,
 )
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "ValueSource",
     "is_value_source",
     "TimeIndependentMapping",
+    "is_trigger",
 ]
