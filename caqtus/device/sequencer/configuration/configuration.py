@@ -27,20 +27,6 @@ class ChannelConfiguration(ABC):
     )
 
 
-# def color_unstructure(color: Color):
-#     return color.original()
-#
-#
-# serialization.register_unstructure_hook(Color, color_unstructure)
-#
-#
-# def color_structure(color: Any, _) -> Color:
-#     return Color(color)
-#
-#
-# serialization.register_structure_hook(Color, color_structure)
-
-
 @attrs.define
 class DigitalChannelConfiguration(ChannelConfiguration):
     def __str__(self):
