@@ -1,5 +1,5 @@
-from abc import ABC
-from typing import TypeVar, TypedDict
+import abc
+from typing import TypeVar, TypedDict, Generic
 
 import attrs
 
@@ -25,7 +25,9 @@ class CameraUpdateParams(TypedDict):
 
 
 @attrs.define
-class CameraConfiguration(DeviceConfiguration, ABC):
+class CameraConfiguration(
+    DeviceConfiguration[CameraType], abc.ABC, Generic[CameraType]
+):
     """Contains the necessary information about a camera.
 
     Attributes:
@@ -37,6 +39,7 @@ class CameraConfiguration(DeviceConfiguration, ABC):
         on_setattr=attrs.setters.validate,
     )
 
+    @abc.abstractmethod
     def get_device_init_args(
         self, device_name: DeviceName, sequence_context: SequenceContext
     ) -> CameraInitParams:
@@ -46,6 +49,7 @@ class CameraConfiguration(DeviceConfiguration, ABC):
             raise DeviceNotUsedException(device_name)
         return CameraInitParams(roi=self.roi, external_trigger=True, timeout=1.0)
 
+    @abc.abstractmethod
     def compile_device_shot_parameters(
         self,
         device_name: DeviceName,
