@@ -10,6 +10,15 @@ from caqtus.types.variable_name import DottedVariableName
 
 @attrs.define(slots=False)
 class ShotContext:
+    def get_lane(self, name: str) -> TimeLane:
+        """Returns the lane with the given name for the shot.
+
+        raises:
+            KeyError: If no lane with the given name is present for the shot.
+        """
+
+        raise NotImplementedError
+
     def get_step_durations(self) -> list[float]:
         raise NotImplementedError
 
