@@ -5,6 +5,16 @@ import numpy as np
 
 from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.shot_compilation.lane_compilers.evaluate_step_durations import (
+    evaluate_step_durations,
+)
+from caqtus.shot_compilation.lane_compilers.timing import (
+    get_step_bounds,
+    start_tick,
+    stop_tick,
+    number_ticks,
+    ns,
+)
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     AnalogValue,
@@ -14,9 +24,8 @@ from caqtus.types.parameter import (
 )
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName
-from .evaluate_step_durations import evaluate_step_durations
-from .timing import get_step_bounds, start_tick, stop_tick, number_ticks, ns
-from ..variable_namespace import VariableNamespace
+from .compilation_contexts import ShotContext
+from .variable_namespace import VariableNamespace
 
 TIME_VARIABLE = VariableName("t")
 
@@ -27,22 +36,12 @@ class AnalogLaneCompiler:
     def __init__(
         self,
         lane: AnalogTimeLane,
-        step_names: Sequence[str],
-        step_durations: Sequence[Expression],
         unit: Optional[str],
+        time_step: int,
+        shot_context: ShotContext,
     ):
-        """
-
-        Args:
-            lane: The lane to compile by replacing the expressions inside it when given
-            the variable values.
-            step_names: The names of the steps in the lane. Must be the same length as
-            the lane.
-            step_durations: The durations to be evaluated of the steps in the lane.
-            Must be the same length as the lane.
-            unit: The unit in which the sequencer instruction should be returned.
-            Can be None if the lane is dimensionless.
-        """
+        step_names = shot_context.get_step_names()
+        step_durations = shot_context.get_step_durations()
         if len(lane) != len(step_names):
             raise ValueError(
                 f"Number of steps in lane ({len(lane)}) does not match number of"
