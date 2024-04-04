@@ -1,7 +1,7 @@
 """This module contains the :class:`DeviceConfiguration` class."""
 
 import abc
-from collections.abc import Mapping, Set
+from collections.abc import Mapping
 from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef, TYPE_CHECKING
 
 import attrs
@@ -58,6 +58,26 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def compile_device_shot_parameters(
+        self,
+        device_name: DeviceName,
+        shot_context: ShotContext,
+    ) -> Mapping[str, Any]:
+        """Compute the parameters that should be applied to the device for a shot.
+
+        The parameters returned by this method will be passed to the method
+        :meth:`Device.update_parameters` of the related device before the shot is run.
+        The keys in the return mapping must match the arguments of this method.
+
+        Args:
+            device_name: The name of the device for which the parameters are being
+                compiled.
+            shot_context: Contains the information about the shot being run.
+        """
+
+        raise NotImplementedError
+
     def get_device_type(self) -> str:
         """Return the runtime type of the device.
 
@@ -78,40 +98,6 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
             return device_type.__forward_arg__
         else:
             return device_type.__name__
-
-    @abc.abstractmethod
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        sequence_context: SequenceContext,
-        shot_context: ShotContext,
-        already_compiled: Mapping[DeviceName, Mapping[str, Any]],
-    ) -> Mapping[str, Any]:
-        """Compute the parameters that should be applied to the device for a shot.
-
-        The parameters returned by this method will be passed to the method
-        :meth:`Device.update_parameters` of the related device before the shot is run.
-        The keys in the return mapping must match the arguments of this method.
-
-        Args:
-            device_name: The name of the device for which the parameters are being
-                compiled.
-            sequence_context: Contains the information about the sequence being run.
-            shot_context: Contains the information about the shot being run.
-            already_compiled: Contains the parameters of devices that have already been
-                compiled for the current shot.
-                If a device is listed by the current device's
-                :meth:`shot_compilation_dependencies` and if this other device is
-                being used in the current shot, its parameters will be available in this
-                mapping.
-        """
-
-        raise NotImplementedError
-
-    def shot_compilation_dependencies(self) -> Set[DeviceName]:
-        """Return the devices whose parameters must be compiled before this device."""
-
-        return set()
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
