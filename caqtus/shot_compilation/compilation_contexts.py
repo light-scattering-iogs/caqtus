@@ -44,10 +44,20 @@ class ShotContext:
         self._was_lane_used[name] = True
         return result
 
+    def get_step_names(self) -> tuple[str, ...]:
+        """Returns the names of the steps in the shot."""
+
+        return tuple(self._time_lanes.step_names)
+
     def get_step_durations(self) -> tuple[float, ...]:
         """Returns the durations of each step in seconds."""
 
         return self._step_durations
+
+    def get_step_bounds(self) -> tuple[float, ...]:
+        """Returns the bounds of each step in seconds."""
+
+        return self._step_bounds
 
     def get_shot_duration(self) -> float:
         """Returns the total duration of the shot in seconds."""
@@ -55,6 +65,12 @@ class ShotContext:
         return self._step_bounds[-1]
 
     def get_variables(self) -> Mapping[DottedVariableName, Any]:
+        raise NotImplementedError
+
+    def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
+        raise NotImplementedError
+
+    def get_shot_parameters(self, device_name: DeviceName) -> Mapping[str, Any]:
         raise NotImplementedError
 
 
