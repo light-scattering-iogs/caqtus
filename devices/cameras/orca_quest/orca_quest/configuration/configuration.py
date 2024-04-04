@@ -1,16 +1,26 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import attrs
 
-from caqtus.device import DeviceParameter
-from caqtus.device.camera import CameraConfiguration
+from caqtus.device import DeviceName
+from caqtus.device.camera import (
+    CameraConfiguration,
+    CameraUpdateParams,
+)
+from caqtus.shot_compilation import ShotContext
 from caqtus.utils import serialization
+
+if TYPE_CHECKING:
+    # We avoid importing the runtime module because it imports the dcam dependency that
+    # might not be installed in the current environment.
+    # noinspection PyUnresolvedReferences
+    from ..runtime import OrcaQuestCamera
 
 
 @attrs.define
-class OrcaQuestCameraConfiguration(CameraConfiguration):
+class OrcaQuestCameraConfiguration(CameraConfiguration["OrcaQuestCamera"]):
     """Holds the configuration for an OrcaQuest camera.
 
     Attributes:
@@ -19,16 +29,17 @@ class OrcaQuestCameraConfiguration(CameraConfiguration):
 
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
 
-    @classmethod
-    def get_device_type(cls) -> str:
-        return "OrcaQuestCamera"
-
-    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
-        extra = {
-            DeviceParameter("camera_number"): self.camera_number,
-            DeviceParameter("timeout"): 1,
+    def get_device_init_args(self, device_name, sequence_context):
+        return super().get_device_init_args(device_name, sequence_context) | {
+            "camera_number": self.camera_number
         }
-        return super().get_device_init_args() | extra
+
+    def compile_device_shot_parameters(
+        self,
+        device_name: DeviceName,
+        shot_context: ShotContext,
+    ) -> CameraUpdateParams:
+        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, config: OrcaQuestCameraConfiguration) -> serialization.JSON:
