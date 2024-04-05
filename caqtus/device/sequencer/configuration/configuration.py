@@ -7,7 +7,12 @@ import attrs
 import numpy as np
 
 from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
-from caqtus.shot_compilation import SequenceContext, ShotContext, compile_analog_lane
+from caqtus.shot_compilation import (
+    SequenceContext,
+    ShotContext,
+    compile_analog_lane,
+    compile_digital_lane,
+)
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit
@@ -286,9 +291,7 @@ def _(
                 f"{required_unit:~}"
             )
         with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
-            lane_values = evaluate_digital_lane_output(
-                lane, required_time_step, shot_context
-            )
+            lane_values = compile_digital_lane(lane, required_time_step, shot_context)
     elif isinstance(lane, AnalogTimeLane):
         with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
             lane_values = compile_analog_lane(
