@@ -24,7 +24,6 @@ class Sequencer(Device, ABC):
     )
     trigger: Trigger = attrs.field(
         on_setattr=attrs.setters.frozen,
-        validator=attrs.validators.instance_of(Trigger),
     )
 
     _sequence_programmed: bool = attrs.field(default=False, init=False)
