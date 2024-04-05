@@ -1,17 +1,21 @@
+from collections.abc import Mapping
 from typing import ClassVar, Any, Self
 
 import attrs
 
-from caqtus.device import DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     DigitalChannelConfiguration,
 )
+from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
+from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils import serialization
+from ..runtime import SwabianPulseStreamer
 
 
 @attrs.define
-class SwabianPulseStreamerConfiguration(SequencerConfiguration):
+class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStreamer]):
     number_channels: ClassVar[int] = 8
 
     ip_address: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
@@ -28,15 +32,19 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
     def channel_types(cls) -> tuple[type[DigitalChannelConfiguration], ...]:
         return (DigitalChannelConfiguration,) * cls.number_channels
 
-    def get_device_type(self) -> str:
-        return "SwabianPulseStreamer"
-
-    def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
-        extra = {
-            DeviceParameter("ip_address"): self.ip_address,
-            DeviceParameter("time_step"): self.time_step,
+    def get_device_init_args(
+        self, device_name: DeviceName, sequence_context: SequenceContext
+    ) -> Mapping[str, Any]:
+        return super().get_device_init_args(device_name, sequence_context) | {
+            "ip_address": self.ip_address,
         }
-        return super().get_device_init_args(*args, **kwargs) | extra
+
+    def compile_device_shot_parameters(
+        self,
+        device_name: DeviceName,
+        shot_context: ShotContext,
+    ) -> SequencerUpdateParams:
+        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, config: Self) -> serialization.JSON:

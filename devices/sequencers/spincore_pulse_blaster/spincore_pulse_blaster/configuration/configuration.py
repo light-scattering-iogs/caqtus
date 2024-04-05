@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, ClassVar, Type
 
 import attrs
-from caqtus.device import DeviceParameter
+
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
 )
+from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
+from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils import serialization
+from ..runtime import SpincorePulseBlaster
 
 
 @attrs.define
-class SpincoreSequencerConfiguration(SequencerConfiguration):
+class SpincoreSequencerConfiguration(SequencerConfiguration[SpincorePulseBlaster]):
     """Holds the static configuration of a spincore sequencer device.
 
     Fields:
@@ -47,15 +52,19 @@ class SpincoreSequencerConfiguration(SequencerConfiguration):
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    def get_device_type(self) -> str:
-        return "SpincorePulseBlaster"
-
-    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
-        extra = {
-            DeviceParameter("board_number"): self.board_number,
-            DeviceParameter("time_step"): self.time_step,
+    def get_device_init_args(
+        self, device_name: DeviceName, sequence_context: SequenceContext
+    ) -> Mapping[str, Any]:
+        return super().get_device_init_args(device_name, sequence_context) | {
+            "board_number": self.board_number,
         }
-        return super().get_device_init_args() | extra
+
+    def compile_device_shot_parameters(
+        self,
+        device_name: DeviceName,
+        shot_context: ShotContext,
+    ) -> SequencerUpdateParams:
+        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, configuration: SpincoreSequencerConfiguration) -> serialization.JSON:

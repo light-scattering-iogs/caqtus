@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, ClassVar, Type
 
 import attrs
-from caqtus.device import DeviceParameter
+
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerConfiguration, AnalogChannelConfiguration
+from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
+from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils import serialization
+from ..runtime import NI6738AnalogCard
 
 
 @attrs.define
-class NI6738SequencerConfiguration(SequencerConfiguration):
+class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
     @classmethod
     def channel_types(cls) -> tuple[Type[AnalogChannelConfiguration], ...]:
         return (AnalogChannelConfiguration,) * cls.number_channels
@@ -40,15 +45,19 @@ class NI6738SequencerConfiguration(SequencerConfiguration):
                     " compatible with Volt"
                 )
 
-    def get_device_type(self) -> str:
-        return "NI6738AnalogCard"
-
-    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
-        extra = {
-            DeviceParameter("device_id"): self.device_id,
-            DeviceParameter("time_step"): self.time_step,
+    def get_device_init_args(
+        self, device_name: DeviceName, sequence_context: SequenceContext
+    ) -> Mapping[str, Any]:
+        return super().get_device_init_args(device_name, sequence_context) | {
+            "device_id": self.device_id,
         }
-        return super().get_device_init_args() | extra
+
+    def compile_device_shot_parameters(
+        self,
+        device_name: DeviceName,
+        shot_context: ShotContext,
+    ) -> SequencerUpdateParams:
+        return super().compile_device_shot_parameters(device_name, shot_context)
 
     @classmethod
     def dump(cls, obj: NI6738SequencerConfiguration) -> serialization.JSON:
