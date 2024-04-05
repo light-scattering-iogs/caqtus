@@ -84,6 +84,7 @@ SequencerType = TypeVar("SequencerType", bound=Sequencer)
 
 
 class SequencerInitParams(TypedDict):
+    time_step: int
     trigger: Trigger
 
 
@@ -140,13 +141,15 @@ class SequencerConfiguration(
     def __getitem__(self, item):
         return self.channels[item]
 
+    @abstractmethod
     def get_device_init_args(
         self, device_name: DeviceName, sequence_context: SequenceContext
     ) -> SequencerInitParams:
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
-        return {"trigger": self.trigger}
+        return {"time_step": self.time_step, "trigger": self.trigger}
 
+    @abstractmethod
     def compile_device_shot_parameters(
         self,
         device_name: DeviceName,
