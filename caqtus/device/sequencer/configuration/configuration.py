@@ -422,25 +422,6 @@ def evaluate_delayed_output(
     )
 
 
-def evaluate_digital_lane_output(
-    lane: DigitalTimeLane, time_step: int, shot_context: ShotContext
-) -> SequencerInstruction[np.bool_]:
-    assert isinstance(lane, DigitalTimeLane)
-    compiler = DigitalLaneCompiler(lane, self.step_names, self.step_durations)
-    lane_output = compiler.compile(self.variables, time_step)
-    assert lane_output.dtype == np.dtype("bool")
-    return lane_output
-
-
-def evaluate_analog_lane_output(
-    lane: AnalogTimeLane,
-    time_step: int,
-    target_unit: Optional[Unit],
-    shot_context: ShotContext,
-) -> SequencerInstruction[np.floating]:
-    return
-
-
 class SequencerCompilationError(Exception):
     pass
 
