@@ -11,7 +11,6 @@ from caqtus.device import (
 from caqtus.device.camera import CameraConfiguration
 from caqtus.session.shot import TimeLanes, TimeLane
 from caqtus.session.shot.timelane import CameraTimeLane
-from .camera_parameter_compiler import CamerasParameterCompiler
 from .shot_compiler import ShotCompiler
 from .variable_namespace import VariableNamespace
 
