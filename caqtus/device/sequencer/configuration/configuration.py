@@ -7,7 +7,7 @@ import attrs
 import numpy as np
 
 from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
-from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.shot_compilation import SequenceContext, ShotContext, compile_analog_lane
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit
@@ -117,8 +117,7 @@ class SequencerConfiguration(
 
     @classmethod
     @abstractmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
-        ...
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]: ...
 
     @channels.validator  # type: ignore
     def validate_channels(self, _, channels):
@@ -292,8 +291,8 @@ def _(
             )
     elif isinstance(lane, AnalogTimeLane):
         with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
-            lane_values = evaluate_analog_lane_output(
-                lane, required_time_step, required_unit, shot_context
+            lane_values = compile_analog_lane(
+                lane, required_unit, required_time_step, shot_context
             )
     else:
         raise TypeError(f"Cannot evaluate values of lane with type {type(lane)}")
@@ -436,11 +435,7 @@ def evaluate_analog_lane_output(
     target_unit: Optional[Unit],
     shot_context: ShotContext,
 ) -> SequencerInstruction[np.floating]:
-    compiler = AnalogLaneCompiler(
-        lane, self.step_names, self.step_durations, target_unit
-    )
-    lane_output = compiler.compile(self.variables, time_step)
-    return lane_output
+    return
 
 
 class SequencerCompilationError(Exception):
