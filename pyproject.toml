@@ -42,6 +42,10 @@ typing-extensions = "^4.10.0"
 pytest = "^8.1.1"
 hypothesis = "^6.99.12"
 pytest-qt = "^4.4.0"
+ni6738-analog-card = {path = "devices/sequencers/ni6738_analog_card", develop = true}
+spincore-pulse-blaster = {path = "devices/sequencers/spincore_pulse_blaster", develop = true}
+swabian-pulse-streamer = {path = "devices/sequencers/swabian_pulse_streamer", develop = true}
+orca-quest = {path = "devices/cameras/orca_quest", develop = true}
 
 
 [tool.poetry.group.doc.dependencies]
