@@ -6,8 +6,10 @@ from ..runtime import Device
 
 DeviceType = TypeVar("DeviceType", bound=Device)
 
+ShotParametersType = TypeVar("ShotParametersType")
 
-class DeviceController(Generic[DeviceType], abc.ABC):
+
+class DeviceController(Generic[DeviceType, ShotParametersType], abc.ABC):
     """Controls a device during a shot."""
 
     def __init__(
@@ -24,6 +26,11 @@ class DeviceController(Generic[DeviceType], abc.ABC):
 
         self.event_dispatcher.signal_device_ready(self.device_name)
 
+    async def wait_all_devices_ready(self) -> None:
+        """Waits for all devices to be ready to run the shot."""
+
+        await self.event_dispatcher.wait_all_devices_ready()
+
     @abc.abstractmethod
-    async def run_shot(self) -> None:
+    async def run_shot(self, shot_parameters: ShotParametersType) -> None:
         self.signal_ready()
