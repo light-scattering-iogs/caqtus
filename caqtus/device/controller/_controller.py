@@ -8,9 +8,9 @@ import anyio
 import anyio.to_thread
 
 from caqtus.shot_event_dispatcher import ShotEventDispatcher
-from .. import DeviceName
+from caqtus.types.data import DataLabel, Data
+from ..name import DeviceName
 from ..runtime import Device
-from ...types.data import DataLabel, Data
 
 DeviceType = TypeVar("DeviceType", bound=Device)
 
@@ -20,7 +20,7 @@ _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
 
-class DeviceController(Generic[DeviceType, ShotParametersType], abc.ABC):
+class DeviceController(Generic[DeviceType, _P], abc.ABC):
     """Controls a device during a shot."""
 
     def __init__(
@@ -28,13 +28,12 @@ class DeviceController(Generic[DeviceType, ShotParametersType], abc.ABC):
         device_name: DeviceName,
         shot_event_dispatcher: ShotEventDispatcher,
     ):
-        #
         self.device_name = device_name
         self.event_dispatcher = shot_event_dispatcher
 
     @abc.abstractmethod
     async def run_shot(
-        self, device: DeviceType, shot_parameters: ShotParametersType
+        self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
     ) -> None:
         """Runs a shot on the device.
 

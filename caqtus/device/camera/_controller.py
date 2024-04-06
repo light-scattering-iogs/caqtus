@@ -1,5 +1,3 @@
-import dataclasses
-
 from caqtus.device.controller import (
     DeviceController,
     run_in_thread,
@@ -10,22 +8,21 @@ from caqtus.types.data import DataLabel
 from ._runtime import Camera
 
 
-class CameraShotParameters(dataclasses.dataclass):
-    timeout: float
-    picture_names: list[str]
-    exposures: list[float]
-
-
 class CameraController(DeviceController[Camera]):
     async def run_shot(
-        self, device: Camera, shot_parameters: CameraShotParameters
+        self,
+        camera: Camera,
+        /,
+        timeout: float,
+        picture_names: list[str],
+        exposures: list[float],
     ) -> None:
-        await run_in_thread(device.update_parameters, timeout=shot_parameters.timeout)
+        await run_in_thread(camera.update_parameters, timeout=timeout)
 
-        async with async_context(device.acquire(shot_parameters.exposures)) as pictures:
+        async with async_context(camera.acquire(exposures)) as pictures:
             self.signal_ready()
             async for name, picture in iterate_async(
-                zip(shot_parameters.picture_names, pictures, strict=True)
+                zip(picture_names, pictures, strict=True)
             ):
                 self.signal_data_acquired(
                     DataLabel(rf"{self.device_name}\{name}"), picture
