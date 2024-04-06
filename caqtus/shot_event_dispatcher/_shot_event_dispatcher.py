@@ -45,3 +45,17 @@ class ShotEventDispatcher:
             self._acquired_data[label] = data
             if label in self._acquisition_events:
                 self._acquisition_events[label].set()
+
+    def waiting_on_data(self) -> Set[DataLabel]:
+        return set(
+            label
+            for label, event in self._acquisition_events.items()
+            if not event.is_set()
+        )
+
+    def acquired_data(self) -> dict[DataLabel, Data]:
+        if not_acquired := self.waiting_on_data():
+            raise RuntimeError(
+                f"Still waiting on data acquisition for labels {not_acquired}"
+            )
+        return self._acquired_data
