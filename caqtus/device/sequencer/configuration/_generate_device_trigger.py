@@ -7,8 +7,8 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from .. import SequencerConfiguration
-from ..configuration import ExternalClockOnChange, ExternalTriggerStart
+from .configuration import SequencerConfiguration
+from .trigger import ExternalClockOnChange, ExternalTriggerStart
 from ..instructions import SequencerInstruction, Pattern, Concatenate, join, Repeat
 from ...camera import CameraConfiguration
 

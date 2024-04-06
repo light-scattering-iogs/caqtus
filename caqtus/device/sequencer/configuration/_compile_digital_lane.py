@@ -3,8 +3,8 @@ import numpy as np
 from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from caqtus.session.shot.timelane import DigitalTimeLane
 from caqtus.types.expression import Expression
-from .compilation_contexts import ShotContext
-from .lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.compilation_contexts import ShotContext
+from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 
 
 def compile_digital_lane(

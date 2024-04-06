@@ -6,9 +6,9 @@ from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef, TYPE_CH
 
 import attrs
 
-from caqtus.device.configuration._get_generic_map import get_generic_map
 from caqtus.device.name import DeviceName
 from caqtus.device.runtime import Device
+from ._get_generic_map import get_generic_map
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import SequenceContext, ShotContext
@@ -48,7 +48,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
     @abc.abstractmethod
     def get_device_init_args(
-        self, device_name: DeviceName, sequence_context: SequenceContext
+        self, device_name: DeviceName, sequence_context: "SequenceContext"
     ) -> Mapping[str, Any]:
         """Return the arguments that should be passed to the device's constructor.
 
@@ -62,7 +62,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     def compile_device_shot_parameters(
         self,
         device_name: DeviceName,
-        shot_context: ShotContext,
+        shot_context: "ShotContext",
     ) -> Mapping[str, Any]:
         """Compute the parameters that should be applied to the device for a shot.
 

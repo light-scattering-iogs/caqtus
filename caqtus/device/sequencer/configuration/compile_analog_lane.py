@@ -20,7 +20,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from .compilation_contexts import ShotContext
+from caqtus.shot_compilation.compilation_contexts import ShotContext
 
 TIME_VARIABLE = VariableName("t")
 
