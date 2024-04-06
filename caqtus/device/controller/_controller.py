@@ -10,13 +10,13 @@ class DeviceController(abc.ABC):
     def __init__(
         self, device_name: DeviceName, shot_event_dispatcher: ShotEventDispatcher
     ):
-        self._shot_event_dispatcher = shot_event_dispatcher
+        self.event_dispatcher = shot_event_dispatcher
         self._device_name = device_name
 
     def signal_ready(self) -> None:
         """Indicates that the device has been programed and is ready to run the shot."""
 
-        self._shot_event_dispatcher.signal_device_ready(self._device_name)
+        self.event_dispatcher.signal_device_ready(self._device_name)
 
     @abc.abstractmethod
     async def run_shot(self) -> None:
