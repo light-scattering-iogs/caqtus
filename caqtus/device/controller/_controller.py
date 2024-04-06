@@ -1,5 +1,10 @@
 import abc
-from typing import Generic, TypeVar
+import functools
+from collections.abc import Callable
+from typing import Generic, TypeVar, ParamSpec
+
+import anyio
+import anyio.to_thread
 
 from caqtus.shot_event_dispatcher import ShotEventDispatcher
 from ..runtime import Device
@@ -7,6 +12,9 @@ from ..runtime import Device
 DeviceType = TypeVar("DeviceType", bound=Device)
 
 ShotParametersType = TypeVar("ShotParametersType")
+
+_T = TypeVar("_T")
+_P = ParamSpec("_P")
 
 
 class DeviceController(Generic[DeviceType, ShotParametersType], abc.ABC):
@@ -30,6 +38,14 @@ class DeviceController(Generic[DeviceType, ShotParametersType], abc.ABC):
         """Waits for all devices to be ready to run the shot."""
 
         await self.event_dispatcher.wait_all_devices_ready()
+
+    async def run_in_thread(
+        self, func: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
+    ) -> _T:
+        return await anyio.to_thread.run_sync(functools.partial(func, *args, **kwargs))
+
+    async def sleep(self, seconds: float) -> None:
+        await anyio.sleep(seconds)
 
     @abc.abstractmethod
     async def run_shot(self, shot_parameters: ShotParametersType) -> None:
