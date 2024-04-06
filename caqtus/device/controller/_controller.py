@@ -1,22 +1,28 @@
 import abc
+from typing import Generic, TypeVar
 
-from caqtus.device import DeviceName
 from caqtus.shot_event_dispatcher import ShotEventDispatcher
+from ..runtime import Device
+
+DeviceType = TypeVar("DeviceType", bound=Device)
 
 
-class DeviceController(abc.ABC):
+class DeviceController(Generic[DeviceType], abc.ABC):
     """Controls a device during a shot."""
 
     def __init__(
-        self, device_name: DeviceName, shot_event_dispatcher: ShotEventDispatcher
+        self,
+        device: DeviceType,
+        shot_event_dispatcher: ShotEventDispatcher,
     ):
+        self.device = device
+        self.device_name = device.get_name()
         self.event_dispatcher = shot_event_dispatcher
-        self._device_name = device_name
 
     def signal_ready(self) -> None:
         """Indicates that the device has been programed and is ready to run the shot."""
 
-        self.event_dispatcher.signal_device_ready(self._device_name)
+        self.event_dispatcher.signal_device_ready(self.device_name)
 
     @abc.abstractmethod
     async def run_shot(self) -> None:
