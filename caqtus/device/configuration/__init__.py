@@ -4,6 +4,9 @@ from ._configuration import (
     DeviceServerName,
     DeviceNotUsedException,
     DeviceConfigType,
+    LocalProcessInitialization,
+    RemoteProcessInitialization,
+    DeviceInitializationMethod,
 )
 from ._parameter import DeviceParameter
 
@@ -14,4 +17,7 @@ __all__ = [
     "DeviceServerName",
     "DeviceNotUsedException",
     "DeviceConfigType",
+    "LocalProcessInitialization",
+    "RemoteProcessInitialization",
+    "DeviceInitializationMethod",
 ]
