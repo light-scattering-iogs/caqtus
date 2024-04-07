@@ -56,7 +56,7 @@ class ShotContext:
 
         return {
             name: lane
-            for name, lane in self._time_lanes.lanes
+            for name, lane in self._time_lanes.lanes.items()
             if isinstance(lane, lane_type)
         }
 
