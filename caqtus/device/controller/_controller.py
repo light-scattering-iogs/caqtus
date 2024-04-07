@@ -31,15 +31,17 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self.device_name = device_name
         self.event_dispatcher = shot_event_dispatcher
 
-    @abc.abstractmethod
     async def run_shot(
         self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
     ) -> None:
         """Runs a shot on the device.
 
         This method must call :meth:`signal_ready` exactly once.
+        The default method simply call :meth:`Device.update_parameters` with the
+        arguments passed before the shot is launched.
         """
 
+        device.update_parameters(*args, **kwargs)
         self.signal_ready()
 
     def signal_ready(self) -> None:

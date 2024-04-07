@@ -113,9 +113,8 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
                 init_kwargs={},
             )
 
-    @abc.abstractmethod
     def get_controller_type(self) -> type[DeviceController]:
-        raise NotImplementedError
+        return DeviceController
 
     @abc.abstractmethod
     def compile_device_shot_parameters(
