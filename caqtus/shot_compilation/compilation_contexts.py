@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Iterable
-from typing import Any
+from typing import Any, TypeVar
 
 import attrs
 
@@ -9,6 +9,8 @@ from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
+
+LaneType = TypeVar("LaneType", bound=TimeLane)
 
 
 @attrs.define
@@ -48,6 +50,15 @@ class ShotContext:
         result = self._time_lanes.lanes[name]
         self._was_lane_used[name] = True
         return result
+
+    def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
+        """Returns the lanes used during the shot with the given type."""
+
+        return {
+            name: lane
+            for name, lane in self._time_lanes.lanes
+            if isinstance(lane, lane_type)
+        }
 
     def get_step_names(self) -> tuple[str, ...]:
         """Returns the names of the steps in the shot."""
