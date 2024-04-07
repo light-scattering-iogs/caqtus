@@ -1,15 +1,18 @@
 import functools
-from typing import assert_never
+from typing import assert_never, TYPE_CHECKING
 
 import numpy as np
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.camera import CameraConfiguration
+from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTriggerStart
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTriggerStart
 from ..instructions import SequencerInstruction, Pattern, Concatenate, join, Repeat
+
+if TYPE_CHECKING:
+    from .configuration import SequencerConfiguration
 
 
 def evaluate_device_trigger(
@@ -54,7 +57,7 @@ def evaluate_device_trigger(
 
 def evaluate_trigger_for_sequencer(
     slave: DeviceName,
-    slave_config: SequencerConfiguration,
+    slave_config: "SequencerConfiguration",
     master_time_step: int,
     shot_context: ShotContext,
 ) -> SequencerInstruction[np.bool_]:

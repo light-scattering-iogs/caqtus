@@ -17,6 +17,7 @@ from caqtus.device.configuration import DeviceConfiguration
 from caqtus.device.name import DeviceName
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
+from ._evaluate_output import evaluate_output, _evaluate_expression_in_unit
 from .channel_output import (
     ChannelOutput,
     is_channel_output,

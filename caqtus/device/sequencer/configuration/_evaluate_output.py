@@ -2,16 +2,18 @@ import functools
 from collections.abc import Mapping
 from typing import (
     Optional,
-    TYPE_CHECKING,
     Any,
 )
 
 import numpy as np
 
 from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
+from caqtus.shot_compilation import (
+    ShotContext,
+)
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import magnitude_in_unit
+from caqtus.types.parameter import magnitude_in_unit, add_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import add_exc_note
@@ -29,11 +31,6 @@ from .channel_output import (
 from .compile_analog_lane import compile_analog_lane
 from ..instructions import SequencerInstruction, Pattern
 
-if TYPE_CHECKING:
-    from caqtus.shot_compilation import (
-        ShotContext,
-    )
-
 
 @functools.singledispatch
 def evaluate_output(
@@ -42,7 +39,7 @@ def evaluate_output(
     required_unit: Optional[Unit],
     prepend: int,
     append: int,
-    shot_context: ShotContext,
+    shot_context: "ShotContext",
 ) -> SequencerInstruction:
     """Evaluate the output of a channel with the required parameters.
 

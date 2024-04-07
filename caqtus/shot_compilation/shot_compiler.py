@@ -19,7 +19,11 @@ class ShotCompiler(Protocol):
     def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> Mapping[DeviceName, Mapping[str, Any]]:
-        shot_context = ShotContext(self.shot_time_lanes, shot_parameters.dict())
+        shot_context = ShotContext(
+            time_lanes=self.shot_time_lanes,
+            variables=shot_parameters.dict(),
+            device_configurations=self.device_configurations,
+        )
 
         results = {}
         for device_name in self.device_configurations:

@@ -1,13 +1,13 @@
 import pickle
 
-from caqtus.shot_compilation import DefaultShotCompiler
-from .variables import variables
-from .time_lanes import time_lanes
+from caqtus.shot_compilation import ShotCompiler
 from .device_configurations import device_configurations
+from .time_lanes import time_lanes
+from .variables import variables
 
 
 def test(request):
-    shot_compiler = DefaultShotCompiler(time_lanes, device_configurations)
+    shot_compiler = ShotCompiler(time_lanes, device_configurations)
 
     result = shot_compiler.compile_shot(variables)
 
