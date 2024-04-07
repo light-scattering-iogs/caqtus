@@ -3,12 +3,13 @@ from typing import TypeVar, TypedDict, Generic
 
 import attrs
 
+from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils.roi import RectangularROI
+from ._controller import CameraController
 from ._runtime import Camera
 from .. import DeviceName
 from ..configuration import DeviceConfiguration, DeviceNotUsedException
-from ...session.shot import CameraTimeLane, TakePicture
 
 CameraType = TypeVar("CameraType", bound=Camera)
 
@@ -40,14 +41,22 @@ class CameraConfiguration(
     )
 
     @abc.abstractmethod
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: SequenceContext
-    ) -> CameraInitParams:
+    ):
         try:
             sequence_context.get_lane(device_name)
         except KeyError:
             raise DeviceNotUsedException(device_name)
-        return CameraInitParams(roi=self.roi, external_trigger=True, timeout=1.0)
+        init_args = CameraInitParams(roi=self.roi, external_trigger=True, timeout=1.0)
+        initialization_method = super().get_device_initialization_method(
+            device_name, sequence_context
+        )
+        initialization_method.init_kwargs.update(init_args)
+        return initialization_method
+
+    def get_controller_type(self):
+        return CameraController
 
     @abc.abstractmethod
     def compile_device_shot_parameters(
