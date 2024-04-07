@@ -1,23 +1,31 @@
 from collections.abc import Mapping
 from typing import Protocol, Any
 
-from caqtus.device import DeviceName, DeviceConfiguration, DeviceParameter
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes
+from .compilation_contexts import ShotContext
 from .variable_namespace import VariableNamespace
 
 
 class ShotCompiler(Protocol):
-    """Converts high level description of a shot into low level device parameters.
-
-    Shot compilation is the process of evaluating expressions inside the shot
-    representation and converting them into numerical values that can be understood by
-    the devices.
-    """
+    def __init__(
+        self,
+        shot_timelanes: TimeLanes,
+        device_configurations: Mapping[DeviceName, DeviceConfiguration],
+    ):
+        self.shot_time_lanes = shot_timelanes
+        self.device_configurations = device_configurations
 
     def compile_shot(
         self, shot_parameters: VariableNamespace
-    ) -> Mapping[DeviceName, Mapping[DeviceParameter, Any]]:
-        ...
+    ) -> Mapping[DeviceName, Mapping[str, Any]]:
+        shot_context = ShotContext(self.shot_time_lanes, shot_parameters.dict())
+
+        results = {}
+        for device_name in self.device_configurations:
+            results[device_name] = shot_context.get_shot_parameters(device_name)
+
+        return results
 
 
 class ShotCompilerFactory(Protocol):
