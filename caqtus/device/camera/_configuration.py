@@ -56,19 +56,22 @@ class CameraConfiguration(
         self,
         device_name: DeviceName,
         shot_context: ShotContext,
-    ) -> CameraUpdateParams:
+    ):
         lane = shot_context.get_lane(device_name)
         if not isinstance(lane, CameraTimeLane):
             raise TypeError(f"Expected a camera lane for device {device_name}")
         step_durations = shot_context.get_step_durations()
         exposures = []
+        picture_names = []
         for value, (start, stop) in zip(lane.values(), lane.bounds()):
             if isinstance(value, TakePicture):
                 exposure = sum(step_durations[start:stop])
                 exposures.append(exposure)
-        return CameraUpdateParams(
+                picture_names.append(value.picture_name)
+        return {
             # Add a bit of extra time to the timeout, in case the shot takes a bit of
             # time to actually start.
-            timeout=shot_context.get_shot_duration() + 1,
-            exposures=exposures,
-        )
+            "timeout": shot_context.get_shot_duration() + 1,
+            "picture_names": picture_names,
+            "exposures": exposures,
+        }
