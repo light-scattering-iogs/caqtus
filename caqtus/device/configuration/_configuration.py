@@ -11,6 +11,7 @@ import attrs
 from caqtus.device.name import DeviceName
 from caqtus.device.runtime import Device
 from ._get_generic_map import get_generic_map
+from ..controller import DeviceController
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import SequenceContext, ShotContext
@@ -102,6 +103,10 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
                 device_type=device_type_name,
                 init_kwargs={},
             )
+
+    @abc.abstractmethod
+    def get_controller_type(self) -> type[DeviceController]:
+        raise NotImplementedError
 
     @abc.abstractmethod
     def compile_device_shot_parameters(

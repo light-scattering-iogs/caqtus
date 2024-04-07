@@ -15,11 +15,13 @@ import attrs
 from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session.sequence import State
-from caqtus.shot_compilation import VariableNamespace, ShotCompiler
+from caqtus.shot_compilation import VariableNamespace, ShotCompiler, SequenceContext
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.concurrent import TaskGroup
+from ..initialize_devices import create_devices
 from ..shot_runner import ShotRunner
 
 pickling_support.install()
@@ -103,6 +105,8 @@ class SequenceManager(AbstractContextManager):
         sequence: Sequence,
         session_maker: ExperimentSessionMaker,
         interruption_event: threading.Event,
+        device_server_configs: Mapping[str, DeviceServerConfiguration],
+        manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig] = None,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
@@ -112,6 +116,8 @@ class SequenceManager(AbstractContextManager):
         self._session_maker = session_maker
         self._sequence_path = sequence.path
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
+        self.device_server_configs = device_server_configs
+        self.manager_class = manager_class
 
         with self._session_maker() as session:
             if device_configurations is None:
@@ -172,7 +178,20 @@ class SequenceManager(AbstractContextManager):
         task = self._process_pool.submit(nothing)
 
         shot_compiler = ShotCompiler(self.time_lanes, self.device_configurations)
-        shot_runner = ShotRunner(...)
+        sequence_context = SequenceContext(
+            device_configurations=self.device_configurations, time_lanes=self.time_lanes
+        )
+        devices = create_devices(
+            self.device_configurations,
+            self.device_server_configs,
+            self.manager_class,
+            sequence_context,
+        )
+        device_controller_types = {
+            name: config.get_controller_type()
+            for name, config in self.device_configurations.items()
+        }
+        shot_runner = ShotRunner(devices, device_controller_types)
         self._exit_stack.enter_context(shot_runner)
 
         self._exit_stack.enter_context(self._thread_pool)

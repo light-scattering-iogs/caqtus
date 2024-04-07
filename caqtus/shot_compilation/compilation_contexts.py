@@ -99,11 +99,19 @@ class ShotContext:
 
 @attrs.define(slots=False)
 class SequenceContext:
-    def get_device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration]:
-        raise NotImplementedError
+    """Contains information about a sequence being compiled."""
 
-    def get_time_lanes(self) -> TimeLanes:
-        raise NotImplementedError
+    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    _time_lanes: TimeLanes
+
+    def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
+        """Returns the configuration for the given device.
+
+        raises:
+            KeyError: If no configuration is found for the given device.
+        """
+
+        return self._device_configurations[device_name]
 
     def get_lane(self, name: str) -> TimeLane:
         """Returns the time lane with the given name.
@@ -112,7 +120,8 @@ class SequenceContext:
             KeyError: If no lane with the given name is not found in the sequence
             context.
         """
-        raise NotImplementedError
+
+        return self._time_lanes.lanes[name]
 
 
 def evaluate_step_durations(
