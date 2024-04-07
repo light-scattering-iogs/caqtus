@@ -29,4 +29,11 @@ class ShotCompiler(Protocol):
         for device_name in self.device_configurations:
             results[device_name] = shot_context.get_shot_parameters(device_name)
 
+        # noinspection PyProtectedMember
+        if unused_lanes := shot_context._unused_lanes():
+            raise ValueError(
+                "The following lanes where not used during the shot: "
+                + ", ".join(unused_lanes)
+            )
+
         return results

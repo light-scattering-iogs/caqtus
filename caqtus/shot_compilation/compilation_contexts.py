@@ -107,6 +107,9 @@ class ShotContext:
             self._computed_shot_parameters[device_name] = shot_parameters
             return shot_parameters
 
+    def _unused_lanes(self) -> set[str]:
+        return {name for name, used in self._was_lane_used if not used}
+
 
 @attrs.define(slots=False)
 class SequenceContext:
