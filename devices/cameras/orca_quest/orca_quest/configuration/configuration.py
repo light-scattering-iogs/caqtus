@@ -29,10 +29,12 @@ class OrcaQuestCameraConfiguration(CameraConfiguration["OrcaQuestCamera"]):
 
     camera_number: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
 
-    def get_device_init_args(self, device_name, sequence_context):
-        return super().get_device_init_args(device_name, sequence_context) | {
-            "camera_number": self.camera_number
-        }
+    def get_device_initialization_method(self, device_name, sequence_context):
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(name=device_name, camera_number=self.camera_number)
+        )
 
     def compile_device_shot_parameters(
         self,

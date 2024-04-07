@@ -32,12 +32,17 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration[SwabianPulseStrea
     def channel_types(cls) -> tuple[type[DigitalChannelConfiguration], ...]:
         return (DigitalChannelConfiguration,) * cls.number_channels
 
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: SequenceContext
     ) -> Mapping[str, Any]:
-        return super().get_device_init_args(device_name, sequence_context) | {
-            "ip_address": self.ip_address,
-        }
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(
+                name=device_name,
+                ip_address=self.ip_address,
+            )
+        )
 
     def compile_device_shot_parameters(
         self,

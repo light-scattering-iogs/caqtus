@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, ClassVar, Type, TYPE_CHECKING
+from typing import ClassVar, Type, TYPE_CHECKING
 
 import attrs
 
@@ -16,7 +15,8 @@ from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.utils import serialization
 
 if TYPE_CHECKING:
-    pass
+    # noinspection PyUnresolvedReferences
+    from ..runtime import SpincorePulseBlaster
 
 
 @attrs.define
@@ -54,12 +54,14 @@ class SpincoreSequencerConfiguration(SequencerConfiguration["SpincorePulseBlaste
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
 
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: SequenceContext
-    ) -> Mapping[str, Any]:
-        return super().get_device_init_args(device_name, sequence_context) | {
-            "board_number": self.board_number,
-        }
+    ):
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(name=device_name, board_number=self.board_number)
+        )
 
     def compile_device_shot_parameters(
         self,

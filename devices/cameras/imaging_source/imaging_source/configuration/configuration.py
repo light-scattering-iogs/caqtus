@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 
 import attrs
 
@@ -8,12 +8,15 @@ from caqtus.device import DeviceName
 from caqtus.device.camera import CameraConfiguration, CameraUpdateParams
 from caqtus.shot_compilation import ShotContext
 from caqtus.utils import serialization
-from ..runtime import ImagingSourceCameraDMK33GR0134
+
+if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
+    from ..runtime import ImagingSourceCameraDMK33GR0134
 
 
 @attrs.define
 class ImagingSourceCameraConfiguration(
-    CameraConfiguration[ImagingSourceCameraDMK33GR0134]
+    CameraConfiguration["ImagingSourceCameraDMK33GR0134"]
 ):
     """Holds the configuration for a camera from The Imaging Source.
 
@@ -30,12 +33,17 @@ class ImagingSourceCameraConfiguration(
         on_setattr=attrs.setters.validate,
     )
 
-    def get_device_init_args(self, device_name, sequence_context):
-        return super().get_device_init_args(device_name, sequence_context) | {
-            "camera_name": self.camera_name,
-            "format": self.format,
-            "timeout": 1,
-        }
+    def get_device_initialization_method(self, device_name, sequence_context):
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(
+                name=device_name,
+                camera_name=self.camera_name,
+                format=self.format,
+                timeout=1,
+            )
+        )
 
     def compile_device_shot_parameters(
         self,

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any, ClassVar, Type
+from typing import ClassVar, Type
 
 import attrs
 
@@ -45,12 +44,14 @@ class NI6738SequencerConfiguration(SequencerConfiguration[NI6738AnalogCard]):
                     " compatible with Volt"
                 )
 
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: SequenceContext
-    ) -> Mapping[str, Any]:
-        return super().get_device_init_args(device_name, sequence_context) | {
-            "device_id": self.device_id,
-        }
+    ):
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(name=device_name, device_id=self.device_id)
+        )
 
     def compile_device_shot_parameters(
         self,
