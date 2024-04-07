@@ -82,11 +82,6 @@ def validate_trigger(instance, attribute, value):
 SequencerType = TypeVar("SequencerType", bound=Sequencer)
 
 
-class SequencerInitParams(TypedDict):
-    time_step: int
-    trigger: Trigger
-
-
 class SequencerUpdateParams(TypedDict):
     sequence: SequencerInstruction
 
@@ -146,13 +141,11 @@ class SequencerConfiguration(
     ):
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
-        initialization_method = super().get_device_initialization_method(
-            device_name, sequence_context
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(time_step=self.time_step, trigger=self.trigger)
         )
-        initialization_method.init_kwargs.update(
-            {"time_step": self.time_step, "trigger": self.trigger}
-        )
-        return initialization_method
 
     def get_controller_type(self):
         return SequencerController

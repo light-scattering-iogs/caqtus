@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef, TYPE_CHECKING
+from typing import (
+    Any,
+    TypeVar,
+    Optional,
+    NewType,
+    Generic,
+    ForwardRef,
+    TYPE_CHECKING,
+    Self,
+)
 
 import attrs
 
@@ -154,12 +163,20 @@ class LocalProcessInitialization:
     device_type: type[Device]
     init_kwargs: dict[str, Any]
 
+    def with_extra_parameters(self, **kwargs) -> Self:
+        self.init_kwargs.update(kwargs)
+        return self
+
 
 @attrs.define
 class RemoteProcessInitialization:
     server_name: DeviceServerName
     device_type: str
     init_kwargs: dict[str, Any]
+
+    def with_extra_parameters(self, **kwargs) -> Self:
+        self.init_kwargs.update(kwargs)
+        return self
 
 
 DeviceInitializationMethod = LocalProcessInitialization | RemoteProcessInitialization

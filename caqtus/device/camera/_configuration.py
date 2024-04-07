@@ -14,12 +14,6 @@ from ..configuration import DeviceConfiguration, DeviceNotUsedException
 CameraType = TypeVar("CameraType", bound=Camera)
 
 
-class CameraInitParams(TypedDict):
-    roi: RectangularROI
-    external_trigger: bool
-    timeout: float
-
-
 class CameraUpdateParams(TypedDict):
     timeout: float
     exposures: list[float]
@@ -48,12 +42,11 @@ class CameraConfiguration(
             sequence_context.get_lane(device_name)
         except KeyError:
             raise DeviceNotUsedException(device_name)
-        init_args = CameraInitParams(roi=self.roi, external_trigger=True, timeout=1.0)
-        initialization_method = super().get_device_initialization_method(
-            device_name, sequence_context
+        return (
+            super()
+            .get_device_initialization_method(device_name, sequence_context)
+            .with_extra_parameters(roi=self.roi, external_trigger=True, timeout=1.0)
         )
-        initialization_method.init_kwargs.update(init_args)
-        return initialization_method
 
     def get_controller_type(self):
         return CameraController
