@@ -154,15 +154,15 @@ class SequencerConfiguration(
         shot_context: "ShotContext",
     ) -> SequencerUpdateParams:
         channel_instructions = []
+        max_advance, max_delay = self._find_max_advance_and_delays(
+            shot_context.get_variables()
+        )
         for channel_number, channel in enumerate(self.channels):
             if isinstance(channel, AnalogChannelConfiguration):
                 required_unit = Unit(channel.output_unit)
             else:
                 required_unit = None
             try:
-                max_advance, max_delay = self._find_max_advance_and_delays(
-                    shot_context.get_variables()
-                )
                 output_values = evaluate_output(
                     channel.output,
                     self.time_step,
