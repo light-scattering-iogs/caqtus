@@ -108,7 +108,7 @@ class ShotContext:
             return shot_parameters
 
     def _unused_lanes(self) -> set[str]:
-        return {name for name, used in self._was_lane_used if not used}
+        return {name for name, used in self._was_lane_used.items() if not used}
 
 
 @attrs.define(slots=False)
