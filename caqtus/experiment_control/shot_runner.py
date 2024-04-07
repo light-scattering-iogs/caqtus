@@ -1,51 +1,35 @@
-import abc
 import contextlib
+import functools
 from collections.abc import Mapping
-from typing import Protocol, Any
+from typing import Any
 
 import anyio
 import anyio.to_thread
 
-from caqtus.device import DeviceName, DeviceParameter, DeviceConfiguration, Device
-from caqtus.session.shot import TimeLanes
+from caqtus.device import DeviceName, Device
+from caqtus.device.controller import DeviceController
+from caqtus.shot_event_dispatcher import ShotEventDispatcher
 from caqtus.types.data import DataLabel, Data
 
 
-class ShotRunner(abc.ABC):
-    """Shot runners are responsible for running shots on the experiment.
-
-    This is an abstract base class.
-    It provides common functionality for managing devices within a shot.
-    It is meant to be subclassed for specific setups that must implement the
-    :meth:`ShotRunner.run_shot` method.
-    """
-
-    def __init__(self, devices: Mapping[DeviceName, Device]):
-        """Initialize the shot runner.
-
-        Args:
-            devices: A mapping containing the devices that the shot runner will use to
-            run shots.
-            The devices are not initialized yet.
-            They will be initialized when the shot runner is entered.
-        """
-
-        self.devices = dict(devices)
+class ShotRunner:
+    def __init__(
+        self,
+        devices: Mapping[DeviceName, Device],
+        controller_types: Mapping[DeviceName, type[DeviceController]],
+    ):
+        self.devices = devices
+        self.controller_types = controller_types
         self.exit_stack = contextlib.ExitStack()
 
+        self.event_dispatcher = ShotEventDispatcher(set(self.devices.keys()))
+
+        self.controllers = {
+            name: controller_type(name, self.event_dispatcher)
+            for name, controller_type in self.controller_types.items()
+        }
+
     def __enter__(self):
-        """Prepares the shot runner.
-
-        The shot runner must initialize itself and acquire all necessary resources here.
-        After this method is called, the shot runner must be ready to have its
-        :meth:`run_shot` method called.
-
-        Typically, this method will initialize the required devices.
-
-        The base class implementation of this method enters the context of all devices
-        concurrently and pushes them to the exit stack.
-        """
-
         self.exit_stack.__enter__()
         try:
             anyio.run(self._enter_async, backend="trio")
@@ -66,81 +50,31 @@ class ShotRunner(abc.ABC):
             await anyio.to_thread.run_sync(device.__enter__)
             self.exit_stack.push(device)
 
-    @abc.abstractmethod
     def run_shot(
-        self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
+        self,
+        device_parameters: Mapping[DeviceName, Mapping[str, Any]],
+        timeout: float,
     ) -> Mapping[DataLabel, Data]:
-        """Run the shot.
-
-        This is the main method of the shot runner.
-        """
-
-        raise NotImplementedError
-
-    def update_device_parameters(
-        self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
-    ) -> None:
-        """Update the parameters of the devices.
-
-        This method calls the :meth:`Device.update_parameters` method of each device
-        with the provided parameters.
-
-        The default implementation updates devices concurrently in separate threads to
-        reduce the total update time.
-
-        Args:
-            device_parameters: A mapping matching device names to the parameters that
-            should be updated for each device.
-            The device names in the mapping must be a subset of the device names
-            provided to the shot runner at initialization.
-
-        Raises:
-            KeyError: If a device name in the mapping is not present in the shot runner
-            devices.
-            ExceptionGroup: If errors occur while updating some devices, they are
-            raised inside an exception group.
-        """
-
-        anyio.run(
-            self._update_device_parameters_async, device_parameters, backend="trio"
+        # noinspection PyProtectedMember
+        self.event_dispatcher._reset()
+        return anyio.run(
+            functools.partial(self._run_shot_async, device_parameters, timeout),
+            backend="trio",
         )
 
-    async def _update_device_parameters_async(
-        self, device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]]
-    ):
-        async with anyio.create_task_group() as tg:
-            for name, parameters in device_parameters.items():
-                device = self.devices[name]
-                tg.start_soon(
-                    anyio.to_thread.run_sync, update_device, name, device, parameters
-                )
+    async def _run_shot_async(
+        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
+    ) -> Mapping[DataLabel, Data]:
+        with anyio.fail_after(timeout):
+            async with anyio.create_task_group() as tg:
+                for name, controller in self.controllers.items():
+                    device = self.devices[name]
+                    parameters = device_parameters[name]
+                    tg.start_soon(
+                        functools.partial(controller.run_shot, device, **parameters)
+                    )
+
+        return self.event_dispatcher.acquired_data()
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """Shutdown the shot runner.
-
-        The shot runner must release all resources that it has acquired here.
-
-        The base class implementation of this method closes its exit stack, thus
-        exiting the context of each device.
-        """
-
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
-
-
-def update_device(
-    name: str, device: Device, parameters: Mapping[DeviceParameter, Any]
-) -> None:
-    try:
-        if parameters:
-            device.update_parameters(**parameters)  # type: ignore
-    except Exception as error:
-        raise RuntimeError(f"Failed to update device {name}") from error
-
-
-class ShotRunnerFactory(Protocol):
-    def __call__(
-        self,
-        shot_timelanes: TimeLanes,
-        device_configurations: Mapping[DeviceName, DeviceConfiguration],
-    ) -> ShotRunner:
-        ...

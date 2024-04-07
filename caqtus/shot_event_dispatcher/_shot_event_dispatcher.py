@@ -9,11 +9,15 @@ from caqtus.types.data import DataLabel, Data
 
 class ShotEventDispatcher:
     def __init__(self, devices_in_use: Set[DeviceName]):
+        self._devices_in_use = devices_in_use
         self._device_ready = {device: anyio.Event() for device in devices_in_use}
-        self._acquisition_events: dict[
-            DataLabel, anyio.Event
-        ] = collections.defaultdict(anyio.Event)
+        self._acquisition_events: dict[DataLabel, anyio.Event] = (
+            collections.defaultdict(anyio.Event)
+        )
         self._acquired_data: dict[DataLabel, Data] = {}
+
+    def _reset(self) -> None:
+        self.__init__(self._devices_in_use)
 
     def signal_device_ready(self, device: DeviceName) -> None:
         if device not in self._device_ready:

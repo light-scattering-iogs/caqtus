@@ -1,10 +1,9 @@
 from .manager import ExperimentManager, Procedure
 from .sequence_runner import SequenceInterruptedException, ShotRetryConfig
-from .shot_runner import ShotRunner, ShotRunnerFactory
+from .shot_runner import ShotRunner
 
 __all__ = [
     "ShotRunner",
-    "ShotRunnerFactory",
     "SequenceInterruptedException",
     "ShotRetryConfig",
     "ExperimentManager",
