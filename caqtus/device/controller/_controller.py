@@ -43,7 +43,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         arguments passed before the shot is launched.
         """
 
-        device.update_parameters(*args, **kwargs)
+        await run_in_thread(device.update_parameters, *args, **kwargs)
         self.signal_ready()
 
     def signal_ready(self) -> None:
