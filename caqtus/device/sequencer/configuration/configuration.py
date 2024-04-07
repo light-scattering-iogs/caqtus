@@ -153,10 +153,12 @@ class SequencerConfiguration(
         device_name: DeviceName,
         shot_context: "ShotContext",
     ) -> SequencerUpdateParams:
-        channel_instructions = []
         max_advance, max_delay = self._find_max_advance_and_delays(
             shot_context.get_variables()
         )
+
+        channel_instructions = []
+        exceptions = []
         for channel_number, channel in enumerate(self.channels):
             if isinstance(channel, AnalogChannelConfiguration):
                 required_unit = Unit(channel.output_unit)
@@ -172,13 +174,22 @@ class SequencerConfiguration(
                     shot_context,
                 )
             except Exception as e:
-                raise SequencerCompilationError(
+                channel_error = ChannelCompilationError(
                     f"Error occurred when evaluating output for channel "
-                    f"{channel_number} ({channel}) of sequencer "
-                    f"{self}"
-                ) from e
-            instruction = _convert_channel_instruction(output_values, channel)
-            channel_instructions.append(with_name(instruction, f"ch {channel_number}"))
+                    f"{channel_number} ({channel})"
+                )
+                channel_error.__cause__ = e
+                exceptions.append(channel_error)
+            else:
+                instruction = _convert_channel_instruction(output_values, channel)
+                channel_instructions.append(
+                    with_name(instruction, f"ch {channel_number}")
+                )
+        if exceptions:
+            raise SequencerCompilationError(
+                f"Errors occurred when evaluating outputs for sequencer {device_name}",
+                exceptions,
+            )
         stacked = stack_instructions(channel_instructions)
         return {"sequence": stacked}
 
@@ -193,7 +204,11 @@ class SequencerConfiguration(
         return max(advances), max(delays)
 
 
-class SequencerCompilationError(Exception):
+class SequencerCompilationError(ExceptionGroup):
+    pass
+
+
+class ChannelCompilationError(Exception):
     pass
 
 
