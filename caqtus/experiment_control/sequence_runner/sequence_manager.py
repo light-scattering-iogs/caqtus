@@ -107,11 +107,9 @@ class SequenceManager(AbstractContextManager):
         interruption_event: threading.Event,
         device_server_configs: Mapping[str, DeviceServerConfiguration],
         manager_class: type[RemoteDeviceManager],
-        shot_retry_config: Optional[ShotRetryConfig] = None,
-        global_parameters: Optional[ParameterNamespace] = None,
-        device_configurations: Optional[
-            Mapping[DeviceName, DeviceConfiguration]
-        ] = None,
+        shot_retry_config: Optional[ShotRetryConfig],
+        global_parameters: Optional[ParameterNamespace],
+        device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence.path
