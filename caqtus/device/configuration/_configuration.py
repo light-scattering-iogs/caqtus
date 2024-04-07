@@ -1,5 +1,7 @@
 """This module contains the :class:`DeviceConfiguration` class."""
 
+from __future__ import annotations
+
 import abc
 from collections.abc import Mapping
 from typing import Any, TypeVar, Optional, NewType, Generic, ForwardRef, TYPE_CHECKING
@@ -47,16 +49,59 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     )
 
     @abc.abstractmethod
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: "SequenceContext"
-    ) -> Mapping[str, Any]:
-        """Return the arguments that should be passed to the device's constructor.
+    ) -> DeviceInitializationMethod:
+        """Indicate how the device should be initialized.
 
+        Args:
+            device_name: The name of the device being initialized.
+            sequence_context: Contains the information about the sequence being run.
         Raises:
             DeviceNotUsedException: If the device is not used in the current sequence.
+
+        The base implementation of this method inspect the device type argument of the
+        configuration to determine how the device should be initialized.
         """
 
-        raise NotImplementedError
+        device_type = get_generic_map(DeviceConfiguration, type(self)).get(DeviceType)  # type: ignore
+
+        if device_type is None:
+            raise ValueError(
+                f"Could not find the device type for configuration {self}."
+            )
+
+        if self.remote_server is None:
+            if isinstance(device_type, ForwardRef):
+                raise ValueError(
+                    f"Can't resolve the device type {device_type} for"
+                    f" device {device_name}."
+                )
+            elif issubclass(device_type, Device):
+                return LocalProcessInitialization(
+                    device_type=device_type,  # type: ignore
+                    init_kwargs={},
+                )
+            else:
+                raise ValueError(
+                    f"The device type {device_type} is not a subclass of Device."
+                )
+        else:
+            if isinstance(device_type, ForwardRef):
+                device_type_name = device_type.__forward_arg__
+            elif isinstance(device_type, str):
+                device_type_name = device_type
+            elif issubclass(device_type, Device):
+                device_type_name = device_type.__name__
+            else:
+                raise ValueError(
+                    f"The device type {device_type} is not a subclass of Device."
+                )
+            return RemoteProcessInitialization(
+                server_name=self.remote_server,
+                device_type=device_type_name,
+                init_kwargs={},
+            )
 
     @abc.abstractmethod
     def compile_device_shot_parameters(
@@ -78,27 +123,6 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
         raise NotImplementedError
 
-    def get_device_type(self) -> type[DeviceType] | str:
-        """Return the runtime type of the device.
-
-        Return:
-            The type of the device that this configuration is meant to instantiate.
-            If importing the device type is not possible, a string with the name of the
-            device type can be returned.
-        """
-
-        device_type = get_generic_map(DeviceConfiguration, type(self)).get(DeviceType)  # type: ignore
-
-        if device_type is None:
-            raise ValueError(
-                f"Could not find the device type for configuration {self}."
-            )
-
-        if isinstance(device_type, ForwardRef):
-            return device_type.__forward_arg__
-        else:
-            return device_type.__name__
-
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
 
@@ -118,3 +142,19 @@ class DeviceNotUsedException(Exception):
     """Raised when a device is not used in a sequence."""
 
     pass
+
+
+@attrs.define
+class LocalProcessInitialization:
+    device_type: type[Device]
+    init_kwargs: dict[str, Any]
+
+
+@attrs.define
+class RemoteProcessInitialization:
+    server_name: DeviceServerName
+    device_type: str
+    init_kwargs: dict[str, Any]
+
+
+DeviceInitializationMethod = LocalProcessInitialization | RemoteProcessInitialization
