@@ -19,7 +19,7 @@ class DeviceTestConfiguration(DeviceConfiguration[DeviceTest]):
 
 
 def test():
-    assert DeviceTestConfiguration(remote_server=None).get_device_type() == "DeviceTest"
+    assert DeviceTestConfiguration(remote_server=None).get_device_type() == DeviceTest
 
 
 class DeviceTestConfiguration1(DeviceConfiguration["DeviceTest"]):

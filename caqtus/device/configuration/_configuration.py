@@ -67,7 +67,7 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
         """Compute the parameters that should be applied to the device for a shot.
 
         The parameters returned by this method will be passed to the method
-        :meth:`Device.update_parameters` of the related device before the shot is run.
+        :meth:`DeviceController.run_shot` of the device controller.
         The keys in the return mapping must match the arguments of this method.
 
         Args:
@@ -78,13 +78,13 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
         raise NotImplementedError
 
-    def get_device_type(self) -> str:
+    def get_device_type(self) -> type[DeviceType] | str:
         """Return the runtime type of the device.
 
         Return:
-            A string containing the :data:`DeviceType` associated to this configuration.
-            The default implementation of this method extracts the device type from the
-            type variable :data:`DeviceType` associated to this configuration.
+            The type of the device that this configuration is meant to instantiate.
+            If importing the device type is not possible, a string with the name of the
+            device type can be returned.
         """
 
         device_type = get_generic_map(DeviceConfiguration, type(self)).get(DeviceType)  # type: ignore
