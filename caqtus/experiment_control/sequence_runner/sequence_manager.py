@@ -14,13 +14,13 @@ from typing import Optional, Any
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceParameter, DeviceConfiguration
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session.sequence import State
-from caqtus.shot_compilation import ShotCompilerFactory, VariableNamespace, ShotCompiler
+from caqtus.shot_compilation import VariableNamespace, ShotCompiler
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.concurrent import TaskGroup
-from ..shot_runner import ShotRunnerFactory, ShotRunner
+from ..shot_runner import ShotRunner
 
 pickling_support.install()
 logger = logging.getLogger(__name__)
@@ -84,28 +84,6 @@ class SequenceManager(AbstractContextManager):
         sequence: The sequence to run.
         session_maker: A factory for creating experiment sessions.
         This is used to connect to the storage in which to find the sequence.
-        shot_compiler_factory: A function used to create a shot compiler.
-        It is a user-defined function used to customize how the parameters for a shot
-        are compiled into device parameters.
-        When the sequence is preparing, this function is called with the timelanes of
-        the sequence and the device configurations to use.
-        The sequence manager stores the shot compiler returned by the factory.
-        Every time a shot is scheduled, the sequence manager uses the shot compiler to
-        compile the shot parameters into device parameters.
-        Note that the shot compiler will be copied and passed to other processes to
-        compile shots in parallel.
-        Because of this, the shot compiler must be pickleable and should not rely on
-        persistent states from shot to shot.
-        shot_runner_factory: A function used to create a shot runner.
-        It is a user-defined function used to customize how the device parameters are
-        used to run a shot.
-        When the sequence is preparing, this function is called with the timelanes of
-        the sequence and the device configurations to use.
-        The sequence manager stores the shot runner returned by the factory.
-        After the parameters for a shot are compiled into device parameters by a shot
-        compiler, the device parameters are passed to the shot runner to run the shot.
-        The shot runner should return the data produced by the shot that will then
-        be stored in the sequence.
         interruption_event: An event that is set to interrupt the sequence.
         When this event is set, the sequence manager will attempt to stop the sequence
         as soon as possible.
@@ -124,8 +102,6 @@ class SequenceManager(AbstractContextManager):
         self,
         sequence: Sequence,
         session_maker: ExperimentSessionMaker,
-        shot_compiler_factory: ShotCompilerFactory,
-        shot_runner_factory: ShotRunnerFactory,
         interruption_event: threading.Event,
         shot_retry_config: Optional[ShotRetryConfig] = None,
         global_parameters: Optional[ParameterNamespace] = None,
@@ -147,8 +123,6 @@ class SequenceManager(AbstractContextManager):
             else:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
-        self.shot_compiler_factory = shot_compiler_factory
-        self.shot_runner_factory = shot_runner_factory
 
         self._current_shot = 0
 
@@ -197,12 +171,8 @@ class SequenceManager(AbstractContextManager):
         # Otherwise, it waits until the first shot is submitted for compilation.
         task = self._process_pool.submit(nothing)
 
-        shot_compiler = self.shot_compiler_factory(
-            self.time_lanes, self.device_configurations
-        )
-        shot_runner: ShotRunner = self.shot_runner_factory(
-            self.time_lanes, self.device_configurations
-        )
+        shot_compiler = ShotCompiler(self.time_lanes, self.device_configurations)
+        shot_runner = ShotRunner(...)
         self._exit_stack.enter_context(shot_runner)
 
         self._exit_stack.enter_context(self._thread_pool)
@@ -409,7 +379,7 @@ class SequenceManager(AbstractContextManager):
         for attempt in range(number_of_attempts):
             try:
                 start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-                data = shot_runner.run_shot(device_parameters.device_parameters)
+                data = shot_runner.run_shot(device_parameters.device_parameters, 5)
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
                 errors.extend(e.exceptions)
@@ -483,9 +453,7 @@ class DeviceParameters:
 
     index: int
     shot_parameters: VariableNamespace = attrs.field(eq=False)
-    device_parameters: Mapping[DeviceName, Mapping[DeviceParameter, Any]] = attrs.field(
-        eq=False
-    )
+    device_parameters: Mapping[DeviceName, Mapping[str, Any]] = attrs.field(eq=False)
 
 
 @attrs.frozen(order=True)
