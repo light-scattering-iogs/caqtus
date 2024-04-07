@@ -11,16 +11,20 @@ from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
 
 
-@attrs.define(slots=False)
+@attrs.define
 class ShotContext:
     """Contains information about a shot being compiled."""
 
     _time_lanes: TimeLanes
     _variables: Mapping[DottedVariableName, Any]
+    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
 
     _step_durations: tuple[float, ...] = attrs.field(init=False)
     _step_bounds: tuple[float, ...] = attrs.field(init=False)
     _was_lane_used: dict[str, bool] = attrs.field(init=False)
+    _computed_shot_parameters: dict[DeviceName, Mapping[str, Any]] = attrs.field(
+        init=False
+    )
 
     def __attrs_post_init__(self):
         self._step_durations = tuple(
@@ -32,6 +36,7 @@ class ShotContext:
         )
         self._step_bounds = tuple(get_step_bounds(self._step_durations))
         self._was_lane_used = {name: False for name in self._time_lanes.lanes}
+        self._computed_shot_parameters = {}
 
     def get_lane(self, name: str) -> TimeLane:
         """Returns the lane with the given name for the shot.
@@ -65,13 +70,31 @@ class ShotContext:
         return self._step_bounds[-1]
 
     def get_variables(self) -> Mapping[DottedVariableName, Any]:
-        raise NotImplementedError
+        """Returns the variables for the shot."""
+
+        return self._variables
 
     def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
-        raise NotImplementedError
+        """Returns the configuration for the given device.
+
+        raises:
+            KeyError: If no configuration is found for the given device.
+        """
+
+        return self._device_configurations[device_name]
 
     def get_shot_parameters(self, device_name: DeviceName) -> Mapping[str, Any]:
-        raise NotImplementedError
+        """Returns the parameters computed for the given device."""
+
+        if device_name in self._computed_shot_parameters:
+            return self._computed_shot_parameters[device_name]
+        else:
+            configuration = self.get_device_config(device_name)
+            shot_parameters = configuration.compile_device_shot_parameters(
+                device_name, self
+            )
+            self._computed_shot_parameters[device_name] = shot_parameters
+            return shot_parameters
 
 
 @attrs.define(slots=False)
