@@ -10,10 +10,10 @@ from tblib import pickling_support
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session import PureSequencePath
-from caqtus.shot_compilation import ShotCompilerFactory
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
-from ..shot_runner import ShotRunnerFactory
+from ...device.configuration import DeviceServerName
+from ...device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 
 # This is necessary to be able to pass exception properly between the experiment server
 # process and the clients.
@@ -146,13 +146,16 @@ def _exit_experiment_manager(exc_value) -> None:
 
 def _create_experiment_manager(
     session_maker: ExperimentSessionMaker,
-    shot_compiler_factory: ShotCompilerFactory,
-    shot_runner_factory: ShotRunnerFactory,
+    device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
+    remote_device_manager_class: type[RemoteDeviceManager],
     shot_retry_config: Optional[ShotRetryConfig] = None,
 ) -> None:
     global experiment_manager
     experiment_manager = BoundExperimentManager(
-        session_maker, shot_compiler_factory, shot_runner_factory, shot_retry_config
+        session_maker=session_maker,
+        shot_retry_config=shot_retry_config,
+        device_server_configs=device_server_configs,
+        remote_device_manager_class=remote_device_manager_class,
     )
 
 
@@ -179,26 +182,25 @@ class RemoteExperimentManagerServer:
         address: tuple[str, int],
         authkey: bytes,
         session_maker: ExperimentSessionMaker,
-        shot_compiler_factory: ShotCompilerFactory,
-        shot_runner_factory: ShotRunnerFactory,
+        device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
+        remote_device_manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._session_maker = session_maker
         self._multiprocessing_manager = _MultiprocessingServerManager(
             address=address, authkey=authkey
         )
-        self._shot_compiler_factory = shot_compiler_factory
-        self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
-        self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
+        self._device_server_configs = device_server_configs
+        self._remote_device_manager_class = remote_device_manager_class
 
     def __enter__(self):
         self._multiprocessing_manager.start()
         self._multiprocessing_manager.create_experiment_manager(
             self._session_maker,
-            self._shot_compiler_factory,
-            self._shot_runner_factory,
+            self._device_server_configs,
+            self._remote_device_manager_class,
             self._shot_retry_config,
         )
         self._multiprocessing_manager.enter_experiment_manager()

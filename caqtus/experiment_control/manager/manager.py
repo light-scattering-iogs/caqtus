@@ -20,6 +20,7 @@ from caqtus.session.sequence.iteration_configuration import StepsConfiguration
 from caqtus.utils import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context
+from ...device.configuration import DeviceServerName
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -186,7 +187,7 @@ class BoundExperimentManager(ExperimentManager):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        device_server_configs: Mapping[DeviceName, DeviceServerConfiguration],
+        device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
         remote_device_manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
