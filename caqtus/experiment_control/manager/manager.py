@@ -9,6 +9,7 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 from caqtus.device import DeviceConfiguration, DeviceName
+from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -16,11 +17,9 @@ from caqtus.session import (
     ParameterNamespace,
 )
 from caqtus.session.sequence.iteration_configuration import StepsConfiguration
-from caqtus.shot_compilation import ShotCompilerFactory
 from caqtus.utils import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context
-from ..shot_runner import ShotRunnerFactory
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -187,14 +186,14 @@ class BoundExperimentManager(ExperimentManager):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        shot_compiler_factory: ShotCompilerFactory,
-        shot_runner_factory: ShotRunnerFactory,
+        device_server_configs: Mapping[DeviceName, DeviceServerConfiguration],
+        remote_device_manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
-        self._shot_compiler_factory = shot_compiler_factory
-        self._shot_runner_factory = shot_runner_factory
+        self._device_server_configs = device_server_configs
+        self._device_manager_class = remote_device_manager_class
         self._shot_retry_config = shot_retry_config
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
@@ -211,15 +210,15 @@ class BoundExperimentManager(ExperimentManager):
         self, procedure_name: str, acquisition_timeout: Optional[float] = None
     ) -> BoundProcedure:
         return BoundProcedure(
-            self,
-            procedure_name,
-            self._session_maker,
-            self._procedure_running,
-            self._thread_pool,
-            self._shot_compiler_factory,
-            self._shot_runner_factory,
-            self._shot_retry_config,
-            acquisition_timeout,
+            experiment_manager=self,
+            name=procedure_name,
+            session_maker=self._session_maker,
+            lock=self._procedure_running,
+            thread_pool=self._thread_pool,
+            shot_retry_config=self._shot_retry_config,
+            acquisition_timeout=acquisition_timeout,
+            device_server_configs=self._device_server_configs,
+            device_manager_class=self._device_manager_class,
         )
 
     def interrupt_running_procedure(self) -> bool:
@@ -244,9 +243,9 @@ class BoundProcedure(Procedure):
         session_maker: ExperimentSessionMaker,
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
-        shot_compiler_factory: ShotCompilerFactory,
-        shot_runner_factory: ShotRunnerFactory,
         shot_retry_config: ShotRetryConfig,
+        device_server_configs: Mapping[DeviceName, DeviceServerConfiguration],
+        device_manager_class: type[RemoteDeviceManager],
         acquisition_timeout: Optional[float] = None,
     ):
         self._parent = experiment_manager
@@ -257,10 +256,10 @@ class BoundProcedure(Procedure):
         self._sequence_future: Optional[concurrent.futures.Future] = None
         self._sequences: list[Sequence] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
-        self._shot_compiler_factory = shot_compiler_factory
-        self._shot_runner_factory = shot_runner_factory
         self._shot_retry_config = shot_retry_config
         self._must_interrupt = threading.Event()
+        self._device_server_configs = device_server_configs
+        self._device_manager_class = device_manager_class
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -340,14 +339,14 @@ class BoundProcedure(Procedure):
             iteration = session.sequences.get_iteration_configuration(sequence.path)
 
         with SequenceManager(
-            sequence,
-            self._session_maker,
-            self._shot_compiler_factory,
-            self._shot_runner_factory,
-            self._must_interrupt,
-            self._shot_retry_config,
-            global_parameters,
-            device_configurations,
+            sequence=sequence,
+            session_maker=self._session_maker,
+            interruption_event=self._must_interrupt,
+            shot_retry_config=self._shot_retry_config,
+            global_parameters=global_parameters,
+            device_configurations=device_configurations,
+            device_server_configs=self._device_server_configs,
+            manager_class=self._device_manager_class,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
