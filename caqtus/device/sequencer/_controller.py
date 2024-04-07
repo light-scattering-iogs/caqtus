@@ -5,7 +5,7 @@ from caqtus.device.sequencer import Sequencer, SoftwareTrigger
 from .instructions import SequencerInstruction
 
 
-class SequencerController(DeviceController[Sequencer]):
+class SequencerController(DeviceController):
     """Controls a sequencer during a shot."""
 
     async def run_shot(

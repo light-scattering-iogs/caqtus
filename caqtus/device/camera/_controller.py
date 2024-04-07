@@ -12,7 +12,7 @@ from caqtus.types.image import Image
 from ._runtime import Camera
 
 
-class CameraController(DeviceController[Camera]):
+class CameraController(DeviceController):
     async def run_shot(
         self,
         camera: Camera,
