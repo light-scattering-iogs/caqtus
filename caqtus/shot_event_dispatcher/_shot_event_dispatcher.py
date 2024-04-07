@@ -38,7 +38,7 @@ class ShotEventDispatcher:
 
     async def wait_data_acquired(self, label: DataLabel) -> Data:
         if label in self._acquired_data:
-            return self._acquired_data
+            return self._acquired_data[label]
         else:
             await self._acquisition_events[label].wait()
 
