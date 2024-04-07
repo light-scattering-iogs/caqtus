@@ -2,7 +2,7 @@ import abc
 import contextlib
 import logging
 from collections.abc import Iterable, Generator
-from typing import ClassVar, ParamSpec, Generic
+from typing import ClassVar
 
 from attrs import define, field
 from attrs.setters import frozen, convert
@@ -19,11 +19,8 @@ class CameraTimeoutError(TimeoutError):
     pass
 
 
-P = ParamSpec("P")
-
-
 @define(slots=False)
-class Camera(Device, abc.ABC, Generic[P]):
+class Camera(Device, abc.ABC):
     """Define the interface for a camera.
 
     This is an abstract class that must be subclassed to implement a specific camera.
@@ -51,9 +48,7 @@ class Camera(Device, abc.ABC, Generic[P]):
             )
 
     @abc.abstractmethod
-    def update_parameters(
-        self, timeout: float, *args: P.args, **kwargs: P.kwargs
-    ) -> None:
+    def update_parameters(self, timeout: float, *args, **kwargs) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
