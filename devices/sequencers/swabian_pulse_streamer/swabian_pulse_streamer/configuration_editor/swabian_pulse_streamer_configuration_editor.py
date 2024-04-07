@@ -1,15 +1,15 @@
 from PySide6.QtWidgets import QSpinBox, QFormLayout, QLineEdit
+
 from caqtus.device.sequencer.configuration import (
     DigitalChannelConfiguration,
-    SoftwareTrigger,
     Constant,
 )
-from caqtus.types.expression import Expression
-
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
+from caqtus.types.expression import Expression
 from ..configuration import SwabianPulseStreamerConfiguration
 
 
@@ -57,7 +57,7 @@ class SwabianPulseStreamerDeviceConfigEditor(
         self.set_configuration(self.device_config)
 
     def set_configuration(
-            self, device_configuration: SwabianPulseStreamerConfiguration
+        self, device_configuration: SwabianPulseStreamerConfiguration
     ) -> None:
         self._channels_view.set_channels(device_configuration.channels)
         self._time_step.setValue(device_configuration.time_step)

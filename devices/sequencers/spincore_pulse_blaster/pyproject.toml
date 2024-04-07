@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spincore-pulse-blaster"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"

@@ -1,15 +1,15 @@
 from PySide6.QtWidgets import QSpinBox, QFormLayout
+
 from caqtus.device.sequencer.configuration import (
     DigitalChannelConfiguration,
-    SoftwareTrigger,
     Constant,
 )
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
 from caqtus.types.expression import Expression
-
 from ..configuration import SpincoreSequencerConfiguration
 
 
