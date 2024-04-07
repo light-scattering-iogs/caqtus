@@ -4,8 +4,8 @@ from typing import ClassVar
 import attrs
 
 from caqtus.device.runtime import Device
-from ..configuration import Trigger, is_trigger
 from ..instructions import SequencerInstruction
+from ..trigger import Trigger, is_trigger
 
 
 @attrs.define(slots=False)

@@ -13,9 +13,10 @@ from typing import (
 import attrs
 import numpy as np
 
+from caqtus.device.configuration import DeviceConfiguration
+from caqtus.device.name import DeviceName
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from ._evaluate_output import evaluate_output, _evaluate_expression_in_unit
 from .channel_output import (
     ChannelOutput,
     is_channel_output,
@@ -24,11 +25,9 @@ from .channel_output import (
     Advance,
     Delay,
 )
-from .trigger import Trigger, is_trigger
 from ..instructions import SequencerInstruction, with_name, stack_instructions
 from ..runtime import Sequencer
-from ... import DeviceName
-from ...configuration import DeviceConfiguration
+from ..trigger import Trigger, is_trigger
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import (
@@ -121,8 +120,7 @@ class SequencerConfiguration(
 
     @classmethod
     @abstractmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
-        ...
+    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]: ...
 
     @channels.validator  # type: ignore
     def validate_channels(self, _, channels):
@@ -142,7 +140,7 @@ class SequencerConfiguration(
 
     @abstractmethod
     def get_device_init_args(
-        self, device_name: DeviceName, sequence_context: SequenceContext
+        self, device_name: DeviceName, sequence_context: "SequenceContext"
     ) -> SequencerInitParams:
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
@@ -152,7 +150,7 @@ class SequencerConfiguration(
     def compile_device_shot_parameters(
         self,
         device_name: DeviceName,
-        shot_context: ShotContext,
+        shot_context: "ShotContext",
     ) -> SequencerUpdateParams:
         channel_instructions = []
         for channel_number, channel in enumerate(self.channels):

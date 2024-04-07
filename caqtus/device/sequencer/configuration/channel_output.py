@@ -23,9 +23,9 @@ from typing import TypeGuard, Optional
 import attrs
 import numpy as np
 
+from caqtus.device.name import DeviceName
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-from ...name import DeviceName
 
 
 def validate_channel_output(instance, attribute, value):

@@ -1,4 +1,4 @@
-from caqtus.device.sequencer.configuration.trigger import (
+from caqtus.device.sequencer.trigger import (
     SoftwareTrigger,
     ExternalTriggerStart,
     TriggerEdge,

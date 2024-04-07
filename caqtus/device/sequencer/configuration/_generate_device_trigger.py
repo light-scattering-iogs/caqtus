@@ -4,13 +4,12 @@ from typing import assert_never
 import numpy as np
 
 from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device.camera import CameraConfiguration
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from .configuration import SequencerConfiguration
-from .trigger import ExternalClockOnChange, ExternalTriggerStart
+from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTriggerStart
 from ..instructions import SequencerInstruction, Pattern, Concatenate, join, Repeat
-from ...camera import CameraConfiguration
 
 
 def evaluate_device_trigger(
@@ -29,6 +28,8 @@ def evaluate_device_trigger(
     output a trigger that is high for half the shot duration and low for the other
     half.
     """
+
+    from .configuration import SequencerConfiguration
 
     if isinstance(device_config, SequencerConfiguration):
         return evaluate_trigger_for_sequencer(

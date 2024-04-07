@@ -3,6 +3,7 @@ from ._configuration import (
     get_configurations_by_type,
     DeviceServerName,
     DeviceNotUsedException,
+    DeviceConfigType,
 )
 from ._parameter import DeviceParameter
 
@@ -12,4 +13,5 @@ __all__ = [
     "DeviceParameter",
     "DeviceServerName",
     "DeviceNotUsedException",
+    "DeviceConfigType",
 ]

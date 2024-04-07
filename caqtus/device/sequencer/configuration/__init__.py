@@ -18,15 +18,6 @@ from .configuration import (
     DigitalChannelConfiguration,
 )
 
-from .trigger import (
-    Trigger,
-    SoftwareTrigger,
-    ExternalTriggerStart,
-    ExternalClock,
-    ExternalClockOnChange,
-    TriggerEdge,
-    is_trigger,
-)
 
 __all__ = [
     "SequencerConfiguration",
@@ -41,14 +32,7 @@ __all__ = [
     "AnalogChannelConfiguration",
     "DigitalChannelConfiguration",
     "CalibratedAnalogMapping",
-    "Trigger",
-    "SoftwareTrigger",
-    "ExternalTriggerStart",
-    "ExternalClock",
-    "ExternalClockOnChange",
-    "TriggerEdge",
     "ValueSource",
     "is_value_source",
     "TimeIndependentMapping",
-    "is_trigger",
 ]

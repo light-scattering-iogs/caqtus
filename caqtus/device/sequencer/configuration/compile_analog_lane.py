@@ -3,8 +3,8 @@ from typing import assert_never, Optional, Any
 
 import numpy as np
 
-from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern, join
 from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import (
     start_tick,
     stop_tick,
@@ -20,7 +20,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from caqtus.shot_compilation.compilation_contexts import ShotContext
+from ..instructions import SequencerInstruction, Pattern, join
 
 TIME_VARIABLE = VariableName("t")
 

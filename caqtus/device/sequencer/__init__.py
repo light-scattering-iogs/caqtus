@@ -1,16 +1,18 @@
 from .configuration import (
     SequencerConfiguration,
-    Trigger,
-    SoftwareTrigger,
-    ExternalClock,
-    ExternalTriggerStart,
-    ExternalClockOnChange,
     ChannelConfiguration,
-    TriggerEdge,
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
+from .trigger import (
+    Trigger,
+    SoftwareTrigger,
+    ExternalTriggerStart,
+    ExternalClock,
+    ExternalClockOnChange,
+    TriggerEdge,
+)
 
 __all__ = [
     "SequencerConfiguration",
