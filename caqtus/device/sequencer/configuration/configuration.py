@@ -26,6 +26,7 @@ from .channel_output import (
     Advance,
     Delay,
 )
+from .._controller import SequencerController
 from ..instructions import SequencerInstruction, with_name, stack_instructions
 from ..runtime import Sequencer
 from ..trigger import Trigger, is_trigger
@@ -140,12 +141,21 @@ class SequencerConfiguration(
         return self.channels[item]
 
     @abstractmethod
-    def get_device_init_args(
+    def get_device_initialization_method(
         self, device_name: DeviceName, sequence_context: "SequenceContext"
-    ) -> SequencerInitParams:
+    ):
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
-        return {"time_step": self.time_step, "trigger": self.trigger}
+        initialization_method = super().get_device_initialization_method(
+            device_name, sequence_context
+        )
+        initialization_method.init_kwargs.update(
+            {"time_step": self.time_step, "trigger": self.trigger}
+        )
+        return initialization_method
+
+    def get_controller_type(self):
+        return SequencerController
 
     @abstractmethod
     def compile_device_shot_parameters(
