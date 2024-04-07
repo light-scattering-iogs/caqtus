@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import contextlib
 import functools
@@ -63,6 +65,14 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         """Waits until the data with the given label has been acquired."""
 
         return await self.event_dispatcher.wait_data_acquired(label)
+
+    def spawn_controller(
+        self, controller_type: type[DeviceControllerType]
+    ) -> DeviceControllerType:
+        return controller_type(self.device_name, self.event_dispatcher)
+
+
+DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
 
 
 async def run_in_thread(
