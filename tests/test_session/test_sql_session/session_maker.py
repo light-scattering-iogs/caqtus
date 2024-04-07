@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, Mapping
 
 import attrs
 import pytest
 
-from caqtus.device import DeviceConfiguration, DeviceParameter
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
     default_sequence_serializer,
@@ -24,11 +24,16 @@ class DummyConfiguration(DeviceConfiguration):
     def get_device_type(self) -> str:
         return "Dummy"
 
-    def get_device_init_args(self) -> dict[DeviceParameter, Any]:
-        return super().get_device_init_args() | {
-            DeviceParameter("a"): self.a,
-            DeviceParameter("b"): self.b,
+    def get_device_init_args(self, device_name, sequence_context) -> Mapping[str, Any]:
+        return {
+            "a": self.a,
+            "b": self.b,
         }
+
+    def compile_device_shot_parameters(
+        self, device_name: DeviceName, shot_context
+    ) -> Mapping[str, Any]:
+        pass
 
 
 def dump(configuration: DummyConfiguration) -> JSON:

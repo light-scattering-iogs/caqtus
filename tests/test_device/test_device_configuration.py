@@ -1,6 +1,7 @@
 from typing import Mapping, Any
 
-from caqtus.device import Device, DeviceConfiguration, DeviceParameter
+from caqtus.device import Device, DeviceConfiguration, DeviceParameter, DeviceName
+from caqtus.shot_compilation import ShotContext
 
 
 class DeviceTest(Device):
@@ -8,10 +9,12 @@ class DeviceTest(Device):
 
 
 class DeviceTestConfiguration(DeviceConfiguration[DeviceTest]):
-    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
+    def compile_device_shot_parameters(
+        self, device_name: DeviceName, shot_context: ShotContext
+    ) -> Mapping[str, Any]:
         pass
 
-    def compile_shot_parameters(self):
+    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
         pass
 
 
@@ -20,10 +23,12 @@ def test():
 
 
 class DeviceTestConfiguration1(DeviceConfiguration["DeviceTest"]):
-    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
+    def compile_device_shot_parameters(
+        self, device_name: DeviceName, shot_context: "ShotContext"
+    ) -> Mapping[str, Any]:
         pass
 
-    def compile_shot_parameters(self):
+    def get_device_init_args(self, *args, **kwargs) -> Mapping[DeviceParameter, Any]:
         pass
 
 
