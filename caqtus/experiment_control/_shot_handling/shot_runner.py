@@ -10,6 +10,7 @@ from caqtus.device import DeviceName, Device
 from caqtus.device.controller import DeviceController
 from caqtus.types.data import DataLabel, Data
 from ._shot_event_dispatcher import ShotEventDispatcher
+from .._logger import logger
 
 
 class ShotRunner:
@@ -67,6 +68,7 @@ class ShotRunner:
     async def _run_shot_async(
         self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
     ) -> Mapping[DataLabel, Data]:
+        logger.info(f"Shot started")
         with anyio.fail_after(timeout):
             async with anyio.create_task_group() as tg:
                 for name, controller in self.controllers.items():
@@ -75,6 +77,8 @@ class ShotRunner:
                     tg.start_soon(
                         functools.partial(controller.run_shot, device, **parameters)
                     )
+
+        logger.info("Shot finished")
 
         return self.event_dispatcher.acquired_data()
 
