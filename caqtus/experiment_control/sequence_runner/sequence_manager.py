@@ -18,11 +18,11 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
 from caqtus.session.sequence import State
-from caqtus.shot_compilation import VariableNamespace, ShotCompiler, SequenceContext
+from caqtus.shot_compilation import VariableNamespace, SequenceContext
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.concurrent import TaskGroup
-from .._shot_handling import ShotRunner
-from ..initialize_devices import create_devices
+from .._initialize_devices import create_devices
+from .._shot_handling import ShotRunner, ShotCompiler
 
 pickling_support.install()
 logger = logging.getLogger(__name__)

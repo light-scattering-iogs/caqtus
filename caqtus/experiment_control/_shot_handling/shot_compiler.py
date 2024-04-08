@@ -1,10 +1,10 @@
 from collections.abc import Mapping
-from typing import Protocol, Any
+from typing import Any
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes
-from .compilation_contexts import ShotContext
-from .variable_namespace import VariableNamespace
+from caqtus.shot_compilation.compilation_contexts import ShotContext
+from caqtus.shot_compilation.variable_namespace import VariableNamespace
 
 
 class ShotCompiler:
