@@ -175,7 +175,6 @@ class SequenceManager(AbstractContextManager):
         # Otherwise, it waits until the first shot is submitted for compilation.
         task = self._process_pool.submit(nothing)
 
-        shot_compiler = ShotCompiler(self.time_lanes, self.device_configurations)
         sequence_context = SequenceContext(
             device_configurations=self.device_configurations, time_lanes=self.time_lanes
         )
@@ -190,6 +189,10 @@ class SequenceManager(AbstractContextManager):
             for name, config in self.device_configurations.items()
         }
         shot_runner = ShotRunner(devices, device_controller_types)
+        shot_compiler = ShotCompiler(
+            self.time_lanes,
+            {name: self.device_configurations[name] for name in devices},
+        )
         self._exit_stack.enter_context(shot_runner)
 
         self._exit_stack.enter_context(self._thread_pool)
