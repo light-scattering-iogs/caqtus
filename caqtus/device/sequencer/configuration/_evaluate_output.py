@@ -186,10 +186,10 @@ def _(
     try:
         device_config = shot_context.get_device_config(device)
     except KeyError:
-        raise ValueError(
-            f"Could not find device <{device}> to generate trigger "
-            f"for output <{output_}>."
+        length = number_ticks(
+            0, shot_context.get_shot_duration(), required_time_step * ns
         )
+        return Pattern([False]) * (length + prepend + append)
     if required_unit is not None:
         raise ValueError(
             f"Cannot evaluate trigger for device <{device}> with unit "
