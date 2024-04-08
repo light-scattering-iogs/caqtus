@@ -41,6 +41,7 @@ class CameraController(DeviceController):
             )
         async with async_context(camera.acquire(exposures)) as pictures:
             self.signal_ready()
+            await self.wait_all_devices_ready()
             yield self.emit_signals(
                 iterate_async(zip(picture_names, pictures, strict=True))
             )
