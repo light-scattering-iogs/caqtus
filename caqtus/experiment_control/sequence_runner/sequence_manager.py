@@ -174,35 +174,48 @@ class SequenceManager(AbstractContextManager):
         # This task is here to force the process pool to start now.
         # Otherwise, it waits until the first shot is submitted for compilation.
         task = self._process_pool.submit(nothing)
+        self._exit_stack.enter_context(self._thread_pool)
 
+        devices_in_use = self._create_devices_in_use()
+
+        shot_runner = self._create_shot_runner(devices_in_use)
+        self._exit_stack.enter_context(shot_runner)
+
+        self._task_group.__enter__()
+        self._task_group.create_task(self._watch_for_interruption)
+        self._task_group.create_task(self._store_shots)
+        shot_compiler = self._create_shot_compiler(devices_in_use)
+        for _ in range(4):
+            self._task_group.create_task(self._compile_shots, shot_compiler)
+        self._task_group.create_task(self._run_shots, shot_runner)
+        task.result()
+
+    def _create_devices_in_use(self):
         sequence_context = SequenceContext(
             device_configurations=self.device_configurations, time_lanes=self.time_lanes
         )
-        devices = create_devices(
+        devices_in_use = create_devices(
             self.device_configurations,
             self.device_server_configs,
             self.manager_class,
             sequence_context,
         )
+        return devices_in_use
+
+    def _create_shot_runner(self, devices_in_use) -> ShotRunner:
         device_controller_types = {
             name: self.device_configurations[name].get_controller_type()
-            for name in devices
+            for name in devices_in_use
         }
-        shot_runner = ShotRunner(devices, device_controller_types)
+        shot_runner = ShotRunner(devices_in_use, device_controller_types)
+        return shot_runner
+
+    def _create_shot_compiler(self, devices_in_use) -> ShotCompiler:
         shot_compiler = ShotCompiler(
             self.time_lanes,
-            {name: self.device_configurations[name] for name in devices},
+            {name: self.device_configurations[name] for name in devices_in_use},
         )
-        self._exit_stack.enter_context(shot_runner)
-
-        self._exit_stack.enter_context(self._thread_pool)
-        self._task_group.__enter__()
-        self._task_group.create_task(self._watch_for_interruption)
-        self._task_group.create_task(self._store_shots)
-        for _ in range(4):
-            self._task_group.create_task(self._compile_shots, shot_compiler)
-        self._task_group.create_task(self._run_shots, shot_runner)
-        task.result()
+        return shot_compiler
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # Indicates if an error occurred in the scheduler thread.
