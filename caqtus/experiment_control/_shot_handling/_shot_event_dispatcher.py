@@ -81,3 +81,6 @@ class ShotEventDispatcher:
                 f"Still waiting on data acquisition for labels {not_acquired}"
             )
         return self._acquired_data
+
+    def _device_signaled_ready(self, device: DeviceName) -> bool:
+        return self._device_ready[device].is_set()

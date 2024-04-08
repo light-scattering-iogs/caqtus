@@ -75,12 +75,23 @@ class ShotRunner:
                     device = self.devices[name]
                     parameters = device_parameters[name]
                     tg.start_soon(
-                        functools.partial(controller.run_shot, device, **parameters)
+                        functools.partial(
+                            self._wrap_run_shot, controller, device, **parameters
+                        )
                     )
 
         logger.info("Shot finished")
 
         return self.event_dispatcher.acquired_data()
+
+    async def _wrap_run_shot(self, controller: DeviceController, device, **parameters):
+        await controller.run_shot(device, **parameters)
+        device_name = controller.device_name
+        if not self.event_dispatcher._device_signaled_ready(device_name):
+            raise RuntimeError(
+                f"The controller supervising the device '{device_name}' did not "
+                f"call {controller.signal_ready}."
+            )
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
