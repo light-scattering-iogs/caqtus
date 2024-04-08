@@ -1,3 +1,5 @@
+import anyio
+
 from caqtus.device.controller import DeviceController, run_in_thread, sleep
 from .instructions import SequencerInstruction
 from .runtime import Sequencer
