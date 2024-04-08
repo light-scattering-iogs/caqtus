@@ -7,7 +7,7 @@ from .compilation_contexts import ShotContext
 from .variable_namespace import VariableNamespace
 
 
-class ShotCompiler(Protocol):
+class ShotCompiler:
     def __init__(
         self,
         shot_timelanes: TimeLanes,

@@ -18,6 +18,8 @@ class ShotRunner:
         devices: Mapping[DeviceName, Device],
         controller_types: Mapping[DeviceName, type[DeviceController]],
     ):
+        if set(devices.keys()) != set(controller_types.keys()):
+            raise ValueError("The devices and controller_types must have the same keys")
         self.devices = devices
         self.controller_types = controller_types
         self.exit_stack = contextlib.ExitStack()

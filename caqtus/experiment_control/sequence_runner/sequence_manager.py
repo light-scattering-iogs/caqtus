@@ -185,8 +185,8 @@ class SequenceManager(AbstractContextManager):
             sequence_context,
         )
         device_controller_types = {
-            name: config.get_controller_type()
-            for name, config in self.device_configurations.items()
+            name: self.device_configurations[name].get_controller_type()
+            for name in devices
         }
         shot_runner = ShotRunner(devices, device_controller_types)
         shot_compiler = ShotCompiler(
