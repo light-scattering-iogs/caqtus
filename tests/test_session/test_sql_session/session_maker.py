@@ -21,14 +21,8 @@ class DummyConfiguration(DeviceConfiguration):
     a: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
     b: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
 
-    def get_device_type(self) -> str:
-        return "Dummy"
-
-    def get_device_init_args(self, device_name, sequence_context) -> Mapping[str, Any]:
-        return {
-            "a": self.a,
-            "b": self.b,
-        }
+    def get_device_initialization_method(self, device_name, sequence_context):
+        return super().get_device_initialization_method(device_name, sequence_context)
 
     def compile_device_shot_parameters(
         self, device_name: DeviceName, shot_context

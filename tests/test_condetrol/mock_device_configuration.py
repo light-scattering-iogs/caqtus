@@ -1,6 +1,6 @@
 from typing import Any, Mapping
 
-from caqtus.device import DeviceConfiguration, DeviceParameter, DeviceName
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.shot_compilation import ShotContext
 
 
@@ -10,5 +10,5 @@ class MockDeviceConfiguration(DeviceConfiguration):
     ) -> Mapping[str, Any]:
         pass
 
-    def get_device_init_args(self, *args, **kwargs) -> dict[DeviceParameter, Any]:
+    def get_device_initialization_method(self, device_name, sequence_context):
         raise NotImplementedError
