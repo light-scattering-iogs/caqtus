@@ -1,8 +1,8 @@
 import anyio
+from caqtus.shot_event_dispatcher import ShotEventDispatcher
 
 from caqtus.device import DeviceName
 from caqtus.device.controller import DeviceController
-from caqtus.shot_event_dispatcher import ShotEventDispatcher
 from tests.fixtures import MockDevice
 
 
@@ -12,7 +12,7 @@ class ControllerTest0(DeviceController[MockDevice]):
 
     async def run_shot(self):
         self.signal_ready()
-        await self.event_dispatcher.wait_all_devices_ready()
+        await self.wait_all_devices_ready()
 
 
 def test_0():

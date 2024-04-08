@@ -34,7 +34,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         shot_event_dispatcher: "ShotEventDispatcher",
     ):
         self.device_name = device_name
-        self.event_dispatcher = shot_event_dispatcher
+        self._event_dispatcher = shot_event_dispatcher
 
     async def run_shot(
         self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
@@ -52,27 +52,27 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     def signal_ready(self) -> None:
         """Indicates that the device has been programed and is ready to run the shot."""
 
-        self.event_dispatcher.signal_device_ready(self.device_name)
+        self._event_dispatcher.signal_device_ready(self.device_name)
 
     async def wait_all_devices_ready(self) -> None:
         """Waits for all devices to be ready to run the shot."""
 
-        await self.event_dispatcher.wait_all_devices_ready(self.device_name)
+        await self._event_dispatcher.wait_all_devices_ready(self.device_name)
 
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
         """Signals that data has been acquired from the device."""
 
-        self.event_dispatcher.signal_data_acquired(self.device_name, label, data)
+        self._event_dispatcher.signal_data_acquired(self.device_name, label, data)
 
     async def wait_data_acquired(self, label: DataLabel) -> Data:
         """Waits until the data with the given label has been acquired."""
 
-        return await self.event_dispatcher.wait_data_acquired(self.device_name, label)
+        return await self._event_dispatcher.wait_data_acquired(self.device_name, label)
 
     def spawn_controller(
         self, controller_type: type[DeviceControllerType]
     ) -> DeviceControllerType:
-        return controller_type(self.device_name, self.event_dispatcher)
+        return controller_type(self.device_name, self._event_dispatcher)
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
