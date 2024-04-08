@@ -1,5 +1,3 @@
-import anyio
-
 from caqtus.device.controller import DeviceController, run_in_thread, sleep
 from .instructions import SequencerInstruction
 from .runtime import Sequencer
@@ -28,6 +26,7 @@ class SequencerController(DeviceController):
         else:
             await run_in_thread(sequencer.start_sequence)
             self.signal_ready()
+            await self.wait_all_devices_ready()
 
     @staticmethod
     async def wait_until_finished(sequencer: Sequencer) -> None:
