@@ -4,15 +4,18 @@ import abc
 import contextlib
 import functools
 from collections.abc import Callable, AsyncGenerator, Iterable, AsyncIterator
-from typing import Generic, TypeVar, ParamSpec
+from typing import Generic, TypeVar, ParamSpec, TYPE_CHECKING
 
 import anyio
 import anyio.to_thread
 
-from caqtus.experiment_control._shot_handling import ShotEventDispatcher
 from caqtus.types.data import DataLabel, Data
 from ..name import DeviceName
 from ..runtime import Device
+
+if TYPE_CHECKING:
+    from caqtus.experiment_control._shot_handling import ShotEventDispatcher
+
 
 DeviceType = TypeVar("DeviceType", bound=Device)
 
@@ -28,7 +31,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     def __init__(
         self,
         device_name: DeviceName,
-        shot_event_dispatcher: ShotEventDispatcher,
+        shot_event_dispatcher: "ShotEventDispatcher",
     ):
         self.device_name = device_name
         self.event_dispatcher = shot_event_dispatcher
