@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus"
-version = "0.18.7"
+version = "0.18.8"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"

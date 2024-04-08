@@ -21,8 +21,8 @@ from caqtus.session.sequence import State
 from caqtus.shot_compilation import VariableNamespace, ShotCompiler, SequenceContext
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.concurrent import TaskGroup
+from .._shot_handling import ShotRunner
 from ..initialize_devices import create_devices
-from ..shot_runner import ShotRunner
 
 pickling_support.install()
 logger = logging.getLogger(__name__)
