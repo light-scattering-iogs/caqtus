@@ -8,8 +8,8 @@ import anyio.to_thread
 
 from caqtus.device import DeviceName, Device
 from caqtus.device.controller import DeviceController
-from caqtus.shot_event_dispatcher import ShotEventDispatcher
 from caqtus.types.data import DataLabel, Data
+from ._shot_event_dispatcher import ShotEventDispatcher
 
 
 class ShotRunner:

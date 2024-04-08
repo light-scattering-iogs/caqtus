@@ -9,7 +9,7 @@ from typing import Generic, TypeVar, ParamSpec
 import anyio
 import anyio.to_thread
 
-from caqtus.shot_event_dispatcher import ShotEventDispatcher
+from caqtus.experiment_control._shot_handling import ShotEventDispatcher
 from caqtus.types.data import DataLabel, Data
 from ..name import DeviceName
 from ..runtime import Device
