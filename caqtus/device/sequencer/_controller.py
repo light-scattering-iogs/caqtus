@@ -10,7 +10,7 @@ class SequencerController(DeviceController):
     """Controls a sequencer during a shot."""
 
     async def run_shot(
-        self, sequencer: Sequencer, /, sequence: SequencerInstruction
+        self, sequencer: Sequencer, /, sequence: SequencerInstruction, *args, **kwargs
     ) -> None:
         await self.program(sequencer, sequence)
         await self.start(sequencer)

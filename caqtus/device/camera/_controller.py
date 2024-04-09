@@ -20,6 +20,8 @@ class CameraController(DeviceController):
         timeout: float,
         picture_names: list[str],
         exposures: list[float],
+        *args,
+        **kwargs,
     ) -> None:
         await self.set_timeout(camera, timeout)
         async with self.acquire_pictures(camera, picture_names, exposures) as pictures:
