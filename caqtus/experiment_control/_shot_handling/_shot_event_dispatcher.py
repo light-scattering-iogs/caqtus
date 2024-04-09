@@ -7,18 +7,9 @@ import anyio
 import attrs
 
 from caqtus.device import DeviceName, Device
+from caqtus.device.controller import DeviceController
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
-from ...device.controller import DeviceController
-
-
-@attrs.define
-class AcquisitionStats:
-    #: The time at which each device started waiting for other devices to be ready
-    signaled_ready: dict[DeviceName, float] = attrs.field(factory=dict)
-
-    #: The time at which each device finished waiting for other devices to be ready
-    finished_waiting_ready: dict[DeviceName, float] = attrs.field(factory=dict)
 
 
 @attrs.define
@@ -54,7 +45,6 @@ class ShotEventDispatcher:
             collections.defaultdict(anyio.Event)
         )
         self._acquired_data: dict[DataLabel, Data] = {}
-        self._acquisition_stats = AcquisitionStats()
         self._start_time = 0.0
 
     async def run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
@@ -62,6 +52,7 @@ class ShotEventDispatcher:
         with anyio.fail_after(timeout):
             async with anyio.create_task_group() as tg:
                 for info in self._device_infos.values():
+                    # noinspection PyProtectedMember
                     tg.start_soon(
                         info.controller._run_shot, info.device, **info.parameters
                     )
