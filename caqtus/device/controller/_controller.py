@@ -48,6 +48,8 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self._signaled_ready_time: Optional[float] = None
         self._finished_waiting_ready_time: Optional[float] = None
         self._thread_times: list[tuple[str, float, float]] = []
+        self._data_waits: list[tuple[str, float, float]] = []
+        self._data_signals: list[tuple[str, float]] = []
 
     async def run_shot(
         self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
@@ -80,6 +82,8 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
             finished_waiting_ready_time=self._finished_waiting_ready_time,
             finished_time=finished_time,
             thread_stats=self._thread_times,
+            data_waits=self._data_waits,
+            data_signals=self._data_signals,
         )
 
     @final
@@ -108,12 +112,17 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         """Signals that data has been acquired from the device."""
 
         self._event_dispatcher.signal_data_acquired(self.device_name, label, data)
+        self._data_signals.append((label, self._event_dispatcher.shot_time()))
 
     @final
     async def wait_data_acquired(self, label: DataLabel) -> Data:
         """Waits until the data with the given label has been acquired."""
 
-        return await self._event_dispatcher.wait_data_acquired(self.device_name, label)
+        start = self._event_dispatcher.shot_time()
+        data = await self._event_dispatcher.wait_data_acquired(self.device_name, label)
+        end = self._event_dispatcher.shot_time()
+        self._data_waits.append((label, start, end))
+        return data
 
     def _debug_stats(self):
         return {
@@ -165,6 +174,8 @@ class ShotStats(TypedDict):
     finished_waiting_ready_time: float
     finished_time: float
     thread_stats: list[tuple[str, float, float]]
+    data_waits: list[tuple[str, float, float]]
+    data_signals: list[tuple[str, float]]
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
