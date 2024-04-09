@@ -65,6 +65,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self, device: DeviceType, *args: _P.args, **kwargs: _P.kwargs
     ) -> ShotStats:
         await self.run_shot(device, *args, **kwargs)
+        finished_time = self._event_dispatcher.shot_time()
         if not self._signaled_ready.is_set():
             raise RuntimeError(
                 f"wait_all_devices_ready was not called in run_shot for {self}"
@@ -75,6 +76,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         return ShotStats(
             signaled_ready_time=self._signaled_ready_time,
             finished_waiting_ready_time=self._finished_waiting_ready_time,
+            finished_time=finished_time,
         )
 
     @final
@@ -125,6 +127,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
 class ShotStats(TypedDict):
     signaled_ready_time: float
     finished_waiting_ready_time: float
+    finished_time: float
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
