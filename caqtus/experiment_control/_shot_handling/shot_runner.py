@@ -90,7 +90,7 @@ class ShotRunner:
         if not self.event_dispatcher._device_signaled_ready(device_name):
             raise RuntimeError(
                 f"The controller supervising the device '{device_name}' did not "
-                f"call {controller.signal_ready}."
+                f"call {controller.wait_all_devices_ready}."
             )
 
     def __exit__(self, exc_type, exc_value, traceback):

@@ -41,21 +41,24 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     ) -> None:
         """Runs a shot on the device.
 
-        This method must call :meth:`signal_ready` exactly once.
+        This method must call :meth:`wait_all_devices_ready` exactly once.
         The default method simply call :meth:`Device.update_parameters` with the
         arguments passed before the shot is launched.
         """
 
         await run_in_thread(device.update_parameters, *args, **kwargs)
-        self.signal_ready()
-
-    def signal_ready(self) -> None:
-        """Indicates that the device has been programed and is ready to run the shot."""
-
-        self._event_dispatcher.signal_device_ready(self.device_name)
+        await self.wait_all_devices_ready()
 
     async def wait_all_devices_ready(self) -> None:
-        """Waits for all devices to be ready to run the shot."""
+        """Wait for all devices to be ready for time-sensitive operations.
+
+        This method must be called once the device has been programmed for the shot and
+        is ready to be triggered or to react to data acquisition signals.
+
+        It must be called exactly once in :meth:`run_shot`.
+
+        The method will wait for all devices to be ready before returning.
+        """
 
         await self._event_dispatcher.wait_all_devices_ready(self.device_name)
 

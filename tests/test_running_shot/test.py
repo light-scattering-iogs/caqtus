@@ -11,7 +11,6 @@ class ControllerTest0(DeviceController[MockDevice]):
         super().__init__(device, shot_event_dispatcher)
 
     async def run_shot(self):
-        self.signal_ready()
         await self.wait_all_devices_ready()
 
 

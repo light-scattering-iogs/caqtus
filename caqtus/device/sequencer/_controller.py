@@ -22,12 +22,10 @@ class SequencerController(DeviceController):
 
     async def start(self, sequencer: Sequencer) -> None:
         if isinstance(sequencer.get_trigger(), SoftwareTrigger):
-            self.signal_ready()
             await self.wait_all_devices_ready()
             sequencer.start_sequence()
         else:
             await run_in_thread(sequencer.start_sequence)
-            self.signal_ready()
             await self.wait_all_devices_ready()
 
     @staticmethod
