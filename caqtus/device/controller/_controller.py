@@ -68,6 +68,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     async def _run_shot(
         self, device: DeviceType, *args: _P.args, **kwargs: _P.kwargs
     ) -> ShotStats:
+        start_time = self._event_dispatcher.shot_time()
         await self.run_shot(device, *args, **kwargs)
         finished_time = self._event_dispatcher.shot_time()
         if not self._signaled_ready.is_set():
@@ -78,6 +79,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         assert self._finished_waiting_ready_time is not None
 
         return ShotStats(
+            start_time=start_time,
             signaled_ready_time=self._signaled_ready_time,
             finished_waiting_ready_time=self._finished_waiting_ready_time,
             finished_time=finished_time,
@@ -170,6 +172,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
 
 
 class ShotStats(TypedDict):
+    start_time: float
     signaled_ready_time: float
     finished_waiting_ready_time: float
     finished_time: float
