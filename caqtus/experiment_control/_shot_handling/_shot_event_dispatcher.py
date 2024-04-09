@@ -1,4 +1,5 @@
 import collections
+import functools
 import time
 from collections.abc import Set, Mapping
 from typing import Any
@@ -54,7 +55,9 @@ class ShotEventDispatcher:
                 for info in self._device_infos.values():
                     # noinspection PyProtectedMember
                     tg.start_soon(
-                        info.controller._run_shot, info.device, **info.parameters
+                        functools.partial(
+                            info.controller._run_shot, info.device, **info.parameters
+                        )
                     )
 
         return self.acquired_data()
