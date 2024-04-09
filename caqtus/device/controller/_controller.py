@@ -79,6 +79,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
             signaled_ready_time=self._signaled_ready_time,
             finished_waiting_ready_time=self._finished_waiting_ready_time,
             finished_time=finished_time,
+            thread_stats=self._thread_times,
         )
 
     @final
@@ -120,6 +121,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
             "finished_waiting_ready_time": self._finished_waiting_ready_time,
         }
 
+    @final
     async def run_in_thread(
         self, func: Callable[_Q, _T], *args: _Q.args, **kwargs: _Q.kwargs
     ) -> _T:
@@ -146,12 +148,14 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         else:
             await self.run_in_thread(cm.__exit__, None, None, None)
 
+    @final
     async def iterate_async(self, iterable: Iterable[_T]) -> AsyncIterator[_T]:
         iterator = iter(iterable)
         done = object()
         while (value := await self.run_in_thread(next, iterator, done)) is not done:
             yield value
 
+    @final
     async def sleep(self, seconds: float) -> None:
         await anyio.sleep(seconds)
 
@@ -160,6 +164,7 @@ class ShotStats(TypedDict):
     signaled_ready_time: float
     finished_waiting_ready_time: float
     finished_time: float
+    thread_stats: list[tuple[str, float, float]]
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
