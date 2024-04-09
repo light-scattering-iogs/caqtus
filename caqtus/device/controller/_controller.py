@@ -95,6 +95,12 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
 
         return await self._event_dispatcher.wait_data_acquired(self.device_name, label)
 
+    def _debug_stats(self):
+        return {
+            "signaled_ready_time": self._signaled_ready_time,
+            "finished_waiting_ready_time": self._finished_waiting_ready_time,
+        }
+
     def spawn_controller(
         self, controller_type: type[DeviceControllerType]
     ) -> DeviceControllerType:

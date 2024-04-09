@@ -49,6 +49,17 @@ class ShotEventDispatcher:
         self._start_time = 0.0
 
     async def run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
+        try:
+            return await self._run_shot(timeout)
+        except:
+            stats = {
+                name: controller._debug_stats()
+                for name, controller in self._controllers.items()
+            }
+            logger.debug(f"Shot trace: {stats}")
+            raise
+
+    async def _run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
         self._start_time = time.monotonic()
         with anyio.fail_after(timeout):
             async with anyio.create_task_group() as tg:
