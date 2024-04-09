@@ -31,6 +31,7 @@ ShotParametersType = TypeVar("ShotParametersType")
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
+_Q = ParamSpec("_Q")
 
 
 class DeviceController(Generic[DeviceType, _P], abc.ABC):
@@ -46,6 +47,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self._signaled_ready = anyio.Event()
         self._signaled_ready_time: Optional[float] = None
         self._finished_waiting_ready_time: Optional[float] = None
+        self._thread_times: list[tuple[str, float, float]] = []
 
     async def run_shot(
         self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
@@ -57,7 +59,7 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         arguments passed before the shot is launched.
         """
 
-        await run_in_thread(device.update_parameters, *args, **kwargs)
+        await self.run_in_thread(device.update_parameters, *args, **kwargs)
         await self.wait_all_devices_ready()
 
     @final
@@ -118,10 +120,40 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
             "finished_waiting_ready_time": self._finished_waiting_ready_time,
         }
 
-    def spawn_controller(
-        self, controller_type: type[DeviceControllerType]
-    ) -> DeviceControllerType:
-        return controller_type(self.device_name, self._event_dispatcher)
+    async def run_in_thread(
+        self, func: Callable[_Q, _T], *args: _Q.args, **kwargs: _Q.kwargs
+    ) -> _T:
+        func_name = func.__name__
+        start_time = self._event_dispatcher.shot_time()
+        result = await anyio.to_thread.run_sync(
+            functools.partial(func, *args, **kwargs)
+        )
+        end_time = self._event_dispatcher.shot_time()
+        self._thread_times.append((func_name, start_time, end_time))
+        return result
+
+    @contextlib.asynccontextmanager
+    async def async_context(
+        self,
+        cm: contextlib.AbstractContextManager[_T],
+    ) -> AsyncGenerator[_T, None]:
+        entered = await self.run_in_thread(cm.__enter__)
+        try:
+            yield entered
+        except BaseException as exc:
+            cm.__exit__(type(exc), exc, exc.__traceback__)
+            raise
+        else:
+            await self.run_in_thread(cm.__exit__, None, None, None)
+
+    async def iterate_async(self, iterable: Iterable[_T]) -> AsyncIterator[_T]:
+        iterator = iter(iterable)
+        done = object()
+        while (value := await self.run_in_thread(next, iterator, done)) is not done:
+            yield value
+
+    async def sleep(self, seconds: float) -> None:
+        await anyio.sleep(seconds)
 
 
 class ShotStats(TypedDict):
@@ -131,34 +163,3 @@ class ShotStats(TypedDict):
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
-
-
-async def run_in_thread(
-    func: Callable[_P, _T], *args: _P.args, **kwargs: _P.kwargs
-) -> _T:
-    return await anyio.to_thread.run_sync(functools.partial(func, *args, **kwargs))
-
-
-async def sleep(seconds: float) -> None:
-    await anyio.sleep(seconds)
-
-
-@contextlib.asynccontextmanager
-async def async_context(
-    cm: contextlib.AbstractContextManager[_T],
-) -> AsyncGenerator[_T, None]:
-    entered = await run_in_thread(cm.__enter__)
-    try:
-        yield entered
-    except BaseException as exc:
-        cm.__exit__(type(exc), exc, exc.__traceback__)
-        raise
-    else:
-        await run_in_thread(cm.__exit__, None, None, None)
-
-
-async def iterate_async(iterable: Iterable[_T]) -> AsyncIterator[_T]:
-    iterator = iter(iterable)
-    done = object()
-    while (value := await run_in_thread(next, iterator, done)) is not done:
-        yield value

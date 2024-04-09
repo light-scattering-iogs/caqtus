@@ -3,9 +3,6 @@ from collections.abc import AsyncIterable, AsyncGenerator
 
 from caqtus.device.controller import (
     DeviceController,
-    run_in_thread,
-    async_context,
-    iterate_async,
 )
 from caqtus.types.data import DataLabel
 from caqtus.types.image import Image
@@ -28,9 +25,8 @@ class CameraController(DeviceController):
             async for picture in pictures:
                 pass
 
-    @staticmethod
-    async def set_timeout(camera: Camera, timeout: float) -> None:
-        await run_in_thread(camera.update_parameters, timeout=timeout)
+    async def set_timeout(self, camera: Camera, timeout: float) -> None:
+        await self.run_in_thread(camera.update_parameters, timeout=timeout)
 
     @contextlib.asynccontextmanager
     async def acquire_pictures(
@@ -41,10 +37,10 @@ class CameraController(DeviceController):
                 f"Number of picture names ({len(picture_names)}) must be equal to the "
                 f"number of exposures ({len(exposures)})"
             )
-        async with async_context(camera.acquire(exposures)) as pictures:
+        async with self.async_context(camera.acquire(exposures)) as pictures:
             await self.wait_all_devices_ready()
             yield self.emit_signals(
-                iterate_async(zip(picture_names, pictures, strict=True))
+                self.iterate_async(zip(picture_names, pictures, strict=True))
             )
 
     async def emit_signals(
