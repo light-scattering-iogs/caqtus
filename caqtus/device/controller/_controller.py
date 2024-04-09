@@ -4,7 +4,15 @@ import abc
 import contextlib
 import functools
 from collections.abc import Callable, AsyncGenerator, Iterable, AsyncIterator
-from typing import Generic, TypeVar, ParamSpec, TYPE_CHECKING, final, Optional
+from typing import (
+    Generic,
+    TypeVar,
+    ParamSpec,
+    TYPE_CHECKING,
+    final,
+    Optional,
+    TypedDict,
+)
 
 import anyio
 import anyio.to_thread
@@ -55,12 +63,19 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     @final
     async def _run_shot(
         self, device: DeviceType, *args: _P.args, **kwargs: _P.kwargs
-    ) -> None:
+    ) -> ShotStats:
         await self.run_shot(device, *args, **kwargs)
         if not self._signaled_ready.is_set():
             raise RuntimeError(
                 f"wait_all_devices_ready was not called in run_shot for {self}"
             )
+        assert self._signaled_ready_time is not None
+        assert self._finished_waiting_ready_time is not None
+
+        return ShotStats(
+            signaled_ready_time=self._signaled_ready_time,
+            finished_waiting_ready_time=self._finished_waiting_ready_time,
+        )
 
     @final
     async def wait_all_devices_ready(self) -> None:
@@ -105,6 +120,11 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self, controller_type: type[DeviceControllerType]
     ) -> DeviceControllerType:
         return controller_type(self.device_name, self._event_dispatcher)
+
+
+class ShotStats(TypedDict):
+    signaled_ready_time: float
+    finished_waiting_ready_time: float
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)

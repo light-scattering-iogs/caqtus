@@ -1,5 +1,4 @@
 import collections
-import functools
 import time
 from collections.abc import Set, Mapping
 from typing import Any
@@ -61,17 +60,21 @@ class ShotEventDispatcher:
 
     async def _run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
         self._start_time = time.monotonic()
+        result = {}
         with anyio.fail_after(timeout):
             async with anyio.create_task_group() as tg:
-                for info in self._device_infos.values():
+                for name, info in self._device_infos.items():
                     # noinspection PyProtectedMember
                     tg.start_soon(
-                        functools.partial(
-                            info.controller._run_shot, info.device, **info.parameters
-                        )
+                        _save_in_dict,
+                        info.controller._run_shot(info.device, **info.parameters),
+                        name,
+                        result,
                     )
 
-        return self.acquired_data()
+        data = self.acquired_data()
+        data[DataLabel("shot analytics")] = result
+        return data
 
     def shot_time(self) -> float:
         return time.monotonic() - self._start_time
@@ -119,3 +122,7 @@ class ShotEventDispatcher:
                 f"Still waiting on data acquisition for labels {not_acquired}"
             )
         return self._acquired_data
+
+
+async def _save_in_dict(task, key, dictionary):
+    dictionary[key] = await task
