@@ -1,6 +1,6 @@
 import anyio
 
-from caqtus.device.controller import DeviceController, sleep
+from caqtus.device.controller import DeviceController
 from .instructions import SequencerInstruction
 from .runtime import Sequencer
 from .trigger import SoftwareTrigger
@@ -34,4 +34,4 @@ class SequencerController(DeviceController):
         # middle with possibly dangerous values on the sequencer channels.
         with anyio.CancelScope(shield=True):
             while not await self.run_in_thread(sequencer.has_sequence_finished):
-                await sleep(0)
+                await self.sleep(0)
