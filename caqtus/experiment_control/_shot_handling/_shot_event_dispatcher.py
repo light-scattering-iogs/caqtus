@@ -1,12 +1,15 @@
 import collections
-from collections.abc import Set
+import time
+from collections.abc import Set, Mapping
+from typing import Any
 
 import anyio
 import attrs
 
-from caqtus.device import DeviceName
+from caqtus.device import DeviceName, Device
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
+from ...device.controller import DeviceController
 
 
 @attrs.define
@@ -18,42 +21,61 @@ class AcquisitionStats:
     finished_waiting_ready: dict[DeviceName, float] = attrs.field(factory=dict)
 
 
+@attrs.define
+class DeviceRunConfig:
+    device: Device
+    controller_type: type[DeviceController]
+    parameters: Mapping[str, Any]
+
+
+@attrs.define
+class DeviceRunInfo:
+    controller: DeviceController
+    device: Device
+    parameters: Mapping[str, Any]
+
+
 class ShotEventDispatcher:
-    def __init__(self, devices_in_use: Set[DeviceName]):
-        self._devices_in_use = devices_in_use
-        self._device_ready = {device: anyio.Event() for device in devices_in_use}
+    def __init__(self, device_run_configs: Mapping[DeviceName, DeviceRunConfig]):
+        self._device_infos: dict[DeviceName, DeviceRunInfo] = {
+            name: DeviceRunInfo(
+                controller=config.controller_type(name, self),
+                device=config.device,
+                parameters=config.parameters,
+            )
+            for name, config in device_run_configs.items()
+        }
+
+        self._controllers: dict[DeviceName, DeviceController] = {
+            name: info.controller for name, info in self._device_infos.items()
+        }
+
         self._acquisition_events: dict[DataLabel, anyio.Event] = (
             collections.defaultdict(anyio.Event)
         )
         self._acquired_data: dict[DataLabel, Data] = {}
         self._acquisition_stats = AcquisitionStats()
+        self._start_time = 0.0
 
-    def _reset(self) -> None:
-        self.__init__(self._devices_in_use)
+    async def run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
+        self._start_time = time.monotonic()
+        with anyio.fail_after(timeout):
+            async with anyio.create_task_group() as tg:
+                for info in self._device_infos.values():
+                    tg.start_soon(
+                        info.controller._run_shot, info.device, **info.parameters
+                    )
 
-    def signal_device_ready(self, device: DeviceName) -> None:
-        if device not in self._device_ready:
-            raise ValueError(f"Device {device} is not in use")
-        if self._device_ready[device].is_set():
-            raise ValueError(f"Device {device} is already ready")
-        self._device_ready[device].set()
-        logger.debug(f"Device {device} signaled ready")
+        return self.acquired_data()
 
-    async def wait_all_devices_ready(self, waiting_device: DeviceName) -> None:
-        if waiting_device not in self._device_ready:
-            raise RuntimeError(f"Device {waiting_device} is not in use")
-        if self._device_ready[waiting_device].is_set():
-            raise RuntimeError(f"Device {waiting_device} is already ready")
-        self._device_ready[waiting_device].set()
-        self._acquisition_stats.signaled_ready[waiting_device] = self._shot_time()
+    def shot_time(self) -> float:
+        return time.monotonic() - self._start_time
 
+    async def wait_all_devices_ready(self) -> None:
         async with anyio.create_task_group() as tg:
-            for event in self._device_ready.values():
-                if not event.is_set():
-                    tg.start_soon(event.wait)
-        self._acquisition_stats.finished_waiting_ready[waiting_device] = (
-            self._shot_time()
-        )
+            for controller in self._controllers.values():
+                # noinspection PyProtectedMember
+                tg.start_soon(controller._signaled_ready.wait)
 
     async def wait_data_acquired(
         self, waiting_device: DeviceName, label: DataLabel
@@ -92,9 +114,3 @@ class ShotEventDispatcher:
                 f"Still waiting on data acquisition for labels {not_acquired}"
             )
         return self._acquired_data
-
-    def _device_signaled_ready(self, device: DeviceName) -> bool:
-        return self._device_ready[device].is_set()
-
-    def _shot_time(self) -> float:
-        return time.time()

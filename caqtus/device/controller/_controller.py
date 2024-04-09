@@ -4,7 +4,7 @@ import abc
 import contextlib
 import functools
 from collections.abc import Callable, AsyncGenerator, Iterable, AsyncIterator
-from typing import Generic, TypeVar, ParamSpec, TYPE_CHECKING
+from typing import Generic, TypeVar, ParamSpec, TYPE_CHECKING, final, Optional
 
 import anyio
 import anyio.to_thread
@@ -35,6 +35,9 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
     ):
         self.device_name = device_name
         self._event_dispatcher = shot_event_dispatcher
+        self._signaled_ready = anyio.Event()
+        self._signaled_ready_time: Optional[float] = None
+        self._finished_waiting_ready_time: Optional[float] = None
 
     async def run_shot(
         self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
@@ -49,6 +52,17 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         await run_in_thread(device.update_parameters, *args, **kwargs)
         await self.wait_all_devices_ready()
 
+    @final
+    async def _run_shot(
+        self, device: DeviceType, *args: _P.args, **kwargs: _P.kwargs
+    ) -> None:
+        await self.run_shot(device, *args, **kwargs)
+        if not self._signaled_ready.is_set():
+            raise RuntimeError(
+                f"wait_all_devices_ready was not called in run_shot for {self}"
+            )
+
+    @final
     async def wait_all_devices_ready(self) -> None:
         """Wait for all devices to be ready for time-sensitive operations.
 
@@ -60,13 +74,22 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         The method will wait for all devices to be ready before returning.
         """
 
-        await self._event_dispatcher.wait_all_devices_ready(self.device_name)
+        if self._signaled_ready.is_set():
+            raise RuntimeError(
+                f"wait_all_devices_ready must be called exactly once for {self}"
+            )
+        self._signaled_ready.set()
+        self._signaled_ready_time = self._event_dispatcher.shot_time()
+        await self._event_dispatcher.wait_all_devices_ready()
+        self._finished_waiting_ready_time = self._event_dispatcher.shot_time()
 
+    @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
         """Signals that data has been acquired from the device."""
 
         self._event_dispatcher.signal_data_acquired(self.device_name, label, data)
 
+    @final
     async def wait_data_acquired(self, label: DataLabel) -> Data:
         """Waits until the data with the given label has been acquired."""
 
