@@ -13,6 +13,7 @@ from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTrigg
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from ._adaptative_clock import get_adaptive_clock
 
 if TYPE_CHECKING:
     from caqtus.device.sequencer.configuration.configuration import (

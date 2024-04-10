@@ -6,6 +6,7 @@ from ._instructions import (
     Repeat,
     Pattern,
     join,
+    concatenate,
 )
 from ._stack import stack_instructions
 from ._to_time_array import convert_to_change_arrays
@@ -20,4 +21,5 @@ __all__ = [
     "with_name",
     "stack_instructions",
     "join",
+    "concatenate",
 ]
