@@ -5,8 +5,8 @@ from hypothesis.strategies import composite, integers
 
 from caqtus.device.sequencer.instructions import (
     Pattern,
-    Concatenate,
-    Repeat,
+    Concatenated,
+    Repeated,
     with_name,
     stack_instructions,
 )
@@ -22,7 +22,7 @@ def interval(draw, length: int) -> tuple[int, int]:
 
 
 @composite
-def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
+def concatenation_and_interval(draw) -> tuple[Concatenated, tuple[int, int]]:
     length = draw(integers(min_value=2, max_value=100))
     instr = draw(generate_concatenate(length))
     s = draw(interval(length))
@@ -30,7 +30,7 @@ def concatenation_and_interval(draw) -> tuple[Concatenate, tuple[int, int]]:
 
 
 @composite
-def two_concatenations(draw) -> tuple[Concatenate, Concatenate]:
+def two_concatenations(draw) -> tuple[Concatenated, Concatenated]:
     length = draw(integers(min_value=2, max_value=100))
     instr1 = draw(generate_concatenate(length))
     instr2 = draw(generate_concatenate(length))
@@ -40,7 +40,7 @@ def two_concatenations(draw) -> tuple[Concatenate, Concatenate]:
 @composite
 def draw_concatenation_and_repeat(
     draw,
-) -> tuple[Concatenate, Pattern]:
+) -> tuple[Concatenated, Pattern]:
     repeat = draw(generate_repeat(100, 100))
     concatenation = draw(generate_concatenate(len(repeat)))
     return concatenation, repeat
@@ -100,7 +100,7 @@ def test_slicing_3():
 
 def test_slicing_4():
     instr = Pattern([0]) + 3 * Pattern([1])
-    assert instr[1:] == Repeat(3, Pattern([1])), str(instr[1:])
+    assert instr[1:] == Repeated(3, Pattern([1])), str(instr[1:])
 
 
 def test():

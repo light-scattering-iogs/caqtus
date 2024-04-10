@@ -17,8 +17,8 @@ from caqtus.device.sequencer import (
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
-    Concatenate,
-    Repeat,
+    Concatenated,
+    Repeated,
 )
 from pulsestreamer import (
     PulseStreamer,
@@ -145,7 +145,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
         return sequence
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, concatenate: Concatenate) -> PulseStreamerSequence:
+    def _(self, concatenate: Concatenated) -> PulseStreamerSequence:
         instructions = concatenate.instructions
         seq = self._construct_pulse_streamer_sequence(instructions[0])
         for instruction in instructions[1:]:
@@ -153,7 +153,7 @@ class SwabianPulseStreamer(Sequencer, RuntimeDevice):
         return seq
 
     @_construct_pulse_streamer_sequence.register
-    def _(self, repeat: Repeat) -> PulseStreamerSequence:
+    def _(self, repeat: Repeated) -> PulseStreamerSequence:
         if len(repeat.instruction) == 1:
             channel_values = repeat.instruction[0]
             seq = self._pulse_streamer.createSequence()

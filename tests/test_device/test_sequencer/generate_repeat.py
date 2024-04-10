@@ -2,12 +2,12 @@ import numpy as np
 from hypothesis.strategies import composite, integers, permutations
 from sympy import factorint
 
-from caqtus.device.sequencer.instructions import Repeat
+from caqtus.device.sequencer.instructions import Repeated
 from .generate_pattern import generate_pattern
 
 
 @composite
-def generate_repeat(draw, max_repetitions: int, max_sub_instruction_length) -> Repeat:
+def generate_repeat(draw, max_repetitions: int, max_sub_instruction_length) -> Repeated:
     repetitions = draw(integers(min_value=2, max_value=max_repetitions))
     sub_instruction_length = draw(
         integers(min_value=1, max_value=max_sub_instruction_length)
@@ -18,7 +18,7 @@ def generate_repeat(draw, max_repetitions: int, max_sub_instruction_length) -> R
 
 
 @composite
-def generate_repeat_fixed_length(draw, length: int) -> Repeat:
+def generate_repeat_fixed_length(draw, length: int) -> Repeated:
     a, b = draw(factorize(length))
     return generate_pattern(a) * b
 

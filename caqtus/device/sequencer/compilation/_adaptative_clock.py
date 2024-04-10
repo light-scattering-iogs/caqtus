@@ -3,9 +3,9 @@ import functools
 from ..instructions import (
     SequencerInstruction,
     Pattern,
-    Concatenate,
+    Concatenated,
     concatenate,
-    Repeat,
+    Repeated,
 )
 
 
@@ -27,7 +27,7 @@ def _(
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Concatenate, clock_pulse: SequencerInstruction
+    target_sequence: Concatenated, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     return concatenate(
         *(
@@ -39,7 +39,7 @@ def _(
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Repeat, clock_pulse: SequencerInstruction
+    target_sequence: Repeated, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     if len(target_sequence.instruction) == 1:
         return clock_pulse + Pattern([False]) * (

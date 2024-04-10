@@ -12,8 +12,8 @@ from caqtus.device import RuntimeDevice
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
-    Repeat,
-    Concatenate,
+    Repeated,
+    Concatenated,
 )
 from caqtus.device.sequencer.runtime import Sequencer, Trigger, SoftwareTrigger
 from caqtus.utils import log_exception
@@ -177,7 +177,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, repeat: Repeat):
+    def _(self, repeat: Repeated):
         if len(repeat.instruction) == 1:
             channel_values = repeat.instruction.to_pattern()[0]
             outputs = [
@@ -230,7 +230,7 @@ class SpincorePulseBlaster(Sequencer, RuntimeDevice):
 
     @_program_instruction.register
     @log_exception(logger)
-    def _(self, concatenate: Concatenate):
+    def _(self, concatenate: Concatenated):
         for instruction in concatenate.instructions:
             self._program_instruction(instruction)
 

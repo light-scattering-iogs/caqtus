@@ -3,7 +3,7 @@ from hypothesis import given
 from hypothesis.strategies import composite, integers
 
 from caqtus.device.sequencer.instructions import (
-    Repeat,
+    Repeated,
     Pattern,
     stack_instructions,
     with_name,
@@ -19,14 +19,14 @@ def interval(draw, length: int) -> tuple[int, int]:
 
 
 @composite
-def repeat_and_interval(draw) -> tuple[Repeat, tuple[int, int]]:
+def repeat_and_interval(draw) -> tuple[Repeated, tuple[int, int]]:
     instr = draw(generate_repeat(100, 100))
     s = draw(interval(len(instr)))
     return instr, s
 
 
 @composite
-def draw_two_repeat(draw, max_length: int) -> tuple[Repeat, Repeat]:
+def draw_two_repeat(draw, max_length: int) -> tuple[Repeated, Repeated]:
     length = draw(integers(min_value=2, max_value=max_length))
     instr1 = draw(generate_repeat_fixed_length(length))
     instr2 = draw(generate_repeat_fixed_length(length))

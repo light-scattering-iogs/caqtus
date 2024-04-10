@@ -2,8 +2,8 @@
 
 from ._instructions import (
     SequencerInstruction,
-    Concatenate,
-    Repeat,
+    Concatenated,
+    Repeated,
     Pattern,
     join,
     concatenate,
@@ -14,8 +14,8 @@ from ._with_name import with_name
 
 __all__ = [
     "SequencerInstruction",
-    "Concatenate",
-    "Repeat",
+    "Concatenated",
+    "Repeated",
     "Pattern",
     "convert_to_change_arrays",
     "with_name",

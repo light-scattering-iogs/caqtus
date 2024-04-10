@@ -127,10 +127,10 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
             elif other == 1:
                 return self
             else:
-                if isinstance(self, Repeat):
-                    return Repeat(self._repetitions * other, self._instruction)
+                if isinstance(self, Repeated):
+                    return Repeated(self._repetitions * other, self._instruction)
                 else:
-                    return Repeat(other, self)
+                    return Repeated(other, self)
         else:
             return NotImplemented
 
@@ -254,7 +254,7 @@ class Pattern(_BaseInstruction[_T]):
         return self._pattern
 
 
-class Concatenate(_BaseInstruction[_T]):
+class Concatenated(_BaseInstruction[_T]):
     """Represents an immutable concatenation of instructions."""
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
@@ -278,7 +278,7 @@ class Concatenate(_BaseInstruction[_T]):
         assert all(len(instruction) >= 1 for instruction in instructions)
         assert len(instructions) >= 2
         assert all(
-            not isinstance(instruction, Concatenate) for instruction in instructions
+            not isinstance(instruction, Concatenated) for instruction in instructions
         )
 
         assert all(
@@ -345,13 +345,13 @@ class Concatenate(_BaseInstruction[_T]):
         return concatenate(*results)
 
     def _get_field(self, field: str) -> SequencerInstruction:
-        return Concatenate(*(instruction[field] for instruction in self._instructions))
+        return Concatenated(*(instruction[field] for instruction in self._instructions))
 
     @property
     def dtype(self) -> numpy.dtype[_T]:
         return self._instructions[0].dtype
 
-    def as_type(self, dtype: numpy.dtype[_S]) -> Concatenate[_S]:
+    def as_type(self, dtype: numpy.dtype[_S]) -> Concatenated[_S]:
         return type(self)(
             *(instruction.as_type(dtype) for instruction in self._instructions)
         )
@@ -376,7 +376,7 @@ class Concatenate(_BaseInstruction[_T]):
         return self._create_pattern_without_copy(new_array)
 
     def __eq__(self, other):
-        if isinstance(other, Concatenate):
+        if isinstance(other, Concatenated):
             return self._instructions == other._instructions
         else:
             return NotImplemented
@@ -390,7 +390,7 @@ class Concatenate(_BaseInstruction[_T]):
         match other:
             case Pattern() as pattern:
                 return self.to_pattern().merge_channels(pattern)
-            case Concatenate() as concatenated:
+            case Concatenated() as concatenated:
                 new_bounds = merge(
                     self._instruction_bounds, concatenated._instruction_bounds
                 )
@@ -400,7 +400,7 @@ class Concatenate(_BaseInstruction[_T]):
                         self[start:stop].merge_channels(concatenated[start:stop])
                     )
                 return concatenate(*results)
-            case Repeat() as repeat:
+            case Repeated() as repeat:
                 results = [empty_like(self).merge_channels(empty_like(repeat))]
                 for (start, stop), instruction in zip(
                     pairwise(self._instruction_bounds), self._instructions
@@ -410,13 +410,13 @@ class Concatenate(_BaseInstruction[_T]):
             case _:
                 assert_never(other)
 
-    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenate[_S]:
-        return Concatenate(
+    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenated[_S]:
+        return Concatenated(
             *(instruction.apply(func) for instruction in self._instructions)
         )
 
 
-class Repeat(_BaseInstruction[_T]):
+class Repeated(_BaseInstruction[_T]):
     """Represents a repetition of an instruction.
 
     Attributes:
@@ -441,7 +441,7 @@ class Repeat(_BaseInstruction[_T]):
         """
 
         assert isinstance(repetitions, int)
-        assert isinstance(instruction, (Pattern, Concatenate, Repeat))
+        assert isinstance(instruction, (Pattern, Concatenated, Repeated))
         assert repetitions >= 2
         assert len(instruction) >= 1
 
@@ -456,7 +456,7 @@ class Repeat(_BaseInstruction[_T]):
         )
 
     def __str__(self):
-        if isinstance(self._instruction, Concatenate):
+        if isinstance(self._instruction, Concatenated):
             return f"{self._repetitions} * ({self._instruction!s})"
         else:
             return f"{self._repetitions} * {self._instruction!s}"
@@ -503,13 +503,13 @@ class Repeat(_BaseInstruction[_T]):
             return prepend + middle + append
 
     def _get_field(self, field: str) -> SequencerInstruction:
-        return Repeat(self._repetitions, self._instruction[field])
+        return Repeated(self._repetitions, self._instruction[field])
 
     @property
     def dtype(self) -> numpy.dtype[_T]:
         return self._instruction.dtype
 
-    def as_type(self, dtype: numpy.dtype[_S]) -> Repeat[_S]:
+    def as_type(self, dtype: numpy.dtype[_S]) -> Repeated[_S]:
         return type(self)(self._repetitions, self._instruction.as_type(dtype))
 
     @property
@@ -527,7 +527,7 @@ class Repeat(_BaseInstruction[_T]):
         return self._create_pattern_without_copy(new_array)
 
     def __eq__(self, other):
-        if isinstance(other, Repeat):
+        if isinstance(other, Repeated):
             return (
                 self._repetitions == other._repetitions
                 and self._instruction == other._instruction
@@ -543,7 +543,7 @@ class Repeat(_BaseInstruction[_T]):
         match other:
             case Pattern() as pattern:
                 return self.to_pattern().merge_channels(pattern)
-            case Concatenate(instructions) as concatenated:
+            case Concatenated(instructions) as concatenated:
                 results = [empty_like(self).merge_channels(empty_like(concatenated))]
                 for (start, stop), instruction in zip(
                     pairwise(concatenated._instruction_bounds),
@@ -551,7 +551,7 @@ class Repeat(_BaseInstruction[_T]):
                 ):
                     results.append(self[start:stop].merge_channels(instruction))
                 return concatenate(*results)
-            case Repeat(instruction=other_repeated, repetitions=other_repetitions):
+            case Repeated(instruction=other_repeated, repetitions=other_repetitions):
                 lcm = math.lcm(len(self._instruction), len(other_repeated))
                 if lcm == len(self):
                     b_a = tile(self.instruction, self.repetitions)
@@ -566,8 +566,8 @@ class Repeat(_BaseInstruction[_T]):
             case _:
                 assert_never(other)
 
-    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Repeat[_S]:
-        return Repeat(self._repetitions, self._instruction.apply(func))
+    def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Repeated[_S]:
+        return Repeated(self._repetitions, self._instruction.apply(func))
 
 
 def _normalize_index(index: int, length: int) -> int:
@@ -674,7 +674,7 @@ def _concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstructio
         case [instruction]:
             return instruction
         case [*instructions]:
-            return Concatenate(*instructions)
+            return Concatenated(*instructions)
         case _:
             assert_never(useful_instructions)
 
@@ -684,7 +684,7 @@ def _break_concatenations(
 ) -> list[SequencerInstruction[_T]]:
     flat = []
     for instruction in instructions:
-        if isinstance(instruction, Concatenate):
+        if isinstance(instruction, Concatenated):
             flat.extend(instruction.instructions)
         else:
             flat.append(instruction)
@@ -692,4 +692,4 @@ def _break_concatenations(
 
 
 #: Union that represents the allowed typed for an instruction.
-SequencerInstruction: TypeAlias = Pattern[_T] | Concatenate[_T] | Repeat[_T]
+SequencerInstruction: TypeAlias = Pattern[_T] | Concatenated[_T] | Repeated[_T]

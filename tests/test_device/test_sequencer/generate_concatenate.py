@@ -1,11 +1,11 @@
 from hypothesis.strategies import composite, integers
-from caqtus.device.sequencer.instructions import Concatenate
+from caqtus.device.sequencer.instructions import Concatenated
 
 from .generate_pattern import generate_pattern
 
 
 @composite
-def generate_concatenate(draw, length: int, offset: int = 0) -> Concatenate:
+def generate_concatenate(draw, length: int, offset: int = 0) -> Concatenated:
     if length <= 1:
         raise ValueError("Length must be strictly greater than 1.")
     else:

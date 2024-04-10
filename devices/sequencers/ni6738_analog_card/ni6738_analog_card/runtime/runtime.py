@@ -23,8 +23,8 @@ from caqtus.device.sequencer import (
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
-    Concatenate,
-    Repeat,
+    Concatenated,
+    Repeated,
 )
 from caqtus.utils import log_exception
 
@@ -178,14 +178,14 @@ class NI6738AnalogCard(Sequencer, RuntimeDevice):
         return [result]
 
     @_values_from_instruction.register
-    def _(self, concatenate: Concatenate) -> list[np.ndarray]:
+    def _(self, concatenate: Concatenated) -> list[np.ndarray]:
         result = []
         for instruction in concatenate.instructions:
             result.extend(self._values_from_instruction(instruction))
         return result
 
     @_values_from_instruction.register
-    def _(self, repeat: Repeat) -> list[np.ndarray]:
+    def _(self, repeat: Repeated) -> list[np.ndarray]:
         if len(repeat.instruction) != 1:
             raise NotImplementedError(
                 "Only one instruction is supported in a repeat block at the moment"

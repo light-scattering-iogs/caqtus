@@ -2,7 +2,7 @@ import functools
 
 import numpy as np
 
-from ._instructions import SequencerInstruction, Pattern, Concatenate, Repeat
+from ._instructions import SequencerInstruction, Pattern, Concatenated, Repeated
 
 
 def convert_to_change_arrays(
@@ -43,7 +43,7 @@ def _(sequence: Pattern) -> tuple[np.ndarray, np.ndarray]:
 
 
 @_convert_to_change_arrays.register
-def _(sequence: Concatenate) -> tuple[np.ndarray, np.ndarray]:
+def _(sequence: Concatenated) -> tuple[np.ndarray, np.ndarray]:
     time_arrays = []
     value_arrays = []
 
@@ -59,7 +59,7 @@ def _(sequence: Concatenate) -> tuple[np.ndarray, np.ndarray]:
 
 
 @_convert_to_change_arrays.register
-def _(sequence: Repeat) -> tuple[np.ndarray, np.ndarray]:
+def _(sequence: Repeated) -> tuple[np.ndarray, np.ndarray]:
     time_array, value_array = _convert_to_change_arrays(sequence.instruction)
     if len(time_array) == 1:
         return np.array([0], dtype=np.int64), value_array
