@@ -550,12 +550,16 @@ class Repeat(_BaseInstruction[_T]):
                 ):
                     results.append(self[start:stop].merge_channels(instruction))
                 return join(*results)
-            case Repeat() as repeat:
-                lcm = math.lcm(len(self._instruction), len(repeat._instruction))
-                r_a = lcm // len(self._instruction)
-                b_a = tile(self._instruction, r_a)
-                r_b = lcm // len(repeat._instruction)
-                b_b = tile(repeat._instruction, r_b)
+            case Repeat(instruction=other_repeated, repetitions=other_repetitions):
+                lcm = math.lcm(len(self._instruction), len(other_repeated))
+                if lcm == len(self):
+                    b_a = tile(self.instruction, self.repetitions)
+                    b_b = tile(other_repeated, other_repetitions)
+                else:
+                    r_a = lcm // len(self._instruction)
+                    b_a = self._instruction * r_a
+                    r_b = lcm // len(other_repeated)
+                    b_b = other_repeated * r_b
                 block = b_a.merge_channels(b_b)
                 return block * (len(self) // len(block))
             case _:
@@ -608,7 +612,7 @@ def to_flat_dict(instruction: SequencerInstruction[_T]) -> dict[str, np.ndarray]
 def tile(
     instruction: SequencerInstruction[_T], repetitions: int
 ) -> SequencerInstruction[_T]:
-    return join(*([instruction] * repetitions))
+    return concatenate(*([instruction] * repetitions))
 
 
 def concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
