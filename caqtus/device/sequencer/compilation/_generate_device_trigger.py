@@ -14,6 +14,7 @@ from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from ._adaptative_clock import get_adaptive_clock
+from ..trigger import Trigger
 
 if TYPE_CHECKING:
     from caqtus.device.sequencer.configuration.configuration import (
@@ -41,11 +42,15 @@ def evaluate_device_trigger(
     from ..configuration import SequencerConfiguration
 
     if isinstance(device_config, SequencerConfiguration):
+        slave_parameters = shot_context.get_shot_parameters(device)
+        slave_instruction = slave_parameters["sequence"]
         return evaluate_trigger_for_sequencer(
             slave=device,
-            slave_config=device_config,
+            slave_instruction=slave_instruction,
+            slave_trigger=device_config.trigger,
+            slave_time_step=device_config.time_step,
             master_time_step=time_step,
-            shot_context=shot_context,
+            length=number_ticks(0, shot_context.get_shot_duration(), time_step * ns),
         )
     elif isinstance(device_config, CameraConfiguration):
         return evaluate_trigger_for_camera(device, time_step, shot_context)
@@ -63,21 +68,17 @@ def evaluate_device_trigger(
 
 def evaluate_trigger_for_sequencer(
     slave: DeviceName,
-    slave_config: "SequencerConfiguration",
+    slave_instruction: SequencerInstruction,
+    slave_trigger: Trigger,
+    slave_time_step: int,
     master_time_step: int,
-    shot_context: ShotContext,
+    length: int,
 ) -> SequencerInstruction[np.bool_]:
-    length = number_ticks(0, shot_context.get_shot_duration(), master_time_step * ns)
-    slave_parameters = shot_context.get_shot_parameters(slave)
-    assert "sequence" in slave_parameters, f"Missing sequence for sequencer '{slave}'"
-    slave_instruction = slave_parameters["sequence"]
-    if isinstance(slave_config.trigger, ExternalClockOnChange):
-        single_clock_pulse = get_master_clock_pulse(
-            slave_config.time_step, master_time_step
-        )
+    if isinstance(slave_trigger, ExternalClockOnChange):
+        single_clock_pulse = get_master_clock_pulse(slave_time_step, master_time_step)
         instruction = get_adaptive_clock(slave_instruction, single_clock_pulse)[:length]
         return instruction
-    elif isinstance(slave_config.trigger, ExternalTriggerStart):
+    elif isinstance(slave_trigger, ExternalTriggerStart):
         high_duration = length // 2
         low_duration = length - high_duration
         if high_duration == 0 or low_duration == 0:
@@ -88,8 +89,7 @@ def evaluate_trigger_for_sequencer(
         return Pattern([True]) * high_duration + Pattern([False]) * low_duration
     else:
         raise NotImplementedError(
-            f"Cannot evaluate trigger for trigger of type "
-            f"{type(slave_config.trigger)}"
+            f"Cannot evaluate trigger for trigger of type " f"{type(slave_trigger)}"
         )
 
 
