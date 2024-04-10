@@ -4,7 +4,7 @@ from caqtus.session.shot.timelane import DigitalTimeLane
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
-from ..instructions import SequencerInstruction, Pattern, join
+from ..instructions import SequencerInstruction, Pattern, concatenate
 
 
 def compile_digital_lane(
@@ -36,7 +36,7 @@ def compile_digital_lane(
 
         else:
             raise NotImplementedError(f"Unexpected value {cell_value} in digital lane")
-    return join(*instructions)
+    return concatenate(*instructions)
 
 
 def get_constant_instruction(

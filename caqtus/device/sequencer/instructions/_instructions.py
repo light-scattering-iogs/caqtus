@@ -114,7 +114,7 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
             elif len(other) == 0:
                 return self
             else:
-                return join(self, other)
+                return concatenate(self, other)
         else:
             return NotImplemented
 
@@ -342,7 +342,7 @@ class Concatenate(_BaseInstruction[_T]):
                 step,
             )
             results.append(self._instructions[instruction_index][instruction_slice])
-        return join(*results)
+        return concatenate(*results)
 
     def _get_field(self, field: str) -> SequencerInstruction:
         return Concatenate(*(instruction[field] for instruction in self._instructions))
@@ -390,23 +390,23 @@ class Concatenate(_BaseInstruction[_T]):
         match other:
             case Pattern() as pattern:
                 return self.to_pattern().merge_channels(pattern)
-            case Concatenate() as concatenate:
+            case Concatenate() as concatenated:
                 new_bounds = merge(
-                    self._instruction_bounds, concatenate._instruction_bounds
+                    self._instruction_bounds, concatenated._instruction_bounds
                 )
-                results = [empty_like(self).merge_channels(empty_like(concatenate))]
+                results = [empty_like(self).merge_channels(empty_like(concatenated))]
                 for start, stop in pairwise(new_bounds):
                     results.append(
-                        self[start:stop].merge_channels(concatenate[start:stop])
+                        self[start:stop].merge_channels(concatenated[start:stop])
                     )
-                return join(*results)
+                return concatenate(*results)
             case Repeat() as repeat:
                 results = [empty_like(self).merge_channels(empty_like(repeat))]
                 for (start, stop), instruction in zip(
                     pairwise(self._instruction_bounds), self._instructions
                 ):
                     results.append(instruction.merge_channels(repeat[start:stop]))
-                return join(*results)
+                return concatenate(*results)
             case _:
                 assert_never(other)
 
@@ -543,13 +543,14 @@ class Repeat(_BaseInstruction[_T]):
         match other:
             case Pattern() as pattern:
                 return self.to_pattern().merge_channels(pattern)
-            case Concatenate() as concatenate:
-                results = [empty_like(self).merge_channels(empty_like(concatenate))]
+            case Concatenate(instructions) as concatenated:
+                results = [empty_like(self).merge_channels(empty_like(concatenated))]
                 for (start, stop), instruction in zip(
-                    pairwise(concatenate._instruction_bounds), concatenate._instructions
+                    pairwise(concatenated._instruction_bounds),
+                    instructions,
                 ):
                     results.append(self[start:stop].merge_channels(instruction))
-                return join(*results)
+                return concatenate(*results)
             case Repeat(instruction=other_repeated, repetitions=other_repetitions):
                 lcm = math.lcm(len(self._instruction), len(other_repeated))
                 if lcm == len(self):

@@ -4,7 +4,7 @@ from ..instructions import (
     SequencerInstruction,
     Pattern,
     Concatenate,
-    join,
+    concatenate,
     Repeat,
 )
 
@@ -29,7 +29,7 @@ def _(
 def _(
     target_sequence: Concatenate, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
-    return join(
+    return concatenate(
         *(
             get_adaptive_clock(sequence, clock_pulse)
             for sequence in target_sequence.instructions

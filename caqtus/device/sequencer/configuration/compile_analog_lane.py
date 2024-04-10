@@ -20,7 +20,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from ..instructions import SequencerInstruction, Pattern, join
+from ..instructions import SequencerInstruction, Pattern, concatenate
 
 TIME_VARIABLE = VariableName("t")
 
@@ -81,7 +81,7 @@ def compile_analog_lane(
         else:
             assert_never(cell_value)
         instructions.append(instruction)
-    return join(*instructions)
+    return concatenate(*instructions)
 
 
 def _compile_expression_cell(

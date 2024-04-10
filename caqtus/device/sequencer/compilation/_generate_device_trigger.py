@@ -7,7 +7,7 @@ from caqtus.device.camera import CameraConfiguration
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
-    join,
+    concatenate,
 )
 from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTriggerStart
 from caqtus.session.shot import CameraTimeLane, TakePicture
@@ -135,7 +135,7 @@ def compile_camera_trigger(
             instructions.append(Pattern([False]) * length)
         else:
             assert_never(value)
-    return join(*instructions)
+    return concatenate(*instructions)
 
 
 def get_master_clock_pulse(
