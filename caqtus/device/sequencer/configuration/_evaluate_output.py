@@ -18,7 +18,6 @@ from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import add_exc_note
 from ._compile_digital_lane import compile_digital_lane
-from ._generate_device_trigger import evaluate_device_trigger
 from .channel_output import (
     ChannelOutput,
     Advance,
@@ -29,6 +28,7 @@ from .channel_output import (
     DeviceTrigger,
 )
 from .compile_analog_lane import compile_analog_lane
+from ..compilation import evaluate_device_trigger
 from ..instructions import SequencerInstruction, Pattern
 
 
