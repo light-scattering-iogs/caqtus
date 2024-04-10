@@ -8,4 +8,4 @@ Reference
    experiment session
    timelanes
    Condetrol
-   device
+   device/index

@@ -1,3 +1,9 @@
+"""This module implement the various components for sequencer devices.
+Sequencers are devices that output values at regular time intervals.
+
+Sequencers have a predetermined set of channels.
+"""
+
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,

@@ -21,6 +21,7 @@ from typing import (
 
 import numpy
 import numpy as np
+from typing_extensions import deprecated
 
 from caqtus.utils.itertools import pairwise
 
@@ -54,16 +55,13 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
     @overload
-    def __getitem__(self, item: int) -> _T:
-        ...
+    def __getitem__(self, item: int) -> _T: ...
 
     @overload
-    def __getitem__(self, item: slice) -> SequencerInstruction[_T]:
-        ...
+    def __getitem__(self, item: slice) -> SequencerInstruction[_T]: ...
 
     @overload
-    def __getitem__(self, item: str) -> SequencerInstruction[_S]:
-        ...
+    def __getitem__(self, item: str) -> SequencerInstruction[_S]: ...
 
     @abc.abstractmethod
     def __getitem__(self, item):
@@ -159,8 +157,12 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
 
 
 class Pattern(_BaseInstruction[_T]):
+    """An instruction representing a sequence of values.
+
+    This is a fully explicit instruction for which each sample point must be given.
+    """
+
     __slots__ = ("_pattern", "_length")
-    """An instruction to output a pattern on a sequencer."""
 
     def __init__(self, pattern, dtype: Optional[np.dtype[_T]] = None):
         self._pattern = numpy.array(pattern, dtype=dtype)
@@ -253,19 +255,21 @@ class Pattern(_BaseInstruction[_T]):
 
 
 class Concatenate(_BaseInstruction[_T]):
-    """Represents an immutable concatenation of instructions.
-
-    Attributes:
-        instructions: The instructions concatenated together.
-    """
+    """Represents an immutable concatenation of instructions."""
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
     __match_args__ = ("instructions",)
 
+    @property
+    def instructions(self) -> tuple[SequencerInstruction[_T], ...]:
+        """The instructions concatenated by this instruction."""
+
+        return self._instructions
+
     def __init__(self, *instructions: SequencerInstruction[_T]):
-        """
-        Do not use this constructor in user code.
-        Instead, use the `+` operator or the `join` function.
+        """Do not use this constructor in user code.
+        Instead, use the `+` operator or the function :fun:`concatenate`.
+        :meta private:
         """
 
         # The following assertions define a "pure" concatenation.
@@ -292,10 +296,6 @@ class Concatenate(_BaseInstruction[_T]):
             itertools.accumulate(len(instruction) for instruction in self._instructions)
         )
         self._length = Length(self._instruction_bounds[-1])
-
-    @property
-    def instructions(self) -> tuple[SequencerInstruction[_T], ...]:
-        return self._instructions
 
     def __repr__(self):
         inner = ", ".join(repr(instruction) for instruction in self._instructions)
@@ -611,8 +611,8 @@ def tile(
     return join(*([instruction] * repetitions))
 
 
-def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
-    """Joins the given instructions into a single instruction.
+def concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+    """Concatenates the given instructions into a single instruction.
 
     Raises:
         ValueError: If no instructions are provided.
@@ -624,10 +624,15 @@ def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
     dtype = instructions[0].dtype
     if not all(instruction.dtype == dtype for instruction in instructions):
         raise TypeError("All instructions must have the same dtype")
-    return _join(*instructions)
+    return _concatenate(*instructions)
 
 
-def _join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+@deprecated("Use concatenate instead")
+def join(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
+    return concatenate(*instructions)
+
+
+def _concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction[_T]:
     assert len(instructions) >= 1
     assert all(
         instruction.dtype == instructions[0].dtype for instruction in instructions
@@ -681,4 +686,5 @@ def _break_concatenations(
     return flat
 
 
+#: Union that represents the allowed typed for an instruction.
 SequencerInstruction: TypeAlias = Pattern[_T] | Concatenate[_T] | Repeat[_T]

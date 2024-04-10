@@ -1,3 +1,5 @@
+"""This module contains the implementation of timed instructions."""
+
 from ._instructions import (
     SequencerInstruction,
     Concatenate,
