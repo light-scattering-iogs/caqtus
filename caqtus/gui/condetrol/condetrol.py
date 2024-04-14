@@ -62,9 +62,7 @@ class Condetrol:
         else:
             self.app = app
 
-        id_ = QFontDatabase.addApplicationFont(":/fonts/JetBrainsMono-Regular.ttf")
-        jet_brains_mono = QFontDatabase.applicationFontFamilies(id_)[0]
-        print(jet_brains_mono)
+        QFontDatabase.addApplicationFont(":/fonts/JetBrainsMono-Regular.ttf")
 
         self.window = CondetrolMainWindow(
             session_maker=session_maker,
