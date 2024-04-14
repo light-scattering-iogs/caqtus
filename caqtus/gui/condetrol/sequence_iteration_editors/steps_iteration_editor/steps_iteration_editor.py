@@ -3,8 +3,9 @@ from typing import Optional
 
 from PySide6 import QtCore
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence, QShortcut, QAction
+from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
+
 from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
     VariableDeclaration,
@@ -14,7 +15,6 @@ from caqtus.session.sequence.iteration_configuration import (
 )
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
-
 from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
@@ -74,6 +74,10 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.rowsInserted.connect(self.emit_iteration_changed)
         self._model.rowsRemoved.connect(self.emit_iteration_changed)
         self._model.modelReset.connect(self.emit_iteration_changed)
+
+        font = QFont("JetBrains Mono")
+        font.setPixelSize(13)
+        self.setFont(font)
 
     def emit_iteration_changed(self, *args, **kwargs):
         self.iteration_changed.emit(self.get_iteration())

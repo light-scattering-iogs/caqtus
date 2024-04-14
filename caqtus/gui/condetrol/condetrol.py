@@ -1,8 +1,10 @@
 from collections.abc import Callable
 
 import qtawesome
+from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 
+import caqtus.gui.condetrol.ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
 from .device_configuration_editors import (
@@ -59,6 +61,10 @@ class Condetrol:
             self.app.setStyle("Fusion")
         else:
             self.app = app
+
+        id_ = QFontDatabase.addApplicationFont(":/fonts/JetBrainsMono-Regular.ttf")
+        jet_brains_mono = QFontDatabase.applicationFontFamilies(id_)[0]
+        print(jet_brains_mono)
 
         self.window = CondetrolMainWindow(
             session_maker=session_maker,

@@ -42,5 +42,5 @@ def test_condetrol(session_maker, steps_configuration, time_lanes):
 
     timer = QTimer(condetrol.window)
     timer.singleShot(1000, change_state)
-    timer.singleShot(0, condetrol.window.close)
+    # timer.singleShot(0, condetrol.window.close)
     condetrol.run()

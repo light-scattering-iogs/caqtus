@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QStyleOptionViewItem,
 )
+
 from caqtus.session.sequence.iteration_configuration import (
     Step,
     VariableDeclaration,
@@ -24,7 +25,6 @@ from caqtus.session.sequence.iteration_configuration import (
 from caqtus.types.expression import EXPRESSION_REGEX
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DOTTED_VARIABLE_NAME_REGEX, DottedVariableName
-
 from ...qt_util import AutoResizeLineEdit
 
 VARIABLE_DECLARATION_REGEX = re.compile(
@@ -95,8 +95,8 @@ def to_str(step: Step) -> str:
 
 class StepDelegate(QStyledItemDelegate):
     def __init__(self, parent: Optional[QWidget] = None):
-        self.doc = QTextDocument()
         super().__init__(parent)
+        self.doc = QTextDocument(self)
 
     def paint(self, painter, option, index):
         options = QtWidgets.QStyleOptionViewItem(option)
