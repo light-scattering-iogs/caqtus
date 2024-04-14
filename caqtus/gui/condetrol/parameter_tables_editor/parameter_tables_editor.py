@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QStandardItem,
     QPalette,
     QFocusEvent,
+    QFont,
 )
 from PySide6.QtWidgets import (
     QWidget,
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QLabel,
+    QStyleOptionViewItem,
 )
 
 from caqtus.gui.common.exception_tree import ExceptionDialog
@@ -78,6 +80,9 @@ class ParameterNamespaceEditor(QWidget):
         self.setup_ui()
         self.setup_connections()
         self.set_read_only(False)
+
+        font = QFont("JetBrains Mono")
+        self.setFont(font)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -402,16 +407,18 @@ class ParameterEditorDelegate(HTMLItemDelegate):
                 f"<span style='color:{VALUE_COLOR}'>{value}</span>"
             )
 
-    def createEditor(self, parent: QWidget, option, index: QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
+    ) -> QWidget:
         name = index.data(PARAMETER_NAME_ROLE)
         assert isinstance(name, DottedVariableName)
         value = index.data(PARAMETER_VALUE_ROLE)
         assert isinstance(value, Expression) or value is None
 
         if value is None:
-            editor = NamespaceEditor()
+            editor = NamespaceEditor(option.font)
         else:
-            editor = ParameterEditor()
+            editor = ParameterEditor(option.font)
         editor.setParent(parent)
         return editor
 
@@ -450,8 +457,9 @@ class ParameterEditorDelegate(HTMLItemDelegate):
 # If we don't do this, the editor will keep the focus when the user clicks
 # outside of it, and the delegate will not be able to close the editor.
 class ParameterEditor(QWidget):
-    def __init__(self):
+    def __init__(self, font):
         super().__init__()
+        self.setFont(font)
         layout = QHBoxLayout(self)
         self.setLayout(layout)
         self.name_editor = AutoResizeLineEdit(self)
@@ -463,7 +471,7 @@ class ParameterEditor(QWidget):
         layout.addWidget(self.value_editor)
         layout.addStretch(1)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(3)
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
         self.setAutoFillBackground(True)
@@ -495,8 +503,9 @@ class ParameterEditor(QWidget):
 
 
 class NamespaceEditor(QWidget):
-    def __init__(self):
+    def __init__(self, font):
         super().__init__()
+        self.setFont(font)
         layout = QVBoxLayout(self)
         self.setLayout(layout)
         self.name_editor = AutoResizeLineEdit(self)
