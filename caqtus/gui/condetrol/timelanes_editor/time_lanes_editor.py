@@ -3,7 +3,7 @@ import itertools
 from typing import Optional
 
 from PySide6.QtCore import Signal, Qt, QModelIndex
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
     QTableView,
     QMenu,
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
+from caqtus.gui.qtutil import block_signals
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane
 from .add_lane_dialog import AddLaneDialog
@@ -25,7 +26,6 @@ from .lane_customization import (
     LaneDelegateFactory,
 )
 from .model import TimeLanesModel
-from caqtus.gui.qtutil import block_signals
 
 
 class TimeLanesEditor(QWidget):
@@ -73,6 +73,9 @@ class TimeLanesEditor(QWidget):
             time_lane_customization.lane_factories.keys()
         )
         self._lane_factories = time_lane_customization.lane_factories
+
+        font = QFont("JetBrains Mono")
+        self.setFont(font)
 
     def set_read_only(self, read_only: bool) -> None:
         """Set the editor to read-only mode.
@@ -141,9 +144,9 @@ class TimeLanesView(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(lane_model_factory, self)
-        self._device_configurations: dict[
-            DeviceName, DeviceConfiguration
-        ] = device_configurations
+        self._device_configurations: dict[DeviceName, DeviceConfiguration] = (
+            device_configurations
+        )
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
             lane_delegate_factory,
