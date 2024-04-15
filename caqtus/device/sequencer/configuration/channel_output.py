@@ -263,6 +263,29 @@ ChannelOutput = (
     LaneValues | DeviceTrigger | Constant | Advance | Delay | CalibratedAnalogMapping
 )
 
+
+def structure_lane_values(data, _):
+    lane = data["lane"]
+    default_data = data["default"]
+    if isinstance(default_data, str):
+        default_expression = serialization.structure(default_data, Expression)
+        default = Constant(value=default_expression)
+    else:
+        default = serialization.structure(default_data, ChannelOutput)
+
+    return LaneValues(lane=lane, default=default)
+
+
+def unstructure_lane_values(lane_values: LaneValues):
+    return {
+        "lane": lane_values.lane,
+        "default": serialization.unstructure(lane_values.default, ChannelOutput),
+    }
+
+
+serialization.register_structure_hook(LaneValues, structure_lane_values)
+serialization.register_unstructure_hook(LaneValues, unstructure_lane_values)
+
 serialization.configure_tagged_union(ChannelOutput, "type")
 
 
