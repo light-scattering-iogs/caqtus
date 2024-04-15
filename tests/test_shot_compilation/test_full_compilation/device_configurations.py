@@ -30,7 +30,8 @@ device_configurations = {
                 description="532 tweezers power (AOM)",
                 output=CalibratedAnalogMapping(
                     input_=LaneValues(
-                        lane="532 tweezers \\ power", default=Expression("100 %")
+                        lane="532 tweezers \\ power",
+                        default=Constant(Expression("100 %")),
                     ),
                     input_units=None,
                     output_units="V",
@@ -173,7 +174,8 @@ device_configurations = {
                 description="626 imaging frequency (AOM)",
                 output=CalibratedAnalogMapping(
                     input_=LaneValues(
-                        lane="626 imaging \\ frequency", default=Expression("0 MHz")
+                        lane="626 imaging \\ frequency",
+                        default=Constant(Expression("0 MHz")),
                     ),
                     input_units="MHz",
                     output_units="V",
@@ -185,7 +187,8 @@ device_configurations = {
                 description="626 imaging power (AOM)",
                 output=CalibratedAnalogMapping(
                     input_=LaneValues(
-                        lane="626 imaging \\ power", default=Expression("0 dB")
+                        lane="626 imaging \\ power",
+                        default=Constant(Expression("0 dB")),
                     ),
                     input_units="dB",
                     output_units="V",
@@ -233,7 +236,7 @@ device_configurations = {
                 description="532 lattice power (AOM)",
                 output=CalibratedAnalogMapping(
                     input_=LaneValues(
-                        lane="532 lattice \\ power", default=Expression("0")
+                        lane="532 lattice \\ power", default=Constant(Expression("0"))
                     ),
                     input_units=None,
                     output_units="V",
@@ -383,7 +386,8 @@ device_configurations = {
             DigitalChannelConfiguration(
                 description="421 kill (shutter)",
                 output=LaneValues(
-                    lane="421 cell \\ kill \\ shutter", default=Expression("Disabled")
+                    lane="421 cell \\ kill \\ shutter",
+                    default=Constant(Expression("Disabled")),
                 ),
             ),
             DigitalChannelConfiguration(
@@ -412,7 +416,8 @@ device_configurations = {
             DigitalChannelConfiguration(
                 description="",
                 output=LaneValues(
-                    lane="421 cell \\ kill \\ EOM", default=Expression("Disabled")
+                    lane="421 cell \\ kill \\ EOM",
+                    default=Constant(Expression("Disabled")),
                 ),
             ),
             DigitalChannelConfiguration(
@@ -449,14 +454,16 @@ device_configurations = {
             DigitalChannelConfiguration(
                 description="",
                 output=LaneValues(
-                    lane="421 cell \\ kill \\ EOM", default=Expression("Disabled")
+                    lane="421 cell \\ kill \\ EOM",
+                    default=Constant(Expression("Disabled")),
                 ),
             ),
             DigitalChannelConfiguration(
                 description="421 kill (EOM)",
                 output=Advance(
                     input_=LaneValues(
-                        lane="421 cell \\ kill \\ EOM", default=Expression("Disabled")
+                        lane="421 cell \\ kill \\ EOM",
+                        default=Constant(Expression("Disabled")),
                     ),
                     advance=Expression("224 ns"),
                 ),
@@ -472,7 +479,8 @@ device_configurations = {
                 description="626 imaging (AOM)",
                 output=Advance(
                     input_=LaneValues(
-                        lane="626 imaging \\ AOM", default=Expression("Disabled")
+                        lane="626 imaging \\ AOM",
+                        default=Constant(Expression("Disabled")),
                     ),
                     advance=Expression("800 ns"),
                 ),
@@ -481,7 +489,8 @@ device_configurations = {
                 description="626 probe AOM",
                 output=Advance(
                     input_=LaneValues(
-                        lane="626 \\ probe \\ AOM", default=Expression("Disabled")
+                        lane="626 \\ probe \\ AOM",
+                        default=Constant(Expression("Disabled")),
                     ),
                     advance=Expression("600 ns"),
                 ),
@@ -490,7 +499,8 @@ device_configurations = {
                 description="532 lattice AOM",
                 output=Advance(
                     input_=LaneValues(
-                        lane="532 lattice \\ AOM", default=Expression("Disabled")
+                        lane="532 lattice \\ AOM",
+                        default=Constant(Expression("Disabled")),
                     ),
                     advance=Expression("730 ns"),
                 ),
@@ -499,7 +509,8 @@ device_configurations = {
                 description="532 tweezers",
                 output=Advance(
                     input_=LaneValues(
-                        lane="532 tweezers \\ AOM", default=Expression("Disabled")
+                        lane="532 tweezers \\ AOM",
+                        default=Constant(Expression("Disabled")),
                     ),
                     advance=Expression("950 ns"),
                 ),

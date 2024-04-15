@@ -77,6 +77,25 @@ class LaneValues:
         return self.lane
 
 
+def structure_lane_values(data, _):
+    lane = data["lane"]
+    default_data = data["default"]
+    if isinstance(default_data, str):
+        default_expression = serialization.structure(default_data, Expression)
+        default = Constant(value=default_expression)
+    else:
+        default = serialization.structure(default_data, ChannelOutput)
+
+    return LaneValues(lane=lane, default=default)
+
+
+def unstructure_lane_values(lane_values):
+    return {
+        "lane": lane_values.lane,
+        "default": serialization.unstructure(lane_values.default, ChannelOutput),
+    }
+
+
 @attrs.define
 class DeviceTrigger:
     """Indicates that the output should be a trigger for a given device.
@@ -98,6 +117,13 @@ class DeviceTrigger:
 
     def __str__(self):
         return f"trig({self.device_name})"
+
+
+def unstructure_device_trigger(device_trigger: DeviceTrigger):
+    return {
+        "device_name": device_trigger.device_name,
+        "default": serialization.unstructure(device_trigger.default, ChannelOutput),
+    }
 
 
 @attrs.define
@@ -263,28 +289,10 @@ ChannelOutput = (
     LaneValues | DeviceTrigger | Constant | Advance | Delay | CalibratedAnalogMapping
 )
 
-
-def structure_lane_values(data, _):
-    lane = data["lane"]
-    default_data = data["default"]
-    if isinstance(default_data, str):
-        default_expression = serialization.structure(default_data, Expression)
-        default = Constant(value=default_expression)
-    else:
-        default = serialization.structure(default_data, ChannelOutput)
-
-    return LaneValues(lane=lane, default=default)
-
-
-def unstructure_lane_values(lane_values: LaneValues):
-    return {
-        "lane": lane_values.lane,
-        "default": serialization.unstructure(lane_values.default, ChannelOutput),
-    }
-
-
 serialization.register_structure_hook(LaneValues, structure_lane_values)
 serialization.register_unstructure_hook(LaneValues, unstructure_lane_values)
+
+serialization.register_unstructure_hook(DeviceTrigger, unstructure_device_trigger)
 
 serialization.configure_tagged_union(ChannelOutput, "type")
 
