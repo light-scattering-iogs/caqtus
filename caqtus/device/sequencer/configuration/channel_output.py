@@ -58,16 +58,16 @@ class LaneValues:
     Attributes:
         lane: The name of the lane from which to take the values.
         default: The default value to take if the lane is absent from the shot
-        timelanes.
+            time lanes.
     """
 
     lane: str = attrs.field(
         converter=str,
         on_setattr=attrs.setters.convert,
     )
-    default: Optional[Expression] = attrs.field(
+    default: Optional[ChannelOutput] = attrs.field(
         default=None,
-        validator=attrs.validators.optional(attrs.validators.instance_of(Expression)),
+        validator=attrs.validators.optional(validate_channel_output),
         on_setattr=attrs.setters.validate,
     )
 
@@ -79,11 +79,21 @@ class LaneValues:
 
 @attrs.define
 class DeviceTrigger:
-    """Indicates that the output should be a trigger for a given device."""
+    """Indicates that the output should be a trigger for a given device.
+
+    Fields:
+        device_name: The name of the device to generate a trigger for.
+        default: If the device is not used in the sequence, fallback to this.
+    """
 
     device_name: DeviceName = attrs.field(
         converter=lambda x: DeviceName(str(x)),
         on_setattr=attrs.setters.convert,
+    )
+    default: Optional[ChannelOutput] = attrs.field(
+        default=None,
+        validator=attrs.validators.optional(validate_channel_output),
+        on_setattr=attrs.setters.validate,
     )
 
     def __str__(self):

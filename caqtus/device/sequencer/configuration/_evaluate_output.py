@@ -110,9 +110,8 @@ def _(
         lane = shot_context.get_lane(lane_name)
     except KeyError:
         if output_.default is not None:
-            constant = Constant(output_.default)
             return evaluate_output(
-                constant,
+                output_.default,
                 required_time_step,
                 required_unit,
                 prepend,
@@ -186,10 +185,20 @@ def _(
     try:
         device_config = shot_context.get_device_config(device)
     except KeyError:
-        length = number_ticks(
-            0, shot_context.get_shot_duration(), required_time_step * ns
-        )
-        return Pattern([False]) * (length + prepend + append)
+        if output_.default is not None:
+            return evaluate_output(
+                output_.default,
+                required_time_step,
+                required_unit,
+                prepend,
+                append,
+                shot_context,
+            )
+        else:
+            raise ValueError(
+                f"Could not find device <{device}> when evaluating output "
+                f"<{output_}>"
+            )
     if required_unit is not None:
         raise ValueError(
             f"Cannot evaluate trigger for device <{device}> with unit "
