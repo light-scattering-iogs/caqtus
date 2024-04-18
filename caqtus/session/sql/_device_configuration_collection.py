@@ -7,7 +7,7 @@ import sqlalchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
-from ._experiment_session import Serializer
+from ._serializer import Serializer
 from ._table_base import Base
 from ..device_configuration_collection import DeviceConfigurationCollection
 

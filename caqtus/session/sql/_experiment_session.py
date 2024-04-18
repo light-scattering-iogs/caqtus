@@ -1,5 +1,3 @@
-from typing import Mapping
-
 import attrs
 import sqlalchemy.orm
 
@@ -10,47 +8,12 @@ from ._device_configuration_collection import SQLDeviceConfigurationCollection
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
-    SequenceSerializer,
-    DeviceConfigurationSerializer,
-    default_sequence_serializer,
 )
+from ._serializer import Serializer
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )
-from ...device import DeviceConfiguration
-
-
-@attrs.define
-class Serializer:
-    """Serialize and deserialize user objects."""
-
-    sequence_serializer: SequenceSerializer
-    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
-
-    def dump_device_configuration(
-        self, config: DeviceConfiguration
-    ) -> tuple[str, serialization.JSON]:
-        type_name = type(config).__qualname__
-        serializer = self.device_configuration_serializers[type_name]
-        content = serializer.dumper(config)
-        return type_name, content
-
-    def load_device_configuration(
-        self, tag: str, content: serialization.JSON
-    ) -> DeviceConfiguration:
-        serializer = self.device_configuration_serializers[tag]
-        device_config = serializer.loader(content)
-        return device_config
-
-
-default_serializer = Serializer(
-    sequence_serializer=default_sequence_serializer, device_configuration_serializers={}
-)
-"""A default serializer object for SQLExperimentSessionMaker,
-It can read and store sequences that use steps to iterate over parameters and with shots 
-containing digital, analog and camera time lanes. 
-"""
 
 
 @attrs.define(init=False)
