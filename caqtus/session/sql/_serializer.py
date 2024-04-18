@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from typing import Generic, TypeVar
 
 import attrs
@@ -24,7 +24,37 @@ class Serializer:
     """Serialize and deserialize user objects."""
 
     sequence_serializer: SequenceSerializer
-    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
+    device_configuration_serializers: dict[str, DeviceConfigurationSerializer]
+
+    @classmethod
+    def default(cls) -> Serializer:
+        return Serializer(
+            sequence_serializer=default_sequence_serializer,
+            device_configuration_serializers={},
+        )
+
+    def register_device_configuration(
+        self,
+        config_type: type[T],
+        dumper: Callable[[T], JSON],
+        constructor: Callable[[JSON], T],
+    ) -> None:
+        """Register a custom device configuration type for serialization.
+
+        Args:
+            config_type: A subclass of :class:`DeviceConfiguration` that is being
+                registered for serialization.
+            dumper: A function that will be called when it is necessary to convert a
+                device configuration to JSON format.
+            constructor: A function that will be called when it is necessary to build a
+                device configuration from the JSON data returned by the dumper.
+        """
+
+        type_name = config_type.__qualname__
+
+        self.device_configuration_serializers[type_name] = (
+            DeviceConfigurationSerializer(dumper=dumper, loader=constructor)
+        )
 
     def dump_device_configuration(
         self, config: DeviceConfiguration
@@ -60,16 +90,12 @@ class Serializer:
 
 @attrs.define
 class DeviceConfigurationSerializer(Generic[T]):
-    """Indicates how to serialize and deserialize device configurations."""
-
     dumper: Callable[[T], JSON]
     loader: Callable[[JSON], T]
 
 
 @attrs.define
 class SequenceSerializer:
-    """Indicates how to serialize and deserialize sequence configurations."""
-
     iteration_serializer: Callable[[IterationConfiguration], serialization.JSON]
     iteration_constructor: Callable[[serialization.JSON], IterationConfiguration]
     time_lane_serializer: Callable[[TimeLane], serialization.JSON]
@@ -167,11 +193,3 @@ default_sequence_serializer = SequenceSerializer(
     time_lane_serializer=default_time_lane_serializer,
     time_lane_constructor=default_time_lane_constructor,
 )
-
-default_serializer = Serializer(
-    sequence_serializer=default_sequence_serializer, device_configuration_serializers={}
-)
-"""A default serializer object for SQLExperimentSessionMaker,
-It can read and store sequences that use steps to iterate over parameters and with shots 
-containing digital, analog and camera time lanes. 
-"""

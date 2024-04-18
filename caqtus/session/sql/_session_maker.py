@@ -6,7 +6,7 @@ import sqlalchemy.orm
 from sqlalchemy import event, Engine
 
 from ._experiment_session import SQLExperimentSession
-from ._serializer import Serializer, default_serializer
+from ._serializer import Serializer
 from ._table_base import create_tables
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
@@ -43,7 +43,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __init__(
         self,
         engine: sqlalchemy.Engine,
-        serializer: Serializer = default_serializer,
+        serializer: Serializer,
     ) -> None:
 
         self._engine = engine
@@ -54,7 +54,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def from_url(
         cls,
         url: str | sqlalchemy.URL,
-        serializer: Serializer = default_serializer,
+        serializer: Serializer = Serializer.default(),
     ) -> Self:
         """Create a new SQLExperimentSessionMaker from a database url.
 

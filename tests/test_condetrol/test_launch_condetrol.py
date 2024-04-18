@@ -7,7 +7,6 @@ from caqtus.session.sequence import State
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
     Serializer,
-    default_sequence_serializer,
 )
 from tests.fixtures import steps_configuration, time_lanes
 
@@ -17,11 +16,7 @@ def session_maker(tmp_path):
     url = f"sqlite:///{tmp_path / 'database.db'}"
 
     session_maker = SQLExperimentSessionMaker.from_url(
-        url,
-        serializer=Serializer(
-            device_configuration_serializers={},
-            sequence_serializer=default_sequence_serializer,
-        ),
+        url, serializer=Serializer.default()
     )
     session_maker.create_tables()
     return session_maker
