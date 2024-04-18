@@ -22,13 +22,21 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 class SQLExperimentSessionMaker(ExperimentSessionMaker):
-    """Used to create a new experiment session with a predefined sqlalchemy engine.
+    """Used to access experiment storage were the data are stored in a SQL database.
 
     This session maker can create session that connects to a database using sqlalchemy.
 
     This object is pickleable and can be passed to other processes, assuming that the
     database referenced by the engine is accessible from the other processes.
     In particular, in-memory sqlite databases are not accessible from other processes.
+
+    Args:
+        engine: This is used by the sessions to connect to the database.
+            See sqlalchemy documentation for more information on how to create an
+            engine.
+        serializer: This is used to convert user defined objects to a JSON format that
+            can be stored in the database.
+
     """
 
     def __init__(
@@ -36,6 +44,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         engine: sqlalchemy.Engine,
         serializer: Serializer = default_serializer,
     ) -> None:
+
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._serializer = serializer

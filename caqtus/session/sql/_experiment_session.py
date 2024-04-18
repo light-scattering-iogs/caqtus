@@ -2,10 +2,10 @@ from typing import Mapping
 
 import attrs
 import sqlalchemy.orm
+
 from caqtus.session import ParameterNamespace
 from caqtus.session.sql.parameters_table import SQLParameters
 from caqtus.utils import serialization
-
 from ._device_configuration_collection import SQLDeviceConfigurationCollection
 from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
@@ -18,14 +18,30 @@ from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
 )
+from ...device import DeviceConfiguration
 
 
 @attrs.define
 class Serializer:
-    """Indicates how to serialize and deserialize objects for persistent storage."""
+    """Serialize and deserialize user objects."""
 
     sequence_serializer: SequenceSerializer
     device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
+
+    def dump_device_configuration(
+        self, config: DeviceConfiguration
+    ) -> tuple[str, serialization.JSON]:
+        type_name = type(config).__qualname__
+        serializer = self.device_configuration_serializers[type_name]
+        content = serializer.dumper(config)
+        return type_name, content
+
+    def load_device_configuration(
+        self, tag: str, content: serialization.JSON
+    ) -> DeviceConfiguration:
+        serializer = self.device_configuration_serializers[tag]
+        device_config = serializer.loader(content)
+        return device_config
 
 
 default_serializer = Serializer(
@@ -39,6 +55,12 @@ containing digital, analog and camera time lanes.
 
 @attrs.define(init=False)
 class SQLExperimentSession(ExperimentSession):
+    """Used to store experiment data in a SQL database.
+
+    This class implements the :class:`ExperimentSession` interface and the documentation
+    of the related methods can be found in the :class:`ExperimentSession`documentation.
+    """
+
     paths: SQLPathHierarchy
     sequences: SQLSequenceCollection
     default_device_configurations: SQLDeviceConfigurationCollection
@@ -69,8 +91,7 @@ class SQLExperimentSession(ExperimentSession):
             device_configuration_serializers=serializer.device_configuration_serializers,
         )
         self.default_device_configurations = SQLDeviceConfigurationCollection(
-            parent_session=self,
-            device_configuration_serializers=serializer.device_configuration_serializers,
+            parent_session=self, serializer=serializer
         )
 
     def get_global_parameters(self) -> ParameterNamespace:
