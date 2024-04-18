@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
 from caqtus.device import DeviceConfiguration, DeviceName
 from ._device_configurations_plugin import (
     DeviceConfigurationsPlugin,
-    DeviceConfigurationEditorFactory,
 )
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .device_configuration_editor import (
@@ -36,15 +35,10 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
 
         super().__init__(parent)
         self._configs_view = DeviceConfigurationsView(
-            device_configurations_plugin.editor_factory, self
+            device_configurations_plugin, self
         )
-
-        self.add_device_dialog = AddDeviceDialog(
-            device_configurations_plugin.configuration_factories, self
-        )
-        self.device_configuration_factories = (
-            device_configurations_plugin.configuration_factories
-        )
+        self.add_device_dialog = AddDeviceDialog(device_configurations_plugin, self)
+        self.device_plugin = device_configurations_plugin
 
         self.setup_ui()
         self.setup_connections()
@@ -74,7 +68,9 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
             )
             if not device_name:
                 return
-            device_configuration = self.device_configuration_factories[device_type]()
+            device_configuration = self.device_plugin.create_device_configuration(
+                device_type
+            )
             self._configs_view.add_configuration(device_name, device_configuration)
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
@@ -91,28 +87,15 @@ class DeviceConfigurationsView(QColumnView):
 
     def __init__(
         self,
-        device_editor_factory: DeviceConfigurationEditorFactory,
+        device_plugin: DeviceConfigurationsPlugin,
         parent: Optional[QWidget] = None,
     ):
-        """Initialize the view.
-
-        Args:
-            device_editor_factory: A factory function that creates an editor for a
-            device configuration.
-            When the configuration of a device is selected, the view will call this
-            function with the configuration as an argument to create an editor for it.
-            When the view needs to read the configuration from the editor, it will call
-            the method :meth:get_configuration` of the editor.
-            Configuration passed to and read from the editor are copies of what is
-            stored in the view, so changes to the configuration in the editor will not
-            affect the view until the view reads the configuration from the editor.
-            parent: The parent widget.
-        """
+        """Initialize the view."""
 
         super().__init__(parent)
 
         self._device_configurations = []
-        self._device_editor_factory = device_editor_factory
+        self._device_plugin = device_plugin
 
         self._model = QStringListModel(self)
         self._sorted_model = QSortFilterProxyModel(self)
@@ -196,7 +179,7 @@ class DeviceConfigurationsView(QColumnView):
             previous_editor.deleteLater()
         self._previous_index = index.row()
         new_config = copy.deepcopy(self._device_configurations[index.row()])
-        new_editor = self._device_editor_factory(new_config)
+        new_editor = self._device_plugin.create_editor(new_config)
         if not isinstance(new_editor, DeviceConfigurationEditor):
             raise TypeError(
                 f"Expected a DeviceConfigurationEditor, got {type(new_editor)}"
@@ -206,9 +189,13 @@ class DeviceConfigurationsView(QColumnView):
 
 
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
-    def __init__(self, device_types: Iterable[str], parent: Optional[QWidget] = None):
+    def __init__(
+        self,
+        device_plugin: DeviceConfigurationsPlugin,
+        parent: Optional[QWidget] = None,
+    ):
         super().__init__(parent)
-        self.setup_ui(device_types)
+        self.setup_ui(device_plugin.available_configuration_types())
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)

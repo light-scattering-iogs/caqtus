@@ -9,9 +9,12 @@ from caqtus.device.sequencer import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
+    SoftwareTrigger,
 )
+from caqtus.device.sequencer.configuration import Constant
 from caqtus.device.sequencer.configuration.configuration import SequencerUpdateParams
 from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
 if TYPE_CHECKING:
@@ -77,3 +80,21 @@ class SpincoreSequencerConfiguration(SequencerConfiguration["SpincorePulseBlaste
     @classmethod
     def load(cls, data) -> SpincoreSequencerConfiguration:
         return serialization.structure(data, SpincoreSequencerConfiguration)
+
+    @classmethod
+    def default(cls) -> SpincoreSequencerConfiguration:
+        return SpincoreSequencerConfiguration(
+            remote_server=None,
+            board_number=0,
+            time_step=50,
+            channels=tuple(
+                [
+                    DigitalChannelConfiguration(
+                        description=f"Channel {channel}",
+                        output=Constant(Expression("Disabled")),
+                    )
+                    for channel in range(SpincoreSequencerConfiguration.number_channels)
+                ]
+            ),
+            trigger=SoftwareTrigger(),
+        )

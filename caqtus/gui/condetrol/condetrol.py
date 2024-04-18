@@ -7,10 +7,7 @@ from PySide6.QtWidgets import QApplication
 import caqtus.gui.condetrol.ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
-from .device_configuration_editors import (
-    DeviceConfigurationsPlugin,
-    default_device_configuration_plugin,
-)
+from .device_configuration_editors import DeviceConfigurationsPlugin
 from .main_window import CondetrolMainWindow
 from .timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
 from ..qtutil import QtAsyncio
@@ -48,7 +45,7 @@ class Condetrol:
             [], ExperimentManager
         ] = default_connect_to_experiment_manager,
         time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
-        device_configurations_plugin: DeviceConfigurationsPlugin = default_device_configuration_plugin,
+        device_configurations_plugin: DeviceConfigurationsPlugin = DeviceConfigurationsPlugin.default(),
     ):
         app = QApplication.instance()
         if app is None:
