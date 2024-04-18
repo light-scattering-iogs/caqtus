@@ -6,7 +6,6 @@ import pytest
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
-    default_sequence_serializer,
     Serializer,
     DeviceConfigurationSerializer,
 )

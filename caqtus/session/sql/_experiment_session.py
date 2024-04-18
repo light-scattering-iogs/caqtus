@@ -49,9 +49,7 @@ class SQLExperimentSession(ExperimentSession):
         self._is_active = False
         self.paths = SQLPathHierarchy(parent_session=self)
         self.sequences = SQLSequenceCollection(
-            parent_session=self,
-            serializer=serializer.sequence_serializer,
-            device_configuration_serializers=serializer.device_configuration_serializers,
+            parent_session=self, serializer=serializer
         )
         self.default_device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self, serializer=serializer

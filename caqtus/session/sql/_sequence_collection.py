@@ -26,6 +26,7 @@ from ._sequence_table import (
     SQLDeviceConfiguration,
     SQLSequenceParameters,
 )
+from ._serializer import Serializer
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
@@ -54,9 +55,7 @@ if TYPE_CHECKING:
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
-    serializer_: Serializer
-    serializer: SequenceSerializer
-    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
+    serializer: Serializer
 
     def __getitem__(self, item: str) -> Sequence:
         return Sequence(BoundSequencePath(item, self.parent_session))
@@ -113,7 +112,7 @@ class SQLSequenceCollection(SequenceCollection):
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
         sequence_model = unwrap(self._query_sequence_model(sequence))
-        return self.serializer.iteration_constructor(
+        return self.serializer.construct_sequence_iteration(
             sequence_model.iteration.content,
         )
 
@@ -123,7 +122,7 @@ class SQLSequenceCollection(SequenceCollection):
         sequence_model = unwrap(self._query_sequence_model(sequence.path))
         if not sequence_model.state.is_editable():
             raise SequenceNotEditableError(sequence.path)
-        iteration_content = self.serializer.iteration_serializer(
+        iteration_content = self.serializer.dump_sequence_iteration(
             iteration_configuration
         )
         sequence_model.iteration.content = iteration_content
@@ -143,7 +142,7 @@ class SQLSequenceCollection(SequenceCollection):
         if unwrap(self.parent_session.paths.get_children(path)):
             raise PathHasChildrenError(path)
 
-        iteration_content = self.serializer.iteration_serializer(
+        iteration_content = self.serializer.dump_sequence_iteration(
             iteration_configuration
         )
 
@@ -170,7 +169,7 @@ class SQLSequenceCollection(SequenceCollection):
                 time_lanes.step_durations, list[Expression]
             ),
             lanes={
-                lane: self.serializer.time_lane_serializer(time_lane)
+                lane: self.serializer.dump_time_lane(time_lane)
                 for lane, time_lane in time_lanes.lanes.items()
             },
         )
@@ -184,7 +183,7 @@ class SQLSequenceCollection(SequenceCollection):
                 time_lanes_content["step_durations"], list[Expression]
             ),
             lanes={
-                lane: self.serializer.time_lane_constructor(time_lane_content)
+                lane: self.serializer.construct_time_lane(time_lane_content)
                 for lane, time_lane_content in time_lanes_content["lanes"].items()
             },
         )
@@ -248,13 +247,12 @@ class SQLSequenceCollection(SequenceCollection):
         for order, (name, device_configuration) in enumerate(
             device_configurations.items()
         ):
-            type_name = type(device_configuration).__qualname__
-            serializer = self.device_configuration_serializers[type_name]
+            type_name, content = self.serializer.dump_device_configuration(
+                device_configuration
+            )
             sql_device_configs.append(
                 SQLDeviceConfiguration(
-                    name=name,
-                    device_type=type_name,
-                    content=serializer.dumper(device_configuration),
+                    name=name, device_type=type_name, content=content
                 )
             )
         sequence.device_configurations = sql_device_configs
@@ -269,12 +267,10 @@ class SQLSequenceCollection(SequenceCollection):
         device_configurations = {}
 
         for device_configuration in sequence.device_configurations:
-            serializer = self.device_configuration_serializers[
-                device_configuration.device_type
-            ]
-            device_configurations[device_configuration.name] = serializer.loader(
-                device_configuration.content
+            constructed = self.serializer.load_device_configuration(
+                device_configuration.device_type, device_configuration.content
             )
+            device_configurations[device_configuration.name] = constructed
         return device_configurations
 
     def get_stats(

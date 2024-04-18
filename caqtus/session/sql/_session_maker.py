@@ -5,7 +5,8 @@ import sqlalchemy
 import sqlalchemy.orm
 from sqlalchemy import event, Engine
 
-from ._experiment_session import SQLExperimentSession, Serializer, default_serializer
+from ._experiment_session import SQLExperimentSession
+from ._serializer import Serializer, default_serializer
 from ._table_base import create_tables
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker

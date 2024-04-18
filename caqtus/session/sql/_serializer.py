@@ -41,6 +41,22 @@ class Serializer:
         device_config = serializer.loader(content)
         return device_config
 
+    def construct_sequence_iteration(
+        self, content: serialization.JSON
+    ) -> IterationConfiguration:
+        return self.sequence_serializer.iteration_constructor(content)
+
+    def dump_sequence_iteration(
+        self, iteration: IterationConfiguration
+    ) -> serialization.JSON:
+        return self.sequence_serializer.iteration_serializer(iteration)
+
+    def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
+        return self.sequence_serializer.time_lane_serializer(lane)
+
+    def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
+        return self.sequence_serializer.time_lane_constructor(content)
+
 
 @attrs.define
 class DeviceConfigurationSerializer(Generic[T]):
