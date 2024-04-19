@@ -5,7 +5,7 @@ from typing import Optional
 import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QToolBar
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from caqtus.session._return_or_raise import unwrap
@@ -135,6 +135,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.setup_connections()
 
+        self.tabWidget.currentChanged.connect(self.on_current_tab_changed)
+
     def __enter__(self):
         """Starts the watcher thread to monitor the sequence state."""
 
@@ -150,8 +152,16 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_watcher_thread.wait()
         return False
 
+    def on_current_tab_changed(self, index: int):
+        if index == 2:
+            self.time_lanes_editor.toolbar.setVisible(True)
+        else:
+            self.time_lanes_editor.toolbar.setVisible(False)
+
     def on_sequence_unset(self):
         self.setVisible(False)
+        for toolbar in self.get_toolbars():
+            toolbar.setVisible(False)
         self.sequence_changed.emit(None)
 
     def on_sequence_set(self):
@@ -268,6 +278,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     )
                 else:
                     self.state_sequence.time_lanes = time_lanes
+
+    def get_toolbars(self) -> list[QToolBar]:
+        return [self.time_lanes_editor.toolbar]
 
     def closeEvent(self, event):
         self.state_watcher_thread.quit()

@@ -52,6 +52,8 @@ class TimeLanesEditor(QWidget):
         )
         self.view.time_lanes_changed.connect(self.time_lanes_edited)
         self.toolbar = QToolBar(self)
+        self.toolbar.setFloatable(False)
+        self.toolbar.setMovable(False)
         self.add_lane_action = self.toolbar.addAction(
             get_icon("add-time-lane", self.palette().buttonText().color()), "Add lane"
         )
@@ -65,7 +67,6 @@ class TimeLanesEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.view)
-        layout.addWidget(self.toolbar)
         self.setLayout(layout)
 
         self._add_lane_dialog = AddLaneDialog(self)
