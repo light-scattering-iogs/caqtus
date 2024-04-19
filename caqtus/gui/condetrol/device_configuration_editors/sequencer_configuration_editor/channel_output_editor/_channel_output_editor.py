@@ -4,9 +4,15 @@ from typing import Optional
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
-from caqtus.device.sequencer.configuration import ChannelOutput, Constant, DeviceTrigger
+from caqtus.device.sequencer.configuration import (
+    ChannelOutput,
+    Constant,
+    DeviceTrigger,
+    LaneValues,
+)
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
+from ._lane_node import LaneNode
 from ._output_node import OutputNode
 
 
@@ -15,8 +21,9 @@ class NewChannelOutputEditor(QWidget):
         super().__init__(parent)
 
         self.graph = NodeGraph(self)
-        self.graph.register_node(ConstantNode, alias="Constant")
+        self.graph.register_node(ConstantNode)
         self.graph.register_node(DeviceTriggerNode)
+        self.graph.register_node(LaneNode)
         self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
         self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
 
@@ -63,7 +70,17 @@ class NewChannelOutputEditor(QWidget):
         self.graph.add_node(node, selected=False, push_undo=False)
         if device_trigger.default is not None:
             default_node = self.build_node(device_trigger.default)
-            default_node.outputs()["out"].connect_to(node.inputs()["default"])
+            default_node.outputs()["out"].connect_to(node.default_port)
+        return node
+
+    @build_node.register
+    def build_lane_node(self, lane_values: LaneValues) -> LaneNode:
+        node = LaneNode()
+        node.set_lane_name(lane_values.lane)
+        self.graph.add_node(node, selected=False, push_undo=False)
+        if lane_values.default is not None:
+            default_node = self.build_node(lane_values.default)
+            default_node.outputs()["out"].connect_to(node.default_port)
         return node
 
 
@@ -86,6 +103,17 @@ def construct_device_trigger(node: DeviceTriggerNode) -> DeviceTrigger:
     else:
         default = construct_output(default_node)
     return DeviceTrigger(device_name=device_name, default=default)
+
+
+@construct_output.register
+def construct_lane_values(node: LaneNode) -> LaneValues:
+    lane_name = node.get_lane_name()
+    default_node = node.get_default_node()
+    if default_node is None:
+        default = None
+    else:
+        default = construct_output(default_node)
+    return LaneValues(lane=lane_name, default=default)
 
 
 class InvalidNodeConfigurationError(ValueError):
