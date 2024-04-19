@@ -41,6 +41,7 @@ class NewChannelOutputEditor(QWidget):
         node = self.build_node(channel_output)
         node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
         self.graph.auto_layout_nodes()
+        self.graph.set_pipe_collision(True)
         self.graph.clear_undo_stack()
 
     def get_output(self) -> ChannelOutput:
