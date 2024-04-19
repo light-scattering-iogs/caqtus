@@ -3,7 +3,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QHBoxLayout
 
-from NodeGraphQt import NodeGraph, BaseNode
+from NodeGraphQt import NodeGraph, BaseNode, NodesTreeWidget
 from caqtus.device.sequencer.configuration import ChannelOutput, Constant
 from ._constant_node import ConstantNode
 from ._output_node import OutputNode
@@ -14,11 +14,13 @@ class NewChannelOutputEditor(QWidget):
         super().__init__(parent)
 
         self.graph = NodeGraph(self)
-        self.graph.register_node(OutputNode)
-        self.graph.register_node(ConstantNode)
+        self.graph.register_node(ConstantNode, alias="Constant")
+        self.nodes_tree = NodesTreeWidget(node_graph=self.graph, parent=self)
+        self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
 
         layout = QHBoxLayout(self)
-        layout.addWidget(self.graph.widget)
+        layout.addWidget(self.graph.widget, 1)
+        layout.addWidget(self.nodes_tree, 0)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
@@ -43,9 +45,10 @@ class NewChannelOutputEditor(QWidget):
         return output
 
     def clear_graph(self) -> None:
+        self.graph.clear_undo_stack()
         for node in self.graph.all_nodes():
             if node is not self.output_node:
-                self.graph.delete_node(node)
+                self.graph.delete_node(node, push_undo=False)
 
     @functools.singledispatchmethod
     def build_node(self, channel_output: ChannelOutput) -> BaseNode:

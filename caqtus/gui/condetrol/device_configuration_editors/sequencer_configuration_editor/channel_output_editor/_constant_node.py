@@ -3,7 +3,7 @@ from caqtus.types.expression import Expression
 
 
 class ConstantNode(BaseNode):
-    __identifier__ = "caqtus.sequencer_node"
+    __identifier__ = "caqtus.sequencer_node.source"
     NODE_NAME = "Constant"
 
     def __init__(self):

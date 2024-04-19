@@ -132,8 +132,8 @@ class NodeGraph(QtCore.QObject):
     """
     Signal is triggered just before a context menu is shown.
 
-    :parameters: 
-        :class:`NodeGraphQt.NodeGraphMenu` or :class:`NodeGraphQt.NodesMenu`, 
+    :parameters:
+        :class:`NodeGraphQt.NodeGraphMenu` or :class:`NodeGraphQt.NodesMenu`,
         :class:`NodeGraphQt.BaseNode`
     :emits: triggered context menu, node object.
     """
@@ -180,7 +180,7 @@ class NodeGraph(QtCore.QObject):
         self._context_menu = {}
 
         self._register_context_menu()
-        self._register_builtin_nodes()
+        # self._register_builtin_nodes()
         self._wire_signals()
 
     def __repr__(self):
@@ -1452,7 +1452,6 @@ class NodeGraph(QtCore.QObject):
         if push_undo:
             self._undo_stack.beginMacro('deleted "{}" node(s)'.format(len(nodes)))
         for node in nodes:
-
             # collapse group node before removing.
             if isinstance(node, GroupNode) and node.is_expanded:
                 node.collapse()
