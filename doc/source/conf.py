@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
+    "sphinxcontrib.plantuml",
 ]
 
 autodoc_typehints = "description"
@@ -40,6 +41,8 @@ intersphinx_mapping = {
 templates_path = ["_templates"]
 exclude_patterns = []
 
+
+plantuml = os.environ["plantuml"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

@@ -5,6 +5,6 @@ Sequencer
    :maxdepth: 2
    :caption: Contents:
 
-   ../notebooks/sequencer_instructions
+   sequencer_instructions
 
 

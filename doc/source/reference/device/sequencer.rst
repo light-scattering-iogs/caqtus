@@ -13,6 +13,6 @@ Instructions
 
 .. autoclass:: caqtus.device.sequencer.instructions.Pattern
 
-.. autoclass:: caqtus.device.sequencer.instructions.Concatenate()
+.. autoclass:: caqtus.device.sequencer.instructions.Concatenated()
 
-.. autoclass:: caqtus.device.sequencer.instructions.Repeat
+.. autoclass:: caqtus.device.sequencer.instructions.Repeated()

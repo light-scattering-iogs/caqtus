@@ -5,7 +5,8 @@ import sqlalchemy
 import sqlalchemy.orm
 from sqlalchemy import event, Engine
 
-from ._experiment_session import SQLExperimentSession, Serializer, default_serializer
+from ._experiment_session import SQLExperimentSession
+from ._serializer import Serializer
 from ._table_base import create_tables
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
@@ -22,20 +23,29 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 class SQLExperimentSessionMaker(ExperimentSessionMaker):
-    """Used to create a new experiment session with a predefined sqlalchemy engine.
+    """Used to access experiment storage were the data are stored in a SQL database.
 
     This session maker can create session that connects to a database using sqlalchemy.
 
     This object is pickleable and can be passed to other processes, assuming that the
     database referenced by the engine is accessible from the other processes.
     In particular, in-memory sqlite databases are not accessible from other processes.
+
+    Args:
+        engine: This is used by the sessions to connect to the database.
+            See sqlalchemy documentation for more information on how to create an
+            engine.
+        serializer: This is used to convert user defined objects to a JSON format that
+            can be stored in the database.
+
     """
 
     def __init__(
         self,
         engine: sqlalchemy.Engine,
-        serializer: Serializer = default_serializer,
+        serializer: Serializer,
     ) -> None:
+
         self._engine = engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
         self._serializer = serializer
@@ -44,7 +54,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def from_url(
         cls,
         url: str | sqlalchemy.URL,
-        serializer: Serializer = default_serializer,
+        serializer: Serializer = Serializer.default(),
     ) -> Self:
         """Create a new SQLExperimentSessionMaker from a database url.
 

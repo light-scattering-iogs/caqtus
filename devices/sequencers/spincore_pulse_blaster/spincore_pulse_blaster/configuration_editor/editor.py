@@ -1,34 +1,10 @@
 from PySide6.QtWidgets import QSpinBox, QFormLayout
 
-from caqtus.device.sequencer.configuration import (
-    DigitalChannelConfiguration,
-    Constant,
-)
-from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
     SequencerChannelView,
 )
-from caqtus.types.expression import Expression
 from ..configuration import SpincoreSequencerConfiguration
-
-
-def get_default_spincore_configuration() -> SpincoreSequencerConfiguration:
-    return SpincoreSequencerConfiguration(
-        remote_server="default",
-        board_number=0,
-        time_step=50,
-        channels=tuple(
-            [
-                DigitalChannelConfiguration(
-                    description=f"Channel {channel}",
-                    output=Constant(Expression("Disabled")),
-                )
-                for channel in range(SpincoreSequencerConfiguration.number_channels)
-            ]
-        ),
-        trigger=SoftwareTrigger(),
-    )
 
 
 class SpincorePulseBlasterDeviceConfigEditor(
@@ -45,7 +21,7 @@ class SpincorePulseBlasterDeviceConfigEditor(
         self._time_step.setSingleStep(10)
         self._time_step.setSuffix(" ns")
 
-        self.device_config = get_default_spincore_configuration()
+        self.device_config = SpincoreSequencerConfiguration.default()
 
         self._channels_view = SequencerChannelView(self.device_config.channels)
 

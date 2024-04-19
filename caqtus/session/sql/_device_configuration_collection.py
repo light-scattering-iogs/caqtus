@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import attrs
@@ -8,8 +7,8 @@ import sqlalchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
+from ._serializer import Serializer
 from ._table_base import Base
-from .device_configuration_serializer import DeviceConfigurationSerializer
 from ..device_configuration_collection import DeviceConfigurationCollection
 
 if TYPE_CHECKING:
@@ -27,12 +26,10 @@ class SQLDefaultDeviceConfiguration(Base):
 @attrs.frozen
 class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
     parent_session: "SQLExperimentSession"
-    device_configuration_serializers: Mapping[str, DeviceConfigurationSerializer]
+    serializer: Serializer
 
     def __setitem__(self, __key, __value):
-        type_name = type(__value).__qualname__
-        serializer = self.device_configuration_serializers[type_name]
-        content = serializer.dumper(__value)
+        type_name, content = self.serializer.dump_device_configuration(__value)
         if __key in self:
             stmt = (
                 sqlalchemy.update(SQLDefaultDeviceConfiguration)
@@ -59,8 +56,9 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
         )
         result = self._get_sql_session().execute(stmt)
         if found := result.scalar():
-            serializer = self.device_configuration_serializers[found.device_type]
-            device_config = serializer.loader(found.content)
+            device_config = self.serializer.load_device_configuration(
+                found.device_type, found.content
+            )
             return device_config
         else:
             raise KeyError(__key)
