@@ -15,25 +15,37 @@ class NewChannelOutputEditor(QWidget):
 
         self.graph = NodeGraph(self)
         self.graph.register_node(OutputNode)
+        self.graph.register_node(ConstantNode)
 
         layout = QHBoxLayout(self)
         layout.addWidget(self.graph.widget)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
+        self.output_node = OutputNode()
+        self.graph.add_node(
+            self.output_node, selected=False, pos=[0, 0], push_undo=False
+        )
+
     def set_output(self, output_label: str, channel_output: ChannelOutput) -> None:
         self.clear_graph()
 
-        output_node = OutputNode()
-        output_node.set_name()
-        self.graph.add_node(output_node, selected=False, pos=[0, 0], push_undo=False)
-
         node = self.build_node(channel_output)
-        node.outputs()["out"].connect_to(output_node.inputs()["in"])
+        node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
+
+    def get_output(self) -> ChannelOutput:
+        connected_node = self.output_node.connected_node()
+        if connected_node is None:
+            raise InvalidNodeConfigurationError(
+                "No node is connected to the output node"
+            )
+        output = construct_output(connected_node)
+        return output
 
     def clear_graph(self) -> None:
         for node in self.graph.all_nodes():
-            self.graph.delete_node(node)
+            if node is not self.output_node:
+                self.graph.delete_node(node)
 
     @functools.singledispatchmethod
     def build_node(self, channel_output: ChannelOutput) -> BaseNode:
@@ -45,3 +57,17 @@ class NewChannelOutputEditor(QWidget):
         node.set_value(constant.value)
         self.graph.add_node(node, selected=False, push_undo=False)
         return node
+
+
+@functools.singledispatch
+def construct_output(node) -> ChannelOutput:
+    raise NotImplementedError
+
+
+@construct_output.register
+def construct_constant(node: ConstantNode) -> Constant:
+    return Constant(value=node.get_value())
+
+
+class InvalidNodeConfigurationError(ValueError):
+    pass

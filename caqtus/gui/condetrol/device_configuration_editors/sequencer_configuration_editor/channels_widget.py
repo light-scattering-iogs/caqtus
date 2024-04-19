@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Sequence
 from typing import Optional
 
@@ -37,7 +38,7 @@ class SequencerChannelWidget(QWidget):
         layout = QHBoxLayout(self)
         self.setLayout(layout)
         layout.addWidget(self.channel_table)
-        layout.addWidget(self.group_box)
+        layout.addWidget(self.group_box, 1)
 
         self._populate_channel_list()
         self.channel_table.currentItemChanged.connect(self._on_current_item_changed)
@@ -61,6 +62,10 @@ class SequencerChannelWidget(QWidget):
     def _on_current_item_changed(
         self, current: Optional[QTableWidgetItem], previous: Optional[QTableWidgetItem]
     ) -> None:
+        if previous is not None:
+            output = self.channel_output_editor.get_output()
+            row = previous.row()
+            self.channels[row].output = output
         self.set_preview_item(current)
 
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
@@ -79,3 +84,11 @@ class SequencerChannelWidget(QWidget):
 
     def channel_label(self, row: int) -> str:
         return str(row)
+
+    def get_channel_configurations(self) -> list[ChannelConfiguration]:
+        current_item = self.channel_table.currentItem()
+        if current_item is not None:
+            output = self.channel_output_editor.get_output()
+            row = current_item.row()
+            self.channels[row].output = output
+        return copy.deepcopy(self.channels)

@@ -19,3 +19,6 @@ class ConstantNode(BaseNode):
 
     def set_value(self, expression: Expression) -> None:
         self.set_property("Value", str(expression))
+
+    def get_value(self) -> Expression:
+        return Expression(str(self.get_property("Value")))
