@@ -4,12 +4,12 @@ from PySide6.QtWidgets import QWidget, QSpinBox
 
 from caqtus.device.sequencer import SequencerConfiguration
 from .channel_view import SequencerChannelView
-from ..device_configuration_editor import DefaultDeviceConfigurationEditor
+from ..device_configuration_editor import FormDeviceConfigurationEditor
 
 S = TypeVar("S", bound=SequencerConfiguration)
 
 
-class SequencerConfigurationEditor(DefaultDeviceConfigurationEditor[S], Generic[S]):
+class SequencerConfigurationEditor(FormDeviceConfigurationEditor[S], Generic[S]):
     def __init__(self, device_configuration: S, parent: Optional[QWidget] = None):
         super().__init__(device_configuration, parent)
 

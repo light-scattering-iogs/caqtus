@@ -9,7 +9,7 @@ import attrs
 from caqtus.device import DeviceConfiguration
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
-    DefaultDeviceConfigurationEditor,
+    FormDeviceConfigurationEditor,
 )
 
 C = TypeVar("C", bound=DeviceConfiguration)
@@ -27,7 +27,7 @@ class DeviceConfigurationsPlugin:
         return cls(configuration_factories={})
 
     def __attrs_post_init__(self):
-        self.editor_factory = functools.singledispatch(DefaultDeviceConfigurationEditor)
+        self.editor_factory = functools.singledispatch(FormDeviceConfigurationEditor)
 
     def register_default_configuration(
         self, configuration_label: str, factory: DeviceConfigurationFactory

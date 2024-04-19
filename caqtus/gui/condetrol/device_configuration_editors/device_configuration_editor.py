@@ -20,11 +20,8 @@ class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
         raise NotImplementedError
 
 
-class DefaultDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
-    """Default device configuration editor.
-
-    This editor is used when no editor is registered for a given device configuration.
-    It only allows editing the remote server name.
+class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
+    """An editor for a device configuration displaying a list of fields.
 
     Attributes:
         device_configuration: The device configuration stored in the editor.
