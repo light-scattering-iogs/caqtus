@@ -1,9 +1,9 @@
 import functools
 from typing import Optional
 
-from PySide6.QtWidgets import QWidget, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from NodeGraphQt import NodeGraph, BaseNode, NodesTreeWidget
+from NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
 from caqtus.device.sequencer.configuration import ChannelOutput, Constant, DeviceTrigger
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
@@ -17,10 +17,10 @@ class NewChannelOutputEditor(QWidget):
         self.graph = NodeGraph(self)
         self.graph.register_node(ConstantNode, alias="Constant")
         self.graph.register_node(DeviceTriggerNode)
-        self.nodes_tree = NodesTreeWidget(node_graph=self.graph, parent=self)
+        self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
         self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
 
-        layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
         layout.addWidget(self.graph.widget, 1)
         layout.addWidget(self.nodes_tree, 0)
         layout.setContentsMargins(0, 0, 0, 0)
