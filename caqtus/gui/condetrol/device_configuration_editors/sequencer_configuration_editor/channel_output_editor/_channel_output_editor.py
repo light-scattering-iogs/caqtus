@@ -10,7 +10,7 @@ from ._output_node import OutputNode
 
 
 class NewChannelOutputEditor(QWidget):
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, channel_output: ChannelOutput, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
         self.graph = NodeGraph(self)
@@ -29,9 +29,6 @@ class NewChannelOutputEditor(QWidget):
             self.output_node, selected=False, pos=[0, 0], push_undo=False
         )
 
-    def set_output(self, output_label: str, channel_output: ChannelOutput) -> None:
-        self.clear_graph()
-
         node = self.build_node(channel_output)
         node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
 
@@ -43,12 +40,6 @@ class NewChannelOutputEditor(QWidget):
             )
         output = construct_output(connected_node)
         return output
-
-    def clear_graph(self) -> None:
-        self.graph.clear_undo_stack()
-        for node in self.graph.all_nodes():
-            if node is not self.output_node:
-                self.graph.delete_node(node, push_undo=False)
 
     @functools.singledispatchmethod
     def build_node(self, channel_output: ChannelOutput) -> BaseNode:

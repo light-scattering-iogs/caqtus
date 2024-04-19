@@ -31,7 +31,7 @@ class SequencerChannelWidget(QWidget):
         self.channel_table.horizontalHeader().setStretchLastSection(True)
         self.channel_table.horizontalHeader().hide()
         self.group_box = QGroupBox(self)
-        self.channel_output_editor = NewChannelOutputEditor(self)
+        self.channel_output_editor: Optional[NewChannelOutputEditor] = None
         self._populate_group_box()
         self.channels = list(channels)
 
@@ -57,12 +57,12 @@ class SequencerChannelWidget(QWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.group_box.setLayout(layout)
-        layout.addWidget(self.channel_output_editor)
 
     def _on_current_item_changed(
         self, current: Optional[QTableWidgetItem], previous: Optional[QTableWidgetItem]
     ) -> None:
         if previous is not None:
+            assert self.channel_output_editor is not None
             output = self.channel_output_editor.get_output()
             row = previous.row()
             self.channels[row].output = output
@@ -78,7 +78,13 @@ class SequencerChannelWidget(QWidget):
             self.group_box.setTitle(item.text())
             row = item.row()
             channel = self.channels[row]
-            self.channel_output_editor.set_output("label", channel.output)
+            previous_editor = None
+            if self.channel_output_editor is not None:
+                previous_editor = self.channel_output_editor
+            self.channel_output_editor = NewChannelOutputEditor(channel.output, self)
+            self.group_box.layout().addWidget(self.channel_output_editor)
+            if previous_editor:
+                previous_editor.deleteLater()
         else:
             self.group_box.setVisible(False)
 
@@ -88,6 +94,7 @@ class SequencerChannelWidget(QWidget):
     def get_channel_configurations(self) -> list[ChannelConfiguration]:
         current_item = self.channel_table.currentItem()
         if current_item is not None:
+            assert self.channel_output_editor is not None
             output = self.channel_output_editor.get_output()
             row = current_item.row()
             self.channels[row].output = output
