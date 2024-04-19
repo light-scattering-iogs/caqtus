@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device.sequencer import ChannelConfiguration
+from .channel_output_editor import NewChannelOutputEditor
 
 
 class SequencerChannelWidget(QWidget):
@@ -29,6 +30,8 @@ class SequencerChannelWidget(QWidget):
         self.channel_table.horizontalHeader().setStretchLastSection(True)
         self.channel_table.horizontalHeader().hide()
         self.group_box = QGroupBox(self)
+        self.channel_output_editor = NewChannelOutputEditor(self)
+        self._populate_group_box()
         self.channels = list(channels)
 
         layout = QHBoxLayout(self)
@@ -49,6 +52,12 @@ class SequencerChannelWidget(QWidget):
         channel_labels = [self.channel_label(row) for row in range(len(self.channels))]
         self.channel_table.setVerticalHeaderLabels(channel_labels)
 
+    def _populate_group_box(self) -> None:
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.group_box.setLayout(layout)
+        layout.addWidget(self.channel_output_editor)
+
     def _on_current_item_changed(
         self, current: Optional[QTableWidgetItem], previous: Optional[QTableWidgetItem]
     ) -> None:
@@ -62,6 +71,9 @@ class SequencerChannelWidget(QWidget):
         if item is not None:
             self.group_box.setVisible(True)
             self.group_box.setTitle(item.text())
+            row = item.row()
+            channel = self.channels[row]
+            self.channel_output_editor.set_output("label", channel.output)
         else:
             self.group_box.setVisible(False)
 
