@@ -15,7 +15,6 @@ class ConstantNode(BaseNode):
             placeholder_text="value",
             tooltip="The output of this node is held constant during the whole shot.",
         )
-        self.set_port_deletion_allowed(True)
 
     def set_value(self, expression: Expression) -> None:
         self.set_property("Value", str(expression))
