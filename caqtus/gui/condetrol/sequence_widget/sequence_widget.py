@@ -5,7 +5,7 @@ from typing import Optional
 import attrs
 from PySide6.QtCore import QThread, QTimer, Signal, QEvent
 from PySide6.QtStateMachine import QStateMachine, QState
-from PySide6.QtWidgets import QWidget, QToolBar
+from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ParameterNamespace
 from caqtus.session._return_or_raise import unwrap
@@ -136,8 +136,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.setup_connections()
 
-        self.tabWidget.currentChanged.connect(self.on_current_tab_changed)
-
         self.tool_bar = QToolBar(self)
         self.start_sequence_action = self.tool_bar.addAction(get_icon("start"), "start")
         self.start_sequence_action.setEnabled(False)
@@ -146,6 +144,15 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         )
         self.interrupt_sequence_action.setEnabled(False)
         self.verticalLayout.insertWidget(0, self.tool_bar)
+        self.stacked = QStackedWidget(self)
+        self.stacked.addWidget(QWidget(self))
+        self.stacked.addWidget(QWidget(self))
+        self.stacked.addWidget(self.time_lanes_editor.toolbar)
+        self.stacked.setCurrentIndex(0)
+        self.tool_bar.addSeparator()
+        self.tool_bar.addWidget(self.stacked)
+
+        self.tabWidget.currentChanged.connect(self.stacked.setCurrentIndex)
 
     def __enter__(self):
         """Starts the watcher thread to monitor the sequence state."""
@@ -161,12 +168,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_watcher_thread.quit()
         self.state_watcher_thread.wait()
         return False
-
-    def on_current_tab_changed(self, index: int):
-        if index == 2:
-            self.time_lanes_editor.toolbar.setVisible(True)
-        else:
-            self.time_lanes_editor.toolbar.setVisible(False)
 
     def on_sequence_unset(self):
         self.setVisible(False)
@@ -288,9 +289,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     )
                 else:
                     self.state_sequence.time_lanes = time_lanes
-
-    def get_toolbars(self) -> list[QToolBar]:
-        return [self.time_lanes_editor.toolbar]
 
     def closeEvent(self, event):
         self.state_watcher_thread.quit()
