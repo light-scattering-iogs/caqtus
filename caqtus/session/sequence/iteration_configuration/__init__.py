@@ -1,4 +1,4 @@
-from .iteration_configuration import IterationConfiguration, Unknown
+from .iteration_configuration import IterationConfiguration, Unknown, is_unknown
 from .steps_configurations import (
     StepsConfiguration,
     Step,
@@ -19,4 +19,5 @@ __all__ = [
     "ArangeLoop",
     "ContainsSubSteps",
     "Unknown",
+    "is_unknown",
 ]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from typing import TypeGuard
 
 from caqtus.types.variable_name import DottedVariableName
 
@@ -76,3 +77,7 @@ class Unknown:
 
     def __str__(self):
         return "unknown"
+
+
+def is_unknown(value) -> TypeGuard[Unknown]:
+    return isinstance(value, Unknown)

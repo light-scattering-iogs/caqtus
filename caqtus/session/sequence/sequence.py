@@ -7,7 +7,7 @@ import attrs
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.variable_name import DottedVariableName
-from .iteration_configuration import IterationConfiguration
+from .iteration_configuration import IterationConfiguration, Unknown
 from .shot import Shot
 from .state import State
 from .._return_or_raise import unwrap
@@ -96,7 +96,7 @@ class Sequence:
 
         return unwrap(session.sequences.get_stats(self.path)).stop_time
 
-    def get_expected_number_of_shots(self, session: ExperimentSession) -> Optional[int]:
+    def get_expected_number_of_shots(self, session: ExperimentSession) -> int | Unknown:
         """Return the expected number of shots for the sequence.
 
         If the sequence has not been started, return None.

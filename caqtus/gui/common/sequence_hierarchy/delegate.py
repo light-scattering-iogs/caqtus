@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.session.sequence import State
+from caqtus.session.sequence.iteration_configuration import is_unknown
 from caqtus.session.sequence_collection import SequenceStats
 
 
@@ -97,7 +98,7 @@ class ProgressDelegate(QStyledItemDelegate):
             maximum = 100
         else:
             total = sequence_stats.expected_number_shots
-            if total is not None:
+            if not is_unknown(total):
                 progress = sequence_stats.number_completed_shots
                 maximum = total
             else:

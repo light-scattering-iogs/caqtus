@@ -13,6 +13,7 @@ from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentS
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import State
+from caqtus.session.sequence.iteration_configuration import Unknown, is_unknown
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
@@ -454,13 +455,14 @@ def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> st
         return f"--/--"
     elif stats.state == State.RUNNING:
         running_duration = updated_time - stats.start_time
-        if stats.expected_number_shots is None or stats.number_completed_shots == 0:
+        expected_num_shots = stats.expected_number_shots
+        if is_unknown(expected_num_shots) or stats.number_completed_shots == 0:
             remaining = "--"
         else:
             remaining = (
                 running_duration
                 / stats.number_completed_shots
-                * (stats.expected_number_shots - stats.number_completed_shots)
+                * (expected_num_shots - stats.number_completed_shots)
             )
         if isinstance(remaining, datetime.timedelta):
             total = remaining + running_duration
