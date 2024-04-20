@@ -128,7 +128,7 @@ class SQLSequenceCollection(SequenceCollection):
         )
         sequence_model.iteration.content = iteration_content
         expected_number_shots = iteration_configuration.expected_number_shots()
-        sequence_model.expected_number_of_shots = _convert_unknown(
+        sequence_model.expected_number_of_shots = _convert_from_unknown(
             expected_number_shots
         )
 
@@ -157,7 +157,7 @@ class SQLSequenceCollection(SequenceCollection):
             device_configurations=[],
             start_time=None,
             stop_time=None,
-            expected_number_of_shots=_convert_unknown(
+            expected_number_of_shots=_convert_from_unknown(
                 iteration_configuration.expected_number_shots()
             ),
         )
@@ -302,7 +302,9 @@ class SQLSequenceCollection(SequenceCollection):
                     else None
                 ),
                 number_completed_shots=number_shot_run,
-                expected_number_shots=sequence.expected_number_of_shots,
+                expected_number_shots=_convert_to_unknown(
+                    sequence.expected_number_of_shots
+                ),
             )
 
         return result.map(extract_stats)
@@ -518,8 +520,15 @@ class SQLSequenceCollection(SequenceCollection):
         return self.parent_session._get_sql_session()
 
 
-def _convert_unknown(value: int | Unknown) -> Optional[int]:
+def _convert_from_unknown(value: int | Unknown) -> Optional[int]:
     if isinstance(value, Unknown):
         return None
+    else:
+        return value
+
+
+def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
+    if value is None:
+        return Unknown()
     else:
         return value

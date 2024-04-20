@@ -6,17 +6,17 @@ from collections.abc import Mapping
 from typing import Protocol, Optional
 
 import attrs
+from returns.result import Result
+
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
-from returns.result import Result
-
 from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence import Sequence, Shot
-from .sequence.iteration_configuration import IterationConfiguration
+from .sequence.iteration_configuration import IterationConfiguration, Unknown
 from .sequence.state import State
 from .shot import TimeLanes
 
@@ -263,8 +263,10 @@ class SequenceCollection(Protocol):
     ) -> None:
         """Update the start and end time of the sequence.
 
-        This method is used for maintenance purposes, such as when copying a sequence from one session to another.
-        It should not be used to record the start and end time of a sequence during normal operation.
+        This method is used for maintenance purposes, such as when copying a sequence
+        from one session to another.
+        It should not be used to record the start and end time of a sequence during
+        normal operation.
         """
 
         raise NotImplementedError
@@ -276,4 +278,4 @@ class SequenceStats:
     start_time: Optional[datetime.datetime]
     stop_time: Optional[datetime.datetime]
     number_completed_shots: int
-    expected_number_shots: Optional[int]
+    expected_number_shots: int | Unknown
