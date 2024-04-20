@@ -15,7 +15,6 @@ def create_exception_tree(
     highlight_color = QApplication.palette().color(QPalette.ColorRole.Accent)
     exception_item.setForeground(0, highlight_color)
     exception_item.setForeground(1, error_color)
-    exception_item.setTextAlignment(1, Qt.AlignmentFlag.AlignRight)
     result.append(exception_item)
     if hasattr(exception, "__notes__"):
         for note in exception.__notes__:
