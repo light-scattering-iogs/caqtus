@@ -12,7 +12,6 @@ from caqtus.session.sequence.iteration_configuration import (
     VariableDeclaration,
     LinspaceLoop,
 )
-from caqtus.shot_compilation import units
 from caqtus.types.parameter import (
     is_analog_value,
     AnalogValue,
@@ -24,6 +23,9 @@ from caqtus.types.parameter import (
 from caqtus.types.parameter.analog_value import add_unit
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
+from ...session.sequence.iteration_configuration.steps_configurations import (
+    evaluate_arange_loop_parameters,
+)
 
 S = TypeVar("S", bound=Step)
 
@@ -151,7 +153,9 @@ def _(
         steps.
     """
 
-    start, stop, step = evaluate_arange_loop_parameters(arange_loop, context)
+    start, stop, step = evaluate_arange_loop_parameters(
+        arange_loop, context.variables.dict()
+    )
 
     unit = get_unit(start)
     start_magnitude = magnitude_in_unit(start, unit)
@@ -217,24 +221,6 @@ def _(
 
     yield context
     return context
-
-
-def evaluate_arange_loop_parameters(
-    arange_loop: ArangeLoop,
-    context: StepContext,
-) -> tuple[AnalogValue, AnalogValue, AnalogValue]:
-    variables = context.variables.dict()
-
-    start = arange_loop.start.evaluate(variables)
-    if not is_analog_value(start):
-        raise TypeError(f"Start of loop '{arange_loop}' is not an analog value.")
-    stop = arange_loop.stop.evaluate(variables)
-    if not is_analog_value(stop):
-        raise TypeError(f"Stop of loop '{arange_loop}' is not an analog value.")
-    step = arange_loop.step.evaluate(variables)
-    if not is_analog_value(step):
-        raise TypeError(f"Step of loop '{arange_loop}' is not an analog value.")
-    return start, stop, step
 
 
 def evaluate_linspace_loop_parameters(

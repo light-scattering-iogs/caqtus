@@ -131,7 +131,11 @@ class Expression:
             return error
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
-        """Evaluate an expression on specific values for its variables"""
+        """Evaluate an expression on specific values for its variables.
+
+        Raises:
+            EvaluationError: if an error occurred during evaluation.
+        """
 
         return self._evaluate({str(expr): variables[expr] for expr in variables})
 

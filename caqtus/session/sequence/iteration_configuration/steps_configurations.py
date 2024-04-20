@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import functools
-from typing import TypeAlias, TypeGuard, assert_never
+from collections.abc import Mapping
+from typing import TypeAlias, TypeGuard, assert_never, Any
 
 import attrs
 
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import AnalogValue, is_analog_value, NotAnalogValueError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from . import Unknown
@@ -200,3 +202,32 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             )
         case _:
             assert_never(step)
+
+
+def evaluate_arange_loop_parameters(
+    arange_loop: ArangeLoop,
+    variables: Mapping[DottedVariableName, Any],
+) -> tuple[AnalogValue, AnalogValue, AnalogValue]:
+    """Evaluates the start, stop and step values of an arange loop.
+
+    Raises:
+        EvaluationError: if one value could not be evaluated.
+        NotAnalogValueError: if one evaluated value is not an analog value.
+    """
+
+    start = arange_loop.start.evaluate(variables)
+    if not is_analog_value(start):
+        raise NotAnalogValueError(
+            f"Start of loop '{arange_loop}' is not an analog value."
+        )
+    stop = arange_loop.stop.evaluate(variables)
+    if not is_analog_value(stop):
+        raise NotAnalogValueError(
+            f"Stop of loop '{arange_loop}' is not an analog value."
+        )
+    step = arange_loop.step.evaluate(variables)
+    if not is_analog_value(step):
+        raise NotAnalogValueError(
+            f"Step of loop '{arange_loop}' is not an analog value."
+        )
+    return start, stop, step

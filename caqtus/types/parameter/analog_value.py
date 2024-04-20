@@ -9,6 +9,10 @@ from ..units import Quantity, Unit, dimensionless
 AnalogValue = Real | NDArray[np.floating] | Quantity
 
 
+class NotAnalogValueError(ValueError):
+    pass
+
+
 def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
     """Returns True if the value is an analog value, False otherwise."""
 
@@ -37,23 +41,23 @@ _R = TypeVar("_R", bound=Real)
 
 
 @overload
-def magnitude_in_unit(value: _R, unit: None) -> _R:
-    ...
+def magnitude_in_unit(value: _R, unit: None) -> _R: ...
 
 
 @overload
-def magnitude_in_unit(value: _R, unit: Unit | str) -> _R:
-    ...
+def magnitude_in_unit(value: _R, unit: Unit | str) -> _R: ...
 
 
 @overload
-def magnitude_in_unit(value: NDArray[np.floating], unit: None) -> NDArray[np.floating]:
-    ...
+def magnitude_in_unit(
+    value: NDArray[np.floating], unit: None
+) -> NDArray[np.floating]: ...
 
 
 @overload
-def magnitude_in_unit(value: Quantity, unit: Unit | str) -> Real | NDArray[np.floating]:
-    ...
+def magnitude_in_unit(
+    value: Quantity, unit: Unit | str
+) -> Real | NDArray[np.floating]: ...
 
 
 def magnitude_in_unit(value, unit):
