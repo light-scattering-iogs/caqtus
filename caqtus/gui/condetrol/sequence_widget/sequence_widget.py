@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import attrs
-from PySide6.QtCore import QThread, QTimer, Signal, QEvent
+from PySide6.QtCore import QThread, QTimer, Signal, QEvent, Qt
 from PySide6.QtStateMachine import QStateMachine, QState
 from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget
 
@@ -137,8 +137,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.setup_connections()
 
         self.tool_bar = QToolBar(self)
-        self.start_sequence_action = self.tool_bar.addAction(get_icon("start"), "start")
-        self.start_sequence_action.setEnabled(False)
+        self.start_sequence_action = self.tool_bar.addAction(
+            get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
+        )
         self.interrupt_sequence_action = self.tool_bar.addAction(
             get_icon("stop"), "interrupt"
         )
@@ -171,8 +172,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     def on_sequence_unset(self):
         self.setVisible(False)
-        for toolbar in self.get_toolbars():
-            toolbar.setVisible(False)
         self.sequence_changed.emit(None)
 
     def on_sequence_set(self):
@@ -201,11 +200,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.time_lanes_editor.set_read_only(False)
         self.parameters_editor.set_read_only(False)
         self.tabWidget.setTabVisible(0, False)
+        self.start_sequence_action.setEnabled(True)
 
     def on_sequence_became_not_editable(self):
         self.iteration_editor.set_read_only(True)
         self.time_lanes_editor.set_read_only(True)
         self.parameters_editor.set_read_only(True)
+        self.start_sequence_action.setEnabled(False)
         if self.state_sequence.sequence_parameters is not None:
             self.parameters_editor.set_parameters(
                 self.state_sequence.sequence_parameters
