@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 from typing import TypeAlias, TypeGuard, assert_never, Any
 
 import attrs
+import numpy
 
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import AnalogValue, is_analog_value, NotAnalogValueError
+from caqtus.types.expression.expression import EvaluationError
+from caqtus.types.parameter import (
+    AnalogValue,
+    is_analog_value,
+    NotAnalogValueError,
+    get_unit,
+    add_unit,
+    magnitude_in_unit,
+)
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from . import Unknown
@@ -100,6 +109,42 @@ class ArangeLoop(ContainsSubSteps):
             f"spacing"
         )
 
+    def loop_values(
+        self, evaluation_context: Mapping[DottedVariableName, Any]
+    ) -> Iterable[AnalogValue]:
+        """Returns the values that the variable represented by this loop takes.
+
+        Args:
+            evaluation_context: Contains the value of the variables with which to
+                evaluate the start, stop and step expressions of the loop.
+
+        Raises:
+            EvaluationError: if the start, stop or step expressions could not be
+                evaluated.
+            NotAnalogValueError: if the start, stop or step expressions don't evaluate
+                to an analog value.
+        """
+
+        start = self.start.evaluate(evaluation_context)
+        if not is_analog_value(start):
+            raise NotAnalogValueError(f"Start of '{self}' is not an analog value.")
+        stop = self.stop.evaluate(evaluation_context)
+        if not is_analog_value(stop):
+            raise NotAnalogValueError(f"Stop of '{self}' is not an analog value.")
+        step = self.step.evaluate(evaluation_context)
+        if not is_analog_value(step):
+            raise NotAnalogValueError(f"Step of '{self}' is not an analog value.")
+
+        unit = get_unit(start)
+        start_magnitude = magnitude_in_unit(start, unit)
+        stop_magnitude = magnitude_in_unit(stop, unit)
+        step_magnitude = magnitude_in_unit(step, unit)
+
+        for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
+            # val.item() is used to convert numpy scalar to python scalar
+            value_with_unit = add_unit(value.item(), unit)
+            yield value_with_unit
+
 
 @attrs.define
 class ExecuteShot:
@@ -184,9 +229,13 @@ def _(step: LinspaceLoop):
 
 @expected_number_shots.register
 def _(step: ArangeLoop):
-    # We need to be careful to not return a wrong number of shots.
-    # In particular, we return unknown if the number of shots for the step depends on
-    # a variable.
+    try:
+        length = len(list(step.loop_values({})))
+    except (EvaluationError, NotAnalogValueError):
+        # The errors above can occur if the steps are still being edited or if the
+        # expressions depend on other variables that are not defined here.
+        return Unknown()
+
     return Unknown()
 
 
@@ -202,32 +251,3 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             )
         case _:
             assert_never(step)
-
-
-def evaluate_arange_loop_parameters(
-    arange_loop: ArangeLoop,
-    variables: Mapping[DottedVariableName, Any],
-) -> tuple[AnalogValue, AnalogValue, AnalogValue]:
-    """Evaluates the start, stop and step values of an arange loop.
-
-    Raises:
-        EvaluationError: if one value could not be evaluated.
-        NotAnalogValueError: if one evaluated value is not an analog value.
-    """
-
-    start = arange_loop.start.evaluate(variables)
-    if not is_analog_value(start):
-        raise NotAnalogValueError(
-            f"Start of loop '{arange_loop}' is not an analog value."
-        )
-    stop = arange_loop.stop.evaluate(variables)
-    if not is_analog_value(stop):
-        raise NotAnalogValueError(
-            f"Stop of loop '{arange_loop}' is not an analog value."
-        )
-    step = arange_loop.step.evaluate(variables)
-    if not is_analog_value(step):
-        raise NotAnalogValueError(
-            f"Step of loop '{arange_loop}' is not an analog value."
-        )
-    return start, stop, step

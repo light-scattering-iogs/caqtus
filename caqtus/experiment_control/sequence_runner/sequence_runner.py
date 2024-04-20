@@ -23,9 +23,6 @@ from caqtus.types.parameter import (
 from caqtus.types.parameter.analog_value import add_unit
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
-from ...session.sequence.iteration_configuration.steps_configurations import (
-    evaluate_arange_loop_parameters,
-)
 
 S = TypeVar("S", bound=Step)
 
@@ -153,20 +150,8 @@ def _(
         steps.
     """
 
-    start, stop, step = evaluate_arange_loop_parameters(
-        arange_loop, context.variables.dict()
-    )
-
-    unit = get_unit(start)
-    start_magnitude = magnitude_in_unit(start, unit)
-    stop_magnitude = magnitude_in_unit(stop, unit)
-    step_magnitude = magnitude_in_unit(step, unit)
-
-    variable_name = arange_loop.variable
-    for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
-        # val.item() is used to convert numpy scalar to python scalar
-        value_with_unit = add_unit(value.item(), unit)
-        context = context.update_variable(variable_name, value_with_unit)
+    for value in arange_loop.loop_values(context.variables.dict()):
+        context = context.update_variable(arange_loop.variable, value)
         for step in arange_loop.sub_steps:
             context = yield from walk_step(step, context)
     return context
