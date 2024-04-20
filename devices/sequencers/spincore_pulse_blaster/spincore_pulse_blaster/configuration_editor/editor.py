@@ -1,50 +1,24 @@
-from PySide6.QtWidgets import QSpinBox, QFormLayout
+from PySide6.QtWidgets import QSpinBox
 
-from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
-from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor import (
-    SequencerChannelView,
+from caqtus.gui.condetrol.device_configuration_editors import (
+    SequencerConfigurationEditor,
 )
 from ..configuration import SpincoreSequencerConfiguration
 
 
 class SpincorePulseBlasterDeviceConfigEditor(
-    DeviceConfigurationEditor[SpincoreSequencerConfiguration]
+    SequencerConfigurationEditor[SpincoreSequencerConfiguration]
 ):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.time_step_spinbox.setRange(50, 1000)
+
         self._board_number = QSpinBox()
         self._board_number.setRange(0, 100)
-
-        self._time_step = QSpinBox()
-        self._time_step.setRange(50, 1000)
-        self._time_step.setSingleStep(10)
-        self._time_step.setSuffix(" ns")
-
-        self.device_config = SpincoreSequencerConfiguration.default()
-
-        self._channels_view = SequencerChannelView(self.device_config.channels)
-
-        self._layout = QFormLayout()
-        self._layout.addRow("Board number", self._board_number)
-        self._layout.addRow("Time step", self._time_step)
-        self._layout.addRow("Channels", self._channels_view)
-
-        self.setLayout(self._layout)
-        self.set_configuration(self.device_config)
-
-    def set_configuration(
-        self, device_configuration: SpincoreSequencerConfiguration
-    ) -> None:
-        self._channels_view.set_channels(device_configuration.channels)
-        self._time_step.setValue(device_configuration.time_step)
-        self._board_number.setValue(device_configuration.board_number)
-        self._channels_view.channel_model.channels = device_configuration.channels
-        self.device_config.remote_server = device_configuration.remote_server
-        self.device_config.trigger = device_configuration.trigger
+        self.form.insertRow(1, "Board number", self._board_number)
 
     def get_configuration(self) -> SpincoreSequencerConfiguration:
-        self.device_config.board_number = self._board_number.value()
-        self.device_config.time_step = self._time_step.value()
-        self.device_config.channels = self._channels_view.channel_model.channels
-        return self.device_config
+        config = super().get_configuration()
+        config.board_number = self._board_number.value()
+        return config
