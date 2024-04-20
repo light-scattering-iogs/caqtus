@@ -1,10 +1,10 @@
 import pytest
 from PySide6.QtCore import QTimer
 
+from caqtus.experiment_control.manager import BoundExperimentManager
 from caqtus.gui.condetrol import Condetrol
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationsPlugin
 from caqtus.session import PureSequencePath
-from caqtus.session.sequence import State
 from caqtus.session.sql import (
     SQLExperimentSessionMaker,
     Serializer,
@@ -43,11 +43,15 @@ def test_condetrol(
         SpincoreSequencerConfiguration,
         SpincorePulseBlasterDeviceConfigEditor,
     )
+    experiment_manager = BoundExperimentManager(session_maker, {})
+
     device_plugin.register_default_configuration(
         "Spincore sequencer", SpincoreSequencerConfiguration.default
     )
     condetrol = Condetrol(
-        session_maker=session_maker, device_configurations_plugin=device_plugin
+        session_maker=session_maker,
+        device_configurations_plugin=device_plugin,
+        connect_to_experiment_manager=lambda: experiment_manager,
     )
     with session_maker() as session:
         sequence = session.sequences.create(
@@ -56,11 +60,6 @@ def test_condetrol(
             time_lanes=time_lanes,
         )
 
-    def change_state():
-        with session_maker() as session:
-            session.sequences.set_state(sequence.path, State.PREPARING)
-
     timer = QTimer(condetrol.window)
-    timer.singleShot(1000, change_state)
-    timer.singleShot(0, condetrol.window.close)
+    # timer.singleShot(0, condetrol.window.close)
     condetrol.run()
