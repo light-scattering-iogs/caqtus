@@ -35,6 +35,7 @@ from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
 from ..sequence import Sequence, Shot
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
+    Unknown,
 )
 from ..sequence.state import State
 from ..sequence_collection import (
@@ -126,8 +127,9 @@ class SQLSequenceCollection(SequenceCollection):
             iteration_configuration
         )
         sequence_model.iteration.content = iteration_content
-        sequence_model.expected_number_of_shots = (
-            iteration_configuration.expected_number_shots()
+        expected_number_shots = iteration_configuration.expected_number_shots()
+        sequence_model.expected_number_of_shots = _convert_unknown(
+            expected_number_shots
         )
 
     def create(
@@ -155,7 +157,9 @@ class SQLSequenceCollection(SequenceCollection):
             device_configurations=[],
             start_time=None,
             stop_time=None,
-            expected_number_of_shots=iteration_configuration.expected_number_shots(),
+            expected_number_of_shots=_convert_unknown(
+                iteration_configuration.expected_number_shots()
+            ),
         )
         self._get_sql_session().add(new_sequence)
         return Sequence(path)
@@ -512,3 +516,10 @@ class SQLSequenceCollection(SequenceCollection):
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
         return self.parent_session._get_sql_session()
+
+
+def _convert_unknown(value: int | Unknown) -> Optional[int]:
+    if isinstance(value, Unknown):
+        return None
+    else:
+        return value

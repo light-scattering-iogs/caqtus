@@ -1,3 +1,4 @@
+from .iteration_configuration import IterationConfiguration, Unknown
 from .steps_configurations import (
     StepsConfiguration,
     Step,
@@ -7,7 +8,6 @@ from .steps_configurations import (
     ArangeLoop,
     ContainsSubSteps,
 )
-from .iteration_configuration import IterationConfiguration
 
 __all__ = [
     "IterationConfiguration",
@@ -18,4 +18,5 @@ __all__ = [
     "LinspaceLoop",
     "ArangeLoop",
     "ContainsSubSteps",
+    "Unknown",
 ]
