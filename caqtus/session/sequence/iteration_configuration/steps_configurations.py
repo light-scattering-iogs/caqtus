@@ -4,10 +4,11 @@ from collections.abc import Iterable
 from typing import Optional, TypeAlias, TypeGuard, assert_never
 
 import attrs
+
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-
+from . import Unknown
 from .iteration_configuration import IterationConfiguration
 
 
@@ -141,10 +142,8 @@ class StepsConfiguration(IterationConfiguration):
         on_setattr=attrs.setters.validate,
     )
 
-    def expected_number_shots(self) -> Optional[int]:
-        child_number_shots = [expected_number_shots(step) for step in self.steps]
-        result = sum_number_shots(child_number_shots)
-        return result
+    def expected_number_shots(self) -> int | Unknown:
+        return sum(expected_number_shots(step) for step in self.steps)
 
     def get_parameter_names(self) -> set[DottedVariableName]:
         return set().union(*[get_parameter_names(step) for step in self.steps])
@@ -158,22 +157,17 @@ class StepsConfiguration(IterationConfiguration):
         return serialization.structure(data, StepsConfiguration)
 
 
-def expected_number_shots(step: Step) -> Optional[int]:
+def expected_number_shots(step: Step) -> int | Unknown:
     match step:
         case VariableDeclaration():
             return 0
         case ExecuteShot():
             return 1
         case LinspaceLoop(_, _, _, num, sub_steps):
-            sub_steps_number = sum_number_shots(
-                [expected_number_shots(step) for step in sub_steps]
-            )
-            if sub_steps_number is None:
-                return None
-            else:
-                return num * sub_steps_number
+            sub_steps_number = sum(expected_number_shots(step) for step in sub_steps)
+            return sub_steps_number * num
         case ArangeLoop(_, _, _, _, sub_steps):
-            return None
+            return Unknown()
         case _:
             assert_never(step)
 
