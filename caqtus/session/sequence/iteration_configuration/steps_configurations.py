@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 from typing import TypeAlias, TypeGuard, assert_never
 
 import attrs
@@ -156,19 +157,35 @@ class StepsConfiguration(IterationConfiguration):
         return serialization.structure(data, StepsConfiguration)
 
 
-def expected_number_shots(step: Step) -> int | Unknown:
-    match step:
-        case VariableDeclaration():
-            return 0
-        case ExecuteShot():
-            return 1
-        case LinspaceLoop(_, _, _, num, sub_steps):
-            sub_steps_number = sum(expected_number_shots(step) for step in sub_steps)
-            return sub_steps_number * num
-        case ArangeLoop(_, _, _, _, sub_steps):
-            return Unknown()
-        case _:
-            assert_never(step)
+@functools.singledispatch
+def expected_number_shots(step: Step) -> int | Unknown:  # type: ignore
+    assert_never(step)
+
+
+@expected_number_shots.register
+def _(step: VariableDeclaration):
+    return 0
+
+
+@expected_number_shots.register
+def _(step: ExecuteShot):
+    return 1
+
+
+@expected_number_shots.register
+def _(step: LinspaceLoop):
+    sub_steps_number = sum(
+        expected_number_shots(sub_step) for sub_step in step.sub_steps
+    )
+    return sub_steps_number * step.num
+
+
+@expected_number_shots.register
+def _(step: ArangeLoop):
+    # We need to be careful to not return a wrong number of shots.
+    # In particular, we return unknown if the number of shots for the step depends on
+    # a variable.
+    return Unknown()
 
 
 def get_parameter_names(step: Step) -> set[DottedVariableName]:
