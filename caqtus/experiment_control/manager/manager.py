@@ -188,7 +188,7 @@ class BoundExperimentManager(ExperimentManager):
         self,
         session_maker: ExperimentSessionMaker,
         device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
-        remote_device_manager_class: type[RemoteDeviceManager],
+        remote_device_manager_class: type[RemoteDeviceManager] = RemoteDeviceManager,
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._procedure_running = threading.Lock()
