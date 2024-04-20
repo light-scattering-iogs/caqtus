@@ -41,7 +41,7 @@ def test_condetrol(
     device_plugin = DeviceConfigurationsPlugin.default()
     device_plugin.register_editor(
         SpincoreSequencerConfiguration,
-        lambda _: SpincorePulseBlasterDeviceConfigEditor(),
+        SpincorePulseBlasterDeviceConfigEditor,
     )
     device_plugin.register_default_configuration(
         "Spincore sequencer", SpincoreSequencerConfiguration.default
