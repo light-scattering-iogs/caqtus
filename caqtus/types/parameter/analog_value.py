@@ -65,9 +65,7 @@ def magnitude_in_unit(value, unit):
 
     if is_quantity(value):
         if unit is None:
-            if value.units.is_compatible_with(dimensionless):
-                return value.to(dimensionless).magnitude
-            raise ValueError(f"Cannot convert quantity {value} to dimensionless")
+            return value.to(dimensionless).magnitude
         return value.to(unit).magnitude
     else:
         if unit is None:
