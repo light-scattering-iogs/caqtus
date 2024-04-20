@@ -17,10 +17,10 @@ from caqtus.types.parameter import (
     add_unit,
     magnitude_in_unit,
 )
+from caqtus.types.units import DimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from . import Unknown
-from .iteration_configuration import IterationConfiguration
+from .iteration_configuration import IterationConfiguration, Unknown
 
 
 def validate_step(instance, attribute, step):
@@ -123,6 +123,8 @@ class ArangeLoop(ContainsSubSteps):
                 evaluated.
             NotAnalogValueError: if the start, stop or step expressions don't evaluate
                 to an analog value.
+            DimensionalityError: if the start, stop and step values are not
+                commensurate.
         """
 
         start = self.start.evaluate(evaluation_context)
@@ -231,12 +233,17 @@ def _(step: LinspaceLoop):
 def _(step: ArangeLoop):
     try:
         length = len(list(step.loop_values({})))
-    except (EvaluationError, NotAnalogValueError):
+    except (EvaluationError, NotAnalogValueError, DimensionalityError):
         # The errors above can occur if the steps are still being edited or if the
         # expressions depend on other variables that are not defined here.
+        # These can be errors on the user side, so we don't want to crash on them, and
+        # we just indicate that we don't know the number of shots.
         return Unknown()
 
-    return Unknown()
+    sub_steps_number = sum(
+        expected_number_shots(sub_step) for sub_step in step.sub_steps
+    )
+    return sub_steps_number * length
 
 
 def get_parameter_names(step: Step) -> set[DottedVariableName]:
