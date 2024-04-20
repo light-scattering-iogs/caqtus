@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, assert_never
 
 import attrs
 import numpy as np
@@ -523,12 +523,16 @@ class SQLSequenceCollection(SequenceCollection):
 def _convert_from_unknown(value: int | Unknown) -> Optional[int]:
     if isinstance(value, Unknown):
         return None
-    else:
+    elif isinstance(value, int):
         return value
+    else:
+        assert_never(value)
 
 
 def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
     if value is None:
         return Unknown()
-    else:
+    elif isinstance(value, int):
         return value
+    else:
+        assert_never(value)
