@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Optional, TypeAlias, TypeGuard, assert_never
+from typing import TypeAlias, TypeGuard, assert_never
 
 import attrs
 
@@ -184,9 +183,3 @@ def get_parameter_names(step: Step) -> set[DottedVariableName]:
             )
         case _:
             assert_never(step)
-
-
-def sum_number_shots(number_shots: Iterable[int | None]) -> Optional[int]:
-    if any(n is None for n in number_shots):
-        return None
-    return sum(number_shots)
