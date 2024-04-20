@@ -21,6 +21,7 @@ from caqtus.session.sequence_collection import (
 )
 from caqtus.session.shot import TimeLanes
 from .sequence_widget_ui import Ui_SequenceWidget
+from ..icons import get_icon
 from ..logger import logger
 from ..parameter_tables_editor import ParameterNamespaceEditor
 from ..sequence_iteration_editors import create_default_editor
@@ -136,6 +137,15 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.setup_connections()
 
         self.tabWidget.currentChanged.connect(self.on_current_tab_changed)
+
+        self.tool_bar = QToolBar(self)
+        self.start_sequence_action = self.tool_bar.addAction(get_icon("start"), "start")
+        self.start_sequence_action.setEnabled(False)
+        self.interrupt_sequence_action = self.tool_bar.addAction(
+            get_icon("stop"), "interrupt"
+        )
+        self.interrupt_sequence_action.setEnabled(False)
+        self.verticalLayout.insertWidget(0, self.tool_bar)
 
     def __enter__(self):
         """Starts the watcher thread to monitor the sequence state."""

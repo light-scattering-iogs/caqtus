@@ -84,15 +84,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.restore_window()
         self.setup_connections()
         self._exit_stack = contextlib.ExitStack()
-        self.start_sequence_action = self.toolbar.addAction(get_icon("start"), "start")
-        self.start_sequence_action.setEnabled(False)
-        self.interrupt_sequence_action = self.toolbar.addAction(
-            get_icon("stop"), "interrupt"
-        )
-        self.interrupt_sequence_action.setEnabled(False)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
-        for toolbar in self.sequence_widget.get_toolbars():
-            self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
 
     def __enter__(self):
         self._exit_stack.__enter__()

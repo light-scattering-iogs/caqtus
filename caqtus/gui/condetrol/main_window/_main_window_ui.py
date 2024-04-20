@@ -48,7 +48,6 @@ from PySide6.QtWidgets import (
     QMenuBar,
     QSizePolicy,
     QStatusBar,
-    QToolBar,
     QWidget,
 )
 
@@ -82,12 +81,6 @@ class Ui_CondetrolMainWindow(object):
         self.statusbar = QStatusBar(CondetrolMainWindow)
         self.statusbar.setObjectName("statusbar")
         CondetrolMainWindow.setStatusBar(self.statusbar)
-        self.toolbar = QToolBar(CondetrolMainWindow)
-        self.toolbar.setObjectName("toolbar")
-        self.toolbar.setMovable(False)
-        self.toolbar.setAllowedAreas(Qt.TopToolBarArea)
-        self.toolbar.setFloatable(False)
-        CondetrolMainWindow.addToolBar(Qt.TopToolBarArea, self.toolbar)
 
         self.menubar.addAction(self.device_configurations_menu.menuAction())
         self.menubar.addAction(self.dock_menu.menuAction())
@@ -120,9 +113,6 @@ class Ui_CondetrolMainWindow(object):
         )
         self.dock_menu.setTitle(
             QCoreApplication.translate("CondetrolMainWindow", "Docks", None)
-        )
-        self.toolbar.setWindowTitle(
-            QCoreApplication.translate("CondetrolMainWindow", "toolBar", None)
         )
 
     # retranslateUi
