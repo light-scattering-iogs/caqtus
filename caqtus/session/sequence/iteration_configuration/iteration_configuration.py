@@ -70,3 +70,9 @@ class Unknown:
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def __repr__(self):
+        return f"Unknown()"
+
+    def __str__(self):
+        return "unknown"
