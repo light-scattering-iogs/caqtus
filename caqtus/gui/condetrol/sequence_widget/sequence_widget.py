@@ -69,6 +69,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     sequence_not_editable_set = Signal(_SequenceInfo)
     sequence_cleared = Signal()
 
+    sequence_start_requested = Signal(PureSequencePath)
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -140,6 +142,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.start_sequence_action = self.tool_bar.addAction(
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
         )
+        self.start_sequence_action.triggered.connect(self._on_start_sequence_requested)
         self.interrupt_sequence_action = self.tool_bar.addAction(
             get_icon("stop"), "interrupt"
         )
@@ -169,6 +172,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.state_watcher_thread.quit()
         self.state_watcher_thread.wait()
         return False
+
+    def _on_start_sequence_requested(self):
+        self.sequence_start_requested.emit(self.state_sequence.sequence_path)
 
     def on_sequence_unset(self):
         self.setVisible(False)

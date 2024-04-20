@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QDockWidget,
     QDialog,
-    QToolBar,
 )
 
 from caqtus.experiment_control import SequenceInterruptedException
@@ -131,6 +130,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             self.on_procedure_exception
         )
         self.sequence_widget.sequence_changed.connect(self.on_viewed_sequence_changed)
+        self.sequence_widget.sequence_start_requested.connect(self.start_sequence)
         self._global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
