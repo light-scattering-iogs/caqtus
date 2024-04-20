@@ -10,7 +10,7 @@ class ExceptionDialog(QDialog, Ui_ExceptionDialog):
         self.setupUi(self)
 
     def set_exception(self, exception: BaseException):
-        self.exception_tree.setColumnCount(2)
+        self.exception_tree.setColumnCount(3)
         tree = create_exception_tree(exception)
 
         self.exception_tree.addTopLevelItems(tree)
