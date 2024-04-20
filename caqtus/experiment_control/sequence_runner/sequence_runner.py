@@ -2,8 +2,6 @@ import functools
 from collections.abc import Iterable, Callable, Generator
 from typing import assert_never, TypeVar
 
-import numpy
-
 from caqtus.session import ParameterNamespace
 from caqtus.session.sequence.iteration_configuration import (
     Step,
@@ -13,14 +11,9 @@ from caqtus.session.sequence.iteration_configuration import (
     LinspaceLoop,
 )
 from caqtus.types.parameter import (
-    is_analog_value,
-    AnalogValue,
-    get_unit,
-    magnitude_in_unit,
     is_parameter,
     Parameter,
 )
-from caqtus.types.parameter.analog_value import add_unit
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
 
@@ -174,17 +167,8 @@ def _(
         sub steps.
     """
 
-    start, stop, num = evaluate_linspace_loop_parameters(linspace_loop, context)
-
-    unit = get_unit(start)
-    start_magnitude = magnitude_in_unit(start, unit)
-    stop_magnitude = magnitude_in_unit(stop, unit)
-
-    variable_name = linspace_loop.variable
-    for value in numpy.linspace(start_magnitude, stop_magnitude, num):
-        # val.item() is used to convert numpy scalar to python scalar
-        value_with_unit = add_unit(value.item(), unit)
-        context = context.update_variable(variable_name, value_with_unit)
+    for value in linspace_loop.loop_values(context.variables.dict()):
+        context = context.update_variable(linspace_loop.variable, value)
         for step in linspace_loop.sub_steps:
             context = yield from walk_step(step, context)
     return context
@@ -206,24 +190,6 @@ def _(
 
     yield context
     return context
-
-
-def evaluate_linspace_loop_parameters(
-    linspace_loop: LinspaceLoop,
-    context: StepContext,
-) -> tuple[AnalogValue, AnalogValue, int]:
-    variables = context.variables.dict()
-
-    start = linspace_loop.start.evaluate(variables)
-    if not is_analog_value(start):
-        raise TypeError(f"Start of loop '{linspace_loop}' is not an analog value.")
-    stop = linspace_loop.stop.evaluate(variables)
-    if not is_analog_value(stop):
-        raise TypeError(f"Stop of loop '{linspace_loop}' is not an analog value.")
-    num = linspace_loop.num
-    if num < 0:
-        raise ValueError(f"Number of points of loop '{linspace_loop}' is negative.")
-    return start, stop, num
 
 
 class StepEvaluationError(Exception):

@@ -82,6 +82,38 @@ class LinspaceLoop(ContainsSubSteps):
             f"for {self.variable} = {self.start} to {self.stop} with {self.num} steps"
         )
 
+    def loop_values(
+        self, evaluation_context: Mapping[DottedVariableName, Any]
+    ) -> Iterable[AnalogValue]:
+        """Returns the values that the variable represented by this loop takes.
+
+        Args:
+            evaluation_context: Contains the value of the variables with which to
+                evaluate the start and stop expressions of the loop.
+
+        Raises:
+            EvaluationError: if the start or stop expressions could not be evaluated.
+            NotAnalogValueError: if the start or stop expressions don't evaluate to an
+                analog value.
+            DimensionalityError: if the start or stop values are not commensurate.
+        """
+
+        start = self.start.evaluate(evaluation_context)
+        if not is_analog_value(start):
+            raise NotAnalogValueError(f"Start of '{self}' is not an analog value.")
+        stop = self.stop.evaluate(evaluation_context)
+        if not is_analog_value(stop):
+            raise NotAnalogValueError(f"Stop of '{self}' is not an analog value.")
+
+        unit = get_unit(start)
+        start_magnitude = magnitude_in_unit(start, unit)
+        stop_magnitude = magnitude_in_unit(stop, unit)
+
+        for value in numpy.linspace(start_magnitude, stop_magnitude, self.num):
+            # val.item() is used to convert numpy scalar to python scalar
+            value_with_unit = add_unit(value.item(), unit)
+            yield value_with_unit
+
 
 @attrs.define
 class ArangeLoop(ContainsSubSteps):
