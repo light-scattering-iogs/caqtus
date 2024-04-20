@@ -105,16 +105,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
 
-        # async def shutdown_on_exception(coro):
-        #     try:
-        #         await coro
-        #     except Exception as e:
-        #         logger.critical(
-        #             "Unhandled exception in the main window's event loop.",
-        #             exc_info=e,
-        #         )
-        #         QApplication.quit()
-
         await asyncio.gather(
             self._path_view.run_async(), self._monitor_global_parameters()
         )
