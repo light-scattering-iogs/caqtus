@@ -16,18 +16,18 @@ from caqtus.session import (
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
-from caqtus.session.sequence import Sequence, State
+from caqtus.session.sequence import State
 from caqtus.session.sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )
 from caqtus.session.sequence_collection import (
     SequenceNotEditableError,
+    PathIsNotSequenceError,
 )
 from caqtus.session.shot import TimeLanes
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..icons import get_icon
-from ..logger import logger
 from ..parameter_tables_editor import ParameterNamespaceEditor
 from ..sequence_iteration_editors.steps_iteration_editor import StepsIterationEditor
 from ..timelanes_editor import (
@@ -108,6 +108,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.interrupt_sequence_action = self.tool_bar.addAction(
             get_icon("stop"), "interrupt"
         )
+        self.interrupt_sequence_action.setVisible(False)
         self.verticalLayout.insertWidget(0, self.tool_bar)
         self.stacked = QStackedWidget(self)
         self.stacked.addWidget(QWidget(self))
@@ -183,59 +184,40 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self._transition(new_state)
 
     def setup_connections(self):
-        return
-        # self.time_lanes_editor.time_lanes_edited.connect(self.on_time_lanes_edited)
-        # self.iteration_editor.iteration_edited.connect(
-        #     self.on_sequence_iteration_edited
-        # )
+        self.time_lanes_editor.time_lanes_edited.connect(self.on_time_lanes_edited)
+        self.iteration_editor.iteration_edited.connect(
+            self.on_sequence_iteration_edited
+        )
 
     def on_sequence_iteration_edited(self, iterations: IterationConfiguration):
-        if self.state_sequence in self.state_machine.configuration():
-            sequence = Sequence(self.state_sequence.sequence_path)
-            with self.session_maker() as session:
-                try:
-                    session.sequences.set_iteration_configuration(sequence, iterations)
-                except SequenceNotEditableError:
-                    state = sequence.get_state(session)
-                    iterations = session.sequences.get_iteration_configuration(
-                        self.state_sequence.sequence_path
-                    )
-                    self.sequence_not_editable_set.emit(
-                        _SequenceInfo(
-                            sequence_path=self.state_sequence.sequence_path,
-                            sequence_parameters=self.state_sequence.sequence_parameters,
-                            iteration_config=iterations,
-                            time_lanes=self.state_sequence.time_lanes,
-                            state=state,
-                        )
-                    )
-                else:
-                    self.state_sequence.iteration_config = iterations
+        assert isinstance(self._state, _SequenceEditableState)
+        with self.session_maker() as session:
+            try:
+                session.sequences.set_iteration_configuration(
+                    self._state.sequence_path, iterations
+                )
+            except (PathNotFoundError, PathIsNotSequenceError):
+                self._transition(_SequenceNotSetState())
+            except SequenceNotEditableError:
+                self._transition(
+                    _query_state_sync(self._state.sequence_path, self.session_maker)
+                )
+            else:
+                self._state = attrs.evolve(self._state, iterations=iterations)
 
     def on_time_lanes_edited(self, time_lanes: TimeLanes):
-        logger.debug("Time lanes edited")
-        if self.state_sequence in self.state_machine.configuration():
-            sequence = Sequence(self.state_sequence.sequence_path)
-            with self.session_maker() as session:
-                try:
-                    session.sequences.set_time_lanes(
-                        self.state_sequence.sequence_path, time_lanes
-                    )
-                except SequenceNotEditableError:
-                    time_lanes = session.sequences.get_time_lanes(
-                        self.state_sequence.sequence_path
-                    )
-                    self.sequence_not_editable_set.emit(
-                        _SequenceInfo(
-                            sequence_path=self.state_sequence.sequence_path,
-                            sequence_parameters=self.state_sequence.sequence_parameters,
-                            iteration_config=self.state_sequence.iteration_config,
-                            time_lanes=time_lanes,
-                            state=self.state_sequence.sequence_state,
-                        )
-                    )
-                else:
-                    self.state_sequence.time_lanes = time_lanes
+        assert isinstance(self._state, _SequenceEditableState)
+        with self.session_maker() as session:
+            try:
+                session.sequences.set_time_lanes(self._state.sequence_path, time_lanes)
+            except (PathNotFoundError, PathIsNotSequenceError):
+                self._transition(_SequenceNotSetState())
+            except SequenceNotEditableError:
+                self._transition(
+                    _query_state_sync(self._state.sequence_path, self.session_maker)
+                )
+            else:
+                self._state = attrs.evolve(self._state, time_lanes=time_lanes)
 
 
 class _State(abc.ABC):
