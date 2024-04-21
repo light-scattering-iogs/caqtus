@@ -1,3 +1,7 @@
-from .async_session import AsyncExperimentSession, AsyncPathHierarchy
+from .async_session import (
+    AsyncExperimentSession,
+    AsyncPathHierarchy,
+    AsyncSequenceCollection,
+)
 
-__all__ = ["AsyncExperimentSession", "AsyncPathHierarchy"]
+__all__ = ["AsyncExperimentSession", "AsyncPathHierarchy", "AsyncSequenceCollection"]

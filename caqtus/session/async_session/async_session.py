@@ -3,6 +3,7 @@ from typing import Protocol
 
 from caqtus.session import ParameterNamespace
 from .path_hierarchy import AsyncPathHierarchy
+from .sequence_collection import AsyncSequenceCollection
 
 
 class AsyncExperimentSession(
@@ -14,6 +15,7 @@ class AsyncExperimentSession(
     """
 
     paths: AsyncPathHierarchy
+    sequences: AsyncSequenceCollection
 
     async def get_global_parameters(self) -> ParameterNamespace: ...
 
