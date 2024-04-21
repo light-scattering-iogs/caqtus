@@ -86,7 +86,12 @@ class Condetrol:
             finally:
                 sys.__excepthook__(*args)
 
+        self.window.show()
+
+        previous_excepthook = sys.excepthook
         sys.excepthook = excepthook
 
-        self.window.show()
-        QtAsyncio.run(self.window.run_async())
+        try:
+            QtAsyncio.run(self.window.run_async())
+        finally:
+            sys.excepthook = previous_excepthook
