@@ -97,8 +97,6 @@ class StepsModel(QAbstractItemModel):
         )
 
     def set_steps(self, steps: StepsConfiguration):
-        if self._read_only:
-            return
         self.beginResetModel()
         self._steps = [StepsItem.construct(step) for step in steps.steps]
         self.endResetModel()

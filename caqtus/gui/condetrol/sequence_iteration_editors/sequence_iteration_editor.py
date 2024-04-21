@@ -10,7 +10,7 @@ T = TypeVar("T", bound=IterationConfiguration)
 
 
 class SequenceIterationEditor(Generic[T], metaclass=qabc.QABCMeta):
-    iteration_changed = Signal(IterationConfiguration)
+    iteration_edited = Signal(IterationConfiguration)
 
     @abc.abstractmethod
     def get_iteration(self) -> T:

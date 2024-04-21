@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
+from caqtus.gui.qtutil import block_signals
 from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
     VariableDeclaration,
@@ -47,11 +48,11 @@ def create_arange_loop():
 
 
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
-    iteration_changed = QtCore.Signal(StepsConfiguration)
+    iteration_edited = QtCore.Signal(StepsConfiguration)
 
-    def __init__(self, iteration: StepsConfiguration, parent: Optional[QWidget] = None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self._model = StepsModel(iteration)
+        self._model = StepsModel(StepsConfiguration([]))
         self.setModel(self._model)
         self.expandAll()
         self.header().hide()
@@ -70,23 +71,30 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
 
-        self._model.dataChanged.connect(self.emit_iteration_changed)
-        self._model.rowsInserted.connect(self.emit_iteration_changed)
-        self._model.rowsRemoved.connect(self.emit_iteration_changed)
-        self._model.modelReset.connect(self.emit_iteration_changed)
+        self._model.dataChanged.connect(self.emit_iteration_edited)
+        self._model.rowsInserted.connect(self.emit_iteration_edited)
+        self._model.rowsRemoved.connect(self.emit_iteration_edited)
+        self._model.modelReset.connect(self.emit_iteration_edited)
 
         font = QFont("JetBrains Mono")
         font.setPixelSize(13)
         self.setFont(font)
 
-    def emit_iteration_changed(self, *args, **kwargs):
-        self.iteration_changed.emit(self.get_iteration())
+    def emit_iteration_edited(self, *args, **kwargs):
+        self.iteration_edited.emit(self.get_iteration())
 
     def get_iteration(self) -> StepsConfiguration:
         return self._model.get_steps()
 
     def set_iteration(self, iteration: StepsConfiguration):
-        self._model.set_steps(iteration)
+        """Updates the iteration displayed by the editor.
+
+        This method does not emit the signal iteration_edited.
+        """
+
+        with block_signals(self):
+            self._model.set_steps(iteration)
+        self.expandAll()
 
     def set_read_only(self, read_only: bool):
         self._model.set_read_only(read_only)
