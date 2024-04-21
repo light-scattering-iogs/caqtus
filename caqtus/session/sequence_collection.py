@@ -138,7 +138,13 @@ class SequenceCollection(Protocol):
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
     ) -> None:
-        """Set the time lanes that define how a shot is run for this sequence."""
+        """Set the time lanes that define how a shot is run for this sequence.
+
+        Raises:
+            PathNotFoundError: If the path doesn't exist.
+            PathIsNotSequenceError: If the path is not a sequence.
+            SequenceNotEditableError: If the sequence is not in DRAFT state.
+        """
 
         raise NotImplementedError
 
