@@ -10,6 +10,12 @@ from ..sequence_collection import PathIsNotSequenceError, SequenceStats
 
 class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
+    async def is_sequence(
+        self, path: PureSequencePath
+    ) -> Result[bool, PathNotFoundError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
     async def get_stats(
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:

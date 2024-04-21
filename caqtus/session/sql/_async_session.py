@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
-from ._sequence_collection import _get_stats
+from ._sequence_collection import _get_stats, _is_sequence
 from ._serializer import Serializer
 from .. import ParameterNamespace, PureSequencePath
 from ..async_session import (
@@ -102,6 +102,11 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     parent_session: AsyncSQLExperimentSession
     serializer: Serializer
+
+    async def is_sequence(
+        self, path: PureSequencePath
+    ) -> Result[bool, PathNotFoundError]:
+        return await self._run_sync(_is_sequence, path)
 
     async def get_stats(
         self, path: PureSequencePath

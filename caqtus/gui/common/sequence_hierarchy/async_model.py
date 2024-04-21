@@ -212,6 +212,35 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             )
         return item
 
+    @staticmethod
+    async def _build_item_async(
+        path: PureSequencePath, session: AsyncExperimentSession
+    ) -> QStandardItem:
+        assert await session.paths.does_path_exists(path)
+        item = QStandardItem()
+        item.setData(path.name, Qt.DisplayRole)
+        is_sequence = unwrap(await session.sequences.is_sequence(path))
+        creation_date = unwrap(await session.paths.get_path_creation_date(path))
+        if is_sequence:
+            stats = unwrap(await session.sequences.get_stats(path))
+            item.setData(
+                SequenceNode(
+                    path=path,
+                    stats=stats,
+                    creation_date=creation_date,
+                    last_query_time=get_update_date(),
+                ),
+                NODE_DATA_ROLE,
+            )
+        else:
+            item.setData(
+                FolderNode(
+                    path=path, has_fetched_children=False, creation_date=creation_date
+                ),
+                NODE_DATA_ROLE,
+            )
+        return item
+
     def columnCount(self, parent=QModelIndex()):
         return 5
 
@@ -334,14 +363,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         parent_item = self._get_item(parent)
         parent_data = get_item_data(parent_item)
-        with self.session_maker() as session:
-            children_result = await asyncio.to_thread(
-                session.paths.get_children, parent_data.path
-            )
+        async with self.session_maker.async_session() as session:
+            children_result = await session.paths.get_children(parent_data.path)
             try:
                 child_paths = unwrap(children_result)
             except PathIsSequenceError:
-                self.handle_folder_became_sequence(parent, session)
+                await self.handle_folder_became_sequence_async(parent, session)
                 return
             except PathNotFoundError:
                 self.handle_path_was_deleted(parent)
@@ -370,14 +397,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             case FolderNode(has_fetched_children=False):
                 return
             case FolderNode(path=parent_path, has_fetched_children=True):
-                with self.session_maker() as session:
-                    children_result = await asyncio.to_thread(
-                        session.paths.get_children, parent_path
-                    )
+                async with self.session_maker.async_session() as session:
+                    children_result = await session.paths.get_children(parent_path)
                     try:
                         child_paths = unwrap(children_result)
                     except PathIsSequenceError:
-                        self.handle_folder_became_sequence(parent, session)
+                        await self.handle_folder_became_sequence_async(parent, session)
                         return
                     except PathNotFoundError:
                         self.handle_path_was_deleted(parent)
@@ -393,7 +418,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         parent_item.rowCount() + len(new_paths) - 1,
                     )
                     for child_path in new_paths:
-                        child_item = self._build_item(child_path, session)
+                        child_item = await self._build_item_async(child_path, session)
                         parent_item.appendRow(child_item)
                     self.endInsertRows()
                 for row in range(self.rowCount(parent)):
@@ -406,6 +431,27 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         data = get_item_data(item)
         stats = unwrap(session.sequences.get_stats(data.path))
         creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+        self.beginRemoveRows(index, 0, item.rowCount() - 1)
+        item.setData(
+            SequenceNode(
+                path=data.path,
+                stats=stats,
+                creation_date=creation_date,
+                last_query_time=get_update_date(),
+            ),
+            NODE_DATA_ROLE,
+        )
+        item.removeRows(0, item.rowCount())
+        self.endRemoveRows()
+        self.emit_index_updated(index)
+
+    async def handle_folder_became_sequence_async(
+        self, index: QModelIndex, session: AsyncExperimentSession
+    ):
+        item = self._get_item(index)
+        data = get_item_data(item)
+        stats = unwrap(await session.sequences.get_stats(data.path))
+        creation_date = unwrap(await session.paths.get_path_creation_date(data.path))
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(

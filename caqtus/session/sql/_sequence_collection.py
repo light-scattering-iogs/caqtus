@@ -64,11 +64,7 @@ class SQLSequenceCollection(SequenceCollection):
         return Sequence(BoundSequencePath(item, self.parent_session))
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
-        if path.is_root():
-            return Success(False)
-        return self._query_path_model(path).map(
-            lambda path_model: bool(path_model.sequence)
-        )
+        return _is_sequence(self._get_sql_session(), path)
 
     def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
         if unwrap(self.is_sequence(path)):
@@ -498,6 +494,16 @@ def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
         return value
     else:
         assert_never(value)
+
+
+def _is_sequence(
+    session: Session, path: PureSequencePath
+) -> Result[bool, PathNotFoundError]:
+    if path.is_root():
+        return Success(False)
+    return _query_path_model(session, path).map(
+        lambda path_model: bool(path_model.sequence)
+    )
 
 
 def _get_stats(
