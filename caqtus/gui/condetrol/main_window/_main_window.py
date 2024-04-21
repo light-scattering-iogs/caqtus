@@ -3,7 +3,7 @@ import contextlib
 from collections.abc import Callable
 from typing import Optional, Literal
 
-from PySide6.QtCore import QSettings, QThread, QObject, QTimer, Signal, Qt
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -71,7 +71,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._global_parameters_editor = ParameterNamespaceEditor()
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
-        self._procedure_watcher_thread = ProcedureWatcherThread(self)
         self.sequence_widget = SequenceWidget(
             self.session_maker, time_lanes_plugin, parent=self
         )
@@ -84,6 +83,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setup_connections()
         self._exit_stack = contextlib.ExitStack()
         self._task_group = asyncio.TaskGroup()
+        self._run_sequence_task: Optional[asyncio.Task] = None
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
@@ -120,9 +120,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
         self._path_view.sequence_start_requested.connect(self.start_sequence)
         self._path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
-        self._procedure_watcher_thread.exception_occurred.connect(
-            self.on_procedure_exception
-        )
         self.sequence_widget.sequence_changed.connect(self.on_viewed_sequence_changed)
         self.sequence_widget.sequence_start_requested.connect(self.start_sequence)
         self._global_parameters_editor.parameters_edited.connect(
@@ -159,7 +156,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         except Exception as e:
             self.display_error("Failed to connect to experiment manager.", e)
             return
-        if self._procedure_watcher_thread.isRunning():
+        sequence_already_running = (
+            self._run_sequence_task is not None and not self._run_sequence_task.done()
+        )
+        if sequence_already_running:
             self.display_error(
                 "A sequence is already running.",
                 RuntimeError("A sequence is already running."),
@@ -168,10 +168,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         procedure = experiment_manager.create_procedure(
             "sequence launched from GUI", acquisition_timeout=1
         )
-        self._procedure_watcher_thread.set_procedure(procedure)
-        self._procedure_watcher_thread.set_sequence(Sequence(path))
-
-        self._procedure_watcher_thread.start()
+        self._run_sequence_task = self._task_group.create_task(
+            self._run_sequence(procedure, Sequence(path))
+        )
 
     def on_procedure_exception(self, exception: Exception):
         self.display_error(
@@ -250,60 +249,35 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 self._global_parameters_editor.set_parameters(parameters)
             await asyncio.sleep(0.2)
 
+    async def _run_sequence(self, procedure: Procedure, sequence):
+        with procedure:
+            try:
+                await asyncio.to_thread(procedure.start_sequence, sequence)
+            except Exception as e:
+                exception = RuntimeError(
+                    f"An error occurred while starting the sequence {sequence}."
+                )
+                exception.__cause__ = e
+                self.on_procedure_exception(e)
+
+            while await asyncio.to_thread(procedure.is_running_sequence):
+                await asyncio.sleep(50e-3)
+
+            if (exc := procedure.exception()) is not None:
+                # Here we ignore the SequenceInterruptedException because it is
+                # expected to happen when the sequence is interrupted and we don't
+                # want to display it to the user as an actual error.
+                if isinstance(exc, SequenceInterruptedException):
+                    exc = None
+                elif isinstance(exc, ExceptionGroup):
+                    _, exc = exc.split(SequenceInterruptedException)
+                if exc is not None:
+                    self.on_procedure_exception(exc)
+
 
 def _get_global_parameters(session_maker: ExperimentSessionMaker) -> ParameterNamespace:
     with session_maker() as session:
         return session.get_global_parameters()
-
-
-class ProcedureWatcherThread(QThread):
-    exception_occurred = Signal(Exception)
-
-    def __init__(self, parent: QObject):
-        super().__init__(parent)
-        self._procedure: Optional[Procedure] = None
-        self._sequence: Optional[Sequence] = None
-
-    def set_procedure(self, procedure: Procedure):
-        self._procedure = procedure
-
-    def set_sequence(self, sequence: Sequence):
-        self._sequence = sequence
-
-    def run(self):
-        def watch():
-            assert self._procedure is not None
-            if self._procedure.is_running_sequence():
-                return
-            else:
-                if (exc := self._procedure.exception()) is not None:
-                    # Here we ignore the SequenceInterruptedException because it is
-                    # expected to happen when the sequence is interrupted and we don't
-                    # want to display it to the user as an actual error.
-                    if isinstance(exc, SequenceInterruptedException):
-                        exc = None
-                    elif isinstance(exc, ExceptionGroup):
-                        _, exc = exc.split(SequenceInterruptedException)
-                    if exc is not None:
-                        self.exception_occurred.emit(exc)
-                self.quit()
-
-        timer = QTimer()
-        timer.timeout.connect(watch)  # type: ignore
-        with self._procedure as procedure:
-            timer.start(50)
-            try:
-                procedure.start_sequence(self._sequence)
-            except Exception as e:
-                exception = RuntimeError(
-                    f"An error occurred while starting the sequence {self._sequence}."
-                )
-                exception.__cause__ = e
-                self.exception_occurred.emit(exception)
-            self.exec()
-        self._procedure = None
-        self._sequence = None
-        timer.stop()
 
 
 class IconLabel(QWidget):
