@@ -4,7 +4,9 @@ from typing import Protocol
 from caqtus.session import ParameterNamespace
 
 
-class AsyncExperimentSession(contextlib.AbstractAsyncContextManager, Protocol):
+class AsyncExperimentSession(
+    contextlib.AbstractAsyncContextManager["AsyncExperimentSession"], Protocol
+):
     """Asynchronous version of ExperimentSession.
 
     For a detailed description of the methods, see ExperimentSession.

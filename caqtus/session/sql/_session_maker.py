@@ -1,15 +1,17 @@
 from sqlite3 import Connection as SQLite3Connection
-from typing import Self
 
 import sqlalchemy
 import sqlalchemy.orm
-from sqlalchemy import event, Engine
+from sqlalchemy import event, Engine, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from ._experiment_session import SQLExperimentSession
 from ._serializer import Serializer
 from ._table_base import create_tables
+from ..async_session import AsyncExperimentSession
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
+from ._async_session import AsyncSQLExperimentSession
 
 
 # We need to enable foreign key constraints for sqlite databases and not for other
@@ -43,28 +45,16 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __init__(
         self,
         engine: sqlalchemy.Engine,
+        async_engine: sqlalchemy.ext.asyncio.AsyncEngine,
         serializer: Serializer,
     ) -> None:
-
         self._engine = engine
+        self._async_engine = async_engine
         self._session_maker = sqlalchemy.orm.sessionmaker(self._engine)
+        self._async_session_maker = sqlalchemy.ext.asyncio.async_sessionmaker(
+            self._async_engine
+        )
         self._serializer = serializer
-
-    @classmethod
-    def from_url(
-        cls,
-        url: str | sqlalchemy.URL,
-        serializer: Serializer = Serializer.default(),
-    ) -> Self:
-        """Create a new SQLExperimentSessionMaker from a database url.
-
-        Args:
-            url: The database url to connect to.
-            serializer: The serializer to use to store data in the database.
-        """
-
-        engine = sqlalchemy.create_engine(url)
-        return cls(engine, serializer)
 
     def create_tables(self) -> None:
         """Create the tables in the database.
@@ -83,6 +73,12 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
             self._serializer,
         )
 
+    def async_session(self) -> AsyncExperimentSession:
+        return AsyncSQLExperimentSession(
+            self._async_session_maker(),
+            self._serializer,
+        )
+
     # The following methods are required to make ExperimentSessionMaker pickleable since
     # sqlalchemy engine is not pickleable.
     # Only the engine url is pickled so the engine created upon unpickling might not be
@@ -90,9 +86,22 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __getstate__(self):
         return {
             "url": self._engine.url,
+            "async_url": self._async_engine.url,
             "serializer": self._serializer,
         }
 
     def __setstate__(self, state):
         engine = sqlalchemy.create_engine(state.pop("url"))
-        self.__init__(engine, **state)
+        async_engine = create_async_engine(state.pop("async_url"))
+        self.__init__(engine, async_engine, **state)
+
+
+class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
+    def __init__(
+        self,
+        path: str,
+        serializer: Serializer,
+    ):
+        engine = create_engine(f"sqlite:///{path}")
+        async_engine = create_async_engine(f"sqlite+aiosqlite:///{path}")
+        super().__init__(engine, async_engine, serializer)

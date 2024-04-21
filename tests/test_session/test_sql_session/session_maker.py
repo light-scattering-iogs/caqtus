@@ -4,7 +4,11 @@ import attrs
 import pytest
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.session.sql import SQLExperimentSessionMaker, Serializer
+from caqtus.session.sql import (
+    SQLExperimentSessionMaker,
+    Serializer,
+    SQLiteExperimentSessionMaker,
+)
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 
@@ -35,13 +39,13 @@ def load(configuration: JSON) -> DummyConfiguration:
 
 @pytest.fixture(scope="function")
 def session_maker(tmp_path) -> SQLExperimentSessionMaker:
-    url = f"sqlite:///{tmp_path / 'database.db'}"
+    # url = f"sqlite:///{tmp_path / 'database.db'}"
 
     serializer = Serializer.default()
     serializer.register_device_configuration(DummyConfiguration, dump, load)
 
-    session_maker = SQLExperimentSessionMaker.from_url(
-        url,
+    session_maker = SQLiteExperimentSessionMaker(
+        str(tmp_path / "database.db"),
         serializer=serializer,
     )
     session_maker.create_tables()

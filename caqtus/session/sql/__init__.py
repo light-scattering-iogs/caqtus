@@ -1,5 +1,5 @@
 from ._experiment_session import SQLExperimentSession
-from ._session_maker import SQLExperimentSessionMaker
+from ._session_maker import SQLExperimentSessionMaker, SQLiteExperimentSessionMaker
 from ._table_base import create_tables
 from ._serializer import Serializer
 
@@ -8,4 +8,5 @@ __all__ = [
     "Serializer",
     "SQLExperimentSessionMaker",
     "SQLExperimentSession",
+    "SQLiteExperimentSessionMaker",
 ]

@@ -6,8 +6,8 @@ from caqtus.gui.condetrol import Condetrol
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationsPlugin
 from caqtus.session import PureSequencePath
 from caqtus.session.sql import (
-    SQLExperimentSessionMaker,
     Serializer,
+    SQLiteExperimentSessionMaker,
 )
 from spincore_pulse_blaster.configuration import SpincoreSequencerConfiguration
 from spincore_pulse_blaster.configuration_editor import (
@@ -18,7 +18,7 @@ from tests.fixtures import steps_configuration, time_lanes
 
 @pytest.fixture
 def session_maker(tmp_path):
-    url = f"sqlite:///{tmp_path / 'database.db'}"
+    # url = f"sqlite:///{tmp_path / 'database.db?check_same_thread=True'}"
 
     serializer = Serializer.default()
 
@@ -28,7 +28,9 @@ def session_maker(tmp_path):
         SpincoreSequencerConfiguration.load,
     )
 
-    session_maker = SQLExperimentSessionMaker.from_url(url, serializer=serializer)
+    session_maker = SQLiteExperimentSessionMaker(
+        str(tmp_path / "database.db"), serializer=serializer
+    )
     session_maker.create_tables()
     return session_maker
 
@@ -61,5 +63,5 @@ def test_condetrol(
         )
 
     timer = QTimer(condetrol.window)
-    # timer.singleShot(0, condetrol.window.close)
+    timer.singleShot(0, condetrol.window.close)
     condetrol.run()
