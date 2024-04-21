@@ -83,15 +83,15 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.restore_window()
         self.setup_connections()
         self._exit_stack = contextlib.ExitStack()
+        self._task_group = asyncio.TaskGroup()
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
 
-        await asyncio.gather(
-            self._path_view.run_async(),
-            self._monitor_global_parameters(),
-            self.sequence_widget.exec_async(),
-        )
+        async with self._task_group:
+            self._task_group.create_task(self._path_view.run_async())
+            self._task_group.create_task(self._monitor_global_parameters())
+            self._task_group.create_task(self.sequence_widget.exec_async())
 
     def setup_ui(self):
         self.setupUi(self)
