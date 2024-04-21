@@ -242,9 +242,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     async def _monitor_global_parameters(self) -> None:
         while True:
-            parameters = await asyncio.to_thread(
-                _get_global_parameters, self.session_maker
-            )
+            async with self.session_maker.async_session() as session:
+                parameters = await session.get_global_parameters()
             if parameters != self._global_parameters_editor.get_parameters():
                 self._global_parameters_editor.set_parameters(parameters)
             await asyncio.sleep(0.2)
@@ -273,11 +272,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                     _, exc = exc.split(SequenceInterruptedException)
                 if exc is not None:
                     self.on_procedure_exception(exc)
-
-
-def _get_global_parameters(session_maker: ExperimentSessionMaker) -> ParameterNamespace:
-    with session_maker() as session:
-        return session.get_global_parameters()
 
 
 class IconLabel(QWidget):
