@@ -2,6 +2,7 @@ import contextlib
 from typing import Protocol
 
 from caqtus.session import ParameterNamespace
+from .path_hierarchy import AsyncPathHierarchy
 
 
 class AsyncExperimentSession(
@@ -11,6 +12,8 @@ class AsyncExperimentSession(
 
     For a detailed description of the methods, see ExperimentSession.
     """
+
+    paths: AsyncPathHierarchy
 
     async def get_global_parameters(self) -> ParameterNamespace: ...
 
