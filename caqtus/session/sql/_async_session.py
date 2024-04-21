@@ -8,12 +8,21 @@ from sqlalchemy.orm import Session
 
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
+from ._sequence_collection import _get_stats
 from ._serializer import Serializer
 from .. import ParameterNamespace, PureSequencePath
-from ..async_session import AsyncExperimentSession, AsyncPathHierarchy
+from ..async_session import (
+    AsyncExperimentSession,
+    AsyncPathHierarchy,
+    AsyncSequenceCollection,
+)
 from ..experiment_session import ExperimentSessionNotActiveError
 from ..path_hierarchy import PathNotFoundError, PathIsRootError
-from ..sequence_collection import PathIsSequenceError
+from ..sequence_collection import (
+    PathIsSequenceError,
+    SequenceStats,
+    PathIsNotSequenceError,
+)
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -23,6 +32,11 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
     def __init__(self, async_session: AsyncSession, serializer: Serializer):
         self._async_session = async_session
         self._is_active = False
+
+        self.paths = AsyncSQLPathHierarchy(parent_session=self)
+        self.sequences = AsyncSQLSequenceCollection(
+            parent_session=self, serializer=serializer
+        )
 
     async def __aenter__(self):
         if self._is_active:
@@ -59,7 +73,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
 
 
 @attrs.frozen
-class SQLPathHierarchy(AsyncPathHierarchy):
+class AsyncSQLPathHierarchy(AsyncPathHierarchy):
     parent_session: AsyncSQLExperimentSession
 
     async def does_path_exists(self, path: PureSequencePath) -> bool:
@@ -74,6 +88,25 @@ class SQLPathHierarchy(AsyncPathHierarchy):
         self, path: PureSequencePath
     ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         return await self._run_sync(_get_path_creation_date, path)
+
+    async def _run_sync(
+        self,
+        fun: Callable[Concatenate[Session, _P], _T],
+        *args: _P.args,
+        **kwargs: _P.kwargs
+    ) -> _T:
+        return await self.parent_session._run_sync(fun, *args, **kwargs)
+
+
+@attrs.frozen
+class AsyncSQLSequenceCollection(AsyncSequenceCollection):
+    parent_session: AsyncSQLExperimentSession
+    serializer: Serializer
+
+    async def get_stats(
+        self, path: PureSequencePath
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+        return self._run_sync(_get_stats, path)
 
     async def _run_sync(
         self,

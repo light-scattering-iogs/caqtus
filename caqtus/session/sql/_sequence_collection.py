@@ -10,6 +10,7 @@ import sqlalchemy.orm
 from returns.result import Result
 from returns.result import Success, Failure
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.types.data import DataLabel, Data, is_data
@@ -18,6 +19,7 @@ from caqtus.types.parameter import Parameter
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
+from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
     SQLSequence,
@@ -282,34 +284,7 @@ class SQLSequenceCollection(SequenceCollection):
     def get_stats(
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
-        result = self._query_sequence_model(path)
-
-        def extract_stats(sequence: SQLSequence) -> SequenceStats:
-            number_shot_query = select(func.count()).select_from(
-                select(SQLShot).where(SQLShot.sequence == sequence).subquery()
-            )
-            number_shot_run = (
-                self._get_sql_session().execute(number_shot_query).scalar_one()
-            )
-            return SequenceStats(
-                state=sequence.state,
-                start_time=(
-                    sequence.start_time.replace(tzinfo=datetime.timezone.utc)
-                    if sequence.start_time is not None
-                    else None
-                ),
-                stop_time=(
-                    sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
-                    if sequence.stop_time is not None
-                    else None
-                ),
-                number_completed_shots=number_shot_run,
-                expected_number_shots=_convert_to_unknown(
-                    sequence.expected_number_of_shots
-                ),
-            )
-
-        return result.map(extract_stats)
+        return _get_stats(self._get_sql_session(), path)
 
     def create_shot(
         self,
@@ -474,27 +449,12 @@ class SQLSequenceCollection(SequenceCollection):
     def _query_path_model(
         self, path: PureSequencePath
     ) -> Result[SQLSequencePath, PathNotFoundError]:
-        stmt = select(SQLSequencePath).where(SQLSequencePath.path == str(path))
-        result = self._get_sql_session().execute(stmt)
-        if found := result.scalar():
-            return Success(found)
-        else:
-            return Failure(PathNotFoundError(path))
+        return _query_path_model(self._get_sql_session(), path)
 
     def _query_sequence_model(
         self, path: PureSequencePath
     ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
-        path_result = self._query_path_model(path)
-        match path_result:
-            case Success(path_model):
-                stmt = select(SQLSequence).where(SQLSequence.path == path_model)
-                result = self._get_sql_session().execute(stmt)
-                if found := result.scalar():
-                    return Success(found)
-                else:
-                    return Failure(PathIsNotSequenceError(path))
-            case Failure() as failure:
-                return failure
+        return _query_sequence_model(self._get_sql_session(), path)
 
     def _query_shot_model(
         self, path: PureSequencePath, shot_index: int
@@ -538,3 +498,50 @@ def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
         return value
     else:
         assert_never(value)
+
+
+def _get_stats(
+    session: Session, path: PureSequencePath
+) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    result = _query_sequence_model(session, path)
+
+    def extract_stats(sequence: SQLSequence) -> SequenceStats:
+        number_shot_query = select(func.count()).select_from(
+            select(SQLShot).where(SQLShot.sequence == sequence).subquery()
+        )
+        number_shot_run = session.execute(number_shot_query).scalar_one()
+        return SequenceStats(
+            state=sequence.state,
+            start_time=(
+                sequence.start_time.replace(tzinfo=datetime.timezone.utc)
+                if sequence.start_time is not None
+                else None
+            ),
+            stop_time=(
+                sequence.stop_time.replace(tzinfo=datetime.timezone.utc)
+                if sequence.stop_time is not None
+                else None
+            ),
+            number_completed_shots=number_shot_run,
+            expected_number_shots=_convert_to_unknown(
+                sequence.expected_number_of_shots
+            ),
+        )
+
+    return result.map(extract_stats)
+
+
+def _query_sequence_model(
+    session: Session, path: PureSequencePath
+) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+    path_result = _query_path_model(session, path)
+    match path_result:
+        case Success(path_model):
+            stmt = select(SQLSequence).where(SQLSequence.path == path_model)
+            result = session.execute(stmt)
+            if found := result.scalar():
+                return Success(found)
+            else:
+                return Failure(PathIsNotSequenceError(path))
+        case Failure() as failure:
+            return failure
