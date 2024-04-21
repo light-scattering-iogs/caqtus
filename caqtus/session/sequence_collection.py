@@ -122,9 +122,17 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def set_iteration_configuration(
-        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+        self,
+        sequence: PureSequencePath,
+        iteration_configuration: IterationConfiguration,
     ) -> None:
-        """Set the iteration configuration for this sequence."""
+        """Set the iteration configuration for this sequence.
+
+        Raises:
+            PathNotFoundError: If the path doesn't exist.
+            PathIsNotSequenceError: If the path is not a sequence.
+            SequenceNotEditableError: If the sequence is not in DRAFT state.
+        """
 
         raise NotImplementedError
 

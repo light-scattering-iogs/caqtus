@@ -118,11 +118,13 @@ class SQLSequenceCollection(SequenceCollection):
         )
 
     def set_iteration_configuration(
-        self, sequence: Sequence, iteration_configuration: IterationConfiguration
+        self,
+        sequence: PureSequencePath,
+        iteration_configuration: IterationConfiguration,
     ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence.path))
+        sequence_model = unwrap(self._query_sequence_model(sequence))
         if not sequence_model.state.is_editable():
-            raise SequenceNotEditableError(sequence.path)
+            raise SequenceNotEditableError(sequence)
         iteration_content = self.serializer.dump_sequence_iteration(
             iteration_configuration
         )

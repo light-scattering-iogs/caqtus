@@ -161,8 +161,12 @@ def test_iteration_save(
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
         )
-        session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
-        session.sequences.set_iteration_configuration(sequence, new_steps_configuration)
+        session.sequences.set_iteration_configuration(
+            sequence.path, new_steps_configuration
+        )
+        session.sequences.set_iteration_configuration(
+            sequence.path, new_steps_configuration
+        )
         assert sequence.get_iteration_configuration(session) == new_steps_configuration
         assert sequence.get_time_lanes(session) == time_lanes
 
