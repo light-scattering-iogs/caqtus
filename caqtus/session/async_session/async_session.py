@@ -1,9 +1,9 @@
 import contextlib
 from typing import Protocol
 
-from caqtus.session import ParameterNamespace
 from .path_hierarchy import AsyncPathHierarchy
 from .sequence_collection import AsyncSequenceCollection
+from ..parameter_namespace import ParameterNamespace
 
 
 class AsyncExperimentSession(
