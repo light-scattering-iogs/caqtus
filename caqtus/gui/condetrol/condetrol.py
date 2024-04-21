@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 
 import qtawesome
@@ -74,6 +75,18 @@ class Condetrol:
         This method will block until the GUI is closed by the user.
         """
 
-        with self.window:
-            self.window.show()
-            QtAsyncio.run(self.window.run_async())
+        # We set up a custom exception hook to close the application if an error occurs.
+        # By default, PySide only prints exceptions and doesn't close the app on error.
+
+        def excepthook(*args):
+            try:
+                app = QApplication.instance()
+                if app is not None:
+                    app.quit()
+            finally:
+                sys.__excepthook__(*args)
+
+        sys.excepthook = excepthook
+
+        self.window.show()
+        QtAsyncio.run(self.window.run_async())
