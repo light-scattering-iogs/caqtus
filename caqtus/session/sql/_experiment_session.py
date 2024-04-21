@@ -56,32 +56,10 @@ class SQLExperimentSession(ExperimentSession):
         )
 
     def get_global_parameters(self) -> ParameterNamespace:
-        stmt = sqlalchemy.select(SQLParameters).where(SQLParameters.name == "global")
-        result = self._get_sql_session().execute(stmt)
-        if found := result.scalar():
-            return serialization.converters["json"].structure(
-                found.content, ParameterNamespace
-            )
-        else:
-            # It could be that the table is empty if set_global_parameters was never
-            # called before, in which case we return an empty ParameterNamespace.
-            return ParameterNamespace.empty()
+        return _get_global_parameters(self._get_sql_session())
 
     def set_global_parameters(self, parameters: ParameterNamespace) -> None:
-        if not isinstance(parameters, ParameterNamespace):
-            raise TypeError(
-                f"Expected a ParameterNamespace, got {type(parameters).__name__}"
-            )
-        query = sqlalchemy.select(SQLParameters).where(SQLParameters.name == "global")
-        result = self._get_sql_session().execute(query)
-        content = serialization.converters["json"].unstructure(
-            parameters, ParameterNamespace
-        )
-        if found := result.scalar():
-            found.content = content
-        else:
-            new_parameters = SQLParameters(name="global", content=content)
-            self._get_sql_session().add(new_parameters)
+        return _set_global_parameters(self._get_sql_session(), parameters)
 
     def __str__(self):
         return f"<{self.__class__.__name__} @ {self._sql_session.get_bind()}>"
@@ -104,3 +82,35 @@ class SQLExperimentSession(ExperimentSession):
                 "Experiment session was not activated"
             )
         return self._sql_session
+
+
+def _get_global_parameters(session: sqlalchemy.orm.Session) -> ParameterNamespace:
+    stmt = sqlalchemy.select(SQLParameters).where(SQLParameters.name == "global")
+    result = session.execute(stmt)
+    if found := result.scalar():
+        return serialization.converters["json"].structure(
+            found.content, ParameterNamespace
+        )
+    else:
+        # It could be that the table is empty if set_global_parameters was never
+        # called before, in which case we return an empty ParameterNamespace.
+        return ParameterNamespace.empty()
+
+
+def _set_global_parameters(
+    session: sqlalchemy.orm.Session, parameters: ParameterNamespace
+) -> None:
+    if not isinstance(parameters, ParameterNamespace):
+        raise TypeError(
+            f"Expected a ParameterNamespace, got {type(parameters).__name__}"
+        )
+    query = sqlalchemy.select(SQLParameters).where(SQLParameters.name == "global")
+    result = session.execute(query)
+    content = serialization.converters["json"].unstructure(
+        parameters, ParameterNamespace
+    )
+    if found := result.scalar():
+        found.content = content
+    else:
+        new_parameters = SQLParameters(name="global", content=content)
+        session.add(new_parameters)
