@@ -1,3 +1,4 @@
+from .async_session import AsyncExperimentSession
 from .data_type import DataType
 from .experiment_session import ExperimentSession
 from .parameter_namespace import ParameterNamespace
@@ -16,4 +17,5 @@ __all__ = [
     "Sequence",
     "Shot",
     "ParameterNamespace",
+    "AsyncExperimentSession",
 ]

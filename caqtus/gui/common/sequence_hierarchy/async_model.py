@@ -9,11 +9,16 @@ import attrs
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt, QDateTime
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
-from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    ExperimentSession,
+    AsyncExperimentSession,
+)
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import State
-from caqtus.session.sequence.iteration_configuration import Unknown, is_unknown
+from caqtus.session.sequence.iteration_configuration import is_unknown
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
@@ -289,19 +294,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     async def update_stats(self, index: QModelIndex) -> None:
         """Update the stats of sequences and folders in the model from the session."""
-
         if not index.isValid():
             raise ValueError("Invalid index")
 
         item = self._get_item(index)
         data = get_item_data(item)
         change_detected = False
-        with self.session_maker() as session:
-            # BUG: a session should only be accessed from one thread, otherwise this
-            # causes issues when using SQLite.
-            creation_date_result = await asyncio.to_thread(
-                session.paths.get_path_creation_date, data.path
-            )
+        async with self.session_maker.async_session() as session:
+            creation_date_result = await session.paths.get_path_creation_date(data.path)
             try:
                 creation_date = unwrap(creation_date_result)
             except PathNotFoundError:
@@ -311,13 +311,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 data.creation_date = creation_date
                 change_detected = True
             if isinstance(data, SequenceNode):
-                sequence_stats_result = await asyncio.to_thread(
-                    session.sequences.get_stats, data.path
-                )
+                sequence_stats_result = await session.sequences.get_stats(data.path)
                 try:
                     stats = unwrap(sequence_stats_result)
                 except PathIsNotSequenceError:
-                    self.handle_sequence_became_folder(index, session)
+                    await self.handle_sequence_became_folder(index, session)
                     return
                 if stats != data.stats:
                     data.stats = stats
@@ -429,12 +427,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         grandparent_item.removeRow(index.row())
         self.endRemoveRows()
 
-    def handle_sequence_became_folder(
-        self, index: QModelIndex, session: ExperimentSession
+    async def handle_sequence_became_folder(
+        self, index: QModelIndex, session: AsyncExperimentSession
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+        creation_date = unwrap(await session.paths.get_path_creation_date(data.path))
         assert item.rowCount() == 0
         item.setData(
             FolderNode(
