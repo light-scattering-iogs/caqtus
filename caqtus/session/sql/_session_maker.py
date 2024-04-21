@@ -5,13 +5,13 @@ import sqlalchemy.orm
 from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from ._async_session import AsyncSQLExperimentSession
 from ._experiment_session import SQLExperimentSession
 from ._serializer import Serializer
 from ._table_base import create_tables
 from ..async_session import AsyncExperimentSession
 from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
-from ._async_session import AsyncSQLExperimentSession
 
 
 # We need to enable foreign key constraints for sqlite databases and not for other
