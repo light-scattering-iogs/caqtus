@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from .async_session import AsyncExperimentSession
 from .experiment_session import ExperimentSession
 
 
@@ -9,3 +10,5 @@ class ExperimentSessionMaker(Protocol):
     def __call__(self) -> ExperimentSession:
         """Create a new experiment session."""
         ...
+
+    def async_session(self) -> AsyncExperimentSession: ...
