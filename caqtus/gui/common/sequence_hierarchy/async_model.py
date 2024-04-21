@@ -297,6 +297,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         data = get_item_data(item)
         change_detected = False
         with self.session_maker() as session:
+            # BUG: a session should only be accessed from one thread, otherwise this
+            # causes issues when using SQLite.
             creation_date_result = await asyncio.to_thread(
                 session.paths.get_path_creation_date, data.path
             )
