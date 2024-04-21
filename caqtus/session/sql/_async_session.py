@@ -106,7 +106,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     async def get_stats(
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
-        return self._run_sync(_get_stats, path)
+        return await self._run_sync(_get_stats, path)
 
     async def _run_sync(
         self,
