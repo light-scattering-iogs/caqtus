@@ -243,11 +243,17 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
 
     async def _monitor_global_parameters(self) -> None:
         while True:
-            with self.session_maker() as session:
-                parameters = await asyncio.to_thread(session.get_global_parameters)
+            parameters = await asyncio.to_thread(
+                _get_global_parameters, self.session_maker
+            )
             if parameters != self._global_parameters_editor.get_parameters():
                 self._global_parameters_editor.set_parameters(parameters)
             await asyncio.sleep(0.2)
+
+
+def _get_global_parameters(session_maker: ExperimentSessionMaker) -> ParameterNamespace:
+    with session_maker() as session:
+        return session.get_global_parameters()
 
 
 class ProcedureWatcherThread(QThread):
