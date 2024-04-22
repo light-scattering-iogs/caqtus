@@ -12,12 +12,16 @@ import typing
 
 
 class QAsyncioTask(futures.QAsyncioFuture):
-    """ https://docs.python.org/3/library/asyncio-task.html """
+    """https://docs.python.org/3/library/asyncio-task.html"""
 
-    def __init__(self, coro: typing.Union[collections.abc.Generator, collections.abc.Coroutine], *,
-                 loop: typing.Optional["events.QAsyncioEventLoop"] = None,
-                 name: typing.Optional[str] = None,
-                 context: typing.Optional[contextvars.Context] = None) -> None:
+    def __init__(
+        self,
+        coro: typing.Union[collections.abc.Generator, collections.abc.Coroutine],
+        *,
+        loop: typing.Optional["events.QAsyncioEventLoop"] = None,
+        name: typing.Optional[str] = None,
+        context: typing.Optional[contextvars.Context] = None,
+    ) -> None:
         super().__init__(loop=loop, context=context)
 
         self._coro = coro
@@ -29,6 +33,7 @@ class QAsyncioTask(futures.QAsyncioFuture):
 
         self._future_to_await: typing.Optional[asyncio.Future] = None
         self._cancel_message: typing.Optional[str] = None
+        self._cancelled = False
 
         asyncio._register_task(self)  # type: ignore[arg-type]
 
@@ -55,9 +60,12 @@ class QAsyncioTask(futures.QAsyncioFuture):
         # This function is not inherited from the Future APIs.
         raise QAsyncioTask.QtTaskApiMisuseError("Tasks cannot set exceptions")
 
-    def _step(self,
-              exception_or_future: typing.Union[
-                  BaseException, futures.QAsyncioFuture, None] = None) -> None:
+    def _step(
+        self,
+        exception_or_future: typing.Union[
+            BaseException, futures.QAsyncioFuture, None
+        ] = None,
+    ) -> None:
         if self.done():
             return
         result = None
@@ -79,7 +87,10 @@ class QAsyncioTask(futures.QAsyncioFuture):
         except StopIteration as e:
             self._state = futures.QAsyncioFuture.FutureState.DONE_WITH_RESULT
             self._result = e.value
-        except (concurrent.futures.CancelledError, asyncio.exceptions.CancelledError) as e:
+        except (
+            concurrent.futures.CancelledError,
+            asyncio.exceptions.CancelledError,
+        ) as e:
             self._state = futures.QAsyncioFuture.FutureState.CANCELLED
             self._exception = e
         except BaseException as e:
@@ -88,8 +99,18 @@ class QAsyncioTask(futures.QAsyncioFuture):
         else:
             if asyncio.futures.isfuture(result):
                 result.add_done_callback(
-                    self._step, context=self._context)  # type: ignore[arg-type]
+                    self._step, context=self._context
+                )  # type: ignore[arg-type]
                 self._future_to_await = result
+                if self._cancelled:
+                    # If the task was cancelled, then a new future should be
+                    # cancelled as well. Otherwise, in some scenarios like
+                    # a loop inside the task and with bad timing, if the new
+                    # future is not cancelled, the task would continue running
+                    # in this loop despite having been cancelled. This bad
+                    # timing can occur especially if the first future finishes
+                    # very quickly.
+                    self._future_to_await.cancel(self._cancel_message)
             elif result is None:
                 self._loop.call_soon(self._step, context=self._context)
             else:
@@ -98,16 +119,22 @@ class QAsyncioTask(futures.QAsyncioFuture):
         finally:
             asyncio._leave_task(self._loop, self)  # type: ignore[arg-type]
             if self._exception:
-                self._loop.call_exception_handler({
-                    "message": (str(self._exception) if self._exception
-                                else "An exception occurred during task "
-                                "execution"),
-                    "exception": self._exception,
-                    "task": self,
-                    "future": (exception_or_future
-                               if asyncio.futures.isfuture(exception_or_future)
-                               else None)
-                })
+                self._loop.call_exception_handler(
+                    {
+                        "message": (
+                            str(self._exception)
+                            if self._exception
+                            else "An exception occurred during task " "execution"
+                        ),
+                        "exception": self._exception,
+                        "task": self,
+                        "future": (
+                            exception_or_future
+                            if asyncio.futures.isfuture(exception_or_future)
+                            else None
+                        ),
+                    }
+                )
             if self.done():
                 self._schedule_callbacks()
                 asyncio._unregister_task(self)  # type: ignore[arg-type]
@@ -120,7 +147,9 @@ class QAsyncioTask(futures.QAsyncioFuture):
         # TODO
         raise NotImplementedError("QtTask.print_stack is not implemented")
 
-    def get_coro(self) -> typing.Union[collections.abc.Generator, collections.abc.Coroutine]:
+    def get_coro(
+        self,
+    ) -> typing.Union[collections.abc.Generator, collections.abc.Coroutine]:
         return self._coro
 
     def get_name(self) -> str:
@@ -136,6 +165,7 @@ class QAsyncioTask(futures.QAsyncioFuture):
         self._handle.cancel()
         if self._future_to_await is not None:
             self._future_to_await.cancel(msg)
+        self._cancelled = True
         return True
 
     def uncancel(self) -> None:
