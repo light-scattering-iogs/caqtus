@@ -168,7 +168,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         procedure = experiment_manager.create_procedure(
             "sequence launched from GUI", acquisition_timeout=1
         )
-        self._run_sequence_task = asyncio.ensure_future(
+        self._run_sequence_task = self._task_group.create_task(
             self._run_sequence(procedure, Sequence(path))
         )
 
