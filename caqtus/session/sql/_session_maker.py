@@ -2,7 +2,7 @@ from sqlite3 import Connection as SQLite3Connection
 
 import sqlalchemy
 import sqlalchemy.orm
-from sqlalchemy import event, Engine, create_engine
+from sqlalchemy import event, Engine, create_engine, URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from ._async_session import AsyncSQLExperimentSession
@@ -107,3 +107,35 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
             f"sqlite+aiosqlite:///{path}?check_same_thread=True"
         )
         super().__init__(engine, async_engine, serializer)
+
+
+class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        host: str,
+        port: int,
+        database: str,
+        serializer: Serializer,
+    ):
+        sync_url = URL.create(
+            "postgresql+psycopg2",
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            database=database,
+        )
+        engine = create_engine(sync_url)
+        async_url = URL.create(
+            "postgresql+asyncpg",
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            database=database,
+        )
+        async_engine = create_async_engine(async_url)
+
+        super().__init__(engine, async_engine, serializer=serializer)

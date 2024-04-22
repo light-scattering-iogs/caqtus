@@ -1,7 +1,11 @@
 from ._experiment_session import SQLExperimentSession
-from ._session_maker import SQLExperimentSessionMaker, SQLiteExperimentSessionMaker
-from ._table_base import create_tables
 from ._serializer import Serializer
+from ._session_maker import (
+    SQLExperimentSessionMaker,
+    SQLiteExperimentSessionMaker,
+    PostgreSQLExperimentSessionMaker,
+)
+from ._table_base import create_tables
 
 __all__ = [
     "create_tables",
@@ -9,4 +13,5 @@ __all__ = [
     "SQLExperimentSessionMaker",
     "SQLExperimentSession",
     "SQLiteExperimentSessionMaker",
+    "PostgreSQLExperimentSessionMaker",
 ]

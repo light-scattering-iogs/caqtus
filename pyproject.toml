@@ -37,6 +37,8 @@ pyqtgraph = {version = "^0.13.4"}
 matplotlib = "^3.8.3"
 typing-extensions = "^4.10.0"
 aiosqlite = "^0.20.0"
+psycopg2 = "^2.9.9"
+asyncpg = "^0.29.0"
 
 
 [tool.poetry.group.test.dependencies]
