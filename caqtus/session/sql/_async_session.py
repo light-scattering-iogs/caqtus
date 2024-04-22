@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from typing import Callable, Concatenate, TypeVar, ParamSpec
 
@@ -70,6 +71,37 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
                 "Experiment session was not activated"
             )
         return self._async_session
+
+
+class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
+    def __init__(self, session: Session, serializer: Serializer):
+        self._session = session
+        self._is_active = False
+
+        self.paths = AsyncSQLPathHierarchy(parent_session=self)
+        self.sequences = AsyncSQLSequenceCollection(
+            parent_session=self, serializer=serializer
+        )
+
+    async def __aenter__(self):
+        if self._is_active:
+            raise RuntimeError("Session is already active")
+        self._transaction = await asyncio.to_thread(self._session.begin().__enter__)
+        self._is_active = True
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await asyncio.to_thread(self._transaction.__exit__, exc_type, exc_val, exc_tb)
+        self._transaction = None
+        self._is_active = False
+
+    async def _run_sync(
+        self,
+        fun: Callable[Concatenate[Session, _P], _T],
+        *args: _P.args,
+        **kwargs: _P.kwargs
+    ) -> _T:
+        return await asyncio.to_thread(fun, self._session, *args, **kwargs)
 
 
 @attrs.frozen
