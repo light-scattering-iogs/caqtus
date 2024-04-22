@@ -1,9 +1,11 @@
 import asyncio
 import contextlib
+import functools
+import logging
 from collections.abc import Callable
 from typing import Optional, Literal
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, Signal, QTimer
 from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -12,6 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QDockWidget,
     QDialog,
+    QApplication,
 )
 
 from caqtus.experiment_control import SequenceInterruptedException
@@ -59,6 +62,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         configurations.
     """
 
+    procedure_exception = Signal(Exception)
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -84,14 +89,22 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._exit_stack = contextlib.ExitStack()
         self._task_group = asyncio.TaskGroup()
         self._run_sequence_task: Optional[asyncio.Task] = None
+        self.timer = QTimer(self)
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
 
+        async def wrap(awaitable):
+            try:
+                await awaitable
+            except Exception as e:
+                logging.critical("An error occurred in the main window.", exc_info=e)
+                QApplication.quit()
+
         async with self._task_group:
-            self._task_group.create_task(self._path_view.run_async())
-            self._task_group.create_task(self._monitor_global_parameters())
-            self._task_group.create_task(self.sequence_widget.exec_async())
+            self._task_group.create_task(wrap(self._path_view.run_async()))
+            self._task_group.create_task(wrap(self._monitor_global_parameters()))
+            self._task_group.create_task(wrap(self.sequence_widget.exec_async()))
 
     def setup_ui(self):
         self.setupUi(self)
@@ -125,6 +138,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
+        self.procedure_exception.connect(self.on_procedure_exception)
 
     def on_viewed_sequence_changed(
         self, sequence: Optional[tuple[PureSequencePath, State]]
@@ -257,7 +271,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                     f"An error occurred while starting the sequence {sequence}."
                 )
                 exception.__cause__ = e
-                self.on_procedure_exception(e)
+                self._signal_exception_while_running_sequence(exception)
+                return
 
             while await asyncio.to_thread(procedure.is_running_sequence):
                 await asyncio.sleep(50e-3)
@@ -271,7 +286,15 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 elif isinstance(exc, ExceptionGroup):
                     _, exc = exc.split(SequenceInterruptedException)
                 if exc is not None:
-                    self.on_procedure_exception(exc)
+                    self._signal_exception_while_running_sequence(exc)
+
+    def _signal_exception_while_running_sequence(self, exception: Exception):
+        # This is a bit ugly because on_procedure_exception runs a dialog, which
+        # messes up the event loop, so instead we schedule the exception handling
+        # to be done in the next event loop iteration.
+        self.timer.singleShot(
+            0, functools.partial(self.on_procedure_exception, exception)
+        )
 
 
 class IconLabel(QWidget):
