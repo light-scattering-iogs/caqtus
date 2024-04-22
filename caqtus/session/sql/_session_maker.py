@@ -5,7 +5,7 @@ import sqlalchemy.orm
 from sqlalchemy import event, Engine, create_engine, URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ._async_session import AsyncSQLExperimentSession
+from ._async_session import AsyncSQLExperimentSession, ThreadedAsyncSQLExperimentSession
 from ._experiment_session import SQLExperimentSession
 from ._serializer import Serializer
 from ._table_base import create_tables
@@ -120,7 +120,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         serializer: Serializer,
     ):
         sync_url = URL.create(
-            "postgresql+psycopg2",
+            "postgresql+psycopg",
             username=username,
             password=password,
             host=host,
@@ -129,7 +129,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         )
         engine = create_engine(sync_url)
         async_url = URL.create(
-            "postgresql+asyncpg",
+            "postgresql+psycopg",
             username=username,
             password=password,
             host=host,
@@ -139,3 +139,9 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         async_engine = create_async_engine(async_url)
 
         super().__init__(engine, async_engine, serializer=serializer)
+
+    def async_session(self) -> AsyncExperimentSession:
+        return ThreadedAsyncSQLExperimentSession(
+            self._session_maker(),
+            self._serializer,
+        )
