@@ -127,7 +127,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             port=port,
             database=database,
         )
-        engine = create_engine(sync_url)
+        engine = create_engine(sync_url, isolation_level="REPEATABLE READ")
         async_url = URL.create(
             "postgresql+psycopg",
             username=username,
@@ -136,7 +136,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             port=port,
             database=database,
         )
-        async_engine = create_async_engine(async_url)
+        async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
 
         super().__init__(engine, async_engine, serializer=serializer)
 
