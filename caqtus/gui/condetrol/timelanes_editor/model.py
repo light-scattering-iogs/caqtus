@@ -264,10 +264,13 @@ class TimeLaneModel(QAbstractListModel, Generic[L, O], metaclass=qabc.QABCMeta):
         if not (0 <= row <= len(self._lane)):
             return False
         self.beginInsertRows(QModelIndex(), row, row)
-        start, stop = self._lane.get_bounds(row)
-        self._lane.insert(row, value)
-        if start < row < stop:
-            self._lane[start : stop + 1] = self._lane[start]
+        if row == len(self._lane):
+            self._lane.append(value)
+        else:
+            start, stop = self._lane.get_bounds(row)
+            self._lane.insert(row, value)
+            if start < row < stop:
+                self._lane[start : stop + 1] = self._lane[start]
         self.endInsertRows()
         return True
 
