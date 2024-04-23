@@ -94,7 +94,7 @@ class DeviceConfigurationSerializer(Generic[T]):
     loader: Callable[[JSON], T]
 
 
-@attrs.define
+@attrs.frozen
 class SequenceSerializer:
     iteration_serializer: Callable[[IterationConfiguration], serialization.JSON]
     iteration_constructor: Callable[[serialization.JSON], IterationConfiguration]
