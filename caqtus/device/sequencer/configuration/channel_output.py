@@ -84,7 +84,7 @@ def structure_lane_values(data, _):
         default_expression = serialization.structure(default_data, Expression)
         default = Constant(value=default_expression)
     else:
-        default = serialization.structure(default_data, ChannelOutput)
+        default = serialization.structure(default_data, Optional[ChannelOutput])
 
     return LaneValues(lane=lane, default=default)
 
@@ -92,7 +92,9 @@ def structure_lane_values(data, _):
 def unstructure_lane_values(lane_values):
     return {
         "lane": lane_values.lane,
-        "default": serialization.unstructure(lane_values.default, ChannelOutput),
+        "default": serialization.unstructure(
+            lane_values.default, Optional[ChannelOutput]
+        ),
     }
 
 

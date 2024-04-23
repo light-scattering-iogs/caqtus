@@ -42,3 +42,11 @@ def test_4():
     d = DeviceTrigger("test")
     s = serialization.structure(u, ChannelOutput)
     assert s == d
+
+
+def test_5():
+    lane_output = LaneValues("lane", default=None)
+
+    u = serialization.unstructure(lane_output, ChannelOutput)
+    s = serialization.structure(u, ChannelOutput)
+    assert lane_output == s
