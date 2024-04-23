@@ -56,6 +56,30 @@ class Serializer:
             DeviceConfigurationSerializer(dumper=dumper, loader=constructor)
         )
 
+    def register_time_lane_serializer(
+        self,
+        dumper: Callable[[TimeLane], serialization.JSON],
+        constructor: Callable[[serialization.JSON], TimeLane],
+    ) -> None:
+        self.sequence_serializer = SequenceSerializer(
+            iteration_serializer=self.sequence_serializer.iteration_serializer,
+            iteration_constructor=self.sequence_serializer.iteration_constructor,
+            time_lane_serializer=dumper,
+            time_lane_constructor=constructor,
+        )
+
+    def register_iteration_configuration_serializer(
+        self,
+        dumper: Callable[[IterationConfiguration], serialization.JSON],
+        constructor: Callable[[serialization.JSON], IterationConfiguration],
+    ) -> None:
+        self.sequence_serializer = SequenceSerializer(
+            iteration_serializer=dumper,
+            iteration_constructor=constructor,
+            time_lane_serializer=self.sequence_serializer.time_lane_serializer,
+            time_lane_constructor=self.sequence_serializer.time_lane_constructor,
+        )
+
     def dump_device_configuration(
         self, config: DeviceConfiguration
     ) -> tuple[str, serialization.JSON]:
