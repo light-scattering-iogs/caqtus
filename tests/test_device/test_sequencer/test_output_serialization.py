@@ -49,4 +49,3 @@ def test_5():
     u = serialization.unstructure(lane_output, ChannelOutput)
     s = serialization.structure(u, ChannelOutput)
     assert lane_output == s
-
