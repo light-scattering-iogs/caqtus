@@ -108,6 +108,17 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         )
         super().__init__(engine, async_engine, serializer)
 
+    def __getstate__(self):
+        return {
+            "path": self._engine.url.database,
+            "serializer": self._serializer,
+        }
+
+    def __setstate__(self, state):
+        path = state.pop("path")
+        serializer = state.pop("serializer")
+        self.__init__(path, serializer)
+
 
 class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
@@ -145,3 +156,22 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             self._session_maker(),
             self._serializer,
         )
+
+    def __getstate__(self):
+        return {
+            "username": self._engine.url.username,
+            "password": self._engine.url.password,
+            "host": self._engine.url.host,
+            "port": self._engine.url.port,
+            "database": self._engine.url.database,
+            "serializer": self._serializer,
+        }
+
+    def __setstate__(self, state):
+        username = state.pop("username")
+        password = state.pop("password")
+        host = state.pop("host")
+        port = state.pop("port")
+        database = state.pop("database")
+        serializer = state.pop("serializer")
+        self.__init__(username, password, host, port, database, serializer)
