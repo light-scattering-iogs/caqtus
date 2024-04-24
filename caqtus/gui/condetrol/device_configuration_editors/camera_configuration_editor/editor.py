@@ -1,6 +1,8 @@
 import abc
 import copy
-from typing import TypeVar
+from typing import TypeVar, Optional
+
+from PySide6.QtWidgets import QWidget
 
 import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device.camera import CameraConfiguration
@@ -15,15 +17,11 @@ class CameraConfigurationEditor(
     DeviceConfigurationEditor[T], Ui_CameraConfigurationEditor, qabc.QABC
 ):
     @abc.abstractmethod
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, configuration: T, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
         self.setupUi(self)
-        self.device_config = self.get_default_configuration()
-
-    @classmethod
-    @abc.abstractmethod
-    def get_default_configuration(cls) -> T:
-        raise NotImplementedError
+        self.device_config = configuration
+        self.update_ui_from_config(self.device_config)
 
     def get_configuration(self) -> T:
         self.device_config = self.update_config_from_ui(self.device_config)
