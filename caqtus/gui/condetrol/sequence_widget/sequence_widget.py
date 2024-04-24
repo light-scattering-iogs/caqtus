@@ -323,10 +323,6 @@ class IconLabel(QWidget):
     ):
         super().__init__(parent)
         self._label = QLabel()
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        self._label.setFont(font)
         self._icon = QLabel()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
