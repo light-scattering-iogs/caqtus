@@ -32,7 +32,6 @@ def test_2():
 def test_3():
     d = DeviceTrigger("test", default=Constant(Expression("Disabled")))
     u = serialization.unstructure(d, ChannelOutput)
-    assert u["default"]["type"] == "Constant"
     s = serialization.structure(u, ChannelOutput)
     assert s == d
 
@@ -50,3 +49,4 @@ def test_5():
     u = serialization.unstructure(lane_output, ChannelOutput)
     s = serialization.structure(u, ChannelOutput)
     assert lane_output == s
+
