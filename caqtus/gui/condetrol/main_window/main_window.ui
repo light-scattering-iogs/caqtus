@@ -37,7 +37,6 @@
    <addaction name="device_configurations_menu"/>
    <addaction name="dock_menu"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="action_edit_device_configurations">
    <property name="text">
     <string>Edit...</string>
