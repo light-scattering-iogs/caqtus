@@ -9,11 +9,13 @@ from caqtus.device.sequencer.configuration import (
     Constant,
     DeviceTrigger,
     LaneValues,
+    Advance,
 )
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
 from ._output_node import OutputNode
+from ._timing_nodes import AdvanceNode
 
 
 class ChannelOutputEditor(QWidget):
@@ -24,8 +26,10 @@ class ChannelOutputEditor(QWidget):
         self.graph.register_node(ConstantNode)
         self.graph.register_node(DeviceTriggerNode)
         self.graph.register_node(LaneNode)
+        self.graph.register_node(AdvanceNode)
         self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
         self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
+        self.nodes_tree.set_category_label("caqtus.sequencer_node.timing", "Timing")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.graph.widget, 1)
@@ -47,15 +51,13 @@ class ChannelOutputEditor(QWidget):
     def get_output(self) -> ChannelOutput:
         connected_node = self.output_node.connected_node()
         if connected_node is None:
-            raise InvalidNodeConfigurationError(
-                "No node is connected to the output node"
-            )
+            raise MissingInputError("No node is connected to the output node")
         output = construct_output(connected_node)
         return output
 
     @functools.singledispatchmethod
     def build_node(self, channel_output: ChannelOutput) -> BaseNode:
-        raise NotImplementedError
+        raise NotImplementedError(f"Can't build node from {type(channel_output)}")
 
     @build_node.register
     def build_constant(self, constant: Constant) -> ConstantNode:
@@ -86,10 +88,19 @@ class ChannelOutputEditor(QWidget):
             default_node.outputs()["out"].connect_to(node.default_port)
         return node
 
+    @build_node.register
+    def build_advance_node(self, advance: Advance) -> AdvanceNode:
+        node = AdvanceNode()
+        node.set_advance(advance.advance)
+        self.graph.add_node(node, selected=False, push_undo=False)
+        input_node = self.build_node(advance.input_)
+        input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
-    raise NotImplementedError
+    raise NotImplementedError(f"Cant construct output from {type(node)}")
 
 
 @construct_output.register
@@ -119,5 +130,20 @@ def construct_lane_values(node: LaneNode) -> LaneValues:
     return LaneValues(lane=lane_name, default=default)
 
 
+@construct_output.register
+def construct_advance(node: AdvanceNode) -> Advance:
+    advance = node.get_advance()
+    input_node = node.get_input_node()
+    if input_node is None:
+        raise MissingInputError(f"Advance node {node.name()} must have an input node")
+    else:
+        input_ = construct_output(input_node)
+    return Advance(advance=advance, input_=input_)
+
+
 class InvalidNodeConfigurationError(ValueError):
+    pass
+
+
+class MissingInputError(InvalidNodeConfigurationError):
     pass
