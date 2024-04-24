@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device.sequencer import ChannelConfiguration
-from .channel_output_editor import NewChannelOutputEditor
+from .channel_output_editor import ChannelOutputEditor
 
 
 class SequencerChannelWidget(QWidget):
@@ -31,7 +31,7 @@ class SequencerChannelWidget(QWidget):
         self.channel_table.horizontalHeader().setStretchLastSection(True)
         self.channel_table.horizontalHeader().hide()
         self.group_box = QGroupBox(self)
-        self.channel_output_editor: Optional[NewChannelOutputEditor] = None
+        self.channel_output_editor: Optional[ChannelOutputEditor] = None
         self._populate_group_box()
         self.channels = list(channels)
 
@@ -81,7 +81,7 @@ class SequencerChannelWidget(QWidget):
             previous_editor = None
             if self.channel_output_editor is not None:
                 previous_editor = self.channel_output_editor
-            self.channel_output_editor = NewChannelOutputEditor(channel.output, self)
+            self.channel_output_editor = ChannelOutputEditor(channel.output, self)
             self.group_box.layout().addWidget(self.channel_output_editor)
             if previous_editor:
                 previous_editor.deleteLater()

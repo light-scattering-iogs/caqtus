@@ -16,7 +16,7 @@ from ._lane_node import LaneNode
 from ._output_node import OutputNode
 
 
-class NewChannelOutputEditor(QWidget):
+class ChannelOutputEditor(QWidget):
     def __init__(self, channel_output: ChannelOutput, parent: Optional[QWidget] = None):
         super().__init__(parent)
 

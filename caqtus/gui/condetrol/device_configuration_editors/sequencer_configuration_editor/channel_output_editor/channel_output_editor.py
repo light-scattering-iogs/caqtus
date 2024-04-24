@@ -34,7 +34,7 @@ from .functional_blocks import (
 )
 
 
-class ChannelOutputEditor(QGraphicsView):
+class _ChannelOutputEditor(QGraphicsView):
     def __init__(
         self,
         channel_label: str,
