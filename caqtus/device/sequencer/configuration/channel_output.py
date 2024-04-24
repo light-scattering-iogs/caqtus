@@ -124,7 +124,9 @@ class DeviceTrigger:
 def unstructure_device_trigger(device_trigger: DeviceTrigger):
     return {
         "device_name": device_trigger.device_name,
-        "default": serialization.unstructure(device_trigger.default, ChannelOutput),
+        "default": serialization.unstructure(
+            device_trigger.default, Optional[ChannelOutput]
+        ),
     }
 
 
