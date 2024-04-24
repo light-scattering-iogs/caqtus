@@ -95,6 +95,17 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         async_engine = create_async_engine(state.pop("async_url"))
         self.__init__(engine, async_engine, **state)
 
+    def upgrade(self) -> None:
+        """Updates the database schema to the latest version.
+
+        When called on a database already setup, this method will upgrade the database
+        tables to the latest version.
+        When called on an empty database, this method will create the necessary tables.
+        """
+
+        # TODO: Handle upgrading the database schema if the tables already exist.
+        create_tables(self._engine)
+
 
 class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
