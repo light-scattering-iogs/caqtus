@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import abc
 import asyncio
-from typing import Optional, assert_never
+from typing import Optional, assert_never, Literal
 
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget
+from PySide6.QtGui import QFont, QIcon
+from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget, QLabel, QHBoxLayout
 
 from caqtus.session import (
     ExperimentSessionMaker,
@@ -101,6 +102,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.setup_connections()
 
         self.tool_bar = QToolBar(self)
+        self.status_widget = IconLabel(icon_position="left")
+        self.tool_bar.addWidget(self.status_widget)
         self.start_sequence_action = self.tool_bar.addAction(
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
         )
@@ -151,11 +154,17 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.setVisible(False)
                 self.start_sequence_action.setEnabled(False)
                 self.interrupt_sequence_action.setEnabled(False)
-            case _SequenceSetState(iterations=iterations, time_lanes=time_lanes):
+            case _SequenceSetState(
+                iterations=iterations,
+                time_lanes=time_lanes,
+                sequence_state=state,
+                sequence_path=path,
+            ):
                 if not isinstance(iterations, StepsConfiguration):
                     raise NotImplementedError(f"Only supports {StepsConfiguration}")
                 self.iteration_editor.set_iteration(iterations)
                 self.time_lanes_editor.set_time_lanes(time_lanes)
+                self._set_status_widget(path, state)
                 if isinstance(new_state, _SequenceEditableState):
                     self.start_sequence_action.setEnabled(True)
                     self.interrupt_sequence_action.setEnabled(False)
@@ -171,6 +180,16 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.tabWidget.setTabEnabled(0, True)
                 self.setVisible(True)
         self._state = new_state
+
+    def _set_status_widget(self, path: PureSequencePath, state: State) -> None:
+        text = " > ".join(path.parts)
+        color = self.palette().text().color()
+        if state.is_editable():
+            icon = get_icon("editable-sequence", color=color)
+        else:
+            icon = get_icon("read-only-sequence", color=color)
+        self.status_widget.set_text(text)
+        self.status_widget.set_icon(icon)
 
     def _on_start_sequence_requested(self):
         assert isinstance(self._state, _SequenceEditableState)
@@ -294,3 +313,36 @@ def _query_sequence_state_sync(
             parameters=parameters,
             sequence_state=state,
         )
+
+
+class IconLabel(QWidget):
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        icon_position: Literal["left", "right"] = "left",
+    ):
+        super().__init__(parent)
+        self._label = QLabel()
+        font = QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        self._label.setFont(font)
+        self._icon = QLabel()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        if icon_position == "left":
+            layout.addWidget(self._icon)
+            layout.addWidget(self._label)
+        else:
+            layout.addWidget(self._label)
+            layout.addWidget(self._icon)
+        self.setLayout(layout)
+
+    def set_text(self, text: str):
+        self._label.setText(text)
+
+    def set_icon(self, icon: Optional[QIcon]):
+        if icon is None:
+            self._icon.clear()
+        else:
+            self._icon.setPixmap(icon.pixmap(20, 20))

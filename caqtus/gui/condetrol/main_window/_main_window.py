@@ -79,7 +79,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.sequence_widget = SequenceWidget(
             self.session_maker, time_lanes_plugin, parent=self
         )
-        self.status_widget = IconLabel(icon_position="left")
         self.device_configurations_dialog = DeviceConfigurationsDialog(
             device_configurations_plugin, parent=self
         )
@@ -124,7 +123,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         # We hide the global parameters dock by default to reduce clutter when
         # launching the app the first time.
         global_parameters_dock.hide()
-        self.statusBar().addPermanentWidget(self.status_widget)
 
     def setup_connections(self):
         self.action_edit_device_configurations.triggered.connect(
@@ -133,29 +131,11 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
         self._path_view.sequence_start_requested.connect(self.start_sequence)
         self._path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
-        self.sequence_widget.sequence_changed.connect(self.on_viewed_sequence_changed)
         self.sequence_widget.sequence_start_requested.connect(self.start_sequence)
         self._global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
         self.procedure_exception.connect(self.on_procedure_exception)
-
-    def on_viewed_sequence_changed(
-        self, sequence: Optional[tuple[PureSequencePath, State]]
-    ):
-        if sequence is None:
-            text = ""
-            icon = None
-        else:
-            path, state = sequence
-            text = " > ".join(path.parts)
-            color = self.palette().text().color()
-            if state.is_editable():
-                icon = get_icon("editable-sequence", color=color)
-            else:
-                icon = get_icon("read-only-sequence", color=color)
-        self.status_widget.set_text(text)
-        self.status_widget.set_icon(icon)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
@@ -295,36 +275,3 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.timer.singleShot(
             0, functools.partial(self.on_procedure_exception, exception)
         )
-
-
-class IconLabel(QWidget):
-    def __init__(
-        self,
-        parent: Optional[QWidget] = None,
-        icon_position: Literal["left", "right"] = "left",
-    ):
-        super().__init__(parent)
-        self._label = QLabel()
-        font = QFont()
-        font.setPointSize(10)
-        font.setBold(True)
-        self._label.setFont(font)
-        self._icon = QLabel()
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        if icon_position == "left":
-            layout.addWidget(self._icon)
-            layout.addWidget(self._label)
-        else:
-            layout.addWidget(self._label)
-            layout.addWidget(self._icon)
-        self.setLayout(layout)
-
-    def set_text(self, text: str):
-        self._label.setText(text)
-
-    def set_icon(self, icon: Optional[QIcon]):
-        if icon is None:
-            self._icon.clear()
-        else:
-            self._icon.setPixmap(icon.pixmap(20, 20))
