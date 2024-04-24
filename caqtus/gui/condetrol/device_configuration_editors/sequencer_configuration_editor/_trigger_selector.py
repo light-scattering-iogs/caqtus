@@ -28,7 +28,7 @@ class TriggerSelector(QComboBox):
             ["Software", "External start", "External clock", "External adaptive clock"]
         )
         self.setCurrentIndex(0)
-        self.currentIndexChanged.connect(self.trigger_changed.emit)
+        self.currentIndexChanged.connect(self._on_trigger_changed)
 
     def set_trigger(self, trigger: Trigger) -> None:
         """Set the trigger to be displayed."""
@@ -59,3 +59,6 @@ class TriggerSelector(QComboBox):
             return ExternalClockOnChange()
         else:
             assert False
+
+    def _on_trigger_changed(self, *args, **kwargs) -> None:
+        self.trigger_changed.emit()
