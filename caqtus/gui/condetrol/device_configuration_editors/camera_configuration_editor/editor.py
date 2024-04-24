@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QWidget
 
 import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device.camera import CameraConfiguration
-
 from .editor_ui import Ui_CameraConfigurationEditor
 from ..configurations_editor import DeviceConfigurationEditor
 
@@ -21,7 +20,7 @@ class CameraConfigurationEditor(
         super().__init__(parent)
         self.setupUi(self)
         self.device_config = configuration
-        self.update_ui_from_config(self.device_config)
+        self._update_camera_fields(self.device_config)
 
     def get_configuration(self) -> T:
         self.device_config = self.update_config_from_ui(self.device_config)
@@ -31,8 +30,7 @@ class CameraConfigurationEditor(
         self.device_config = device_configuration
         self.update_ui_from_config(self.device_config)
 
-    @abc.abstractmethod
-    def update_ui_from_config(self, device_config: T) -> None:
+    def _update_camera_fields(self, device_config: T) -> None:
         self._left_spinbox.setRange(0, device_config.roi.original_width - 1)
         self._left_spinbox.setValue(device_config.roi.left)
 
@@ -44,6 +42,10 @@ class CameraConfigurationEditor(
 
         self._top_spinbox.setRange(0, device_config.roi.original_height - 1)
         self._top_spinbox.setValue(device_config.roi.top)
+
+    @abc.abstractmethod
+    def update_ui_from_config(self, device_config: T) -> None:
+        self._update_camera_fields(device_config)
 
     @abc.abstractmethod
     def update_config_from_ui(self, device_config: T) -> T:
