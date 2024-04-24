@@ -18,6 +18,7 @@ class SequencerConfigurationEditor(FormDeviceConfigurationEditor[S], Generic[S])
         trigger_selector: A widget to select the trigger of the sequencer.
         channels_widget: A widget to edit the channels of the sequencer.
     """
+
     def __init__(self, device_configuration: S, parent: Optional[QWidget] = None):
         super().__init__(device_configuration, parent)
 
