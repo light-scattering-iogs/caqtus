@@ -323,8 +323,11 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     async def update_stats(self, index: QModelIndex) -> None:
         """Update the stats of sequences and folders in the model from the session."""
+
         if not index.isValid():
-            raise ValueError("Invalid index")
+            # This situation occurs sometimes, but unsure why.
+            # Maybe if fetch is called in the middle of an async call?
+            return None
 
         item = self._get_item(index)
         data = get_item_data(item)
