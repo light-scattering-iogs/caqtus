@@ -14,6 +14,36 @@ MAGNITUDE_FIELD = "magnitude"
 UNITS_FIELD = "units"
 
 
+@polars.api.register_expr_namespace("quantity")
+class QuantityExpressions:
+    def __init__(self, expr: polars.Expr):
+        self._expr = expr
+
+    def magnitude(self) -> polars.Expr:
+        return self._expr.struct.field(MAGNITUDE_FIELD)
+
+    def unit(self) -> polars.Expr:
+        return self._expr.struct.field(UNITS_FIELD)
+
+
+@polars.api.register_series_namespace("quantity")
+class QuantitySeries:
+    def __init__(self, s: polars.Series):
+        self._s = s
+
+    def extract_unit(self):
+        return extract_unit(self._s)
+
+
+@polars.api.register_dataframe_namespace("quantity")
+class QuantityDataframe:
+    def __init__(self, df: polars.DataFrame):
+        self._df = df
+
+    def extract_units(self):
+        return extract_units(self._df)
+
+
 def is_quantity_dtype(dtype: polars.DataType) -> bool:
     """Check if a dtype is a QuantityDType.
 
@@ -28,8 +58,8 @@ def is_quantity_dtype(dtype: polars.DataType) -> bool:
     if isinstance(dtype, polars.Struct):
         if len(dtype.fields) == 2:
             if (
-                    dtype.fields[0].name == MAGNITUDE_FIELD
-                    and dtype.fields[1].name == UNITS_FIELD
+                dtype.fields[0].name == MAGNITUDE_FIELD
+                and dtype.fields[1].name == UNITS_FIELD
             ):
                 return True
     return False
@@ -66,7 +96,7 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
 
 
 def extract_unit(
-        series: polars.Series,
+    series: polars.Series,
 ) -> tuple[polars.Series, Optional[Unit]]:
     """Break the series into a magnitude series and a unit.
 
@@ -92,7 +122,7 @@ def extract_unit(
 
 
 def extract_units(
-        dataframe: polars.DataFrame,
+    dataframe: polars.DataFrame,
 ) -> tuple[polars.DataFrame, Mapping[str, Optional[Unit]]]:
     """Break a dataframe potentially containing quantities into its magnitude and
     unit components."""
@@ -107,7 +137,7 @@ def extract_units(
 
 
 def convert_to_unit(
-        series: polars.Series, target_unit: Optional[Unit]
+    series: polars.Series, target_unit: Optional[Unit]
 ) -> polars.Series:
     """Convert a series to a given unit.
 
@@ -177,7 +207,7 @@ def magnitude_in_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Ser
 
 
 def with_columns_expressed_in_units(
-        dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
+    dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
 ) -> polars.DataFrame:
     """Compute the magnitude of columns in a dataframe to given units.
 
@@ -200,7 +230,7 @@ def with_columns_expressed_in_units(
 
 
 def with_units_added_to_columns(
-        dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
+    dataframe: polars.DataFrame, column_units: Mapping[str, Optional[Unit]]
 ) -> polars.DataFrame:
     """Add units to columns in a dataframe.
 
