@@ -29,3 +29,20 @@ def test_number():
         ]
     )
     assert steps.expected_number_shots() == 10
+
+
+def test_parameter_names():
+    steps = StepsConfiguration(
+        steps=[
+            LinspaceLoop(
+                variable=DottedVariableName("a"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                num=10,
+                sub_steps=[
+                    ExecuteShot(),
+                ],
+            ),
+        ]
+    )
+    assert steps.get_parameter_names() == {DottedVariableName("a")}
