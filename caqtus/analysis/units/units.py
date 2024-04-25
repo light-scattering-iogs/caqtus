@@ -31,8 +31,12 @@ class QuantitySeries:
     def __init__(self, s: polars.Series):
         self._s = s
 
-    def extract_unit(self):
-        return extract_unit(self._s)
+    def extract_unit(self) -> tuple[polars.Series, Optional[str]]:
+        magnitude, unit = extract_unit(self._s)
+        if unit is None:
+            return magnitude, None
+        else:
+            return magnitude, format(unit, "~")
 
 
 @polars.api.register_dataframe_namespace("quantity")
@@ -40,7 +44,7 @@ class QuantityDataframe:
     def __init__(self, df: polars.DataFrame):
         self._df = df
 
-    def extract_units(self):
+    def extract_units(self) -> tuple[polars.DataFrame, Mapping[str, Optional[str]]]:
         return extract_units(self._df)
 
 
