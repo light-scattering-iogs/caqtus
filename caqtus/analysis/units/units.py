@@ -6,6 +6,7 @@ to add or remove units from series.
 """
 
 from typing import Optional, Mapping
+from typing_extensions import deprecated
 
 import polars
 from caqtus.types.units import Unit, Quantity
@@ -32,7 +33,27 @@ class QuantitySeries:
         self._s = s
 
     def extract_unit(self) -> tuple[polars.Series, Optional[str]]:
-        magnitude, unit = extract_unit(self._s)
+        """Break the series into a magnitude series and a unit.
+
+        If the series has a quantity data type, this will attempt to convert all
+        magnitudes to a given unit. It will then
+        return a series of magnitudes only and their unit. If the series is any other
+        dtype, it will be returned unchanged.
+        """
+
+        series = self._s
+        if is_quantity_dtype(series.dtype):
+            all_units = series.struct.field(UNITS_FIELD).unique().to_list()
+            if len(all_units) == 1:
+                unit = Unit(all_units[0])
+            else:
+                raise NotImplementedError(
+                    f"Series {series.name} is expressed in several units: {all_units}"
+                )
+            magnitude = series.struct.field(MAGNITUDE_FIELD).alias(series.name)
+        else:
+            unit = None
+            magnitude = series
         if unit is None:
             return magnitude, None
         else:
@@ -45,7 +66,18 @@ class QuantityDataframe:
         self._df = df
 
     def extract_units(self) -> tuple[polars.DataFrame, Mapping[str, Optional[str]]]:
-        return extract_units(self._df)
+        """Break a dataframe potentially containing quantities into its magnitude and
+        unit components."""
+
+        dataframe = self._df
+
+        column_units = {}
+        columns_magnitudes = {}
+        for column in dataframe.columns:
+            magnitude, unit = extract_unit(dataframe[column])
+            columns_magnitudes[column] = magnitude
+            column_units[column] = unit
+        return polars.DataFrame(columns_magnitudes), column_units
 
 
 def is_quantity_dtype(dtype: polars.DataType) -> bool:
@@ -99,45 +131,18 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
         )
 
 
+@deprecated("Use series.quantity.extract_unit() instead.")
 def extract_unit(
     series: polars.Series,
 ) -> tuple[polars.Series, Optional[Unit]]:
-    """Break the series into a magnitude series and a unit.
-
-    If the series has a quantity data type, this will attempt to convert all
-    magnitudes to a given unit. It will then
-    return a series of magnitudes only and their unit. If the series is any other
-    dtype, it will be returned unchanged.
-    """
-
-    if is_quantity_dtype(series.dtype):
-        all_units = series.struct.field(UNITS_FIELD).unique().to_list()
-        if len(all_units) == 1:
-            unit = Unit(all_units[0])
-        else:
-            raise NotImplementedError(
-                f"Series {series.name} is expressed in several units: {all_units}"
-            )
-        magnitude = series.struct.field(MAGNITUDE_FIELD).alias(series.name)
-    else:
-        unit = None
-        magnitude = series
-    return magnitude, unit
+    return series.quantity.extract_unit()
 
 
+@deprecated("Use dataframe.quantity.extract_units() instead.")
 def extract_units(
     dataframe: polars.DataFrame,
-) -> tuple[polars.DataFrame, Mapping[str, Optional[Unit]]]:
-    """Break a dataframe potentially containing quantities into its magnitude and
-    unit components."""
-
-    column_units = {}
-    columns_magnitudes = {}
-    for column in dataframe.columns:
-        magnitude, unit = extract_unit(dataframe[column])
-        columns_magnitudes[column] = magnitude
-        column_units[column] = unit
-    return polars.DataFrame(columns_magnitudes), column_units
+) -> tuple[polars.DataFrame, Mapping[str, Optional[str]]]:
+    return dataframe.quantity.extract_units()
 
 
 def convert_to_unit(
