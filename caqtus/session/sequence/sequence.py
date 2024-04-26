@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Optional
 
 import attrs
+import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.variable_name import DottedVariableName
@@ -147,3 +149,19 @@ class Sequence:
 
     def __hash__(self):
         return hash(self.path)
+
+    def load_shots_data(
+        self,
+        importer: Callable[[Shot, ExperimentSession], polars.DataFrame],
+        session: ExperimentSession,
+        tags: Optional[polars.type_aliases.FrameInitTypes] = None,
+    ) -> Iterable[polars.DataFrame]:
+        shots = self.get_shots(session)
+        shots.sort(key=lambda x: x.index)
+        for shot in shots:
+            data = importer(shot, session)
+
+            if tags is not None:
+                yield data.join(polars.DataFrame(tags), how="cross")
+            else:
+                yield data
