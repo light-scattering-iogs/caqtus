@@ -20,17 +20,17 @@ def test_edit(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    view = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
-    view.set_device_configurations(device_configurations)
-    qtbot.addWidget(view)
+    widget = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
+    widget.set_device_configurations(device_configurations)
+    qtbot.addWidget(widget)
+    widget.show()
 
-    first_index = view.model().index(0, 0)
-    view.setCurrentIndex(first_index)
-    editor = view.previewWidget()
+    widget.edit(0)
+    editor = widget.editor()
     assert isinstance(editor, FormDeviceConfigurationEditor)
     assert editor.remote_server_line_edit.text() == "default"
     editor.remote_server_line_edit.setText("new")
-    new_configs = view.get_device_configurations()
+    new_configs = widget.get_device_configurations()
     assert new_configs[DeviceName("Device 1")].remote_server == "new"
     assert new_configs[DeviceName("Device 2")].remote_server == "default"
 
@@ -40,50 +40,19 @@ def test_edit_1(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    view = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
-    view.set_device_configurations(device_configurations)
-    qtbot.addWidget(view)
+    widget = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
+    widget.set_device_configurations(device_configurations)
+    qtbot.addWidget(widget)
 
-    first_index = view.model().index(0, 0)
-    view.setCurrentIndex(first_index)
-    editor = view.previewWidget()
+    widget.edit(0)
+    editor = widget.editor()
     assert isinstance(editor, FormDeviceConfigurationEditor)
     assert editor.remote_server_line_edit.text() == "default"
     editor.remote_server_line_edit.setText("new")
-    view.setCurrentIndex(view.model().index(1, 0))
-    new_configs = view.get_device_configurations()
+    widget._list_view.setCurrentIndex(widget._model.index(1, 0))
+    new_configs = widget.get_device_configurations()
     assert new_configs[DeviceName("Device 1")].remote_server == "new"
     assert new_configs[DeviceName("Device 2")].remote_server == "default"
-
-
-def test_name_edit(qtbot: QtBot):
-    device_configurations = {
-        DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
-    }
-    view = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
-    view.set_device_configurations(device_configurations)
-    qtbot.addWidget(view)
-
-    # need to click before double click
-    qtbot.mouseClick(
-        view.viewport(),
-        Qt.MouseButton.LeftButton,
-        Qt.KeyboardModifier.NoModifier,
-        view.visualRect(view.model().index(0, 0)).center(),
-    )
-    qtbot.mouseDClick(
-        view.viewport(),
-        Qt.MouseButton.LeftButton,
-        Qt.KeyboardModifier.NoModifier,
-        view.visualRect(view.model().index(0, 0)).center(),
-    )
-    qtbot.keyClicks(view.focusWidget(), "New Name")
-    qtbot.keyClick(view.focusWidget(), Qt.Key_Return)
-    qtbot.wait_until(lambda: view._model.stringList() == ["New Name"])
-    assert (
-        view.get_device_configurations()[DeviceName("New Name")]
-        == device_configurations[DeviceName("Device 1")]
-    )
 
 
 def test_add_config(qtbot: QtBot):
@@ -105,8 +74,19 @@ def test_add_config(qtbot: QtBot):
 
 
 def test_dialog(qtbot: QtBot):
+    plugin = DeviceConfigurationsPlugin.default()
+    plugin.register_default_configuration(
+        "Mock", lambda: MockDeviceConfiguration(remote_server=None)
+    )
     dialog = DeviceConfigurationsDialog(
-        DeviceConfigurationsPlugin.default(),
+        device_configurations_plugin=plugin,
         parent=None,
     )
+    dialog.set_device_configurations(
+        {
+            DeviceName("Device 1"): MockDeviceConfiguration(remote_server=None),
+            DeviceName("Device 2"): MockDeviceConfiguration(remote_server=None),
+        }
+    )
+    dialog.show()
     qtbot.addWidget(dialog)

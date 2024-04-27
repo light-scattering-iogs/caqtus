@@ -102,7 +102,6 @@ class DeviceConfigurationsView(QWidget):
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._list_view, 0)
-        self._configuration_editor: Optional[DeviceConfigurationEditor] = None
         self._delegate = DeviceEditorDelegate(self._layout, device_plugin, self)
         self._list_view.setItemDelegate(self._delegate)
 
@@ -122,7 +121,7 @@ class DeviceConfigurationsView(QWidget):
 
         # We need to ensure that the data in the current editor is committed before
         # we read the model data.
-        w = self._list_view.indexWidget(self._list_view.currentIndex())
+        w = self.editor()
         if w is not None:
             self._list_view.commitData(w)
 
@@ -150,6 +149,16 @@ class DeviceConfigurationsView(QWidget):
         index = self._list_view.currentIndex()
         if index.isValid():
             self._model.removeRow(index.row())
+
+    def edit(self, row: int) -> None:
+        index = self._model.index(row, 0)
+        self._list_view.setCurrentIndex(index)
+        self._list_view.edit(index)
+
+    def editor(self) -> Optional[DeviceConfigurationEditor]:
+        w = self._list_view.indexWidget(self._list_view.currentIndex())
+        assert isinstance(w, DeviceConfigurationEditor) or w is None
+        return w
 
 
 class DeviceEditorDelegate(QStyledItemDelegate):
