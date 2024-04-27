@@ -63,5 +63,5 @@ def test_condetrol(
         )
 
     timer = QTimer(condetrol.window)
-    # timer.singleShot(0, condetrol.window.close)
+    timer.singleShot(0, condetrol.window.close)
     condetrol.run()
