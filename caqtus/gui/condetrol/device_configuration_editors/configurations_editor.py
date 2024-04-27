@@ -138,27 +138,17 @@ class DeviceConfigurationsView(QWidget):
 
         if not isinstance(device_configuration, DeviceConfiguration):
             raise TypeError(
-                f"Expected a DeviceConfigurationAttrs, got {type(device_configuration)}"
+                f"Expected a {DeviceConfiguration}, got {type(device_configuration)}"
             )
 
-        device_configuration = copy.deepcopy(device_configuration)
-
-        self._device_configurations.append(device_configuration)
-        self._model.setStringList(self._model.stringList() + [device_name])
+        self._model.add_configuration(device_name, device_configuration)
 
     def delete_selected_configuration(self) -> None:
         """Delete the configuration that is currently selected in the view."""
 
-        index = self.currentIndex()
+        index = self._list_view.currentIndex()
         if index.isValid():
-            index = self._sorted_model.mapToSource(index)
             self._model.removeRow(index.row())
-            self._device_configurations.pop(index.row())
-            self._previous_index = None
-            # This is necessary to hide the preview widget when there are no
-            # configurations left.
-            if not self._device_configurations:
-                self.setPreviewWidget(QWidget())
 
 
 class DeviceEditorDelegate(QStyledItemDelegate):
@@ -256,3 +246,19 @@ class DeviceConfigurationModel(QAbstractListModel):
 
     def get_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         return dict(copy.deepcopy(self._device_configurations))
+
+    def add_configuration(
+        self, device_name: DeviceName, device_configuration: DeviceConfiguration
+    ) -> None:
+        self.beginInsertRows(
+            QModelIndex(),
+            len(self._device_configurations),
+            len(self._device_configurations),
+        )
+        self._device_configurations.append((device_name, device_configuration))
+        self.endInsertRows()
+
+    def removeRow(self, row):
+        self.beginRemoveRows(QModelIndex(), row, row)
+        del self._device_configurations[row]
+        self.endRemoveRows()
