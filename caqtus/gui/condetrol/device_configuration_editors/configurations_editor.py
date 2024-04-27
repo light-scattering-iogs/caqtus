@@ -2,13 +2,15 @@ import copy
 from collections.abc import Mapping, Iterable
 from typing import Optional
 
-from PySide6.QtCore import QStringListModel, QSortFilterProxyModel
+from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex
 from PySide6.QtWidgets import (
     QDialog,
     QWidget,
-    QColumnView,
     QVBoxLayout,
     QDialogButtonBox,
+    QHBoxLayout,
+    QListView,
+    QStyledItemDelegate,
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
@@ -21,6 +23,8 @@ from .device_configuration_editor import (
 )
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from ..icons import get_icon
+
+_CONFIG_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
 class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
@@ -82,28 +86,24 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
         self._configs_view.set_device_configurations(device_configurations)
 
 
-class DeviceConfigurationsView(QColumnView):
-    """View for displaying a collection of device configurations."""
-
+class DeviceConfigurationsView(QWidget):
     def __init__(
         self,
         device_plugin: DeviceConfigurationsPlugin,
         parent: Optional[QWidget] = None,
     ):
-        """Initialize the view."""
 
         super().__init__(parent)
 
-        self._device_configurations = []
         self._device_plugin = device_plugin
-
-        self._model = QStringListModel(self)
-        self._sorted_model = QSortFilterProxyModel(self)
-        self._sorted_model.setSourceModel(self._model)
-        self._sorted_model.sort(0)
-        self.setModel(self._sorted_model)
-        self.updatePreviewWidget.connect(self._update_preview_widget)
-        self._previous_index: Optional[int] = None
+        self._list_view = QListView(self)
+        self._model = DeviceConfigurationModel(self)
+        self._list_view.setModel(self._model)
+        self._layout = QHBoxLayout(self)
+        self._layout.addWidget(self._list_view, 0)
+        self._configuration_editor: Optional[DeviceConfigurationEditor] = None
+        self._delegate = DeviceEditorDelegate(self._layout, device_plugin, self)
+        self._list_view.setItemDelegate(self._delegate)
 
     def set_device_configurations(
         self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
@@ -114,27 +114,18 @@ class DeviceConfigurationsView(QColumnView):
         changes to the configurations will not affect the view.
         """
 
-        device_configurations = copy.deepcopy(dict(device_configurations))
-
-        self._device_configurations = list(device_configurations.values())
-        self._model.setStringList(list(device_configurations.keys()))
+        self._model.set_device_configurations(device_configurations)
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         """Return a copy of the configurations currently displayed in the view."""
 
-        # We first need to read the changes from the currently displayed editor before
-        # returning the configurations.
-        if self._previous_index is not None:
-            config_editor = self.previewWidget()
-            assert isinstance(config_editor, DeviceConfigurationEditor)
-            previous_config = copy.deepcopy(config_editor.get_configuration())
-            self._device_configurations[self._previous_index] = previous_config
-        return {
-            device_name: device_configuration
-            for device_name, device_configuration in zip(
-                self._model.stringList(), self._device_configurations
-            )
-        }
+        # We need to ensure that the data in the current editor is committed before
+        # we read the model data.
+        w = self._list_view.indexWidget(self._list_view.currentIndex())
+        if w is not None:
+            self._list_view.commitData(w)
+
+        return self._model.get_configurations()
 
     def add_configuration(
         self, device_name: DeviceName, device_configuration: DeviceConfiguration
@@ -169,23 +160,38 @@ class DeviceConfigurationsView(QColumnView):
             if not self._device_configurations:
                 self.setPreviewWidget(QWidget())
 
-    def _update_preview_widget(self, index) -> None:
-        index = self._sorted_model.mapToSource(index)
-        if self._previous_index is not None:
-            previous_editor = self.previewWidget()
-            assert isinstance(previous_editor, DeviceConfigurationEditor)
-            previous_config = copy.deepcopy(previous_editor.get_configuration())
-            self._device_configurations[self._previous_index] = previous_config
-            previous_editor.deleteLater()
-        self._previous_index = index.row()
-        new_config = copy.deepcopy(self._device_configurations[index.row()])
-        new_editor = self._device_plugin.create_editor(new_config)
-        if not isinstance(new_editor, DeviceConfigurationEditor):
-            raise TypeError(
-                f"Expected a DeviceConfigurationEditor, got {type(new_editor)}"
-            )
-        previous_editor = new_editor
-        self.setPreviewWidget(previous_editor)
+
+class DeviceEditorDelegate(QStyledItemDelegate):
+    # This is a delegate that doesn't display the editor in the view cell, but instead
+    # displays it in an external layout.
+    def __init__(
+        self,
+        layout,
+        device_plugin: DeviceConfigurationsPlugin,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self._layout = layout
+        self._device_plugin = device_plugin
+
+    def createEditor(self, parent, option, index):
+        config = index.data(_CONFIG_ROLE)
+        editor = self._device_plugin.create_editor(config)
+        self._layout.addWidget(editor, 1)
+
+        return editor
+
+    def setEditorData(self, editor, index):
+        pass
+
+    def setModelData(self, editor, model, index):
+        assert isinstance(editor, DeviceConfigurationEditor)
+        config = copy.deepcopy(editor.get_configuration())
+        model.setData(index, config, _CONFIG_ROLE)
+
+    def updateEditorGeometry(self, editor, option, index):
+        # This is necessary to ensure that the editor is resized to fit the layout.
+        editor.updateGeometry()
 
 
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
@@ -214,3 +220,39 @@ class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
         self.setupUi(self)
         for device_type in device_types:
             self.device_type_combo_box.addItem(device_type)
+
+
+class DeviceConfigurationModel(QAbstractListModel):
+    def __init__(self, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+
+        self._device_configurations: list[tuple[DeviceName, DeviceConfiguration]] = []
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._device_configurations)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            return self._device_configurations[index.row()][0]
+        if role == _CONFIG_ROLE:
+            return self._device_configurations[index.row()][1]
+        return None
+
+    def flags(self, index):
+        return (
+            Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsEditable
+        )
+
+    def set_device_configurations(
+        self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    ) -> None:
+        self.beginResetModel()
+        self._device_configurations = copy.deepcopy(list(device_configurations.items()))
+        self.endResetModel()
+
+    def get_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
+        return dict(copy.deepcopy(self._device_configurations))
