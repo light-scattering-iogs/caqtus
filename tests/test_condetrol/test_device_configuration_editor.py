@@ -6,7 +6,7 @@ from caqtus.gui.condetrol.device_configuration_editors import (
     DeviceConfigurationsDialog,
 )
 from caqtus.gui.condetrol.device_configuration_editors.configurations_editor import (
-    DeviceConfigurationsView,
+    DeviceConfigurationsEditor,
     DeviceConfigurationsPlugin,
 )
 from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (
@@ -20,7 +20,9 @@ def test_edit(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    widget = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
+    widget = DeviceConfigurationsEditor(
+        DeviceConfigurationsPlugin.default(), parent=None
+    )
     widget.set_device_configurations(device_configurations)
     qtbot.addWidget(widget)
     widget.show()
@@ -40,7 +42,9 @@ def test_edit_1(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    widget = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
+    widget = DeviceConfigurationsEditor(
+        DeviceConfigurationsPlugin.default(), parent=None
+    )
     widget.set_device_configurations(device_configurations)
     qtbot.addWidget(widget)
 
@@ -57,7 +61,7 @@ def test_edit_1(qtbot: QtBot):
 
 def test_add_config(qtbot: QtBot):
     config = MockDeviceConfiguration(remote_server="default")
-    view = DeviceConfigurationsView(DeviceConfigurationsPlugin.default(), parent=None)
+    view = DeviceConfigurationsEditor(DeviceConfigurationsPlugin.default(), parent=None)
     qtbot.addWidget(view)
     view.add_configuration(DeviceName("Device 1"), config)
     assert view.get_device_configurations() == {DeviceName("Device 1"): config}

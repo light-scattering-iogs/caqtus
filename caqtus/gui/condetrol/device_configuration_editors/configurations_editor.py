@@ -38,7 +38,7 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
         """Initialize the dialog."""
 
         super().__init__(parent)
-        self._configs_view = DeviceConfigurationsView(
+        self._configs_view = DeviceConfigurationsEditor(
             device_configurations_plugin, self
         )
         self.add_device_dialog = AddDeviceDialog(device_configurations_plugin, self)
@@ -86,7 +86,13 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
         self._configs_view.set_device_configurations(device_configurations)
 
 
-class DeviceConfigurationsView(QWidget):
+class DeviceConfigurationsEditor(QWidget):
+    """A widget for displaying and editing a collection of device configurations.
+
+    This widget displays a list of device configurations, each of which can be edited
+    using a custom editor provided by the device plugin.
+    """
+
     def __init__(
         self,
         device_plugin: DeviceConfigurationsPlugin,
