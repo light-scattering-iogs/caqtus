@@ -1,8 +1,15 @@
 import qtawesome
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPalette
 
 
 def get_icon(name: str, color=None) -> QIcon:
+    """Get an icon by name.
+
+    Args:
+        name: The name of the icon.
+        color: The color of the icon. If None, the default color is used.
+    """
+
     ids = {
         "camera": "mdi6.camera-outline",
         "editable-sequence": "mdi6.pencil-outline",
@@ -19,6 +26,7 @@ def get_icon(name: str, color=None) -> QIcon:
         "simplify-timelanes": "mdi6.table-merge-cells",
         "add-time-lane": "mdi6.table-row-plus-after",
     }
-
+    if color is None:
+        color = QPalette().buttonText().color()
     icon = qtawesome.icon(ids[name], color=color)
     return icon
