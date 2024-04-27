@@ -100,6 +100,7 @@ class DeviceConfigurationsView(QWidget):
         self._model = DeviceConfigurationModel(self)
         self._list_view.setModel(self._model)
         self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._list_view, 0)
         self._configuration_editor: Optional[DeviceConfigurationEditor] = None
         self._delegate = DeviceEditorDelegate(self._layout, device_plugin, self)
