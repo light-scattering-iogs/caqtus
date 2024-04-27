@@ -110,6 +110,9 @@ class DeviceConfigurationsEditor(QWidget):
         self._layout.addWidget(self._list_view, 0)
         self._delegate = DeviceEditorDelegate(self._layout, device_plugin, self)
         self._list_view.setItemDelegate(self._delegate)
+        self._list_view.setEditTriggers(
+            QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.CurrentChanged
+        )
 
     def set_device_configurations(
         self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
