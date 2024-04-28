@@ -132,6 +132,18 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
 
 
 class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
+    """Used to access experiment data stored in a PostgreSQL database.
+
+    Args:
+        username: The username to use to connect to the database.
+        password: The password to use to connect to the database.
+        host: The host of the database.
+        port: The port of the database.
+        database: The name of the database.
+        serializer: This is used to convert user defined sequence objects to a JSON
+            format that can be stored in the database.
+    """
+
     def __init__(
         self,
         username: str,
