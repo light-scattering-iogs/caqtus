@@ -190,10 +190,12 @@ class Sequence:
 
         shots = self.get_shots()
         shots.sort(key=lambda x: x.index)
-
-        tags_dataframe = polars.DataFrame(tags) if tags is not None else None
-        if len(tags_dataframe) != 1:
-            raise ValueError("tags should be a single row DataFrame")
+        if tags is not None:
+            tags_dataframe = polars.DataFrame(tags)
+            if len(tags_dataframe) != 1:
+                raise ValueError("tags should be a single row DataFrame")
+        else:
+            tags_dataframe = None
 
         for shot in shots:
             data = importer(shot)
