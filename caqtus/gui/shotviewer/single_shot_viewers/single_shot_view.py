@@ -13,7 +13,7 @@ from caqtus.utils.serialization import JSON
 
 class ShotView(QWidget, metaclass=qabc.QABCMeta):
     @abstractmethod
-    def display_shot(self, shot: Shot) -> None:
+    async def display_shot(self, shot: Shot) -> None:
         raise NotImplementedError
 
 
