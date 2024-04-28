@@ -23,6 +23,12 @@ if TYPE_CHECKING:
     from caqtus.analysis.loading import DataImporter
 
 
+def _convert_to_path(path: PureSequencePath | str) -> PureSequencePath:
+    if isinstance(path, str):
+        return PureSequencePath(path)
+    return path
+
+
 @attrs.frozen(eq=False, order=False)
 class Sequence:
     """Gives access to the runtime information and data of a sequence.
@@ -34,7 +40,7 @@ class Sequence:
             the session is active.
     """
 
-    path: PureSequencePath
+    path: PureSequencePath = attrs.field(converter=_convert_to_path)
     session: ExperimentSession
 
     def __attrs_post_init__(self):
