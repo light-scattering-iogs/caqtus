@@ -111,6 +111,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._views[view_name] = (constructor_name, view)
         sub_window = self._mdi_area.addSubWindow(view)
         sub_window.setWindowTitle(view_name)
+        sub_window.show()
 
     def get_workspace(self) -> WorkSpace:
         views = {}
