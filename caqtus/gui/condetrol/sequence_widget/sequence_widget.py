@@ -6,7 +6,7 @@ from typing import Optional, assert_never, Literal
 
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget, QLabel, QHBoxLayout
 
 from caqtus.session import (
@@ -14,6 +14,7 @@ from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
     ParameterNamespace,
+    AsyncExperimentSession,
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
@@ -270,9 +271,41 @@ class _SequenceEditableState(_SequenceSetState):
 async def _query_state_async(
     path: PureSequencePath, session_maker: ExperimentSessionMaker
 ) -> _State:
-    # We need to be careful that a single session is never used in two different
-    # threads.
-    return await asyncio.to_thread(_query_state_sync, path, session_maker)
+    async with session_maker.async_session() as session:
+        is_sequence_result = await session.sequences.is_sequence(path)
+        try:
+            is_sequence = unwrap(is_sequence_result)
+        except PathNotFoundError:
+            return _SequenceNotSetState()
+        else:
+            if is_sequence:
+                return await _query_sequence_state_async(path, session)
+            else:
+                return _SequenceNotSetState()
+
+
+async def _query_sequence_state_async(
+    path: PureSequencePath, session: AsyncExperimentSession
+) -> _SequenceSetState:
+    # These results can be unwrapped safely because we checked that the sequence
+    # exists in the session.
+    state = unwrap(await session.sequences.get_state(path))
+    iterations = await session.sequences.get_iteration_configuration(path)
+    time_lanes = await session.sequences.get_time_lanes(path)
+
+    if state.is_editable():
+        return _SequenceEditableState(
+            path, iterations=iterations, time_lanes=time_lanes, sequence_state=state
+        )
+    else:
+        parameters = await session.sequences.get_global_parameters(path)
+        return _SequenceNotEditableState(
+            path,
+            iterations=iterations,
+            time_lanes=time_lanes,
+            parameters=parameters,
+            sequence_state=state,
+        )
 
 
 def _query_state_sync(
