@@ -32,9 +32,8 @@ from ._serializer import Serializer
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
-from ..path import PureSequencePath, BoundSequencePath
+from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from ..sequence import Sequence
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
     Unknown,
@@ -60,9 +59,6 @@ if TYPE_CHECKING:
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: Serializer
-
-    def __getitem__(self, item: str) -> Sequence:
-        return Sequence(BoundSequencePath(item, self.parent_session))
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         return _is_sequence(self._get_sql_session(), path)

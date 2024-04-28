@@ -15,7 +15,6 @@ from caqtus.types.variable_name import DottedVariableName
 from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
-from .sequence import Sequence, Shot
 from .sequence.iteration_configuration import IterationConfiguration, Unknown
 from .sequence.state import State
 from .shot import TimeLanes
@@ -68,9 +67,6 @@ class SequenceCollection(Protocol):
     data from sequences and shots.
     """
 
-    @abc.abstractmethod
-    def __getitem__(self, item: str) -> Sequence:
-        raise NotImplementedError
 
     @abc.abstractmethod
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
