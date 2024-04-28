@@ -64,8 +64,8 @@ class SequenceCollection(Protocol):
     sequences and their shots.
     However, they are not meant to be convenient to use directly in user code.
     Instead, consider using the higher-level API provided by the
-    :class:`caqtus.session.Sequence` and :class:`caqtus.session.Shot` classes to access data
-    from sequences and shots.
+    :class:`caqtus.session.Sequence` and :class:`caqtus.session.Shot` classes to access
+    data from sequences and shots.
     """
 
     @abc.abstractmethod
@@ -293,3 +293,11 @@ class SequenceStats:
     stop_time: Optional[datetime.datetime]
     number_completed_shots: int
     expected_number_shots: int | Unknown
+
+
+@attrs.frozen
+class PureShot:
+    """Unique identifier for a shot in a sequence."""
+
+    sequence: PureSequencePath
+    index: int
