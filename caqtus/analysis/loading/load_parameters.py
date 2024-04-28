@@ -3,9 +3,9 @@ from typing import Literal
 
 import attrs
 import polars
-from caqtus.session import ExperimentSession, Shot, Sequence
-from caqtus.types.parameter import is_analog_value, is_quantity
 
+from caqtus.session import Shot, Sequence
+from caqtus.types.parameter import is_analog_value, is_quantity
 from .combinable_importers import CombinableLoader
 from .sequence_cache import cache_per_sequence
 
@@ -39,16 +39,16 @@ class LoadShotParameters(CombinableLoader):
     def __attrs_post_init__(self):
         self._get_local_parameters = cache_per_sequence(get_local_parameters)
 
-    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
+    def __call__(self, shot: Shot) -> polars.DataFrame:
         parameters = {
             str(parameter_name): value
-            for parameter_name, value in shot.get_parameters(session).items()
+            for parameter_name, value in shot.get_parameters().items()
         }
 
         if self.which == "all":
             pass
         elif self.which == "sequence":
-            local_parameters = self._get_local_parameters(shot.sequence, session)
+            local_parameters = self._get_local_parameters(shot.sequence)
             parameters = {name: parameters[name] for name in local_parameters}
         elif self.which == "globals":
             raise NotImplementedError
@@ -77,5 +77,5 @@ class LoadShotParameters(CombinableLoader):
         return dataframe
 
 
-def get_local_parameters(sequence: Sequence, session: ExperimentSession) -> list[str]:
-    return [str(name) for name in sequence.get_local_parameters(session)]
+def get_local_parameters(sequence: Sequence) -> list[str]:
+    return [str(name) for name in sequence.get_local_parameters()]

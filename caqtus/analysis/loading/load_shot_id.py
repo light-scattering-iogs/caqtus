@@ -1,17 +1,17 @@
 import polars
-from caqtus.session import ExperimentSession, Shot
 
+from caqtus.session import Shot
 from .combinable_importers import CombinableLoader
 
 
 class LoadShotId(CombinableLoader):
     """Loads the id of a shot.
 
-    When it is evaluated on a shot, it returns a polars dataframe with a single row and three
-    columns: `sequence`, `shot name` and `shot index` that allows to identify the shot.
+    When it is evaluated on a shot, it returns a polars dataframe with a single row and
+    two columns: `sequence` and `shot index` that allows to identify the shot.
     """
 
-    def __call__(self, shot: Shot, session: ExperimentSession):
+    def __call__(self, shot: Shot):
         dataframe = polars.DataFrame(
             [
                 polars.Series(

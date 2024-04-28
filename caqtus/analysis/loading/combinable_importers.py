@@ -8,9 +8,17 @@ from .shot_data import DataImporter
 
 
 class CombinableLoader(DataImporter, abc.ABC):
+    """A loader that can be combined with other loaders.
+
+    Objects that inherit from this class can be combined with other loaders using the
+    `+` and `*` operators.
+    The `+` operator will concatenate the dataframes returned by the loaders.
+    The `*` operator will perform a cross product of the dataframes returned by the
+    loaders.
+    """
+
     @abc.abstractmethod
-    def __call__(self, shot: Shot) -> polars.DataFrame:
-        ...
+    def __call__(self, shot: Shot) -> polars.DataFrame: ...
 
     def __add__(self, other):
         if isinstance(other, CombinableLoader):
@@ -51,6 +59,8 @@ class CrossProductLoader(CombinableLoader):
 
 # noinspection PyPep8Naming
 class join(CombinableLoader):
+    """Join multiple loaders on given columns."""
+
     def __init__(self, *loaders: CombinableLoader, on: Sequence[str]):
         if len(loaders) < 1:
             raise ValueError("At least one loader must be provided.")
