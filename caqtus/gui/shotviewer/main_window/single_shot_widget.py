@@ -12,13 +12,14 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QSizePolicy,
 )
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.session.sequence import Shot, Sequence
 from pyqtgraph.dockarea import DockArea, Dock
+
 from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session._return_or_raise import unwrap
+from caqtus.session.sequence import Shot
 from caqtus.utils import serialization
 from caqtus.utils.concurrent import BackgroundScheduler
-
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ViewManager, ManagerName
@@ -183,7 +184,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             self.set_workspace(workspace)
 
     def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
-        self._sequence_watcher.set_sequence(Sequence(path))
+        self._sequence_watcher.set_sequence(path)
 
     def _update_views(self, shot: Shot) -> None:
         for view in self._views.values():
@@ -361,7 +362,7 @@ class SequenceWatcher(QObject):
     def __init__(self, session_maker: ExperimentSessionMaker):
         super().__init__()
         self._session_maker = session_maker
-        self._sequence: Optional[Sequence] = None
+        self._sequence_path: Optional[PureSequencePath] = None
         self._shots = set[Shot]()
         self._background_scheduler = BackgroundScheduler(on_error="stop_all")
 
@@ -374,15 +375,16 @@ class SequenceWatcher(QObject):
         return self._background_scheduler.__exit__(exc_type, exc_val, exc_tb)
 
     def update(self):
-        if self._sequence is None:
+        if self._sequence_path is None:
             return
         with self._session_maker() as session:
-            shots = set(self._sequence.get_shots(session))
+            shot_list = unwrap(session.sequences.get_shots(self._sequence_path))
+            shots = set(shot_list)
             new_shots = shots - self._shots
             self._shots.update(new_shots)
             if new_shots:
                 self.shots_changed.emit(sorted(self._shots, key=lambda shot: shot.index))  # type: ignore
 
-    def set_sequence(self, sequence: Sequence) -> None:
-        self._sequence = sequence
+    def set_sequence(self, path: PureSequencePath) -> None:
+        self._sequence_path = path
         self._shots.clear()
