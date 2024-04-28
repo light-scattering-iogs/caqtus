@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session
 
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
-from ._sequence_collection import _get_stats, _is_sequence
+from ._sequence_collection import (
+    _get_stats,
+    _is_sequence,
+    _get_sequence_global_parameters,
+    _get_time_lanes,
+    _get_iteration_configuration,
+)
 from ._serializer import Serializer
 from .. import ParameterNamespace, PureSequencePath
 from ..async_session import (
@@ -19,11 +25,13 @@ from ..async_session import (
 )
 from ..experiment_session import ExperimentSessionNotActiveError
 from ..path_hierarchy import PathNotFoundError, PathIsRootError
+from ..sequence.iteration_configuration import IterationConfiguration
 from ..sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
 )
+from ..shot import TimeLanes
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -144,6 +152,17 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_stats, path)
+
+    async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:
+        return await self._run_sync(_get_time_lanes, path, self.serializer)
+
+    async def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        return await self._run_sync(_get_sequence_global_parameters, path)
+
+    async def get_iteration_configuration(
+        self, path: PureSequencePath
+    ) -> IterationConfiguration:
+        return await self._run_sync(_get_iteration_configuration, path, self.serializer)
 
     async def _run_sync(
         self,

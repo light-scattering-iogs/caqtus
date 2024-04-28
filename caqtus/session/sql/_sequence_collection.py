@@ -96,23 +96,13 @@ class SQLSequenceCollection(SequenceCollection):
         sequence.parameters.content = parameters_content
 
     def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
-        sequence = unwrap(self._query_sequence_model(path))
-
-        if sequence.state == State.DRAFT:
-            raise RuntimeError("Sequence has not been prepared yet")
-
-        parameters_content = sequence.parameters.content
-
-        return serialization.converters["json"].structure(
-            parameters_content, ParameterNamespace
-        )
+        return _get_sequence_global_parameters(self._get_sql_session(), path)
 
     def get_iteration_configuration(
         self, sequence: PureSequencePath
     ) -> IterationConfiguration:
-        sequence_model = unwrap(self._query_sequence_model(sequence))
-        return self.serializer.construct_sequence_iteration(
-            sequence_model.iteration.content,
+        return _get_iteration_configuration(
+            self._get_sql_session(), sequence, self.serializer
         )
 
     def set_iteration_configuration(
@@ -178,23 +168,8 @@ class SQLSequenceCollection(SequenceCollection):
             },
         )
 
-    def construct_time_lanes(self, time_lanes_content: serialization.JSON) -> TimeLanes:
-        return TimeLanes(
-            step_names=serialization.converters["json"].structure(
-                time_lanes_content["step_names"], list[str]
-            ),
-            step_durations=serialization.converters["json"].structure(
-                time_lanes_content["step_durations"], list[Expression]
-            ),
-            lanes={
-                lane: self.serializer.construct_time_lane(time_lane_content)
-                for lane, time_lane_content in time_lanes_content["lanes"].items()
-            },
-        )
-
     def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
-        sequence_model = unwrap(self._query_sequence_model(sequence_path))
-        return self.construct_time_lanes(sequence_model.time_lanes.content)
+        return _get_time_lanes(self._get_sql_session(), sequence_path, self.serializer)
 
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
@@ -535,6 +510,54 @@ def _get_stats(
         )
 
     return result.map(extract_stats)
+
+
+def _get_sequence_global_parameters(
+    session: Session, path: PureSequencePath
+) -> ParameterNamespace:
+    sequence = unwrap(_query_sequence_model(session, path))
+
+    if sequence.state == State.DRAFT:
+        raise RuntimeError("Sequence has not been prepared yet")
+
+    parameters_content = sequence.parameters.content
+
+    return serialization.converters["json"].structure(
+        parameters_content, ParameterNamespace
+    )
+
+
+def _get_iteration_configuration(
+    session: Session, sequence: PureSequencePath, serializer: Serializer
+) -> IterationConfiguration:
+    sequence_model = unwrap(_query_sequence_model(session, sequence))
+    return serializer.construct_sequence_iteration(
+        sequence_model.iteration.content,
+    )
+
+
+def _construct_time_lanes(
+    time_lanes_content: serialization.JSON, serializer: Serializer
+) -> TimeLanes:
+    return TimeLanes(
+        step_names=serialization.converters["json"].structure(
+            time_lanes_content["step_names"], list[str]
+        ),
+        step_durations=serialization.converters["json"].structure(
+            time_lanes_content["step_durations"], list[Expression]
+        ),
+        lanes={
+            lane: serializer.construct_time_lane(time_lane_content)
+            for lane, time_lane_content in time_lanes_content["lanes"].items()
+        },
+    )
+
+
+def _get_time_lanes(
+    session: Session, sequence_path: PureSequencePath, serializer: Serializer
+) -> TimeLanes:
+    sequence_model = unwrap(_query_sequence_model(session, sequence_path))
+    return _construct_time_lanes(sequence_model.time_lanes.content, serializer)
 
 
 def _query_sequence_model(

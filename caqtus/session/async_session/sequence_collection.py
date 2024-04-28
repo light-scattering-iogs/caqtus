@@ -3,7 +3,7 @@ from typing import Protocol
 
 from returns.result import Result
 
-from .. import ParameterNamespace
+from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError
 from ..sequence import State
