@@ -7,13 +7,14 @@ import functools
 from typing import Optional, Mapping, assert_never
 
 import attrs
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import (
     QWidget,
     QMainWindow,
     QFileDialog,
+    QMdiArea,
+    QDockWidget,
 )
-from pyqtgraph.dockarea import DockArea, Dock
 
 from caqtus.gui.common.sequence_hierarchy import (
     AsyncPathHierarchyView,
@@ -45,13 +46,13 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._views: dict[str, tuple[ManagerName, ShotView]] = {}
         self._experiment_session_maker = experiment_session_maker
         self._view_managers = view_managers
-        self._dock_area = DockArea()
+        self._mdi_area = QMdiArea()
+
         self._hierarchy_view = AsyncPathHierarchyView(
             self._experiment_session_maker, self
         )
         self._setup_ui()
         self.restore_state()
-
         self._task_group = asyncio.TaskGroup()
         self._state: WidgetState = NoSequenceSelected()
 
@@ -73,7 +74,10 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
-        self._add_default_docks()
+        paths_dock = QDockWidget("Sequences", self)
+        paths_dock.setObjectName("SequencesDock")
+        paths_dock.setWidget(self._hierarchy_view)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
 
         self.action_save_workspace_as.triggered.connect(self.save_workspace_as)
         self.action_load_workspace.triggered.connect(self.load_workspace)
@@ -81,15 +85,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._add_view_managers(self._view_managers)
 
         self.setWindowTitle("Single Shot Viewer")
-        self.setCentralWidget(self._dock_area)
-
-    def _add_default_docks(self) -> None:
-        sequence_dock = Dock("Sequences")
-        self._hierarchy_view.sequence_double_clicked.connect(
-            self.on_sequence_double_clicked
-        )
-        sequence_dock.addWidget(self._hierarchy_view)
-        self._dock_area.addDock(sequence_dock, "left")
+        self.setCentralWidget(self._mdi_area)
 
     def _add_view_managers(self, view_managers: Mapping[str, ViewManager]) -> None:
         for name in view_managers:
@@ -113,9 +109,8 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self, constructor_name: ManagerName, view_name: str, view: ShotView
     ) -> None:
         self._views[view_name] = (constructor_name, view)
-        dock = Dock(view_name)
-        dock.addWidget(view)
-        self._dock_area.addDock(dock, "right")
+        sub_window = self._mdi_area.addSubWindow(view)
+        sub_window.setWindowTitle(view_name)
 
     def get_workspace(self) -> WorkSpace:
         views = {}
