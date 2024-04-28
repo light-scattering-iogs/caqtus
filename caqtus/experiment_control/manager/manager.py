@@ -13,7 +13,6 @@ from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceM
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    Sequence,
     ParameterNamespace,
 )
 from caqtus.session.sequence.iteration_configuration import StepsConfiguration
@@ -100,7 +99,7 @@ class Procedure(AbstractContextManager, abc.ABC):
     @abc.abstractmethod
     def start_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
@@ -147,7 +146,7 @@ class Procedure(AbstractContextManager, abc.ABC):
 
     def run_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
@@ -245,7 +244,7 @@ class BoundProcedure(Procedure):
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
         shot_retry_config: ShotRetryConfig,
-        device_server_configs: Mapping[DeviceName, DeviceServerConfiguration],
+        device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
         device_manager_class: type[RemoteDeviceManager],
         acquisition_timeout: Optional[float] = None,
     ):
@@ -255,7 +254,7 @@ class BoundProcedure(Procedure):
         self._running = lock
         self._thread_pool = thread_pool
         self._sequence_future: Optional[concurrent.futures.Future] = None
-        self._sequences: list[Sequence] = []
+        self._sequences: list[PureSequencePath] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_retry_config = shot_retry_config
         self._must_interrupt = threading.Event()
@@ -281,7 +280,7 @@ class BoundProcedure(Procedure):
     def is_running_sequence(self) -> bool:
         return self._sequence_future is not None and not self._sequence_future.done()
 
-    def sequences(self) -> list[Sequence]:
+    def sequences(self) -> list[PureSequencePath]:
         return self._sequences.copy()
 
     def exception(self) -> Optional[Exception]:
@@ -291,7 +290,7 @@ class BoundProcedure(Procedure):
 
     def start_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
@@ -330,14 +329,14 @@ class BoundProcedure(Procedure):
     @log_exception(logger)
     def _run_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
         with self._session_maker() as session:
-            iteration = session.sequences.get_iteration_configuration(sequence.path)
+            iteration = session.sequences.get_iteration_configuration(sequence)
 
         with SequenceManager(
             sequence=sequence,

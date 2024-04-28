@@ -3,15 +3,11 @@ import contextlib
 import functools
 import logging
 from collections.abc import Callable
-from typing import Optional, Literal
+from typing import Optional
 
 from PySide6.QtCore import QSettings, Qt, Signal, QTimer
-from PySide6.QtGui import QIcon, QFont
 from PySide6.QtWidgets import (
     QMainWindow,
-    QLabel,
-    QHBoxLayout,
-    QWidget,
     QDockWidget,
     QDialog,
     QApplication,
@@ -25,16 +21,13 @@ from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEdito
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
-    Sequence,
     ParameterNamespace,
 )
-from caqtus.session.sequence import State
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import (
     DeviceConfigurationsDialog,
     DeviceConfigurationsPlugin,
 )
-from ..icons import get_icon
 from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
@@ -163,7 +156,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             "sequence launched from GUI", acquisition_timeout=1
         )
         self._run_sequence_task = self._task_group.create_task(
-            self._run_sequence(procedure, Sequence(path))
+            self._run_sequence(procedure, path)
         )
 
     def on_procedure_exception(self, exception: Exception):

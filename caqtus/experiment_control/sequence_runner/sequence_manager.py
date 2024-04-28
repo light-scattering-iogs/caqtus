@@ -16,7 +16,7 @@ from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
-from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
+from caqtus.session import ExperimentSessionMaker, ParameterNamespace, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import VariableNamespace, SequenceContext
 from caqtus.types.data import DataLabel, Data
@@ -102,7 +102,7 @@ class SequenceManager(AbstractContextManager):
 
     def __init__(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         interruption_event: threading.Event,
         device_server_configs: Mapping[str, DeviceServerConfiguration],
@@ -112,7 +112,7 @@ class SequenceManager(AbstractContextManager):
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
     ) -> None:
         self._session_maker = session_maker
-        self._sequence_path = sequence.path
+        self._sequence_path = sequence
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
         self.device_server_configs = device_server_configs
         self.manager_class = manager_class

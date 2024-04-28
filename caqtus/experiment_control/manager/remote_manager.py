@@ -8,7 +8,7 @@ from typing import Optional
 from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session import ExperimentSessionMaker, Sequence, ParameterNamespace
+from caqtus.session import ExperimentSessionMaker, ParameterNamespace
 from caqtus.session import PureSequencePath
 from .manager import ExperimentManager, Procedure, BoundExperimentManager
 from ..sequence_runner import ShotRetryConfig
@@ -92,7 +92,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
 
     def start_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
@@ -108,7 +108,7 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
 
     def run_sequence(
         self,
-        sequence: Sequence,
+        sequence: PureSequencePath,
         global_parameters: Optional[ParameterNamespace] = None,
         device_configurations: Optional[
             Mapping[DeviceName, DeviceConfiguration]
