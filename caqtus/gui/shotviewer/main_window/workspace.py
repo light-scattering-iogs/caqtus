@@ -10,7 +10,6 @@ from ..single_shot_viewers import ManagerName
 class ViewState:
     view_state: JSON
     window_geometry: str
-    window_state: str
 
 
 @attrs.define

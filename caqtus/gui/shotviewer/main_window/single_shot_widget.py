@@ -134,7 +134,6 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             view_states[view_name] = ViewState(
                 view_state=self._view_dumper(view),
                 window_geometry=_bytes_to_str(sub_window.saveGeometry()),
-                window_state=_bytes_to_str(sub_window.saveState()),
             )
         window_state = _bytes_to_str(self.saveState())
         window_geometry = _bytes_to_str(self.saveGeometry())
