@@ -13,12 +13,11 @@ from caqtus.analysis.loading import DataImporter
 from caqtus.session import (
     PureSequencePath,
     ExperimentSessionMaker,
-    ExperimentSession,
     Shot,
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
-from caqtus.session.sequence_collection import PathIsNotSequenceError
+from caqtus.session.sequence_collection import PathIsNotSequenceError, PureShot
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 
@@ -125,7 +124,7 @@ class DataLoader(QWidget, Ui_Loader):
                 return
             result = await asyncio.to_thread(session.sequences.get_shots, sequence)
             try:
-                shots = unwrap(result)
+                shots: list[PureShot] = unwrap(result)
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(sequence)
                 return
@@ -142,11 +141,11 @@ class DataLoader(QWidget, Ui_Loader):
         for shot_group in batched(new_shots, self.process_chunk_size):
             with self.session_maker() as session:
                 for shot in shot_group:
-                    await self.process_shot(shot, session)
+                    await self.process_shot(Shot.bound(shot, session))
                 # self.update_progress_bar()
 
-    async def process_shot(self, shot: Shot, session: ExperimentSession) -> None:
-        new_data = await asyncio.to_thread(self.shot_loader, shot, session)
+    async def process_shot(self, shot: Shot) -> None:
+        new_data = await asyncio.to_thread(self.shot_loader, shot)
         try:
             processing_info = self.watchlist[shot.sequence.path]
         except KeyError:
