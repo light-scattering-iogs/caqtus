@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Optional, Self
 
 import attrs
@@ -20,6 +20,7 @@ from ..shot import TimeLanes
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
+    from caqtus.analysis.loading import DataImporter
 
 
 @attrs.frozen(eq=False, order=False)
@@ -163,7 +164,7 @@ class Sequence:
 
     def load_shots_data(
         self,
-        importer: Callable[[Shot], polars.DataFrame],
+        importer: "DataImporter",
         tags: Optional[polars.type_aliases.FrameInitTypes] = None,
     ) -> Iterable[polars.DataFrame]:
         """Load the data of the shots that have been run for this sequence.
