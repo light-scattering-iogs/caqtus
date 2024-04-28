@@ -1,7 +1,7 @@
 """
 This module defines what interface the devices must satisfy to be used in an
 experiment.
-For each device to be used on the experiment, there must be a corresponding class
+For each instrument to be used on the experiment, there must be a corresponding class
 inheriting from :class:`Device` that contains the low-level logic to control the actual
 instrument.
 

@@ -22,7 +22,8 @@ def square_wave(t, period, duty_cycle=0.5, low=0, high=1):
     return result
 
 
-BUILTINS = {
+#: Built-in functions and constants available in expressions.
+BUILTINS: Mapping[str, Any] = {
     "abs": numpy.abs,
     "arccos": numpy.arccos,
     "arcsin": numpy.arcsin,
@@ -54,9 +55,31 @@ BUILTINS = {
 
 
 class Expression:
-    """Python expression that can be evaluated to return a python object
+    """Unevaluated expression.
 
-    It may depend on other upstream variables that must be specified during evaluation.
+    This class is a wrapper around a python string expression that can be evaluated
+    later when the values of the variables it depends on are known.
+
+    If the expression contains syntax errors, they only will be raised when the
+    expression is evaluated.
+
+    Args:
+        body: the expression body.
+            This is a string expression that must follow the specifications of the
+            python syntax, with some exceptions.
+        implicit_multiplication: if True, the expression will be parsed to allow
+            implicit multiplication, even though it is not regular python.
+            For example, 'a b' will be parsed as 'a * b'.
+            If set to False, a syntax error will be raised in such cases when evaluating
+            the expression.
+        allow_percentage: if True, the expression will be parsed to understand the
+            use of the % symbol as a multiplication by 0.01.
+            If set to False, the % symbol will be understood as a modulo operator.
+        allow_degree: if True, the expression will be parsed to understand the use
+            of the ° symbol as the degree symbol and will be replaced by the name
+            `deg` in the expression.
+            If set to False, the ° symbol will not be replaced and evaluating the
+            expression will raise a SyntaxError.
     """
 
     def __init__(
@@ -65,30 +88,12 @@ class Expression:
         implicit_multiplication: bool = True,
         allow_percentage: bool = True,
         allow_degree: bool = True,
-        cache_evaluation: bool = True,
     ):
-        """
-        Args:
-            body: the expression body. This is a string expression that must follow the
-            specifications of the python syntax.
-            implicit_multiplication: if True, the expression will be parsed to allow
-            implicit multiplication, even though it is not regular python. For example,
-            'a b' will be parsed as 'a * b'. If set to False, a syntax error will be
-            raised in such cases.
-            allow_percentage: if True, the expression will be parsed to understand the
-            use of the % symbol as a multiplication by 0.01. If set to False, the %
-            symbol will be understood as a modulo operator.
-            allow_degree: if True, the expression will be parsed to understand the use
-            of the ° symbol as the degree symbol and will be replaced by the name
-            `deg` in the expression. If set to False, the ° symbol will not be replaced
-            and evaluating the expression will raise a SyntaxError.
-        """
 
         self.body = body
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
         self._allow_degree = allow_degree
-        self._cache_evaluation = cache_evaluation
 
     @property
     def body(self) -> str:
@@ -133,6 +138,12 @@ class Expression:
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
         """Evaluate an expression on specific values for its variables.
 
+        Args:
+            variables: a mapping of variable names to their values.
+                The variables the expression depends upon will be replaced by the values
+                in this mapping.
+                The mapping is also concatenated with the :data:`BUILTINS` dictionary.
+
         Raises:
             EvaluationError: if an error occurred during evaluation.
         """
@@ -148,7 +159,7 @@ class Expression:
 
     @cached_property
     def upstream_variables(self) -> frozenset[VariableName]:
-        """Return the name of the other variables the expression depend on"""
+        """Return the name of the other variables the expression depend on."""
 
         variables = set()
 
@@ -211,7 +222,6 @@ class Expression:
             "implicit_multiplication": self._implicit_multiplication,
             "allow_percentage": self._allow_percentage,
             "allow_degree": self._allow_degree,
-            "cache_evaluation": self._cache_evaluation,
         }
 
     def __setstate__(self, state):
