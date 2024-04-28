@@ -32,15 +32,14 @@ def test_1(session_maker, qtmodeltester: ModelTester):
 def test_2(session_maker, qtmodeltester: ModelTester, steps_configuration, time_lanes):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
-        sequence = session.sequences.create(
-            PureSequencePath(r"\test"), steps_configuration, time_lanes
-        )
+        path = PureSequencePath(r"\test")
+        session.sequences.create(path, steps_configuration, time_lanes)
     qtmodeltester.check(model)
     index = model.index(0, 1)
     assert index.data().state == State.DRAFT
 
     with session_maker() as session:
-        session.sequences.set_state(sequence.path, State.PREPARING)
+        session.sequences.set_state(path, State.PREPARING)
 
     QtAsyncio.run(model.update_stats(model.index(0, 0)), keep_running=False)
     assert index.data().state == State.PREPARING
