@@ -128,7 +128,7 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> Sequence:
+    ) -> None:
         self.parent_session.paths.create_path(path)
         if unwrap(self.is_sequence(path)):
             raise PathIsSequenceError(path)
@@ -153,7 +153,6 @@ class SQLSequenceCollection(SequenceCollection):
             ),
         )
         self._get_sql_session().add(new_sequence)
-        return Sequence(path)
 
     def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return dict(

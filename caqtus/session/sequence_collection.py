@@ -190,7 +190,7 @@ class SequenceCollection(Protocol):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> Sequence:
+    ) -> None:
         """Create a new sequence at the given path.
 
         Raises:
