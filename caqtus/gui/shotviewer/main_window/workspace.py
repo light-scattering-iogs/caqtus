@@ -2,13 +2,10 @@ from typing import Any
 
 import attrs
 
-from caqtus.utils.serialization import JSON
-from ..single_shot_viewers import ManagerName
-
 
 @attrs.define
 class ViewState:
-    view_state: JSON
+    view_state: Any
     window_geometry: str
 
 
