@@ -37,6 +37,9 @@ class AsyncPathHierarchyView(QTreeView):
         self.setItemDelegateForColumn(1, ProgressDelegate(self))
         self.setUniformRowHeights(True)
 
+    async def run_async(self) -> None:
+        await self._model.watch_session()
+
     def show_header_menu(self, pos):
         menu = QMenu(self)
         visibility_menu = menu.addMenu("Visible")

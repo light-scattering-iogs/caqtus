@@ -64,9 +64,6 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
 
-    async def run_async(self) -> None:
-        await self._model.watch_session()
-
     def show_context_menu(self, pos):
         index = self.indexAt(pos)
 
