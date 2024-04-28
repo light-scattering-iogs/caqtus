@@ -51,7 +51,6 @@ class ShotViewer:
 
         try:
             sys.excepthook = excepthook
-            with self.window:
-                QtAsyncio.run(self.window.exec_async(), keep_running=False)
+            QtAsyncio.run(self.window.exec_async(), keep_running=False)
         finally:
             sys.excepthook = previous_excepthook
