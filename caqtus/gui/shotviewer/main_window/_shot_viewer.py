@@ -1,12 +1,14 @@
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Callable
 
 import qtawesome
 from PySide6.QtWidgets import QApplication
 
 from caqtus.session import ExperimentSessionMaker
+from caqtus.utils.serialization import JSON
 from .single_shot_widget import ShotViewerMainWindow
 from .single_shot_widget import ViewManager
+from .. import ShotView
 from ...qtutil import QtAsyncio
 
 
@@ -15,6 +17,8 @@ class ShotViewer:
         self,
         session_maker: ExperimentSessionMaker,
         view_managers: Mapping[str, ViewManager],
+        view_dumper: Callable[[ShotView], JSON],
+        view_loader: Callable[[JSON], ShotView],
     ):
         app = QApplication.instance()
         if app is None:
@@ -31,6 +35,8 @@ class ShotViewer:
         self.window = ShotViewerMainWindow(
             experiment_session_maker=session_maker,
             view_managers=view_managers,
+            view_dumper=view_dumper,
+            view_loader=view_loader,
         )
 
     def run(self) -> None:

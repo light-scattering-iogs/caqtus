@@ -46,6 +46,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         experiment_session_maker: ExperimentSessionMaker,
         view_managers: Mapping[str, ViewManager],
         view_dumper: Callable[[ShotView], JSON],
+        view_loader: Callable[[JSON], ShotView],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -63,6 +64,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._task_group = asyncio.TaskGroup()
         self._state: WidgetState = NoSequenceSelected()
         self._view_dumper = view_dumper
+        self._view_loader = view_loader
 
     async def exec_async(self):
         async with self._task_group:
