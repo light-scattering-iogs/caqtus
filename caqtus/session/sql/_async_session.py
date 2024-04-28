@@ -15,6 +15,7 @@ from ._sequence_collection import (
     _get_sequence_global_parameters,
     _get_time_lanes,
     _get_iteration_configuration,
+    _get_shots,
 )
 from ._serializer import Serializer
 from .. import ParameterNamespace, PureSequencePath
@@ -30,6 +31,7 @@ from ..sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
+    PureShot,
 )
 from ..shot import TimeLanes
 
@@ -163,6 +165,11 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> IterationConfiguration:
         return await self._run_sync(_get_iteration_configuration, path, self.serializer)
+
+    async def get_shots(
+        self, path: PureSequencePath
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+        return await self._run_sync(_get_shots, path)
 
     async def _run_sync(
         self,

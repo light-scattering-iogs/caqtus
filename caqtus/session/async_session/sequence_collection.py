@@ -8,7 +8,7 @@ from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError
 from ..sequence import State
 from ..sequence.iteration_configuration import IterationConfiguration
-from ..sequence_collection import PathIsNotSequenceError, SequenceStats
+from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
 from ..shot import TimeLanes
 
 
@@ -43,4 +43,10 @@ class AsyncSequenceCollection(Protocol):
 
     @abc.abstractmethod
     async def get_global_parameters(self, path: PureSequencePath) -> ParameterNamespace:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_shots(
+        self, path: PureSequencePath
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
