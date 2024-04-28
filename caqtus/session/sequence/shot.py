@@ -9,7 +9,7 @@ import attrs
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
-from .. import PureSequencePath
+from ..path import PureSequencePath
 from ..sequence_collection import PureShot
 
 # We don't do these imports at runtime because it would create a circular import.
