@@ -1,7 +1,8 @@
 from typing import TypeAlias, Protocol, TypeVar
 
 import polars
-from caqtus.session import ExperimentSession, Shot
+
+from caqtus.session import Shot
 
 ShotData: TypeAlias = polars.DataFrame
 
@@ -15,7 +16,7 @@ class ShotImporter(Protocol[T]):
     returns a value of generic type T.
     """
 
-    def __call__(self, shot: Shot, session: ExperimentSession) -> T:
+    def __call__(self, shot: Shot) -> T:
         raise NotImplementedError()
 
 
