@@ -42,6 +42,11 @@ class Sequence:
     def __str__(self) -> str:
         return str(self.path)
 
+    def __len__(self) -> int:
+        """Return the number of shots that have been run for this sequence."""
+
+        return len(self.get_shots())
+
     def exists(self) -> bool:
         """Check if the sequence exists in the session."""
 
