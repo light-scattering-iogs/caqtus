@@ -9,7 +9,9 @@ from caqtus.session import (
     BoundSequencePath,
     PureSequencePath,
     ParameterNamespace,
+    Sequence,
 )
+from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap
 from caqtus.session.sequence import State, Shot
 from caqtus.session.sequence.iteration_configuration import (
@@ -111,9 +113,8 @@ def test_deletion_1(empty_session):
 def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.exists(session)
-        assert session.sequences.is_sequence(p)
+        session.sequences.create(p, steps_configuration, time_lanes)
+        assert unwrap(session.sequences.is_sequence(p))
         with pytest.raises(PathIsSequenceError):
             session.sequences.create(p, steps_configuration, time_lanes)
 
@@ -125,10 +126,10 @@ def test_sequence_deletion(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
-        assert sequence.exists(session)
+        assert session.sequences.is_sequence(session)
 
 
 def test_sequence_deletion_1(
@@ -141,14 +142,15 @@ def test_sequence_deletion_1(
     # with the same path would fail.
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.exists(session)
+        session.sequences.create(p, steps_configuration, time_lanes)
+        assert unwrap(session.sequences.is_sequence(p))
     with empty_session as session:
         session.paths.delete_path(p, delete_sequences=True)
-        assert not sequence.exists(session)
+        with pytest.raises(PathNotFoundError):
+            session.sequences.is_sequence(p)
     with empty_session as session:
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.exists(session)
+        session.sequences.create(p, steps_configuration, time_lanes)
+        assert session.sequences.is_sequence(p)
 
 
 def test_iteration_save(
@@ -156,8 +158,8 @@ def test_iteration_save(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
-        assert sequence.get_iteration_configuration(session) == steps_configuration
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        assert sequence.get_iteration_configuration() == steps_configuration
         new_steps_configuration = StepsConfiguration(
             steps=steps_configuration.steps + [steps_configuration.steps[0]]
         )
@@ -167,14 +169,14 @@ def test_iteration_save(
         session.sequences.set_iteration_configuration(
             sequence.path, new_steps_configuration
         )
-        assert sequence.get_iteration_configuration(session) == new_steps_configuration
-        assert sequence.get_time_lanes(session) == time_lanes
+        assert sequence.get_iteration_configuration() == new_steps_configuration
+        assert sequence.get_time_lanes() == time_lanes
 
 
 def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
     with empty_session as session:
         p = PureSequencePath(r"\test\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
     with session:
@@ -194,7 +196,7 @@ def test_shot_creation(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {
@@ -214,17 +216,17 @@ def test_shot_creation(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots(session)
-        assert shots == [Shot(sequence, 0)], sequence.get_shots(session)
-        assert shots[0].get_parameters(session) == parameters
-        d = shots[0].get_data(session)
+        shots = sequence.get_shots()
+        assert shots == [Shot(sequence, 0)], sequence.get_shots()
+        assert shots[0].get_parameters() == parameters
+        d = shots[0].get_data()
         assert d[DataLabel("a")] == [1, 2, 3]
         assert np.array_equal(d[DataLabel("b")], np.linspace(0, 1, 100))
         assert np.array_equal(d[DataLabel("c")], data[DataLabel("c")])
-        assert shots[0].get_data_by_label(DataLabel("a"), session) == [1, 2, 3]
+        assert shots[0].get_data_by_label(DataLabel("a")) == [1, 2, 3]
 
         with pytest.raises(KeyError):
-            shots[0].get_data_by_label(DataLabel("d"), session)
+            shots[0].get_data_by_label(DataLabel("d"))
 
 
 def test_data_not_existing(
@@ -232,7 +234,7 @@ def test_data_not_existing(
 ):
     with empty_session as session:
         p = PureSequencePath(r"\test")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
         parameters = {}
@@ -248,9 +250,9 @@ def test_data_not_existing(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots(session)
+        shots = sequence.get_shots()
         with pytest.raises(KeyError):
-            shots[0].get_data_by_label(DataLabel("c"), session)
+            shots[0].get_data_by_label(DataLabel("c"))
 
 
 def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
@@ -266,14 +268,14 @@ def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             ),
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
 
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_global_parameters(p, parameters)
         session.sequences.set_device_configurations(p, device_configurations)
 
     with session:
-        s = sequence.get_global_parameters(session)
+        s = sequence.get_global_parameters()
         d = session.sequences.get_device_configurations(p)
     assert s == parameters
     assert d == device_configurations
@@ -287,10 +289,10 @@ def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             )
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = session.sequences.create(p, steps_configuration, time_lanes)
+        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_device_configurations(p, configurations)
 
     with session:
-        d = sequence.get_device_configurations(session)
+        d = sequence.get_device_configurations()
     assert d == configurations
