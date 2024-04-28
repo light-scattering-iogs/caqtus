@@ -12,8 +12,7 @@ T = TypeVar("T")
 class ShotImporter(Protocol[T]):
     """Protocol for object that can import a value from a shot.
 
-    A shot importer is a callable that takes a shot and an experiment session and
-    returns a value of generic type T.
+    A shot importer is a callable that takes a shot returns a value of generic type T.
     """
 
     def __call__(self, shot: Shot) -> T:
