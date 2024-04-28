@@ -144,18 +144,21 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         )
 
     def set_workspace(self, workspace: WorkSpace) -> None:
-        views = {}
-        for view_name, view_state in workspace.views.items():
-            manager_name = view_state.manager_name
-            manager = self._view_managers[manager_name]
-            view = manager.constructor(view_state.view_state)
-            views[view_name] = (manager_name, view)
-        self._views = views
-        self._dock_area.clear()
-        self._add_default_docks()
-        for view_name, (manager_name, view) in self._views.items():
-            self._add_view(manager_name, view_name, view)
-        self._dock_area.restoreState(workspace.docks_state)
+        self.clear()
+
+        self.restoreState(_str_to_bytes_array(workspace.window_state))
+        self.restoreGeometry(_str_to_bytes_array(workspace.window_geometry))
+
+        for view_name, view_state in workspace.view_states.items():
+            view = self._view_loader(view_state.view_state)
+            sub_window = self._mdi_area.addSubWindow(view)
+            sub_window.setWindowTitle(view_name)
+            sub_window.restoreGeometry(_str_to_bytes_array(view_state.window_geometry))
+            sub_window.show()
+
+    def clear(self):
+        for sub_window in self._mdi_area.subWindowList():
+            sub_window.close()
 
     def save_workspace_as(self) -> None:
         file_name, _ = QFileDialog.getSaveFileName(
@@ -221,6 +224,10 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         async with asyncio.TaskGroup() as tg:
             for view in self._get_views().values():
                 tg.create_task(view.display_shot(shot))
+
+
+def _str_to_bytes_array(string: str) -> QByteArray:
+    return QByteArray(bytes(string, "utf-8"))
 
 
 @attrs.frozen
