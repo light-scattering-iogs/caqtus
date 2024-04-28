@@ -6,8 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from caqtus.session import ExperimentSessionMaker
 from caqtus.utils.serialization import JSON
-from .single_shot_widget import ShotViewerMainWindow, ViewCreator
-from .. import ShotView
+from .single_shot_widget import ShotViewerMainWindow, ViewCreator, ShotView
 from ...qtutil import QtAsyncio
 
 
