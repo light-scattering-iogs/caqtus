@@ -91,6 +91,9 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         paths_dock.setObjectName("SequencesDock")
         paths_dock.setWidget(self._hierarchy_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
+        self._hierarchy_view.sequence_double_clicked.connect(
+            self.on_sequence_double_clicked
+        )
 
         self.action_save_workspace_as.triggered.connect(self.save_workspace_as)
         self.action_load_workspace.triggered.connect(self.load_workspace)
