@@ -1,37 +1,39 @@
-import collections
+from __future__ import annotations
+
+import abc
+import asyncio
+import datetime
 import functools
 from typing import Optional, Mapping, assert_never
 
-from PySide6.QtCore import Signal, QSignalBlocker, QSettings, QObject
+import attrs
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import (
     QWidget,
-    QHBoxLayout,
-    QPushButton,
     QMainWindow,
-    QSpinBox,
     QFileDialog,
-    QSizePolicy,
 )
 from pyqtgraph.dockarea import DockArea, Dock
 
 from caqtus.gui.common.sequence_hierarchy import (
-    PathHierarchyView,
     AsyncPathHierarchyView,
 )
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    AsyncExperimentSession,
+)
 from caqtus.session._return_or_raise import unwrap
+from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import Shot
+from caqtus.session.sequence_collection import PureShot, PathIsNotSequenceError
 from caqtus.utils import serialization
-from caqtus.utils.concurrent import BackgroundScheduler
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ViewManager, ManagerName
 
 
 class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
-    current_shot_changed = Signal(Shot)
-    shots_changed = Signal()
-
     def __init__(
         self,
         experiment_session_maker: ExperimentSessionMaker,
@@ -39,30 +41,24 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        # self._sequence_watcher: Optional[SequenceWatcher] = None
 
         self._views: dict[str, tuple[ManagerName, ShotView]] = {}
         self._experiment_session_maker = experiment_session_maker
         self._view_managers = view_managers
         self._dock_area = DockArea()
-        self._sequence_widget = AsyncPathHierarchyView(
+        self._hierarchy_view = AsyncPathHierarchyView(
             self._experiment_session_maker, self
         )
-        self._shot_selector: ShotSelector = ShotSelector()
-        self._sequence_watcher = SequenceWatcher(self._experiment_session_maker)
-
         self._setup_ui()
         self.restore_state()
 
-    def __enter__(self):
-        self._sequence_watcher.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._sequence_watcher.__exit__(exc_type, exc_val, exc_tb)
+        self._task_group = asyncio.TaskGroup()
+        self._state: WidgetState = NoSequenceSelected()
 
     async def exec_async(self):
-        await self._sequence_widget.run_async()
+        async with self._task_group:
+            self._task_group.create_task(self.watch())
+            self._task_group.create_task(self._hierarchy_view.run_async())
 
     def restore_state(self):
         ui_settings = QSettings("Caqtus", "ShotViewer")
@@ -89,24 +85,11 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def _add_default_docks(self) -> None:
         sequence_dock = Dock("Sequences")
-        self._sequence_widget.sequence_double_clicked.connect(
+        self._hierarchy_view.sequence_double_clicked.connect(
             self.on_sequence_double_clicked
         )
-        sequence_dock.addWidget(self._sequence_widget)
+        sequence_dock.addWidget(self._hierarchy_view)
         self._dock_area.addDock(sequence_dock, "left")
-
-        self._shot_selector = ShotSelector()
-        self._sequence_watcher.shots_changed.connect(self._shot_selector.on_shots_changed)  # type: ignore
-        self._shot_selector.current_shot_changed.connect(self._update_views)  # type: ignore
-        self._shot_selector.setSizePolicy(
-            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
-        )
-
-        # noinspection PyUnresolvedReferences
-        shot_selector_dock = Dock("Shot")
-        # shot_selector_dock.hideTitleBar()
-        shot_selector_dock.addWidget(self._shot_selector)
-        self._dock_area.addDock(shot_selector_dock, "top", relativeTo=sequence_dock)
 
     def _add_view_managers(self, view_managers: Mapping[str, ViewManager]) -> None:
         for name in view_managers:
@@ -190,11 +173,76 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             self.set_workspace(workspace)
 
     def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
-        self._sequence_watcher.set_sequence(path)
+        self._task_group.create_task(self.on_sequence_double_clicked_async(path))
 
-    def _update_views(self, shot: Shot) -> None:
-        for view in self._views.values():
-            view[1].display_shot(shot)
+    async def on_sequence_double_clicked_async(self, path: PureSequencePath) -> None:
+        async with self._experiment_session_maker.async_session() as session:
+            state = await get_state_async(path, session)
+            await self._transition(state)
+
+    async def watch(self):
+        while True:
+            await self.compare()
+            await asyncio.sleep(50e-3)
+
+    async def compare(self):
+        match self._state:
+            case NoSequenceSelected():
+                return
+            case SequenceSelected(path=path):
+                async with self._experiment_session_maker.async_session() as session:
+                    new_state = await get_state_async(path, session)
+                    if new_state != self._state:
+                        await self._transition(new_state)
+            case _:
+                assert_never(self._state)
+
+    async def _transition(self, state: WidgetState) -> None:
+        if isinstance(state, SequenceSelected):
+            if state.shots:
+                last_shot = max(state.shots, key=lambda s: s.index)
+                with self._experiment_session_maker() as session:
+                    shot = Shot.bound(last_shot, session)
+                    await self._update_views(shot)
+
+    async def _update_views(self, shot: Shot) -> None:
+        async with asyncio.TaskGroup() as tg:
+            for view in self._views.values():
+                tg.create_task(view[1].display_shot(shot))
+
+
+@attrs.frozen
+class WidgetState(abc.ABC):
+    pass
+
+
+@attrs.frozen
+class NoSequenceSelected(WidgetState):
+    pass
+
+
+@attrs.frozen
+class SequenceSelected(WidgetState):
+    path: PureSequencePath
+    start_time: Optional[datetime.datetime]
+    shots: frozenset[PureShot]
+
+
+async def get_state_async(
+    sequence_path: Optional[PureSequencePath], session: AsyncExperimentSession
+) -> WidgetState:
+    if sequence_path is None:
+        return NoSequenceSelected()
+    shots_result = await session.sequences.get_shots(sequence_path)
+    try:
+        shots = shots_result.unwrap()
+    except (PathNotFoundError, PathIsNotSequenceError):
+        return NoSequenceSelected()
+    else:
+        start_time = unwrap(await session.sequences.get_stats(sequence_path)).start_time
+    return SequenceSelected(
+        path=sequence_path, shots=frozenset(shots), start_time=start_time
+    )
 
     #
     # def add_shots(self, shots: Iterable[Shot]) -> None:
@@ -265,132 +313,3 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
     #             yaml = file.read()
     #         workspace = serialization.converters["yaml"].loads(yaml, Workspace)
     #         self.load_workspace(workspace)
-
-
-class ShotSelector(QWidget):
-    current_shot_changed = Signal(Shot)
-
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent=parent)
-        self.setLayout(QHBoxLayout())
-
-        self._shot_spinbox = QSpinBox()
-        self._shot_spinbox.setMinimum(0)
-        # self._shot_spinbox.valueChanged.connect(self.on_shot_spinbox_value_changed)
-        self.layout().addWidget(self._shot_spinbox)
-
-        self._number_shots = 0
-        self._current_shot = -1
-
-        self._left_button = QPushButton("<")
-        self._left_button.setAutoRepeat(True)
-        self._left_button.setAutoRepeatInterval(100)
-        # self._left_button.clicked.connect(self.on_left_button_clicked)
-        self.layout().addWidget(self._left_button)
-
-        self._pause_button = QPushButton("||")
-        # self._pause_button.clicked.connect(self.on_pause_button_clicked)
-        self.layout().addWidget(self._pause_button)
-
-        self._right_button = QPushButton(">")
-        self._right_button.setAutoRepeat(True)
-        self._right_button.setAutoRepeatInterval(100)
-        # self._right_button.clicked.connect(self.on_right_button_clicked)
-        self.layout().addWidget(self._right_button)
-
-        self._last_button = QPushButton(">>")
-        # self._last_button.clicked.connect(self.on_last_button_clicked)
-        self.layout().addWidget(self._last_button)
-        # noinspection PyUnresolvedReferences
-        self.layout().addStretch()
-        self._shots: list[Shot] = []
-
-        self.update_spinbox()
-
-    def on_shots_changed(self, shots: collections.abc.Sequence[Shot]) -> None:
-        self._number_shots = len(shots)
-        self._shots = shots
-        if self._current_shot == -1:
-            self.current_shot_changed.emit(self._shots[-1])
-        self.update_spinbox()
-
-    def on_left_button_clicked(self) -> None:
-        if self._current_shot == -1:
-            self._current_shot = len(self._shots) - 1
-
-        self._current_shot = max(0, self._current_shot - 1)
-        self.update_spinbox()
-        # noinspection PyUnresolvedReferences
-        self.current_shot_changed.emit(self.get_selected_shot())
-
-    def on_right_button_clicked(self) -> None:
-        if self._current_shot == -1:
-            self._current_shot = len(self._shots) - 1
-
-        self._current_shot = min(len(self._shots) - 1, self._current_shot + 1)
-        self.update_spinbox()
-        # noinspection PyUnresolvedReferences
-        self.current_shot_changed.emit(self.get_selected_shot())
-
-    def on_last_button_clicked(self) -> None:
-        self._current_shot = -1
-        self.update_spinbox()
-        # noinspection PyUnresolvedReferences
-        self.current_shot_changed.emit(self.get_selected_shot())
-
-    def on_pause_button_clicked(self) -> None:
-        if self._current_shot == -1:
-            self._current_shot = len(self._shots) - 1
-        self.update_spinbox()
-        # noinspection PyUnresolvedReferences
-        self.current_shot_changed.emit(self.get_selected_shot())
-
-    def on_shot_spinbox_value_changed(self, value: int) -> None:
-        self._current_shot = value - 1
-        # noinspection PyUnresolvedReferences
-        self.current_shot_changed.emit(self.get_selected_shot())
-
-    def update_spinbox(self) -> None:
-        if self._current_shot == -1:
-            current_shot = self._number_shots - 1
-        else:
-            current_shot = self._current_shot
-        with QSignalBlocker(self._shot_spinbox):
-            self._shot_spinbox.setMaximum(self._number_shots)
-            self._shot_spinbox.setValue(current_shot + 1)
-            self._shot_spinbox.setSuffix(f"/{self._number_shots}")
-            self._shot_spinbox.setPrefix("Shot: ")
-
-
-class SequenceWatcher(QObject):
-    shots_changed = Signal(list)
-
-    def __init__(self, session_maker: ExperimentSessionMaker):
-        super().__init__()
-        self._session_maker = session_maker
-        self._sequence_path: Optional[PureSequencePath] = None
-        self._shots = set[Shot]()
-        self._background_scheduler = BackgroundScheduler(on_error="stop_all")
-
-    def __enter__(self):
-        self._background_scheduler.__enter__()
-        self._background_scheduler.schedule_task(self.update, interval=0.1)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._background_scheduler.__exit__(exc_type, exc_val, exc_tb)
-
-    def update(self):
-        if self._sequence_path is None:
-            return
-        with self._session_maker() as session:
-            shot_list = unwrap(session.sequences.get_shots(self._sequence_path))
-            shots = set(shot_list)
-            new_shots = shots - self._shots
-            self._shots.update(new_shots)
-            if new_shots:
-                self.shots_changed.emit(sorted(self._shots, key=lambda shot: shot.index))  # type: ignore
-
-    def set_sequence(self, path: PureSequencePath) -> None:
-        self._sequence_path = path
-        self._shots.clear()
