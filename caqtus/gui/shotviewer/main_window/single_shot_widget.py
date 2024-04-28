@@ -4,6 +4,7 @@ import abc
 import asyncio
 import datetime
 import functools
+from collections.abc import Callable
 from typing import Optional, Mapping, assert_never
 
 import attrs
@@ -29,6 +30,7 @@ from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import Shot
 from caqtus.session.sequence_collection import PureShot, PathIsNotSequenceError
 from caqtus.utils import serialization
+from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ViewManager, ManagerName
@@ -43,6 +45,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self,
         experiment_session_maker: ExperimentSessionMaker,
         view_managers: Mapping[str, ViewManager],
+        view_dumper: Callable[[ShotView], JSON],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -59,6 +62,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self.restore_state()
         self._task_group = asyncio.TaskGroup()
         self._state: WidgetState = NoSequenceSelected()
+        self._view_dumper = view_dumper
 
     async def exec_async(self):
         async with self._task_group:
@@ -127,7 +131,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             view = sub_window.widget()
             assert isinstance(view, ShotView)
             view_states[view_name] = ViewState(
-                view_state=view.get_state(),
+                view_state=self._view_dumper(view),
                 window_geometry=_bytes_to_str(sub_window.saveGeometry()),
                 window_state=_bytes_to_str(sub_window.saveState()),
             )
