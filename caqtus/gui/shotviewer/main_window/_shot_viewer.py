@@ -6,8 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from caqtus.session import ExperimentSessionMaker
 from caqtus.utils.serialization import JSON
-from .single_shot_widget import ShotViewerMainWindow
-from .single_shot_widget import ViewManager
+from .single_shot_widget import ShotViewerMainWindow, ViewCreator
 from .. import ShotView
 from ...qtutil import QtAsyncio
 
@@ -16,7 +15,7 @@ class ShotViewer:
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        view_managers: Mapping[str, ViewManager],
+        view_creators: Mapping[str, ViewCreator],
         view_dumper: Callable[[ShotView], JSON],
         view_loader: Callable[[JSON], ShotView],
     ):
@@ -34,7 +33,7 @@ class ShotViewer:
 
         self.window = ShotViewerMainWindow(
             experiment_session_maker=session_maker,
-            view_managers=view_managers,
+            view_creators=view_creators,
             view_dumper=view_dumper,
             view_loader=view_loader,
         )

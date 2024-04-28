@@ -5,7 +5,7 @@ import asyncio
 import datetime
 import functools
 from collections.abc import Callable
-from typing import Optional, Mapping, assert_never
+from typing import Optional, Mapping, assert_never, TypeAlias
 
 import attrs
 from PySide6.QtCore import QSettings, Qt, QByteArray
@@ -33,18 +33,21 @@ from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
-from ..single_shot_viewers import ShotView, ViewManager, ManagerName
+from ..single_shot_viewers import ShotView, ManagerName
 
 
 def _bytes_to_str(array: QByteArray) -> str:
     return array.data().decode("utf-8", "ignore")
 
 
+ViewCreator: TypeAlias = Callable[[], tuple[str, ShotView]]
+
+
 class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
     def __init__(
         self,
         experiment_session_maker: ExperimentSessionMaker,
-        view_managers: Mapping[str, ViewManager],
+        view_creators: Mapping[str, ViewCreator],
         view_dumper: Callable[[ShotView], JSON],
         view_loader: Callable[[JSON], ShotView],
         parent: Optional[QWidget] = None,
@@ -53,7 +56,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
         self._views: dict[str, tuple[ManagerName, ShotView]] = {}
         self._experiment_session_maker = experiment_session_maker
-        self._view_managers = view_managers
+        self._view_creators = view_creators
         self._mdi_area = QMdiArea()
 
         self._hierarchy_view = AsyncPathHierarchyView(
@@ -92,28 +95,21 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self.action_save_workspace_as.triggered.connect(self.save_workspace_as)
         self.action_load_workspace.triggered.connect(self.load_workspace)
 
-        self._add_view_managers(self._view_managers)
+        self._add_view_creators(self._view_creators)
 
         self.setWindowTitle("Single Shot Viewer")
         self.setCentralWidget(self._mdi_area)
 
-    def _add_view_managers(self, view_managers: Mapping[str, ViewManager]) -> None:
-        for name in view_managers:
+    def _add_view_creators(self, view_creators: Mapping[str, ViewCreator]) -> None:
+        for name in view_creators:
             self.menu_add_view.addAction(name).triggered.connect(
                 functools.partial(self._create_view, name)
             )
 
-    def _create_view(self, manager_name: ManagerName) -> None:
-        manager = self._view_managers[manager_name]
-        created = manager.state_generator(self)
-        match created:
-            case None:
-                return
-            case (view_name, view_state):
-                view = manager.constructor(view_state)
-                self._add_view(view_name, view)
-            case _:
-                assert_never(created)
+    def _create_view(self, creator_name: str) -> None:
+        manager = self._view_creators[creator_name]
+        name, view = manager()
+        self._add_view(name, view)
 
     def _add_view(self, view_name: str, view: ShotView) -> None:
         sub_window = self._mdi_area.addSubWindow(view)

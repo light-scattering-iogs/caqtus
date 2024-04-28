@@ -41,6 +41,9 @@ class ImageView(ShotView, pyqtgraph.ImageView):
             self._on_levels_changed
         )
 
+    def get_state(self) -> ImageViewState:
+        return self._state
+
     def set_state(self, state: ImageViewState) -> None:
         if state.colormap is not None:
             colormap = pyqtgraph.colormap.get(state.colormap, source="matplotlib")
@@ -87,9 +90,7 @@ class ImageViewDialog(QDialog, Ui_ImageViewDialog):
         self.setupUi(self)
 
 
-def create_image_view(
-    parent: Optional[QWidget] = None,
-) -> Optional[tuple[str, ImageViewState]]:
+def create_image_view() -> tuple[str, ImageViewState]:
     dialog = ImageViewDialog()
     result = dialog.exec()
     if result == QDialog.DialogCode.Accepted:
@@ -105,4 +106,5 @@ def create_image_view(
         )
         return name, serialization.unstructure(state)
 
-    return None
+    else:
+        raise ValueError("Dialog was cancelled.")
