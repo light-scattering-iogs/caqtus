@@ -34,7 +34,7 @@ from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath, BoundSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from ..sequence import Sequence, Shot
+from ..sequence import Sequence
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
     Unknown,
@@ -47,6 +47,7 @@ from ..sequence_collection import (
     SequenceNotEditableError,
     SequenceStats,
     ShotNotFoundError,
+    PureShot,
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLanes
@@ -334,12 +335,11 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[Shot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         sql_sequence = self._query_sequence_model(path)
 
-        def extract_shots(sql_sequence: SQLSequence) -> list[Shot]:
-            sequence = Sequence(BoundSequencePath(path, self.parent_session))
-            return [Shot(sequence, shot.index) for shot in sql_sequence.shots]
+        def extract_shots(sql_sequence: SQLSequence) -> list[PureShot]:
+            return [PureShot(path, shot.index) for shot in sql_sequence.shots]
 
         return sql_sequence.map(extract_shots)
 
