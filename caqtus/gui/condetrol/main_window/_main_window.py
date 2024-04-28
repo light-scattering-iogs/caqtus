@@ -94,9 +94,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 QApplication.quit()
 
         async with self._task_group:
-            self._task_group.create_task(wrap(self._path_view.run_async()))
-            self._task_group.create_task(wrap(self._monitor_global_parameters()))
-            self._task_group.create_task(wrap(self.sequence_widget.exec_async()))
+            self._task_group.create_task(self._path_view.run_async())
+            self._task_group.create_task(self._monitor_global_parameters())
+            self._task_group.create_task(self.sequence_widget.exec_async())
 
     def setup_ui(self):
         self.setupUi(self)

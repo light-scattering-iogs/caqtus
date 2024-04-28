@@ -82,7 +82,7 @@ class Condetrol:
             try:
                 app = QApplication.instance()
                 if app is not None:
-                    app.quit()
+                    app.exit(-1)
             finally:
                 sys.__excepthook__(*args)
 
@@ -92,6 +92,6 @@ class Condetrol:
         sys.excepthook = excepthook
 
         try:
-            QtAsyncio.run(self.window.run_async())
+            QtAsyncio.run(self.window.run_async(), keep_running=False)
         finally:
             sys.excepthook = previous_excepthook
