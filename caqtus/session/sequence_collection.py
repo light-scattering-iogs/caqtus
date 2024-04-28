@@ -67,7 +67,6 @@ class SequenceCollection(Protocol):
     data from sequences and shots.
     """
 
-
     @abc.abstractmethod
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         raise NotImplementedError
