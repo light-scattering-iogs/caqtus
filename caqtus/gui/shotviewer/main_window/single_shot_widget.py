@@ -35,11 +35,6 @@ from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ManagerName
 
-
-def _bytes_to_str(array: QByteArray) -> str:
-    return array.data().decode("utf-8", "ignore")
-
-
 ViewCreator: TypeAlias = Callable[[], tuple[str, ShotView]]
 
 
@@ -227,7 +222,11 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
 
 def _str_to_bytes_array(string: str) -> QByteArray:
-    return QByteArray(bytes(string, "utf-8"))
+    return QByteArray.fromHex(bytes(string, "ascii"))
+
+
+def _bytes_to_str(array: QByteArray) -> str:
+    return bytes(array.toHex()).decode("ascii")
 
 
 @attrs.frozen
