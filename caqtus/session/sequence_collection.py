@@ -299,5 +299,5 @@ class SequenceStats:
 class PureShot:
     """Unique identifier for a shot in a sequence."""
 
-    sequence: PureSequencePath
+    sequence_path: PureSequencePath
     index: int
