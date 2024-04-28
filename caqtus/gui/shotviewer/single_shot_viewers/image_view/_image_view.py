@@ -82,8 +82,8 @@ class ImageView(ShotView, pyqtgraph.ImageView):
 
 
 class ImageViewDialog(QDialog, Ui_ImageViewDialog):
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent=parent)
+    def __init__(self):
+        super().__init__()
         self.setupUi(self)
 
 
