@@ -24,13 +24,13 @@ if TYPE_CHECKING:
 
 @attrs.frozen(eq=False, order=False)
 class Sequence:
-    """Contains the runtime information and data of a sequence.
+    """Gives access to the runtime information and data of a sequence.
 
-    Only methods that take an ExperimentSession argument actually connect to the
-    permanent storage of the experiment. Such methods can raise SequenceNotFoundError if
-    the sequence does not exist in the session. They are also expected to be
-    comparatively slow since they require a file system access, possibly over the
-    network.
+    Args:
+        path: The path of the sequence.
+        session: The session to which the sequence belongs.
+            The sequence is bound to the session and is only valid in the context where
+            the session is active.
     """
 
     path: PureSequencePath
@@ -42,10 +42,6 @@ class Sequence:
             raise PathIsNotSequenceError(self.path)
 
     @classmethod
-    def bound(cls, path: PureSequencePath, session: ExperimentSession) -> Self:
-        return cls(path, session)
-
-    @classmethod
     def create(
         cls,
         path: PureSequencePath,
@@ -53,7 +49,16 @@ class Sequence:
         time_lanes: TimeLanes,
         session: ExperimentSession,
     ) -> Self:
-        """Create a new sequence in the session."""
+        """Create a new sequence in the session.
+
+        Args:
+            path: The path at which to create the sequence.
+            iteration_configuration: How the sequence parameters should be iterated
+                over.
+            time_lanes: How the shots should be run.
+            session: The session in which the sequence should be created.
+                The session must be active.
+        """
 
         session.sequences.create(path, iteration_configuration, time_lanes)
         return cls(path, session)
@@ -67,17 +72,17 @@ class Sequence:
         return len(self.get_shots())
 
     def get_state(self) -> State:
-        """Return the state of the sequence.
-
-        Raises:
-            PathNotFoundError: If the sequence does not exist in the session.
-            PathIsNotSequenceError: If the path exists but is not a sequence.
-        """
+        """Return the state of the sequence."""
 
         return unwrap(self.session.sequences.get_state(self.path))
 
     def get_global_parameters(self) -> ParameterNamespace:
-        """Return a copy of the parameter tables set for this sequence."""
+        """Return a copy of the parameter tables set for this sequence.
+
+        Raises:
+            RuntimeError: If the sequence is in DRAFT state, since the global parameters
+                are only set once the sequence has entered the PREPARING state.
+        """
 
         return self.session.sequences.get_global_parameters(self.path)
 
@@ -156,26 +161,37 @@ class Sequence:
         iterations = self.get_iteration_configuration()
         return iterations.get_parameter_names()
 
-    def __eq__(self, other):
-        if isinstance(other, Sequence):
-            return self.path == other.path
-        else:
-            return NotImplemented
-
-    def __hash__(self):
-        return hash(self.path)
-
     def load_shots_data(
         self,
         importer: Callable[[Shot], polars.DataFrame],
         tags: Optional[polars.type_aliases.FrameInitTypes] = None,
     ) -> Iterable[polars.DataFrame]:
+        """Load the data of the shots that have been run for this sequence.
+
+        Args:
+            importer: A function that takes a shot and returns the data of the shot.
+                It will be called for each shot in the sequence.
+            tags: An optional object that can be converted to a 1-row DataFrame.
+                The dataframe will be joined with the data of each shot.
+                This allows to add extra information to the dataframes returned for this
+                sequence.
+
+        Yields:
+            Dataframes containing the data of the shots in the sequence ordered by shot
+            index.
+        """
+
         shots = self.get_shots()
         shots.sort(key=lambda x: x.index)
+
+        tags_dataframe = polars.DataFrame(tags) if tags is not None else None
+        if len(tags_dataframe) != 1:
+            raise ValueError("tags should be a single row DataFrame")
+
         for shot in shots:
             data = importer(shot)
 
             if tags is not None:
-                yield data.join(polars.DataFrame(tags), how="cross")
+                yield data.join(tags_dataframe, how="cross")
             else:
                 yield data
