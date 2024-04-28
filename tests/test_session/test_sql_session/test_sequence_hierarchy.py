@@ -17,7 +17,7 @@ from caqtus.session.sequence import State, Shot
 from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
 )
-from caqtus.session.sequence_collection import PathIsSequenceError
+from caqtus.session.sequence_collection import PathIsSequenceError, PureShot
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.units import ureg
@@ -129,7 +129,7 @@ def test_sequence_deletion(
         session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
-        assert session.sequences.is_sequence(session)
+        assert session.sequences.is_sequence(p)
 
 
 def test_sequence_deletion_1(
@@ -147,7 +147,7 @@ def test_sequence_deletion_1(
     with empty_session as session:
         session.paths.delete_path(p, delete_sequences=True)
         with pytest.raises(PathNotFoundError):
-            session.sequences.is_sequence(p)
+            unwrap(session.sequences.is_sequence(p))
     with empty_session as session:
         session.sequences.create(p, steps_configuration, time_lanes)
         assert session.sequences.is_sequence(p)
@@ -217,7 +217,8 @@ def test_shot_creation(
             datetime.datetime.now(),
         )
         shots = sequence.get_shots()
-        assert shots == [Shot(sequence, 0)], sequence.get_shots()
+        assert len(shots) == 1
+        assert shots[0].index == 0
         assert shots[0].get_parameters() == parameters
         d = shots[0].get_data()
         assert d[DataLabel("a")] == [1, 2, 3]
