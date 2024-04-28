@@ -78,20 +78,12 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
-        self._exit_stack = contextlib.ExitStack()
         self._task_group = asyncio.TaskGroup()
         self._run_sequence_task: Optional[asyncio.Task] = None
         self.timer = QTimer(self)
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
-
-        async def wrap(awaitable):
-            try:
-                await awaitable
-            except Exception as e:
-                logging.critical("An error occurred in the main window.", exc_info=e)
-                QApplication.quit()
 
         async with self._task_group:
             self._task_group.create_task(self._path_view.run_async())

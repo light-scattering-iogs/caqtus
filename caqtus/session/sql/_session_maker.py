@@ -113,9 +113,9 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         path: str,
         serializer: Serializer,
     ):
-        engine = create_engine(f"sqlite:///{path}?check_same_thread=True")
+        engine = create_engine(f"sqlite:///{path}?check_same_thread=False")
         async_engine = create_async_engine(
-            f"sqlite+aiosqlite:///{path}?check_same_thread=True"
+            f"sqlite+aiosqlite:///{path}?check_same_thread=False"
         )
         super().__init__(engine, async_engine, serializer)
 
