@@ -34,6 +34,8 @@ class Shot:
     def sequence(self) -> "Sequence":
         """The sequence to which this shot belongs."""
 
+        from .sequence import Sequence
+
         return Sequence(self.sequence_path, self._session)
 
     def __eq__(self, other):
