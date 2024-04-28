@@ -3,12 +3,13 @@ from collections.abc import Sequence
 
 import polars
 
-from caqtus.session import Shot, ExperimentSession
+from caqtus.session import Shot
+from .shot_data import DataImporter
 
 
-class CombinableLoader(abc.ABC):
+class CombinableLoader(DataImporter, abc.ABC):
     @abc.abstractmethod
-    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
+    def __call__(self, shot: Shot) -> polars.DataFrame:
         ...
 
     def __add__(self, other):
@@ -33,9 +34,9 @@ class HorizontalConcatenateLoader(CombinableLoader):
             else:
                 self.loaders.append(loader)
 
-    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
+    def __call__(self, shot: Shot) -> polars.DataFrame:
         return polars.concat(
-            [loader(shot, session) for loader in self.loaders], how="horizontal"
+            [loader(shot) for loader in self.loaders], how="horizontal"
         )
 
 
@@ -44,8 +45,8 @@ class CrossProductLoader(CombinableLoader):
         self.first = first
         self.second = second
 
-    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
-        return self.first(shot, session).join(self.second(shot, session), how="cross")
+    def __call__(self, shot: Shot) -> polars.DataFrame:
+        return self.first(shot).join(self.second(shot), how="cross")
 
 
 # noinspection PyPep8Naming
@@ -56,8 +57,8 @@ class join(CombinableLoader):
         self.loaders = loaders
         self.on = on
 
-    def __call__(self, shot: Shot, session: ExperimentSession) -> polars.DataFrame:
-        dataframe = self.loaders[0](shot, session)
+    def __call__(self, shot: Shot) -> polars.DataFrame:
+        dataframe = self.loaders[0](shot)
         for loader in self.loaders[1:]:
-            dataframe = dataframe.join(loader(shot, session), on=self.on, how="inner")
+            dataframe = dataframe.join(loader(shot), on=self.on, how="inner")
         return dataframe
