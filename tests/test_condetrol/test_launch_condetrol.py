@@ -57,7 +57,7 @@ def test_condetrol(
         connect_to_experiment_manager=lambda: experiment_manager,
     )
     with session_maker() as session:
-        sequence = session.sequences.create(
+        session.sequences.create(
             path=PureSequencePath(r"\test"),
             iteration_configuration=steps_configuration,
             time_lanes=time_lanes,
