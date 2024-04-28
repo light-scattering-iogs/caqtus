@@ -14,7 +14,10 @@ from PySide6.QtWidgets import (
 )
 from pyqtgraph.dockarea import DockArea, Dock
 
-from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
+from caqtus.gui.common.sequence_hierarchy import (
+    PathHierarchyView,
+    AsyncPathHierarchyView,
+)
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.sequence import Shot
@@ -42,7 +45,9 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._experiment_session_maker = experiment_session_maker
         self._view_managers = view_managers
         self._dock_area = DockArea()
-        self._sequence_widget = PathHierarchyView(self._experiment_session_maker)
+        self._sequence_widget = AsyncPathHierarchyView(
+            self._experiment_session_maker, self
+        )
         self._shot_selector: ShotSelector = ShotSelector()
         self._sequence_watcher = SequenceWatcher(self._experiment_session_maker)
 
@@ -51,12 +56,13 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def __enter__(self):
         self._sequence_watcher.__enter__()
-        self._sequence_widget.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._sequence_widget.__exit__(exc_type, exc_val, exc_tb)
         return self._sequence_watcher.__exit__(exc_type, exc_val, exc_tb)
+
+    async def exec_async(self):
+        await self._sequence_widget.run_async()
 
     def restore_state(self):
         ui_settings = QSettings("Caqtus", "ShotViewer")

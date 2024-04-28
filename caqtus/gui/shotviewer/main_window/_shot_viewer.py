@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 from caqtus.session import ExperimentSessionMaker
 from .single_shot_widget import ShotViewerMainWindow
 from .single_shot_widget import ViewManager
+from ...qtutil import QtAsyncio
 
 
 class ShotViewer:
@@ -47,9 +48,10 @@ class ShotViewer:
         self.window.show()
 
         previous_excepthook = sys.excepthook
-        sys.excepthook = excepthook
 
         try:
-            self.app.exec()
+            sys.excepthook = excepthook
+            with self.window:
+                QtAsyncio.run(self.window.exec_async(), keep_running=False)
         finally:
             sys.excepthook = previous_excepthook
