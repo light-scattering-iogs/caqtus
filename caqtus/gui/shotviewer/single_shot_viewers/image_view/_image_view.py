@@ -90,7 +90,7 @@ class ImageViewDialog(QDialog, Ui_ImageViewDialog):
 def create_image_view(
     parent: Optional[QWidget] = None,
 ) -> Optional[tuple[str, ImageViewState]]:
-    dialog = ImageViewDialog(parent=parent)
+    dialog = ImageViewDialog()
     result = dialog.exec()
     if result == QDialog.DialogCode.Accepted:
         name = dialog.view_name_line_edit.text()
