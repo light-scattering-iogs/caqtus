@@ -1,3 +1,3 @@
-from .single_shot_widget import ShotViewerMainWindow
+from ._shot_viewer import ShotViewer
 
-__all__ = ["ShotViewerMainWindow"]
+__all__ = ["ShotViewer"]
