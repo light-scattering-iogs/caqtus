@@ -39,6 +39,19 @@ class Sequence:
     def bound(cls, path: PureSequencePath, session: ExperimentSession) -> Self:
         return cls(path, session)
 
+    @classmethod
+    def create(
+        cls,
+        path: PureSequencePath,
+        iteration_configuration: IterationConfiguration,
+        time_lanes: TimeLanes,
+        session: ExperimentSession,
+    ) -> Self:
+        """Create a new sequence in the session."""
+
+        session.sequences.create(path, iteration_configuration, time_lanes)
+        return cls(path, session)
+
     def __str__(self) -> str:
         return str(self.path)
 
@@ -129,7 +142,7 @@ class Sequence:
 
         iteration_configuration = self.get_iteration_configuration()
         time_lanes = self.get_time_lanes()
-        self._session.sequences.create(target_path, iteration_configuration, time_lanes)
+        self.create(target_path, iteration_configuration, time_lanes, self._session)
         return Sequence(target_path, self._session)
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
