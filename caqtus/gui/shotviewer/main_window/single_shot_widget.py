@@ -204,6 +204,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
                 with self._experiment_session_maker() as session:
                     shot = Shot.bound(last_shot, session)
                     await self._update_views(shot)
+        self._state = state
 
     async def _update_views(self, shot: Shot) -> None:
         async with asyncio.TaskGroup() as tg:
