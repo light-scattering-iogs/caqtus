@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Self
 
 import attrs
 import polars
@@ -33,19 +33,24 @@ class Sequence:
     """
 
     path: PureSequencePath
+    _session: ExperimentSession
+
+    @classmethod
+    def bound(cls, path: PureSequencePath, session: ExperimentSession) -> Self:
+        return cls(path, session)
 
     def __str__(self) -> str:
         return str(self.path)
 
-    def exists(self, session: ExperimentSession) -> bool:
+    def exists(self) -> bool:
         """Check if the sequence exists in the session."""
 
-        if session.paths.does_path_exists(self.path):
-            return unwrap(session.sequences.is_sequence(self.path))
+        if self._session.paths.does_path_exists(self.path):
+            return unwrap(self._session.sequences.is_sequence(self.path))
         else:
             return False
 
-    def get_state(self, session: ExperimentSession) -> State:
+    def get_state(self) -> State:
         """Return the state of the sequence.
 
         Raises:
@@ -53,62 +58,61 @@ class Sequence:
             PathIsNotSequenceError: If the path exists but is not a sequence.
         """
 
-        return unwrap(session.sequences.get_state(self.path))
+        return unwrap(self._session.sequences.get_state(self.path))
 
-    def get_global_parameters(self, session: ExperimentSession) -> ParameterNamespace:
+    def get_global_parameters(self) -> ParameterNamespace:
         """Return a copy of the parameter tables set for this sequence."""
 
-        return session.sequences.get_global_parameters(self.path)
+        return self._session.sequences.get_global_parameters(self.path)
 
-    def get_iteration_configuration(
-        self, session: ExperimentSession
-    ) -> IterationConfiguration:
+    def get_iteration_configuration(self) -> IterationConfiguration:
         """Return the iteration configuration of the sequence."""
 
-        return session.sequences.get_iteration_configuration(self.path)
+        return self._session.sequences.get_iteration_configuration(self.path)
 
-    def get_time_lanes(self, session: ExperimentSession) -> TimeLanes:
+    def get_time_lanes(self) -> TimeLanes:
         """Return the time lanes that define how a shot is run for this sequence."""
 
-        return session.sequences.get_time_lanes(self.path)
+        return self._session.sequences.get_time_lanes(self.path)
 
-    def set_time_lanes(self, time_lanes: TimeLanes, session: ExperimentSession) -> None:
+    def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes that define how a shot is run for this sequence."""
 
-        return session.sequences.set_time_lanes(self.path, time_lanes)
+        return self._session.sequences.set_time_lanes(self.path, time_lanes)
 
-    def get_shots(self, session: ExperimentSession) -> list[Shot]:
+    def get_shots(self) -> list[Shot]:
         """Return the shots that belong to this sequence."""
 
-        return unwrap(session.sequences.get_shots(self.path))
+        pure_shots = unwrap(self._session.sequences.get_shots(self.path))
+        return [Shot.bound(shot, self._session) for shot in pure_shots]
 
-    def get_start_time(self, session: ExperimentSession) -> Optional[datetime.datetime]:
+    def get_start_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was started.
 
         If the sequence has not been started, return None.
         """
 
-        return unwrap(session.sequences.get_stats(self.path)).start_time
+        return unwrap(self._session.sequences.get_stats(self.path)).start_time
 
-    def get_end_time(self, session: ExperimentSession) -> Optional[datetime.datetime]:
+    def get_end_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was ended.
 
         If the sequence has not been ended, return None.
         """
 
-        return unwrap(session.sequences.get_stats(self.path)).stop_time
+        return unwrap(self._session.sequences.get_stats(self.path)).stop_time
 
-    def get_expected_number_of_shots(self, session: ExperimentSession) -> int | Unknown:
+    def get_expected_number_of_shots(self) -> int | Unknown:
         """Return the expected number of shots for the sequence.
 
         If the sequence has not been started, return None.
         """
 
-        return unwrap(session.sequences.get_stats(self.path)).expected_number_shots
+        return unwrap(
+            self._session.sequences.get_stats(self.path)
+        ).expected_number_shots
 
-    def duplicate(
-        self, target_path: PureSequencePath | str, session: ExperimentSession
-    ) -> Sequence:
+    def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
         """Duplicate the sequence to a new path.
 
         The sequence created will be in the draft state and will have the same iteration
@@ -118,27 +122,25 @@ class Sequence:
         if isinstance(target_path, str):
             target_path = PureSequencePath(target_path)
 
-        iteration_configuration = self.get_iteration_configuration(session)
-        time_lanes = self.get_time_lanes(session)
-        return session.sequences.create(
+        iteration_configuration = self.get_iteration_configuration()
+        time_lanes = self.get_time_lanes()
+        return self._session.sequences.create(
             target_path, iteration_configuration, time_lanes
         )
 
-    def get_device_configurations(
-        self, session: ExperimentSession
-    ) -> dict[DeviceName, DeviceConfiguration]:
+    def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         """Return the device configurations used when the sequence was launched."""
 
-        device_configurations = session.sequences.get_device_configurations(self.path)
+        device_configurations = self._session.sequences.get_device_configurations(
+            self.path
+        )
 
         return dict(device_configurations)
 
-    def get_local_parameters(
-        self, session: ExperimentSession
-    ) -> set[DottedVariableName]:
-        """Return the name of the parameters that are specifically set for this sequence."""
+    def get_local_parameters(self) -> set[DottedVariableName]:
+        """Return the name of the parameters specifically set for this sequence."""
 
-        iterations = self.get_iteration_configuration(session)
+        iterations = self.get_iteration_configuration()
         return iterations.get_parameter_names()
 
     def __eq__(self, other):
@@ -152,14 +154,13 @@ class Sequence:
 
     def load_shots_data(
         self,
-        importer: Callable[[Shot, ExperimentSession], polars.DataFrame],
-        session: ExperimentSession,
+        importer: Callable[[Shot], polars.DataFrame],
         tags: Optional[polars.type_aliases.FrameInitTypes] = None,
     ) -> Iterable[polars.DataFrame]:
-        shots = self.get_shots(session)
+        shots = self.get_shots()
         shots.sort(key=lambda x: x.index)
         for shot in shots:
-            data = importer(shot, session)
+            data = importer(shot)
 
             if tags is not None:
                 yield data.join(polars.DataFrame(tags), how="cross")
