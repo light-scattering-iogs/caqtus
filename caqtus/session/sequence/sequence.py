@@ -129,9 +129,8 @@ class Sequence:
 
         iteration_configuration = self.get_iteration_configuration()
         time_lanes = self.get_time_lanes()
-        return self._session.sequences.create(
-            target_path, iteration_configuration, time_lanes
-        )
+        self._session.sequences.create(target_path, iteration_configuration, time_lanes)
+        return Sequence(target_path, self._session)
 
     def get_device_configurations(self) -> dict[DeviceName, DeviceConfiguration]:
         """Return the device configurations used when the sequence was launched."""
