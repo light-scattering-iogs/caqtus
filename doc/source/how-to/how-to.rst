@@ -2,10 +2,11 @@ How to
 ======
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    install
    how-to-use-sql-server
+   how-to-add-new-device
    ui
    add lane
 

@@ -2,10 +2,10 @@ Reference
 =========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   overview
    experiment session
    timelanes
    Condetrol
    device/index
+   types/index
