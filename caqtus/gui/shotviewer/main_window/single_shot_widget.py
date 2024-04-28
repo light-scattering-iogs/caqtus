@@ -7,7 +7,7 @@ import functools
 from typing import Optional, Mapping, assert_never
 
 import attrs
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, QByteArray
 from PySide6.QtWidgets import (
     QWidget,
     QMainWindow,
@@ -32,6 +32,10 @@ from caqtus.utils import serialization
 from .main_window_ui import Ui_ShotViewerMainWindow
 from .workspace import ViewState, WorkSpace
 from ..single_shot_viewers import ShotView, ViewManager, ManagerName
+
+
+def _bytes_to_str(array: QByteArray) -> str:
+    return array.data().decode("utf-8", "ignore")
 
 
 class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
@@ -101,29 +105,36 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
                 return
             case (view_name, view_state):
                 view = manager.constructor(view_state)
-                self._add_view(manager_name, view_name, view)
+                self._add_view(view_name, view)
             case _:
                 assert_never(created)
 
-    def _add_view(
-        self, constructor_name: ManagerName, view_name: str, view: ShotView
-    ) -> None:
-        self._views[view_name] = (constructor_name, view)
+    def _add_view(self, view_name: str, view: ShotView) -> None:
         sub_window = self._mdi_area.addSubWindow(view)
         sub_window.setWindowTitle(view_name)
         sub_window.show()
 
+    def _get_views(self) -> dict[str, ShotView]:
+        return {
+            sub_window.windowTitle(): sub_window.widget()
+            for sub_window in self._mdi_area.subWindowList()
+        }
+
     def get_workspace(self) -> WorkSpace:
-        views = {}
-        for view_name, (manager_name, view) in self._views.items():
-            manager = self._view_managers[manager_name]
-            state = manager.dumper(view)
-            views[view_name] = ViewState(manager_name=manager_name, view_state=state)
-        window_state = self.saveState().data().decode("utf-8", "ignore")
-        window_geometry = self.saveGeometry().data().decode("utf-8", "ignore")
+        view_states = {}
+        for sub_window in self._mdi_area.subWindowList():
+            view_name = sub_window.windowTitle()
+            view = sub_window.widget()
+            assert isinstance(view, ShotView)
+            view_states[view_name] = ViewState(
+                view_state=view.get_state(),
+                window_geometry=_bytes_to_str(sub_window.saveGeometry()),
+                window_state=_bytes_to_str(sub_window.saveState()),
+            )
+        window_state = _bytes_to_str(self.saveState())
+        window_geometry = _bytes_to_str(self.saveGeometry())
         return WorkSpace(
-            views=views,
-            docks_state=self._dock_area.saveState(),
+            view_states=view_states,
             window_state=window_state,
             window_geometry=window_geometry,
         )
@@ -204,8 +215,8 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     async def _update_views(self, shot: Shot) -> None:
         async with asyncio.TaskGroup() as tg:
-            for view in self._views.values():
-                tg.create_task(view[1].display_shot(shot))
+            for view in self._get_views().values():
+                tg.create_task(view.display_shot(shot))
 
 
 @attrs.frozen
@@ -240,73 +251,3 @@ async def get_state_async(
     return SequenceSelected(
         path=sequence_path, shots=frozenset(shots), start_time=start_time
     )
-
-    #
-    # def add_shots(self, shots: Iterable[Shot]) -> None:
-    #     self._shot_selector.add_shots(shots)
-    #     self._update_viewers(self._shot_selector.get_selected_shot())
-    #
-    # def add_view(self, view_type_name: str) -> None:
-    #     view_name, ok = QInputDialog().getText(
-    #         self, "Choose a name for the view", "Name:"
-    #     )
-    #     if ok and view_name:
-    #         view_type = self._single_shot_viewers[view_type_name]
-    #         view = view_type(self._experiment_session_maker)
-    #         subwindow = self._mdi_area.addSubWindow(view)
-    #         subwindow.setWindowTitle(view_name)
-    #         subwindow.show()
-    #
-    # def reset(self) -> None:
-    #     self._shot_selector.reset()
-    #
-    # def _update_viewers(self, shot) -> None:
-    #     for viewer in self._get_viewers().values():
-    #         viewer.set_shot(shot)
-    #     for viewer in self._get_viewers().values():
-    #         viewer.update_view()
-    #
-    # def _get_viewers(self) -> dict[str, SingleShotView]:
-    #     return {
-    #         subwindow.windowTitle(): subwindow.widget()
-    #         for subwindow in self._mdi_area.subWindowList()
-    #     }
-    #
-    # def load_workspace(self, workspace: "Workspace") -> None:
-    #     self.clear()
-    #     for name, viewer in workspace.viewers.items():
-    #         self.add_view(name, viewer)
-    #
-    # def extract_workspace(self) -> "Workspace":
-    #     viewers = self._get_viewers()
-    #     return Workspace(viewers=viewers)
-    #
-    # def clear(self) -> None:
-    #     for subwindow in self._mdi_area.subWindowList():
-    #         self._mdi_area.removeSubWindow(subwindow)
-    #
-    # def on_save_as(self):
-    #     directory = platformdirs.user_data_path(
-    #         appname="Viewer", appauthor="Caqtus", ensure_exists=True
-    #     )
-    #     file, _ = QFileDialog.getSaveFileName(
-    #         self, "Save Workspace", str(directory), "YAML (*.yaml)"
-    #     )
-    #     if file:
-    #         workspace = self.extract_workspace()
-    #         yaml = serialization.converters["yaml"].dumps(workspace, Workspace)
-    #         with open(file, "w") as file:
-    #             file.write(yaml)
-    #
-    # def on_load(self):
-    #     directory = platformdirs.user_data_path(
-    #         appname="Viewer", appauthor="Caqtus", ensure_exists=True
-    #     )
-    #     file, _ = QFileDialog.getOpenFileName(
-    #         self, "Load Workspace", str(directory), "YAML (*.yaml)"
-    #     )
-    #     if file:
-    #         with open(file, "r") as file:
-    #             yaml = file.read()
-    #         workspace = serialization.converters["yaml"].loads(yaml, Workspace)
-    #         self.load_workspace(workspace)

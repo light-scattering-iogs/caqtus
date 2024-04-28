@@ -2,18 +2,19 @@ from typing import Any
 
 import attrs
 
+from caqtus.utils.serialization import JSON
 from ..single_shot_viewers import ManagerName
 
 
 @attrs.define
 class ViewState:
-    manager_name: ManagerName
-    view_state: Any
+    view_state: JSON
+    window_geometry: str
+    window_state: str
 
 
 @attrs.define
 class WorkSpace:
     window_state: str
     window_geometry: str
-    docks_state: Any
-    views: dict[str, ViewState]
+    view_states: dict[str, ViewState]

@@ -16,6 +16,10 @@ class ShotView(QWidget, metaclass=qabc.QABCMeta):
     async def display_shot(self, shot: Shot) -> None:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_state(self) -> JSON:
+        raise NotImplementedError
+
 
 S = TypeVar("S", bound=JSON)
 V = TypeVar("V", bound=ShotView)
