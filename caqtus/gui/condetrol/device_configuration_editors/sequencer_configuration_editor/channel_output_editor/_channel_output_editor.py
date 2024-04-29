@@ -10,12 +10,14 @@ from caqtus.device.sequencer.configuration import (
     DeviceTrigger,
     LaneValues,
     Advance,
+    CalibratedAnalogMapping,
 )
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode
+from ._analog_mapping_node import CalibratedAnalogMappingNode
 
 
 class ChannelOutputEditor(QWidget):
@@ -27,9 +29,11 @@ class ChannelOutputEditor(QWidget):
         self.graph.register_node(DeviceTriggerNode)
         self.graph.register_node(LaneNode)
         self.graph.register_node(AdvanceNode)
+        self.graph.register_node(CalibratedAnalogMappingNode)
         self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
         self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
         self.nodes_tree.set_category_label("caqtus.sequencer_node.timing", "Timing")
+        self.nodes_tree.set_category_label("caqtus.sequencer_node.mapping", "Mapping")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.graph.widget, 1)
@@ -97,6 +101,18 @@ class ChannelOutputEditor(QWidget):
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
 
+    @build_node.register
+    def build_analog_mapping_node(
+        self, analog_mapping: CalibratedAnalogMapping
+    ) -> CalibratedAnalogMappingNode:
+        node = CalibratedAnalogMappingNode()
+        node.set_units(analog_mapping.input_units, analog_mapping.output_units)
+        node.set_data_points(analog_mapping.measured_data_points)
+        self.graph.add_node(node, selected=False, push_undo=False)
+        input_node = self.build_node(analog_mapping.input_)
+        input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
@@ -139,6 +155,26 @@ def construct_advance(node: AdvanceNode) -> Advance:
     else:
         input_ = construct_output(input_node)
     return Advance(advance=advance, input_=input_)
+
+
+@construct_output.register
+def construct_analog_mapping(
+    node: CalibratedAnalogMappingNode,
+) -> CalibratedAnalogMapping:
+    input_node = node.get_input_node()
+    if input_node is None:
+        raise MissingInputError(
+            f"Analog mapping node {node.name()} must have an input node"
+        )
+    else:
+        input_ = construct_output(input_node)
+    input_units, output_units = node.get_units()
+    return CalibratedAnalogMapping(
+        input_=input_,
+        input_units=input_units,
+        output_units=output_units,
+        measured_data_points=tuple(node.get_data_points()),
+    )
 
 
 class InvalidNodeConfigurationError(ValueError):

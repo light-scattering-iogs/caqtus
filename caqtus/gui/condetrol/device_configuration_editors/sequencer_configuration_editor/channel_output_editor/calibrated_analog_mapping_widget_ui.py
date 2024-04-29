@@ -23,7 +23,7 @@ class Ui_CalibratedAnalogMappingWigdet(object):
     def setupUi(self, CalibratedAnalogMappingWigdet):
         if not CalibratedAnalogMappingWigdet.objectName():
             CalibratedAnalogMappingWigdet.setObjectName(u"CalibratedAnalogMappingWigdet")
-        CalibratedAnalogMappingWigdet.resize(569, 376)
+        CalibratedAnalogMappingWigdet.resize(925, 376)
         self.horizontalLayout_2 = QHBoxLayout(CalibratedAnalogMappingWigdet)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.verticalLayout = QVBoxLayout()

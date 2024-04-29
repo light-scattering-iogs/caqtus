@@ -1,13 +1,66 @@
 from collections.abc import Sequence
 from typing import Optional
 
+from NodeGraphQt import BaseNode, NodeBaseWidget
 from PySide6.QtCharts import QChart, QLineSeries, QVXYModelMapper, QChartView
 from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QApplication
 
 from caqtus.gui.condetrol.icons import get_icon
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
+
+
+class CalibratedAnalogMappingNode(BaseNode):
+    __identifier__ = "caqtus.sequencer_node.mapping"
+    NODE_NAME = "Analog mapping"
+
+    def __init__(self):
+        super().__init__()
+        self.add_output("out", multi_output=False, display_name=False)
+        self.input_port = self.add_input("in", multi_input=False)
+        self._widget = NodeWidgetWrapper(self.view)
+        self.add_custom_widget(self._widget)
+
+    def set_units(self, input_units: str, output_units: str) -> None:
+        (self._widget._widget.set_units(input_units, output_units))
+
+    def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
+        self._widget._widget.set_data_points(values)
+
+    def get_input_node(self) -> Optional[BaseNode]:
+        input_nodes = self.connected_input_nodes()[self.input_port]
+        if len(input_nodes) == 0:
+            return None
+        elif len(input_nodes) == 1:
+            return input_nodes[0]
+        else:
+            assert False, "There can't be multiple nodes connected to the input"
+
+    def get_units(self) -> tuple[Optional[str], Optional[str]]:
+        return self._widget._widget.get_units()
+
+    def get_data_points(self) -> list[tuple[float, float]]:
+        return self._widget._widget.get_data_points()
+
+
+class NodeWidgetWrapper(NodeBaseWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # set the label above the widget.
+        self.set_label("Custom Widget")
+
+        # set the custom widget.
+        self._widget = CalibratedAnalogMappingWidget()
+        self._widget.setStyle(QApplication.style())
+        self.set_custom_widget(self._widget)
+
+    def get_value(self):
+        return ""
+
+    def set_value(self, text):
+        pass
 
 
 class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
