@@ -2,26 +2,28 @@ from collections.abc import Sequence
 from typing import Optional
 
 from PySide6.QtCharts import QChart, QLineSeries, QVXYModelMapper, QChartView
-from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel
+from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QTableView
+from PySide6.QtWidgets import QWidget
+
+from caqtus.gui.condetrol.icons import get_icon
+from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
 
 
-class CalibratedAnalogMappingWidget(QWidget):
+class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        layout = QHBoxLayout()
-        self.setLayout(layout)
+        self.setupUi(self)
 
-        self._table = QTableView(self)
-        self._table.verticalHeader().hide()
-        self._table.horizontalHeader().setStretchLastSection(True)
         self._model = Model(self)
         self._sorted_model = QSortFilterProxyModel(self)
         self._sorted_model.setSourceModel(self._model)
         self._sorted_model.sort(0, Qt.SortOrder.AscendingOrder)
-        self._table.setModel(self._sorted_model)
-        layout.addWidget(self._table, 0)
+        self.tableView.setModel(self._sorted_model)
+        self.add_button.setIcon(get_icon("plus"))
+        self.remove_button.setIcon(get_icon("minus"))
+        self.add_button.clicked.connect(self.on_add_button_clicked)
+        self.remove_button.clicked.connect(self.on_remove_button_clicked)
 
         self._chart = QChart()
         self._chart.setAnimationOptions(QChart.AnimationOption.AllAnimations)
@@ -43,14 +45,38 @@ class CalibratedAnalogMappingWidget(QWidget):
         self._chart.axisX().setTitleText("Input")
         self._chart.axisY().setTitleText("Output")
 
-        layout.addWidget(self._chartView, 1)
+        self.layout().addWidget(self._chartView, 1)
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
 
+    def set_units(self, input_units: str, output_units: str) -> None:
+        self.inputUnitLineEdit.setText(input_units)
+        self.outputUnitLineEdit.setText(output_units)
+        self._chart.axisX().setTitleText(f"Input ({input_units})")
+        self._chart.axisY().setTitleText(f"Output ({output_units})")
+
+    def get_data_points(self) -> list[tuple[float, float]]:
+        return self._model.get_values()
+
+    def get_units(self) -> tuple[Optional[str], Optional[str]]:
+        input_units = self.inputUnitLineEdit.text()
+        if input_units == "":
+            input_units = None
+        output_units = self.outputUnitLineEdit.text()
+        if output_units == "":
+            output_units = None
+        return input_units, output_units
+
     def auto_scale(self) -> None:
         self._chart.axisX().setRange(*self._model.x_range())
         self._chart.axisY().setRange(*self._model.y_range())
+
+    def on_add_button_clicked(self):
+        self._model.insertRow(self._model.rowCount(QModelIndex()))
+
+    def on_remove_button_clicked(self):
+        self._model.removeRow(self.tableView.currentIndex().row())
 
 
 class Model(QAbstractTableModel):
@@ -113,3 +139,15 @@ class Model(QAbstractTableModel):
             else:
                 return str(section)
         return None
+
+    def insertRow(self, row, parent=QModelIndex()):
+        self.beginInsertRows(parent, row, row)
+        self._values.insert(row, (0.0, 0.0))
+        self.endInsertRows()
+        return True
+
+    def removeRow(self, row, parent=QModelIndex()):
+        self.beginRemoveRows(parent, row, row)
+        del self._values[row]
+        self.endRemoveRows()
+        return True
