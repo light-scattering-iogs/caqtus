@@ -5,7 +5,13 @@ from NodeGraphQt import BaseNode, NodeBaseWidget
 from PySide6.QtCharts import QChart, QLineSeries, QVXYModelMapper, QChartView
 from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QPainter
-from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtWidgets import (
+    QWidget,
+    QApplication,
+    QItemEditorFactory,
+    QDoubleSpinBox,
+    QStyledItemDelegate,
+)
 
 from caqtus.gui.condetrol.icons import get_icon
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
@@ -77,6 +83,10 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self.remove_button.setIcon(get_icon("minus"))
         self.add_button.clicked.connect(self.on_add_button_clicked)
         self.remove_button.clicked.connect(self.on_remove_button_clicked)
+
+        styledItemDelegate = QStyledItemDelegate(self)
+        styledItemDelegate.setItemEditorFactory(ItemEditorFactory())
+        self.tableView.setItemDelegate(styledItemDelegate)
 
         self._chart = QChart()
         self._chart.setAnimationOptions(QChart.AnimationOption.AllAnimations)
@@ -204,3 +214,17 @@ class Model(QAbstractTableModel):
         del self._values[row]
         self.endRemoveRows()
         return True
+
+
+class ItemEditorFactory(QItemEditorFactory):
+    def __init__(self):
+        super().__init__()
+
+    def createEditor(self, userType, parent):
+        if userType == 6:
+            doubleSpinBox = QDoubleSpinBox(parent)
+            doubleSpinBox.setDecimals(3)
+            doubleSpinBox.setMaximum(1000)
+            return doubleSpinBox
+        else:
+            return super().createEditor(userType, parent)
