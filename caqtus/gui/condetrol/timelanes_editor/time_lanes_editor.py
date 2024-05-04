@@ -20,8 +20,8 @@ from caqtus.gui.qtutil import block_signals
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane
 from .add_lane_dialog import AddLaneDialog
+from .extension import CondetrolLaneExtensionProtocol
 from .model import TimeLanesModel
-from ..extension import CondetrolExtensionProtocol
 
 
 class TimeLanesEditor(QWidget):
@@ -35,7 +35,7 @@ class TimeLanesEditor(QWidget):
 
     def __init__(
         self,
-        extension: CondetrolExtensionProtocol,
+        extension: CondetrolLaneExtensionProtocol,
         device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):
@@ -117,7 +117,7 @@ class TimeLanesView(QTableView):
 
     def __init__(
         self,
-        extension: CondetrolExtensionProtocol,
+        extension: CondetrolLaneExtensionProtocol,
         device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):

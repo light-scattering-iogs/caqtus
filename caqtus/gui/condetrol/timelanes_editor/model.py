@@ -20,7 +20,7 @@ import caqtus.gui.qtutil.qabc as qabc
 from caqtus.session.shot import TimeLane
 from caqtus.session.shot.timelane import TimeLanes
 from caqtus.types.expression import Expression
-from ..extension import CondetrolExtensionProtocol
+from .extension import CondetrolLaneExtensionProtocol
 
 
 class TimeStepNameModel(QAbstractListModel):
@@ -411,7 +411,9 @@ LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def __init__(
-        self, extension: CondetrolExtensionProtocol, parent: Optional[QObject] = None
+        self,
+        extension: CondetrolLaneExtensionProtocol,
+        parent: Optional[QObject] = None,
     ):
         super().__init__(parent)
         self._step_names_model = TimeStepNameModel(self)

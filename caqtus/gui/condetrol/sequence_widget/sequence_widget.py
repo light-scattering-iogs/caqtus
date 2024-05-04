@@ -29,11 +29,11 @@ from caqtus.session.sequence_collection import (
 )
 from caqtus.session.shot import TimeLanes
 from .sequence_widget_ui import Ui_SequenceWidget
-from ..extension import CondetrolExtensionProtocol
 from ..icons import get_icon
 from ..parameter_tables_editor import ParameterNamespaceEditor
 from ..sequence_iteration_editors.steps_iteration_editor import StepsIterationEditor
 from ..timelanes_editor import TimeLanesEditor
+from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
@@ -61,7 +61,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
-        extension: CondetrolExtensionProtocol,
+        extension: CondetrolLaneExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
         """Initializes the sequence widget.
