@@ -1,7 +1,5 @@
 import asyncio
-import contextlib
 import functools
-import logging
 from collections.abc import Callable
 from typing import Optional
 
@@ -10,7 +8,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QDockWidget,
     QDialog,
-    QApplication,
 )
 
 from caqtus.experiment_control import SequenceInterruptedException
@@ -24,14 +21,11 @@ from caqtus.session import (
     ParameterNamespace,
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..device_configuration_editors import (
-    DeviceConfigurationsDialog,
-    DeviceConfigurationsPlugin,
-)
+from ..device_configuration_editors import DeviceConfigurationsDialog
+from ..extension import CondetrolExtensionProtocol
 from ..logger import logger
 from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
-from ..timelanes_editor import TimeLanesPlugin
 
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
@@ -48,11 +42,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         running sequences.
         This is used to submit sequences to the manager when the user starts them
         in the GUI.
-    time_lanes_plugin
-        The plugin to use for customizing the time lane editor.
-    device_configurations_plugin
-        A plugin that provides a way to create, display and edit the device
-        configurations.
+    extension
+        The extension that provides the GUI with the necessary tools to edit sequences
+        and device configurations.
     """
 
     procedure_exception = Signal(Exception)
@@ -61,8 +53,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self,
         session_maker: ExperimentSessionMaker,
         connect_to_experiment_manager: Callable[[], ExperimentManager],
-        time_lanes_plugin: TimeLanesPlugin,
-        device_configurations_plugin: DeviceConfigurationsPlugin,
+        extension: CondetrolExtensionProtocol,
     ):
         super().__init__()
         self._path_view = EditablePathHierarchyView(session_maker, self)
@@ -70,10 +61,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.sequence_widget = SequenceWidget(
-            self.session_maker, time_lanes_plugin, parent=self
+            self.session_maker, extension, parent=self
         )
         self.device_configurations_dialog = DeviceConfigurationsDialog(
-            device_configurations_plugin, parent=self
+            extension, parent=self
         )
         self.setup_ui()
         self.restore_window()
