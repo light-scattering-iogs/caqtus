@@ -212,7 +212,7 @@ class TimeLanesView(QTableView):
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             name = self._model.get_lane_name(row - 2)
-            delegate = self.lane_delegate_factory(name, lane)
+            delegate = self.lane_delegate_factory(lane, name)
             self.setItemDelegateForRow(row, delegate)
             if delegate:
                 delegate.setParent(self)

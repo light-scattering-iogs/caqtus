@@ -80,8 +80,8 @@ class CondetrolExtensionProtocol(Protocol):
 
     def get_lane_delegate(
         self,
-        lane_name: str,
         lane: L,
+        lane_name: str,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
         sequencer_parameters: ParameterNamespace,
         parent: QWidget,
