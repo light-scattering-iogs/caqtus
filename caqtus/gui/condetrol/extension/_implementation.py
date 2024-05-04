@@ -2,6 +2,7 @@ import functools
 from collections.abc import Callable, Mapping
 from typing import TypeVar, TypeAlias, Optional, Protocol
 
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
 
 from caqtus.device import DeviceConfiguration, DeviceName
@@ -50,13 +51,14 @@ class CondetrolExtension(CondetrolExtensionProtocol):
         self.get_device_configuration_editor = functools.singledispatch(
             get_default_device_configuration_editor
         )
+        self.get_lane_delegate = functools.singledispatch(default_lane_delegate_factory)
+        self.get_lane_model = functools.singledispatch(default_lane_model_factory)
         self.configuration_factories: dict[str, Callable[[], DeviceConfiguration]] = {}
         self.lane_factories: dict[str, LaneFactory] = {
             "Digital": create_digital_lane,
             "Analog": create_analog_lane,
             "Camera": create_camera_lane,
         }
-        self.get_lane_delegate = functools.singledispatch(default_lane_delegate_factory)
 
     def register_device_configuration_editor(
         self,
@@ -126,15 +128,25 @@ def default_lane_delegate_factory(
         return None
 
 
-def default_lane_model_factory(lane) -> type[TimeLaneModel]:
+def default_lane_model_factory(
+    lane, name: str, parent: Optional[QObject]
+) -> TimeLaneModel:
     if not isinstance(lane, TimeLane):
         raise TypeError(f"Expected a TimeLane, got {type(lane)}.")
 
     if isinstance(lane, DigitalTimeLane):
-        return DigitalTimeLaneModel
+        model = DigitalTimeLaneModel(name, parent)
+        model.set_lane(lane)
+        return model
     elif isinstance(lane, AnalogTimeLane):
-        return AnalogTimeLaneModel
+        model = AnalogTimeLaneModel(name, parent)
+        model.set_lane(lane)
+        return model
     elif isinstance(lane, CameraTimeLane):
-        return CameraTimeLaneModel
+        model = CameraTimeLaneModel(name, parent)
+        model.set_lane(lane)
+        return model
     else:
-        raise NotImplementedError(f"Don't know how to handle {type(lane)}.")
+        raise NotImplementedError(
+            f"Don't know how to provide a model for {type(lane)}."
+        )
