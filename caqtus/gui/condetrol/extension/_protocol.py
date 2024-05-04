@@ -68,7 +68,7 @@ class CondetrolExtensionProtocol(Protocol):
         ...
 
     def get_lane_model(
-        self, name: str, lane: L, parent: Optional[QObject]
+        self, lane: L, name: str, parent: Optional[QObject]
     ) -> TimeLaneModel[L, Any]:
         """Return the model for the given lane.
 
