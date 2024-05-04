@@ -69,9 +69,14 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self._setup_ui()
         self.restore_state()
         self._task_group = asyncio.TaskGroup()
-        self._state: WidgetState = NoSequenceSelected()
+
         self._view_dumper = view_dumper
         self._view_loader = view_loader
+
+        self._state: WidgetState = NoSequenceSelected()
+        # Lock to prevent changing the state while comparing if the state is different
+        # from the stored sequence.
+        self._state_lock = asyncio.Lock()
 
     async def exec_async(self):
         async with self._task_group:
@@ -191,24 +196,35 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
             self.set_workspace(workspace)
 
     def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
-        self._task_group.create_task(self.on_sequence_double_clicked_async(path))
+        # We can't transition synchronously now, because the widget might be in the
+        # middle of a state comparison or a transition.
+        # So instead we schedule the transition to happen asynchronously once it's safe.
+        self._task_group.create_task(self._on_sequence_double_clicked_async(path))
 
-    async def on_sequence_double_clicked_async(self, path: PureSequencePath) -> None:
-        async with self._experiment_session_maker.async_session() as session:
+    async def _on_sequence_double_clicked_async(self, path: PureSequencePath) -> None:
+        async with (
+            self._state_lock,
+            self._experiment_session_maker.async_session() as session,
+        ):
             state = await get_state_async(path, session)
             await self._transition(state)
 
     async def watch(self):
         while True:
-            await self.compare()
+            await self.update_state()
             await asyncio.sleep(50e-3)
 
-    async def compare(self):
+    async def update_state(self) -> None:
+        """Ensure that the widget displays the up-to-date state of the sequence."""
+
         match self._state:
             case NoSequenceSelected():
                 return
             case SequenceSelected(path=path):
-                async with self._experiment_session_maker.async_session() as session:
+                async with (
+                    self._state_lock,
+                    self._experiment_session_maker.async_session() as session,
+                ):
                     new_state = await get_state_async(path, session)
                     if new_state != self._state:
                         await self._transition(new_state)
