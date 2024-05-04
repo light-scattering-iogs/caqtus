@@ -1,4 +1,3 @@
-import functools
 import itertools
 from typing import Optional
 
@@ -17,7 +16,6 @@ from PySide6.QtWidgets import (
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
 from caqtus.gui.qtutil import block_signals
-from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane
 from .add_lane_dialog import AddLaneDialog
 from .extension import CondetrolLaneExtensionProtocol
@@ -128,13 +126,7 @@ class TimeLanesView(QTableView):
         self._device_configurations: dict[DeviceName, DeviceConfiguration] = (
             device_configurations
         )
-        self._sequence_parameters = ParameterNamespace.empty()
-        self.lane_delegate_factory = functools.partial(
-            extension.get_lane_delegate,
-            device_configurations=self._device_configurations,
-            sequence_parameters=self._sequence_parameters,
-            parent=self,
-        )
+        self._extension = extension
         self.setModel(self._model)
 
         self.horizontalHeader().setContextMenuPolicy(
@@ -212,7 +204,11 @@ class TimeLanesView(QTableView):
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             name = self._model.get_lane_name(row - 2)
-            delegate = self.lane_delegate_factory(lane, name)
+            delegate = self._extension.get_lane_delegate(lane, name)
+            if delegate is not None:
+                delegate.setParent(self)
+                delegate.set_device_configurations(self._device_configurations)
+                delegate.set_parameter_names(set())
             self.setItemDelegateForRow(row, delegate)
             if delegate:
                 delegate.setParent(self)

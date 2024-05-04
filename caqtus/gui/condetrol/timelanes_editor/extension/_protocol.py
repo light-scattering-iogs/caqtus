@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QWidget, QStyledItemDelegate
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLane
+from .. import TimeLaneDelegate
 from ..model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
@@ -48,10 +49,7 @@ class CondetrolLaneExtensionProtocol(Protocol):
         self,
         lane: L,
         lane_name: str,
-        device_configurations: Mapping[DeviceName, DeviceConfiguration],
-        sequencer_parameters: ParameterNamespace,
-        parent: QWidget,
-    ) -> Optional[QStyledItemDelegate]:
+    ) -> Optional[TimeLaneDelegate]:
         """Return a delegate for the given lane.
 
         This method is called when a lane needs to be displayed.
