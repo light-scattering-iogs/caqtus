@@ -38,21 +38,11 @@ class Shot:
 
         return Sequence(self.sequence_path, self._session)
 
-    def __eq__(self, other):
-        return (
-            isinstance(other, Shot)
-            and self.sequence == other.sequence
-            and self.index == other.index
-        )
-
-    def __hash__(self):
-        return hash((self.sequence, self.index))
-
     def get_parameters(self) -> Mapping[DottedVariableName, Parameter]:
         """Return the parameters used to run this shot."""
 
         return self._session.sequences.get_shot_parameters(
-            self.sequence.path, self.index
+            self.sequence_path, self.index
         )
 
     def get_data(self) -> Mapping[DataLabel, Data]:
@@ -63,23 +53,23 @@ class Shot:
         which will avoid querying unnecessary data.
         """
 
-        return self._session.sequences.get_all_shot_data(self.sequence.path, self.index)
+        return self._session.sequences.get_all_shot_data(self.sequence_path, self.index)
 
     def get_data_by_label(self, label: DataLabel) -> Data:
         """Return the data of this shot with the given label."""
 
         return self._session.sequences.get_shot_data_by_label(
-            self.sequence.path, self.index, label
+            self.sequence_path, self.index, label
         )
 
     def get_start_time(self) -> datetime.datetime:
         """Return the time at which this shot started running."""
 
         return self._session.sequences.get_shot_start_time(
-            self.sequence.path, self.index
+            self.sequence_path, self.index
         )
 
     def get_end_time(self) -> datetime.datetime:
         """Return the time at which this shot finished running."""
 
-        return self._session.sequences.get_shot_end_time(self.sequence.path, self.index)
+        return self._session.sequences.get_shot_end_time(self.sequence_path, self.index)
