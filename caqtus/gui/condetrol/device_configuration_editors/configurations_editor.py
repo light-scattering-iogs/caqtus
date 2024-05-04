@@ -14,9 +14,6 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from ._device_configurations_plugin import (
-    DeviceConfigurationsPlugin,
-)
 from .add_device_dialog_ui import Ui_AddDeviceDialog
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
@@ -96,20 +93,19 @@ class DeviceConfigurationsEditor(QWidget):
 
     def __init__(
         self,
-        device_plugin: DeviceConfigurationsPlugin,
+        extension: "CondetrolExtensionProtocol",
         parent: Optional[QWidget] = None,
     ):
 
         super().__init__(parent)
 
-        self._device_plugin = device_plugin
         self._list_view = QListView(self)
         self._model = DeviceConfigurationModel(self)
         self._list_view.setModel(self._model)
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(self._list_view, 0)
-        self._delegate = DeviceEditorDelegate(self._layout, device_plugin, self)
+        self._delegate = DeviceEditorDelegate(self._layout, extension, self)
         self._list_view.setItemDelegate(self._delegate)
         self._list_view.setEditTriggers(
             QListView.EditTrigger.DoubleClicked | QListView.EditTrigger.CurrentChanged
@@ -177,16 +173,16 @@ class DeviceEditorDelegate(QStyledItemDelegate):
     def __init__(
         self,
         layout,
-        device_plugin: DeviceConfigurationsPlugin,
+        extension: "CondetrolExtensionProtocol",
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self._layout = layout
-        self._device_plugin = device_plugin
+        self._extension = extension
 
     def createEditor(self, parent, option, index):
         config = index.data(_CONFIG_ROLE)
-        editor = self._device_plugin.create_editor(config)
+        editor = self._extension.get_device_configuration_editor(config)
         self._layout.addWidget(editor, 1)
 
         return editor
