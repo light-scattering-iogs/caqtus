@@ -46,7 +46,6 @@ class LaneModelFactory(Protocol[L]):
         self,
         lane: L,
         lane_name: str,
-        parent: Optional[QWidget],
     ) -> TimeLaneModel[L, Any]:
         """Create a delegate for the lane passed as argument."""
         ...
@@ -109,12 +108,9 @@ def default_lane_model_factory(
 def default_lane_delegate_factory(
     lane: TimeLane,
     lane_name: str,
-    device_configurations: Mapping[DeviceName, DeviceConfiguration],
-    sequence_parameters: ParameterNamespace,
-    parent: QWidget,
 ) -> Optional[QStyledItemDelegate]:
     if isinstance(lane, DigitalTimeLane):
-        return DigitalTimeLaneDelegate(parent)
+        return DigitalTimeLaneDelegate()
     else:
         return None
 
