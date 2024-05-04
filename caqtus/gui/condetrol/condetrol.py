@@ -1,5 +1,6 @@
 import sys
 from collections.abc import Callable
+from typing import Optional
 
 import qtawesome
 from PySide6.QtGui import QFontDatabase
@@ -8,9 +9,8 @@ from PySide6.QtWidgets import QApplication
 import caqtus.gui.condetrol.ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
-from .device_configuration_editors import DeviceConfigurationsPlugin
+from .extension import CondetrolExtension, CondetrolExtensionProtocol
 from .main_window import CondetrolMainWindow
-from .timelanes_editor import TimeLanesPlugin, default_time_lanes_plugin
 from ..qtutil import QtAsyncio
 
 
@@ -45,9 +45,10 @@ class Condetrol:
         connect_to_experiment_manager: Callable[
             [], ExperimentManager
         ] = default_connect_to_experiment_manager,
-        time_lanes_plugin: TimeLanesPlugin = default_time_lanes_plugin,
-        device_configurations_plugin: DeviceConfigurationsPlugin = DeviceConfigurationsPlugin.default(),
+        extension: Optional[CondetrolExtensionProtocol] = None,
     ):
+        if extension is None:
+            extension = CondetrolExtension()
         app = QApplication.instance()
         if app is None:
             self.app = QApplication([])
@@ -65,8 +66,7 @@ class Condetrol:
         self.window = CondetrolMainWindow(
             session_maker=session_maker,
             connect_to_experiment_manager=connect_to_experiment_manager,
-            time_lanes_plugin=time_lanes_plugin,
-            device_configurations_plugin=device_configurations_plugin,
+            extension=extension,
         )
 
     def run(self) -> None:
