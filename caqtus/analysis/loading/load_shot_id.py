@@ -21,9 +21,7 @@ class LoadShotId(CombinableLoader):
     def _shot_id_to_dataframe(path: PureSequencePath, index: int) -> polars.DataFrame:
         dataframe = polars.DataFrame(
             [
-                polars.Series(
-                    "sequence", [str(path)], dtype=polars.Categorical
-                ),
+                polars.Series("sequence", [str(path)], dtype=polars.Categorical),
                 polars.Series("shot index", [index], dtype=polars.Int64),
             ]
         )

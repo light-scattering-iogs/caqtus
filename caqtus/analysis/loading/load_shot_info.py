@@ -1,7 +1,10 @@
+import datetime
+
 import polars
 
 from caqtus.session import Shot
 from .combinable_importers import CombinableLoader
+from ...session.sequence._async_shot import AsyncShot
 
 
 class LoadShotTime(CombinableLoader):
@@ -12,11 +15,22 @@ class LoadShotTime(CombinableLoader):
     when the shot started and ended.
     """
 
-    def __call__(self, shot: Shot):
-        start_time = polars.Series(
-            "start time", [shot.get_start_time()], dtype=polars.Datetime
+    def load(self, shot: Shot):
+        return self._shot_time_to_dataframe(shot.get_start_time(), shot.get_end_time())
+
+    @staticmethod
+    def _shot_time_to_dataframe(
+        start_time: datetime.datetime, stop_time: datetime.datetime
+    ) -> polars.DataFrame:
+        dataframe = polars.DataFrame(
+            [
+                polars.Series("start time", [start_time], dtype=polars.Datetime),
+                polars.Series("end time", [stop_time], dtype=polars.Datetime),
+            ]
         )
-        stop_time = polars.Series(
-            "end time", [shot.get_end_time()], dtype=polars.Datetime
-        )
-        return polars.DataFrame([start_time, stop_time])
+        return dataframe
+
+    async def async_load(self, shot: AsyncShot):
+        start_time = await shot.get_start_time()
+        stop_time = await shot.get_end_time()
+        return self._shot_time_to_dataframe(start_time, stop_time)
