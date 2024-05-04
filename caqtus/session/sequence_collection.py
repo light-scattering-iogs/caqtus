@@ -235,7 +235,6 @@ class SequenceCollection(Protocol):
     def get_shot_parameters(
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
-        """Return the shots that belong to this sequence."""
 
         raise NotImplementedError
 

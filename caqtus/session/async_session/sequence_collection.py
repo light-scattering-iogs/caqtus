@@ -1,4 +1,6 @@
 import abc
+import datetime
+from collections.abc import Mapping
 from typing import Protocol
 
 from returns.result import Result
@@ -10,6 +12,9 @@ from ..sequence import State
 from ..sequence.iteration_configuration import IterationConfiguration
 from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
 from ..shot import TimeLanes
+from caqtus.types.data import DataLabel, Data
+from caqtus.types.parameter import Parameter
+from caqtus.types.variable_name import DottedVariableName
 
 
 class AsyncSequenceCollection(Protocol):
@@ -49,4 +54,35 @@ class AsyncSequenceCollection(Protocol):
     async def get_shots(
         self, path: PureSequencePath
     ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_shot_parameters(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DottedVariableName, Parameter]:
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_all_shot_data(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DataLabel, Data]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_shot_data_by_label(
+        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    ) -> Data:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_shot_start_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    async def get_shot_end_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime.datetime:
         raise NotImplementedError
