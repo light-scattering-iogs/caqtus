@@ -468,7 +468,8 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         self.endResetModel()
 
     def create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
-        lane_model = self._extension.get_lane_model(lane, name, self)
+        lane_model = self._extension.get_lane_model(lane, name)
+        lane_model.setParent(self)
         lane_model.set_lane(lane)
         lane_model.dataChanged.connect(
             # For some reason, functools.partial does not work here, but lambda does.

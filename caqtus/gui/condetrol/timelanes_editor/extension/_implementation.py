@@ -1,12 +1,9 @@
 import functools
-from collections.abc import Mapping, Callable
+from collections.abc import Callable
 from typing import Optional, TypeAlias, Protocol, TypeVar, Any
 
-from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QWidget, QStyledItemDelegate
+from PySide6.QtWidgets import QStyledItemDelegate
 
-from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session import ParameterNamespace
 from caqtus.session.shot import (
     TimeLane,
     DigitalTimeLane,
@@ -33,9 +30,6 @@ class LaneDelegateFactory(Protocol[L]):
         self,
         lane: L,
         lane_name: str,
-        device_configurations: Mapping[DeviceName, DeviceConfiguration],
-        sequence_parameters: ParameterNamespace,
-        parent: QWidget,
     ) -> Optional[QStyledItemDelegate]:
         """Create a delegate for the lane passed as argument."""
         ...
@@ -81,22 +75,20 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
         return self._lane_factories[lane_label](steps)
 
 
-def default_lane_model_factory(
-    lane, name: str, parent: Optional[QObject]
-) -> TimeLaneModel:
+def default_lane_model_factory(lane, name: str) -> TimeLaneModel:
     if not isinstance(lane, TimeLane):
         raise TypeError(f"Expected a TimeLane, got {type(lane)}.")
 
     if isinstance(lane, DigitalTimeLane):
-        model = DigitalTimeLaneModel(name, parent)
+        model = DigitalTimeLaneModel(name)
         model.set_lane(lane)
         return model
     elif isinstance(lane, AnalogTimeLane):
-        model = AnalogTimeLaneModel(name, parent)
+        model = AnalogTimeLaneModel(name)
         model.set_lane(lane)
         return model
     elif isinstance(lane, CameraTimeLane):
-        model = CameraTimeLaneModel(name, parent)
+        model = CameraTimeLaneModel(name)
         model.set_lane(lane)
         return model
     else:
@@ -106,7 +98,7 @@ def default_lane_model_factory(
 
 
 def default_lane_delegate_factory(
-    lane: TimeLane,
+    lane,
     lane_name: str,
 ) -> Optional[QStyledItemDelegate]:
     if isinstance(lane, DigitalTimeLane):
