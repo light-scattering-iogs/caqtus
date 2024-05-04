@@ -39,6 +39,15 @@ ViewCreator: TypeAlias = Callable[[], tuple[str, ShotView]]
 
 
 class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
+    """The main window of the shot viewer application.
+
+    This window displays the sequences in a dock widget.
+    The central widget is a multi-document interface area where the user can open
+    multiple views of the shots.
+    When a sequence is double-clicked in the sequence dock widget, the window will
+    display the last shot of the sequence in all the views.
+    """
+
     def __init__(
         self,
         experiment_session_maker: ExperimentSessionMaker,
