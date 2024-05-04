@@ -2,7 +2,7 @@ import abc
 import copy
 import functools
 from collections.abc import Callable
-from typing import Optional, Any, TypeVar, Generic
+from typing import Optional, Any, TypeVar, Generic, TYPE_CHECKING
 
 from PySide6.QtCore import (
     QAbstractTableModel,
@@ -20,7 +20,9 @@ import caqtus.gui.qtutil.qabc as qabc
 from caqtus.session.shot import TimeLane
 from caqtus.session.shot.timelane import TimeLanes
 from caqtus.types.expression import Expression
-from .extension import CondetrolLaneExtensionProtocol
+
+if TYPE_CHECKING:
+    from .extension import CondetrolLaneExtensionProtocol
 
 
 class TimeStepNameModel(QAbstractListModel):
@@ -412,7 +414,7 @@ LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def __init__(
         self,
-        extension: CondetrolLaneExtensionProtocol,
+        extension: "CondetrolLaneExtensionProtocol",
         parent: Optional[QObject] = None,
     ):
         super().__init__(parent)

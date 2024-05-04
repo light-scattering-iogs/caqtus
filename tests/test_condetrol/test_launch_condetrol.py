@@ -3,7 +3,7 @@ from PySide6.QtCore import QTimer
 
 from caqtus.experiment_control.manager import BoundExperimentManager
 from caqtus.gui.condetrol import Condetrol
-from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationsPlugin
+from caqtus.gui.condetrol.extension import CondetrolExtension
 from caqtus.session import PureSequencePath
 from caqtus.session.sql import (
     Serializer,
@@ -41,19 +41,17 @@ def test_condetrol(
     steps_configuration,
     time_lanes,
 ):
-    device_plugin = DeviceConfigurationsPlugin.default()
-    device_plugin.register_editor(
-        SpincoreSequencerConfiguration,
-        SpincorePulseBlasterDeviceConfigEditor,
+    extension = CondetrolExtension()
+    extension.device_extension.register_device_configuration_editor(
+        SpincoreSequencerConfiguration, SpincorePulseBlasterDeviceConfigEditor
     )
-    experiment_manager = BoundExperimentManager(session_maker, {})
-
-    device_plugin.register_default_configuration(
+    extension.device_extension.register_configuration_factory(
         "Spincore sequencer", SpincoreSequencerConfiguration.default
     )
+    experiment_manager = BoundExperimentManager(session_maker, {})
     condetrol = Condetrol(
         session_maker=session_maker,
-        device_configurations_plugin=device_plugin,
+        extension=extension,
         connect_to_experiment_manager=lambda: experiment_manager,
     )
     with session_maker() as session:

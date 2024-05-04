@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Mapping, Callable
-from typing import Optional, TypeAlias, Protocol, TypeVar
+from typing import Optional, TypeAlias, Protocol, TypeVar, Any
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
@@ -24,7 +24,7 @@ from ..model import TimeLaneModel
 L = TypeVar("L", bound=TimeLane)
 
 LaneFactory: TypeAlias = Callable[[int], TimeLane]
-LaneModelFactory: TypeAlias = Callable[[L], type[TimeLaneModel[L]]]
+LaneModelFactory: TypeAlias = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
 class LaneDelegateFactory(Protocol[L]):
