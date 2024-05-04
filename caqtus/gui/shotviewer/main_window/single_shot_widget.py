@@ -217,19 +217,19 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
     async def update_state(self) -> None:
         """Ensure that the widget displays the up-to-date state of the sequence."""
 
-        match self._state:
-            case NoSequenceSelected():
-                return
-            case SequenceSelected(path=path):
-                async with (
-                    self._state_lock,
-                    self._experiment_session_maker.async_session() as session,
-                ):
-                    new_state = await get_state_async(path, session)
-                    if new_state != self._state:
-                        await self._transition(new_state)
-            case _:
-                assert_never(self._state)
+        async with self._state_lock:
+            match self._state:
+                case NoSequenceSelected():
+                    return
+                case SequenceSelected(path=path):
+                    async with (
+                        self._experiment_session_maker.async_session() as session,
+                    ):
+                        new_state = await get_state_async(path, session)
+                        if new_state != self._state:
+                            await self._transition(new_state)
+                case _:
+                    assert_never(self._state)
 
     async def _transition(self, state: WidgetState) -> None:
         if isinstance(state, SequenceSelected):
