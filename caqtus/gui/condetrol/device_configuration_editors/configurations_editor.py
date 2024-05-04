@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Mapping, Iterable
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex
 from PySide6.QtWidgets import (
@@ -24,6 +24,10 @@ from .device_configuration_editor import (
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from ..icons import get_icon
 
+if TYPE_CHECKING:
+    from ..extension import CondetrolExtensionProtocol
+
+
 _CONFIG_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
@@ -32,18 +36,15 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
 
     def __init__(
         self,
-        device_configurations_plugin: DeviceConfigurationsPlugin,
+        extension: "CondetrolExtensionProtocol",
         parent: Optional[QWidget] = None,
     ):
         """Initialize the dialog."""
 
         super().__init__(parent)
-        self._configs_view = DeviceConfigurationsEditor(
-            device_configurations_plugin, self
-        )
-        self.add_device_dialog = AddDeviceDialog(device_configurations_plugin, self)
-        self.device_plugin = device_configurations_plugin
-
+        self._configs_view = DeviceConfigurationsEditor(extension, self)
+        self.add_device_dialog = AddDeviceDialog(extension, self)
+        self._extension = extension
         self.setup_ui()
         self.setup_connections()
 
@@ -72,7 +73,7 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
             )
             if not device_name:
                 return
-            device_configuration = self.device_plugin.create_device_configuration(
+            device_configuration = self._extension.create_new_device_configuration(
                 device_type
             )
             self._configs_view.add_configuration(device_name, device_configuration)
@@ -206,11 +207,11 @@ class DeviceEditorDelegate(QStyledItemDelegate):
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
     def __init__(
         self,
-        device_plugin: DeviceConfigurationsPlugin,
+        extension: "CondetrolExtensionProtocol",
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
-        self.setup_ui(device_plugin.available_configuration_types())
+        self.setup_ui(extension.available_new_configurations())
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
