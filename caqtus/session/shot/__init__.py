@@ -1,4 +1,3 @@
-from ._async_shot import AsyncShot
 from .timelane import (
     TimeLane,
     TimeLanes,
@@ -8,6 +7,8 @@ from .timelane import (
     CameraTimeLane,
     TakePicture,
 )
+from ..sequence._async_shot import AsyncShot
+from ..sequence.shot import Shot
 
 __all__ = [
     "TimeLane",
@@ -18,4 +19,5 @@ __all__ = [
     "CameraTimeLane",
     "TakePicture",
     "AsyncShot",
+    "Shot",
 ]

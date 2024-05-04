@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 from collections.abc import Iterable, Callable, AsyncIterable, Coroutine, Awaitable
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import attrs
 import polars
@@ -11,12 +11,14 @@ import polars
 from caqtus.types.variable_name import DottedVariableName
 from .iteration_configuration import IterationConfiguration, Unknown
 from .state import State
-from .. import AsyncExperimentSession
 from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..shot import AsyncShot
 from ..shot import TimeLanes
+
+if TYPE_CHECKING:
+    from ..async_session import AsyncExperimentSession
 
 
 def _convert_to_path(path: PureSequencePath | str) -> PureSequencePath:
@@ -30,7 +32,7 @@ class AsyncSequence:
     """Asynchronous version of :class:`Sequence`."""
 
     path: PureSequencePath = attrs.field(converter=_convert_to_path)
-    session: AsyncExperimentSession
+    session: "AsyncExperimentSession"
 
     def __str__(self) -> str:
         return str(self.path)

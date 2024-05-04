@@ -9,9 +9,11 @@ import attrs
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
-from ..async_session import AsyncExperimentSession
 from ..path import PureSequencePath
 from ..sequence_collection import PureShot
+
+if typing.TYPE_CHECKING:
+    from ..async_session import AsyncExperimentSession
 
 
 @attrs.frozen(eq=False, order=False)
@@ -20,7 +22,7 @@ class AsyncShot:
 
     sequence_path: PureSequencePath
     index: int
-    _session: AsyncExperimentSession
+    _session: "AsyncExperimentSession"
 
     @classmethod
     def bound(cls, shot: PureShot, session: AsyncExperimentSession) -> typing.Self:
