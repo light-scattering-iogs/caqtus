@@ -1,5 +1,5 @@
-from collections.abc import Mapping
-from typing import Protocol, Optional, Any, TypeVar
+from collections.abc import Mapping, Callable
+from typing import Protocol, Optional, Any, TypeVar, TypeAlias
 
 from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
