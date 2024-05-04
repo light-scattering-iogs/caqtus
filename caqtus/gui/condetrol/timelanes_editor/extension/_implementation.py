@@ -60,6 +60,11 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
     ) -> None:
         self.get_lane_delegate.register(lane_type)(factory)
 
+    def register_lane_model_factory(
+        self, lane_type: type[L], factory: LaneModelFactory[L]
+    ) -> None:
+        self.get_lane_model.register(lane_type)(factory)
+
     def available_new_lanes(self) -> set[str]:
         return set(self._lane_factories.keys())
 
