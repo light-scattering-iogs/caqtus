@@ -1,12 +1,14 @@
 import asyncio
 from datetime import datetime
-from typing import Callable, Concatenate, TypeVar, ParamSpec
+from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping
 
 import attrs
 from returns.result import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from caqtus.types.parameter import Parameter
+from caqtus.types.variable_name import DottedVariableName
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
 from ._sequence_collection import (
@@ -16,6 +18,11 @@ from ._sequence_collection import (
     _get_time_lanes,
     _get_iteration_configuration,
     _get_shots,
+    _get_shot_parameters,
+    _get_shot_end_time,
+    _get_shot_start_time,
+    _get_shot_data_by_label,
+    _get_all_shot_data,
 )
 from ._serializer import Serializer
 from .. import ParameterNamespace, PureSequencePath
@@ -34,6 +41,7 @@ from ..sequence_collection import (
     PureShot,
 )
 from ..shot import TimeLanes
+from ...types.data import DataLabel, Data
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -170,6 +178,33 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_shots, path)
+
+    async def get_shot_parameters(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DottedVariableName, Parameter]:
+        return await self._run_sync(_get_shot_parameters, path, shot_index)
+
+    async def get_all_shot_data(
+        self, path: PureSequencePath, shot_index: int
+    ) -> Mapping[DataLabel, Data]:
+        return await self._run_sync(_get_all_shot_data, path, shot_index)
+
+    async def get_shot_data_by_label(
+        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    ) -> Data:
+        return await self._run_sync(
+            _get_shot_data_by_label, path, shot_index, data_label
+        )
+
+    async def get_shot_start_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime:
+        return await self._run_sync(_get_shot_start_time, path, shot_index)
+
+    async def get_shot_end_time(
+        self, path: PureSequencePath, shot_index: int
+    ) -> datetime:
+        return await self._run_sync(_get_shot_end_time, path, shot_index)
 
     async def _run_sync(
         self,

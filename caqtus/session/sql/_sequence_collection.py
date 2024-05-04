@@ -336,58 +336,29 @@ class SQLSequenceCollection(SequenceCollection):
     def get_shot_parameters(
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
-        shot_model = unwrap(self._query_shot_model(path, shot_index))
-        values = shot_model.parameters.content
-        parameters = serialization.converters["json"].structure(
-            values, dict[DottedVariableName, bool | int | float | Quantity]
-        )
-        return parameters
+        return _get_shot_parameters(self._get_sql_session(), path, shot_index)
 
     def get_all_shot_data(
         self, path: PureSequencePath, shot_index: int
     ) -> dict[DataLabel, Data]:
-        shot_model = unwrap(self._query_shot_model(path, shot_index))
-        arrays = shot_model.array_data
-        structured_data = shot_model.structured_data
-        result = {}
-        for array in arrays:
-            result[array.label] = np.frombuffer(
-                array.bytes_, dtype=array.dtype
-            ).reshape(array.shape)
-        for data in structured_data:
-            result[data.label] = data.content
-        return result
+        return _get_all_shot_data(self._get_sql_session(), path, shot_index)
 
     def get_shot_data_by_label(
         self, path: PureSequencePath, shot_index: int, data_label: DataLabel
     ) -> Data:
-        shot_model = unwrap(self._query_shot_model(path, shot_index))
-        structure_query = select(SQLStructuredShotData).where(
-            (SQLStructuredShotData.shot == shot_model)
-            & (SQLStructuredShotData.label == data_label)
+        return _get_shot_data_by_label(
+            self._get_sql_session(), path, shot_index, data_label
         )
-        result = self._get_sql_session().execute(structure_query)
-        if found := result.scalar():
-            return found.content
-        array_query = select(SQLShotArray).where(
-            (SQLShotArray.shot == shot_model) & (SQLShotArray.label == data_label)
-        )
-        result = self._get_sql_session().execute(array_query)
-        if found := result.scalar():
-            return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
-        raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
 
     def get_shot_start_time(
         self, path: PureSequencePath, shot_index: int
     ) -> datetime.datetime:
-        shot_model = unwrap(self._query_shot_model(path, shot_index))
-        return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
+        return _get_shot_start_time(self._get_sql_session(), path, shot_index)
 
     def get_shot_end_time(
         self, path: PureSequencePath, shot_index: int
     ) -> datetime.datetime:
-        shot_model = unwrap(self._query_shot_model(path, shot_index))
-        return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+        return _get_shot_end_time(self._get_sql_session(), path, shot_index)
 
     def update_start_and_end_time(
         self,
@@ -422,21 +393,7 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> Result[
         SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError
     ]:
-        sequence_model_result = self._query_sequence_model(path)
-        match sequence_model_result:
-            case Success(sequence_model):
-                stmt = (
-                    select(SQLShot)
-                    .where(SQLShot.sequence == sequence_model)
-                    .where(SQLShot.index == shot_index)
-                )
-                result = self._get_sql_session().execute(stmt)
-                if found := result.scalar():
-                    return Success(found)
-                else:
-                    return Failure(PathIsNotSequenceError(path))
-            case Failure() as failure:
-                return failure
+        return _query_shot_model(self._get_sql_session(), path, shot_index)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         # noinspection PyProtectedMember
@@ -561,6 +518,67 @@ def _get_shots(
     return sql_sequence.map(extract_shots)
 
 
+def _get_shot_parameters(
+    session: Session, path: PureSequencePath, shot_index: int
+) -> Mapping[DottedVariableName, Parameter]:
+    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    values = shot_model.parameters.content
+    parameters = serialization.converters["json"].structure(
+        values, dict[DottedVariableName, bool | int | float | Quantity]
+    )
+    return parameters
+
+
+def _get_all_shot_data(
+    session: Session, path: PureSequencePath, shot_index: int
+) -> dict[DataLabel, Data]:
+    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    arrays = shot_model.array_data
+    structured_data = shot_model.structured_data
+    result = {}
+    for array in arrays:
+        result[array.label] = np.frombuffer(array.bytes_, dtype=array.dtype).reshape(
+            array.shape
+        )
+    for data in structured_data:
+        result[data.label] = data.content
+    return result
+
+
+def _get_shot_data_by_label(
+    session: Session, path: PureSequencePath, shot_index: int, data_label: DataLabel
+) -> Data:
+    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    structure_query = select(SQLStructuredShotData).where(
+        (SQLStructuredShotData.shot == shot_model)
+        & (SQLStructuredShotData.label == data_label)
+    )
+    result = session.execute(structure_query)
+    if found := result.scalar():
+        return found.content
+    array_query = select(SQLShotArray).where(
+        (SQLShotArray.shot == shot_model) & (SQLShotArray.label == data_label)
+    )
+    result = session.execute(array_query)
+    if found := result.scalar():
+        return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
+    raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
+
+
+def _get_shot_start_time(
+    session: Session, path: PureSequencePath, shot_index: int
+) -> datetime.datetime:
+    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
+
+
+def _get_shot_end_time(
+    session: Session, path: PureSequencePath, shot_index: int
+) -> datetime.datetime:
+    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+
+
 def _query_sequence_model(
     session: Session, path: PureSequencePath
 ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
@@ -568,6 +586,26 @@ def _query_sequence_model(
     match path_result:
         case Success(path_model):
             stmt = select(SQLSequence).where(SQLSequence.path == path_model)
+            result = session.execute(stmt)
+            if found := result.scalar():
+                return Success(found)
+            else:
+                return Failure(PathIsNotSequenceError(path))
+        case Failure() as failure:
+            return failure
+
+
+def _query_shot_model(
+    session, path: PureSequencePath, shot_index: int
+) -> Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
+    sequence_model_result = _query_sequence_model(session, path)
+    match sequence_model_result:
+        case Success(sequence_model):
+            stmt = (
+                select(SQLShot)
+                .where(SQLShot.sequence == sequence_model)
+                .where(SQLShot.index == shot_index)
+            )
             result = session.execute(stmt)
             if found := result.scalar():
                 return Success(found)
