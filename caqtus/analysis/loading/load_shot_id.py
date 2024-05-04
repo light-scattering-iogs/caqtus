@@ -1,6 +1,6 @@
 import polars
 
-from caqtus.session import Shot
+from caqtus.session import Shot, PureSequencePath
 from .combinable_importers import CombinableLoader
 
 
@@ -11,13 +11,20 @@ class LoadShotId(CombinableLoader):
     two columns: `sequence` and `shot index` that allows to identify the shot.
     """
 
-    def __call__(self, shot: Shot):
+    def load(self, shot: Shot):
+        return self._shot_id_to_dataframe(shot.sequence.path, shot.index)
+
+    async def async_load(self, shot: Shot):
+        return self._shot_id_to_dataframe(shot.sequence.path, shot.index)
+
+    @staticmethod
+    def _shot_id_to_dataframe(path: PureSequencePath, index: int) -> polars.DataFrame:
         dataframe = polars.DataFrame(
             [
                 polars.Series(
-                    "sequence", [str(shot.sequence)], dtype=polars.Categorical
+                    "sequence", [str(path)], dtype=polars.Categorical
                 ),
-                polars.Series("shot index", [shot.index], dtype=polars.Int64),
+                polars.Series("shot index", [index], dtype=polars.Int64),
             ]
         )
         return dataframe
