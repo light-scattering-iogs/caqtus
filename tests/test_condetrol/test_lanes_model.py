@@ -1,14 +1,14 @@
 import pytest
 
-from caqtus.gui.condetrol.timelanes_editor import (
-    TimeLanesModel,
-    default_time_lanes_plugin,
+from caqtus.gui.condetrol.timelanes_editor import TimeLanesModel
+from caqtus.gui.condetrol.timelanes_editor.extension import (
+    CondetrolLaneExtension,
 )
 from caqtus.session.shot import DigitalTimeLane
 
 
 def test_0():
-    model = TimeLanesModel(default_time_lanes_plugin.lane_model_factory)
+    model = TimeLanesModel(CondetrolLaneExtension())
 
     lane = DigitalTimeLane([True, False])
     with pytest.raises(ValueError):
@@ -16,7 +16,7 @@ def test_0():
 
 
 def test_1():
-    model = TimeLanesModel(default_time_lanes_plugin.lane_model_factory)
+    model = TimeLanesModel(CondetrolLaneExtension())
 
     model.insertColumn(0)
     model.insertColumn(0)

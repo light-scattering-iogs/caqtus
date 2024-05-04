@@ -7,10 +7,12 @@ from caqtus.gui.condetrol.device_configuration_editors import (
 )
 from caqtus.gui.condetrol.device_configuration_editors.configurations_editor import (
     DeviceConfigurationsEditor,
-    DeviceConfigurationsPlugin,
 )
 from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (
     FormDeviceConfigurationEditor,
+)
+from caqtus.gui.condetrol.device_configuration_editors.extension import (
+    CondetrolDeviceExtension,
 )
 from tests.test_condetrol.mock_device_configuration import MockDeviceConfiguration
 
@@ -20,9 +22,7 @@ def test_edit(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    widget = DeviceConfigurationsEditor(
-        DeviceConfigurationsPlugin.default(), parent=None
-    )
+    widget = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     widget.set_device_configurations(device_configurations)
     qtbot.addWidget(widget)
     widget.show()
@@ -42,9 +42,7 @@ def test_edit_1(qtbot: QtBot):
         DeviceName("Device 1"): MockDeviceConfiguration(remote_server="default"),
         DeviceName("Device 2"): MockDeviceConfiguration(remote_server="default"),
     }
-    widget = DeviceConfigurationsEditor(
-        DeviceConfigurationsPlugin.default(), parent=None
-    )
+    widget = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     widget.set_device_configurations(device_configurations)
     qtbot.addWidget(widget)
 
@@ -61,7 +59,7 @@ def test_edit_1(qtbot: QtBot):
 
 def test_add_config(qtbot: QtBot):
     config = MockDeviceConfiguration(remote_server="default")
-    view = DeviceConfigurationsEditor(DeviceConfigurationsPlugin.default(), parent=None)
+    view = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     qtbot.addWidget(view)
     view.add_configuration(DeviceName("Device 1"), config)
     assert view.get_device_configurations() == {DeviceName("Device 1"): config}
@@ -78,12 +76,12 @@ def test_add_config(qtbot: QtBot):
 
 
 def test_dialog(qtbot: QtBot):
-    plugin = DeviceConfigurationsPlugin.default()
-    plugin.register_default_configuration(
+    extension = CondetrolDeviceExtension()
+    extension.register_configuration_factory(
         "Mock", lambda: MockDeviceConfiguration(remote_server=None)
     )
     dialog = DeviceConfigurationsDialog(
-        device_configurations_plugin=plugin,
+        extension=extension,
         parent=None,
     )
     dialog.set_device_configurations(
