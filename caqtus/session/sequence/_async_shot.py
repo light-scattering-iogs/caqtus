@@ -10,6 +10,7 @@ from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
 from ..path import PureSequencePath
+from ..sequence import AsyncSequence
 from ..sequence_collection import PureShot
 
 if typing.TYPE_CHECKING:
@@ -27,6 +28,10 @@ class AsyncShot:
     @classmethod
     def bound(cls, shot: PureShot, session: AsyncExperimentSession) -> typing.Self:
         return cls(shot.sequence_path, shot.index, session)
+
+    @property
+    def sequence(self) -> AsyncSequence:
+        return AsyncSequence(self.sequence_path, self._session)
 
     async def get_parameters(self) -> Mapping[DottedVariableName, Parameter]:
         return await self._session.sequences.get_shot_parameters(

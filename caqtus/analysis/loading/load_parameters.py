@@ -1,13 +1,14 @@
-from collections.abc import Iterable
 from typing import Literal
 
 import attrs
 import polars
 
 from caqtus.session import Shot, Sequence
-from caqtus.types.parameter import is_analog_value, is_quantity
+from caqtus.session.shot import AsyncShot
+from caqtus.types.parameter import is_analog_value, is_quantity, Parameter
 from .combinable_importers import CombinableLoader
 from .sequence_cache import cache_per_sequence
+from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.define
@@ -34,16 +35,39 @@ class LoadShotParameters(CombinableLoader):
         loaded.
     """
 
-    which: Literal["sequence", "all"] | Iterable[str] = "all"
+    which: Literal["sequence", "all"] = "all"
 
     def __attrs_post_init__(self):
         self._get_local_parameters = cache_per_sequence(get_local_parameters)
 
-    def __call__(self, shot: Shot) -> polars.DataFrame:
-        parameters = {
-            str(parameter_name): value
-            for parameter_name, value in shot.get_parameters().items()
-        }
+    @staticmethod
+    def _parameters_to_dataframe(
+        parameters: dict[DottedVariableName, Parameter]
+    ) -> polars.DataFrame:
+        series: list[polars.Series] = []
+
+        for parameter_name, value in parameters.items():
+            name = str(parameter_name)
+            if is_analog_value(value) and is_quantity(value):
+                magnitude = float(value.magnitude)
+                units = format(value.units, "~")
+                s = polars.Series(
+                    name,
+                    [
+                        polars.Series("magnitude", [magnitude]),
+                        polars.Series("units", [units], dtype=polars.Categorical),
+                    ],
+                    dtype=polars.Struct,
+                )
+            else:
+                s = polars.Series(name, [value])
+            series.append(s)
+        series.sort(key=lambda s: s.name)
+        dataframe = polars.DataFrame(series)
+        return dataframe
+
+    def load(self, shot: Shot) -> polars.DataFrame:
+        parameters = shot.get_parameters()
 
         if self.which == "all":
             pass
@@ -53,29 +77,25 @@ class LoadShotParameters(CombinableLoader):
         elif self.which == "globals":
             raise NotImplementedError
         else:
-            parameters = {name: parameters[name] for name in self.which}
+            raise NotImplementedError
 
-        series: list[polars.Series] = []
+        return self._parameters_to_dataframe(parameters)
 
-        for parameter_name, value in parameters.items():
-            if is_analog_value(value) and is_quantity(value):
-                magnitude = float(value.magnitude)
-                units = format(value.units, "~")
-                s = polars.Series(
-                    parameter_name,
-                    [
-                        polars.Series("magnitude", [magnitude]),
-                        polars.Series("units", [units], dtype=polars.Categorical),
-                    ],
-                    dtype=polars.Struct,
-                )
-            else:
-                s = polars.Series(parameter_name, [value])
-            series.append(s)
-        series.sort(key=lambda s: s.name)
-        dataframe = polars.DataFrame(series)
-        return dataframe
+    async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
+        parameters = await shot.get_parameters()
+
+        if self.which == "all":
+            pass
+        elif self.which == "sequence":
+            local_parameters = await shot.sequence.get_local_parameters()
+            parameters = {name: parameters[name] for name in local_parameters}
+        elif self.which == "globals":
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+
+        return self._parameters_to_dataframe(parameters)
 
 
-def get_local_parameters(sequence: Sequence) -> list[str]:
-    return [str(name) for name in sequence.get_local_parameters()]
+def get_local_parameters(sequence: Sequence) -> set[DottedVariableName]:
+    return sequence.get_local_parameters()
