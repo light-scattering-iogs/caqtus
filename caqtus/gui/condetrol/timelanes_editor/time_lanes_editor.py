@@ -20,12 +20,8 @@ from caqtus.gui.qtutil import block_signals
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLanes, TimeLane
 from .add_lane_dialog import AddLaneDialog
-from .lane_customization import (
-    TimeLanesPlugin,
-    LaneModelFactory,
-    LaneDelegateFactory,
-)
 from .model import TimeLanesModel
+from ..extension import CondetrolExtensionProtocol
 
 
 class TimeLanesEditor(QWidget):
@@ -39,17 +35,17 @@ class TimeLanesEditor(QWidget):
 
     def __init__(
         self,
-        time_lane_customization: TimeLanesPlugin,
+        extension: CondetrolExtensionProtocol,
         device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
         self.view = TimeLanesView(
-            lane_model_factory=time_lane_customization.lane_model_factory,
-            lane_delegate_factory=time_lane_customization.lane_delegate_factory,
+            extension=extension,
             device_configurations=device_configurations,
             parent=self,
         )
+        self._extension = extension
         self.view.time_lanes_changed.connect(self.time_lanes_edited)
         self.toolbar = QToolBar(self)
         self.toolbar.setFloatable(False)
@@ -70,10 +66,7 @@ class TimeLanesEditor(QWidget):
         self.setLayout(layout)
 
         self._add_lane_dialog = AddLaneDialog(self)
-        self._add_lane_dialog.set_lane_types(
-            time_lane_customization.lane_factories.keys()
-        )
-        self._lane_factories = time_lane_customization.lane_factories
+        self._add_lane_dialog.set_lane_types(extension.available_new_lanes())
 
         font = QFont("JetBrains Mono")
         self.setFont(font)
@@ -113,8 +106,9 @@ class TimeLanesEditor(QWidget):
                     "a lane with this name.",
                 )
             else:
-                lane_factory = self._lane_factories[lane_type]
-                lane = lane_factory(self.view.model().columnCount())
+                lane = self._extension.create_new_lane(
+                    lane_type, self.view.model().columnCount()
+                )
                 self.view.add_lane(lane_name, lane)
 
 
@@ -123,34 +117,20 @@ class TimeLanesView(QTableView):
 
     def __init__(
         self,
-        lane_model_factory: LaneModelFactory,
-        lane_delegate_factory: LaneDelegateFactory,
+        extension: CondetrolExtensionProtocol,
         device_configurations: dict[DeviceName, DeviceConfiguration],
         parent: Optional[QWidget] = None,
     ):
-        """A widget for editing time lanes.
-
-        Parameters:
-            lane_delegate_factory: A factory for lane delegates.
-            This is a callable that allows to customize how a lane should be displayed
-            and edited.
-            When a lane is displayed, the factory is called with the lane, the default
-            device configurations and the default constant tables.
-            If the factory returns a QStyledItemDelegate, it is set for the view row
-            corresponding to the lane.
-            It is up to the factory to create a delegate per lane or to reuse the same
-            delegate for multiple lanes.
-            parent: The parent widget.
-        """
+        """A widget for editing time lanes."""
 
         super().__init__(parent)
-        self._model = TimeLanesModel(lane_model_factory, self)
+        self._model = TimeLanesModel(extension, self)
         self._device_configurations: dict[DeviceName, DeviceConfiguration] = (
             device_configurations
         )
         self._sequence_parameters = ParameterNamespace.empty()
         self.lane_delegate_factory = functools.partial(
-            lane_delegate_factory,
+            extension.get_lane_delegate,
             device_configurations=self._device_configurations,
             sequence_parameters=self._sequence_parameters,
             parent=self,

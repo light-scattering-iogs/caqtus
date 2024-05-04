@@ -1,6 +1,7 @@
 from collections.abc import Mapping
-from typing import Protocol, TypeVar, runtime_checkable, Optional
+from typing import Protocol, TypeVar, runtime_checkable, Optional, Any
 
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget, QStyledItemDelegate
 
 from caqtus.device import DeviceConfiguration, DeviceName
@@ -66,7 +67,9 @@ class CondetrolExtensionProtocol(Protocol):
 
         ...
 
-    def get_lane_model(self, lane: L) -> type[TimeLaneModel[L]]:
+    def get_lane_model(
+        self, name: str, lane: L, parent: Optional[QObject]
+    ) -> TimeLaneModel[L, Any]:
         """Return the model for the given lane.
 
         This method is called when a lane needs to be displayed.

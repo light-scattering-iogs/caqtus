@@ -20,6 +20,7 @@ import caqtus.gui.qtutil.qabc as qabc
 from caqtus.session.shot import TimeLane
 from caqtus.session.shot.timelane import TimeLanes
 from caqtus.types.expression import Expression
+from ..extension import CondetrolExtensionProtocol
 
 
 class TimeStepNameModel(QAbstractListModel):
@@ -410,13 +411,13 @@ LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def __init__(
-        self, lane_model_factory: LaneModelFactory, parent: Optional[QObject] = None
+        self, extension: CondetrolExtensionProtocol, parent: Optional[QObject] = None
     ):
         super().__init__(parent)
         self._step_names_model = TimeStepNameModel(self)
         self._step_durations_model = TimeStepDurationModel(self)
         self._lane_models: list[TimeLaneModel] = []
-        self._lane_model_factory = lane_model_factory
+        self._extension = extension
 
         self._step_names_model.dataChanged.connect(self.on_step_names_data_changed)
         self._step_durations_model.dataChanged.connect(
@@ -463,7 +464,7 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
         self.endResetModel()
 
     def create_lane_model(self, name: str, lane: TimeLane) -> TimeLaneModel:
-        lane_model = self._lane_model_factory(lane)(name, self)
+        lane_model = self._extension.get_lane_model(name, lane, self)
         lane_model.set_lane(lane)
         lane_model.dataChanged.connect(
             # For some reason, functools.partial does not work here, but lambda does.
