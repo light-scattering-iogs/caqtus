@@ -1,6 +1,6 @@
 import copy
 from collections.abc import Mapping, Iterable
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 
 from PySide6.QtCore import Qt, QAbstractListModel, QModelIndex
 from PySide6.QtWidgets import (
@@ -19,11 +19,8 @@ from .device_configuration_editor import (
     DeviceConfigurationEditor,
 )
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
+from .extension import CondetrolDeviceExtensionProtocol
 from ..icons import get_icon
-
-if TYPE_CHECKING:
-    from ..extension import CondetrolExtensionProtocol
-
 
 _CONFIG_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -33,7 +30,7 @@ class DeviceConfigurationsDialog(QDialog, Ui_DeviceConfigurationsDialog):
 
     def __init__(
         self,
-        extension: "CondetrolExtensionProtocol",
+        extension: CondetrolDeviceExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
         """Initialize the dialog."""
@@ -93,7 +90,7 @@ class DeviceConfigurationsEditor(QWidget):
 
     def __init__(
         self,
-        extension: "CondetrolExtensionProtocol",
+        extension: CondetrolDeviceExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
 
@@ -173,7 +170,7 @@ class DeviceEditorDelegate(QStyledItemDelegate):
     def __init__(
         self,
         layout,
-        extension: "CondetrolExtensionProtocol",
+        extension: CondetrolDeviceExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -203,7 +200,7 @@ class DeviceEditorDelegate(QStyledItemDelegate):
 class AddDeviceDialog(QDialog, Ui_AddDeviceDialog):
     def __init__(
         self,
-        extension: "CondetrolExtensionProtocol",
+        extension: CondetrolDeviceExtensionProtocol,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)

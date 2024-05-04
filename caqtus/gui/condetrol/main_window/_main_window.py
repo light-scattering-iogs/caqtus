@@ -61,10 +61,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.sequence_widget = SequenceWidget(
-            self.session_maker, extension, parent=self
+            self.session_maker, extension.lane_extension, parent=self
         )
         self.device_configurations_dialog = DeviceConfigurationsDialog(
-            extension, parent=self
+            extension.device_extension, parent=self
         )
         self.setup_ui()
         self.restore_window()
