@@ -1,9 +1,11 @@
 import abc
-from collections.abc import Sequence
+import asyncio
+from collections.abc import Sequence, Iterable
 
 import polars
 
 from caqtus.session import Shot
+from caqtus.session.shot import AsyncShot
 from .shot_data import DataImporter
 
 
@@ -17,8 +19,14 @@ class CombinableLoader(DataImporter, abc.ABC):
     loaders.
     """
 
+    def __call__(self, shot: Shot) -> polars.DataFrame:
+        return self.load(shot)
+
     @abc.abstractmethod
-    def __call__(self, shot: Shot) -> polars.DataFrame: ...
+    def load(self, shot: Shot) -> polars.DataFrame: ...
+
+    @abc.abstractmethod
+    async def async_load(self, shot: AsyncShot) -> polars.DataFrame: ...
 
     def __add__(self, other):
         if isinstance(other, CombinableLoader):
@@ -42,10 +50,18 @@ class HorizontalConcatenateLoader(CombinableLoader):
             else:
                 self.loaders.append(loader)
 
-    def __call__(self, shot: Shot) -> polars.DataFrame:
-        return polars.concat(
-            [loader(shot) for loader in self.loaders], how="horizontal"
+    @staticmethod
+    def _concatenate(dataframes: Iterable[polars.DataFrame]) -> polars.DataFrame:
+        return polars.concat(dataframes, how="horizontal")
+
+    def load(self, shot: Shot) -> polars.DataFrame:
+        return self._concatenate(loader(shot) for loader in self.loaders)
+
+    async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
+        dataframes = await asyncio.gather(
+            *(loader.async_load(shot) for loader in self.loaders)
         )
+        return self._concatenate(dataframes)
 
 
 class CrossProductLoader(CombinableLoader):
@@ -53,8 +69,18 @@ class CrossProductLoader(CombinableLoader):
         self.first = first
         self.second = second
 
-    def __call__(self, shot: Shot) -> polars.DataFrame:
-        return self.first(shot).join(self.second(shot), how="cross")
+    @staticmethod
+    def _join(first: polars.DataFrame, second: polars.DataFrame) -> polars.DataFrame:
+        return first.join(second, how="cross")
+
+    def load(self, shot: Shot) -> polars.DataFrame:
+        return self._join(self.first(shot), self.second(shot))
+
+    async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
+        first, second = await asyncio.gather(
+            self.first.async_load(shot), self.second.async_load(shot)
+        )
+        return self._join(first, second)
 
 
 # noinspection PyPep8Naming
@@ -67,8 +93,17 @@ class join(CombinableLoader):
         self.loaders = loaders
         self.on = on
 
-    def __call__(self, shot: Shot) -> polars.DataFrame:
-        dataframe = self.loaders[0](shot)
-        for loader in self.loaders[1:]:
-            dataframe = dataframe.join(loader(shot), on=self.on, how="inner")
+    def _join(self, dataframes: Sequence[polars.DataFrame]) -> polars.DataFrame:
+        dataframe = dataframes[0]
+        for other in dataframes[1:]:
+            dataframe = dataframe.join(other, on=self.on, how="inner")
         return dataframe
+
+    def load(self, shot: Shot) -> polars.DataFrame:
+        return self._join([loader(shot) for loader in self.loaders])
+
+    async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
+        dataframes = await asyncio.gather(
+            *(loader.async_load(shot) for loader in self.loaders)
+        )
+        return self._join(dataframes)
