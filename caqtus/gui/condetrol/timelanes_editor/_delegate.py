@@ -10,7 +10,6 @@ from caqtus.gui.qtutil import QABCMeta
 class TimeLaneDelegate(QStyledItemDelegate, metaclass=QABCMeta):
     """A delegate to display and edit the cells of a time lane."""
 
-    @abc.abstractmethod
     def set_device_configurations(
         self, device_configurations: Mapping[DeviceName, DeviceConfiguration]
     ) -> None:
@@ -21,9 +20,8 @@ class TimeLaneDelegate(QStyledItemDelegate, metaclass=QABCMeta):
         cells or editor if they depend on the device configurations.
         """
 
-        raise NotImplementedError
+        pass
 
-    @abc.abstractmethod
     def set_parameter_names(self, parameter_names: Set[str]) -> None:
         """Update the name of the parameters used in the sequence.
 
@@ -32,4 +30,4 @@ class TimeLaneDelegate(QStyledItemDelegate, metaclass=QABCMeta):
         cells or editors if they depend on the parameter names.
         """
 
-        raise NotImplementedError
+        pass

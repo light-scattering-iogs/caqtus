@@ -1,6 +1,5 @@
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import (
-    QStyledItemDelegate,
     QWidget,
     QStyleOptionViewItem,
     QPushButton,
@@ -8,9 +7,10 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.types.expression import Expression
+from ._delegate import TimeLaneDelegate
 
 
-class DigitalTimeLaneDelegate(QStyledItemDelegate):
+class DigitalTimeLaneDelegate(TimeLaneDelegate):
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:

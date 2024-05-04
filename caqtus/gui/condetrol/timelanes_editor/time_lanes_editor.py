@@ -17,6 +17,7 @@ from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.gui.condetrol.icons import get_icon
 from caqtus.gui.qtutil import block_signals
 from caqtus.session.shot import TimeLanes, TimeLane
+from ._delegate import TimeLaneDelegate
 from .add_lane_dialog import AddLaneDialog
 from .extension import CondetrolLaneExtensionProtocol
 from .model import TimeLanesModel
@@ -204,14 +205,25 @@ class TimeLanesView(QTableView):
         for row in range(2, self._model.rowCount()):
             lane = self._model.get_lane(row - 2)
             name = self._model.get_lane_name(row - 2)
-            delegate = self._extension.get_lane_delegate(lane, name)
-            if delegate is not None:
-                delegate.setParent(self)
-                delegate.set_device_configurations(self._device_configurations)
-                delegate.set_parameter_names(set())
+            delegate = self._construct_delegate(lane, name)
             self.setItemDelegateForRow(row, delegate)
             if delegate:
                 delegate.setParent(self)
+
+    def _construct_delegate(
+        self, lane: TimeLane, lane_name: str
+    ) -> Optional[TimeLaneDelegate]:
+        delegate = self._extension.get_lane_delegate(lane, lane_name)
+        if delegate is not None:
+            if not isinstance(delegate, TimeLaneDelegate):
+                raise TypeError(
+                    f"Invalid delegate type: {type(delegate)}. "
+                    "The delegate must be an instance of TimeLaneDelegate."
+                )
+            delegate.setParent(self)
+            delegate.set_device_configurations(self._device_configurations)
+            delegate.set_parameter_names(set())
+        return delegate
 
     def set_read_only(self, read_only: bool) -> None:
         self._model.set_read_only(read_only)
