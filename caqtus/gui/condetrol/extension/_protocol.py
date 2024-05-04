@@ -7,10 +7,9 @@ from PySide6.QtWidgets import QWidget, QStyledItemDelegate
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import ParameterNamespace
 from caqtus.session.shot import TimeLane
-from ..device_configuration_editors import DeviceConfigurationEditor
+from ..device_configuration_editors.extension import CondetrolDeviceExtensionProtocol
 from ..timelanes_editor import TimeLaneModel
 
-C = TypeVar("C", bound=DeviceConfiguration)
 L = TypeVar("L", bound=TimeLane)
 
 
@@ -18,25 +17,7 @@ L = TypeVar("L", bound=TimeLane)
 class CondetrolExtensionProtocol(Protocol):
     """Defines the operations an extension must implement to be used by Condetrol."""
 
-    def get_device_configuration_editor(
-        self, device_configuration: C
-    ) -> DeviceConfigurationEditor[C]:
-        """Create an editor for the given device configuration.
-
-        This method is called when the user wants to edit a device configuration.
-        The returned editor will be used to display and modify the device configuration.
-        """
-
-        ...
-
-    def available_new_configurations(self) -> set[str]:
-        """Return the new configurations that can be created.
-
-        This method is called when the user wants to create a new device configuration.
-        The user will be able to choose one of the returned labels.
-        """
-
-        ...
+    device_extension: CondetrolDeviceExtensionProtocol
 
     def create_new_device_configuration(
         self, configuration_label: str
