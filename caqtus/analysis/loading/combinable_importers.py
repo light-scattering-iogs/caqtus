@@ -1,5 +1,4 @@
 import abc
-import asyncio
 from collections.abc import Sequence, Iterable
 
 import polars
@@ -58,9 +57,9 @@ class HorizontalConcatenateLoader(CombinableLoader):
         return self._concatenate(loader(shot) for loader in self.loaders)
 
     async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
-        dataframes = await asyncio.gather(
-            *(loader.async_load(shot) for loader in self.loaders)
-        )
+        # We can't load the values concurrently because the session used to fetch the
+        # data can't be used in multiple tasks in the same time.
+        dataframes = [await loader.async_load(shot) for loader in self.loaders]
         return self._concatenate(dataframes)
 
 
@@ -77,9 +76,10 @@ class CrossProductLoader(CombinableLoader):
         return self._join(self.first(shot), self.second(shot))
 
     async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
-        first, second = await asyncio.gather(
-            self.first.async_load(shot), self.second.async_load(shot)
-        )
+        # We can't load the values concurrently because the session used to fetch the
+        # data can't be used in multiple tasks in the same time.
+        first = await self.first.async_load(shot)
+        second = await self.second.async_load(shot)
         return self._join(first, second)
 
 
@@ -103,7 +103,7 @@ class join(CombinableLoader):
         return self._join([loader(shot) for loader in self.loaders])
 
     async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
-        dataframes = await asyncio.gather(
-            *(loader.async_load(shot) for loader in self.loaders)
-        )
+        # We can't load the values concurrently because the session used to fetch the
+        # data can't be used in multiple tasks in the same time.
+        dataframes = [await loader.async_load(shot) for loader in self.loaders]
         return self._join(dataframes)
