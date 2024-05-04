@@ -24,7 +24,6 @@ from ..model import TimeLaneModel
 L = TypeVar("L", bound=TimeLane)
 
 LaneFactory: TypeAlias = Callable[[int], TimeLane]
-LaneModelFactory: TypeAlias = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
 class LaneDelegateFactory(Protocol[L]):
@@ -38,6 +37,17 @@ class LaneDelegateFactory(Protocol[L]):
         sequence_parameters: ParameterNamespace,
         parent: QWidget,
     ) -> Optional[QStyledItemDelegate]:
+        """Create a delegate for the lane passed as argument."""
+        ...
+
+
+class LaneModelFactory(Protocol[L]):
+    def __call__(
+        self,
+        lane: L,
+        lane_name: str,
+        parent: Optional[QWidget],
+    ) -> TimeLaneModel[L, Any]:
         """Create a delegate for the lane passed as argument."""
         ...
 
