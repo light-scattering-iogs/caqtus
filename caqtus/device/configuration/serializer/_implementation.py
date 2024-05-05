@@ -38,7 +38,7 @@ class DeviceConfigJSONSerializer(DeviceConfigJSONSerializerProtocol):
     def dump_device_configuration(
         self, config: DeviceConfiguration
     ) -> tuple[str, JSON]:
-        type_name = type(config).__class__.__qualname__
+        type_name = type(config).__qualname__
         dumper = self.dumpers[type_name]
         return type_name, dumper(config)
 

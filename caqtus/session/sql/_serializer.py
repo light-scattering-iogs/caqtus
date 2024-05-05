@@ -7,6 +7,7 @@ from typing import Generic, TypeVar
 import attrs
 
 from caqtus.device import DeviceConfiguration
+from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
 from caqtus.session.shot.timelane import AnalogTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
@@ -24,13 +25,13 @@ class Serializer:
     """Serialize and deserialize user objects."""
 
     sequence_serializer: SequenceSerializer
-    device_configuration_serializers: dict[str, DeviceConfigurationSerializer]
+    device_configuration_serializer: DeviceConfigJSONSerializer
 
     @classmethod
     def default(cls) -> Serializer:
         return Serializer(
             sequence_serializer=default_sequence_serializer,
-            device_configuration_serializers={},
+            device_configuration_serializer=DeviceConfigJSONSerializer(),
         )
 
     def register_device_configuration(
@@ -39,21 +40,8 @@ class Serializer:
         dumper: Callable[[T], JSON],
         constructor: Callable[[JSON], T],
     ) -> None:
-        """Register a custom device configuration type for serialization.
-
-        Args:
-            config_type: A subclass of :class:`DeviceConfiguration` that is being
-                registered for serialization.
-            dumper: A function that will be called when it is necessary to convert a
-                device configuration to JSON format.
-            constructor: A function that will be called when it is necessary to build a
-                device configuration from the JSON data returned by the dumper.
-        """
-
-        type_name = config_type.__qualname__
-
-        self.device_configuration_serializers[type_name] = (
-            DeviceConfigurationSerializer(dumper=dumper, loader=constructor)
+        self.device_configuration_serializer.register_device_configuration(
+            config_type, dumper, constructor
         )
 
     def register_time_lane_serializer(
@@ -83,17 +71,14 @@ class Serializer:
     def dump_device_configuration(
         self, config: DeviceConfiguration
     ) -> tuple[str, serialization.JSON]:
-        type_name = type(config).__qualname__
-        serializer = self.device_configuration_serializers[type_name]
-        content = serializer.dumper(config)
-        return type_name, content
+        return self.device_configuration_serializer.dump_device_configuration(config)
 
     def load_device_configuration(
         self, tag: str, content: serialization.JSON
     ) -> DeviceConfiguration:
-        serializer = self.device_configuration_serializers[tag]
-        device_config = serializer.loader(content)
-        return device_config
+        return self.device_configuration_serializer.load_device_configuration(
+            tag, content
+        )
 
     def construct_sequence_iteration(
         self, content: serialization.JSON
