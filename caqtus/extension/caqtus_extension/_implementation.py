@@ -5,6 +5,7 @@ from caqtus.gui.condetrol.extension import CondetrolExtension
 from caqtus.session.shot.timelane.serializer import TimeLaneSerializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
+from ..time_lane_extension import TimeLaneExtension
 
 
 @attrs.frozen
@@ -26,4 +27,14 @@ class CaqtusExtension(CaqtusExtensionProtocol):
             device_extension.configuration_type,
             device_extension.configuration_dumper,
             device_extension.configuration_loader,
+        )
+
+    def register_time_lane_extension(
+        self, time_lane_extension: TimeLaneExtension
+    ) -> None:
+        self.time_lane_serializer.register_time_lane(
+            time_lane_extension.lane_type,
+            time_lane_extension.dumper,
+            time_lane_extension.loader,
+            time_lane_extension.type_tag,
         )
