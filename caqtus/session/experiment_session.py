@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import logging
 from contextlib import AbstractContextManager
-from typing import Protocol
+from typing import Protocol, TYPE_CHECKING
 
 from caqtus.session.parameter_namespace import ParameterNamespace
+from . import PureSequencePath
 
 from .device_configuration_collection import DeviceConfigurationCollection
 from .path_hierarchy import PathHierarchy
 from .sequence_collection import SequenceCollection
+
+if TYPE_CHECKING:
+    from .sequence import Sequence
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -61,6 +65,23 @@ class ExperimentSession(
     paths: PathHierarchy
     sequences: SequenceCollection
     default_device_configurations: DeviceConfigurationCollection
+
+    def get_sequence(self, path: PureSequencePath | str) -> Sequence:
+        """Get a sequence object from the session.
+
+        Args:
+            path: The path of the sequence to get.
+
+        Returns:
+            The sequence object.
+
+        Raises:
+            SequenceNotFoundError: If the sequence does not exist.
+        """
+
+        from .sequence import Sequence
+
+        return Sequence(path, self)
 
     def get_global_parameters(self) -> ParameterNamespace:
         """Returns a copy of the global parameters of the session."""
