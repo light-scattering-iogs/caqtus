@@ -1,3 +1,4 @@
+import contextlib
 from typing import Optional
 
 import attrs
@@ -48,6 +49,7 @@ class SQLExperimentSession(ExperimentSession):
             parent_session=self, serializer=serializer
         )
         self._transaction: Optional[sqlalchemy.orm.SessionTransaction] = None
+        self._exit_stack = contextlib.ExitStack()
 
     def get_global_parameters(self) -> ParameterNamespace:
         return _get_global_parameters(self._get_sql_session())
@@ -65,11 +67,19 @@ class SQLExperimentSession(ExperimentSession):
                 "You cannot reactivate a session, you must create a new one."
             )
             raise error
-        self._transaction = self._sql_session.begin().__enter__()
+        self._exit_stack.__enter__()
+        self._exit_stack.enter_context(self._sql_session)
+        try:
+            self._transaction = self._exit_stack.enter_context(
+                self._sql_session.begin()
+            )
+        except Exception:
+            self._exit_stack.close()
+            raise
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._transaction.__exit__(exc_type, exc_val, exc_tb)
+        self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
         if self._transaction is None:

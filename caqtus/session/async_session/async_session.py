@@ -12,6 +12,8 @@ class AsyncExperimentSession(
     """Asynchronous version of ExperimentSession.
 
     For a detailed description of the methods, see ExperimentSession.
+    This session cannot be used in several tasks concurrently, it must be used
+    sequentially.
     """
 
     paths: AsyncPathHierarchy

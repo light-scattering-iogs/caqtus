@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from datetime import datetime
 from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping, Optional, Self
 
@@ -56,6 +57,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
         self.sequences = AsyncSQLSequenceCollection(
             parent_session=self, serializer=serializer
         )
+        self._exit_stack = contextlib.AsyncExitStack()
 
     async def __aenter__(self) -> Self:
         if self._transaction is not None:
@@ -63,11 +65,19 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
             error.add_note(
                 "You cannot reactivate a session, you must create a new one."
             )
-        self._transaction = await self._async_session.begin().__aenter__()
+        await self._exit_stack.__aenter__()
+        await self._exit_stack.enter_async_context(self._async_session)
+        try:
+            self._transaction = await self._exit_stack.enter_async_context(
+                self._async_session.begin()
+            )
+        except Exception:
+            await self._exit_stack.aclose()
+            raise
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self._transaction.__aexit__(exc_type, exc_val, exc_tb)
+        await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def get_global_parameters(self) -> ParameterNamespace:
         return await self._run_sync(_get_global_parameters)
