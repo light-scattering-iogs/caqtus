@@ -5,7 +5,7 @@ from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping, Optional,
 
 import attrs
 from returns.result import Result
-from sqlalchemy.ext.asyncio import AsyncSession, AsyncSessionTransaction
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from caqtus.types.parameter import Parameter
@@ -49,35 +49,29 @@ _P = ParamSpec("_P")
 
 
 class AsyncSQLExperimentSession(AsyncExperimentSession):
-    def __init__(self, async_session: AsyncSession, serializer: Serializer):
-        self._async_session = async_session
-        self._transaction: Optional[AsyncSessionTransaction] = None
-
+    def __init__(
+        self,
+        async_session_context: contextlib.AbstractAsyncContextManager[AsyncSession],
+        serializer: Serializer,
+    ):
+        self._async_session_context = async_session_context
+        self._async_session: Optional[AsyncSession] = None
         self.paths = AsyncSQLPathHierarchy(parent_session=self)
         self.sequences = AsyncSQLSequenceCollection(
             parent_session=self, serializer=serializer
         )
-        self._exit_stack = contextlib.AsyncExitStack()
 
     async def __aenter__(self) -> Self:
-        if self._transaction is not None:
+        if self._async_session is not None:
             error = RuntimeError("Session has already been activated")
             error.add_note(
                 "You cannot reactivate a session, you must create a new one."
             )
-        await self._exit_stack.__aenter__()
-        await self._exit_stack.enter_async_context(self._async_session)
-        try:
-            self._transaction = await self._exit_stack.enter_async_context(
-                self._async_session.begin()
-            )
-        except Exception:
-            await self._exit_stack.aclose()
-            raise
+        self._async_session = await self._async_session_context.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+        await self._async_session_context.__aexit__(exc_type, exc_val, exc_tb)
 
     async def get_global_parameters(self) -> ParameterNamespace:
         return await self._run_sync(_get_global_parameters)
@@ -94,7 +88,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
         return await self._session().run_sync(fun, *args, **kwargs)
 
     def _session(self) -> AsyncSession:
-        if self._transaction is None:
+        if self._async_session is None:
             raise ExperimentSessionNotActiveError(
                 "Experiment session was not activated"
             )
@@ -102,9 +96,13 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
 
 
 class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
-    def __init__(self, session: Session, serializer: Serializer):
-        self._session = session
-        self._is_active = False
+    def __init__(
+        self,
+        session_context: contextlib.AbstractContextManager[Session],
+        serializer: Serializer,
+    ):
+        self._session_context = session_context
+        self._session: Optional[Session] = None
 
         self.paths = AsyncSQLPathHierarchy(parent_session=self)
         self.sequences = AsyncSQLSequenceCollection(
@@ -112,16 +110,15 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
         )
 
     async def __aenter__(self):
-        if self._is_active:
+        if self._session is not None:
             raise RuntimeError("Session is already active")
-        self._transaction = await asyncio.to_thread(self._session.begin().__enter__)
-        self._is_active = True
+        self._session = await asyncio.to_thread(self._session_context.__enter__)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await asyncio.to_thread(self._transaction.__exit__, exc_type, exc_val, exc_tb)
-        self._transaction = None
-        self._is_active = False
+        await asyncio.to_thread(
+            self._session_context.__exit__, exc_type, exc_val, exc_tb
+        )
 
     async def _run_sync(
         self,
@@ -129,6 +126,10 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
         *args: _P.args,
         **kwargs: _P.kwargs
     ) -> _T:
+        if self._session is None:
+            raise ExperimentSessionNotActiveError(
+                "Experiment session was not activated"
+            )
         return await asyncio.to_thread(fun, self._session, *args, **kwargs)
 
 

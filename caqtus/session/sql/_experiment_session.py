@@ -1,7 +1,6 @@
 import contextlib
 from typing import Optional
 
-import attrs
 import sqlalchemy.orm
 
 from caqtus.session import ParameterNamespace
@@ -28,7 +27,7 @@ class SQLExperimentSession(ExperimentSession):
 
     def __init__(
         self,
-        session: sqlalchemy.orm.Session,
+        session_context: contextlib.AbstractContextManager[sqlalchemy.orm.Session],
         serializer: Serializer,
         *args,
         **kwargs,
@@ -40,7 +39,8 @@ class SQLExperimentSession(ExperimentSession):
         """
 
         super().__init__(*args, **kwargs)
-        self._sql_session = session
+        self._session_context = session_context
+        self._sql_session: Optional[sqlalchemy.orm.session] = None
         self.paths = SQLPathHierarchy(parent_session=self)
         self.sequences = SQLSequenceCollection(
             parent_session=self, serializer=serializer
@@ -48,8 +48,6 @@ class SQLExperimentSession(ExperimentSession):
         self.default_device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self, serializer=serializer
         )
-        self._transaction: Optional[sqlalchemy.orm.SessionTransaction] = None
-        self._exit_stack = contextlib.ExitStack()
 
     def get_global_parameters(self) -> ParameterNamespace:
         return _get_global_parameters(self._get_sql_session())
@@ -61,28 +59,20 @@ class SQLExperimentSession(ExperimentSession):
         return f"<{self.__class__.__name__} @ {self._sql_session.get_bind()}>"
 
     def __enter__(self):
-        if self._transaction is not None:
+        if self._sql_session is not None:
             error = RuntimeError("Session has already been activated")
             error.add_note(
                 "You cannot reactivate a session, you must create a new one."
             )
             raise error
-        self._exit_stack.__enter__()
-        self._exit_stack.enter_context(self._sql_session)
-        try:
-            self._transaction = self._exit_stack.enter_context(
-                self._sql_session.begin()
-            )
-        except Exception:
-            self._exit_stack.close()
-            raise
+        self._sql_session = self._session_context.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
+        self._session_context.__exit__(exc_type, exc_val, exc_tb)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
-        if self._transaction is None:
+        if self._sql_session is None:
             raise ExperimentSessionNotActiveError(
                 "Experiment session was not activated"
             )
