@@ -522,12 +522,23 @@ def _get_shots(
 def _get_shot_parameters(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> Mapping[DottedVariableName, Parameter]:
-    shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    values = shot_model.parameters.content
-    parameters = serialization.converters["json"].structure(
-        values, dict[DottedVariableName, bool | int | float | Quantity]
+    stmt = (
+        select(SQLShotParameter.content)
+        .join(SQLShot)
+        .where(SQLShot.index == shot_index)
+        .join(SQLSequence)
+        .join(SQLSequencePath)
+        .where(SQLSequencePath.path == str(path))
     )
-    return parameters
+
+    result = session.execute(stmt).scalar_one_or_none()
+    if result is not None:
+        return serialization.converters["json"].structure(
+            result, dict[DottedVariableName, bool | int | float | Quantity]
+        )
+    # This will raise the proper error if the shot was not found.
+    unwrap(_query_shot_model(session, path, shot_index))
+    assert False, "Unreachable"
 
 
 def _get_all_shot_data(
