@@ -5,9 +5,8 @@ from contextlib import AbstractContextManager
 from typing import Protocol, TYPE_CHECKING
 
 from caqtus.session.parameter_namespace import ParameterNamespace
-from . import PureSequencePath
-
 from .device_configuration_collection import DeviceConfigurationCollection
+from .path import PureSequencePath
 from .path_hierarchy import PathHierarchy
 from .sequence_collection import SequenceCollection
 
