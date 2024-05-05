@@ -100,12 +100,12 @@ def test_children_2(empty_session):
         assert root_children == {p.parent.parent, p1.parent.parent}, repr(root_children)
 
 
-def test_deletion_1(empty_session):
-    with empty_session as session:
-        p = BoundSequencePath(r"\a\b\c", session)
-        p.create()
-    with empty_session as session:
-        p.delete()
+def test_deletion_1(session_maker):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b\c")
+        session.paths.create_path(p)
+    with session_maker() as session:
+        session.paths.delete_path(p)
         assert not session.paths.does_path_exists(p)
         assert session.paths.does_path_exists(p.parent)
 
@@ -133,22 +133,22 @@ def test_sequence_deletion(
 
 
 def test_sequence_deletion_1(
-    empty_session, steps_configuration: StepsConfiguration, time_lanes
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
 ):
     # This test checks mostly that foreign keys are set up correctly.
     # If a sequence path is deleted, it should delete all sequence information and
     # creating a new sequence with the same path should work.
     # Otherwise, the sequence information would be orphaned and creating a new sequence
     # with the same path would fail.
-    with empty_session as session:
+    with session_maker() as session:
         p = PureSequencePath(r"\test")
         session.sequences.create(p, steps_configuration, time_lanes)
         assert unwrap(session.sequences.is_sequence(p))
-    with empty_session as session:
+    with session_maker() as session:
         session.paths.delete_path(p, delete_sequences=True)
         with pytest.raises(PathNotFoundError):
             unwrap(session.sequences.is_sequence(p))
-    with empty_session as session:
+    with session_maker() as session:
         session.sequences.create(p, steps_configuration, time_lanes)
         assert session.sequences.is_sequence(p)
 
@@ -173,13 +173,13 @@ def test_iteration_save(
         assert sequence.get_time_lanes() == time_lanes
 
 
-def test_start_date(empty_session, steps_configuration: StepsConfiguration, time_lanes):
-    with empty_session as session:
+def test_start_date(session_maker, steps_configuration: StepsConfiguration, time_lanes):
+    with session_maker() as session:
         p = PureSequencePath(r"\test\test")
         session.sequences.create(p, steps_configuration, time_lanes)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
-    with session:
+    with session_maker() as session:
         stats = unwrap(session.sequences.get_stats(p))
         d = stats.start_time
         assert d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None
@@ -256,8 +256,8 @@ def test_data_not_existing(
             shots[0].get_data_by_label(DataLabel("c"))
 
 
-def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
-    with empty_session as session:
+def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
+    with session_maker() as session:
         parameters = ParameterNamespace.from_mapping(
             {
                 VariableName("test"): {DottedVariableName("a"): Expression("1")},
@@ -269,31 +269,33 @@ def test_0(empty_session, steps_configuration: StepsConfiguration, time_lanes):
             ),
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        Sequence.create(p, steps_configuration, time_lanes, session)
 
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_global_parameters(p, parameters)
         session.sequences.set_device_configurations(p, device_configurations)
 
-    with session:
+    with session_maker() as session:
+        sequence = Sequence(p, session)
         s = sequence.get_global_parameters()
         d = session.sequences.get_device_configurations(p)
     assert s == parameters
     assert d == device_configurations
 
 
-def test_1(empty_session, steps_configuration: StepsConfiguration, time_lanes):
-    with empty_session as session:
+def test_1(session_maker, steps_configuration: StepsConfiguration, time_lanes):
+    with session_maker() as session:
         configurations = {
             DeviceName("device"): DummyConfiguration(
                 a=1, b="test", remote_server="test"
             )
         }
         p = PureSequencePath(r"\a\b\c")
-        sequence = Sequence.create(p, steps_configuration, time_lanes, session)
+        Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_device_configurations(p, configurations)
 
-    with session:
+    with session_maker() as session:
+        sequence = Sequence(p, session)
         d = sequence.get_device_configurations()
     assert d == configurations

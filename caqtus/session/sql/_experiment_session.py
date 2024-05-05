@@ -1,3 +1,5 @@
+from typing import Optional
+
 import attrs
 import sqlalchemy.orm
 
@@ -16,20 +18,12 @@ from ..experiment_session import (
 )
 
 
-@attrs.define(init=False)
 class SQLExperimentSession(ExperimentSession):
     """Used to store experiment data in a SQL database.
 
     This class implements the :class:`ExperimentSession` interface and the documentation
     of the related methods can be found in the :class:`ExperimentSession`documentation.
     """
-
-    paths: SQLPathHierarchy
-    sequences: SQLSequenceCollection
-    default_device_configurations: SQLDeviceConfigurationCollection
-
-    _sql_session: sqlalchemy.orm.Session
-    _is_active: bool
 
     def __init__(
         self,
@@ -46,7 +40,6 @@ class SQLExperimentSession(ExperimentSession):
 
         super().__init__(*args, **kwargs)
         self._sql_session = session
-        self._is_active = False
         self.paths = SQLPathHierarchy(parent_session=self)
         self.sequences = SQLSequenceCollection(
             parent_session=self, serializer=serializer
@@ -54,6 +47,7 @@ class SQLExperimentSession(ExperimentSession):
         self.default_device_configurations = SQLDeviceConfigurationCollection(
             parent_session=self, serializer=serializer
         )
+        self._transaction: Optional[sqlalchemy.orm.SessionTransaction] = None
 
     def get_global_parameters(self) -> ParameterNamespace:
         return _get_global_parameters(self._get_sql_session())
@@ -65,19 +59,20 @@ class SQLExperimentSession(ExperimentSession):
         return f"<{self.__class__.__name__} @ {self._sql_session.get_bind()}>"
 
     def __enter__(self):
-        if self._is_active:
-            raise RuntimeError("Session is already active")
+        if self._transaction is not None:
+            error = RuntimeError("Session has already been activated")
+            error.add_note(
+                "You cannot reactivate a session, you must create a new one."
+            )
+            raise error
         self._transaction = self._sql_session.begin().__enter__()
-        self._is_active = True
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._transaction.__exit__(exc_type, exc_val, exc_tb)
-        self._transaction = None
-        self._is_active = False
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
-        if not self._is_active:
+        if self._transaction is None:
             raise ExperimentSessionNotActiveError(
                 "Experiment session was not activated"
             )
