@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import attrs
 from typing_extensions import Protocol
