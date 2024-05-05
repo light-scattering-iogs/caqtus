@@ -582,17 +582,23 @@ def _get_shot_end_time(
 def _query_sequence_model(
     session: Session, path: PureSequencePath
 ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
-    path_result = _query_path_model(session, path)
-    match path_result:
-        case Success(path_model):
-            stmt = select(SQLSequence).where(SQLSequence.path == path_model)
-            result = session.execute(stmt)
-            if found := result.scalar():
-                return Success(found)
-            else:
+    stmt = (
+        select(SQLSequence)
+        .join(SQLSequencePath)
+        .where(SQLSequencePath.path == str(path))
+    )
+    result = session.execute(stmt).scalar_one_or_none()
+    if result is not None:
+        return Success(result)
+    else:
+        # If we are not is the happy path, we need to check the reason why to be able to
+        # return the correct error.
+        path_result = _query_path_model(session, path)
+        match path_result:
+            case Success():
                 return Failure(PathIsNotSequenceError(path))
-        case Failure() as failure:
-            return failure
+            case Failure() as failure:
+                return failure
 
 
 def _query_shot_model(
