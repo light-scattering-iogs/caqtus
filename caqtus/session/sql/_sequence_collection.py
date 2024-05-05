@@ -596,20 +596,30 @@ def _query_sequence_model(
 
 
 def _query_shot_model(
-    session, path: PureSequencePath, shot_index: int
+    session: Session, path: PureSequencePath, shot_index: int
 ) -> Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
-    sequence_model_result = _query_sequence_model(session, path)
-    match sequence_model_result:
-        case Success(sequence_model):
-            stmt = (
-                select(SQLShot)
-                .where(SQLShot.sequence == sequence_model)
-                .where(SQLShot.index == shot_index)
-            )
-            result = session.execute(stmt)
-            if found := result.scalar():
-                return Success(found)
-            else:
-                return Failure(PathIsNotSequenceError(path))
-        case Failure() as failure:
-            return failure
+    stmt = (
+        select(SQLShot)
+        .where(SQLShot.index == shot_index)
+        .join(SQLSequence)
+        .join(SQLSequencePath)
+        .where(SQLSequencePath.path == str(path))
+    )
+
+    result = session.execute(stmt).scalar_one_or_none()
+    if result is not None:
+        return Success(result)
+    else:
+        # This function is fast for the happy path were the shot exists, but if it was
+        # not found, we need to check the reason why to be able to return the correct
+        # error.
+        sequence_model_result = _query_sequence_model(session, path)
+        match sequence_model_result:
+            case Success():
+                return Failure(
+                    ShotNotFoundError(
+                        f"Shot {shot_index} not found for sequence {path}"
+                    )
+                )
+            case Failure() as failure:
+                return failure
