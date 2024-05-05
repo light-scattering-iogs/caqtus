@@ -12,22 +12,22 @@ from caqtus.device.configuration.serializer import (
     DeviceConfigJSONSerializer,
     DeviceConfigJSONSerializerProtocol,
 )
-from caqtus.session.shot.timelane import AnalogTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from ..sequence.iteration_configuration import (
     IterationConfiguration,
     StepsConfiguration,
 )
-from ..shot import TimeLane, DigitalTimeLane, CameraTimeLane
+from ..shot import TimeLane
+from ..shot.timelane.serializer import TimeLaneSerializerProtocol, TimeLaneSerializer
 
 T = TypeVar("T", bound=DeviceConfiguration)
 
 
-@attrs.define
 class SerializerProtocol(Protocol):
     sequence_serializer: SequenceSerializer
     device_configuration_serializer: DeviceConfigJSONSerializerProtocol
+    time_lane_serializer: TimeLaneSerializerProtocol
 
     def dump_device_configuration(
         self, config: DeviceConfiguration
@@ -52,10 +52,10 @@ class SerializerProtocol(Protocol):
         return self.sequence_serializer.iteration_serializer(iteration)
 
     def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
-        return self.sequence_serializer.time_lane_serializer(lane)
+        return self.time_lane_serializer.dump(lane)
 
     def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
-        return self.sequence_serializer.time_lane_constructor(content)
+        return self.time_lane_serializer.load(content)
 
 
 @attrs.define
@@ -64,12 +64,14 @@ class Serializer(SerializerProtocol):
 
     sequence_serializer: SequenceSerializer
     device_configuration_serializer: DeviceConfigJSONSerializer
+    time_lane_serializer: TimeLaneSerializer
 
     @classmethod
     def default(cls) -> Serializer:
         return Serializer(
             sequence_serializer=default_sequence_serializer,
             device_configuration_serializer=DeviceConfigJSONSerializer(),
+            time_lane_serializer=TimeLaneSerializer(),
         )
 
     def register_device_configuration(
@@ -82,18 +84,6 @@ class Serializer(SerializerProtocol):
             config_type, dumper, constructor
         )
 
-    def register_time_lane_serializer(
-        self,
-        dumper: Callable[[TimeLane], serialization.JSON],
-        constructor: Callable[[serialization.JSON], TimeLane],
-    ) -> None:
-        self.sequence_serializer = SequenceSerializer(
-            iteration_serializer=self.sequence_serializer.iteration_serializer,
-            iteration_constructor=self.sequence_serializer.iteration_constructor,
-            time_lane_serializer=dumper,
-            time_lane_constructor=constructor,
-        )
-
     def register_iteration_configuration_serializer(
         self,
         dumper: Callable[[IterationConfiguration], serialization.JSON],
@@ -102,8 +92,6 @@ class Serializer(SerializerProtocol):
         self.sequence_serializer = SequenceSerializer(
             iteration_serializer=dumper,
             iteration_constructor=constructor,
-            time_lane_serializer=self.sequence_serializer.time_lane_serializer,
-            time_lane_constructor=self.sequence_serializer.time_lane_constructor,
         )
 
 
@@ -111,8 +99,6 @@ class Serializer(SerializerProtocol):
 class SequenceSerializer:
     iteration_serializer: Callable[[IterationConfiguration], serialization.JSON]
     iteration_constructor: Callable[[serialization.JSON], IterationConfiguration]
-    time_lane_serializer: Callable[[TimeLane], serialization.JSON]
-    time_lane_constructor: Callable[[serialization.JSON], TimeLane]
 
 
 @functools.singledispatch
@@ -146,63 +132,7 @@ def default_iteration_configuration_constructor(
         raise ValueError(f"Unknown iteration type {iteration_type}")
 
 
-@functools.singledispatch
-def default_time_lane_serializer(time_lane: TimeLane) -> serialization.JSON:
-    error = TypeError(f"Cannot serialize time lane of type {type(time_lane)}")
-
-    error.add_note(
-        f"{default_time_lane_serializer} doesn't support saving this lane type."
-    )
-    error.add_note(
-        "You need to provide a custom lane serializer to the experiment session maker."
-    )
-    raise error
-
-
-@default_time_lane_serializer.register
-def _(time_lane: DigitalTimeLane):
-    content = serialization.converters["json"].unstructure(time_lane, DigitalTimeLane)
-    content["type"] = "digital"
-    return content
-
-
-@default_time_lane_serializer.register
-def _(time_lane: AnalogTimeLane):
-    content = serialization.converters["json"].unstructure(time_lane, AnalogTimeLane)
-    content["type"] = "analog"
-    return content
-
-
-@default_time_lane_serializer.register
-def _(time_lane: CameraTimeLane):
-    content = serialization.converters["json"].unstructure(time_lane, CameraTimeLane)
-    content["type"] = "camera"
-    return content
-
-
-def default_time_lane_constructor(
-    time_lane_content: serialization.JSON,
-) -> TimeLane:
-    time_lane_type = time_lane_content.pop("type")
-    if time_lane_type == "digital":
-        return serialization.converters["json"].structure(
-            time_lane_content, DigitalTimeLane
-        )
-    elif time_lane_type == "analog":
-        return serialization.converters["json"].structure(
-            time_lane_content, AnalogTimeLane
-        )
-    elif time_lane_type == "camera":
-        return serialization.converters["json"].structure(
-            time_lane_content, CameraTimeLane
-        )
-    else:
-        raise ValueError(f"Unknown time lane type {time_lane_type}")
-
-
 default_sequence_serializer = SequenceSerializer(
     iteration_serializer=default_iteration_configuration_serializer,
     iteration_constructor=default_iteration_configuration_constructor,
-    time_lane_serializer=default_time_lane_serializer,
-    time_lane_constructor=default_time_lane_constructor,
 )
