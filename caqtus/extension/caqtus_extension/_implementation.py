@@ -49,7 +49,7 @@ class CaqtusExtension(CaqtusExtensionProtocol):
 
     def create_session_maker(
         self,
-        session_maker_type: Callable[Concatenate[P, SerializerProtocol], T],
+        session_maker_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
         **kwargs: P.kwargs
     ) -> T:
@@ -58,4 +58,4 @@ class CaqtusExtension(CaqtusExtensionProtocol):
             self.device_configurations_serializer
         )
         serializer.time_lane_serializer = self.time_lane_serializer
-        return session_maker_type(*args, serializer=serializer, **kwargs)
+        return session_maker_type(serializer, *args, **kwargs)

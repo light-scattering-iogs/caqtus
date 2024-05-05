@@ -45,7 +45,7 @@ def session_maker(tmp_path) -> SQLExperimentSessionMaker:
     serializer.register_device_configuration(DummyConfiguration, dump, load)
 
     session_maker = SQLiteExperimentSessionMaker(
-        str(tmp_path / "database.db"),
+        path=str(tmp_path / "database.db"),
         serializer=serializer,
     )
     session_maker.create_tables()

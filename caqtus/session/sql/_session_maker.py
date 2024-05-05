@@ -42,9 +42,9 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
 
     def __init__(
         self,
+        serializer: SerializerProtocol,
         engine: sqlalchemy.Engine,
         async_engine: sqlalchemy.ext.asyncio.AsyncEngine,
-        serializer: SerializerProtocol,
     ) -> None:
         self._engine = engine
         self._async_engine = async_engine
@@ -91,7 +91,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
     def __setstate__(self, state):
         engine = sqlalchemy.create_engine(state.pop("url"))
         async_engine = create_async_engine(state.pop("async_url"))
-        self.__init__(engine, async_engine, **state)
+        self.__init__(state["serializer"], engine, async_engine)
 
     def upgrade(self) -> None:
         """Updates the database schema to the latest version.
@@ -108,14 +108,14 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
 class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
         self,
-        path: str,
         serializer: SerializerProtocol,
+        path: str,
     ):
         engine = create_engine(f"sqlite:///{path}?check_same_thread=False")
         async_engine = create_async_engine(
             f"sqlite+aiosqlite:///{path}?check_same_thread=False"
         )
-        super().__init__(engine, async_engine, serializer)
+        super().__init__(serializer, engine, async_engine)
 
     def __getstate__(self):
         return {
@@ -144,12 +144,12 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
     def __init__(
         self,
+        serializer: SerializerProtocol,
         username: str,
         password: str,
         host: str,
         port: int,
         database: str,
-        serializer: SerializerProtocol,
     ):
         sync_url = URL.create(
             "postgresql+psycopg",
@@ -170,7 +170,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         )
         async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
 
-        super().__init__(engine, async_engine, serializer=serializer)
+        super().__init__(serializer, engine, async_engine)
 
     def async_session(self) -> ThreadedAsyncSQLExperimentSession:
         return ThreadedAsyncSQLExperimentSession(
