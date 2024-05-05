@@ -65,7 +65,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
 
         create_tables(self._engine)
 
-    def __call__(self) -> ExperimentSession:
+    def __call__(self) -> SQLExperimentSession:
         """Create a new ExperimentSession with the engine used at initialization."""
 
         return SQLExperimentSession(
@@ -73,7 +73,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
             self._serializer,
         )
 
-    def async_session(self) -> AsyncExperimentSession:
+    def async_session(self) -> AsyncSQLExperimentSession:
         return AsyncSQLExperimentSession(
             self._async_session_maker.begin(),
             self._serializer,
@@ -174,7 +174,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
         super().__init__(engine, async_engine, serializer=serializer)
 
-    def async_session(self) -> AsyncExperimentSession:
+    def async_session(self) -> ThreadedAsyncSQLExperimentSession:
         return ThreadedAsyncSQLExperimentSession(
             self._session_maker.begin(),
             self._serializer,
