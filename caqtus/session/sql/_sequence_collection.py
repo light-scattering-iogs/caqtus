@@ -47,6 +47,7 @@ from ..sequence_collection import (
     SequenceStats,
     ShotNotFoundError,
     PureShot,
+    DataNotFoundError,
 )
 from ..sequence_collection import SequenceCollection
 from ..shot import TimeLanes
@@ -548,21 +549,14 @@ def _get_all_shot_data(
 def _get_shot_data_by_label(
     session: Session, path: PureSequencePath, shot_index: int, data_label: DataLabel
 ) -> Data:
-    shot_model = unwrap(_query_shot_model(session, path, shot_index))
-    structure_query = select(SQLStructuredShotData).where(
-        (SQLStructuredShotData.shot == shot_model)
-        & (SQLStructuredShotData.label == data_label)
-    )
-    result = session.execute(structure_query)
-    if found := result.scalar():
-        return found.content
-    array_query = select(SQLShotArray).where(
-        (SQLShotArray.shot == shot_model) & (SQLShotArray.label == data_label)
-    )
-    result = session.execute(array_query)
-    if found := result.scalar():
-        return np.frombuffer(found.bytes_, dtype=found.dtype).reshape(found.shape)
-    raise KeyError(f"Data <{data_label}> not found in shot {shot_index}")
+    data = unwrap(_query_data_model(session, path, shot_index, data_label))
+
+    if isinstance(data, SQLStructuredShotData):
+        return data.content
+    elif isinstance(data, SQLShotArray):
+        return np.frombuffer(data.bytes_, dtype=data.dtype).reshape(data.shape)
+    else:
+        assert_never(data)
 
 
 def _get_shot_start_time(
@@ -577,6 +571,44 @@ def _get_shot_end_time(
 ) -> datetime.datetime:
     shot_model = unwrap(_query_shot_model(session, path, shot_index))
     return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
+
+
+def _query_data_model(
+    session: Session, path: PureSequencePath, shot_index: int, data_label: DataLabel
+) -> Result[
+    SQLShotArray | SQLStructuredShotData,
+    PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError | DataNotFoundError,
+]:
+    stmt = (
+        select(SQLStructuredShotData)
+        .where(SQLStructuredShotData.label == data_label)
+        .join(SQLShot)
+        .where(SQLShot.index == shot_index)
+        .join(SQLSequence)
+        .join(SQLSequencePath)
+        .where(SQLSequencePath.path == str(path))
+    )
+    result = session.execute(stmt).scalar_one_or_none()
+    if result is not None:
+        return Success(result)
+    stmt = (
+        select(SQLShotArray)
+        .where(SQLShotArray.label == data_label)
+        .join(SQLShot)
+        .where(SQLShot.index == shot_index)
+        .join(SQLSequence)
+        .join(SQLSequencePath)
+        .where(SQLSequencePath.path == str(path))
+    )
+    result = session.execute(stmt).scalar_one_or_none()
+    if result is not None:
+        return Success(result)
+    shot_result = _query_shot_model(session, path, shot_index)
+    match shot_result:
+        case Success():
+            return Failure(DataNotFoundError(data_label))
+        case Failure() as failure:
+            return failure
 
 
 def _query_sequence_model(

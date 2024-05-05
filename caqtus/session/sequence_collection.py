@@ -27,6 +27,9 @@ class PathIsSequenceError(PathError):
 class PathIsNotSequenceError(PathError):
     pass
 
+class DataNotFoundError(RuntimeError):
+    pass
+
 
 class SequenceStateError(RuntimeError):
     """Raised when an invalid sequence state is encountered.
@@ -248,6 +251,16 @@ class SequenceCollection(Protocol):
     def get_shot_data_by_label(
         self, path: PureSequencePath, shot_index: int, data_label: DataLabel
     ) -> Data:
+        """Return the data with the given label for the shot at the given index.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsNotSequenceError: If the path is not a sequence.
+            ShotNotFoundError: If the shot does not exist in the sequence.
+            DataNotFoundError: If the data with the given label does not exist in the
+            shot.
+        """
+
         raise NotImplementedError
 
     @abc.abstractmethod

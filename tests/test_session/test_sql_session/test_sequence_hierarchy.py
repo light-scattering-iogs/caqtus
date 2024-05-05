@@ -17,7 +17,11 @@ from caqtus.session.sequence import State, Shot
 from caqtus.session.sequence.iteration_configuration import (
     StepsConfiguration,
 )
-from caqtus.session.sequence_collection import PathIsSequenceError, PureShot
+from caqtus.session.sequence_collection import (
+    PathIsSequenceError,
+    PureShot,
+    DataNotFoundError,
+)
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.units import ureg
@@ -226,7 +230,7 @@ def test_shot_creation(
         assert np.array_equal(d[DataLabel("c")], data[DataLabel("c")])
         assert shots[0].get_data_by_label(DataLabel("a")) == [1, 2, 3]
 
-        with pytest.raises(KeyError):
+        with pytest.raises(DataNotFoundError):
             shots[0].get_data_by_label(DataLabel("d"))
 
 
@@ -252,7 +256,7 @@ def test_data_not_existing(
             datetime.datetime.now(),
         )
         shots = sequence.get_shots()
-        with pytest.raises(KeyError):
+        with pytest.raises(DataNotFoundError):
             shots[0].get_data_by_label(DataLabel("c"))
 
 
