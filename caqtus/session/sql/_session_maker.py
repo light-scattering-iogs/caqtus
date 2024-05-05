@@ -7,10 +7,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from ._async_session import AsyncSQLExperimentSession, ThreadedAsyncSQLExperimentSession
 from ._experiment_session import SQLExperimentSession
-from ._serializer import Serializer
+from ._serializer import SerializerProtocol
 from ._table_base import create_tables
-from ..async_session import AsyncExperimentSession
-from ..experiment_session import ExperimentSession
 from ..session_maker import ExperimentSessionMaker
 
 
@@ -46,7 +44,7 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         self,
         engine: sqlalchemy.Engine,
         async_engine: sqlalchemy.ext.asyncio.AsyncEngine,
-        serializer: Serializer,
+        serializer: SerializerProtocol,
     ) -> None:
         self._engine = engine
         self._async_engine = async_engine
@@ -111,7 +109,7 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
         self,
         path: str,
-        serializer: Serializer,
+        serializer: SerializerProtocol,
     ):
         engine = create_engine(f"sqlite:///{path}?check_same_thread=False")
         async_engine = create_async_engine(
@@ -151,7 +149,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         host: str,
         port: int,
         database: str,
-        serializer: Serializer,
+        serializer: SerializerProtocol,
     ):
         sync_url = URL.create(
             "postgresql+psycopg",

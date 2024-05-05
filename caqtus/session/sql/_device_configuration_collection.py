@@ -7,7 +7,7 @@ import sqlalchemy
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, Session
 
-from ._serializer import Serializer
+from ._serializer import SerializerProtocol
 from ._table_base import Base
 from ..device_configuration_collection import DeviceConfigurationCollection
 
@@ -26,7 +26,7 @@ class SQLDefaultDeviceConfiguration(Base):
 @attrs.frozen
 class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
     parent_session: "SQLExperimentSession"
-    serializer: Serializer
+    serializer: SerializerProtocol
 
     def __setitem__(self, __key, __value):
         type_name, content = self.serializer.dump_device_configuration(__value)

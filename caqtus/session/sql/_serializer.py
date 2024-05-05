@@ -5,9 +5,13 @@ from collections.abc import Callable
 from typing import Generic, TypeVar
 
 import attrs
+from typing_extensions import Protocol
 
 from caqtus.device import DeviceConfiguration
-from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
+from caqtus.device.configuration.serializer import (
+    DeviceConfigJSONSerializer,
+    DeviceConfigJSONSerializerProtocol,
+)
 from caqtus.session.shot.timelane import AnalogTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
@@ -21,7 +25,41 @@ T = TypeVar("T", bound=DeviceConfiguration)
 
 
 @attrs.define
-class Serializer:
+class SerializerProtocol(Protocol):
+    sequence_serializer: SequenceSerializer
+    device_configuration_serializer: DeviceConfigJSONSerializerProtocol
+
+    def dump_device_configuration(
+        self, config: DeviceConfiguration
+    ) -> tuple[str, serialization.JSON]:
+        return self.device_configuration_serializer.dump_device_configuration(config)
+
+    def load_device_configuration(
+        self, tag: str, content: serialization.JSON
+    ) -> DeviceConfiguration:
+        return self.device_configuration_serializer.load_device_configuration(
+            tag, content
+        )
+
+    def construct_sequence_iteration(
+        self, content: serialization.JSON
+    ) -> IterationConfiguration:
+        return self.sequence_serializer.iteration_constructor(content)
+
+    def dump_sequence_iteration(
+        self, iteration: IterationConfiguration
+    ) -> serialization.JSON:
+        return self.sequence_serializer.iteration_serializer(iteration)
+
+    def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
+        return self.sequence_serializer.time_lane_serializer(lane)
+
+    def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
+        return self.sequence_serializer.time_lane_constructor(content)
+
+
+@attrs.define
+class Serializer(SerializerProtocol):
     """Serialize and deserialize user objects."""
 
     sequence_serializer: SequenceSerializer
@@ -67,40 +105,6 @@ class Serializer:
             time_lane_serializer=self.sequence_serializer.time_lane_serializer,
             time_lane_constructor=self.sequence_serializer.time_lane_constructor,
         )
-
-    def dump_device_configuration(
-        self, config: DeviceConfiguration
-    ) -> tuple[str, serialization.JSON]:
-        return self.device_configuration_serializer.dump_device_configuration(config)
-
-    def load_device_configuration(
-        self, tag: str, content: serialization.JSON
-    ) -> DeviceConfiguration:
-        return self.device_configuration_serializer.load_device_configuration(
-            tag, content
-        )
-
-    def construct_sequence_iteration(
-        self, content: serialization.JSON
-    ) -> IterationConfiguration:
-        return self.sequence_serializer.iteration_constructor(content)
-
-    def dump_sequence_iteration(
-        self, iteration: IterationConfiguration
-    ) -> serialization.JSON:
-        return self.sequence_serializer.iteration_serializer(iteration)
-
-    def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
-        return self.sequence_serializer.time_lane_serializer(lane)
-
-    def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
-        return self.sequence_serializer.time_lane_constructor(content)
-
-
-@attrs.define
-class DeviceConfigurationSerializer(Generic[T]):
-    dumper: Callable[[T], JSON]
-    loader: Callable[[JSON], T]
 
 
 @attrs.frozen

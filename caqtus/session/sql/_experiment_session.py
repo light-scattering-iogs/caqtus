@@ -11,7 +11,7 @@ from ._path_hierarchy import SQLPathHierarchy
 from ._sequence_collection import (
     SQLSequenceCollection,
 )
-from ._serializer import Serializer
+from ._serializer import SerializerProtocol
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
@@ -54,7 +54,7 @@ class SQLExperimentSession(ExperimentSession):
     def __init__(
         self,
         session_context: contextlib.AbstractContextManager[sqlalchemy.orm.Session],
-        serializer: Serializer,
+        serializer: SerializerProtocol,
         *args,
         **kwargs,
     ):

@@ -25,7 +25,7 @@ from ._sequence_collection import (
     _get_shot_data_by_label,
     _get_all_shot_data,
 )
-from ._serializer import Serializer
+from ._serializer import SerializerProtocol
 from .. import ParameterNamespace, PureSequencePath
 from ..async_session import (
     AsyncExperimentSession,
@@ -52,7 +52,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
     def __init__(
         self,
         async_session_context: contextlib.AbstractAsyncContextManager[AsyncSession],
-        serializer: Serializer,
+        serializer: SerializerProtocol,
     ):
         self._async_session_context = async_session_context
         self._async_session: Optional[AsyncSession] = None
@@ -99,7 +99,7 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
     def __init__(
         self,
         session_context: contextlib.AbstractContextManager[Session],
-        serializer: Serializer,
+        serializer: SerializerProtocol,
     ):
         self._session_context = session_context
         self._session: Optional[Session] = None
@@ -162,7 +162,7 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 @attrs.frozen
 class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     parent_session: AsyncSQLExperimentSession
-    serializer: Serializer
+    serializer: SerializerProtocol
 
     async def is_sequence(
         self, path: PureSequencePath

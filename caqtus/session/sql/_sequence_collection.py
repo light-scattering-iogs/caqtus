@@ -28,7 +28,7 @@ from ._sequence_table import (
     SQLDeviceConfiguration,
     SQLSequenceParameters,
 )
-from ._serializer import Serializer
+from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
@@ -59,7 +59,7 @@ if TYPE_CHECKING:
 @attrs.frozen
 class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
-    serializer: Serializer
+    serializer: SerializerProtocol
 
     def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         return _is_sequence(self._get_sql_session(), path)
@@ -476,7 +476,7 @@ def _get_sequence_global_parameters(
 
 
 def _get_iteration_configuration(
-    session: Session, sequence: PureSequencePath, serializer: Serializer
+    session: Session, sequence: PureSequencePath, serializer: SerializerProtocol
 ) -> IterationConfiguration:
     sequence_model = unwrap(_query_sequence_model(session, sequence))
     return serializer.construct_sequence_iteration(
@@ -485,7 +485,7 @@ def _get_iteration_configuration(
 
 
 def _construct_time_lanes(
-    time_lanes_content: serialization.JSON, serializer: Serializer
+    time_lanes_content: serialization.JSON, serializer: SerializerProtocol
 ) -> TimeLanes:
     return TimeLanes(
         step_names=serialization.converters["json"].structure(
@@ -502,7 +502,7 @@ def _construct_time_lanes(
 
 
 def _get_time_lanes(
-    session: Session, sequence_path: PureSequencePath, serializer: Serializer
+    session: Session, sequence_path: PureSequencePath, serializer: SerializerProtocol
 ) -> TimeLanes:
     sequence_model = unwrap(_query_sequence_model(session, sequence_path))
     return _construct_time_lanes(sequence_model.time_lanes.content, serializer)
