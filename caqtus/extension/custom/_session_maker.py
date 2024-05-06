@@ -18,7 +18,8 @@ def get_session_maker() -> PostgreSQLExperimentSessionMaker:
     if _session_maker_config is None:
         error = RuntimeError("Storage configuration has not been set.")
         error.add_note(
-            "Please call `configure_storage` with the appropriate configuration."
+            "Please call `caqtus.extension.custom.configure_storage` with the "
+            "appropriate configuration."
         )
         raise error
     session_maker = _extension.create_session_maker(
