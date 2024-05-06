@@ -49,6 +49,9 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         self.condetrol_extension.lane_extension.register_lane_factory(
             time_lane_extension.label, time_lane_extension.lane_factory
         )
+        self.condetrol_extension.lane_extension.register_lane_model_factory(
+            time_lane_extension.lane_type, time_lane_extension.lane_model_factory
+        )
 
     def create_session_maker(
         self,

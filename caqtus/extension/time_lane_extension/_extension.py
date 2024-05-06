@@ -3,7 +3,10 @@ from typing import TypeVar, Optional
 
 import attrs
 
-from caqtus.gui.condetrol.timelanes_editor.extension import LaneFactory
+from caqtus.gui.condetrol.timelanes_editor.extension import (
+    LaneFactory,
+    LaneModelFactory,
+)
 from caqtus.session.shot import TimeLane
 from caqtus.utils.serialization import JSON
 
@@ -28,6 +31,8 @@ class TimeLaneExtension:
         lane_factory: A factory function to create a new lane when the user wants to
             create a lane with this label.
             The factory will be called with the number of steps the lane must have.
+        lane_model_factory: A factory function to create a model for the lane.
+            The model will be used to provide the data from the lane to the view.
     """
 
     label: str = attrs.field(converter=str)
@@ -35,6 +40,7 @@ class TimeLaneExtension:
     dumper: Callable[[L], JSON] = attrs.field()
     loader: Callable[[JSON], L] = attrs.field()
     lane_factory: LaneFactory[L] = attrs.field()
+    lane_model_factory: LaneModelFactory[L] = attrs.field()
     type_tag: Optional[str] = attrs.field(default=None)
 
     @lane_type.validator

@@ -1,7 +1,6 @@
 import abc
 import copy
 import functools
-from collections.abc import Callable
 from typing import Optional, Any, TypeVar, Generic, TYPE_CHECKING
 
 from PySide6.QtCore import (
@@ -406,9 +405,6 @@ class ColoredTimeLaneModel(TimeLaneModel[L, O], metaclass=qabc.QABCMeta):
             return True
 
         return super().setHeaderData(section, orientation, value, role)
-
-
-LaneModelFactory = Callable[[L], type[TimeLaneModel[L, Any]]]
 
 
 class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
