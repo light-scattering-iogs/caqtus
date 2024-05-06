@@ -4,6 +4,7 @@ from ._session_maker import (
     SQLExperimentSessionMaker,
     SQLiteExperimentSessionMaker,
     PostgreSQLExperimentSessionMaker,
+    PostgreSQLConfig,
 )
 from ._table_base import create_tables
 
@@ -14,4 +15,5 @@ __all__ = [
     "SQLExperimentSession",
     "SQLiteExperimentSessionMaker",
     "PostgreSQLExperimentSessionMaker",
+    "PostgreSQLConfig",
 ]

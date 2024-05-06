@@ -1,5 +1,6 @@
 from sqlite3 import Connection as SQLite3Connection
 
+import attrs
 import sqlalchemy
 import sqlalchemy.orm
 from sqlalchemy import event, Engine, create_engine, URL
@@ -129,44 +130,39 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         self.__init__(path, serializer)
 
 
-class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
-    """Used to access experiment data stored in a PostgreSQL database.
+@attrs.define
+class PostgreSQLConfig:
+    username: str
+    password: str
+    host: str
+    port: int
+    database: str
 
-    Args:
-        username: The username to use to connect to the database.
-        password: The password to use to connect to the database.
-        host: The host of the database.
-        port: The port of the database.
-        database: The name of the database.
-        serializer: This is used to convert user defined sequence objects to a JSON
-            format that can be stored in the database.
-    """
+
+class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
+    """Used to access experiment data stored in a PostgreSQL database."""
 
     def __init__(
         self,
         serializer: SerializerProtocol,
-        username: str,
-        password: str,
-        host: str,
-        port: int,
-        database: str,
+        config: PostgreSQLConfig,
     ):
         sync_url = URL.create(
             "postgresql+psycopg",
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            database=database,
+            username=config.username,
+            password=config.password,
+            host=config.host,
+            port=config.port,
+            database=config.database,
         )
         engine = create_engine(sync_url, isolation_level="REPEATABLE READ")
         async_url = URL.create(
             "postgresql+psycopg",
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            database=database,
+            username=config.username,
+            password=config.password,
+            host=config.host,
+            port=config.port,
+            database=config.database,
         )
         async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
 
@@ -180,19 +176,17 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
     def __getstate__(self):
         return {
-            "username": self._engine.url.username,
-            "password": self._engine.url.password,
-            "host": self._engine.url.host,
-            "port": self._engine.url.port,
-            "database": self._engine.url.database,
+            "config": PostgreSQLConfig(
+                username=self._engine.url.username,
+                password=self._engine.url.password,
+                host=self._engine.url.host,
+                port=self._engine.url.port,
+                database=self._engine.url.database,
+            ),
             "serializer": self._serializer,
         }
 
     def __setstate__(self, state):
-        username = state.pop("username")
-        password = state.pop("password")
-        host = state.pop("host")
-        port = state.pop("port")
-        database = state.pop("database")
+        config = state.pop("config")
         serializer = state.pop("serializer")
-        self.__init__(username, password, host, port, database, serializer)
+        self.__init__(serializer, config)
