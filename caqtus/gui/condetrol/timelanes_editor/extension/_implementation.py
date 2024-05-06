@@ -20,7 +20,7 @@ from ..model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
-LaneFactory: TypeAlias = Callable[[int], TimeLane]
+LaneFactory: TypeAlias = Callable[[int], L]
 
 
 class LaneDelegateFactory(Protocol[L]):
@@ -72,7 +72,14 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
         return set(self._lane_factories.keys())
 
     def create_new_lane(self, lane_label: str, steps: int) -> TimeLane:
-        return self._lane_factories[lane_label](steps)
+        lane = self._lane_factories[lane_label](steps)
+        if not isinstance(lane, TimeLane):
+            raise TypeError(f"Expected a TimeLane, got {type(lane)}.")
+        if len(lane) != steps:
+            raise ValueError(
+                f"Expected a lane with {steps} steps, got {len(lane)} steps."
+            )
+        return lane
 
 
 def default_lane_model_factory(lane, name: str) -> TimeLaneModel:
