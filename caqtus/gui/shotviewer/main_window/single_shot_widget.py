@@ -278,7 +278,7 @@ async def get_state_async(
         return NoSequenceSelected()
     shots_result = await session.sequences.get_shots(sequence_path)
     try:
-        shots = shots_result.unwrap()
+        shots = unwrap(shots_result)
     except (PathNotFoundError, PathIsNotSequenceError):
         return NoSequenceSelected()
     else:
