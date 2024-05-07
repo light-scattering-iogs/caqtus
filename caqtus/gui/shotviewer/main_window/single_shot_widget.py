@@ -236,15 +236,20 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         if isinstance(state, SequenceSelected):
             if state.shots:
                 last_shot = max(state.shots, key=lambda s: s.index)
-                with self._experiment_session_maker() as session:
-                    shot = Shot.bound(last_shot, session)
-                    await self._update_views(shot)
+                await self._update_views(last_shot)
         self._state = state
 
-    async def _update_views(self, shot: Shot) -> None:
+    async def _update_views(self, shot: PureShot) -> None:
         async with asyncio.TaskGroup() as tg:
             for view in self._get_views().values():
-                tg.create_task(view.display_shot(shot))
+                tg.create_task(self._update_view(shot, view))
+
+    async def _update_view(self, shot: PureShot, view: ShotView) -> None:
+        # We need to create a new session for each view, because otherwise the views
+        # might use the same session concurrently, which is not allowed.
+        with self._experiment_session_maker() as session:
+            shot = Shot.bound(shot, session)
+            await view.display_shot(shot)
 
 
 def _str_to_bytes_array(string: str) -> QByteArray:
