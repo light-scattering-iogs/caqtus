@@ -77,6 +77,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         # Lock to prevent changing the state while comparing if the state is different
         # from the stored sequence.
         self._state_lock = asyncio.Lock()
+        self.tile_action.triggered.connect(self._mdi_area.tileSubWindows)
 
     async def exec_async(self):
         async with self._task_group:

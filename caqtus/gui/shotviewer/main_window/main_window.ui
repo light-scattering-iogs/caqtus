@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>515</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,8 +35,15 @@
     <addaction name="action_save_workspace_as"/>
     <addaction name="action_load_workspace"/>
    </widget>
+   <widget class="QMenu" name="menuWindows">
+    <property name="title">
+     <string>Windows</string>
+    </property>
+    <addaction name="tile_action"/>
+   </widget>
    <addaction name="menu_add_view"/>
    <addaction name="menuWorkspace"/>
+   <addaction name="menuWindows"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_save_workspace_as">
@@ -47,6 +54,11 @@
   <action name="action_load_workspace">
    <property name="text">
     <string>Load...</string>
+   </property>
+  </action>
+  <action name="tile_action">
+   <property name="text">
+    <string>Tile</string>
    </property>
   </action>
  </widget>
