@@ -17,6 +17,7 @@ from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..sequence_collection import PathIsNotSequenceError
 from ..shot import TimeLanes
+from ...types.data import DataLabel
 
 if TYPE_CHECKING:
     from ..experiment_session import ExperimentSession
@@ -203,8 +204,16 @@ class Sequence:
         else:
             tags_dataframe = None
 
+        data_labels = set[DataLabel]()
+
         for shot in self.get_shots():
+            # Here we use a trick to speed up data loading.
+            # We keep track of the data labels that have been loaded so far and
+            # reload them before passing them to the importer.
+            # This ensure that data are queried in group, with is more efficient.
+            shot.get_data_by_labels(data_labels)
             data = importer(shot)
+            data_labels = set(shot._data_cache.keys())
 
             if tags is not None:
                 yield data.join(tags_dataframe, how="cross")
