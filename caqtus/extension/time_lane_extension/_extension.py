@@ -6,11 +6,16 @@ import attrs
 from caqtus.gui.condetrol.timelanes_editor.extension import (
     LaneFactory,
     LaneModelFactory,
+    LaneDelegateFactory,
 )
 from caqtus.session.shot import TimeLane
 from caqtus.utils.serialization import JSON
 
 L = TypeVar("L", bound=TimeLane)
+
+
+def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
+    return None
 
 
 @attrs.frozen
@@ -31,6 +36,11 @@ class TimeLaneExtension:
         lane_factory: A factory function to create a new lane when the user wants to
             create a lane with this label.
             The factory will be called with the number of steps the lane must have.
+        lane_delegate_factory: A factory function to create a delegate for the lane.
+            The factory will be called when the lane is displayed in the editor.
+            The delegate returned by the factory will be used for custom painting and
+            editing of the lane.
+            The default lane delegate factory returns None.
         lane_model_factory: A factory function to create a model for the lane.
             The model will be used to provide the data from the lane to the view.
     """
@@ -41,6 +51,9 @@ class TimeLaneExtension:
     loader: Callable[[JSON], L] = attrs.field()
     lane_factory: LaneFactory[L] = attrs.field()
     lane_model_factory: LaneModelFactory[L] = attrs.field()
+    lane_delegate_factory: LaneDelegateFactory[L] = attrs.field(
+        default=no_lane_delegate_factory
+    )
     type_tag: Optional[str] = attrs.field(default=None)
 
     @lane_type.validator

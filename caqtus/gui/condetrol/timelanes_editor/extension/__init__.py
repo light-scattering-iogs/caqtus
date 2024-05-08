@@ -1,4 +1,9 @@
-from ._implementation import CondetrolLaneExtension, LaneFactory, LaneModelFactory
+from ._implementation import (
+    CondetrolLaneExtension,
+    LaneFactory,
+    LaneModelFactory,
+    LaneDelegateFactory,
+)
 from ._protocol import CondetrolLaneExtensionProtocol
 
 __all__ = [
@@ -6,4 +11,5 @@ __all__ = [
     "CondetrolLaneExtension",
     "LaneFactory",
     "LaneModelFactory",
+    "LaneDelegateFactory",
 ]
