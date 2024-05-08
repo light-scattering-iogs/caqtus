@@ -5,6 +5,7 @@ from collections.abc import MutableSequence, Iterable, Sequence
 from typing import TypeVar, Generic, Self, NewType
 
 import attrs
+
 from caqtus.types.expression import Expression
 from caqtus.utils.asserts import assert_length_changed
 
@@ -162,8 +163,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         self._bounds = compute_bounds(span for _, span in self._spanned_values)
 
     def set_value_for_slice(self, slice_: slice, value: T):
-        start = self._normalize_step(Step(slice_.start if slice_.start is not None else 0))
-        stop = self._normalize_step(Step(slice_.stop if slice_.stop is not None else len(self)))
+        start = self._normalize_step(
+            Step(slice_.start if slice_.start is not None else 0)
+        )
+        stop = self._normalize_step(
+            Step(slice_.stop if slice_.stop is not None else len(self))
+        )
         if not (0 <= start <= stop <= len(self)):
             raise IndexError(f"Slice out of bounds: {slice_}")
         if slice_.step is not None:
@@ -271,6 +276,9 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             return all(a == b for a, b in zip(self, other))
         else:
             return NotImplemented
+
+
+TimeLaneType = TypeVar("TimeLaneType", bound=TimeLane)
 
 
 def compute_bounds(spans: Iterable[Span]) -> list[Step]:

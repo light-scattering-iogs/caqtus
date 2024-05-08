@@ -1,7 +1,7 @@
 from .analog_time_lane import AnalogTimeLane, Ramp
-from .digital_time_lane import DigitalTimeLane
-from .timelane import TimeLane, TimeLanes
 from .camera_time_lane import CameraTimeLane, TakePicture
+from .digital_time_lane import DigitalTimeLane
+from .timelane import TimeLane, TimeLanes, TimeLaneType
 
 __all__ = [
     "TimeLane",
@@ -11,4 +11,5 @@ __all__ = [
     "Ramp",
     "CameraTimeLane",
     "TakePicture",
+    "TimeLaneType",
 ]

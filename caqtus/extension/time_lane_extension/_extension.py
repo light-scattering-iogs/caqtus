@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import TypeVar, Optional
+from typing import Optional
 
 import attrs
 
@@ -9,9 +9,10 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
     LaneDelegateFactory,
 )
 from caqtus.session.shot import TimeLane
-from caqtus.utils.serialization import JSON
 
-L = TypeVar("L", bound=TimeLane)
+# noinspection PyPep8Naming
+from caqtus.session.shot.timelane import TimeLaneType as L
+from caqtus.utils.serialization import JSON
 
 
 def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
