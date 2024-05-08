@@ -1,10 +1,11 @@
 import pytest
 
-from caqtus.gui.condetrol.timelanes_editor import TimeLanesModel
+from caqtus.gui.condetrol.timelanes_editor import TimeLanesModel, DigitalTimeLaneModel
 from caqtus.gui.condetrol.timelanes_editor.extension import (
     CondetrolLaneExtension,
 )
 from caqtus.session.shot import DigitalTimeLane
+from caqtus.extension.time_lane_extension import digital_time_lane_extension
 
 
 def test_0():
@@ -16,7 +17,11 @@ def test_0():
 
 
 def test_1():
-    model = TimeLanesModel(CondetrolLaneExtension())
+    lane_extension = CondetrolLaneExtension()
+    lane_extension.register_lane_model_factory(
+        DigitalTimeLane, digital_time_lane_extension.lane_model_factory
+    )
+    model = TimeLanesModel(lane_extension)
 
     model.insertColumn(0)
     model.insertColumn(0)

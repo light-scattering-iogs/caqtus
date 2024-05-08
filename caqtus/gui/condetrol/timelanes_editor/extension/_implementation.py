@@ -49,11 +49,7 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
     def __init__(self):
         self.get_lane_delegate = functools.singledispatch(default_lane_delegate_factory)
         self.get_lane_model = functools.singledispatch(default_lane_model_factory)
-        self._lane_factories: dict[str, LaneFactory] = {
-            "Digital": create_digital_lane,
-            "Analog": create_analog_lane,
-            "Camera": create_camera_lane,
-        }
+        self._lane_factories: dict[str, LaneFactory] = {}
 
     def register_lane_factory(self, lane_label: str, factory: LaneFactory) -> None:
         self._lane_factories[lane_label] = factory
@@ -86,41 +82,11 @@ def default_lane_model_factory(lane, name: str) -> TimeLaneModel:
     if not isinstance(lane, TimeLane):
         raise TypeError(f"Expected a TimeLane, got {type(lane)}.")
 
-    if isinstance(lane, DigitalTimeLane):
-        model = DigitalTimeLaneModel(name)
-        model.set_lane(lane)
-        return model
-    elif isinstance(lane, AnalogTimeLane):
-        model = AnalogTimeLaneModel(name)
-        model.set_lane(lane)
-        return model
-    elif isinstance(lane, CameraTimeLane):
-        model = CameraTimeLaneModel(name)
-        model.set_lane(lane)
-        return model
-    else:
-        raise NotImplementedError(
-            f"Don't know how to provide a model for {type(lane)}."
-        )
+    raise NotImplementedError(f"Don't know how to provide a model for {type(lane)}.")
 
 
 def default_lane_delegate_factory(
     lane,
     lane_name: str,
 ) -> Optional[QStyledItemDelegate]:
-    if isinstance(lane, DigitalTimeLane):
-        return DigitalTimeLaneDelegate()
-    else:
-        return None
-
-
-def create_digital_lane(number_steps: int) -> DigitalTimeLane:
-    return DigitalTimeLane([False] * number_steps)
-
-
-def create_analog_lane(number_steps: int) -> AnalogTimeLane:
-    return AnalogTimeLane([Expression("...")] * number_steps)
-
-
-def create_camera_lane(number_steps: int) -> CameraTimeLane:
-    return CameraTimeLane([None] * number_steps)
+    return None
