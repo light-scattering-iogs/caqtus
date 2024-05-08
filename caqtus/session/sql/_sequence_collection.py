@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 from typing import TYPE_CHECKING, Optional, assert_never
 
 import attrs
@@ -351,6 +351,13 @@ class SQLSequenceCollection(SequenceCollection):
             self._get_sql_session(), path, shot_index, data_label
         )
 
+    def get_shot_data_by_labels(
+        self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]
+    ) -> Mapping[DataLabel, Data]:
+        return _get_shot_data_by_labels(
+            self._get_sql_session(), path, shot_index, data_labels
+        )
+
     def get_shot_start_time(
         self, path: PureSequencePath, shot_index: int
     ) -> datetime.datetime:
@@ -558,16 +565,34 @@ def _get_all_shot_data(
 
 
 def _get_shot_data_by_label(
-    session: Session, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    session: Session,
+    path: PureSequencePath,
+    shot_index: int,
+    data_label: DataLabel,
 ) -> Data:
-    data = unwrap(_query_data_model(session, path, shot_index, data_label))
+    return _get_shot_data_by_labels(session, path, shot_index, {data_label})[data_label]
 
-    if isinstance(data, SQLStructuredShotData):
-        return data.content
-    elif isinstance(data, SQLShotArray):
-        return np.frombuffer(data.bytes_, dtype=data.dtype).reshape(data.shape)
-    else:
-        assert_never(data)
+
+def _get_shot_data_by_labels(
+    session: Session,
+    path: PureSequencePath,
+    shot_index: int,
+    data_labels: Set[DataLabel],
+) -> dict[DataLabel, Data]:
+    content = unwrap(_query_data_model(session, path, shot_index, data_labels))
+
+    data = {}
+
+    for label, value in content.items():
+        if isinstance(value, SQLStructuredShotData):
+            data[label] = value.content
+        elif isinstance(value, SQLShotArray):
+            data[label] = np.frombuffer(value.bytes_, dtype=value.dtype).reshape(
+                value.shape
+            )
+        else:
+            assert_never(value)
+    return data
 
 
 def _get_shot_start_time(
@@ -585,39 +610,50 @@ def _get_shot_end_time(
 
 
 def _query_data_model(
-    session: Session, path: PureSequencePath, shot_index: int, data_label: DataLabel
+    session: Session,
+    path: PureSequencePath,
+    shot_index: int,
+    data_labels: Set[DataLabel],
 ) -> Result[
-    SQLShotArray | SQLStructuredShotData,
+    dict[DataLabel, SQLShotArray | SQLStructuredShotData],
     PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError | DataNotFoundError,
 ]:
+    data = {}
+    data_labels = set(data_labels)
     stmt = (
         select(SQLStructuredShotData)
-        .where(SQLStructuredShotData.label == data_label)
+        .where(SQLStructuredShotData.label.in_(data_labels))
         .join(SQLShot)
         .where(SQLShot.index == shot_index)
         .join(SQLSequence)
         .join(SQLSequencePath)
         .where(SQLSequencePath.path == str(path))
     )
-    result = session.execute(stmt).scalar_one_or_none()
-    if result is not None:
-        return Success(result)
+    results = session.execute(stmt).all()
+    for (result,) in results:
+        data[result.label] = result
+        data_labels.remove(result.label)
+    if not data_labels:
+        return Success(data)
     stmt = (
         select(SQLShotArray)
-        .where(SQLShotArray.label == data_label)
+        .where(SQLShotArray.label.in_(data_labels))
         .join(SQLShot)
         .where(SQLShot.index == shot_index)
         .join(SQLSequence)
         .join(SQLSequencePath)
         .where(SQLSequencePath.path == str(path))
     )
-    result = session.execute(stmt).scalar_one_or_none()
-    if result is not None:
-        return Success(result)
+    results = session.execute(stmt).all()
+    for (result,) in results:
+        data[result.label] = result
+        data_labels.remove(result.label)
+    if not data_labels:
+        return Success(data)
     shot_result = _query_shot_model(session, path, shot_index)
     match shot_result:
         case Success():
-            return Failure(DataNotFoundError(data_label))
+            return Failure(DataNotFoundError(data_labels))
         case Failure() as failure:
             return failure
 
