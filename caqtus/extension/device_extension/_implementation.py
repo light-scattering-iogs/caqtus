@@ -12,6 +12,8 @@ C = TypeVar("C", bound=DeviceConfiguration)
 
 @attrs.frozen
 class DeviceExtension(Generic[C]):
+    """Extension to define how to implement a device in the application."""
+
     label: str = attrs.field(converter=str)
     configuration_type: type[C] = attrs.field()
     configuration_factory: Callable[[], C] = attrs.field()

@@ -9,3 +9,4 @@ Reference
    Condetrol
    device/index
    types/index
+   extension/extension

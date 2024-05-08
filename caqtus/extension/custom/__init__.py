@@ -1,35 +1,56 @@
-"""This module acts as a registry for a custom extension to the caqtus package."""
+"""This module represent a custom experiment to be used with the caqtus framework.
 
-from caqtus.session import ExperimentSessionMaker
-from caqtus.session.sql import PostgreSQLConfig
+It can be used to configure the static configuration of the experiment and launch the
+different components of the framework.
+
+A typical use of this module would be to configure the experiment in a separate
+module and then import it in the main script to launch the experiment.
+
+For example, in a file `experiment_configuration.py`:
+
+.. code-block:: python
+
+    import caqtus.extension.custom as my_experiment
+    from caqtus.session.sql import PostgreSQLConfig
+    from caqtus_devices.spincore_pulse_blaster import spincore_pulse_blaster_extension
+    from my_devices.my_device_extension import my_device_extension
+
+    my_experiment.configure_storage(PostgreSQLConfig(...))
+
+    my_experiment.register_device_extension(spincore_pulse_blaster_extension)
+    my_experiment.register_device_extension(my_device_extension)
+
+Then in the script to launch the experiment:
+
+.. code-block:: python
+
+        from experiment_configuration import my_experiment
+
+        if __name__ == "__main__":
+            my_experiment.launch_condetrol()
+"""
+
 from .._injector import CaqtusInjector
-from ..device_extension import DeviceExtension
-from ..time_lane_extension import TimeLaneExtension
 
 _injector = CaqtusInjector()
 
 
-def register_device_extension(device_extension: DeviceExtension) -> None:
-    _injector.register_device_extension(device_extension)
+register_device_extension = _injector.register_device_extension
 
 
-def register_time_lane_extension(time_lane_extension: TimeLaneExtension) -> None:
-    _injector.register_time_lane_extension(time_lane_extension)
+register_time_lane_extension = _injector.register_time_lane_extension
 
 
-def configure_storage(backend_config: PostgreSQLConfig) -> None:
-    _injector.configure_storage(backend_config)
+configure_storage = _injector.configure_storage
 
 
 configure_experiment_manager = _injector.configure_experiment_manager
 
 
-def get_session_maker() -> ExperimentSessionMaker:
-    return _injector.get_session_maker()
+get_session_maker = _injector.get_session_maker
 
 
-def launch_condetrol() -> None:
-    _injector.launch_condetrol()
+launch_condetrol = _injector.launch_condetrol
 
 
 __all__ = [

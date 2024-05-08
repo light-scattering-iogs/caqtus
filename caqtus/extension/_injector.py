@@ -7,15 +7,15 @@ from caqtus.experiment_control.manager import (
 )
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
+from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
-from .device_extension import DeviceExtension
-from .time_lane_extension import TimeLaneExtension
 from ..experiment_control import ExperimentManager
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
     LocalExperimentManagerConfiguration,
     RemoteExperimentManagerConfiguration,
 )
+from ..session import ExperimentSessionMaker
 
 
 class CaqtusInjector:
@@ -34,23 +34,92 @@ class CaqtusInjector:
             LocalExperimentManagerConfiguration()
         )
 
-    def configure_storage(self, backend_config: PostgreSQLConfig):
+    def configure_storage(self, backend_config: PostgreSQLConfig) -> None:
+        """Configure the storage backend to be used by the application.
+
+        After this method is called, the application will read and write data and
+        configurations to the storage specified.
+
+        It is necessary to call this method before launching the application.
+
+        Warning:
+            Calling this method multiple times will overwrite the previous
+            configuration.
+        """
+
         if self._session_maker_config is not None:
             warnings.warn("Storage configuration is being overwritten.")
         self._session_maker_config = backend_config
 
-    def configure_experiment_manager(self, location: ExperimentManagerConnection):
+    def configure_experiment_manager(
+        self, location: ExperimentManagerConnection
+    ) -> None:
+        """Configure the location of the experiment manager with respect to Condetrol.
+
+        The :class:`ExperimentManager` is responsible for running sequences on the
+        experiment.
+
+        It can be either running in the same process as the Condetrol application or in
+        a separate process.
+
+        This is configured by passing an instance of either
+        :class:`LocalExperimentManagerConfiguration` or
+        :class:`RemoteExperimentManagerConfiguration`.
+
+        If this method is not called, the experiment manager will be assumed to be
+        running in the same local process as the Condetrol application.
+
+        If the experiment manager is configured to run in the same process, it will be
+        created when the Condetrol application is launched.
+        An issue with this approach is that if the Condetrol application crashes, the
+        experiment manager will also stop abruptly, potentially leaving the experiment
+        in an undesired state.
+
+        If the experiment manager is configured to run in a separate process, it will be
+        necessary to have an experiment manager server running before launching the
+        Condetrol application.
+        The Condetrol application will then connect to the server and transmit the
+        commands to the other process.
+        If the Condetrol application crashes, the experiment manager will be unaffected.
+
+        Warning:
+            Calling this method multiple times will overwrite the previous
+            configuration.
+        """
+
         self._experiment_manager_location = location
 
     def register_device_extension(self, device_extension: DeviceExtension) -> None:
+        """Register a new device extension.
+
+        After this method is called, the device extension will be available to the
+        application, both in the device editor tab in Condetrol and while running the
+        experiment.
+        """
+
         self._extension.register_device_extension(device_extension)
 
     def register_time_lane_extension(
         self, time_lane_extension: TimeLaneExtension
     ) -> None:
+        """Register a new time lane extension.
+
+        After this method is called, the time lane extension will be available to the
+        application, both in the time lane editor tab in Condetrol and while running the
+        experiment.
+        """
+
         self._extension.register_time_lane_extension(time_lane_extension)
 
-    def get_session_maker(self) -> PostgreSQLExperimentSessionMaker:
+    def get_session_maker(self) -> ExperimentSessionMaker:
+        """Get the session maker to be used by the application.
+
+        The session maker is responsible for interacting with the storage of the
+        experiment.
+
+        The method :meth:`configure_storage` must be called before this method.
+        """
+
         if self._session_maker_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
@@ -64,6 +133,8 @@ class CaqtusInjector:
         return session_maker
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
+        """Connect to the experiment manager."""
+
         location = self._experiment_manager_location
         if isinstance(location, LocalExperimentManagerConfiguration):
             return self.get_local_experiment_manager()
@@ -84,6 +155,13 @@ class CaqtusInjector:
         return self._experiment_manager
 
     def launch_condetrol(self) -> None:
+        """Launch the Condetrol application.
+
+        The Condetrol application is the main user interface to the experiment.
+        It allows to edit and launch sequences, as well as edit the device
+        configurations.
+        """
+
         app = Condetrol(
             self.get_session_maker(),
             connect_to_experiment_manager=self.connect_to_experiment_manager,
