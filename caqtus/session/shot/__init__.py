@@ -7,7 +7,6 @@ from caqtus.types.timelane import (
     CameraTimeLane,
     TakePicture,
 )
-from ..sequence._async_shot import AsyncShot
 from ..sequence.shot import Shot
 
 __all__ = [
@@ -18,6 +17,5 @@ __all__ = [
     "Ramp",
     "CameraTimeLane",
     "TakePicture",
-    "AsyncShot",
     "Shot",
 ]

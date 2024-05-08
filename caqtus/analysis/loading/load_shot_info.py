@@ -4,7 +4,6 @@ import polars
 
 from caqtus.session import Shot
 from .combinable_importers import CombinableLoader
-from ...session.sequence._async_shot import AsyncShot
 
 
 class LoadShotTime(CombinableLoader):

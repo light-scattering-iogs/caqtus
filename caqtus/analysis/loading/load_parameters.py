@@ -4,11 +4,10 @@ import attrs
 import polars
 
 from caqtus.session import Shot, Sequence
-from caqtus.session.shot import AsyncShot
 from caqtus.types.parameter import is_analog_value, is_quantity, Parameter
+from caqtus.types.variable_name import DottedVariableName
 from .combinable_importers import CombinableLoader
 from .sequence_cache import cache_per_sequence
-from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.define

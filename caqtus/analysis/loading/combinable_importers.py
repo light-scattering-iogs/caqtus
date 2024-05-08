@@ -4,7 +4,6 @@ from collections.abc import Sequence, Iterable
 import polars
 
 from caqtus.session import Shot
-from caqtus.session.shot import AsyncShot
 from .shot_data import DataImporter
 
 
