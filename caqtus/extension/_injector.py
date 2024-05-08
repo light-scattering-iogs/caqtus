@@ -149,7 +149,7 @@ class CaqtusInjector:
 
     def get_local_experiment_manager(self) -> LocalExperimentManager:
         if self._experiment_manager is None:
-            _experiment_manager = LocalExperimentManager(
+            self._experiment_manager = LocalExperimentManager(
                 session_maker=self.get_session_maker(), device_server_configs={}
             )
         return self._experiment_manager
