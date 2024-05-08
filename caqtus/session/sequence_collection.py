@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Set
 from typing import Protocol, Optional
 
 import attrs
@@ -262,6 +262,26 @@ class SequenceCollection(Protocol):
         """
 
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_shot_data_by_labels(self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]) -> Mapping[DataLabel, Data]:
+        """Return the data with the given labels for the shot at the given index.
+
+        This method is equivalent to calling :meth:`get_shot_data_by_label` for each
+        label in the set, but can be faster.
+
+        Raises:
+            PathNotFoundError: If the path does not exist in the session.
+            PathIsNotSequenceError: If the path is not a sequence.
+            ShotNotFoundError: If the shot does not exist in the sequence.
+            DataNotFoundError: If one of the data labels does not exist in the shot.
+        """
+
+        # Naive implementation that calls get_shot_data_by_label for each label.
+        return {
+            label: self.get_shot_data_by_label(path, shot_index, label)
+            for label in data_labels
+        }
 
     @abc.abstractmethod
     def get_shot_start_time(
