@@ -19,7 +19,10 @@ from ..sequence.iteration_configuration import (
     StepsConfiguration,
 )
 from ..shot import TimeLane
-from ..shot.timelane.serializer import TimeLaneSerializerProtocol, TimeLaneSerializer
+from caqtus.types.timelane.serializer import (
+    TimeLaneSerializerProtocol,
+    TimeLaneSerializer,
+)
 
 T = TypeVar("T", bound=DeviceConfiguration)
 

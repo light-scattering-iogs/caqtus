@@ -11,7 +11,7 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
 from caqtus.session.shot import TimeLane
 
 # noinspection PyPep8Naming
-from caqtus.session.shot.timelane import TimeLaneType as L
+from caqtus.types.timelane import TimeLaneType as L
 from caqtus.utils.serialization import JSON
 
 

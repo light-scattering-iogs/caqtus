@@ -1,4 +1,4 @@
-from .timelane import (
+from caqtus.types.timelane import (
     TimeLane,
     TimeLanes,
     DigitalTimeLane,

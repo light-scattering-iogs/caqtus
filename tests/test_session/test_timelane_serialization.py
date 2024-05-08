@@ -1,5 +1,5 @@
 from caqtus.session.shot import DigitalTimeLane
-from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.types.timelane import AnalogTimeLane, Ramp
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 

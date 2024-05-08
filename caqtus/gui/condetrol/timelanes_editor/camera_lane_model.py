@@ -3,7 +3,7 @@ from typing import Optional, Any, assert_never
 from PySide6.QtCore import QObject, QModelIndex, Qt
 from PySide6.QtGui import QPalette
 
-from caqtus.session.shot.timelane import CameraTimeLane, TakePicture
+from caqtus.types.timelane import CameraTimeLane, TakePicture
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
 from .model import TimeLaneModel

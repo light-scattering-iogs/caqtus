@@ -1,6 +1,6 @@
 import numpy as np
 
-from caqtus.session.shot.timelane import DigitalTimeLane
+from caqtus.types.timelane import DigitalTimeLane
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression

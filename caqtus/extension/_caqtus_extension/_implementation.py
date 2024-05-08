@@ -6,7 +6,7 @@ import attrs
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
 from caqtus.gui.condetrol.extension import CondetrolExtension
 from caqtus.session import ExperimentSessionMaker
-from caqtus.session.shot.timelane.serializer import TimeLaneSerializer
+from caqtus.types.timelane import TimeLaneSerializer
 from caqtus.session.sql._serializer import SerializerProtocol, Serializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension

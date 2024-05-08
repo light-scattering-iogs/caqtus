@@ -5,7 +5,7 @@ from caqtus.device.sequencer.configuration.compile_analog_lane import (
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import TimeLanes
-from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.types.timelane import AnalogTimeLane, Ramp
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
 

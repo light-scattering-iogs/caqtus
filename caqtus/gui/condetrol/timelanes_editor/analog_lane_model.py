@@ -4,7 +4,7 @@ from PySide6.QtCore import QObject, QModelIndex, Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu
 
-from caqtus.session.shot.timelane import AnalogTimeLane, Ramp
+from caqtus.types.timelane import AnalogTimeLane, Ramp
 from caqtus.types.expression import Expression
 from .model import ColoredTimeLaneModel
 
