@@ -12,8 +12,14 @@ from caqtus.utils.asserts import assert_length_changed
 #: The type of the values in the time lane.
 T = TypeVar("T")
 
+
+#: Represents the index of a single step in a time lane.
 Step = NewType("Step", int)
+
+#: Represents the index of a block of steps in a time lane.
 Block = NewType("Block", int)
+
+#: Represents the number of steps spanned by a block.
 Span = NewType("Span", int)
 
 
