@@ -6,16 +6,8 @@ from PySide6.QtWidgets import QStyledItemDelegate
 
 from caqtus.session.shot import (
     TimeLane,
-    DigitalTimeLane,
-    AnalogTimeLane,
-    CameraTimeLane,
 )
-from caqtus.types.expression import Expression
 from ._protocol import CondetrolLaneExtensionProtocol
-from ..analog_lane_model import AnalogTimeLaneModel
-from ..camera_lane_model import CameraTimeLaneModel
-from ..digital_lane_delegate import DigitalTimeLaneDelegate
-from ..digital_lane_model import DigitalTimeLaneModel
 from ..model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)

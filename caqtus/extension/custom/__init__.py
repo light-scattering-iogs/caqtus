@@ -34,12 +34,14 @@ from .._injector import CaqtusInjector
 from ..time_lane_extension import (
     digital_time_lane_extension,
     analog_time_lane_extension,
+    camera_time_lane_extension,
 )
 
 _injector = CaqtusInjector()
 
 _injector.register_time_lane_extension(digital_time_lane_extension)
 _injector.register_time_lane_extension(analog_time_lane_extension)
+_injector.register_time_lane_extension(camera_time_lane_extension)
 
 
 register_device_extension = _injector.register_device_extension

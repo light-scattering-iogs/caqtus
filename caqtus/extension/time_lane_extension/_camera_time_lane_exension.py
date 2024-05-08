@@ -1,6 +1,6 @@
 from caqtus.gui.condetrol.timelanes_editor import TimeLaneModel
 from caqtus.gui.condetrol.timelanes_editor.camera_lane_model import CameraTimeLaneModel
-from caqtus.types.timelane import DigitalTimeLane, CameraTimeLane
+from caqtus.types.timelane import CameraTimeLane
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from ._extension import TimeLaneExtension
@@ -30,7 +30,7 @@ def load_camera_lane(content: JSON):
 
 camera_time_lane_extension = TimeLaneExtension(
     label="Camera",
-    lane_type=DigitalTimeLane,
+    lane_type=CameraTimeLane,
     dumper=dump_camera_lane,
     loader=load_camera_lane,
     lane_factory=create_camera_lane,
