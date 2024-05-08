@@ -2,7 +2,7 @@ from typing import Protocol
 
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializerProtocol
 from caqtus.gui.condetrol.extension import CondetrolExtensionProtocol
-from caqtus.types.timelane import TimeLaneSerializerProtocol
+from caqtus.types.timelane.serializer import TimeLaneSerializerProtocol
 
 
 class CaqtusExtensionProtocol(Protocol):
