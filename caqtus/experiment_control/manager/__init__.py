@@ -1,7 +1,7 @@
 from .manager import (
     ExperimentManager,
     Procedure,
-    BoundExperimentManager,
+    LocalExperimentManager,
     BoundProcedure,
     ProcedureNotActiveError,
 )
@@ -15,7 +15,7 @@ from .remote_manager import (
 __all__ = [
     "ExperimentManager",
     "Procedure",
-    "BoundExperimentManager",
+    "LocalExperimentManager",
     "BoundProcedure",
     "ProcedureNotActiveError",
     "RemoteExperimentManagerServer",

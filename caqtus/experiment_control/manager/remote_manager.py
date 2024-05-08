@@ -10,7 +10,7 @@ from tblib import pickling_support
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, ParameterNamespace
 from caqtus.session import PureSequencePath
-from .manager import ExperimentManager, Procedure, BoundExperimentManager
+from .manager import ExperimentManager, Procedure, LocalExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ...device.configuration import DeviceServerName
 from ...device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
@@ -21,7 +21,7 @@ from ...device.remote_server import DeviceServerConfiguration, RemoteDeviceManag
 # It is not safe since it allows arbitrary code execution upon unpickling.
 pickling_support.install()
 
-experiment_manager: Optional[BoundExperimentManager] = None
+experiment_manager: Optional[LocalExperimentManager] = None
 
 
 class ExperimentManagerProxy(ExperimentManager, multiprocessing.managers.BaseProxy):
@@ -130,7 +130,7 @@ class _MultiprocessingServerManager(multiprocessing.managers.BaseManager):
     pass
 
 
-def _get_experiment_manager() -> BoundExperimentManager:
+def _get_experiment_manager() -> LocalExperimentManager:
     if experiment_manager is None:
         raise RuntimeError("Experiment manager not initialized")
     return experiment_manager
@@ -151,7 +151,7 @@ def _create_experiment_manager(
     shot_retry_config: Optional[ShotRetryConfig] = None,
 ) -> None:
     global experiment_manager
-    experiment_manager = BoundExperimentManager(
+    experiment_manager = LocalExperimentManager(
         session_maker=session_maker,
         shot_retry_config=shot_retry_config,
         device_server_configs=device_server_configs,

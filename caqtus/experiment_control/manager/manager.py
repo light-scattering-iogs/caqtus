@@ -182,7 +182,9 @@ class Procedure(AbstractContextManager, abc.ABC):
         raise NotImplementedError
 
 
-class BoundExperimentManager(ExperimentManager):
+class LocalExperimentManager(ExperimentManager):
+    """Implementation of :class:`ExperimentManager` that runs in the local process."""
+
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -238,7 +240,7 @@ class BoundProcedure(Procedure):
 
     def __init__(
         self,
-        experiment_manager: BoundExperimentManager,
+        experiment_manager: LocalExperimentManager,
         name: str,
         session_maker: ExperimentSessionMaker,
         lock: threading.Lock,

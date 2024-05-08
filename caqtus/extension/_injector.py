@@ -1,7 +1,7 @@
 import warnings
 from typing import Optional
 
-from caqtus.experiment_control.manager import BoundExperimentManager
+from caqtus.experiment_control.manager import LocalExperimentManager
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from ._caqtus_extension import CaqtusExtension
@@ -13,7 +13,7 @@ class CaqtusInjector:
     def __init__(self):
         self._session_maker_config: Optional[PostgreSQLConfig] = None
         self._extension = CaqtusExtension()
-        self._experiment_manager: Optional[BoundExperimentManager] = None
+        self._experiment_manager: Optional[LocalExperimentManager] = None
 
     def configure_storage(self, backend_config: PostgreSQLConfig):
         if self._session_maker_config is not None:
@@ -41,9 +41,9 @@ class CaqtusInjector:
         )
         return session_maker
 
-    def get_experiment_manager(self) -> BoundExperimentManager:
+    def get_experiment_manager(self) -> LocalExperimentManager:
         if self._experiment_manager is None:
-            _experiment_manager = BoundExperimentManager(
+            _experiment_manager = LocalExperimentManager(
                 session_maker=self.get_session_maker(), device_server_configs={}
             )
         return self._experiment_manager

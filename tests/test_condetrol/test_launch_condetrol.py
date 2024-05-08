@@ -1,7 +1,7 @@
 import pytest
 from PySide6.QtCore import QTimer
 
-from caqtus.experiment_control.manager import BoundExperimentManager
+from caqtus.experiment_control.manager import LocalExperimentManager
 from caqtus.gui.condetrol import Condetrol
 from caqtus.gui.condetrol.extension import CondetrolExtension
 from caqtus.session import PureSequencePath
@@ -48,7 +48,7 @@ def test_condetrol(
     extension.device_extension.register_configuration_factory(
         "Spincore sequencer", SpincoreSequencerConfiguration.default
     )
-    experiment_manager = BoundExperimentManager(session_maker, {})
+    experiment_manager = LocalExperimentManager(session_maker, {})
     condetrol = Condetrol(
         session_maker=session_maker,
         extension=extension,
