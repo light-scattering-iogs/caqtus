@@ -11,6 +11,11 @@ from .remote_manager import (
     ExperimentManagerProxy,
     ProcedureProxy,
 )
+from ._configuration import (
+    ExperimentManagerConnection,
+    LocalExperimentManagerConfiguration,
+    RemoteExperimentManagerConfiguration,
+)
 
 __all__ = [
     "ExperimentManager",
@@ -22,4 +27,7 @@ __all__ = [
     "RemoteExperimentManagerClient",
     "ExperimentManagerProxy",
     "ProcedureProxy",
+    "ExperimentManagerConnection",
+    "LocalExperimentManagerConfiguration",
+    "RemoteExperimentManagerConfiguration",
 ]

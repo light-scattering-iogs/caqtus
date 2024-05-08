@@ -21,6 +21,9 @@ def configure_storage(backend_config: PostgreSQLConfig) -> None:
     _injector.configure_storage(backend_config)
 
 
+configure_experiment_manager = _injector.configure_experiment_manager
+
+
 def get_session_maker() -> ExperimentSessionMaker:
     return _injector.get_session_maker()
 
@@ -35,4 +38,5 @@ __all__ = [
     "configure_storage",
     "get_session_maker",
     "launch_condetrol",
+    "configure_experiment_manager",
 ]
