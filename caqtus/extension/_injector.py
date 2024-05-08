@@ -4,7 +4,7 @@ from typing import Optional
 from caqtus.experiment_control.manager import BoundExperimentManager
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
-from .caqtus_extension import CaqtusExtension
+from ._caqtus_extension import CaqtusExtension
 from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
 
