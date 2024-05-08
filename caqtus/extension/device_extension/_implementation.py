@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from typing import Generic
 
 import attrs
 
 from caqtus.device import DeviceConfiguration
+# noinspection PyPep8Naming
+from caqtus.device.configuration import DeviceConfigType as C
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.utils.serialization import JSON
 
-_C = TypeVar("_C", bound=DeviceConfiguration)
-
 
 @attrs.frozen
-class DeviceExtension(Generic[_C]):
+class DeviceExtension(Generic[C]):
     """Extension to define how to implement a device in the application.
 
     This class is generic in the :class:`DeviceConfiguration` type.
@@ -41,18 +41,18 @@ class DeviceExtension(Generic[_C]):
         editor_type: A function that returns an editor for the device configuration.
             When the user wants to edit the configuration of a device of this type,
             this function will be called to create an editor for the configuration.
-            The method :meth:`DeviceConfiguration.get_configuration` of the editor will be
-            called when the user validates the configuration.
+            The method :meth:`DeviceConfiguration.get_configuration` of the editor will
+            be called when the user validates the configuration.
     """
 
     label: str = attrs.field(converter=str)
-    configuration_type: type[_C] = attrs.field()
-    configuration_factory: Callable[[], _C] = attrs.field()
-    configuration_dumper: Callable[[_C], JSON] = attrs.field()
-    configuration_loader: Callable[[JSON], _C] = attrs.field()
-    editor_type: Callable[[_C], DeviceConfigurationEditor[_C]] = attrs.field()
+    configuration_type: type[C] = attrs.field()
+    configuration_factory: Callable[[], C] = attrs.field()
+    configuration_dumper: Callable[[C], JSON] = attrs.field()
+    configuration_loader: Callable[[JSON], C] = attrs.field()
+    editor_type: Callable[[C], DeviceConfigurationEditor[C]] = attrs.field()
 
     @configuration_type.validator  # type: ignore
-    def _validate_configuration_type(self, attribute, value):
+    def _validate_configuration_type(self, _, value):
         if not issubclass(value, DeviceConfiguration):
             raise ValueError(f"Invalid configuration type: {value}.")
