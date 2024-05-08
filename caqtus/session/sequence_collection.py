@@ -11,13 +11,13 @@ from returns.result import Result
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence.iteration_configuration import IterationConfiguration, Unknown
 from .sequence.state import State
-from .shot import TimeLanes
 
 
 class PathIsSequenceError(PathError):
@@ -263,7 +263,7 @@ class SequenceCollection(Protocol):
 
         raise NotImplementedError
 
-    @abc.abstractmethod
+
     def get_shot_data_by_labels(self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]) -> Mapping[DataLabel, Data]:
         """Return the data with the given labels for the shot at the given index.
 
