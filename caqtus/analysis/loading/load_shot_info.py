@@ -29,8 +29,3 @@ class LoadShotTime(CombinableLoader):
             ]
         )
         return dataframe
-
-    async def async_load(self, shot: AsyncShot):
-        start_time = await shot.get_start_time()
-        stop_time = await shot.get_end_time()
-        return self._shot_time_to_dataframe(start_time, stop_time)

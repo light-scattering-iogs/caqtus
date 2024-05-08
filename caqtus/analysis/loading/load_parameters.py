@@ -81,21 +81,6 @@ class LoadShotParameters(CombinableLoader):
 
         return self._parameters_to_dataframe(parameters)
 
-    async def async_load(self, shot: AsyncShot) -> polars.DataFrame:
-        parameters = await shot.get_parameters()
-
-        if self.which == "all":
-            pass
-        elif self.which == "sequence":
-            local_parameters = await shot.sequence.get_local_parameters()
-            parameters = {name: parameters[name] for name in local_parameters}
-        elif self.which == "globals":
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-
-        return self._parameters_to_dataframe(parameters)
-
 
 def get_local_parameters(sequence: Sequence) -> set[DottedVariableName]:
     return sequence.get_local_parameters()

@@ -14,9 +14,6 @@ class LoadShotId(CombinableLoader):
     def load(self, shot: Shot):
         return self._shot_id_to_dataframe(shot.sequence.path, shot.index)
 
-    async def async_load(self, shot: Shot):
-        return self._shot_id_to_dataframe(shot.sequence.path, shot.index)
-
     @staticmethod
     def _shot_id_to_dataframe(path: PureSequencePath, index: int) -> polars.DataFrame:
         dataframe = polars.DataFrame(
