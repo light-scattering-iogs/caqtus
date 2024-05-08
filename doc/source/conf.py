@@ -25,11 +25,11 @@ extensions = [
     "sphinx_rtd_theme",
 ]
 
-autodoc_typehints = "description"
+autodoc_typehints = "signature"
 autodoc_preserve_defaults = True
 maximum_signature_line_length = 80
 
-autodoc_type_aliases = {"LaneFactory": "LaneFactory"}
+autodoc_type_aliases = {"LaneFactory": "LaneFactory", "JSON": "JSON"}
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),

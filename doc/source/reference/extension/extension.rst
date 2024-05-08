@@ -7,6 +7,7 @@ Extension
    :maxdepth: 1
 
    custom
+   device
 
 
 
