@@ -33,6 +33,10 @@ def _convert_to_path(path: PureSequencePath | str) -> PureSequencePath:
 class Sequence:
     """Gives access to the runtime information and data of a sequence.
 
+    Sequence objects can be obtained by calling :meth:`ExperimentSession.get_sequence`.
+    The returned sequence object is bound to the session and is only valid in the
+    context where the session is active.
+
     Args:
         path: The path of the sequence.
         session: The session to which the sequence belongs.
@@ -76,7 +80,7 @@ class Sequence:
     def __len__(self) -> int:
         """Return the number of shots that have been run for this sequence."""
 
-        return len(self.get_shots())
+        return len(unwrap(self.session.sequences.get_shots(self.path)))
 
     def get_state(self) -> State:
         """Return the state of the sequence."""
@@ -108,11 +112,15 @@ class Sequence:
 
         return self.session.sequences.set_time_lanes(self.path, time_lanes)
 
-    def get_shots(self) -> list[Shot]:
-        """Return the shots that belong to this sequence."""
+    def get_shots(self) -> Iterable[Shot]:
+        """Return the shots that belong to this sequence.
+
+        The shots are returned sorted by index.
+        """
 
         pure_shots = unwrap(self.session.sequences.get_shots(self.path))
-        return [Shot.bound(shot, self.session) for shot in pure_shots]
+        sorted_shots = sorted(pure_shots, key=lambda x: x.index)
+        return (Shot.bound(shot, self.session) for shot in sorted_shots)
 
     def get_start_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was started.
@@ -188,8 +196,6 @@ class Sequence:
             index.
         """
 
-        shots = self.get_shots()
-        shots.sort(key=lambda x: x.index)
         if tags is not None:
             tags_dataframe = polars.DataFrame(tags)
             if len(tags_dataframe) != 1:
@@ -197,7 +203,7 @@ class Sequence:
         else:
             tags_dataframe = None
 
-        for shot in shots:
+        for shot in self.get_shots():
             data = importer(shot)
 
             if tags is not None:

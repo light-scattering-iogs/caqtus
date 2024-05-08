@@ -220,7 +220,7 @@ def test_shot_creation(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots()
+        shots = list(sequence.get_shots())
         assert len(shots) == 1
         assert shots[0].index == 0
         assert shots[0].get_parameters() == parameters
@@ -255,7 +255,7 @@ def test_data_not_existing(
             datetime.datetime.now(),
             datetime.datetime.now(),
         )
-        shots = sequence.get_shots()
+        shots = list(sequence.get_shots())
         with pytest.raises(DataNotFoundError):
             shots[0].get_data_by_label(DataLabel("c"))
 
