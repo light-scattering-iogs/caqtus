@@ -6,6 +6,7 @@ from typing import Generic
 import attrs
 
 from caqtus.device import DeviceConfiguration
+
 # noinspection PyPep8Naming
 from caqtus.device.configuration import DeviceConfigType as C
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
