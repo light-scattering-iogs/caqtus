@@ -3,6 +3,7 @@ Explanations
 
 .. toctree::
 
-    overview
+    goals
+    architecture
     how are sequences run
     external resources
