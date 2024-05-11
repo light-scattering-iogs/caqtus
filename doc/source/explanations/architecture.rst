@@ -8,7 +8,7 @@ in the following diagram.
     :alt: System Context Diagram
     :align: center
 
-    System Context Diagram
+    Context diagram
 
 The system is composed of the components to configure runs, to execute them on the apparatus, to store the acquired
 data, and to visualize them.
@@ -17,6 +17,6 @@ data, and to visualize them.
     :alt: Experiment Control Container
     :align: center
 
-    Experiment Control Container
+    Experiment control system
 
 
