@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2024-05-11T17:09:38.106Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="iUiNa4pskU8Npj5OEdpk" version="24.2.5" type="device">
+<mxfile host="Electron" modified="2024-05-11T17:37:10.284Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="TZVGbx6AVTzGpDA5vF5E" version="24.2.5" type="device">
   <diagram name="Page-1" id="qh3EzcdpaSvzkxx11e34">
-    <mxGraphModel dx="1247" dy="727" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
+    <mxGraphModel dx="1793" dy="1045" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -9,9 +9,9 @@
             <mxGeometry x="60" width="200" height="180" as="geometry" />
           </mxCell>
         </object>
-        <mxCell id="vPy4da65JbhE29JQjTfA-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" source="vPy4da65JbhE29JQjTfA-1" target="NfskYz0vfe1n3Q-fBgOu-7" edge="1">
+        <mxCell id="vPy4da65JbhE29JQjTfA-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" source="vPy4da65JbhE29JQjTfA-1" edge="1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="150" y="290" as="targetPoint" />
+            <mxPoint x="160" y="280" as="targetPoint" />
           </mxGeometry>
         </mxCell>
         <mxCell id="vPy4da65JbhE29JQjTfA-8" value="Edit run configurations&amp;nbsp;&lt;div&gt;and launch them&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#000000;labelBackgroundColor=#ffffff;" parent="vPy4da65JbhE29JQjTfA-7" vertex="1" connectable="0">
@@ -24,147 +24,147 @@
             <mxGeometry x="40" y="840" width="240" height="120" as="geometry" />
           </mxCell>
         </object>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-4" value="Experiment control system" style="swimlane;horizontal=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
-          <mxGeometry y="260" width="820" height="520" as="geometry">
-            <mxRectangle y="280" width="40" height="140" as="alternateBounds" />
-          </mxGeometry>
-        </mxCell>
-        <object placeholders="1" c4Name="Condetrol" c4Type="Container" c4Technology="python, Qt" c4Description="Allows users to configure and launch experimental runs" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="NfskYz0vfe1n3Q-fBgOu-7">
-          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="NfskYz0vfe1n3Q-fBgOu-4">
-            <mxGeometry x="40" y="20" width="240" height="160" as="geometry" />
-          </mxCell>
-        </object>
-        <object placeholders="1" c4Name="Experiment manager" c4Type="Container" c4Technology="python" c4Description="Run sequences on the apparatus" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="NfskYz0vfe1n3Q-fBgOu-8">
-          <mxCell style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;metaEdit=1;resizable=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];" vertex="1" parent="NfskYz0vfe1n3Q-fBgOu-4">
-            <mxGeometry x="40" y="300" width="240" height="120" as="geometry" />
-          </mxCell>
-        </object>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.166;entryY=0.004;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="NfskYz0vfe1n3Q-fBgOu-4" target="NfskYz0vfe1n3Q-fBgOu-8">
+        <mxCell id="vPy4da65JbhE29JQjTfA-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" target="vPy4da65JbhE29JQjTfA-17" edge="1">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="80" y="180" as="sourcePoint" />
-            <mxPoint x="80" y="260" as="targetPoint" />
-            <Array as="points">
-              <mxPoint x="80" y="240" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-10" value="Requests to&amp;nbsp;&lt;div&gt;launch a run&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="NfskYz0vfe1n3Q-fBgOu-9">
-          <mxGeometry x="0.0263" y="-1" relative="1" as="geometry">
-            <mxPoint x="1" y="-2" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <object placeholders="1" c4Name="SnapShot" c4Type="Container" c4Technology="python, Qt" c4Description="Allows to view data generated for a single shot" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="NfskYz0vfe1n3Q-fBgOu-13">
-          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="NfskYz0vfe1n3Q-fBgOu-4">
-            <mxGeometry x="300" y="20" width="240" height="160" as="geometry" />
-          </mxCell>
-        </object>
-        <object placeholders="1" c4Name="GraphPlot" c4Type="Container" c4Technology="python, Qt" c4Description="Allows to gather and display data of many shots" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="NfskYz0vfe1n3Q-fBgOu-14">
-          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="NfskYz0vfe1n3Q-fBgOu-4">
-            <mxGeometry x="560" y="20" width="240" height="160" as="geometry" />
-          </mxCell>
-        </object>
-        <object placeholders="1" c4Name="Experiment storage" c4Type="Container" c4Technology="PostgreSQL" c4Description="Stores configurations and data generated during runs" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="NfskYz0vfe1n3Q-fBgOu-40">
-          <mxCell style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#23A2D9;fontSize=12;fontColor=#ffffff;align=center;strokeColor=#0E7DAD;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="NfskYz0vfe1n3Q-fBgOu-4">
-            <mxGeometry x="440" y="300" width="240" height="120" as="geometry" />
-          </mxCell>
-        </object>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="NfskYz0vfe1n3Q-fBgOu-4" target="NfskYz0vfe1n3Q-fBgOu-40">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="700" y="180" as="sourcePoint" />
-            <mxPoint x="680" y="500" as="targetPoint" />
-            <Array as="points">
-              <mxPoint x="700" y="180" />
-              <mxPoint x="700" y="360" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-16" value="Reads and analyzes data&lt;div&gt;&amp;nbsp;from several shots&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="NfskYz0vfe1n3Q-fBgOu-15">
-          <mxGeometry x="-0.283" relative="1" as="geometry">
-            <mxPoint y="-12" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.168;entryY=0.031;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;exitX=0.749;exitY=0.991;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="NfskYz0vfe1n3Q-fBgOu-4" source="NfskYz0vfe1n3Q-fBgOu-13" target="NfskYz0vfe1n3Q-fBgOu-40">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="520" y="500" as="targetPoint" />
-            <Array as="points" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-22" value="Reads and displays data&amp;nbsp;&lt;div&gt;for a single shot&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="NfskYz0vfe1n3Q-fBgOu-20">
-          <mxGeometry x="-0.285" y="1" relative="1" as="geometry">
-            <mxPoint y="17" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=#000000;" parent="NfskYz0vfe1n3Q-fBgOu-4" source="NfskYz0vfe1n3Q-fBgOu-7" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="210" y="150" as="sourcePoint" />
-            <mxPoint x="440" y="340" as="targetPoint" />
-            <Array as="points">
-              <mxPoint x="160" y="260" />
-              <mxPoint x="360" y="260" />
-              <mxPoint x="360" y="340" />
-              <mxPoint x="440" y="340" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-11" value="Reads and writes configurations" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" parent="vPy4da65JbhE29JQjTfA-10" vertex="1" connectable="0">
-          <mxGeometry x="0.025" y="3" relative="1" as="geometry">
-            <mxPoint x="-46" y="3" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;entryX=-0.001;entryY=0.663;entryDx=0;entryDy=0;entryPerimeter=0;" parent="NfskYz0vfe1n3Q-fBgOu-4" target="NfskYz0vfe1n3Q-fBgOu-40" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="280" y="380" as="sourcePoint" />
-            <mxPoint x="439" y="380" as="targetPoint" />
-            <Array as="points" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-33" value="&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; background-color: rgb(27, 29, 30);&quot;&gt;%3CmxGraphModel%3E%3Croot%3E%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%20parent%3D%220%22%2F%3E%3CmxCell%20id%3D%222%22%20value%3D%22Writes%20aquired%20data%22%20style%3D%22edgeLabel%3Bhtml%3D1%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3Bresizable%3D0%3Bpoints%3D%5B%5D%3B%22%20vertex%3D%221%22%20connectable%3D%220%22%20parent%3D%221%22%3E%3CmxGeometry%20x%3D%22612.698172690878%22%20y%3D%22773.9698802626483%22%20as%3D%22geometry%22%2F%3E%3C%2FmxCell%3E%3C%2Froot%3E%3C%2FmxGraphModel%3EW&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; background-color: rgb(27, 29, 30);&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="vPy4da65JbhE29JQjTfA-30" vertex="1" connectable="0">
-          <mxGeometry x="0.0024" y="-1" relative="1" as="geometry">
-            <mxPoint as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-34" value="Reads configurations&amp;nbsp;&lt;div&gt;and writes acquired data&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" parent="vPy4da65JbhE29JQjTfA-30" vertex="1" connectable="0">
-          <mxGeometry x="-0.0097" y="-3" relative="1" as="geometry">
-            <mxPoint x="-8" y="-3" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" source="NfskYz0vfe1n3Q-fBgOu-8" target="vPy4da65JbhE29JQjTfA-17" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="154.98" y="590" as="sourcePoint" />
+            <mxPoint x="160" y="680" as="sourcePoint" />
             <mxPoint x="165.0234782608695" y="770" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="vPy4da65JbhE29JQjTfA-19" value="Controls the devices&amp;nbsp;&lt;div&gt;&lt;div&gt;during a run&lt;/div&gt;&lt;div&gt;and gather generated data&lt;/div&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontColor=#000000;" parent="vPy4da65JbhE29JQjTfA-18" vertex="1" connectable="0">
-          <mxGeometry x="-0.0868" y="-2" relative="1" as="geometry">
-            <mxPoint x="2" y="-23" as="offset" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.997;exitY=0.825;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="1" source="vPy4da65JbhE29JQjTfA-1" target="NfskYz0vfe1n3Q-fBgOu-13">
+        <mxCell id="NfskYz0vfe1n3Q-fBgOu-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.997;exitY=0.825;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" source="vPy4da65JbhE29JQjTfA-1" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="420" y="148" />
             </Array>
+            <mxPoint x="420" y="280" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-32" value="Monitors experimental runs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#000000;labelBackgroundColor=#ffffff;" vertex="1" connectable="0" parent="NfskYz0vfe1n3Q-fBgOu-30">
+        <mxCell id="NfskYz0vfe1n3Q-fBgOu-32" value="Monitors experimental runs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#000000;labelBackgroundColor=#ffffff;" parent="NfskYz0vfe1n3Q-fBgOu-30" vertex="1" connectable="0">
           <mxGeometry x="-0.4538" y="-2" relative="1" as="geometry">
             <mxPoint y="-1" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="1" target="NfskYz0vfe1n3Q-fBgOu-14">
+        <mxCell id="NfskYz0vfe1n3Q-fBgOu-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" parent="1" edge="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="260" y="110" as="sourcePoint" />
             <Array as="points">
               <mxPoint x="260" y="110" />
               <mxPoint x="680" y="110" />
             </Array>
+            <mxPoint x="680" y="280" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="NfskYz0vfe1n3Q-fBgOu-33" value="Analyzes data acquired&amp;nbsp;&lt;div&gt;during the runs&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#000000;labelBackgroundColor=#ffffff;" vertex="1" connectable="0" parent="NfskYz0vfe1n3Q-fBgOu-31">
+        <mxCell id="NfskYz0vfe1n3Q-fBgOu-33" value="Analyzes data acquired&amp;nbsp;&lt;div&gt;during the runs&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontColor=#000000;labelBackgroundColor=#ffffff;" parent="NfskYz0vfe1n3Q-fBgOu-31" vertex="1" connectable="0">
           <mxGeometry x="-0.3023" y="4" relative="1" as="geometry">
             <mxPoint y="4" as="offset" />
           </mxGeometry>
         </mxCell>
+        <object placeholders="1" c4Name="Condetrol" c4Type="Container" c4Technology="python, Qt" c4Description="Allows users to configure and launch experimental runs" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-2">
+          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="1">
+            <mxGeometry x="40" y="280" width="240" height="160" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Experiment manager" c4Type="Container" c4Technology="python" c4Description="Run sequences on the apparatus" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-3">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;metaEdit=1;resizable=0;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];" vertex="1" parent="1">
+            <mxGeometry x="40" y="560" width="240" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.166;entryY=0.004;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="1" target="Q1tHPlpaSqCuggFhtofJ-3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="80" y="440" as="sourcePoint" />
+            <mxPoint x="80" y="520" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="80" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-5" value="Requests to&amp;nbsp;&lt;div&gt;launch a run&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-4">
+          <mxGeometry x="0.0263" y="-1" relative="1" as="geometry">
+            <mxPoint x="1" y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <object placeholders="1" c4Name="SnapShot" c4Type="Container" c4Technology="python, Qt" c4Description="Allows to view data generated for a single shot" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-6">
+          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="1">
+            <mxGeometry x="300" y="280" width="240" height="160" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="GraphPlot" c4Type="Container" c4Technology="python, Qt" c4Description="Allows to gather and display data of many shots" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-7">
+          <mxCell style="shape=mxgraph.c4.webBrowserContainer2;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;strokeColor=#118ACD;fillColor=#23A2D9;strokeColor=#118ACD;strokeColor2=#0E7DAD;fontSize=12;fontColor=#ffffff;align=center;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="1">
+            <mxGeometry x="560" y="280" width="240" height="160" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Experiment storage" c4Type="Container" c4Technology="PostgreSQL" c4Description="Stores configurations and data generated during runs" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%:&amp;nbsp;%c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-8">
+          <mxCell style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#23A2D9;fontSize=12;fontColor=#ffffff;align=center;strokeColor=#0E7DAD;metaEdit=1;points=[[0.5,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.5,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];resizable=0;" vertex="1" parent="1">
+            <mxGeometry x="440" y="560" width="240" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;" edge="1" parent="1" target="Q1tHPlpaSqCuggFhtofJ-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="700" y="440" as="sourcePoint" />
+            <mxPoint x="680" y="760" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="700" y="440" />
+              <mxPoint x="700" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-10" value="Reads and analyzes data&lt;div&gt;&amp;nbsp;from several shots&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-9">
+          <mxGeometry x="-0.283" relative="1" as="geometry">
+            <mxPoint y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.168;entryY=0.031;entryDx=0;entryDy=0;entryPerimeter=0;strokeColor=#000000;exitX=0.749;exitY=0.991;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="Q1tHPlpaSqCuggFhtofJ-6" target="Q1tHPlpaSqCuggFhtofJ-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="520" y="760" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-12" value="Reads and displays data&amp;nbsp;&lt;div&gt;for a single shot&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-11">
+          <mxGeometry x="-0.285" y="1" relative="1" as="geometry">
+            <mxPoint y="17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;strokeColor=#000000;" edge="1" parent="1" source="Q1tHPlpaSqCuggFhtofJ-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="210" y="410" as="sourcePoint" />
+            <mxPoint x="440" y="600" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="160" y="520" />
+              <mxPoint x="360" y="520" />
+              <mxPoint x="360" y="600" />
+              <mxPoint x="440" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-14" value="Reads and writes configurations" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-13">
+          <mxGeometry x="0.025" y="3" relative="1" as="geometry">
+            <mxPoint x="-46" y="3" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;entryX=-0.001;entryY=0.663;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" target="Q1tHPlpaSqCuggFhtofJ-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="640" as="sourcePoint" />
+            <mxPoint x="439" y="640" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-16" value="&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; background-color: rgb(27, 29, 30);&quot;&gt;%3CmxGraphModel%3E%3Croot%3E%3CmxCell%20id%3D%220%22%2F%3E%3CmxCell%20id%3D%221%22%20parent%3D%220%22%2F%3E%3CmxCell%20id%3D%222%22%20value%3D%22Writes%20aquired%20data%22%20style%3D%22edgeLabel%3Bhtml%3D1%3Balign%3Dcenter%3BverticalAlign%3Dmiddle%3Bresizable%3D0%3Bpoints%3D%5B%5D%3B%22%20vertex%3D%221%22%20connectable%3D%220%22%20parent%3D%221%22%3E%3CmxGeometry%20x%3D%22612.698172690878%22%20y%3D%22773.9698802626483%22%20as%3D%22geometry%22%2F%3E%3C%2FmxCell%3E%3C%2Froot%3E%3C%2FmxGraphModel%3EW&lt;/span&gt;&lt;div&gt;&lt;span style=&quot;color: rgba(0, 0, 0, 0); font-family: monospace; font-size: 0px; text-align: start; background-color: rgb(27, 29, 30);&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-15">
+          <mxGeometry x="0.0024" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-17" value="Reads configurations&amp;nbsp;&lt;div&gt;and writes acquired data&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];rotation=0;labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="Q1tHPlpaSqCuggFhtofJ-15">
+          <mxGeometry x="-0.0097" y="-3" relative="1" as="geometry">
+            <mxPoint x="-8" y="-3" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q1tHPlpaSqCuggFhtofJ-18" value="Controls the devices&amp;nbsp;&lt;div&gt;&lt;div&gt;during a run&lt;/div&gt;&lt;div&gt;and gather generated data&lt;/div&gt;&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;fontColor=#000000;" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="160" y="730.0434782608695" as="geometry" />
+        </mxCell>
+        <object placeholders="1" c4Name="Experiment control system" c4Type="SystemScopeBoundary" c4Application="Software System" label="&lt;font style=&quot;font-size: 16px&quot;&gt;&lt;b&gt;&lt;div style=&quot;&quot;&gt;%c4Name%&lt;/div&gt;&lt;/b&gt;&lt;/font&gt;&lt;div style=&quot;&quot;&gt;[%c4Application%]&lt;/div&gt;" id="Q1tHPlpaSqCuggFhtofJ-19">
+          <mxCell style="rounded=1;fontSize=11;whiteSpace=wrap;html=1;dashed=1;arcSize=20;fillColor=none;strokeColor=#666666;fontColor=#333333;labelBackgroundColor=none;align=right;verticalAlign=bottom;labelBorderColor=none;spacingTop=0;spacing=10;dashPattern=8 4;metaEdit=1;rotatable=0;perimeter=rectanglePerimeter;noLabel=0;labelPadding=0;allowArrows=0;connectable=0;expand=0;recursiveResize=0;editable=1;pointerEvents=0;absoluteArcSize=1;points=[[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0.25,0],[1,0.5,0],[1,0.75,0],[0.75,1,0],[0.5,1,0],[0.25,1,0],[0,0.75,0],[0,0.5,0],[0,0.25,0]];" vertex="1" parent="1">
+            <mxGeometry x="9" y="250" width="810" height="520" as="geometry" />
+          </mxCell>
+        </object>
       </root>
     </mxGraphModel>
   </diagram>
