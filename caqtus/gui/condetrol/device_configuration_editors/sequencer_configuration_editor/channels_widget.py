@@ -98,4 +98,6 @@ class SequencerChannelWidget(QWidget):
             output = self.channel_output_editor.get_output()
             row = current_item.row()
             self.channels[row].output = output
+        for row, channel in enumerate(self.channels):
+            channel.description = self.channel_table.item(row, 0).text()
         return copy.deepcopy(self.channels)
