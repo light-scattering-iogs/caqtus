@@ -20,7 +20,11 @@ from caqtus.types.parameter import (
 )
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from ..instructions import SequencerInstruction, Pattern, concatenate
+from caqtus.device.sequencer.instructions import (
+    SequencerInstruction,
+    Pattern,
+    concatenate,
+)
 
 TIME_VARIABLE = VariableName("t")
 

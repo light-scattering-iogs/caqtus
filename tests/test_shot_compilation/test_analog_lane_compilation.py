@@ -1,6 +1,6 @@
 import numpy as np
 
-from caqtus.device.sequencer.configuration.compile_analog_lane import (
+from caqtus.device.sequencer.compilation.compile_analog_lane import (
     compile_analog_lane,
 )
 from caqtus.device.sequencer.instructions import Pattern

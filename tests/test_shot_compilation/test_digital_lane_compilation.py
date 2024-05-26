@@ -1,4 +1,4 @@
-from caqtus.device.sequencer.configuration._compile_digital_lane import (
+from caqtus.device.sequencer.compilation._compile_digital_lane import (
     compile_digital_lane,
 )
 from caqtus.device.sequencer.instructions import Pattern
