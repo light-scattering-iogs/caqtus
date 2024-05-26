@@ -8,7 +8,26 @@ class AutoResizeLineEdit(QLineEdit):
         self.textChanged.connect(self.resize_to_content)
 
     def resize_to_content(self):
+        text = self.get_text()
+        self.resize_to_text(text)
+
+    def get_text(self):
+        completer = self.completer()
+        if completer is not None:
+            if completer.popup().isVisible():
+                return completer.currentCompletion()
         text = self.text()
+        if text:
+            return text
+        else:
+            return self.placeholderText()
+
+    def setCompleter(self, completer):
+        super().setCompleter(completer)
+        if completer is not None:
+            completer.highlighted.connect(self.resize_to_text)
+
+    def resize_to_text(self, text):
         text_size = self.fontMetrics().size(0, text)
         tm = self.textMargins()
         tm_size = QSize(tm.left() + tm.right(), tm.top() + tm.bottom())

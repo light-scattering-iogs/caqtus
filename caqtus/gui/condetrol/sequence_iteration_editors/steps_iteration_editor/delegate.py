@@ -91,7 +91,6 @@ class StepDelegate(HTMLItemDelegate):
         super().__init__(parent)
         self.doc = QTextDocument(self)
         self._completer = QCompleter(self)
-        self._completer.setCompletionMode(QCompleter.CompletionMode.InlineCompletion)
 
     def get_text_to_render(self, index: QModelIndex) -> str:
         step: Step = index.data(role=Qt.DisplayRole)
@@ -180,8 +179,7 @@ class CompoundWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
-        margins = layout.contentsMargins()
-        layout.setContentsMargins(margins.left(), 0, margins.right(), 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
         self._widgets = []
