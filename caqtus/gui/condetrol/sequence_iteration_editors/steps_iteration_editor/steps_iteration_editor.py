@@ -56,7 +56,8 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setModel(self._model)
         self.expandAll()
         self.header().hide()
-        self.setItemDelegate(StepDelegate(self))
+        self._delegate = StepDelegate(self)
+        self.setItemDelegate(self._delegate)
 
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
@@ -95,6 +96,15 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         with block_signals(self):
             self._model.set_steps(iteration)
         self.expandAll()
+
+    def set_available_names(self, names: set[DottedVariableName]):
+        """Sets the names that can be used in the iteration.
+
+        The names are used to populate the auto-completion of variable names when the
+        user try to edit the name of a variable or a loop.
+        """
+
+        self._delegate.set_available_names(names)
 
     def set_read_only(self, read_only: bool):
         self._model.set_read_only(read_only)

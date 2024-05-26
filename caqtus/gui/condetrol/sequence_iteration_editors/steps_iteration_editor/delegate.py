@@ -1,6 +1,14 @@
+from collections.abc import Set
 from typing import Optional, assert_never
 
-from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QObject, QEvent
+from PySide6.QtCore import (
+    QModelIndex,
+    Qt,
+    QAbstractItemModel,
+    QObject,
+    QEvent,
+    QStringListModel,
+)
 from PySide6.QtGui import (
     QTextDocument,
     QPalette,
@@ -14,6 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QApplication,
     QSpinBox,
+    QCompleter,
 )
 
 from caqtus.types.expression import Expression
@@ -81,6 +90,7 @@ class StepDelegate(HTMLItemDelegate):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.doc = QTextDocument(self)
+        self._completer = QCompleter(self)
 
     def get_text_to_render(self, index: QModelIndex) -> str:
         step: Step = index.data(role=Qt.DisplayRole)
@@ -91,13 +101,15 @@ class StepDelegate(HTMLItemDelegate):
     ) -> QWidget:
         value = index.data(role=Qt.DisplayRole)
         if isinstance(value, VariableDeclaration):
-            return VariableDeclarationEditor(parent, option.font)
+            editor = VariableDeclarationEditor(parent, option.font)
         elif isinstance(value, LinspaceLoop):
-            return LinspaceLoopEditor(parent, option.font)
+            editor = LinspaceLoopEditor(parent, option.font)
         elif isinstance(value, ArangeLoop):
-            return ArrangeLoopEditor(parent, option.font)
+            editor = ArrangeLoopEditor(parent, option.font)
         else:
             assert_never(value)
+        editor.set_name_completer(self._completer)
+        return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
@@ -157,6 +169,10 @@ class StepDelegate(HTMLItemDelegate):
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case _:
                 assert_never(previous_data)
+
+    def set_available_names(self, names: Set[DottedVariableName]) -> None:
+        available_names = {str(name) for name in names}
+        self._completer.setModel(QStringListModel(available_names))
 
 
 class CompoundWidget(QWidget):
@@ -241,6 +257,9 @@ class LinspaceLoopEditor(CompoundWidget):
             "num": self.num_editor.value(),
         }
 
+    def set_name_completer(self, completer: QCompleter) -> None:
+        self.name_editor.setCompleter(completer)
+
 
 class VariableDeclarationEditor(CompoundWidget):
     def __init__(self, parent, font):
@@ -272,6 +291,9 @@ class VariableDeclarationEditor(CompoundWidget):
         name = DottedVariableName(self.name_editor.text())
         value = Expression(self.value_editor.text())
         return VariableDeclaration(variable=name, value=value)
+
+    def set_name_completer(self, completer: QCompleter) -> None:
+        self.name_editor.setCompleter(completer)
 
 
 class ArrangeLoopEditor(CompoundWidget):
@@ -329,3 +351,6 @@ class ArrangeLoopEditor(CompoundWidget):
             "stop": Expression(self.stop_editor.text()),
             "step": Expression(self.step_editor.text()),
         }
+
+    def set_name_completer(self, completer: QCompleter) -> None:
+        self.name_editor.setCompleter(completer)
