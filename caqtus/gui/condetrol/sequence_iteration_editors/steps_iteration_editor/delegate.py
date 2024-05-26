@@ -2,19 +2,19 @@ import re
 from typing import Optional, assert_never
 
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtCore import QModelIndex, Qt, QRectF, QAbstractItemModel
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
 from PySide6.QtGui import (
     QValidator,
     QTextDocument,
-    QAbstractTextDocumentLayout,
 )
 from PySide6.QtWidgets import (
-    QStyledItemDelegate,
     QLineEdit,
     QWidget,
     QStyleOptionViewItem,
 )
 
+from caqtus.types.expression import EXPRESSION_REGEX
+from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     Step,
     VariableDeclaration,
@@ -22,10 +22,8 @@ from caqtus.types.iteration import (
     ArangeLoop,
     ExecuteShot,
 )
-from caqtus.types.expression import EXPRESSION_REGEX
-from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DOTTED_VARIABLE_NAME_REGEX, DottedVariableName
-from ...qt_util import AutoResizeLineEdit
+from ...qt_util import AutoResizeLineEdit, HTMLItemDelegate
 
 VARIABLE_DECLARATION_REGEX = re.compile(
     f"(?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) = (?P<value>{EXPRESSION_REGEX.pattern})"
@@ -93,37 +91,14 @@ def to_str(step: Step) -> str:
             assert_never(step)
 
 
-class StepDelegate(QStyledItemDelegate):
+class StepDelegate(HTMLItemDelegate):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.doc = QTextDocument(self)
 
-    def paint(self, painter, option, index):
-        options = QtWidgets.QStyleOptionViewItem(option)
-        self.initStyleOption(options, index)
-        painter.save()
-        self.doc.setTextWidth(options.rect.width())
-        text = to_str(index.data(role=Qt.ItemDataRole.DisplayRole))
-        self.doc.setHtml(text)
-        self.doc.setDefaultFont(options.font)
-        options.text = ""
-        options.widget.style().drawControl(
-            QtWidgets.QStyle.ControlElement.CE_ItemViewItem, options, painter
-        )
-        painter.translate(options.rect.left(), options.rect.top())
-        clip = QRectF(0, 0, options.rect.width(), options.rect.height())
-        painter.setClipRect(clip)
-        ctx = QAbstractTextDocumentLayout.PaintContext()
-        ctx.clip = clip
-        self.doc.documentLayout().draw(painter, ctx)
-        painter.restore()
-
-    def sizeHint(self, option, index):
-        options = QtWidgets.QStyleOptionViewItem(option)
-        self.initStyleOption(option, index)
-        self.doc.setHtml(option.text)
-        self.doc.setTextWidth(option.rect.width())
-        return QtCore.QSize(int(self.doc.idealWidth()), int(self.doc.size().height()))
+    def get_text_to_render(self, index: QModelIndex) -> str:
+        step: Step = index.data(role=Qt.DisplayRole)
+        return to_str(step)
 
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
@@ -191,12 +166,6 @@ class StepDelegate(QStyledItemDelegate):
                         "step": Expression(match.group("step")),
                     }
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
-
-    def updateEditorGeometry(
-        self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex
-    ):
-        geometry = option.rect
-        editor.setGeometry(geometry)
 
 
 class VariableDeclarationValidator(QValidator):
