@@ -15,7 +15,16 @@ class AutoResizeLineEdit(QLineEdit):
         completer = self.completer()
         if completer is not None:
             if completer.popup().isVisible():
-                return completer.currentCompletion()
+                model = completer.completionModel()
+                if model.rowCount() > 0:
+                    longest_suggestion = max(
+                        (
+                            model.data(model.index(index, 0))
+                            for index in range(model.rowCount())
+                        ),
+                        key=lambda x: len(x),
+                    )
+                    return longest_suggestion
         text = self.text()
         if text:
             return text
