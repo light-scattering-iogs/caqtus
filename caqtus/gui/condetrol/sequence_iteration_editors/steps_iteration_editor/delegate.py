@@ -163,7 +163,8 @@ class CompoundWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        margins = layout.contentsMargins()
+        layout.setContentsMargins(margins.left(), 0, margins.right(), 0)
         layout.setSpacing(0)
         self.setLayout(layout)
         self._widgets = []
