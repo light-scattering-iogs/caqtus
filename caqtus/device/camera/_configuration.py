@@ -1,4 +1,3 @@
-import abc
 from typing import TypeVar, Generic
 
 import attrs
@@ -13,7 +12,7 @@ CameraType = TypeVar("CameraType", bound=Camera)
 
 @attrs.define
 class CameraConfiguration(
-    DeviceConfiguration[CameraType], abc.ABC, Generic[CameraType]
+    DeviceConfiguration[CameraType], Generic[CameraType]
 ):
     """Contains the necessary information about a camera.
 
