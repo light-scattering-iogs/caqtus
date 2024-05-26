@@ -1,16 +1,20 @@
 import re
 from typing import Optional, assert_never
 
-from PySide6 import QtWidgets, QtCore
-from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel
+from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QObject, QEvent
 from PySide6.QtGui import (
     QValidator,
     QTextDocument,
+    QPalette,
+    QFocusEvent,
 )
 from PySide6.QtWidgets import (
     QLineEdit,
     QWidget,
     QStyleOptionViewItem,
+    QHBoxLayout,
+    QLabel,
+    QApplication,
 )
 
 from caqtus.types.expression import EXPRESSION_REGEX
@@ -22,7 +26,11 @@ from caqtus.types.iteration import (
     ArangeLoop,
     ExecuteShot,
 )
-from caqtus.types.variable_name import DOTTED_VARIABLE_NAME_REGEX, DottedVariableName
+from caqtus.types.variable_name import (
+    DOTTED_VARIABLE_NAME_REGEX,
+    DottedVariableName,
+    InvalidVariableNameError,
+)
 from ...qt_util import AutoResizeLineEdit, HTMLItemDelegate
 
 VARIABLE_DECLARATION_REGEX = re.compile(
@@ -48,26 +56,30 @@ IMPORT_CONSTANT_TABLE_REGEX = re.compile(
     f"( as (?P<alias>{DOTTED_VARIABLE_NAME_REGEX.pattern}))?"
 )
 
+NAME_COLOR = "#AA4926"
+VALUE_COLOR = "#6897BB"
+HIGHLIGHT_COLOR = "#cc7832"
+
 
 def to_str(step: Step) -> str:
-    hl = "#cc7832"
-    var_col = "#AA4926"
-    val_col = "#6897BB"
-    text_col = "#FFFFFF"
+    hl = HIGHLIGHT_COLOR
+    text_color = f"#{QPalette().text().color().rgba():X}"
+    var_col = NAME_COLOR
+    val_col = VALUE_COLOR
     match step:
         case ExecuteShot():
             return f"<span style='color:{hl}'>do shot</span>"
         case VariableDeclaration(variable, value):
             return (
                 f"<span style='color:{var_col}'>{variable}</span> "
-                "<span style='color:#FFFFFF'>=</span> "
+                f"<span style='color:{text_color}'>=</span> "
                 f"<span style='color:{val_col}'>{value}</span>"
             )
         case ArangeLoop(variable, start, stop, step, sub_steps):
             return (
                 f"<span style='color:{hl}'>for</span> "
                 f"<span style='color:{var_col}'>{variable}</span> "
-                "<span style='color:#FFFFFF'>=</span> "
+                f"<span style='color:{text_color}'>=</span> "
                 f"<span style='color:{val_col}'>{start}</span> "
                 f"<span style='color:{hl}'>to </span> "
                 f"<span style='color:{val_col}'>{stop}</span> "
@@ -79,7 +91,7 @@ def to_str(step: Step) -> str:
             return (
                 f"<span style='color:{hl}'>for</span> "
                 f"<span style='color:{var_col}'>{variable}</span> "
-                "<span style='color:#FFFFFF'>=</span> "
+                f"<span style='color:{text_color}'>=</span> "
                 f"<span style='color:{val_col}'>{start}</span> "
                 f"<span style='color:{hl}'>to </span> "
                 f"<span style='color:{val_col}'>{stop}</span> "
@@ -103,17 +115,20 @@ class StepDelegate(HTMLItemDelegate):
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
-        editor = QLineEdit()
-        editor.setParent(parent)
-        return editor
+        value = index.data(role=Qt.DisplayRole)
+        if isinstance(value, VariableDeclaration):
+            return VariableDeclarationEditor(parent, option.font)
+        else:
+            editor = QLineEdit()
+            editor.setParent(parent)
+            return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
         match data:
-            case VariableDeclaration(variable, value):
-                text = f"{variable} = {value}"
-                editor.setValidator(VariableDeclarationValidator())
-                editor.setText(text)
+            case VariableDeclaration() as declaration:
+                assert isinstance(editor, VariableDeclarationEditor)
+                editor.set_value(declaration)
             case LinspaceLoop(variable, start, stop, num, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {num} steps:"
                 editor.setValidator(LinSpaceLoopValidator())
@@ -136,17 +151,22 @@ class StepDelegate(HTMLItemDelegate):
     ) -> None:
         editor: QLineEdit
         previous_data: Step = index.data(role=Qt.ItemDataRole.EditRole)
-        text = editor.text()
+
         match previous_data:
             case VariableDeclaration():
-                match = VARIABLE_DECLARATION_REGEX.fullmatch(text)
-                if match:
+                assert isinstance(editor, VariableDeclarationEditor)
+                try:
+                    new_declaration = editor.get_value()
+                except InvalidVariableNameError:
+                    return
+                else:
                     new_attributes = {
-                        "variable": DottedVariableName(match.group("variable")),
-                        "value": Expression(match.group("value")),
+                        "variable": new_declaration.variable,
+                        "value": new_declaration.value,
                     }
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case LinspaceLoop():
+                text = editor.text()
                 match = LINSPACE_LOOP_REGEX.fullmatch(text)
                 if match:
                     new_attributes = {
@@ -157,6 +177,7 @@ class StepDelegate(HTMLItemDelegate):
                     }
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case ArangeLoop():
+                text = editor.text()
                 match = ARANGE_LOOP_REGEX.fullmatch(text)
                 if match:
                     new_attributes = {
@@ -168,15 +189,60 @@ class StepDelegate(HTMLItemDelegate):
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
 
 
-class VariableDeclarationValidator(QValidator):
+class CompoundWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+        self._widgets = []
 
-    def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
-        if VARIABLE_DECLARATION_REGEX.fullmatch(input):
-            return QValidator.State.Acceptable, input, pos
-        else:
-            return QValidator.State.Invalid, input, pos
+    def add_widget(self, widget: QWidget):
+        self.layout().addWidget(widget)
+        widget.installEventFilter(self)
+        self._widgets.append(widget)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        watched_is_child = watched in self._widgets
+        if watched_is_child and event.type() == QEvent.Type.FocusOut:
+            if QApplication.focusWidget() not in self.findChildren(QWidget):
+                QApplication.postEvent(self, QFocusEvent(event.type()))
+            return False
+
+        return super().eventFilter(watched, event)
+
+
+class VariableDeclarationEditor(CompoundWidget):
+    def __init__(self, parent, font):
+        super().__init__(parent)
+        self.setFont(font)
+        self.name_editor = AutoResizeLineEdit(self)
+        self.add_widget(self.name_editor)
+        label = QLabel("=", self)
+        label.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.add_widget(label)
+        self.value_editor = AutoResizeLineEdit(self)
+        self.add_widget(self.value_editor)
+        self.layout().addStretch(1)
+
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+        self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.value_editor.setStyleSheet(f"color: {VALUE_COLOR}")
+        self.name_editor.setPlaceholderText("Parameter name")
+        self.value_editor.setPlaceholderText("Parameter value")
+
+    def set_value(self, declaration: VariableDeclaration) -> None:
+        self.name_editor.setText(str(declaration.variable))
+        self.value_editor.setText(str(declaration.value))
+
+    def get_value(self) -> VariableDeclaration:
+        name = DottedVariableName(self.name_editor.text())
+        value = Expression(self.value_editor.text())
+        return VariableDeclaration(variable=name, value=value)
 
 
 class LinSpaceLoopValidator(QValidator):
@@ -210,32 +276,3 @@ class ImportConstantTableValidator(QValidator):
             return QValidator.State.Acceptable, input, pos
         else:
             return QValidator.State.Invalid, input, pos
-
-
-class VariableDeclarationEditor(QWidget):
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-        layout = QtWidgets.QHBoxLayout()
-        self.variable = AutoResizeLineEdit(self)
-        self.value = AutoResizeLineEdit(self)
-        layout.addWidget(self.variable)
-        label = QtWidgets.QLabel(self)
-        label.setText("=")
-        label.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(label, 0)
-        layout.addWidget(self.value, 0)
-        layout.addStretch(1)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-
-    def set_data(self, data: VariableDeclaration):
-        self.variable.setText(str(data.variable))
-        self.value.setText(str(data.value))
-
-    def get_data(self) -> VariableDeclaration:
-        return VariableDeclaration(
-            variable=DottedVariableName(self.variable.text()),
-            value=Expression(self.value.text()),
-        )
