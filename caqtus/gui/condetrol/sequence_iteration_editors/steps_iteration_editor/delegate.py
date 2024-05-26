@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QApplication,
+    QSpinBox,
 )
 
 from caqtus.types.expression import EXPRESSION_REGEX
@@ -33,17 +34,6 @@ from caqtus.types.variable_name import (
 )
 from ...qt_util import AutoResizeLineEdit, HTMLItemDelegate
 
-VARIABLE_DECLARATION_REGEX = re.compile(
-    f"(?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) = (?P<value>{EXPRESSION_REGEX.pattern})"
-)
-
-LINSPACE_LOOP_REGEX = re.compile(
-    f"for (?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) "
-    f"= (?P<start>{EXPRESSION_REGEX.pattern}) "
-    f"to (?P<stop>{EXPRESSION_REGEX.pattern}) "
-    f"with (?P<num>[0-9]+) steps:"
-)
-
 ARANGE_LOOP_REGEX = re.compile(
     f"for (?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) "
     f"= (?P<start>{EXPRESSION_REGEX.pattern}) "
@@ -51,10 +41,6 @@ ARANGE_LOOP_REGEX = re.compile(
     f"with (?P<step>{EXPRESSION_REGEX.pattern}) spacing:"
 )
 
-IMPORT_CONSTANT_TABLE_REGEX = re.compile(
-    f"import (?P<table>{DOTTED_VARIABLE_NAME_REGEX.pattern})"
-    f"( as (?P<alias>{DOTTED_VARIABLE_NAME_REGEX.pattern}))?"
-)
 
 NAME_COLOR = "#AA4926"
 VALUE_COLOR = "#6897BB"
@@ -118,6 +104,8 @@ class StepDelegate(HTMLItemDelegate):
         value = index.data(role=Qt.DisplayRole)
         if isinstance(value, VariableDeclaration):
             return VariableDeclarationEditor(parent, option.font)
+        elif isinstance(value, LinspaceLoop):
+            return LinspaceLoopEditor(parent, option.font)
         else:
             editor = QLineEdit()
             editor.setParent(parent)
@@ -129,10 +117,9 @@ class StepDelegate(HTMLItemDelegate):
             case VariableDeclaration() as declaration:
                 assert isinstance(editor, VariableDeclarationEditor)
                 editor.set_value(declaration)
-            case LinspaceLoop(variable, start, stop, num, sub_steps):
-                text = f"for {variable} = {start} to {stop} with {num} steps:"
-                editor.setValidator(LinSpaceLoopValidator())
-                editor.setText(text)
+            case LinspaceLoop() as loop:
+                assert isinstance(editor, LinspaceLoopEditor)
+                editor.set_value(loop)
             case ArangeLoop(variable, start, stop, step, sub_steps):
                 text = f"for {variable} = {start} to {stop} with {step} spacing:"
                 editor.setValidator(ArangeLoopValidator())
@@ -166,16 +153,13 @@ class StepDelegate(HTMLItemDelegate):
                     }
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
             case LinspaceLoop():
-                text = editor.text()
-                match = LINSPACE_LOOP_REGEX.fullmatch(text)
-                if match:
-                    new_attributes = {
-                        "variable": DottedVariableName(match.group("variable")),
-                        "start": Expression(match.group("start")),
-                        "stop": Expression(match.group("stop")),
-                        "num": int(match.group("num")),
-                    }
-                    model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
+                assert isinstance(editor, LinspaceLoopEditor)
+                try:
+                    new_values = editor.get_values()
+                except InvalidVariableNameError:
+                    return
+                else:
+                    model.setData(index, new_values, Qt.ItemDataRole.EditRole)
             case ArangeLoop():
                 text = editor.text()
                 match = ARANGE_LOOP_REGEX.fullmatch(text)
@@ -213,6 +197,64 @@ class CompoundWidget(QWidget):
         return super().eventFilter(watched, event)
 
 
+class LinspaceLoopEditor(CompoundWidget):
+    def __init__(self, parent, font):
+        super().__init__(parent)
+        self.setFont(font)
+        for_label = QLabel("for", self)
+        for_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        for_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(for_label)
+        self.name_editor = AutoResizeLineEdit(self)
+        self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.name_editor)
+        equal_label = QLabel("=", self)
+        equal_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.add_widget(equal_label)
+        self.start_editor = AutoResizeLineEdit(self)
+        self.start_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.start_editor)
+        to_label = QLabel("to", self)
+        to_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        to_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(to_label)
+        self.stop_editor = AutoResizeLineEdit(self)
+        self.start_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.stop_editor)
+        with_label = QLabel("with", self)
+        with_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        with_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(with_label)
+        self.num_editor = QSpinBox(self)
+        self.num_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.num_editor.setRange(0, 9999)
+        self.add_widget(self.num_editor)
+        steps_label = QLabel("steps:", self)
+        steps_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        steps_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(steps_label)
+        self.layout().addStretch(1)
+
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+
+    def set_value(self, loop: LinspaceLoop) -> None:
+        self.name_editor.setText(str(loop.variable))
+        self.start_editor.setText(str(loop.start))
+        self.stop_editor.setText(str(loop.stop))
+        self.num_editor.setValue(loop.num)
+
+    def get_values(self) -> dict:
+        return {
+            "variable": DottedVariableName(self.name_editor.text()),
+            "start": Expression(self.start_editor.text()),
+            "stop": Expression(self.stop_editor.text()),
+            "num": self.num_editor.value(),
+        }
+
+
 class VariableDeclarationEditor(CompoundWidget):
     def __init__(self, parent, font):
         super().__init__(parent)
@@ -245,34 +287,12 @@ class VariableDeclarationEditor(CompoundWidget):
         return VariableDeclaration(variable=name, value=value)
 
 
-class LinSpaceLoopValidator(QValidator):
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-
-    def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
-        if LINSPACE_LOOP_REGEX.fullmatch(input):
-            return QValidator.State.Acceptable, input, pos
-        else:
-            return QValidator.State.Invalid, input, pos
-
-
 class ArangeLoopValidator(QValidator):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
     def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
         if ARANGE_LOOP_REGEX.fullmatch(input):
-            return QValidator.State.Acceptable, input, pos
-        else:
-            return QValidator.State.Invalid, input, pos
-
-
-class ImportConstantTableValidator(QValidator):
-    def __init__(self, parent: Optional[QWidget] = None):
-        super().__init__(parent)
-
-    def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
-        if IMPORT_CONSTANT_TABLE_REGEX.fullmatch(input):
             return QValidator.State.Acceptable, input, pos
         else:
             return QValidator.State.Invalid, input, pos
