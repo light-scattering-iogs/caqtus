@@ -8,8 +8,8 @@ from typing import Optional
 from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session import ExperimentSessionMaker, ParameterNamespace
-from caqtus.session import PureSequencePath
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.types.parameter import ParameterNamespace
 from .manager import ExperimentManager, Procedure, LocalExperimentManager
 from ..sequence_runner import ShotRetryConfig
 from ...device.configuration import DeviceServerName

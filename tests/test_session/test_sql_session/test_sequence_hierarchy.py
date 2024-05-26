@@ -8,21 +8,21 @@ from caqtus.device import DeviceName
 from caqtus.session import (
     BoundSequencePath,
     PureSequencePath,
-    ParameterNamespace,
     Sequence,
 )
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap
 from caqtus.session.sequence import State
-from caqtus.types.iteration import (
-    StepsConfiguration,
-)
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     DataNotFoundError,
 )
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
+from caqtus.types.iteration import (
+    StepsConfiguration,
+)
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
 from tests.fixtures.steps_iteration import steps_configuration

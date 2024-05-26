@@ -8,7 +8,8 @@ from returns.result import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
-from caqtus.types.parameter import Parameter
+from caqtus.types.iteration import IterationConfiguration
+from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.variable_name import DottedVariableName
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
@@ -26,7 +27,7 @@ from ._sequence_collection import (
     _get_all_shot_data,
 )
 from ._serializer import SerializerProtocol
-from .. import ParameterNamespace, PureSequencePath
+from .. import PureSequencePath
 from ..async_session import (
     AsyncExperimentSession,
     AsyncPathHierarchy,
@@ -34,7 +35,6 @@ from ..async_session import (
 )
 from ..experiment_session import ExperimentSessionNotActiveError
 from ..path_hierarchy import PathNotFoundError, PathIsRootError
-from caqtus.types.iteration import IterationConfiguration
 from ..sequence_collection import (
     PathIsSequenceError,
     SequenceStats,

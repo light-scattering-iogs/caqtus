@@ -1,8 +1,8 @@
 from pytestqt.qtbot import QtBot
 
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
-from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import ParameterNamespace
 
 
 def test(qtbot: QtBot):

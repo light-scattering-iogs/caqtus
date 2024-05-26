@@ -10,13 +10,12 @@ from returns.result import Result
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
-from caqtus.types.parameter import Parameter
+from caqtus.types.iteration import IterationConfiguration, Unknown
+from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
-from caqtus.types.iteration import IterationConfiguration, Unknown
 from .sequence.state import State
 
 

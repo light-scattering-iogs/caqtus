@@ -13,21 +13,21 @@ from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     ExperimentSession,
-    ParameterNamespace,
     AsyncExperimentSession,
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import State
-from caqtus.types.iteration import (
-    IterationConfiguration,
-    StepsConfiguration,
-)
 from caqtus.session.sequence_collection import (
     SequenceNotEditableError,
     PathIsNotSequenceError,
 )
 from caqtus.session.shot import TimeLanes
+from caqtus.types.iteration import (
+    IterationConfiguration,
+    StepsConfiguration,
+)
+from caqtus.types.parameter import ParameterNamespace
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..icons import get_icon
 from ..parameter_tables_editor import ParameterNamespaceEditor

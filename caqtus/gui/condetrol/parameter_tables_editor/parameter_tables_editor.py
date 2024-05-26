@@ -33,8 +33,8 @@ from PySide6.QtWidgets import (
 
 from caqtus.gui.common.exception_tree import ExceptionDialog
 from caqtus.gui.qtutil import block_signals, temporary_widget
-from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ..icons import get_icon

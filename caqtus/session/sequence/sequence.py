@@ -8,12 +8,12 @@ import attrs
 import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.types.variable_name import DottedVariableName
 from caqtus.types.iteration import IterationConfiguration, Unknown
+from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
 from .state import State
 from .._return_or_raise import unwrap
-from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..sequence_collection import PathIsNotSequenceError
 from ..shot import TimeLanes

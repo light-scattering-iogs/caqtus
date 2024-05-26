@@ -5,16 +5,15 @@ from typing import Protocol
 
 from returns.result import Result
 
-from ..parameter_namespace import ParameterNamespace
+from caqtus.types.data import DataLabel, Data
+from caqtus.types.iteration import IterationConfiguration
+from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.variable_name import DottedVariableName
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError
 from ..sequence import State
-from caqtus.types.iteration import IterationConfiguration
 from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
 from ..shot import TimeLanes
-from caqtus.types.data import DataLabel, Data
-from caqtus.types.parameter import Parameter
-from caqtus.types.variable_name import DottedVariableName
 
 
 class AsyncSequenceCollection(Protocol):

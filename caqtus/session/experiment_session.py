@@ -4,7 +4,7 @@ import logging
 from contextlib import AbstractContextManager
 from typing import Protocol, TYPE_CHECKING
 
-from caqtus.session.parameter_namespace import ParameterNamespace
+from caqtus.types.parameter import ParameterNamespace
 from .device_configuration_collection import DeviceConfigurationCollection
 from .path import PureSequencePath
 from .path_hierarchy import PathHierarchy

@@ -1,7 +1,7 @@
 import pickle
 
-from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization

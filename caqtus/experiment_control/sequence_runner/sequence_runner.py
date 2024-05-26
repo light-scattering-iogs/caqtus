@@ -2,7 +2,6 @@ import functools
 from collections.abc import Iterable, Callable, Generator
 from typing import assert_never, TypeVar
 
-from caqtus.session import ParameterNamespace
 from caqtus.types.iteration import (
     Step,
     ArangeLoop,
@@ -10,10 +9,7 @@ from caqtus.types.iteration import (
     VariableDeclaration,
     LinspaceLoop,
 )
-from caqtus.types.parameter import (
-    is_parameter,
-    Parameter,
-)
+from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
 from .sequence_manager import SequenceManager
 from .step_context import StepContext
 

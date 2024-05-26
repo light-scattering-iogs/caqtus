@@ -10,12 +10,9 @@ from typing import Optional
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
-from caqtus.session import (
-    ExperimentSessionMaker,
-    PureSequencePath,
-    ParameterNamespace,
-)
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.iteration import StepsConfiguration
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context

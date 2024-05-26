@@ -1,6 +1,6 @@
 from caqtus.gui.qtutil import QtAsyncio
-from caqtus.session import ParameterNamespace
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import ParameterNamespace
 from .session_maker import session_maker
 
 

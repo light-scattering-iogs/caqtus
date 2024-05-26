@@ -3,8 +3,7 @@ import contextlib
 import attrs
 import sqlalchemy.orm
 
-from caqtus.session import ParameterNamespace
-from caqtus.session.sql.parameters_table import SQLParameters
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils import serialization
 from ._device_configuration_collection import SQLDeviceConfigurationCollection
 from ._path_hierarchy import SQLPathHierarchy
@@ -12,6 +11,7 @@ from ._sequence_collection import (
     SQLSequenceCollection,
 )
 from ._serializer import SerializerProtocol
+from .parameters_table import SQLParameters
 from ..experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,

@@ -16,10 +16,11 @@ from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
-from caqtus.session import ExperimentSessionMaker, ParameterNamespace, PureSequencePath
+from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import VariableNamespace, SequenceContext
 from caqtus.types.data import DataLabel, Data
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.concurrent import TaskGroup
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler

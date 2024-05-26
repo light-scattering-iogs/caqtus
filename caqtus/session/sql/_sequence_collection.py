@@ -15,7 +15,12 @@ from sqlalchemy.orm import Session
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.types.data import DataLabel, Data, is_data
 from caqtus.types.expression import Expression
+from caqtus.types.iteration import (
+    IterationConfiguration,
+    Unknown,
+)
 from caqtus.types.parameter import Parameter
+from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
@@ -31,13 +36,8 @@ from ._sequence_table import (
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
-from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from caqtus.types.iteration import (
-    IterationConfiguration,
-    Unknown,
-)
 from ..sequence.state import State
 from ..sequence_collection import (
     PathIsSequenceError,
