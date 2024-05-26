@@ -4,12 +4,12 @@ from typing import TypeVar, TypedDict, Generic
 import attrs
 
 from caqtus.session.shot import CameraTimeLane, TakePicture
-from caqtus.shot_compilation import SequenceContext, ShotContext
+from caqtus.shot_compilation import SequenceContext, ShotContext, DeviceNotUsedException
 from caqtus.utils.roi import RectangularROI
 from ._controller import CameraController
 from ._runtime import Camera
 from .. import DeviceName
-from ..configuration import DeviceConfiguration, DeviceNotUsedException
+from ..configuration import DeviceConfiguration
 
 CameraType = TypeVar("CameraType", bound=Camera)
 

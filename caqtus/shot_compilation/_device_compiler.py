@@ -1,6 +1,8 @@
+from __future__ import annotations
+
+import abc
 from collections.abc import Mapping
 from typing import Protocol, Any
-import abc
 
 from caqtus.device import DeviceName, DeviceParameter
 from .compilation_contexts import SequenceContext, ShotContext
@@ -26,8 +28,6 @@ class DeviceCompiler(Protocol):
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         """Initialize the device compiler.
 
-
-
         Args:
             device_name: The name of the device for which the compiler is being created.
                 The device name can be used to retrieve the device configuration in the
@@ -35,6 +35,8 @@ class DeviceCompiler(Protocol):
             sequence_context: The context of the sequence being compiled.
                 It contains information about the current that can be useful to evaluate
                 device parameters.
+        Raises:
+            DeviceNotUsedException: If the device is not used in the current sequence.
         """
 
         ...
@@ -56,3 +58,9 @@ class DeviceCompiler(Protocol):
         """
 
         ...
+
+
+class DeviceNotUsedException(Exception):
+    """Raised when a device is not used in a sequence."""
+
+    pass

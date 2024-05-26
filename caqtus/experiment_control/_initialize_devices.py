@@ -4,12 +4,11 @@ from typing import Any, assert_never
 
 from caqtus.device import DeviceName, DeviceConfiguration, Device
 from caqtus.device.configuration import (
-    DeviceNotUsedException,
     LocalProcessInitialization,
     RemoteProcessInitialization,
 )
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
-from caqtus.shot_compilation import SequenceContext
+from caqtus.shot_compilation import SequenceContext, DeviceNotUsedException
 
 
 def create_devices(

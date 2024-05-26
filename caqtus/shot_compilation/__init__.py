@@ -4,7 +4,7 @@ configurations into low-level device parameters.
 """
 
 from caqtus.types.units.unit_namespace import units
-from ._device_compiler import DeviceCompiler
+from ._device_compiler import DeviceCompiler, DeviceNotUsedException
 from .compilation_contexts import ShotContext, SequenceContext
 from .variable_namespace import VariableNamespace
 
@@ -14,4 +14,5 @@ __all__ = [
     "ShotContext",
     "SequenceContext",
     "DeviceCompiler",
+    "DeviceNotUsedException",
 ]

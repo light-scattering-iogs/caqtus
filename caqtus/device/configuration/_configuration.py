@@ -151,12 +151,6 @@ def get_configurations_by_type(
     }
 
 
-class DeviceNotUsedException(Exception):
-    """Raised when a device is not used in a sequence."""
-
-    pass
-
-
 @attrs.define
 class LocalProcessInitialization:
     device_type: type[Device]
