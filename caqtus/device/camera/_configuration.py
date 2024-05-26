@@ -1,22 +1,14 @@
 import abc
-from typing import TypeVar, TypedDict, Generic
+from typing import TypeVar, Generic
 
 import attrs
 
-from caqtus.session.shot import CameraTimeLane, TakePicture
-from caqtus.shot_compilation import SequenceContext, ShotContext, DeviceNotUsedException
 from caqtus.utils.roi import RectangularROI
 from ._controller import CameraController
 from ._runtime import Camera
-from .. import DeviceName
 from ..configuration import DeviceConfiguration
 
 CameraType = TypeVar("CameraType", bound=Camera)
-
-
-class CameraUpdateParams(TypedDict):
-    timeout: float
-    exposures: list[float]
 
 
 @attrs.define
@@ -34,44 +26,5 @@ class CameraConfiguration(
         on_setattr=attrs.setters.validate,
     )
 
-    @abc.abstractmethod
-    def get_device_initialization_method(
-        self, device_name: DeviceName, sequence_context: SequenceContext
-    ):
-        try:
-            sequence_context.get_lane(device_name)
-        except KeyError:
-            raise DeviceNotUsedException(device_name)
-        return (
-            super()
-            .get_device_initialization_method(device_name, sequence_context)
-            .with_extra_parameters(roi=self.roi, external_trigger=True, timeout=1.0)
-        )
-
     def get_controller_type(self):
         return CameraController
-
-    @abc.abstractmethod
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        shot_context: ShotContext,
-    ):
-        lane = shot_context.get_lane(device_name)
-        if not isinstance(lane, CameraTimeLane):
-            raise TypeError(f"Expected a camera lane for device {device_name}")
-        step_durations = shot_context.get_step_durations()
-        exposures = []
-        picture_names = []
-        for value, (start, stop) in zip(lane.values(), lane.bounds()):
-            if isinstance(value, TakePicture):
-                exposure = sum(step_durations[start:stop])
-                exposures.append(exposure)
-                picture_names.append(value.picture_name)
-        return {
-            # Add a bit of extra time to the timeout, in case the shot takes a bit of
-            # time to actually start.
-            "timeout": shot_context.get_shot_duration() + 1,
-            "picture_names": picture_names,
-            "exposures": exposures,
-        }
