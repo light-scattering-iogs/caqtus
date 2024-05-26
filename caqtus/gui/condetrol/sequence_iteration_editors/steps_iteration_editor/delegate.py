@@ -1,9 +1,7 @@
-import re
 from typing import Optional, assert_never
 
 from PySide6.QtCore import QModelIndex, Qt, QAbstractItemModel, QObject, QEvent
 from PySide6.QtGui import (
-    QValidator,
     QTextDocument,
     QPalette,
     QFocusEvent,
@@ -18,7 +16,6 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from caqtus.types.expression import EXPRESSION_REGEX
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     Step,
@@ -28,19 +25,10 @@ from caqtus.types.iteration import (
     ExecuteShot,
 )
 from caqtus.types.variable_name import (
-    DOTTED_VARIABLE_NAME_REGEX,
     DottedVariableName,
     InvalidVariableNameError,
 )
 from ...qt_util import AutoResizeLineEdit, HTMLItemDelegate
-
-ARANGE_LOOP_REGEX = re.compile(
-    f"for (?P<variable>{DOTTED_VARIABLE_NAME_REGEX.pattern}) "
-    f"= (?P<start>{EXPRESSION_REGEX.pattern}) "
-    f"to (?P<stop>{EXPRESSION_REGEX.pattern}) "
-    f"with (?P<step>{EXPRESSION_REGEX.pattern}) spacing:"
-)
-
 
 NAME_COLOR = "#AA4926"
 VALUE_COLOR = "#6897BB"
@@ -106,10 +94,10 @@ class StepDelegate(HTMLItemDelegate):
             return VariableDeclarationEditor(parent, option.font)
         elif isinstance(value, LinspaceLoop):
             return LinspaceLoopEditor(parent, option.font)
+        elif isinstance(value, ArangeLoop):
+            return ArrangeLoopEditor(parent, option.font)
         else:
-            editor = QLineEdit()
-            editor.setParent(parent)
-            return editor
+            assert_never(value)
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
         data: Step = index.data(role=Qt.ItemDataRole.EditRole)
@@ -120,10 +108,9 @@ class StepDelegate(HTMLItemDelegate):
             case LinspaceLoop() as loop:
                 assert isinstance(editor, LinspaceLoopEditor)
                 editor.set_value(loop)
-            case ArangeLoop(variable, start, stop, step, sub_steps):
-                text = f"for {variable} = {start} to {stop} with {step} spacing:"
-                editor.setValidator(ArangeLoopValidator())
-                editor.setText(text)
+            case ArangeLoop():
+                assert isinstance(editor, ArrangeLoopEditor)
+                editor.set_value(data)
             case _:
                 raise ValueError(f"Can't set editor data for {data}")
 
@@ -161,16 +148,15 @@ class StepDelegate(HTMLItemDelegate):
                 else:
                     model.setData(index, new_values, Qt.ItemDataRole.EditRole)
             case ArangeLoop():
-                text = editor.text()
-                match = ARANGE_LOOP_REGEX.fullmatch(text)
-                if match:
-                    new_attributes = {
-                        "variable": DottedVariableName(match.group("variable")),
-                        "start": Expression(match.group("start")),
-                        "stop": Expression(match.group("stop")),
-                        "step": Expression(match.group("step")),
-                    }
+                assert isinstance(editor, ArrangeLoopEditor)
+                try:
+                    new_attributes = editor.get_values()
+                except InvalidVariableNameError:
+                    return
+                else:
                     model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
+            case _:
+                assert_never(previous_data)
 
 
 class CompoundWidget(QWidget):
@@ -287,12 +273,58 @@ class VariableDeclarationEditor(CompoundWidget):
         return VariableDeclaration(variable=name, value=value)
 
 
-class ArangeLoopValidator(QValidator):
-    def __init__(self, parent: Optional[QWidget] = None):
+class ArrangeLoopEditor(CompoundWidget):
+    def __init__(self, parent, font):
         super().__init__(parent)
+        self.setFont(font)
+        for_label = QLabel("for ", self)
+        for_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        for_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(for_label)
+        self.name_editor = AutoResizeLineEdit(self)
+        self.name_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.name_editor)
+        equal_label = QLabel("=", self)
+        equal_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.add_widget(equal_label)
+        self.start_editor = AutoResizeLineEdit(self)
+        self.start_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.start_editor)
+        to_label = QLabel(" to ", self)
+        to_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        to_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(to_label)
+        self.stop_editor = AutoResizeLineEdit(self)
+        self.start_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.stop_editor)
+        with_label = QLabel(" with ", self)
+        with_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        with_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(with_label)
+        self.step_editor = AutoResizeLineEdit(self)
+        self.step_editor.setStyleSheet(f"color: {NAME_COLOR}")
+        self.add_widget(self.step_editor)
+        spacing_label = QLabel(" spacing:", self)
+        spacing_label.setAttribute(Qt.WA_TranslucentBackground, True)
+        spacing_label.setStyleSheet(f"color: {HIGHLIGHT_COLOR}")
+        self.add_widget(spacing_label)
+        self.layout().addStretch(1)
 
-    def validate(self, input: str, pos: int) -> tuple[QValidator.State, str, int]:
-        if ARANGE_LOOP_REGEX.fullmatch(input):
-            return QValidator.State.Acceptable, input, pos
-        else:
-            return QValidator.State.Invalid, input, pos
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.black)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+
+    def set_value(self, loop: ArangeLoop) -> None:
+        self.name_editor.setText(str(loop.variable))
+        self.start_editor.setText(str(loop.start))
+        self.stop_editor.setText(str(loop.stop))
+        self.step_editor.setText(str(loop.step))
+
+    def get_values(self) -> dict:
+        return {
+            "variable": DottedVariableName(self.name_editor.text()),
+            "start": Expression(self.start_editor.text()),
+            "stop": Expression(self.stop_editor.text()),
+            "step": Expression(self.step_editor.text()),
+        }
