@@ -91,6 +91,7 @@ class StepDelegate(HTMLItemDelegate):
         super().__init__(parent)
         self.doc = QTextDocument(self)
         self._completer = QCompleter(self)
+        self._completer.setCompletionMode(QCompleter.CompletionMode.InlineCompletion)
 
     def get_text_to_render(self, index: QModelIndex) -> str:
         step: Step = index.data(role=Qt.DisplayRole)
