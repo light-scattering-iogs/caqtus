@@ -19,7 +19,7 @@ from caqtus.session import (
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import State
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
 )

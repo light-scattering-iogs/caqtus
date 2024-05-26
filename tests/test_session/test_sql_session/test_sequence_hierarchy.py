@@ -13,13 +13,12 @@ from caqtus.session import (
 )
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap
-from caqtus.session.sequence import State, Shot
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.session.sequence import State
+from caqtus.types.iteration import (
     StepsConfiguration,
 )
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
-    PureShot,
     DataNotFoundError,
 )
 from caqtus.types.data import DataLabel

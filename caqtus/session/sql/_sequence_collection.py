@@ -34,7 +34,7 @@ from .._return_or_raise import unwrap
 from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from ..sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     IterationConfiguration,
     Unknown,
 )

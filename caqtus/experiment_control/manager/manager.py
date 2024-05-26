@@ -15,7 +15,7 @@ from caqtus.session import (
     PureSequencePath,
     ParameterNamespace,
 )
-from caqtus.session.sequence.iteration_configuration import StepsConfiguration
+from caqtus.types.iteration import StepsConfiguration
 from caqtus.utils import log_exception
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context

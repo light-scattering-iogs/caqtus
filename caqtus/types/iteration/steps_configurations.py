@@ -17,10 +17,10 @@ from caqtus.types.parameter import (
     add_unit,
     magnitude_in_unit,
 )
-from caqtus.types.units import DimensionalityError
-from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
+from ..units import DimensionalityError
+from ..variable_name import DottedVariableName
 
 
 def validate_step(instance, attribute, step):

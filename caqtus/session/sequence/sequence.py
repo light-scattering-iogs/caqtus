@@ -9,7 +9,7 @@ import polars
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.variable_name import DottedVariableName
-from .iteration_configuration import IterationConfiguration, Unknown
+from caqtus.types.iteration import IterationConfiguration, Unknown
 from .shot import Shot
 from .state import State
 from .._return_or_raise import unwrap

@@ -34,7 +34,7 @@ from ..async_session import (
 )
 from ..experiment_session import ExperimentSessionNotActiveError
 from ..path_hierarchy import PathNotFoundError, PathIsRootError
-from ..sequence.iteration_configuration import IterationConfiguration
+from caqtus.types.iteration import IterationConfiguration
 from ..sequence_collection import (
     PathIsSequenceError,
     SequenceStats,

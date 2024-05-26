@@ -12,7 +12,7 @@ from PySide6.QtCore import (
     QObject,
 )
 from anytree import NodeMixin
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     StepsConfiguration,
     Step,
     ArangeLoop,

@@ -9,7 +9,7 @@ from ..parameter_namespace import ParameterNamespace
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError
 from ..sequence import State
-from ..sequence.iteration_configuration import IterationConfiguration
+from caqtus.types.iteration import IterationConfiguration
 from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
 from ..shot import TimeLanes
 from caqtus.types.data import DataLabel, Data

@@ -4,7 +4,7 @@ from typing import TypeVar, Generic, TypeAlias
 
 import caqtus.gui.qtutil.qabc as qabc
 from PySide6.QtCore import Signal
-from caqtus.session.sequence.iteration_configuration import IterationConfiguration
+from caqtus.types.iteration import IterationConfiguration
 
 T = TypeVar("T", bound=IterationConfiguration)
 

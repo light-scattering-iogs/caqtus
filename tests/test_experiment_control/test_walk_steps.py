@@ -1,6 +1,6 @@
 from caqtus.experiment_control.sequence_runner import walk_steps
 from caqtus.experiment_control.sequence_runner.step_context import StepContext
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     ArangeLoop,
     ExecuteShot,
     VariableDeclaration,

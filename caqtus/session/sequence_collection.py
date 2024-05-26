@@ -16,7 +16,7 @@ from caqtus.types.variable_name import DottedVariableName
 from .parameter_namespace import ParameterNamespace
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
-from .sequence.iteration_configuration import IterationConfiguration, Unknown
+from caqtus.types.iteration import IterationConfiguration, Unknown
 from .sequence.state import State
 
 

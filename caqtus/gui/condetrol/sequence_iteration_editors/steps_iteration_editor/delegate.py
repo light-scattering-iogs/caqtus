@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     Step,
     VariableDeclaration,
     LinspaceLoop,

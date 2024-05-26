@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
 
 from caqtus.gui.qtutil import temporary_widget
 from caqtus.gui.common.sequence_hierarchy import (
-    PathHierarchyView,
     AsyncPathHierarchyView,
 )
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
@@ -21,7 +20,7 @@ from caqtus.session.path import InvalidPathFormatError
 from caqtus.session.path_hierarchy import PathHasChildrenError
 from caqtus.session.result import unwrap
 from caqtus.session.sequence import State
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     StepsConfiguration,
     ArangeLoop,
     ExecuteShot,

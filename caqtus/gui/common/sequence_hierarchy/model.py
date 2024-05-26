@@ -20,7 +20,7 @@ from caqtus.session import PureSequencePath, ExperimentSessionMaker, ExperimentS
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap, Failure
 from caqtus.session.sequence import State
-from caqtus.session.sequence.iteration_configuration import is_unknown
+from caqtus.types.iteration import is_unknown
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,

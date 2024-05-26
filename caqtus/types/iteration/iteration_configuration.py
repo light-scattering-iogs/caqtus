@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 from typing import TypeGuard
 
-from caqtus.types.variable_name import DottedVariableName
+from ..variable_name import DottedVariableName
 
 
 class IterationConfiguration(abc.ABC):

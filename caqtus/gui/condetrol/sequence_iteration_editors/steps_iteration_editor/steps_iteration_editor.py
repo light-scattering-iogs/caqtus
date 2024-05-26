@@ -7,7 +7,7 @@ from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from caqtus.gui.qtutil import block_signals
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     StepsConfiguration,
     VariableDeclaration,
     ExecuteShot,

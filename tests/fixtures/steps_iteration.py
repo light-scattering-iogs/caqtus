@@ -1,6 +1,6 @@
 import pytest
 
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     StepsConfiguration,
     ExecuteShot,
     VariableDeclaration,

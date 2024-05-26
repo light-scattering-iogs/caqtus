@@ -14,7 +14,7 @@ from caqtus.device.configuration.serializer import (
 )
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
-from ..sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
 )

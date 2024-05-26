@@ -3,7 +3,7 @@ from collections.abc import Iterable, Callable, Generator
 from typing import assert_never, TypeVar
 
 from caqtus.session import ParameterNamespace
-from caqtus.session.sequence.iteration_configuration import (
+from caqtus.types.iteration import (
     Step,
     ArangeLoop,
     ExecuteShot,
