@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from typing import Self, Any
 
 import attrs
 
 from caqtus.utils import serialization
-
-NAME = r"[^\W\d]\w*"
-VARIABLE_NAME_REGEX = re.compile(NAME)
-DOTTED_VARIABLE_NAME = rf"{NAME}(\.{NAME})*"
-DOTTED_VARIABLE_NAME_REGEX = re.compile(DOTTED_VARIABLE_NAME)
 
 
 @attrs.define
@@ -64,7 +58,7 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
 @attrs.define
 class VariableName(DottedVariableName):
     def __init__(self, name: str):
-        if not VARIABLE_NAME_REGEX.match(name):
+        if not name.isidentifier():
             raise InvalidVariableNameError(f"Invalid variable name: {name}")
         self._individual_names = (self,)
         self._dotted_name = str(name)
