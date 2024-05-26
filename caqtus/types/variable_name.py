@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from typing import Self, Any
 
 import attrs
+
 from caqtus.utils import serialization
 
 NAME = r"[^\W\d]\w*"
@@ -57,14 +58,14 @@ def dotted_variable_name_converter(name: Any) -> DottedVariableName:
     elif isinstance(name, str):
         return DottedVariableName(name)
     else:
-        raise ValueError(f"Invalid variable name: {name}")
+        raise InvalidVariableNameError(f"Invalid variable name: {name}")
 
 
 @attrs.define
 class VariableName(DottedVariableName):
     def __init__(self, name: str):
         if not VARIABLE_NAME_REGEX.match(name):
-            raise ValueError(f"Invalid variable name: {name}")
+            raise InvalidVariableNameError(f"Invalid variable name: {name}")
         self._individual_names = (self,)
         self._dotted_name = str(name)
 
@@ -96,3 +97,7 @@ def structure_hook(data: str, cls: type[DottedVariableName]) -> DottedVariableNa
 
 
 serialization.register_structure_hook(DottedVariableName, structure_hook)
+
+
+class InvalidVariableNameError(ValueError):
+    pass
