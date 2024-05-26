@@ -11,9 +11,7 @@ CameraType = TypeVar("CameraType", bound=Camera)
 
 
 @attrs.define
-class CameraConfiguration(
-    DeviceConfiguration[CameraType], Generic[CameraType]
-):
+class CameraConfiguration(DeviceConfiguration[CameraType], Generic[CameraType]):
     """Contains the necessary information about a camera.
 
     Attributes:
