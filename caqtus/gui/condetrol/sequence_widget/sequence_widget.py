@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import asyncio
+from collections.abc import Set
 from typing import Optional, assert_never, Literal
 
 import attrs
@@ -28,6 +29,7 @@ from caqtus.types.iteration import (
     StepsConfiguration,
 )
 from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.variable_name import DottedVariableName
 from .sequence_widget_ui import Ui_SequenceWidget
 from ..icons import get_icon
 from ..parameter_tables_editor import ParameterNamespaceEditor
@@ -123,6 +125,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.currentChanged.connect(self.stacked.setCurrentIndex)
 
         self._transition(_SequenceNotSetState())
+
+    def set_available_parameter_names(
+        self, parameter_names: Set[DottedVariableName]
+    ) -> None:
+        """Set the names of the parameters that are defined externally."""
+
+        self.iteration_editor.set_available_parameter_names(parameter_names)
 
     async def exec_async(self) -> None:
         while True:

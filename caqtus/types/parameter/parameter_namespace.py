@@ -176,6 +176,11 @@ class ParameterNamespace:
                 else:
                     self._content[index] = (name, expression)
 
+    def names(self) -> set[DottedVariableName]:
+        """Return the names of the parameters in the namespace."""
+
+        return {name for name, _ in self.flatten()}
+
 
 def union_structure_hook(value, _) -> Expression | ParameterNamespace:
     if isinstance(value, str):

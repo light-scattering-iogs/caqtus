@@ -206,6 +206,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         with self.session_maker() as session:
             session.set_global_parameters(parameters)
             logger.info(f"Global parameters written to storage: {parameters}")
+        self.sequence_widget.set_available_parameter_names(parameters.names())
 
     async def _monitor_global_parameters(self) -> None:
         while True:
@@ -213,6 +214,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 parameters = await session.get_global_parameters()
             if parameters != self._global_parameters_editor.get_parameters():
                 self._global_parameters_editor.set_parameters(parameters)
+                self.sequence_widget.set_available_parameter_names(parameters.names())
             await asyncio.sleep(0.2)
 
     async def _run_sequence(self, procedure: Procedure, sequence):
