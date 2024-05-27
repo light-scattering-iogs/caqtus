@@ -14,14 +14,20 @@ from typing import Optional, Any
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceName, DeviceConfiguration, Device
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
-from caqtus.shot_compilation import VariableNamespace, SequenceContext
+from caqtus.shot_compilation import (
+    VariableNamespace,
+    SequenceContext,
+    DeviceCompiler,
+    DeviceNotUsedException,
+)
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.concurrent import TaskGroup
+from .._device_manager_extension import DeviceManagerExtensionProtocol
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
 
@@ -111,6 +117,7 @@ class SequenceManager(AbstractContextManager):
         shot_retry_config: Optional[ShotRetryConfig],
         global_parameters: Optional[ParameterNamespace],
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
+        device_manager_extension: DeviceManagerExtensionProtocol,
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence
@@ -158,6 +165,9 @@ class SequenceManager(AbstractContextManager):
         self._is_watching_for_interruption = threading.Event()
         self._is_watching_for_interruption.set()
 
+        self._device_manager_extension = device_manager_extension
+        self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
+
     def __enter__(self):
         self._prepare_sequence()
         self._exit_stack.__enter__()
@@ -191,21 +201,39 @@ class SequenceManager(AbstractContextManager):
         self._task_group.create_task(self._run_shots, shot_runner)
         task.result()
 
-    def _create_devices_in_use(self):
+    def _create_devices_in_use(self) -> dict[DeviceName, Device]:
         sequence_context = SequenceContext(
             device_configurations=self.device_configurations, time_lanes=self.time_lanes
         )
+        self._device_compilers = {}
+        device_types = {}
+        for device_name, device_configuration in self.device_configurations.items():
+            compiler_type = self._device_manager_extension.get_device_compiler_type(
+                device_configuration
+            )
+            try:
+                compiler = compiler_type(device_name, sequence_context)
+            except DeviceNotUsedException:
+                continue
+            else:
+                self._device_compilers[device_name] = compiler
+                device_types[device_name] = (
+                    self._device_manager_extension.get_device_type(device_configuration)
+                )
         devices_in_use = create_devices(
+            self._device_compilers,
             self.device_configurations,
+            device_types,
             self.device_server_configs,
             self.manager_class,
-            sequence_context,
         )
         return devices_in_use
 
     def _create_shot_runner(self, devices_in_use) -> ShotRunner:
         device_controller_types = {
-            name: self.device_configurations[name].get_controller_type()
+            name: self._device_manager_extension.get_device_controller_type(
+                self.device_configurations[name]
+            )
             for name in devices_in_use
         }
         shot_runner = ShotRunner(devices_in_use, device_controller_types)

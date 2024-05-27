@@ -1,44 +1,37 @@
 from collections.abc import Mapping
 from multiprocessing.managers import RemoteError
-from typing import Any, assert_never
+from typing import Any
 
-from caqtus.device import DeviceName, DeviceConfiguration, Device
-from caqtus.device.configuration import (
-    LocalProcessInitialization,
-    RemoteProcessInitialization,
-)
+from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
-from caqtus.shot_compilation import SequenceContext, DeviceNotUsedException
+from caqtus.shot_compilation import (
+    DeviceCompiler,
+)
 
 
 def create_devices(
+    device_compilers: Mapping[DeviceName, DeviceCompiler],
     device_configs: Mapping[DeviceName, DeviceConfiguration],
+    device_types: Mapping[DeviceName, type[Device]],
     device_server_configs: Mapping[str, DeviceServerConfiguration],
     manager_class: type[RemoteDeviceManager],
-    sequence_context: SequenceContext,
 ) -> dict[DeviceName, Device]:
     device_servers = create_device_servers(device_server_configs, manager_class)
     connect_to_device_servers(device_servers)
 
     result = {}
 
-    for device_name, device_config in device_configs.items():
-        try:
-            initialization_method = device_config.get_device_initialization_method(
-                device_name=device_name, sequence_context=sequence_context
+    for device_name, device_compiler in device_compilers.items():
+        initialization_parameters = device_compiler.compile_initialization_parameters()
+        device_config = device_configs[device_name]
+        device_type = device_types[device_name]
+        if device_config.remote_server is None:
+            result[device_name] = device_type(**initialization_parameters)
+        else:
+            manager = device_servers[device_config.remote_server]
+            result[device_name] = create_device_on_server(
+                device_name, device_type.__name__, initialization_parameters, manager
             )
-        except DeviceNotUsedException:
-            continue
-        match initialization_method:
-            case LocalProcessInitialization(device_type, init_kwargs):
-                result[device_name] = device_type(**init_kwargs)
-            case RemoteProcessInitialization(server_name, device_type, init_kwargs):
-                manager = device_servers[server_name]
-                result[device_name] = create_device_on_server(
-                    device_name, device_type, init_kwargs, manager
-                )
-            case _:
-                assert_never(initialization_method)
 
     return result
 
