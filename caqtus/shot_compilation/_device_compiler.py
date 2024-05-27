@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Mapping
-from typing import Protocol, Any
+from typing import Protocol, Any, runtime_checkable
 
 from caqtus.device import DeviceName, DeviceParameter
 from .compilation_contexts import SequenceContext, ShotContext
 
 
+@runtime_checkable
 class DeviceCompiler(Protocol):
     """Defines the interface for a device compiler.
 
