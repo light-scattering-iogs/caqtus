@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Iterable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, TYPE_CHECKING
 
 import attrs
 
@@ -9,6 +9,9 @@ from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
+
+if TYPE_CHECKING:
+    from caqtus.shot_compilation import DeviceCompiler
 
 LaneType = TypeVar("LaneType", bound=TimeLane)
 
@@ -20,6 +23,7 @@ class ShotContext:
     _time_lanes: TimeLanes
     _variables: Mapping[DottedVariableName, Any]
     _device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    _device_compilers: Mapping[DeviceName, "DeviceCompiler"]
 
     _step_durations: tuple[float, ...] = attrs.field(init=False)
     _step_bounds: tuple[float, ...] = attrs.field(init=False)
@@ -100,10 +104,8 @@ class ShotContext:
         if device_name in self._computed_shot_parameters:
             return self._computed_shot_parameters[device_name]
         else:
-            configuration = self.get_device_config(device_name)
-            shot_parameters = configuration.compile_device_shot_parameters(
-                device_name, self
-            )
+            compiler = self._device_compilers[device_name]
+            shot_parameters = compiler.compile_shot_parameters(self)
             self._computed_shot_parameters[device_name] = shot_parameters
             return shot_parameters
 

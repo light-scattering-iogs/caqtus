@@ -3,6 +3,7 @@ from typing import Any
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes
+from caqtus.shot_compilation import DeviceCompiler
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 
@@ -12,9 +13,11 @@ class ShotCompiler:
         self,
         shot_timelanes: TimeLanes,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
+        device_compilers: Mapping[DeviceName, DeviceCompiler],
     ):
         self.shot_time_lanes = shot_timelanes
         self.device_configurations = device_configurations
+        self.device_compilers = device_compilers
 
     def compile_shot(
         self, shot_parameters: VariableNamespace
@@ -23,10 +26,11 @@ class ShotCompiler:
             time_lanes=self.shot_time_lanes,
             variables=shot_parameters.dict(),
             device_configurations=self.device_configurations,
+            device_compilers=self.device_compilers,
         )
 
         results = {}
-        for device_name in self.device_configurations:
+        for device_name, compiler in self.device_compilers.items():
             results[device_name] = shot_context.get_shot_parameters(device_name)
 
         # noinspection PyProtectedMember
