@@ -27,7 +27,7 @@ from caqtus.shot_compilation import (
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.concurrent import TaskGroup
-from .._device_manager_extension import DeviceManagerExtensionProtocol
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
 
