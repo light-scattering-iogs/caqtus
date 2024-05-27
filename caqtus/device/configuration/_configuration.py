@@ -10,8 +10,6 @@ from typing import (
     Optional,
     NewType,
     Generic,
-    ForwardRef,
-    TYPE_CHECKING,
     Self,
 )
 
@@ -19,11 +17,6 @@ import attrs
 
 from caqtus.device.name import DeviceName
 from caqtus.device.runtime import Device
-from ._get_generic_map import get_generic_map
-from ..controller import DeviceController
-
-if TYPE_CHECKING:
-    from caqtus.shot_compilation import SequenceContext, ShotContext
 
 DeviceServerName = NewType("DeviceServerName", str)
 
@@ -57,84 +50,6 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
-
-    @abc.abstractmethod
-    def get_device_initialization_method(
-        self, device_name: DeviceName, sequence_context: "SequenceContext"
-    ) -> DeviceInitializationMethod:
-        """Indicate how the device should be initialized.
-
-        Args:
-            device_name: The name of the device being initialized.
-            sequence_context: Contains the information about the sequence being run.
-        Raises:
-            DeviceNotUsedException: If the device is not used in the current sequence.
-
-        The base implementation of this method inspect the device type argument of the
-        configuration to determine how the device should be initialized.
-        """
-
-        device_type = get_generic_map(DeviceConfiguration, type(self)).get(DeviceType)  # type: ignore
-
-        if device_type is None:
-            raise ValueError(
-                f"Could not find the device type for configuration {self}."
-            )
-
-        if self.remote_server is None:
-            if isinstance(device_type, ForwardRef):
-                raise ValueError(
-                    f"Can't resolve the device type {device_type} for"
-                    f" device {device_name}."
-                )
-            elif issubclass(device_type, Device):
-                return LocalProcessInitialization(
-                    device_type=device_type,  # type: ignore
-                    init_kwargs={},
-                )
-            else:
-                raise ValueError(
-                    f"The device type {device_type} is not a subclass of Device."
-                )
-        else:
-            if isinstance(device_type, ForwardRef):
-                device_type_name = device_type.__forward_arg__
-            elif isinstance(device_type, str):
-                device_type_name = device_type
-            elif issubclass(device_type, Device):
-                device_type_name = device_type.__name__
-            else:
-                raise ValueError(
-                    f"The device type {device_type} is not a subclass of Device."
-                )
-            return RemoteProcessInitialization(
-                server_name=self.remote_server,
-                device_type=device_type_name,
-                init_kwargs={},
-            )
-
-    def get_controller_type(self) -> type[DeviceController]:
-        return DeviceController
-
-    @abc.abstractmethod
-    def compile_device_shot_parameters(
-        self,
-        device_name: DeviceName,
-        shot_context: "ShotContext",
-    ) -> Mapping[str, Any]:
-        """Compute the parameters that should be applied to the device for a shot.
-
-        The parameters returned by this method will be passed to the method
-        :meth:`DeviceController.run_shot` of the device controller.
-        The keys in the return mapping must match the arguments of this method.
-
-        Args:
-            device_name: The name of the device for which the parameters are being
-                compiled.
-            shot_context: Contains the information about the shot being run.
-        """
-
-        raise NotImplementedError
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
