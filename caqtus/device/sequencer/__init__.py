@@ -4,6 +4,7 @@ Sequencers are devices that output values at regular time intervals.
 Sequencers have a predetermined set of channels.
 """
 
+from .compilation import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -32,4 +33,5 @@ __all__ = [
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
+    "SequencerCompiler",
 ]
