@@ -44,8 +44,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         and device configurations.
     """
 
-    procedure_exception = Signal(Exception)
-
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
@@ -108,7 +106,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self._global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
-        self.procedure_exception.connect(self.on_procedure_exception)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
