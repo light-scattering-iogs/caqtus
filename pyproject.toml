@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "caqtus"
-version = "1.25.3"
+version = "1.25.4"
 description = ""
 authors = ["Dear <lechadoq@gmail.com>"]
 readme = "README.md"
@@ -46,6 +46,11 @@ nodegraphqt = {git = "https://github.com/light-scattering-io/NodeGraphQt.git"}
 pytest = "^8.1.1"
 hypothesis = "^6.99.12"
 pytest-qt = "^4.4.0"
+
+caqtus_devices-ni6738_analog_card = {git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.ni6738_analog_card"}
+caqtus_devices-orca_quest = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.orca_quest" }
+caqtus_devices-swabian_pulse_streamer = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.swabian_pulse_streamer" }
+caqtus_devices-spincore_pulse_blaster = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.spincore_pulse_blaster" }
 
 
 [tool.poetry.group.doc.dependencies]
