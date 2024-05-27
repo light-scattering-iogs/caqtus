@@ -12,12 +12,7 @@ from ._configuration import CameraConfiguration
 
 
 class CameraCompiler(DeviceCompiler):
-    """Compiler for a camera device.
-
-    Attributes:
-        lane: The time lane associated with the camera.
-        configuration: The configuration of the camera.
-    """
+    """Compiler for a camera device."""
 
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
@@ -30,18 +25,18 @@ class CameraCompiler(DeviceCompiler):
                 f"Expected a camera time lane for device {device_name}, got "
                 f"{type(lane)}"
             )
-        self.lane = lane
+        self.__lane = lane
         configuration = sequence_context.get_device_configuration(device_name)
         if not isinstance(configuration, CameraConfiguration):
             raise TypeError(
                 f"Expected a camera configuration for device {device_name}, got "
                 f"{type(configuration)}"
             )
-        self.configuration = configuration
+        self.__configuration = configuration
 
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
         return {
-            DeviceParameter("roi"): self.configuration.roi,
+            DeviceParameter("roi"): self.__configuration.roi,
             DeviceParameter("external_trigger"): True,
             DeviceParameter("timeout"): 1.0,
         }
@@ -50,7 +45,7 @@ class CameraCompiler(DeviceCompiler):
         step_durations = shot_context.get_step_durations()
         exposures = []
         picture_names = []
-        for value, (start, stop) in zip(self.lane.values(), self.lane.bounds()):
+        for value, (start, stop) in zip(self.__lane.values(), self.__lane.bounds()):
             if isinstance(value, TakePicture):
                 exposure = sum(step_durations[start:stop])
                 exposures.append(exposure)
