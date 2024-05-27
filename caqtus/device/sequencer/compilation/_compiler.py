@@ -31,15 +31,15 @@ class SequencerCompiler(DeviceCompiler):
                 f"Expected a sequencer configuration for device {device_name}, got "
                 f"{type(configuration)}"
             )
-        self.configuration = configuration
-        self.device_name = device_name
+        self.__configuration = configuration
+        self.__device_name = device_name
 
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
         return {
-            DeviceParameter("time_step"): self.configuration.time_step,
-            DeviceParameter("trigger"): self.configuration.trigger,
+            DeviceParameter("time_step"): self.__configuration.time_step,
+            DeviceParameter("trigger"): self.__configuration.trigger,
         }
 
     def compile_shot_parameters(
@@ -52,7 +52,7 @@ class SequencerCompiler(DeviceCompiler):
 
         channel_instructions = []
         exceptions = []
-        for channel_number, channel in enumerate(self.configuration.channels):
+        for channel_number, channel in enumerate(self.__configuration.channels):
             if isinstance(channel, AnalogChannelConfiguration):
                 required_unit = Unit(channel.output_unit)
             else:
@@ -60,7 +60,7 @@ class SequencerCompiler(DeviceCompiler):
             try:
                 output_values = evaluate_output(
                     channel.output,
-                    self.configuration.time_step,
+                    self.__configuration.time_step,
                     required_unit,
                     max_advance,
                     max_delay,
@@ -81,7 +81,7 @@ class SequencerCompiler(DeviceCompiler):
         if exceptions:
             raise SequencerCompilationError(
                 f"Errors occurred when evaluating outputs for sequencer "
-                f"{self.device_name}",
+                f"{self.__device_name}",
                 exceptions,
             )
         stacked = stack_instructions(channel_instructions)
@@ -92,9 +92,9 @@ class SequencerCompiler(DeviceCompiler):
     ) -> tuple[int, int]:
         advances_and_delays = [
             _evaluate_max_advance_and_delay(
-                channel.output, self.configuration.time_step, variables
+                channel.output, self.__configuration.time_step, variables
             )
-            for channel in self.configuration.channels
+            for channel in self.__configuration.channels
         ]
         advances, delays = zip(*advances_and_delays)
         return max(advances), max(delays)
