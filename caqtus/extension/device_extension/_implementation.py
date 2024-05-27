@@ -8,6 +8,7 @@ import attrs
 from caqtus.device import DeviceConfiguration
 # noinspection PyPep8Naming
 from caqtus.device.configuration import DeviceConfigType as C
+from caqtus.device.controller import DeviceController
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.shot_compilation import DeviceCompiler
 from caqtus.utils.serialization import JSON
@@ -53,6 +54,7 @@ class DeviceExtension(Generic[C]):
     configuration_loader: Callable[[JSON], C] = attrs.field()
     editor_type: Callable[[C], DeviceConfigurationEditor[C]] = attrs.field()
     compiler_type: type[DeviceCompiler] = attrs.field()
+    controller_type: type[DeviceController] = attrs.field()
 
     @configuration_type.validator  # type: ignore
     def _validate_configuration_type(self, _, value):
