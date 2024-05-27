@@ -11,6 +11,7 @@ from caqtus.types.timelane.serializer import TimeLaneSerializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
 from ..time_lane_extension import TimeLaneExtension
+from ...experiment_control.device_manager_extension import DeviceManagerExtension
 
 P = ParamSpec("P")
 T = TypeVar("T", bound=ExperimentSessionMaker)
@@ -23,6 +24,9 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         factory=DeviceConfigJSONSerializer
     )
     time_lane_serializer: TimeLaneSerializer = attrs.field(factory=TimeLaneSerializer)
+    device_manager_extension: DeviceManagerExtension = attrs.field(
+        factory=DeviceManagerExtension
+    )
 
     def register_device_extension(self, device_extension: DeviceExtension) -> None:
         self.condetrol_extension.device_extension.register_device_configuration_editor(
@@ -35,6 +39,15 @@ class CaqtusExtension(CaqtusExtensionProtocol):
             device_extension.configuration_type,
             device_extension.configuration_dumper,
             device_extension.configuration_loader,
+        )
+        self.device_manager_extension.register_device_compiler(
+            device_extension.configuration_type, device_extension.compiler_type
+        )
+        self.device_manager_extension.register_controller(
+            device_extension.configuration_type, device_extension.controller_type
+        )
+        self.device_manager_extension.register_device(
+            device_extension.configuration_type, device_extension.configuration_type
         )
 
     def register_time_lane_extension(
