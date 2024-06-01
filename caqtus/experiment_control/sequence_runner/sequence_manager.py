@@ -14,7 +14,7 @@ from typing import Optional, Any
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceName, DeviceConfiguration, Device
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
