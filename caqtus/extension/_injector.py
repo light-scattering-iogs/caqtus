@@ -9,7 +9,7 @@ from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
-from ..experiment_control import ExperimentManager
+from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
     LocalExperimentManagerConfiguration,
@@ -33,6 +33,7 @@ class CaqtusInjector:
         self._experiment_manager_location: ExperimentManagerConnection = (
             LocalExperimentManagerConfiguration()
         )
+        self._shot_retry_config: Optional[ShotRetryConfig] = None
 
     def configure_storage(self, backend_config: PostgreSQLConfig) -> None:
         """Configure the storage backend to be used by the application.
@@ -50,6 +51,23 @@ class CaqtusInjector:
         if self._session_maker_config is not None:
             warnings.warn("Storage configuration is being overwritten.")
         self._session_maker_config = backend_config
+
+    def configure_shot_retry(
+        self, shot_retry_config: Optional[ShotRetryConfig]
+    ) -> None:
+        """Configure the shot retry policy to be used when running sequences.
+
+        After this method is called, shots that raise errors will be retried according
+        to the policy specified.
+
+        It is necessary to call this method before launching the experiment manager.
+
+        Warning:
+            Calling this method multiple times will overwrite the previous
+            configuration.
+        """
+
+        self._shot_retry_config = shot_retry_config
 
     def configure_experiment_manager(
         self, location: ExperimentManagerConnection
@@ -148,9 +166,20 @@ class CaqtusInjector:
             assert_never(location)
 
     def get_local_experiment_manager(self) -> LocalExperimentManager:
+        """Return the local experiment manager.
+
+        This method is used to create an instance of the experiment manager that runs
+        in the local process.
+
+        The first time this method is called, the experiment manager will be created.
+        If it is called again, the instance previously created will be returned.
+        """
+
         if self._experiment_manager is None:
             self._experiment_manager = LocalExperimentManager(
-                session_maker=self.get_session_maker(), device_server_configs={}
+                session_maker=self.get_session_maker(),
+                device_manager_extension=self._extension.device_manager_extension,
+                shot_retry_config=self._shot_retry_config,
             )
         return self._experiment_manager
 
