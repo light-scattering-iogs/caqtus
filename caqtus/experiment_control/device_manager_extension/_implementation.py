@@ -1,7 +1,7 @@
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
-from caqtus.device.remote_server import DeviceServerConfiguration
+from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.shot_compilation import DeviceCompiler
 from ._protocol import DeviceManagerExtensionProtocol
 
@@ -16,6 +16,9 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         self._device_server_configs: dict[
             DeviceServerName, DeviceServerConfiguration
         ] = {}
+        self._remote_device_manager_class: type[RemoteDeviceManager] = (
+            RemoteDeviceManager
+        )
 
     def register_device_compiler(
         self,
@@ -37,6 +40,18 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         controller_type: type[DeviceController],
     ) -> None:
         self._controller_types[configuration_type] = controller_type
+
+    def register_device_server_config(
+        self,
+        server: DeviceServerName,
+        config: DeviceServerConfiguration,
+    ) -> None:
+        self._device_server_configs[server] = config
+
+    def register_remote_device_manager_class(
+        self, manager_class: type[RemoteDeviceManager]
+    ) -> None:
+        self._remote_device_manager_class = manager_class
 
     def get_device_compiler_type(
         self, device_configuration: DeviceConfiguration

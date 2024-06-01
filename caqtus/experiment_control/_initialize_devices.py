@@ -17,7 +17,6 @@ def create_devices(
     device_configs: Mapping[DeviceName, DeviceConfiguration],
     device_types: Mapping[DeviceName, type[Device]],
     device_manager_extension: DeviceManagerExtensionProtocol,
-    manager_class: type[RemoteDeviceManager],
 ) -> dict[DeviceName, Device]:
     device_server_configs = {}
     for device_config in device_configs.values():
@@ -27,7 +26,10 @@ def create_devices(
                 device_manager_extension.get_device_server_config(remote_server)
             )
 
-    device_servers = create_device_servers(device_server_configs, manager_class)
+    device_servers = create_device_servers(
+        device_server_configs,
+        device_manager_extension.get_remote_device_manager_class(),
+    )
     connect_to_device_servers(device_servers)
 
     result = {}

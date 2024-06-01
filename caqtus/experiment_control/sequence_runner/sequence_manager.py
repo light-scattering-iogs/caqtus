@@ -14,8 +14,7 @@ from typing import Optional, Any
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceConfiguration, Device
-from caqtus.device.remote_server import RemoteDeviceManager
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
@@ -112,7 +111,6 @@ class SequenceManager(AbstractContextManager):
         sequence: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         interruption_event: threading.Event,
-        manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig],
         global_parameters: Optional[ParameterNamespace],
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
@@ -121,7 +119,6 @@ class SequenceManager(AbstractContextManager):
         self._session_maker = session_maker
         self._sequence_path = sequence
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
-        self.manager_class = manager_class
 
         with self._session_maker() as session:
             if device_configurations is None:
@@ -223,7 +220,6 @@ class SequenceManager(AbstractContextManager):
             self.device_configurations,
             device_types,
             self._device_manager_extension,
-            self.manager_class,
         )
         return devices_in_use
 
@@ -284,6 +280,7 @@ class SequenceManager(AbstractContextManager):
             state = State.FINISHED
         finally:
             try:
+                # noinspection PyUnboundLocalVariable
                 self._set_sequence_state(state)
             finally:
                 self._exit_stack.__exit__(exc_type, exc_val, exc_tb)

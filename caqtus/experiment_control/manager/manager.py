@@ -9,8 +9,6 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.device.configuration import DeviceServerName
-from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
@@ -187,12 +185,10 @@ class LocalExperimentManager(ExperimentManager):
         self,
         session_maker: ExperimentSessionMaker,
         device_manager_extension: DeviceManagerExtensionProtocol,
-        remote_device_manager_class: type[RemoteDeviceManager] = RemoteDeviceManager,
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
-        self._device_manager_class = remote_device_manager_class
         self._shot_retry_config = shot_retry_config
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
@@ -217,7 +213,6 @@ class LocalExperimentManager(ExperimentManager):
             thread_pool=self._thread_pool,
             shot_retry_config=self._shot_retry_config,
             acquisition_timeout=acquisition_timeout,
-            device_manager_class=self._device_manager_class,
             device_manager_extension=self._device_manager_extension,
         )
 
@@ -244,7 +239,6 @@ class BoundProcedure(Procedure):
         lock: threading.Lock,
         thread_pool: concurrent.futures.ThreadPoolExecutor,
         shot_retry_config: ShotRetryConfig,
-        device_manager_class: type[RemoteDeviceManager],
         device_manager_extension: DeviceManagerExtensionProtocol,
         acquisition_timeout: Optional[float] = None,
     ):
@@ -258,7 +252,6 @@ class BoundProcedure(Procedure):
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_retry_config = shot_retry_config
         self._must_interrupt = threading.Event()
-        self._device_manager_class = device_manager_class
         self._device_manager_extension = device_manager_extension
 
     def __repr__(self):
@@ -345,7 +338,6 @@ class BoundProcedure(Procedure):
             shot_retry_config=self._shot_retry_config,
             global_parameters=global_parameters,
             device_configurations=device_configurations,
-            manager_class=self._device_manager_class,
             device_manager_extension=self._device_manager_extension,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
