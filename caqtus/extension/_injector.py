@@ -9,6 +9,7 @@ from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
+from ..device.remote_server import RemoteDeviceManager
 from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
@@ -106,6 +107,11 @@ class CaqtusInjector:
         """
 
         self._experiment_manager_location = location
+
+    def register_remote_device_manager_class(
+        self, manager_class: type[RemoteDeviceManager]
+    ) -> None:
+        self._extension.register_remote_device_manager_class(manager_class)
 
     def register_device_extension(self, device_extension: DeviceExtension) -> None:
         """Register a new device extension.
