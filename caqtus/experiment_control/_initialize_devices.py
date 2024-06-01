@@ -4,6 +4,9 @@ from typing import Any
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
+from caqtus.experiment_control.device_manager_extension import (
+    DeviceManagerExtensionProtocol,
+)
 from caqtus.shot_compilation import (
     DeviceCompiler,
 )
@@ -13,9 +16,17 @@ def create_devices(
     device_compilers: Mapping[DeviceName, DeviceCompiler],
     device_configs: Mapping[DeviceName, DeviceConfiguration],
     device_types: Mapping[DeviceName, type[Device]],
-    device_server_configs: Mapping[str, DeviceServerConfiguration],
+    device_manager_extension: DeviceManagerExtensionProtocol,
     manager_class: type[RemoteDeviceManager],
 ) -> dict[DeviceName, Device]:
+    device_server_configs = {}
+    for device_config in device_configs.values():
+        remote_server = device_config.remote_server
+        if remote_server is not None:
+            device_server_configs[remote_server] = (
+                device_manager_extension.get_device_server_config(remote_server)
+            )
+
     device_servers = create_device_servers(device_server_configs, manager_class)
     connect_to_device_servers(device_servers)
 

@@ -15,7 +15,7 @@ import attrs
 from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration, Device
-from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
+from caqtus.device.remote_server import RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
@@ -27,9 +27,9 @@ from caqtus.shot_compilation import (
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils.concurrent import TaskGroup
-from ..device_manager_extension import DeviceManagerExtensionProtocol
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 
 pickling_support.install()
 logger = logging.getLogger(__name__)
@@ -112,7 +112,6 @@ class SequenceManager(AbstractContextManager):
         sequence: PureSequencePath,
         session_maker: ExperimentSessionMaker,
         interruption_event: threading.Event,
-        device_server_configs: Mapping[str, DeviceServerConfiguration],
         manager_class: type[RemoteDeviceManager],
         shot_retry_config: Optional[ShotRetryConfig],
         global_parameters: Optional[ParameterNamespace],
@@ -122,7 +121,6 @@ class SequenceManager(AbstractContextManager):
         self._session_maker = session_maker
         self._sequence_path = sequence
         self._shot_retry_config = shot_retry_config or ShotRetryConfig()
-        self.device_server_configs = device_server_configs
         self.manager_class = manager_class
 
         with self._session_maker() as session:
@@ -224,7 +222,7 @@ class SequenceManager(AbstractContextManager):
             self._device_compilers,
             self.device_configurations,
             device_types,
-            self.device_server_configs,
+            self._device_manager_extension,
             self.manager_class,
         )
         return devices_in_use
@@ -243,6 +241,7 @@ class SequenceManager(AbstractContextManager):
         shot_compiler = ShotCompiler(
             self.time_lanes,
             {name: self.device_configurations[name] for name in devices_in_use},
+            self._device_compilers,
         )
         return shot_compiler
 
