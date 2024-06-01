@@ -11,9 +11,8 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace
 from .manager import ExperimentManager, Procedure, LocalExperimentManager
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import ShotRetryConfig
-from ...device.configuration import DeviceServerName
-from ...device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 
 # This is necessary to be able to pass exception properly between the experiment server
 # process and the clients.
@@ -146,16 +145,14 @@ def _exit_experiment_manager(exc_value) -> None:
 
 def _create_experiment_manager(
     session_maker: ExperimentSessionMaker,
-    device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
-    remote_device_manager_class: type[RemoteDeviceManager],
+    device_manager_extension: DeviceManagerExtensionProtocol,
     shot_retry_config: Optional[ShotRetryConfig] = None,
 ) -> None:
     global experiment_manager
     experiment_manager = LocalExperimentManager(
         session_maker=session_maker,
         shot_retry_config=shot_retry_config,
-        device_server_configs=device_server_configs,
-        remote_device_manager_class=remote_device_manager_class,
+        device_manager_extension=device_manager_extension,
     )
 
 
@@ -182,8 +179,7 @@ class RemoteExperimentManagerServer:
         address: tuple[str, int],
         authkey: bytes,
         session_maker: ExperimentSessionMaker,
-        device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
-        remote_device_manager_class: type[RemoteDeviceManager],
+        device_manager_extension: DeviceManagerExtensionProtocol,
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
         self._session_maker = session_maker
@@ -192,15 +188,13 @@ class RemoteExperimentManagerServer:
         )
         self._shot_retry_config = shot_retry_config
         self._shot_retry_config = shot_retry_config
-        self._device_server_configs = device_server_configs
-        self._remote_device_manager_class = remote_device_manager_class
+        self._device_manager_extension = device_manager_extension
 
     def __enter__(self):
         self._multiprocessing_manager.start()
         self._multiprocessing_manager.create_experiment_manager(
             self._session_maker,
-            self._device_server_configs,
-            self._remote_device_manager_class,
+            self._device_manager_extension,
             self._shot_retry_config,
         )
         self._multiprocessing_manager.enter_experiment_manager()

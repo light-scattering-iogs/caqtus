@@ -69,6 +69,8 @@ get_session_maker = _injector.get_session_maker
 
 launch_condetrol = _injector.launch_condetrol
 
+launch_experiment_server = _injector.launch_experiment_server
+
 
 __all__ = [
     "register_device_extension",
@@ -76,5 +78,6 @@ __all__ = [
     "configure_storage",
     "get_session_maker",
     "launch_condetrol",
+    "launch_experiment_server",
     "configure_experiment_manager",
 ]

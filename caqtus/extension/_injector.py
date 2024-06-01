@@ -4,6 +4,7 @@ from typing import Optional, assert_never
 from caqtus.experiment_control.manager import (
     LocalExperimentManager,
     RemoteExperimentManagerClient,
+    RemoteExperimentManagerServer,
 )
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
@@ -203,3 +204,34 @@ class CaqtusInjector:
             extension=self._extension.condetrol_extension,
         )
         app.run()
+
+    def launch_experiment_server(self) -> None:
+        """Launch the experiment server.
+
+        The experiment server is used to run procedures on the experiment manager from a
+        remote process.
+        """
+
+        if not isinstance(
+            self._experiment_manager_location, RemoteExperimentManagerConfiguration
+        ):
+            error = RuntimeError(
+                "The experiment manager is not configured to run remotely."
+            )
+            error.add_note(
+                "Please call `configure_experiment_manager` with a remote "
+                "configuration."
+            )
+            raise error
+
+        server = RemoteExperimentManagerServer(
+            session_maker=self.get_session_maker(),
+            address=("localhost", self._experiment_manager_location.port),
+            authkey=bytes(self._experiment_manager_location.authkey, "utf-8"),
+            shot_retry_config=self._shot_retry_config,
+            device_manager_extension=self._extension.device_manager_extension,
+        )
+
+        with server:
+            print("Ready")
+            server.serve_forever()
