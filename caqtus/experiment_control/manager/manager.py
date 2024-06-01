@@ -9,14 +9,15 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 from caqtus.device import DeviceConfiguration, DeviceName
+from caqtus.device.configuration import DeviceServerName
 from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils import log_exception
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context
-from ...device.configuration import DeviceServerName
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -186,6 +187,7 @@ class LocalExperimentManager(ExperimentManager):
         self,
         session_maker: ExperimentSessionMaker,
         device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
+        device_manager_extension: DeviceManagerExtensionProtocol,
         remote_device_manager_class: type[RemoteDeviceManager] = RemoteDeviceManager,
         shot_retry_config: Optional[ShotRetryConfig] = None,
     ):
@@ -196,6 +198,7 @@ class LocalExperimentManager(ExperimentManager):
         self._shot_retry_config = shot_retry_config
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
+        self._device_manager_extension = device_manager_extension
 
     def __enter__(self):
         self._thread_pool.__enter__()
@@ -218,6 +221,7 @@ class LocalExperimentManager(ExperimentManager):
             acquisition_timeout=acquisition_timeout,
             device_server_configs=self._device_server_configs,
             device_manager_class=self._device_manager_class,
+            device_manager_extension=self._device_manager_extension,
         )
 
     def interrupt_running_procedure(self) -> bool:
@@ -245,6 +249,7 @@ class BoundProcedure(Procedure):
         shot_retry_config: ShotRetryConfig,
         device_server_configs: Mapping[DeviceServerName, DeviceServerConfiguration],
         device_manager_class: type[RemoteDeviceManager],
+        device_manager_extension: DeviceManagerExtensionProtocol,
         acquisition_timeout: Optional[float] = None,
     ):
         self._parent = experiment_manager
@@ -259,6 +264,7 @@ class BoundProcedure(Procedure):
         self._must_interrupt = threading.Event()
         self._device_server_configs = device_server_configs
         self._device_manager_class = device_manager_class
+        self._device_manager_extension = device_manager_extension
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -346,6 +352,7 @@ class BoundProcedure(Procedure):
             device_configurations=device_configurations,
             device_server_configs=self._device_server_configs,
             manager_class=self._device_manager_class,
+            device_manager_extension=self._device_manager_extension,
         ) as sequence_manager:
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError("Only steps iteration is supported.")
