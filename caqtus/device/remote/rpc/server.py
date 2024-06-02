@@ -16,7 +16,7 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
     def __init__(self) -> None:
         self._objects: dict[int, object] = {}
 
-    def Call(self, request: rpc_pb2.CallRequest, context):
+    def Call(self, request: rpc_pb2.CallRequest, context) -> rpc_pb2.CallResponse:
         fun = pickle.loads(request.function)
         args = [self.resolve(pickle.loads(arg)) for arg in request.args]
         kwargs = {
@@ -28,7 +28,9 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
             value = fun(*args, **kwargs)
         except Exception as e:
             logger.error(e)
-            return rpc_pb2.CallResponse(failure=pickle.dumps(e))
+            remote_error = RemoteCallError(f"An error occurred while calling {fun}")
+            remote_error.__cause__ = e
+            return rpc_pb2.CallResponse(failure=pickle.dumps(remote_error))
         else:
             if request.return_value == rpc_pb2.ReturnValue.SERIALIZED:
                 result = value
@@ -56,3 +58,11 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
             return self.get_referent(obj)
         else:
             return obj
+
+
+class RemoteError(Exception):
+    pass
+
+
+class RemoteCallError(RemoteError):
+    pass
