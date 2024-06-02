@@ -1,4 +1,3 @@
-import asyncio
 import contextlib
 import pickle
 from typing import Callable, TypeVar, ParamSpec, Self, Literal
@@ -6,9 +5,9 @@ from typing import Callable, TypeVar, ParamSpec, Self, Literal
 import grpc
 import grpc.aio
 
-import rpc_pb2
-import rpc_pb2_grpc
-from proxy import Proxy
+from . import rpc_pb2
+from . import rpc_pb2_grpc
+from .proxy import Proxy
 
 P = ParamSpec("P")
 T = TypeVar("T")

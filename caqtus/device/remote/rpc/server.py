@@ -6,8 +6,8 @@ from typing import TypeVar, Self
 
 import grpc
 
-import rpc_pb2
-import rpc_pb2_grpc
+from . import rpc_pb2
+from . import rpc_pb2_grpc
 from .proxy import Proxy
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class Server:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self._server.stop()
+        self._server.stop(grace=5)
         logger.info("Server stopped")
 
 
