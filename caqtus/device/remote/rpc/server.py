@@ -36,6 +36,7 @@ class Server:
         logger.info("Server stopped")
 
 
+# noinspection PyProtectedMember
 class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
     def __init__(self) -> None:
         self._objects: dict[int, object] = {}
@@ -68,6 +69,14 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
         obj_id = id(obj)
         self._objects[obj_id] = obj
         return Proxy(os.getpid(), obj_id)
+
+    def delete_proxy_referent(self, proxy: Proxy[T]) -> None:
+        if proxy._pid != os.getpid():
+            raise RuntimeError(
+                "Proxy cannot be deleted in a different process than the one it was "
+                "created in"
+            )
+        del self._objects[proxy._obj_id]
 
     def get_referent(self, proxy: Proxy[T]) -> T:
         if proxy._pid != os.getpid():

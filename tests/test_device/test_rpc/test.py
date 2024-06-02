@@ -4,6 +4,7 @@ import os
 from multiprocessing import Process, Event
 
 from caqtus.device.remote.rpc import Server, Client
+from caqtus.device.remote.rpc.proxy import Proxy
 
 
 def _run_server(e):
@@ -27,8 +28,10 @@ def run_server():
 
 def test_1():
     async def fun():
-        async with Client("localhost:50051") as client:
-            l = await client.call(list, [1, 2, 3], returned_value="proxy")
+        async with Client("localhost:50051") as client, client.call_proxy_result(
+            list, [1, 2, 3]
+        ) as l:
+            assert isinstance(l, Proxy)
             await client.call_method(l, "append", 4)
             assert await client.call(len, l) == 4
 
