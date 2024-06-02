@@ -5,10 +5,13 @@ import pickle
 from typing import TypeVar, Self
 
 import grpc
+import tblib.pickling_support
 
 from . import rpc_pb2
 from . import rpc_pb2_grpc
 from .proxy import Proxy
+
+tblib.pickling_support.install()
 
 logger = logging.getLogger(__name__)
 

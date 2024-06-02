@@ -1,16 +1,31 @@
 import contextlib
+import operator
 import pickle
-from typing import Callable, TypeVar, ParamSpec, Self, Literal
+from typing import (
+    Callable,
+    TypeVar,
+    ParamSpec,
+    Self,
+    Literal,
+    TypeAlias,
+    LiteralString,
+    Any,
+)
 
 import grpc
 import grpc.aio
+import tblib.pickling_support
 
 from . import rpc_pb2
 from . import rpc_pb2_grpc
 from .proxy import Proxy
 
+tblib.pickling_support.install()
+
 P = ParamSpec("P")
 T = TypeVar("T")
+
+ReturnedType: TypeAlias = Literal["copy", "proxy"]
 
 
 class Client:
@@ -36,11 +51,22 @@ class Client:
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
+    async def call_method(
+        self,
+        obj: Any,
+        method: LiteralString,
+        *args: Any,
+        returned_value: ReturnedType = "copy",
+        **kwargs: Any,
+    ) -> Any:
+        caller = operator.methodcaller(method, *args, **kwargs)
+        return await self.call(caller, obj, returned_value=returned_value)
+
     async def call(
         self,
         fun: Callable[P, T],
         *args: P.args,
-        result: Literal["serialized", "proxy"] = "serialized",
+        returned_value: ReturnedType = "copy",
         **kwargs: P.kwargs,
     ) -> T | Proxy[T]:
         response = await self._stub.Call(
@@ -50,7 +76,7 @@ class Client:
                 kwargs={key: pickle.dumps(value) for key, value in kwargs.items()},
                 return_value=(
                     rpc_pb2.ReturnValue.SERIALIZED
-                    if result == "serialized"
+                    if returned_value == "copy"
                     else rpc_pb2.ReturnValue.PROXY
                 ),
             )
