@@ -11,7 +11,7 @@ from caqtus.device.remote.rpc.proxy import Proxy
 
 
 def _run_server(e):
-    with Server():
+    with Server(address="[::]:50051"):
         e.wait()
 
 
