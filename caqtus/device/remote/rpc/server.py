@@ -1,7 +1,10 @@
+import concurrent.futures
 import logging
 import os
 import pickle
-from typing import TypeVar
+from typing import TypeVar, Self
+
+import grpc
 
 import rpc_pb2
 import rpc_pb2_grpc
@@ -10,6 +13,24 @@ from .proxy import Proxy
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+class Server:
+    def __init__(self) -> None:
+        self._server = grpc.server(concurrent.futures.ThreadPoolExecutor())
+        rpc_pb2_grpc.add_RemoteCallServicer_to_server(
+            RemoteCallServicer(), self._server
+        )
+        self._server.add_insecure_port("[::]:50051")
+
+    def __enter__(self) -> Self:
+        self._server.start()
+        logger.info("Server started")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self._server.stop()
+        logger.info("Server stopped")
 
 
 class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
