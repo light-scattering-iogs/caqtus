@@ -5,7 +5,7 @@ from typing import TypeVar
 
 import rpc_pb2
 import rpc_pb2_grpc
-from proxy import Proxy
+from .proxy import Proxy
 
 logger = logging.getLogger(__name__)
 
