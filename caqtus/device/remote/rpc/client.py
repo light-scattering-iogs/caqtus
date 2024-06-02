@@ -31,14 +31,15 @@ ReturnedType: TypeAlias = Literal["copy", "proxy"]
 
 
 class Client:
-    """
+    """A client to call remote functions running on a server.
 
     Args:
         target: The server address to connect to.
+        credentials: The credentials to use for the connection.
     """
 
-    def __init__(self, target: str):
-        self._async_channel = grpc.aio.insecure_channel(target)
+    def __init__(self, target: str, credentials: grpc.ChannelCredentials) -> None:
+        self._async_channel = grpc.aio.secure_channel(target, credentials=credentials)
         self._stub = rpc_pb2_grpc.RemoteCallStub(self._async_channel)
 
     async def __aenter__(self) -> Self:

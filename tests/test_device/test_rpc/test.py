@@ -2,6 +2,7 @@ import contextlib
 from multiprocessing import Process, Event
 
 import anyio
+import grpc
 import pytest
 
 from caqtus.device import Device
@@ -11,7 +12,10 @@ from caqtus.device.remote.rpc.proxy import Proxy
 
 
 def _run_server(e):
-    with Server(address="[::]:50051"):
+    with Server(
+        address="[::]:50051",
+        credentials=grpc.local_server_credentials(grpc.LocalConnectionType.LOCAL_TCP),
+    ):
         e.wait()
 
 
@@ -28,7 +32,10 @@ def run_server():
 
 
 def create_client():
-    return Client("localhost:50051")
+    return Client(
+        "localhost:50051",
+        credentials=grpc.local_channel_credentials(grpc.LocalConnectionType.LOCAL_TCP),
+    )
 
 
 def test_1():

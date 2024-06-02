@@ -22,11 +22,11 @@ T = TypeVar("T")
 
 
 class Server:
-    def __init__(self, address: str) -> None:
+    def __init__(self, address: str, credentials: grpc.ServerCredentials) -> None:
         self._server = grpc.server(concurrent.futures.ThreadPoolExecutor())
         self._servicer = RemoteCallServicer()
         rpc_pb2_grpc.add_RemoteCallServicer_to_server(self._servicer, self._server)
-        self._server.add_insecure_port(address=address)
+        self._server.add_secure_port(address=address, server_credentials=credentials)
         self._exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> Self:
