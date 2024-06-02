@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import abc
-import contextlib
 import functools
-from collections.abc import Callable, AsyncGenerator, Iterable, AsyncIterator
+from collections.abc import Callable
 from typing import (
     Generic,
     TypeVar,
@@ -19,13 +18,13 @@ import anyio.to_thread
 
 from caqtus.types.data import DataLabel, Data
 from ..name import DeviceName
-from ..runtime import Device
+from ..remote import DeviceProxy
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher
 
 
-DeviceType = TypeVar("DeviceType", bound=Device)
+DeviceProxyType = TypeVar("DeviceProxyType", bound=DeviceProxy)
 
 ShotParametersType = TypeVar("ShotParametersType")
 
@@ -34,7 +33,7 @@ _P = ParamSpec("_P")
 _Q = ParamSpec("_Q")
 
 
-class DeviceController(Generic[DeviceType, _P], abc.ABC):
+class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
     """Controls a device during a shot."""
 
     def __init__(
@@ -51,8 +50,9 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         self._data_waits: list[tuple[str, float, float]] = []
         self._data_signals: list[tuple[str, float]] = []
 
+    @abc.abstractmethod
     async def run_shot(
-        self, device: DeviceType, /, *args: _P.args, **kwargs: _P.kwargs
+        self, device: DeviceProxyType, /, *args: _P.args, **kwargs: _P.kwargs
     ) -> None:
         """Runs a shot on the device.
 
@@ -61,12 +61,11 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         arguments passed before the shot is launched.
         """
 
-        await self.run_in_thread(device.update_parameters, *args, **kwargs)
-        await self.wait_all_devices_ready()
+        raise NotImplementedError
 
     @final
     async def _run_shot(
-        self, device: DeviceType, *args: _P.args, **kwargs: _P.kwargs
+        self, device: DeviceProxyType, *args: _P.args, **kwargs: _P.kwargs
     ) -> ShotStats:
         start_time = self._event_dispatcher.shot_time()
         await self.run_shot(device, *args, **kwargs)
@@ -144,27 +143,6 @@ class DeviceController(Generic[DeviceType, _P], abc.ABC):
         end_time = self._event_dispatcher.shot_time()
         self._thread_times.append((func_name, start_time, end_time))
         return result
-
-    @contextlib.asynccontextmanager
-    async def async_context(
-        self,
-        cm: contextlib.AbstractContextManager[_T],
-    ) -> AsyncGenerator[_T, None]:
-        entered = await self.run_in_thread(cm.__enter__)
-        try:
-            yield entered
-        except BaseException as exc:
-            cm.__exit__(type(exc), exc, exc.__traceback__)
-            raise
-        else:
-            await self.run_in_thread(cm.__exit__, None, None, None)
-
-    @final
-    async def iterate_async(self, iterable: Iterable[_T]) -> AsyncIterator[_T]:
-        iterator = iter(iterable)
-        done = object()
-        while (value := await self.run_in_thread(next, iterator, done)) is not done:
-            yield value
 
     @final
     async def sleep(self, seconds: float) -> None:
