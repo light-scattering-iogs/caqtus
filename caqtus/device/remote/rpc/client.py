@@ -13,6 +13,7 @@ from typing import (
     Any,
 )
 
+import anyio
 import grpc
 import grpc.aio
 import tblib.pickling_support
@@ -40,15 +41,13 @@ class Client:
         self._async_channel = grpc.aio.insecure_channel(target)
         self._stub = rpc_pb2_grpc.RemoteCallStub(self._async_channel)
 
-        self._exit_stack = contextlib.AsyncExitStack()
-
     async def __aenter__(self) -> Self:
-        await self._exit_stack.__aenter__()
-        await self._exit_stack.enter_async_context(self._async_channel)
+        await self._async_channel.__aenter__()
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
+        with anyio.CancelScope(shield=True):
+            await self._async_channel.__aexit__(exc_type, exc_value, traceback)
 
     async def call_method(
         self,
@@ -66,22 +65,26 @@ class Client:
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        response = await self._stub.Call(self._build_request(fun, args, kwargs, "copy"))
+        with anyio.CancelScope(shield=True):
+            response = await self._stub.Call(
+                self._build_request(fun, args, kwargs, "copy")
+            )
         return self._build_result(response)
 
     @contextlib.asynccontextmanager
     async def call_proxy_result(
         self, fun: Callable[..., T], *args: Any, **kwargs: Any
     ) -> AsyncGenerator[Proxy[T], None]:
-        response = await self._stub.Call(
-            self._build_request(fun, args, kwargs, "proxy")
-        )
-        proxy = self._build_result(response)
-        assert isinstance(proxy, Proxy)
-        try:
-            yield proxy
-        finally:
-            await self._close_proxy(proxy)
+        with anyio.CancelScope(shield=True):
+            response = await self._stub.Call(
+                self._build_request(fun, args, kwargs, "proxy")
+            )
+            proxy = self._build_result(response)
+            assert isinstance(proxy, Proxy)
+            try:
+                yield proxy
+            finally:
+                await self._close_proxy(proxy)
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         pass

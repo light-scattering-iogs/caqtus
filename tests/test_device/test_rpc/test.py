@@ -1,7 +1,8 @@
-import asyncio
 import contextlib
 import os
 from multiprocessing import Process, Event
+
+import anyio
 
 from caqtus.device.remote.rpc import Server, Client
 from caqtus.device.remote.rpc.proxy import Proxy
@@ -36,4 +37,4 @@ def test_1():
             assert await client.call(len, l) == 4
 
     with run_server():
-        asyncio.run(fun())
+        anyio.run(fun)
