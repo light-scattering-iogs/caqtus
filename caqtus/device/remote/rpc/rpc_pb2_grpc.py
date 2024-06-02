@@ -48,12 +48,24 @@ class RemoteCallStub(object):
             response_deserializer=rpc__pb2.CallResponse.FromString,
             _registered_method=True,
         )
+        self.DeleteReferent = channel.unary_unary(
+            "/RemoteCall/DeleteReferent",
+            request_serializer=rpc__pb2.DeleteReferentRequest.SerializeToString,
+            response_deserializer=rpc__pb2.DeleteReferentResponse.FromString,
+            _registered_method=True,
+        )
 
 
 class RemoteCallServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Call(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def DeleteReferent(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details("Method not implemented!")
@@ -66,6 +78,11 @@ def add_RemoteCallServicer_to_server(servicer, server):
             servicer.Call,
             request_deserializer=rpc__pb2.CallRequest.FromString,
             response_serializer=rpc__pb2.CallResponse.SerializeToString,
+        ),
+        "DeleteReferent": grpc.unary_unary_rpc_method_handler(
+            servicer.DeleteReferent,
+            request_deserializer=rpc__pb2.DeleteReferentRequest.FromString,
+            response_serializer=rpc__pb2.DeleteReferentResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -98,6 +115,36 @@ class RemoteCall(object):
             "/RemoteCall/Call",
             rpc__pb2.CallRequest.SerializeToString,
             rpc__pb2.CallResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True,
+        )
+
+    @staticmethod
+    def DeleteReferent(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/RemoteCall/DeleteReferent",
+            rpc__pb2.DeleteReferentRequest.SerializeToString,
+            rpc__pb2.DeleteReferentResponse.FromString,
             options,
             channel_credentials,
             insecure,

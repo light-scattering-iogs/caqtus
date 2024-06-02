@@ -49,6 +49,18 @@ class CallRequest(_message.Message):
         return_value: _Optional[_Union[ReturnValue, str]] = ...,
     ) -> None: ...
 
+class DeleteReferentRequest(_message.Message):
+    __slots__ = ("proxy",)
+    PROXY_FIELD_NUMBER: _ClassVar[int]
+    proxy: bytes
+    def __init__(self, proxy: _Optional[bytes] = ...) -> None: ...
+
+class DeleteReferentResponse(_message.Message):
+    __slots__ = ("success",)
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    def __init__(self, success: bool = ...) -> None: ...
+
 class CallResponse(_message.Message):
     __slots__ = ("success", "failure")
     SUCCESS_FIELD_NUMBER: _ClassVar[int]

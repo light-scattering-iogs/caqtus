@@ -87,7 +87,9 @@ class Client:
                 await self._close_proxy(proxy)
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
-        pass
+        await self._stub.DeleteReferent(
+            rpc_pb2.DeleteReferentRequest(proxy=pickle.dumps(proxy))
+        )
 
     @staticmethod
     def _build_request(

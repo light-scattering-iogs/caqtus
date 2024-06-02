@@ -75,14 +75,6 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
         self._objects[obj_id] = obj
         return Proxy(os.getpid(), obj_id)
 
-    def delete_proxy_referent(self, proxy: Proxy[T]) -> None:
-        if proxy._pid != os.getpid():
-            raise RuntimeError(
-                "Proxy cannot be deleted in a different process than the one it was "
-                "created in"
-            )
-        del self._objects[proxy._obj_id]
-
     def get_referent(self, proxy: Proxy[T]) -> T:
         if proxy._pid != os.getpid():
             raise RuntimeError(
@@ -107,6 +99,20 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
                 f"If you acquired any proxies, make sure to close them."
             )
             self._objects.clear()
+
+    def DeleteReferent(
+        self, request: rpc_pb2.DeleteReferentRequest, context
+    ) -> rpc_pb2.DeleteReferentResponse:
+        proxy = pickle.loads(request.proxy)
+        assert isinstance(proxy, Proxy)
+
+        if proxy._pid != os.getpid():
+            raise RuntimeError(
+                "Proxy cannot be deleted in a different process than the one it was "
+                "created in"
+            )
+        del self._objects[proxy._obj_id]
+        return rpc_pb2.DeleteReferentResponse(success=True)
 
 
 class RemoteError(Exception):
