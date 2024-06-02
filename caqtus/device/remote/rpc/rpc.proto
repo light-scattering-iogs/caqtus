@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service RemoteCall {
+    rpc Call(CallRequest) returns (CallResponse);
+}
+
+message CallRequest {
+    bytes function = 1;
+    repeated bytes args = 2;
+    map<string, bytes> kwargs = 3;
+    ReturnValue return_value = 4;
+}
+
+enum ReturnValue {
+    SERIALIZED = 0;
+    PROXY = 1;
+}
+
+message CallResponse {
+    oneof result {
+        bytes success = 1;
+        bytes failure = 2;
+    }
+}
