@@ -9,6 +9,8 @@ P = ParamSpec("P")
 
 DeviceType = TypeVar("DeviceType", bound=Device)
 
+T = TypeVar("T")
+
 
 class DeviceProxy(Generic[DeviceType]):
     def __init__(
@@ -33,7 +35,7 @@ class DeviceProxy(Generic[DeviceType]):
             )
         )
         await self._async_exit_stack.enter_async_context(
-            self._rpc_client.async_context_manager(self._device_proxy)
+            self.async_context_manager(self._device_proxy)
         )
         return self
 
@@ -49,6 +51,21 @@ class DeviceProxy(Generic[DeviceType]):
         return await self._rpc_client.call_method(
             self._device_proxy, method_name, *args, **kwargs
         )
+
+    def call_method_proxy_result(
+        self,
+        method_name: LiteralString,
+        *args: Any,
+        **kwargs: Any,
+    ) -> contextlib.AbstractAsyncContextManager[Proxy]:
+        return self._rpc_client.call_method_proxy_result(
+            self._device_proxy, method_name, *args, **kwargs
+        )
+
+    def async_context_manager(
+        self, proxy: Proxy[contextlib.AbstractContextManager[T]]
+    ) -> contextlib.AbstractAsyncContextManager[Proxy[T]]:
+        return self._rpc_client.async_context_manager(proxy)
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self._async_exit_stack.__aexit__(exc_type, exc_value, traceback)

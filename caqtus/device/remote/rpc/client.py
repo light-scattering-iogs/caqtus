@@ -1,7 +1,7 @@
 import contextlib
 import operator
 import pickle
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator, AsyncIterator
 from typing import (
     Callable,
     TypeVar,
@@ -21,6 +21,7 @@ import tblib.pickling_support
 from . import rpc_pb2
 from . import rpc_pb2_grpc
 from .proxy import Proxy
+from .server import RemoteError
 
 tblib.pickling_support.install()
 
@@ -113,6 +114,17 @@ class Client:
         finally:
             with anyio.CancelScope(shield=True):
                 await self.call_method(proxy, "__exit__", None, None, None)
+
+    async def async_iterator(self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
+        while True:
+            try:
+                value = await self.call_method(proxy, "__next__")
+                yield value
+            except RemoteError as error:
+                if isinstance(error.__cause__, StopIteration):
+                    break
+                else:
+                    raise
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         await self._stub.DeleteReferent(

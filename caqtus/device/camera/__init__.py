@@ -1,5 +1,6 @@
 from ._compiler import CameraCompiler
 from ._configuration import CameraConfiguration
+from ._proxy import CameraProxy
 from ._runtime import Camera, CameraTimeoutError
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     "Camera",
     "CameraTimeoutError",
     "CameraCompiler",
+    "CameraProxy",
 ]

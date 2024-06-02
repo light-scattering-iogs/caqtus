@@ -3,12 +3,16 @@ from multiprocessing import Process, Event
 
 import anyio
 import grpc
+import numpy as np
 import pytest
 
 from caqtus.device import Device
+from caqtus.device.camera import Camera, CameraProxy
 from caqtus.device.remote import DeviceProxy
 from caqtus.device.remote.rpc import Server, Client
 from caqtus.device.remote.rpc.proxy import Proxy
+from caqtus.types.image import Image
+from caqtus.utils.roi import RectangularROI
 
 
 def _run_server(e):
@@ -78,6 +82,42 @@ def test_3():
     async def fun():
         async with create_client() as client, DeviceProxy(client, DeviceMock) as device:
             assert await device.get_attribute("state") == 1
+
+    with run_server():
+        anyio.run(fun)
+
+
+class CameraMock(Camera):
+    sensor_width = 100
+    sensor_height = 100
+
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        pass
+
+    def _read_image(self, exposure: float) -> Image:
+        return np.array([[1, 2, 3]])
+
+    def _stop_acquisition(self) -> None:
+        pass
+
+    def update_parameters(self, timeout: float, *args, **kwargs) -> None:
+        pass
+
+
+def test_4():
+    async def fun():
+        async with create_client() as client, CameraProxy(
+            client,
+            CameraMock,
+            roi=RectangularROI(
+                original_image_size=(100, 100), x=0, y=0, width=100, height=100
+            ),
+            timeout=1,
+            external_trigger=True,
+        ) as camera:
+            async with camera.acquire([1.0, 1.0, 1.0]) as images:
+                async for image in images:
+                    assert np.all(image == np.array([[1, 2, 3]]))
 
     with run_server():
         anyio.run(fun)

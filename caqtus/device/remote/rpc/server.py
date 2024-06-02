@@ -76,6 +76,10 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
             else:
                 assert False, f"Unknown return value: {request.return_value}"
             return rpc_pb2.CallResponse(success=pickle.dumps(result))
+        except StopIteration as e:
+            # Don't log this exception, as it can occur during normal operation if we're
+            # calling __next__ on an iterator.
+            return self._construct_error_response(fun, e)
         except Exception as e:
             logger.exception(
                 f"Error during call with request {request!r}", exc_info=True
