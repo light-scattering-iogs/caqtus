@@ -1,7 +1,9 @@
 import concurrent.futures
+import contextlib
 import logging
 import os
 import pickle
+import warnings
 from typing import TypeVar, Self
 
 import grpc
@@ -21,18 +23,21 @@ T = TypeVar("T")
 class Server:
     def __init__(self) -> None:
         self._server = grpc.server(concurrent.futures.ThreadPoolExecutor())
-        rpc_pb2_grpc.add_RemoteCallServicer_to_server(
-            RemoteCallServicer(), self._server
-        )
+        self._servicer = RemoteCallServicer()
+        rpc_pb2_grpc.add_RemoteCallServicer_to_server(self._servicer, self._server)
         self._server.add_insecure_port("[::]:50051")
+        self._exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> Self:
+        self._exit_stack.__enter__()
         self._server.start()
+        self._exit_stack.callback(self._server.stop, grace=5)
+        self._exit_stack.enter_context(self._servicer)
         logger.info("Server started")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self._server.stop(grace=5)
+        self._exit_stack.__exit__(exc_type, exc_value, traceback)
         logger.info("Server stopped")
 
 
@@ -91,6 +96,17 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
             return self.get_referent(obj)
         else:
             return obj
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        if self._objects:
+            warnings.warn(
+                f"Not all objects were properly deleted: {self._objects}.\n"
+                f"If you acquired any proxies, make sure to close them."
+            )
+            self._objects.clear()
 
 
 class RemoteError(Exception):
