@@ -56,6 +56,11 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
     def Call(self, request: rpc_pb2.CallRequest, context) -> rpc_pb2.CallResponse:
         try:
             fun = pickle.loads(request.function)
+        except pickle.UnpicklingError as e:
+            error = RemoteCallError("Error during call")
+            error.__cause__ = e
+            return rpc_pb2.CallResponse(failure=pickle.dumps(error))
+        try:
             args = [self.resolve(pickle.loads(arg)) for arg in request.args]
             kwargs = {
                 key: self.resolve(pickle.loads(value))
@@ -75,19 +80,19 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
             logger.exception(
                 f"Error during call with request {request!r}", exc_info=True
             )
-            return self._construct_error_response(e)
+            return self._construct_error_response(fun, e)
 
     @staticmethod
-    def _construct_error_response(e: Exception) -> rpc_pb2.CallResponse:
-        error = RemoteError(f"Error during call")
+    def _construct_error_response(fun, e: Exception) -> rpc_pb2.CallResponse:
+        error = RemoteError(f"Error during call to {fun}")
         error.__cause__ = e
         try:
             pickled = pickle.dumps(error)
         except pickle.PicklingError:
-            # It can happen that the error cannot be pickled.
-            # In this case we convert the cause error to a string.
+            # It can happen that the cause error cannot be pickled.
+            # In this case we convert it to a string.
             error.__cause__ = None
-            error = RemoteCallError(f"Error during call: {e}")
+            error = RemoteCallError(f"Error during call to {fun}: {e}")
             pickled = pickle.dumps(error)
         return rpc_pb2.CallResponse(failure=pickled)
 
@@ -105,7 +110,13 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
                 "Proxy cannot be resolved in a different process than the one it was "
                 "created in"
             )
-        return self._objects[proxy._obj_id].obj
+        try:
+            return self._objects[proxy._obj_id].obj
+        except KeyError as e:
+            raise InvalidProxyError(
+                f"{proxy} is referring to an object that does not exist on the "
+                f"server"
+            ) from e
 
     def resolve(self, obj: Proxy[T] | T) -> T:
         if isinstance(obj, Proxy):
@@ -142,6 +153,10 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
 
 
 class RemoteError(Exception):
+    pass
+
+
+class InvalidProxyError(RemoteError):
     pass
 
 

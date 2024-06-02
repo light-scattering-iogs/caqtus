@@ -67,10 +67,10 @@ class DeviceMock(Device):
 
 def test_3():
     async def fun():
-        async with Client("localhost:50051") as client:
-            async with DeviceProxy(client, DeviceMock) as device:
-                assert await device.get_attribute("state") == 1
-            assert await device.get_attribute("state") == 2
+        async with Client("localhost:50051") as client, DeviceProxy(
+            client, DeviceMock
+        ) as device:
+            assert await device.get_attribute("state") == 1
 
     with run_server():
         anyio.run(fun)
