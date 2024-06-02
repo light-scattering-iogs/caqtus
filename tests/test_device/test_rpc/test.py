@@ -27,9 +27,13 @@ def run_server():
         p.join()
 
 
+def create_client():
+    return Client("localhost:50051")
+
+
 def test_1():
     async def fun():
-        async with Client("localhost:50051") as client, client.call_proxy_result(
+        async with create_client() as client, client.call_proxy_result(
             list, [1, 2, 3]
         ) as l:
             assert isinstance(l, Proxy)
@@ -42,9 +46,7 @@ def test_1():
 
 def test_2():
     async def fun():
-        async with Client("localhost:50051") as client, client.call_proxy_result(
-            list, [1, 2, 3]
-        ):
+        async with create_client() as client, client.call_proxy_result(list, [1, 2, 3]):
             raise RuntimeError("This is a test")
 
     with run_server(), pytest.raises(RuntimeError):
@@ -67,9 +69,7 @@ class DeviceMock(Device):
 
 def test_3():
     async def fun():
-        async with Client("localhost:50051") as client, DeviceProxy(
-            client, DeviceMock
-        ) as device:
+        async with create_client() as client, DeviceProxy(client, DeviceMock) as device:
             assert await device.get_attribute("state") == 1
 
     with run_server():
