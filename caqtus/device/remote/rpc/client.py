@@ -38,7 +38,6 @@ class Client:
 
     def __init__(self, target: str):
         self._async_channel = grpc.aio.insecure_channel(target)
-        self._sync_channel = grpc.insecure_channel(target)
         self._stub = rpc_pb2_grpc.RemoteCallStub(self._async_channel)
 
         self._exit_stack = contextlib.AsyncExitStack()
@@ -46,7 +45,6 @@ class Client:
     async def __aenter__(self) -> Self:
         await self._exit_stack.__aenter__()
         await self._exit_stack.enter_async_context(self._async_channel)
-        self._exit_stack.enter_context(self._sync_channel)
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
