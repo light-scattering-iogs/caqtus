@@ -16,7 +16,7 @@ class DeviceProxy(Generic[DeviceType]):
         rpc_client: Client,
         device_type: Callable[P, DeviceType],
         *args: P.args,
-        **kwargs: P.kwargs
+        **kwargs: P.kwargs,
     ) -> None:
         self._rpc_client = rpc_client
         self._device_type = device_type
@@ -39,6 +39,16 @@ class DeviceProxy(Generic[DeviceType]):
 
     async def get_attribute(self, attribute_name: LiteralString) -> Any:
         return await self._rpc_client.get_attribute(self._device_proxy, attribute_name)
+
+    async def call_method(
+        self,
+        method_name: LiteralString,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        return await self._rpc_client.call_method(
+            self._device_proxy, method_name, *args, **kwargs
+        )
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self._async_exit_stack.__aexit__(exc_type, exc_value, traceback)
