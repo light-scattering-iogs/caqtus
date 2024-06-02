@@ -59,6 +59,22 @@ class Client:
         caller = operator.methodcaller(method, *args, **kwargs)
         return await self.call(caller, obj)
 
+    @contextlib.asynccontextmanager
+    async def call_method_proxy_result(
+        self,
+        obj: Any,
+        method: LiteralString,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        caller = operator.methodcaller(method, *args, **kwargs)
+        async with self.call_proxy_result(caller, obj) as result:
+            yield result
+
+    async def get_attribute(self, obj: Any, attribute: LiteralString) -> Any:
+        caller = operator.attrgetter(attribute)
+        return await self.call(caller, obj)
+
     async def call(
         self,
         fun: Callable[..., T],
@@ -85,6 +101,17 @@ class Client:
                 yield proxy
             finally:
                 await self._close_proxy(proxy)
+
+    @contextlib.asynccontextmanager
+    async def async_context_manager(
+        self, proxy: Proxy[contextlib.AbstractContextManager[T]]
+    ) -> AsyncGenerator[Proxy[T], None]:
+        try:
+            async with self.call_method_proxy_result(proxy, "__enter__") as result:
+                yield result
+        finally:
+            with anyio.CancelScope(shield=True):
+                await self.call_method(proxy, "__exit__", None, None, None)
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         await self._stub.DeleteReferent(

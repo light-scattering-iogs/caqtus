@@ -4,6 +4,8 @@ from multiprocessing import Process, Event
 import anyio
 import pytest
 
+from caqtus.device import Device
+from caqtus.device.remote import DeviceProxy
 from caqtus.device.remote.rpc import Server, Client
 from caqtus.device.remote.rpc.proxy import Proxy
 
@@ -46,4 +48,29 @@ def test_2():
             raise RuntimeError("This is a test")
 
     with run_server(), pytest.raises(RuntimeError):
+        anyio.run(fun)
+
+
+class DeviceMock(Device):
+    def __init__(self):
+        super().__init__()
+        self.state = 0
+
+    def __enter__(self):
+        self.state = 1
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.state = 2
+        return False
+
+
+def test_3():
+    async def fun():
+        async with Client("localhost:50051") as client:
+            async with DeviceProxy(client, DeviceMock) as device:
+                assert await device.get_attribute("state") == 1
+            assert await device.get_attribute("state") == 2
+
+    with run_server():
         anyio.run(fun)
