@@ -29,6 +29,9 @@ class Server:
         self._server.add_secure_port(address=address, server_credentials=credentials)
         self._exit_stack = contextlib.ExitStack()
 
+    def wait_for_termination(self) -> None:
+        self._server.wait_for_termination()
+
     def __enter__(self) -> Self:
         self._exit_stack.__enter__()
         self._server.start()
