@@ -31,7 +31,7 @@ Then in the script to launch the experiment:
 """
 
 from caqtus.device.remote_server import RemoteDeviceManager
-from .._injector import CaqtusInjector
+from .._experiment import Experiment
 from ..time_lane_extension import (
     digital_time_lane_extension,
     analog_time_lane_extension,
@@ -43,7 +43,7 @@ class _RemoteDeviceManager(RemoteDeviceManager):
     pass
 
 
-_injector = CaqtusInjector()
+_injector = Experiment()
 
 _injector.register_remote_device_manager_class(_RemoteDeviceManager)
 

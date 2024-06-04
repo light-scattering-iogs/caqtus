@@ -23,7 +23,7 @@ from ..experiment_control.manager import (
 from ..session import ExperimentSessionMaker
 
 
-class CaqtusInjector:
+class Experiment:
     """Dispatches configuration and extensions to the appropriate components.
 
     There should be only a single instance of this class in the entire application.
