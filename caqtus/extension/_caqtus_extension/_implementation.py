@@ -12,7 +12,7 @@ from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
 from ..time_lane_extension import TimeLaneExtension
 from ...device.configuration import DeviceServerName
-from ...device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
+from ...device.remote_server import DeviceServerConfiguration
 from ...experiment_control.device_manager_extension import DeviceManagerExtension
 
 P = ParamSpec("P")
@@ -77,13 +77,6 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         config: DeviceServerConfiguration,
     ) -> None:
         self.device_manager_extension.register_device_server_config(server, config)
-
-    def register_remote_device_manager_class(
-        self, manager_class: type[RemoteDeviceManager]
-    ) -> None:
-        self.device_manager_extension.register_remote_device_manager_class(
-            manager_class
-        )
 
     def create_session_maker(
         self,
