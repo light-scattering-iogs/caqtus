@@ -6,7 +6,6 @@ import datetime
 import logging
 import threading
 from collections.abc import Mapping, Generator, AsyncGenerator
-from contextlib import AbstractContextManager
 from typing import Optional, Any
 
 import anyio
@@ -139,7 +138,6 @@ class SequenceManager:
         self._is_shutting_down = threading.Event()
         self._exit_stack = contextlib.AsyncExitStack()
 
-        self._task_group = anyio.create_task_group()
         self._interruption_event = interruption_event
         self._is_watching_for_interruption = threading.Event()
         self._is_watching_for_interruption.set()
@@ -160,7 +158,7 @@ class SequenceManager:
     async def run_sequence(self) -> None:
         self._prepare_sequence()
         try:
-            async with self._exit_stack, self._task_group:
+            async with self._exit_stack:
                 devices_in_use = await self._exit_stack.enter_async_context(
                     self._create_devices_in_use()
                 )
@@ -183,13 +181,13 @@ class SequenceManager:
             tg.start_soon(self._store_shots)
             async with self._device_parameter_receiver, self._device_parameter_sender:
                 for _ in range(4):
-                    self._task_group.start_soon(
+                    tg.start_soon(
                         self._compile_shots,
                         shot_compiler,
                         self._shot_parameter_receiver.clone(),
                         self._device_parameter_sender.clone(),
                     )
-            self._task_group.start_soon(self._run_shots, shot_runner)
+            tg.start_soon(self._run_shots, shot_runner)
 
     @contextlib.asynccontextmanager
     async def _create_devices_in_use(
