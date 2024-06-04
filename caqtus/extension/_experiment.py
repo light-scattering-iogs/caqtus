@@ -10,8 +10,9 @@ from caqtus.experiment_control.manager import (
 )
 from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
-from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
+from .device_extension import DeviceExtension
+from .time_lane_extension import TimeLaneExtension
 from ..device.configuration import DeviceServerName
 from ..device.remote import Server
 from ..device.remote_server import DeviceServerConfiguration
