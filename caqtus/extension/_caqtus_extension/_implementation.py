@@ -2,7 +2,6 @@ from collections.abc import Callable
 from typing import Concatenate, ParamSpec, TypeVar
 
 import attrs
-import grpc
 
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
 from caqtus.gui.condetrol.extension import CondetrolExtension
@@ -75,9 +74,9 @@ class CaqtusExtension(CaqtusExtensionProtocol):
     def register_device_server_config(
         self,
         name: DeviceServerName,
-        credentials: grpc.ChannelCredentials,
+        config: DeviceServerConfiguration,
     ) -> None:
-        self.device_manager_extension.register_device_server_config(name, credentials)
+        self.device_manager_extension.register_device_server_config(name, config)
 
     def create_session_maker(
         self,

@@ -1,4 +1,5 @@
 import attrs
+import grpc
 from pydantic import SecretStr
 
 from caqtus.utils import serialization
@@ -15,11 +16,8 @@ def secret_str_converter(value: str | SecretStr) -> SecretStr:
 
 @attrs.define
 class DeviceServerConfiguration:
-    address: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-    port: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
-    authkey: SecretStr = attrs.field(
-        converter=secret_str_converter, on_setattr=attrs.setters.convert
-    )
+    target: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+    credentials: grpc.ChannelCredentials = attrs.field()
 
 
 def secret_str_unstructure(secret_str: SecretStr) -> str:

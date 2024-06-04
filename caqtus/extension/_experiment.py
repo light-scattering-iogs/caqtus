@@ -14,6 +14,7 @@ from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
 from ..device.configuration import DeviceServerName
 from ..device.remote import Server
+from ..device.remote_server import DeviceServerConfiguration
 from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
@@ -135,7 +136,7 @@ class Experiment:
         self._extension.register_time_lane_extension(time_lane_extension)
 
     def register_device_server(
-        self, name: DeviceServerName, credentials: grpc.ChannelCredentials
+        self, name: DeviceServerName, config: DeviceServerConfiguration
     ) -> None:
         """Register a new device server.
 
@@ -143,7 +144,7 @@ class Experiment:
         application to connect to devices.
         """
 
-        self._extension.register_device_server_config(name, credentials)
+        self._extension.register_device_server_config(name, config)
 
     def get_session_maker(self) -> ExperimentSessionMaker:
         """Get the session maker to be used by the application.
