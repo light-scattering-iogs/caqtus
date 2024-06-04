@@ -4,6 +4,7 @@ Sequencers are devices that output values at regular time intervals.
 Sequencers have a predetermined set of channels.
 """
 
+from ._proxy import SequencerProxy
 from .compilation import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,
@@ -34,4 +35,5 @@ __all__ = [
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
     "SequencerCompiler",
+    "SequencerProxy",
 ]
