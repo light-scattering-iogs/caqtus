@@ -1,3 +1,5 @@
+from typing import TypeAlias
+
 import attrs
 import grpc
 from pydantic import SecretStr
@@ -15,9 +17,20 @@ def secret_str_converter(value: str | SecretStr) -> SecretStr:
 
 
 @attrs.define
+class LocalServerCredentials:
+    connection_type: grpc.LocalConnectionType
+
+    def get_credentials(self) -> grpc.ChannelCredentials:
+        return grpc.local_channel_credentials(self.connection_type)
+
+
+Credentials: TypeAlias = LocalServerCredentials
+
+
+@attrs.define
 class DeviceServerConfiguration:
     target: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-    credentials: grpc.ChannelCredentials = attrs.field()
+    credentials: Credentials = attrs.field()
 
 
 def secret_str_unstructure(secret_str: SecretStr) -> str:
