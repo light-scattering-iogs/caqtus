@@ -9,6 +9,7 @@ from caqtus.device import DeviceConfiguration
 # noinspection PyPep8Naming
 from caqtus.device.configuration import DeviceConfigType as C
 from caqtus.device.controller import DeviceController
+from caqtus.device.remote import DeviceProxy
 from caqtus.gui.condetrol.device_configuration_editors import DeviceConfigurationEditor
 from caqtus.shot_compilation import DeviceCompiler
 from caqtus.utils.serialization import JSON
@@ -55,6 +56,7 @@ class DeviceExtension(Generic[C]):
     editor_type: Callable[[C], DeviceConfigurationEditor[C]] = attrs.field()
     compiler_type: type[DeviceCompiler] = attrs.field()
     controller_type: type[DeviceController] = attrs.field()
+    proxy_type: type[DeviceProxy] = attrs.field()
 
     @configuration_type.validator  # type: ignore
     def _validate_configuration_type(self, _, value):
@@ -65,3 +67,15 @@ class DeviceExtension(Generic[C]):
     def _validate_compiler_type(self, _, value):
         if not issubclass(value, DeviceCompiler):
             raise ValueError(f"Invalid compiler type: {value}.")
+
+    @controller_type.validator  # type: ignore
+    def _validate_controller_type(self, _, value):
+        if not issubclass(value, DeviceController):
+            raise ValueError(f"Invalid controller type: {value}.")
+
+    @proxy_type.validator  # type: ignore
+    def _validate_proxy_type(self, _, value):
+        if not issubclass(value, DeviceProxy):
+            raise ValueError(f"Invalid proxy type: {value}.")
+
+
