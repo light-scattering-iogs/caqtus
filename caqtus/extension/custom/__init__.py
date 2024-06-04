@@ -71,6 +71,8 @@ launch_condetrol = _injector.launch_condetrol
 
 launch_experiment_server = _injector.launch_experiment_server
 
+launch_device_server = _injector.launch_device_server
+
 
 __all__ = [
     "register_device_extension",
@@ -80,4 +82,5 @@ __all__ = [
     "launch_condetrol",
     "launch_experiment_server",
     "configure_experiment_manager",
+    "launch_device_server",
 ]
