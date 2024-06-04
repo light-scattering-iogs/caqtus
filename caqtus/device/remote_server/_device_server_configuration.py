@@ -28,9 +28,19 @@ Credentials: TypeAlias = LocalServerCredentials
 
 
 @attrs.define
-class DeviceServerConfiguration:
+class SecureDeviceServerConfiguration:
     target: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
     credentials: Credentials = attrs.field()
+
+
+@attrs.define
+class InsecureDeviceServerConfiguration:
+    target: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
+
+
+DeviceServerConfiguration = (
+    SecureDeviceServerConfiguration | InsecureDeviceServerConfiguration
+)
 
 
 def secret_str_unstructure(secret_str: SecretStr) -> str:

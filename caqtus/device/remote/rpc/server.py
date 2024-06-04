@@ -13,6 +13,11 @@ import tblib.pickling_support
 from . import rpc_pb2
 from . import rpc_pb2_grpc
 from .proxy import Proxy
+from ...remote_server import DeviceServerConfiguration
+from ...remote_server._device_server_configuration import (
+    SecureDeviceServerConfiguration,
+    InsecureDeviceServerConfiguration,
+)
 
 tblib.pickling_support.install()
 
@@ -22,11 +27,17 @@ T = TypeVar("T")
 
 
 class Server:
-    def __init__(self, address: str, credentials: grpc.ServerCredentials) -> None:
+    def __init__(self, config: DeviceServerConfiguration) -> None:
         self._server = grpc.server(concurrent.futures.ThreadPoolExecutor())
         self._servicer = RemoteCallServicer()
         rpc_pb2_grpc.add_RemoteCallServicer_to_server(self._servicer, self._server)
-        self._server.add_secure_port(address=address, server_credentials=credentials)
+        if isinstance(config, SecureDeviceServerConfiguration):
+            self._server.add_secure_port(
+                address=config.target,
+                server_credentials=config.credentials.get_credentials(),
+            )
+        elif isinstance(config, InsecureDeviceServerConfiguration):
+            self._server.add_insecure_port(address=config.target)
         self._exit_stack = contextlib.ExitStack()
 
     def wait_for_termination(self) -> None:

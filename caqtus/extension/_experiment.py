@@ -1,8 +1,6 @@
 import warnings
 from typing import Optional, assert_never
 
-import grpc
-
 from caqtus.experiment_control.manager import (
     LocalExperimentManager,
     RemoteExperimentManagerClient,
@@ -248,12 +246,12 @@ class Experiment:
             server.serve_forever()
 
     @staticmethod
-    def launch_device_server(address: str, credentials: grpc.ServerCredentials) -> None:
+    def launch_device_server(config: DeviceServerConfiguration) -> None:
         """Launch a device server in the current process.
 
         This method will block until the server is stopped.
         """
 
-        with Server(address, credentials) as server:
+        with Server(config) as server:
             print("Ready")
             server.wait_for_termination()

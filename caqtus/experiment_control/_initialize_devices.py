@@ -51,11 +51,8 @@ async def create_rpc_clients(
 ) -> AsyncGenerator[dict[str, Client], None]:
     clients: dict[str, Client] = {}
     async with contextlib.AsyncExitStack() as stack:
-        for server_name, server_config in device_server_configs.items():
-            client = Client(
-                target=server_config.target,
-                credentials=server_config.credentials.get_credentials(),
-            )
+        for server_name, config in device_server_configs.items():
+            client = Client(config)
             await stack.enter_async_context(client)
             clients[server_name] = client
         yield clients
