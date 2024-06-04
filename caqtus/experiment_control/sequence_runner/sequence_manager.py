@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import concurrent.futures
 import contextlib
 import copy
 import datetime
 import logging
-import queue
 import threading
-from collections.abc import Mapping, Generator
+from collections.abc import Mapping, Generator, AsyncGenerator
 from contextlib import AbstractContextManager
 from typing import Optional, Any
 
+import anyio
+import anyio.to_process
+import anyio.to_thread
 import attrs
 from tblib import pickling_support
 
@@ -25,7 +26,6 @@ from caqtus.shot_compilation import (
 )
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.utils.concurrent import TaskGroup
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -71,7 +71,7 @@ def _compile_shot(
         return e
 
 
-class SequenceManager(AbstractContextManager):
+class SequenceManager:
     """Manages the execution of a sequence.
 
     Instances of this class run background tasks to compile and run shots for a given
@@ -137,25 +137,9 @@ class SequenceManager(AbstractContextManager):
         # tasks should stop. It can either be set by a task if an error occurs, or
         # by the __exit__ method at the end of the sequence.
         self._is_shutting_down = threading.Event()
-        self._exit_stack = contextlib.ExitStack()
-        self._thread_pool = concurrent.futures.ThreadPoolExecutor()
-        self._process_pool = concurrent.futures.ProcessPoolExecutor()
+        self._exit_stack = contextlib.AsyncExitStack()
 
-        self._shot_parameter_queue = queue.PriorityQueue[ShotParameters](4)
-        self._is_compiling = LockedEvent()
-        self._is_compiling.set()
-
-        self._device_parameter_queue = queue.PriorityQueue[DeviceParameters](4)
-        self._is_running_shots = LockedEvent()
-        self._is_running_shots.set()
-
-        self._shot_data_queue = queue.PriorityQueue[ShotData](4)
-        self._is_saving_data = LockedEvent()
-        self._is_saving_data.set()
-
-        self._task_group = TaskGroup(
-            self._thread_pool, name=f"managing the sequence '{self._sequence_path}'"
-        )
+        self._task_group = anyio.create_task_group()
         self._interruption_event = interruption_event
         self._is_watching_for_interruption = threading.Event()
         self._is_watching_for_interruption.set()
@@ -163,40 +147,54 @@ class SequenceManager(AbstractContextManager):
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
-    def __enter__(self):
+        self._shot_storage_sender, self._shot_storage_receiver = (
+            anyio.create_memory_object_stream(4)
+        )
+        self._shot_parameter_sender, self._shot_parameter_receiver = (
+            anyio.create_memory_object_stream[ShotParameters](4)
+        )
+        self._device_parameter_sender, self._device_parameter_receiver = (
+            anyio.create_memory_object_stream[DeviceParameters](4)
+        )
+
+    async def run_sequence(self) -> None:
         self._prepare_sequence()
-        self._exit_stack.__enter__()
         try:
-            self._prepare()
-            self._set_sequence_state(State.RUNNING)
-        except Exception as e:
-            self._exit_stack.__exit__(type(e), e, e.__traceback__)
+            async with self._exit_stack, self._task_group:
+                devices_in_use = await self._exit_stack.enter_async_context(
+                    self._create_devices_in_use()
+                )
+                shot_runner = self._create_shot_runner(devices_in_use)
+                shot_compiler = self._create_shot_compiler(devices_in_use)
+                self._set_sequence_state(State.RUNNING)
+                await self._run(shot_runner, shot_compiler)
+        except* SequenceInterruptedException:
+            self._set_sequence_state(State.INTERRUPTED)
+            raise
+        except* BaseException:
             self._set_sequence_state(State.CRASHED)
             raise
-        return self
+        else:
+            self._set_sequence_state(State.FINISHED)
 
-    def _prepare(self) -> None:
-        self._exit_stack.enter_context(self._process_pool)
-        # This task is here to force the process pool to start now.
-        # Otherwise, it waits until the first shot is submitted for compilation.
-        task = self._process_pool.submit(nothing)
-        self._exit_stack.enter_context(self._thread_pool)
+    async def _run(self, shot_runner: ShotRunner, shot_compiler: ShotCompiler) -> None:
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(self._watch_for_interruption)
+            tg.start_soon(self._store_shots)
+            async with self._device_parameter_receiver, self._device_parameter_sender:
+                for _ in range(4):
+                    self._task_group.start_soon(
+                        self._compile_shots,
+                        shot_compiler,
+                        self._shot_parameter_receiver.clone(),
+                        self._device_parameter_sender.clone(),
+                    )
+            self._task_group.start_soon(self._run_shots, shot_runner)
 
-        devices_in_use = self._create_devices_in_use()
-
-        shot_runner = self._create_shot_runner(devices_in_use)
-        self._exit_stack.enter_context(shot_runner)
-
-        self._task_group.__enter__()
-        self._task_group.create_task(self._watch_for_interruption)
-        self._task_group.create_task(self._store_shots)
-        shot_compiler = self._create_shot_compiler(devices_in_use)
-        for _ in range(4):
-            self._task_group.create_task(self._compile_shots, shot_compiler)
-        self._task_group.create_task(self._run_shots, shot_runner)
-        task.result()
-
-    def _create_devices_in_use(self) -> dict[DeviceName, Device]:
+    @contextlib.asynccontextmanager
+    async def _create_devices_in_use(
+        self,
+    ) -> AsyncGenerator[dict[DeviceName, Device], None]:
         sequence_context = SequenceContext(
             device_configurations=self.device_configurations, time_lanes=self.time_lanes
         )
@@ -215,13 +213,13 @@ class SequenceManager(AbstractContextManager):
                 device_types[device_name] = (
                     self._device_manager_extension.get_device_type(device_configuration)
                 )
-        devices_in_use = create_devices(
+        async with create_devices(
             self._device_compilers,
             self.device_configurations,
             device_types,
             self._device_manager_extension,
-        )
-        return devices_in_use
+        ) as devices_in_use:
+            yield devices_in_use
 
     def _create_shot_runner(self, devices_in_use) -> ShotRunner:
         device_controller_types = {
@@ -241,77 +239,12 @@ class SequenceManager(AbstractContextManager):
         )
         return shot_compiler
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Indicates if an error occurred in the scheduler thread.
-        error_occurred = exc_val is not None
-        if error_occurred:
-            self._is_compiling.clear()
-            self._is_running_shots.clear()
-            self._is_saving_data.clear()
-
-        self._shot_parameter_queue.join()
-        self._is_compiling.clear()
-        self._device_parameter_queue.join()
-        self._is_running_shots.clear()
-        self._shot_data_queue.join()
-        self._is_saving_data.clear()
-        self._is_watching_for_interruption.clear()
-        try:
-            # Here we check is any of the background tasks raised an exception. If so,
-            # they are re-raised here, and the exception that occurred in the scheduler
-            # thread is added to the list of exceptions.
-            try:
-                self._task_group.__exit__(exc_type, exc_val, exc_tb)
-            except ExceptionGroup as e:
-                if error_occurred:
-                    raise ExceptionGroup(e.message, [*e.exceptions, exc_val])
-                else:
-                    raise e
-            else:
-                if error_occurred:
-                    raise exc_val
-        except* SequenceInterruptedException:
-            state = State.INTERRUPTED
-            raise
-        except* Exception:
-            state = State.CRASHED
-            raise
-        else:
-            state = State.FINISHED
-        finally:
-            try:
-                # noinspection PyUnboundLocalVariable
-                self._set_sequence_state(state)
-            finally:
-                self._exit_stack.__exit__(exc_type, exc_val, exc_tb)
-
-    def schedule_shot(self, shot_variables: VariableNamespace) -> None:
+    async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
             index=self._current_shot, parameters=shot_variables
         )
 
-        def try_pushing_shot() -> bool:
-            with self._is_compiling.is_set_context() as is_compiling:
-                if not is_compiling:
-                    if self._interruption_event.is_set():
-                        raise SequenceInterruptedException(
-                            f"Cannot schedule shot after sequence has been "
-                            f"interrupted."
-                        )
-                    else:
-                        raise RuntimeError(
-                            "Cannot schedule shot after shot compilation has been "
-                            "terminated."
-                        )
-                try:
-                    self._shot_parameter_queue.put(shot_parameters, timeout=20e-3)
-                except queue.Full:
-                    return False
-                else:
-                    return True
-
-        while not try_pushing_shot():
-            continue
+        await self._shot_parameter_sender.send(shot_parameters)
         self._current_shot += 1
 
     def _prepare_sequence(self):
@@ -328,103 +261,34 @@ class SequenceManager(AbstractContextManager):
         with self._session_maker() as session:
             session.sequences.set_state(self._sequence_path, state)
 
-    def _watch_for_interruption(self):
-        while self._is_watching_for_interruption.is_set():
-            if self._interruption_event.wait(20e-3):
-                logger.debug("Sequence interrupted")
-                self._is_compiling.clear()
-                self._is_running_shots.clear()
-                self._is_saving_data.clear()
+    async def _watch_for_interruption(self):
+        while True:
+            if self._interruption_event.is_set():
                 raise SequenceInterruptedException(
                     f"Sequence '{self._sequence_path}' received an external "
                     f"interruption signal."
                 )
-            else:
-                continue
+            await anyio.sleep(20e-3)
 
-    def _compile_shots(self, shot_compiler: ShotCompiler):
-        try:
-            while self._is_compiling.is_set():
-                try:
-                    shot_parameters = self._shot_parameter_queue.get(timeout=20e-3)
-                except queue.Empty:
-                    continue
-                try:
-                    task = self._process_pool.submit(
-                        _compile_shot, shot_parameters, shot_compiler
-                    )
-                    result = task.result()
-                    # Here we don't use task.exception() because it returns an ugly
-                    # RemoteTraceback that is hard to read.
-                    # Instead, if an exception occurs in the task, it is pickled with
-                    # tblib and returned, so we just have to check if the result is an
-                    # exception or not.
-                    if isinstance(result, Exception):
-                        result.add_note(f"When compiling shot {shot_parameters.index}")
-                        raise result
-                    self.put_device_parameters(result)
-                except ProcessingFinishedException:
-                    self._is_compiling.clear()
-                    break
-                except Exception:
-                    self._is_compiling.clear()
-                    raise
-                finally:
-                    self._shot_parameter_queue.task_done()
-        finally:
-            discard_queue(self._shot_parameter_queue)
+    async def _compile_shots(self, shot_compiler: ShotCompiler, receiver, sender):
+        async with receiver, sender:
+            async for shot_parameters in receiver:
+                result = await anyio.to_process.run_sync(
+                    _compile_shot, shot_parameters, shot_compiler
+                )
+                if isinstance(result, Exception):
+                    raise result
+                await sender.send(result)
 
-    def put_device_parameters(self, device_parameters: DeviceParameters) -> None:
-        while True:
-            with self._is_running_shots.is_set_context() as is_processing:
-                if not is_processing:
-                    raise ProcessingFinishedException(
-                        "Cannot put device parameters after processing has been "
-                        "terminated."
-                    )
-                try:
-                    self._device_parameter_queue.put(device_parameters, timeout=20e-3)
-                    return
-                except queue.Full:
-                    continue
+    async def _run_shots(self, shot_runner: ShotRunner):
+        async with self._device_parameter_receiver as receiver:
+            async for device_parameters in receiver:
+                shot_data = await self._run_shot_with_retry(
+                    device_parameters, shot_runner
+                )
+                await self._shot_storage_sender.send(shot_data)
 
-    def _run_shots(self, shot_runner: ShotRunner):
-        try:
-            while self._is_running_shots.is_set():
-                try:
-                    device_parameters = self._device_parameter_queue.get(timeout=20e-3)
-                except queue.Empty:
-                    continue
-                try:
-                    shot_data = self._run_shot_with_retry(
-                        device_parameters, shot_runner
-                    )
-                    self.put_shot_data(shot_data)
-                except ProcessingFinishedException:
-                    self._is_running_shots.clear()
-                    break
-                except Exception:
-                    self._is_running_shots.clear()
-                    raise
-                finally:
-                    self._device_parameter_queue.task_done()
-        finally:
-            discard_queue(self._device_parameter_queue)
-
-    def put_shot_data(self, shot_data: ShotData) -> None:
-        while True:
-            with self._is_saving_data.is_set_context() as is_saving:
-                if not is_saving:
-                    raise ProcessingFinishedException(
-                        "Cannot put shot data after saving has been terminated."
-                    )
-                try:
-                    self._shot_data_queue.put(shot_data, timeout=20e-3)
-                    return
-                except queue.Full:
-                    continue
-
-    def _run_shot_with_retry(
+    async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunner
     ) -> ShotData:
         exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
@@ -437,7 +301,9 @@ class SequenceManager(AbstractContextManager):
         for attempt in range(number_of_attempts):
             try:
                 start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-                data = shot_runner.run_shot(device_parameters.device_parameters, 5)
+                data = await shot_runner.run_shot(
+                    device_parameters.device_parameters, 5
+                )
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
                 errors.extend(e.exceptions)
@@ -456,22 +322,10 @@ class SequenceManager(AbstractContextManager):
             f"Could not execute shot after {number_of_attempts} attempts", errors
         )
 
-    def _store_shots(self):
-        try:
-            while self._is_saving_data.is_set():
-                try:
-                    shot_data = self._shot_data_queue.get(timeout=20e-3)
-                except queue.Empty:
-                    continue
-                try:
-                    self._store_shot(shot_data)
-                except Exception:
-                    self._is_saving_data.clear()
-                    raise
-                finally:
-                    self._shot_data_queue.task_done()
-        finally:
-            discard_queue(self._shot_data_queue)
+    async def _store_shots(self) -> None:
+        async with self._shot_storage_receiver as receiver:
+            async for shot_data in receiver:
+                await anyio.to_thread.run_sync(self._store_shot, shot_data)
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {
@@ -486,15 +340,6 @@ class SequenceManager(AbstractContextManager):
                 shot_data.start_time,
                 shot_data.end_time,
             )
-
-
-def discard_queue(q: queue.Queue) -> None:
-    while True:
-        try:
-            q.get_nowait()
-            q.task_done()
-        except queue.Empty:
-            break
 
 
 @attrs.frozen(order=True)

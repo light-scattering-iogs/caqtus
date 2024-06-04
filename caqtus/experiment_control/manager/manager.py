@@ -8,6 +8,8 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager
 from typing import Optional
 
+import anyio
+
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.iteration import StepsConfiguration
@@ -331,7 +333,7 @@ class BoundProcedure(Procedure):
         with self._session_maker() as session:
             iteration = session.sequences.get_iteration_configuration(sequence)
 
-        with SequenceManager(
+        sequence_manager = SequenceManager(
             sequence=sequence,
             session_maker=self._session_maker,
             interruption_event=self._must_interrupt,
@@ -339,16 +341,22 @@ class BoundProcedure(Procedure):
             global_parameters=global_parameters,
             device_configurations=device_configurations,
             device_manager_extension=self._device_manager_extension,
-        ) as sequence_manager:
-            if not isinstance(iteration, StepsConfiguration):
-                raise NotImplementedError("Only steps iteration is supported.")
-            sequence_runner = StepSequenceRunner(
-                sequence_manager, sequence_manager.sequence_parameters
-            )
-            initial_context = evaluate_initial_context(
-                sequence_manager.sequence_parameters
-            )
-            sequence_runner.execute_steps(iteration.steps, initial_context)
+        )
+        if not isinstance(iteration, StepsConfiguration):
+            raise NotImplementedError("Only steps iteration is supported.")
+        sequence_runner = StepSequenceRunner(
+            sequence_manager, sequence_manager.sequence_parameters
+        )
+        initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
+
+        async def run():
+            async with anyio.create_task_group() as task_group:
+                task_group.start_soon(sequence_manager.run_sequence)
+                task_group.start_soon(
+                    sequence_runner.execute_steps, iteration.steps, initial_context
+                )
+
+        anyio.run(run)
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None

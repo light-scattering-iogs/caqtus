@@ -60,7 +60,7 @@ class StepSequenceRunner:
         self._sequence_manager = sequence_manager
         self._initial_parameters = initial_parameters
 
-    def execute_steps(
+    async def execute_steps(
         self, steps: Iterable[Step], initial_context: StepContext[Parameter]
     ):
         """Execute a sequence of steps on the experiment.
@@ -73,7 +73,7 @@ class StepSequenceRunner:
         """
 
         for context in walk_steps(steps, initial_context):
-            self._sequence_manager.schedule_shot(context.variables)
+            await self._sequence_manager.schedule_shot(context.variables)
 
 
 @functools.singledispatch
