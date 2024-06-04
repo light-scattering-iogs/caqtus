@@ -6,6 +6,7 @@ from typing import Generic
 import attrs
 
 from caqtus.device import DeviceConfiguration
+
 # noinspection PyPep8Naming
 from caqtus.device.configuration import DeviceConfigType as C
 from caqtus.device.controller import DeviceController
@@ -77,5 +78,3 @@ class DeviceExtension(Generic[C]):
     def _validate_proxy_type(self, _, value):
         if not issubclass(value, DeviceProxy):
             raise ValueError(f"Invalid proxy type: {value}.")
-
-
