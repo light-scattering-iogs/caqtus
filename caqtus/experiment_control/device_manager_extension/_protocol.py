@@ -1,9 +1,11 @@
 from typing import Protocol
 
+import grpc
+
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
-from caqtus.device.remote_server import DeviceServerConfiguration, RemoteDeviceManager
+from caqtus.device.remote_server import RemoteDeviceManager
 from caqtus.shot_compilation import DeviceCompiler
 
 
@@ -22,7 +24,7 @@ class DeviceManagerExtensionProtocol(Protocol):
 
     def get_device_server_config(
         self, server: DeviceServerName
-    ) -> DeviceServerConfiguration:
+    ) -> grpc.ChannelCredentials:
         """Returns the configuration for the given device server.
 
         raises:

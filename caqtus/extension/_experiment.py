@@ -12,6 +12,7 @@ from caqtus.gui.condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from . import DeviceExtension, TimeLaneExtension
 from ._caqtus_extension import CaqtusExtension
+from ..device.configuration import DeviceServerName
 from ..device.remote import Server
 from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
@@ -132,6 +133,17 @@ class Experiment:
         """
 
         self._extension.register_time_lane_extension(time_lane_extension)
+
+    def register_device_server(
+        self, name: DeviceServerName, credentials: grpc.ChannelCredentials
+    ) -> None:
+        """Register a new device server.
+
+        After this method is called, the device server will be available to the
+        application to connect to devices.
+        """
+
+        self._extension.register_device_server_config(name, credentials)
 
     def get_session_maker(self) -> ExperimentSessionMaker:
         """Get the session maker to be used by the application.

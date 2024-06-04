@@ -1,7 +1,8 @@
+import grpc
+
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
-from caqtus.device.remote_server import DeviceServerConfiguration
 from caqtus.shot_compilation import DeviceCompiler
 from ._protocol import DeviceManagerExtensionProtocol
 
@@ -13,9 +14,9 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         self._controller_types: dict[
             type[DeviceConfiguration], type[DeviceController]
         ] = {}
-        self._device_server_configs: dict[
-            DeviceServerName, DeviceServerConfiguration
-        ] = {}
+        self._device_server_configs: dict[DeviceServerName, grpc.ChannelCredentials] = (
+            {}
+        )
 
     def register_device_compiler(
         self,
@@ -40,10 +41,10 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
 
     def register_device_server_config(
         self,
-        server: DeviceServerName,
-        config: DeviceServerConfiguration,
+        name: DeviceServerName,
+        credentials: grpc.ChannelCredentials,
     ) -> None:
-        self._device_server_configs[server] = config
+        self._device_server_configs[name] = credentials
 
     def get_device_compiler_type(
         self, device_configuration: DeviceConfiguration
@@ -62,5 +63,5 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
 
     def get_device_server_config(
         self, server: DeviceServerName
-    ) -> DeviceServerConfiguration:
+    ) -> grpc.ChannelCredentials:
         return self._device_server_configs[server]
