@@ -3,6 +3,7 @@ from collections.abc import Callable
 from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any
 
 from .rpc import Client, Proxy
+from .rpc.server import RemoteError
 from .. import Device
 
 P = ParamSpec("P")
@@ -49,9 +50,19 @@ class DeviceProxy(Generic[DeviceType]):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        return await self._rpc_client.call_method(
-            self._device_proxy, method_name, *args, **kwargs
-        )
+        # Here we raise the original exception if there is one and not the remote error.
+        # This way we can forget that the device is remote.
+        # It is useful to catch device specific exceptions like camera or tweezer
+        # arranger timeouts.
+        try:
+            return await self._rpc_client.call_method(
+                self._device_proxy, method_name, *args, **kwargs
+            )
+        except RemoteError as e:
+            if isinstance(e.__cause__, Exception):
+                raise e.__cause__
+            else:
+                raise e
 
     def call_method_proxy_result(
         self,
