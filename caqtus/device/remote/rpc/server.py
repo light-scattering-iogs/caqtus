@@ -34,7 +34,7 @@ class Server:
         if isinstance(config, SecureRPCConfiguration):
             self._server.add_secure_port(
                 address=config.target,
-                server_credentials=config.credentials.get_credentials(),
+                server_credentials=config.credentials.get_server_credentials(),
             )
         elif isinstance(config, InsecureRPCConfiguration):
             self._server.add_insecure_port(address=config.target)

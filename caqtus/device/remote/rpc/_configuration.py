@@ -8,8 +8,11 @@ import grpc
 class LocalRPCCredentials:
     connection_type: grpc.LocalConnectionType
 
-    def get_credentials(self) -> grpc.ChannelCredentials:
+    def get_channel_credentials(self) -> grpc.ChannelCredentials:
         return grpc.local_channel_credentials(self.connection_type)
+
+    def get_server_credentials(self) -> grpc.ServerCredentials:
+        return grpc.local_server_credentials(self.connection_type)
 
 
 Credentials: TypeAlias = LocalRPCCredentials

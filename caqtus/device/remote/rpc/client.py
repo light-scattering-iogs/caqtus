@@ -45,7 +45,7 @@ class Client:
 
     def __init__(self, config: RPCConfiguration) -> None:
         if isinstance(config, SecureRPCConfiguration):
-            credentials = config.credentials.get_credentials()
+            credentials = config.credentials.get_channel_credentials()
             self._async_channel = grpc.aio.secure_channel(
                 config.target, credentials=credentials
             )
