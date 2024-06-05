@@ -59,7 +59,7 @@ class ShotEventDispatcher:
                 name: controller._debug_stats()
                 for name, controller in self._controllers.items()
             }
-            logger.debug(f"Shot trace: {stats}")
+            logger.debug("Shot trace: %s", stats)
             raise
 
     async def _run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
