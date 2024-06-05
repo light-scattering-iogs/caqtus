@@ -49,7 +49,7 @@ class CaqtusExtension(CaqtusExtensionProtocol):
             device_extension.configuration_type, device_extension.controller_type
         )
         self.device_manager_extension.register_device(
-            device_extension.configuration_type, device_extension.configuration_type
+            device_extension.configuration_type, device_extension.device_type
         )
         self.device_manager_extension.register_proxy(
             device_extension.configuration_type, device_extension.proxy_type

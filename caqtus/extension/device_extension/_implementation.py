@@ -5,7 +5,7 @@ from typing import Generic
 
 import attrs
 
-from caqtus.device import DeviceConfiguration
+from caqtus.device import DeviceConfiguration, Device
 
 # noinspection PyPep8Naming
 from caqtus.device.configuration import DeviceConfigType as C
@@ -50,6 +50,7 @@ class DeviceExtension(Generic[C]):
     """
 
     label: str = attrs.field(converter=str)
+    device_type: type[Device] = attrs.field()
     configuration_type: type[C] = attrs.field()
     configuration_factory: Callable[[], C] = attrs.field()
     configuration_dumper: Callable[[C], JSON] = attrs.field()
@@ -58,6 +59,11 @@ class DeviceExtension(Generic[C]):
     compiler_type: type[DeviceCompiler] = attrs.field()
     controller_type: type[DeviceController] = attrs.field()
     proxy_type: type[DeviceProxy] = attrs.field()
+
+    @device_type.validator  # type: ignore
+    def _validate_device_type(self, _, value):
+        if not issubclass(value, Device):
+            raise ValueError(f"Invalid device type: {value}.")
 
     @configuration_type.validator  # type: ignore
     def _validate_configuration_type(self, _, value):
