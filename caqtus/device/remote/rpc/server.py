@@ -25,10 +25,18 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
+
 
 class Server:
     def __init__(self, config: RPCConfiguration) -> None:
-        self._server = grpc.server(concurrent.futures.ThreadPoolExecutor())
+        self._server = grpc.server(
+            concurrent.futures.ThreadPoolExecutor(),
+            options=[
+                ("grpc.max_send_message_length", MAX_MESSAGE_LENGTH),
+                ("grpc.max_receive_message_length", MAX_MESSAGE_LENGTH),
+            ],
+        )
         self._servicer = RemoteCallServicer()
         rpc_pb2_grpc.add_RemoteCallServicer_to_server(self._servicer, self._server)
         if isinstance(config, SecureRPCConfiguration):
