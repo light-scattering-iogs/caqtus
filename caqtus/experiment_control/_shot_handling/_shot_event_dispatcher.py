@@ -29,7 +29,9 @@ class DeviceRunInfo:
 
 class ShotEventDispatcher:
     def __init__(self, device_run_configs: Mapping[DeviceName, DeviceRunConfig]):
-        logger.info(f"Creating ShotEventDispatcher with devices {device_run_configs}")
+        logger.info(
+            f"Creating ShotEventDispatcher with devices {device_run_configs.keys()}"
+        )
         self._device_infos: dict[DeviceName, DeviceRunInfo] = {
             name: DeviceRunInfo(
                 controller=config.controller_type(name, self),
