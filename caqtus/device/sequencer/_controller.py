@@ -22,11 +22,6 @@ class SequencerController(DeviceController):
         await self.start(sequencer)
         await self.wait_until_finished(sequencer)
 
-    async def program(
-        self, sequencer: Sequencer, sequence: SequencerInstruction
-    ) -> None:
-        await self.run_in_thread(sequencer.update_parameters, sequence=sequence)
-
     async def start(self, sequencer: SequencerProxy) -> None:
         trigger = await sequencer.get_trigger()
         if isinstance(trigger, SoftwareTrigger):
