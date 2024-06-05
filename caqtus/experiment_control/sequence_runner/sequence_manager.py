@@ -28,6 +28,7 @@ from caqtus.types.parameter import ParameterNamespace
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ...device.remote import DeviceProxy
 
 pickling_support.install()
 logger = logging.getLogger(__name__)
@@ -192,7 +193,7 @@ class SequenceManager:
     @contextlib.asynccontextmanager
     async def _create_devices_in_use(
         self,
-    ) -> AsyncGenerator[dict[DeviceName, Device], None]:
+    ) -> AsyncGenerator[dict[DeviceName, DeviceProxy], None]:
         sequence_context = SequenceContext(
             device_configurations=self.device_configurations, time_lanes=self.time_lanes
         )

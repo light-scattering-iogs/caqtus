@@ -6,15 +6,16 @@ from typing import Any
 import anyio
 import attrs
 
-from caqtus.device import DeviceName, Device
+from caqtus.device import DeviceName
 from caqtus.device.controller import DeviceController
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
+from ...device.remote import DeviceProxy
 
 
 @attrs.define
 class DeviceRunConfig:
-    device: Device
+    device: DeviceProxy
     controller_type: type[DeviceController]
     parameters: Mapping[str, Any]
 
@@ -22,7 +23,7 @@ class DeviceRunConfig:
 @attrs.define
 class DeviceRunInfo:
     controller: DeviceController
-    device: Device
+    device: DeviceProxy
     parameters: Mapping[str, Any]
 
 

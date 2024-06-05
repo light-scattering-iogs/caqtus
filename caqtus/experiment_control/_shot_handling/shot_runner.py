@@ -6,12 +6,13 @@ from caqtus.device.controller import DeviceController
 from caqtus.types.data import DataLabel, Data
 from . import ShotEventDispatcher
 from ._shot_event_dispatcher import DeviceRunConfig
+from ...device.remote import DeviceProxy
 
 
 class ShotRunner:
     def __init__(
         self,
-        devices: Mapping[DeviceName, Device],
+        devices: Mapping[DeviceName, DeviceProxy],
         controller_types: Mapping[DeviceName, type[DeviceController]],
     ):
         if set(devices.keys()) != set(controller_types.keys()):

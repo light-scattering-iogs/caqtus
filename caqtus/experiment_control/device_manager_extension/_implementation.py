@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
@@ -59,7 +61,7 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
 
     def get_device_type(
         self, device_configuration: DeviceConfiguration
-    ) -> type[Device]:
+    ) -> Callable[..., Device]:
         return self._device_types[type(device_configuration)]
 
     def get_device_controller_type(

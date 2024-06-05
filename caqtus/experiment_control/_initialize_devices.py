@@ -1,8 +1,8 @@
 import contextlib
-from collections.abc import Mapping, AsyncGenerator
+from collections.abc import Mapping, AsyncGenerator, Callable
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
-from caqtus.device.remote import Client
+from caqtus.device.remote import Client, DeviceProxy
 from caqtus.device.remote_server import RPCConfiguration
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
@@ -16,9 +16,9 @@ from caqtus.shot_compilation import (
 async def create_devices(
     device_compilers: Mapping[DeviceName, DeviceCompiler],
     device_configs: Mapping[DeviceName, DeviceConfiguration],
-    device_types: Mapping[DeviceName, type[Device]],
+    device_types: Mapping[DeviceName, Callable[..., Device]],
     device_manager_extension: DeviceManagerExtensionProtocol,
-) -> AsyncGenerator[dict[DeviceName, Device], None]:
+) -> AsyncGenerator[dict[DeviceName, DeviceProxy], None]:
     device_server_configs = {}
     for device_config in device_configs.values():
         remote_server = device_config.remote_server
@@ -41,7 +41,7 @@ async def create_devices(
             proxy_type = device_manager_extension.get_proxy_type(device_config)
             device_proxy = proxy_type(client, device_type, **init_params)
             await stack.enter_async_context(device_proxy)
-            result[device_name] = device_type(device_proxy)
+            result[device_name] = device_proxy
         yield result
 
 

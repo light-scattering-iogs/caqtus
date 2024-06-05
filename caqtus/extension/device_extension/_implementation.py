@@ -50,7 +50,7 @@ class DeviceExtension(Generic[C]):
     """
 
     label: str = attrs.field(converter=str)
-    device_type: type[Device] = attrs.field()
+    device_type: Callable[..., Device] = attrs.field()
     configuration_type: type[C] = attrs.field()
     configuration_factory: Callable[[], C] = attrs.field()
     configuration_dumper: Callable[[C], JSON] = attrs.field()
