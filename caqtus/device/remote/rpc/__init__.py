@@ -2,6 +2,7 @@ from ._configuration import (
     RPCConfiguration,
     SecureRPCConfiguration,
     InsecureRPCConfiguration,
+    LocalRPCCredentials,
 )
 from .client import Client
 from .proxy import Proxy
@@ -14,4 +15,5 @@ __all__ = [
     "RPCConfiguration",
     "SecureRPCConfiguration",
     "InsecureRPCConfiguration",
+    "LocalRPCCredentials",
 ]
