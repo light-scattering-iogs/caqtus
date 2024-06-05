@@ -29,6 +29,7 @@ class DeviceProxy(Generic[DeviceType]):
         self._async_exit_stack = contextlib.AsyncExitStack()
 
     async def __aenter__(self) -> Self:
+        await self._async_exit_stack.__aenter__()
         self._device_proxy = await self._async_exit_stack.enter_async_context(
             self._rpc_client.call_proxy_result(
                 self._device_type, *self._args, **self._kwargs
