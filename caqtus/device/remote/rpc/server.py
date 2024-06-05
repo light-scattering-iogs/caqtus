@@ -12,12 +12,12 @@ import tblib.pickling_support
 
 from . import rpc_pb2
 from . import rpc_pb2_grpc
-from .proxy import Proxy
-from ...remote_server import RPCConfiguration
-from caqtus.device.remote.rpc._configuration import (
+from ._configuration import (
+    RPCConfiguration,
     SecureRPCConfiguration,
     InsecureRPCConfiguration,
 )
+from .proxy import Proxy
 
 tblib.pickling_support.install()
 
