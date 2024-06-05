@@ -51,6 +51,9 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         self.device_manager_extension.register_device(
             device_extension.configuration_type, device_extension.configuration_type
         )
+        self.device_manager_extension.register_proxy(
+            device_extension.configuration_type, device_extension.proxy_type
+        )
 
     def register_time_lane_extension(
         self, time_lane_extension: TimeLaneExtension

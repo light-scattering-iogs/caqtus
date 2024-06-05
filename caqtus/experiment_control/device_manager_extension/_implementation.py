@@ -3,6 +3,7 @@ from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
 from caqtus.shot_compilation import DeviceCompiler
 from ._protocol import DeviceManagerExtensionProtocol
+from ...device.remote import DeviceProxy
 from ...device.remote_server import RPCConfiguration
 
 
@@ -13,6 +14,7 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         self._controller_types: dict[
             type[DeviceConfiguration], type[DeviceController]
         ] = {}
+        self._proxy_types: dict[type[DeviceConfiguration], type[DeviceProxy]] = {}
         self._device_server_configs: dict[DeviceServerName, RPCConfiguration] = {}
 
     def register_device_compiler(
@@ -36,6 +38,13 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     ) -> None:
         self._controller_types[configuration_type] = controller_type
 
+    def register_proxy(
+        self,
+        configuration_type: type[DeviceConfiguration],
+        proxy_type: type[DeviceProxy],
+    ) -> None:
+        self._proxy_types[configuration_type] = proxy_type
+
     def register_device_server_config(
         self,
         name: DeviceServerName,
@@ -57,6 +66,11 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         self, device_configuration: DeviceConfiguration
     ) -> type[DeviceController]:
         return self._controller_types[type(device_configuration)]
+
+    def get_proxy_type(
+        self, device_configuration: DeviceConfiguration
+    ) -> type[DeviceProxy]:
+        return self._proxy_types[type(device_configuration)]
 
     def get_device_server_config(self, server: DeviceServerName) -> RPCConfiguration:
         return self._device_server_configs[server]

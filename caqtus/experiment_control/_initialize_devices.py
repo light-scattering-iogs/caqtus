@@ -38,7 +38,7 @@ async def create_devices(
             if device_config.remote_server is None:
                 raise NotImplementedError
             client = rpc_clients[device_config.remote_server]
-            proxy_type = device_manager_extension.get_proxy_type(device_type)
+            proxy_type = device_manager_extension.get_proxy_type(device_config)
             device_proxy = proxy_type(client, device_type, **init_params)
             await stack.enter_async_context(device_proxy)
             result[device_name] = device_type(device_proxy)
