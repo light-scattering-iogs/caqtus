@@ -77,7 +77,8 @@ async def context_group(
     cms: Mapping[str, contextlib.AbstractAsyncContextManager[T]]
 ) -> AsyncGenerator[Mapping[str, T], None]:
     results = {}
-    async with contextlib.AsyncExitStack() as stack, anyio.create_task_group() as tg:
-        for key, cm in cms.items():
-            tg.start_soon(enter_and_push, stack, key, cm, results)
+    async with contextlib.AsyncExitStack() as stack:
+        async with anyio.create_task_group() as tg:
+            for key, cm in cms.items():
+                tg.start_soon(enter_and_push, stack, key, cm, results)
         yield results
