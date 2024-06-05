@@ -6,7 +6,7 @@ import datetime
 import logging
 import threading
 from collections.abc import Mapping, Generator, AsyncGenerator
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar
 
 import anyio
 import anyio.to_process

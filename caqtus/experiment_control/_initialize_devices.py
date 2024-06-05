@@ -1,5 +1,8 @@
 import contextlib
 from collections.abc import Mapping, AsyncGenerator, Callable
+from typing import TypeVar
+
+import anyio
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote import Client, DeviceProxy
@@ -27,10 +30,8 @@ async def create_devices(
                 device_manager_extension.get_device_server_config(remote_server)
             )
 
-    async with create_rpc_clients(
-        device_server_configs
-    ) as rpc_clients, contextlib.AsyncExitStack() as stack:
-        result = {}
+    async with create_rpc_clients(device_server_configs) as rpc_clients:
+        uninitialized_proxies = {}
         for device_name, device_compiler in device_compilers.items():
             init_params = device_compiler.compile_initialization_parameters()
             device_config = device_configs[device_name]
@@ -40,9 +41,9 @@ async def create_devices(
             client = rpc_clients[device_config.remote_server]
             proxy_type = device_manager_extension.get_proxy_type(device_config)
             device_proxy = proxy_type(client, device_type, **init_params)
-            await stack.enter_async_context(device_proxy)
-            result[device_name] = device_proxy
-        yield result
+            uninitialized_proxies[device_name] = device_proxy
+        async with context_group(uninitialized_proxies) as devices:
+            yield devices
 
 
 @contextlib.asynccontextmanager
@@ -56,3 +57,27 @@ async def create_rpc_clients(
             await stack.enter_async_context(client)
             clients[server_name] = client
         yield clients
+
+
+T = TypeVar("T")
+
+
+async def enter_and_push(
+    stack: contextlib.AsyncExitStack,
+    key: str,
+    cm: contextlib.AbstractAsyncContextManager[T],
+    results: dict,
+):
+    value = await stack.enter_async_context(cm)
+    results[key] = value
+
+
+@contextlib.asynccontextmanager
+async def context_group(
+    cms: Mapping[str, contextlib.AbstractAsyncContextManager[T]]
+) -> AsyncGenerator[Mapping[str, T], None]:
+    results = {}
+    async with contextlib.AsyncExitStack() as stack, anyio.create_task_group() as tg:
+        for key, cm in cms.items():
+            tg.start_soon(enter_and_push, stack, key, cm, results)
+        yield results
