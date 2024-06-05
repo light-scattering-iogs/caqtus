@@ -46,7 +46,7 @@ class DeviceCompiler(Protocol):
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
         """Compile the parameters to pass to the device constructor."""
 
-        ...
+        return {}
 
     @abc.abstractmethod
     def compile_shot_parameters(self, shot_context: ShotContext) -> Mapping[str, Any]:
@@ -58,7 +58,7 @@ class DeviceCompiler(Protocol):
                 device parameters.
         """
 
-        ...
+        return {}
 
 
 class DeviceNotUsedException(Exception):
