@@ -88,7 +88,6 @@ class RemoteCallServicer(rpc_pb2_grpc.RemoteCallServicer):
                 key: self.resolve(pickle.loads(value))
                 for key, value in request.kwargs.items()
             }
-            logger.info(f"Calling {fun} with {args} and {kwargs}")
             value = fun(*args, **kwargs)
 
             if request.return_value == rpc_pb2.ReturnValue.SERIALIZED:
