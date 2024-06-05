@@ -8,7 +8,11 @@ import pytest
 
 from caqtus.device import Device
 from caqtus.device.camera import Camera, CameraProxy
-from caqtus.device.remote import DeviceProxy
+from caqtus.device.remote import (
+    DeviceProxy,
+    SecureRPCConfiguration,
+    LocalRPCCredentials,
+)
 from caqtus.device.remote.rpc import Server, Client
 from caqtus.device.remote.rpc.proxy import Proxy
 from caqtus.types.image import Image
@@ -17,8 +21,10 @@ from caqtus.utils.roi import RectangularROI
 
 def _run_server(e):
     with Server(
-        address="[::]:50051",
-        credentials=grpc.local_server_credentials(grpc.LocalConnectionType.LOCAL_TCP),
+        SecureRPCConfiguration(
+            target="[::]:50051",
+            credentials=LocalRPCCredentials(grpc.LocalConnectionType.LOCAL_TCP),
+        )
     ):
         e.wait()
 
@@ -37,8 +43,10 @@ def run_server():
 
 def create_client():
     return Client(
-        "localhost:50051",
-        credentials=grpc.local_channel_credentials(grpc.LocalConnectionType.LOCAL_TCP),
+        SecureRPCConfiguration(
+            target="localhost:50051",
+            credentials=LocalRPCCredentials(grpc.LocalConnectionType.LOCAL_TCP),
+        )
     )
 
 
