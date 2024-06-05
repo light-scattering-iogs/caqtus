@@ -60,11 +60,6 @@ class DeviceExtension(Generic[C]):
     controller_type: type[DeviceController] = attrs.field()
     proxy_type: type[DeviceProxy] = attrs.field()
 
-    @device_type.validator  # type: ignore
-    def _validate_device_type(self, _, value):
-        if not issubclass(value, Device):
-            raise ValueError(f"Invalid device type: {value}.")
-
     @configuration_type.validator  # type: ignore
     def _validate_configuration_type(self, _, value):
         if not issubclass(value, DeviceConfiguration):
