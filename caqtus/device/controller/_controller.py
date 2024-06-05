@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import functools
+import logging
 from collections.abc import Callable
 from typing import (
     Generic,
@@ -22,6 +23,8 @@ from ..remote import DeviceProxy
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher
+
+logger = logging.getLogger(__name__)
 
 
 DeviceProxyType = TypeVar("DeviceProxyType", bound=DeviceProxy)
@@ -99,6 +102,10 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         The method will wait for all devices to be ready before returning.
         """
 
+        logger.debug(
+            f"Device {self.device_name} is waiting for all devices to be ready"
+        )
+
         if self._signaled_ready.is_set():
             raise RuntimeError(
                 f"wait_all_devices_ready must be called exactly once for {self}"
@@ -107,6 +114,9 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         self._signaled_ready_time = self._event_dispatcher.shot_time()
         await self._event_dispatcher.wait_all_devices_ready()
         self._finished_waiting_ready_time = self._event_dispatcher.shot_time()
+        logger.debug(
+            f"Device {self.device_name} finished waiting for all devices to be ready"
+        )
 
     @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
