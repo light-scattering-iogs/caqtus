@@ -3,7 +3,7 @@ from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
 from caqtus.shot_compilation import DeviceCompiler
 from ._protocol import DeviceManagerExtensionProtocol
-from ...device.remote_server import DeviceServerConfiguration
+from ...device.remote_server import RPCConfiguration
 
 
 class DeviceManagerExtension(DeviceManagerExtensionProtocol):
@@ -13,9 +13,7 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
         self._controller_types: dict[
             type[DeviceConfiguration], type[DeviceController]
         ] = {}
-        self._device_server_configs: dict[
-            DeviceServerName, DeviceServerConfiguration
-        ] = {}
+        self._device_server_configs: dict[DeviceServerName, RPCConfiguration] = {}
 
     def register_device_compiler(
         self,
@@ -41,7 +39,7 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     def register_device_server_config(
         self,
         name: DeviceServerName,
-        config: DeviceServerConfiguration,
+        config: RPCConfiguration,
     ) -> None:
         self._device_server_configs[name] = config
 
@@ -60,7 +58,5 @@ class DeviceManagerExtension(DeviceManagerExtensionProtocol):
     ) -> type[DeviceController]:
         return self._controller_types[type(device_configuration)]
 
-    def get_device_server_config(
-        self, server: DeviceServerName
-    ) -> DeviceServerConfiguration:
+    def get_device_server_config(self, server: DeviceServerName) -> RPCConfiguration:
         return self._device_server_configs[server]

@@ -13,7 +13,7 @@ from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
 from ..device.configuration import DeviceServerName
 from ..device.remote import Server
-from ..device.remote_server import DeviceServerConfiguration
+from ..device.remote_server import RPCConfiguration
 from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
     ExperimentManagerConnection,
@@ -135,7 +135,7 @@ class Experiment:
         self._extension.register_time_lane_extension(time_lane_extension)
 
     def register_device_server(
-        self, name: DeviceServerName, config: DeviceServerConfiguration
+        self, name: DeviceServerName, config: RPCConfiguration
     ) -> None:
         """Register a new device server.
 
@@ -246,7 +246,7 @@ class Experiment:
             server.serve_forever()
 
     @staticmethod
-    def launch_device_server(config: DeviceServerConfiguration) -> None:
+    def launch_device_server(config: RPCConfiguration) -> None:
         """Launch a device server in the current process.
 
         This method will block until the server is stopped.

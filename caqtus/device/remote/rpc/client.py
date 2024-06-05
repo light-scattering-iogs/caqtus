@@ -22,9 +22,9 @@ from . import rpc_pb2
 from . import rpc_pb2_grpc
 from .proxy import Proxy
 from .server import RemoteError
-from ...remote_server import DeviceServerConfiguration
-from ...remote_server._device_server_configuration import (
-    SecureDeviceServerConfiguration,
+from ...remote_server import RPCConfiguration
+from caqtus.device.remote.rpc._configuration import (
+    SecureRPCConfiguration,
 )
 
 tblib.pickling_support.install()
@@ -43,8 +43,8 @@ class Client:
         credentials: The credentials to use for the connection.
     """
 
-    def __init__(self, config: DeviceServerConfiguration) -> None:
-        if isinstance(config, SecureDeviceServerConfiguration):
+    def __init__(self, config: RPCConfiguration) -> None:
+        if isinstance(config, SecureRPCConfiguration):
             credentials = config.credentials.get_credentials()
             self._async_channel = grpc.aio.secure_channel(
                 config.target, credentials=credentials

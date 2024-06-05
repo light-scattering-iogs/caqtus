@@ -3,7 +3,7 @@ from collections.abc import Mapping, AsyncGenerator
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote import Client
-from caqtus.device.remote_server import DeviceServerConfiguration
+from caqtus.device.remote_server import RPCConfiguration
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
@@ -47,7 +47,7 @@ async def create_devices(
 
 @contextlib.asynccontextmanager
 async def create_rpc_clients(
-    device_server_configs: Mapping[str, DeviceServerConfiguration],
+    device_server_configs: Mapping[str, RPCConfiguration],
 ) -> AsyncGenerator[dict[str, Client], None]:
     clients: dict[str, Client] = {}
     async with contextlib.AsyncExitStack() as stack:

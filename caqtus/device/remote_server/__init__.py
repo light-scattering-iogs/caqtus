@@ -5,10 +5,10 @@ from ._device_server import (
     SequencerProxy,
     CameraProxy,
 )
-from ._device_server_configuration import DeviceServerConfiguration
+from caqtus.device.remote.rpc._configuration import RPCConfiguration
 
 __all__ = [
-    "DeviceServerConfiguration",
+    "RPCConfiguration",
     "RemoteDeviceServer",
     "RemoteDeviceManager",
     "DeviceProxy",
