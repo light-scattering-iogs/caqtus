@@ -21,7 +21,7 @@ class ShotCompiler:
 
     def compile_shot(
         self, shot_parameters: VariableNamespace
-    ) -> Mapping[DeviceName, Mapping[str, Any]]:
+    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         shot_context = ShotContext(
             time_lanes=self.shot_time_lanes,
             variables=shot_parameters.dict(),
@@ -40,4 +40,4 @@ class ShotCompiler:
                 + ", ".join(unused_lanes)
             )
 
-        return results
+        return results, shot_context.get_shot_duration()

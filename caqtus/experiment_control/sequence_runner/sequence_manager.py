@@ -14,7 +14,7 @@ import anyio.to_thread
 import attrs
 from tblib import pickling_support
 
-from caqtus.device import DeviceName, DeviceConfiguration, Device
+from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
@@ -61,11 +61,12 @@ def _compile_shot(
     shot_parameters: ShotParameters, shot_compiler: ShotCompiler
 ) -> DeviceParameters | Exception:
     try:
-        compiled = shot_compiler.compile_shot(shot_parameters.parameters)
+        compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
         return DeviceParameters(
             index=shot_parameters.index,
             shot_parameters=shot_parameters.parameters,
             device_parameters=compiled,
+            timeout=shot_duration + 1,
         )
     except Exception as e:
         return e
@@ -301,7 +302,7 @@ class SequenceManager:
             try:
                 start_time = datetime.datetime.now(tz=datetime.timezone.utc)
                 data = await shot_runner.run_shot(
-                    device_parameters.device_parameters, 5
+                    device_parameters.device_parameters, device_parameters.timeout
                 )
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
@@ -356,6 +357,7 @@ class DeviceParameters:
     index: int
     shot_parameters: VariableNamespace = attrs.field(eq=False)
     device_parameters: Mapping[DeviceName, Mapping[str, Any]] = attrs.field(eq=False)
+    timeout: float = attrs.field()
 
 
 @attrs.frozen(order=True)
