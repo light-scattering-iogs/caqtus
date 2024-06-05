@@ -180,7 +180,7 @@ class SequenceManager:
         async with anyio.create_task_group() as tg:
             tg.start_soon(self._watch_for_interruption)
             tg.start_soon(self._store_shots)
-            async with self._device_parameter_receiver, self._device_parameter_sender:
+            async with self._device_parameter_sender:
                 for _ in range(4):
                     tg.start_soon(
                         self._compile_shots,
