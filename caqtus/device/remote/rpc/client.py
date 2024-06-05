@@ -58,8 +58,8 @@ class Client:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        with anyio.CancelScope(shield=True):
-            await self._async_channel.__aexit__(exc_type, exc_value, traceback)
+        # with anyio.CancelScope(shield=True):
+        await self._async_channel.__aexit__(exc_type, exc_value, traceback)
 
     async def call_method(
         self,
@@ -93,26 +93,26 @@ class Client:
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        with anyio.CancelScope(shield=True):
-            response = await self._stub.Call(
-                self._build_request(fun, args, kwargs, "copy")
-            )
+        # with anyio.CancelScope(shield=True):
+        response = await self._stub.Call(
+            self._build_request(fun, args, kwargs, "copy")
+        )
         return self._build_result(response)
 
     @contextlib.asynccontextmanager
     async def call_proxy_result(
         self, fun: Callable[..., T], *args: Any, **kwargs: Any
     ) -> AsyncGenerator[Proxy[T], None]:
-        with anyio.CancelScope(shield=True):
-            response = await self._stub.Call(
-                self._build_request(fun, args, kwargs, "proxy")
-            )
-            proxy = self._build_result(response)
-            assert isinstance(proxy, Proxy)
-            try:
-                yield proxy
-            finally:
-                await self._close_proxy(proxy)
+        # with anyio.CancelScope(shield=True):
+        response = await self._stub.Call(
+            self._build_request(fun, args, kwargs, "proxy")
+        )
+        proxy = self._build_result(response)
+        assert isinstance(proxy, Proxy)
+        try:
+            yield proxy
+        finally:
+            await self._close_proxy(proxy)
 
     @contextlib.asynccontextmanager
     async def async_context_manager(
