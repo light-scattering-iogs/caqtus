@@ -134,15 +134,9 @@ class SequenceManager:
 
         self._current_shot = 0
 
-        # _is_shutting down is an event that is set to indicate that the background
-        # tasks should stop. It can either be set by a task if an error occurs, or
-        # by the __exit__ method at the end of the sequence.
-        self._is_shutting_down = threading.Event()
         self._exit_stack = contextlib.AsyncExitStack()
 
         self._interruption_event = interruption_event
-        self._is_watching_for_interruption = threading.Event()
-        self._is_watching_for_interruption.set()
 
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
@@ -394,28 +388,6 @@ class ShotData:
 
 class SequenceInterruptedException(RuntimeError):
     pass
-
-
-class LockedEvent:
-    def __init__(self):
-        self._event = threading.Event()
-        self._lock = threading.Lock()
-
-    def set(self):
-        with self._lock:
-            self._event.set()
-
-    def clear(self):
-        with self._lock:
-            self._event.clear()
-
-    def is_set(self) -> bool:
-        return self._event.is_set()
-
-    @contextlib.contextmanager
-    def is_set_context(self) -> Generator[bool, None, None]:
-        with self._lock:
-            yield self._event.is_set()
 
 
 class ProcessingFinishedException(Exception):
