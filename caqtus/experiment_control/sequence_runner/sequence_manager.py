@@ -5,7 +5,7 @@ import copy
 import datetime
 import logging
 import threading
-from collections.abc import Mapping, Generator, AsyncGenerator
+from collections.abc import Mapping, AsyncGenerator
 from typing import Optional, Any
 
 import anyio
@@ -167,10 +167,7 @@ class SequenceManager:
                     shot_runner = self._create_shot_runner(devices_in_use)
                     shot_compiler = self._create_shot_compiler(devices_in_use)
                 self._set_sequence_state(State.RUNNING)
-                async with (
-                    self._run(shot_runner, shot_compiler),
-                    self._shot_parameter_scheduler,
-                ):
+                async with self._run(shot_runner, shot_compiler):
                     yield
         except* anyio.BrokenResourceError:
             # We ignore this error because the error that causes it will anyway be
@@ -201,7 +198,8 @@ class SequenceManager:
                         self._device_parameter_sender.clone(),
                     )
             tg.start_soon(self._run_shots, shot_runner)
-            yield
+            async with self._shot_parameter_scheduler:
+                yield
 
     @contextlib.asynccontextmanager
     async def _create_devices_in_use(
@@ -282,20 +280,22 @@ class SequenceManager:
                 )
             await anyio.sleep(20e-3)
 
-    async def _compile_shots(self, shot_compiler: ShotCompiler, receiver, sender):
-        async with receiver, sender:
-            async for shot_parameters in receiver:
+    async def _compile_shots(
+        self, shot_compiler: ShotCompiler, shot_params_receiver, device_params_sender
+    ):
+        async with device_params_sender, shot_params_receiver:
+            async for shot_parameters in shot_params_receiver:
                 result = await anyio.to_process.run_sync(
                     _compile_shot, shot_parameters, shot_compiler
                 )
                 if isinstance(result, Exception):
                     raise result
-                await sender.send(result)
+                await device_params_sender.send(result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
         async with (
-            self._device_parameter_receiver as receiver,
             self._shot_storage_sender,
+            self._device_parameter_receiver as receiver,
         ):
             async for device_parameters in receiver:
                 shot_data = await self._run_shot_with_retry(
