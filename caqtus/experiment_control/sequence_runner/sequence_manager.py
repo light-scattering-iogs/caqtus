@@ -6,7 +6,7 @@ import datetime
 import logging
 import threading
 from collections.abc import Mapping, Generator, AsyncGenerator
-from typing import Optional, Any, TypeVar
+from typing import Optional, Any
 
 import anyio
 import anyio.to_process
@@ -161,11 +161,16 @@ class SequenceManager:
         self._prepare_sequence()
         try:
             async with self._exit_stack:
-                devices_in_use = await self._exit_stack.enter_async_context(
-                    self._create_devices_in_use()
-                )
-                shot_runner = self._create_shot_runner(devices_in_use)
-                shot_compiler = self._create_shot_compiler(devices_in_use)
+                async with anyio.create_task_group() as tg:
+                    # this task is present below to force the initialization of the
+                    # process pool while the devices are being initialized.
+                    tg.start_soon(anyio.to_process.run_sync, nothing)
+
+                    devices_in_use = await self._exit_stack.enter_async_context(
+                        self._create_devices_in_use()
+                    )
+                    shot_runner = self._create_shot_runner(devices_in_use)
+                    shot_compiler = self._create_shot_compiler(devices_in_use)
                 self._set_sequence_state(State.RUNNING)
                 await self._run(shot_runner, shot_compiler)
         except* SequenceInterruptedException:
