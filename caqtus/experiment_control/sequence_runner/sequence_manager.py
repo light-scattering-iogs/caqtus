@@ -178,6 +178,10 @@ class SequenceManager:
                     self._shot_parameter_scheduler,
                 ):
                     yield
+        except* anyio.BrokenResourceError:
+            # We ignore this error because the error that causes it will anyway be
+            # raised, and we don't want to clutter the error traceback.
+            pass
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
