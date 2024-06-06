@@ -147,17 +147,18 @@ class SequenceManager:
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
-        self._shot_storage_sender, self._shot_storage_receiver = (
-            anyio.create_memory_object_stream(4)
-        )
-        self._shot_parameter_sender, self._shot_parameter_receiver = (
+        self._shot_parameter_scheduler, self._shot_parameter_receiver = (
             anyio.create_memory_object_stream[ShotParameters](4)
         )
         self._device_parameter_sender, self._device_parameter_receiver = (
             anyio.create_memory_object_stream[DeviceParameters](4)
         )
+        self._shot_storage_sender, self._shot_storage_receiver = (
+            anyio.create_memory_object_stream(4)
+        )
 
-    async def run_sequence(self) -> None:
+    @contextlib.asynccontextmanager
+    async def run_sequence(self) -> AsyncGenerator[None, None]:
         self._prepare_sequence()
         try:
             async with self._exit_stack:
@@ -172,7 +173,11 @@ class SequenceManager:
                     shot_runner = self._create_shot_runner(devices_in_use)
                     shot_compiler = self._create_shot_compiler(devices_in_use)
                 self._set_sequence_state(State.RUNNING)
-                await self._run(shot_runner, shot_compiler)
+                async with (
+                    self._run(shot_runner, shot_compiler),
+                    self._shot_parameter_scheduler,
+                ):
+                    yield
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
@@ -182,11 +187,14 @@ class SequenceManager:
         else:
             self._set_sequence_state(State.FINISHED)
 
-    async def _run(self, shot_runner: ShotRunner, shot_compiler: ShotCompiler) -> None:
+    @contextlib.asynccontextmanager
+    async def _run(
+        self, shot_runner: ShotRunner, shot_compiler: ShotCompiler
+    ) -> AsyncGenerator[None, None]:
         async with anyio.create_task_group() as tg:
             tg.start_soon(self._watch_for_interruption)
             tg.start_soon(self._store_shots)
-            async with self._device_parameter_sender:
+            async with self._device_parameter_sender, self._shot_parameter_receiver:
                 for _ in range(4):
                     tg.start_soon(
                         self._compile_shots,
@@ -195,6 +203,7 @@ class SequenceManager:
                         self._device_parameter_sender.clone(),
                     )
             tg.start_soon(self._run_shots, shot_runner)
+            yield
 
     @contextlib.asynccontextmanager
     async def _create_devices_in_use(
@@ -249,7 +258,7 @@ class SequenceManager:
             index=self._current_shot, parameters=shot_variables
         )
 
-        await self._shot_parameter_sender.send(shot_parameters)
+        await self._shot_parameter_scheduler.send(shot_parameters)
         self._current_shot += 1
 
     def _prepare_sequence(self):
@@ -286,7 +295,10 @@ class SequenceManager:
                 await sender.send(result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
-        async with self._device_parameter_receiver as receiver:
+        async with (
+            self._device_parameter_receiver as receiver,
+            self._shot_storage_sender,
+        ):
             async for device_parameters in receiver:
                 shot_data = await self._run_shot_with_retry(
                     device_parameters, shot_runner

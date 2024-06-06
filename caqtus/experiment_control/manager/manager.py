@@ -350,11 +350,8 @@ class BoundProcedure(Procedure):
         initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
 
         async def run():
-            async with anyio.create_task_group() as task_group:
-                task_group.start_soon(sequence_manager.run_sequence)
-                task_group.start_soon(
-                    sequence_runner.execute_steps, iteration.steps, initial_context
-                )
+            async with sequence_manager.run_sequence():
+                await sequence_runner.execute_steps(iteration.steps, initial_context)
 
         anyio.run(run)
 
