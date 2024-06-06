@@ -148,7 +148,7 @@ class SequenceManager:
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
         self._shot_parameter_scheduler, self._shot_parameter_receiver = (
-            anyio.create_memory_object_stream[ShotParameters](4)
+            anyio.create_memory_object_stream[ShotParameters]()
         )
         self._device_parameter_sender, self._device_parameter_receiver = (
             anyio.create_memory_object_stream[DeviceParameters](4)
