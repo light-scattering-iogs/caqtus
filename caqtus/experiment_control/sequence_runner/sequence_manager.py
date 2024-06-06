@@ -66,7 +66,7 @@ def _compile_shot(
             index=shot_parameters.index,
             shot_parameters=shot_parameters.parameters,
             device_parameters=compiled,
-            timeout=shot_duration + 1,
+            timeout=shot_duration + 10,
         )
     except Exception as e:
         return e
