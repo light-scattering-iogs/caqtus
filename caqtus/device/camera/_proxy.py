@@ -5,6 +5,7 @@ from typing import TypeVar
 from caqtus.device.remote import DeviceProxy
 from caqtus.types.image import Image
 from ._runtime import Camera
+from ..remote.rpc.server import RemoteError
 
 CameraType = TypeVar("CameraType", bound=Camera)
 
@@ -20,4 +21,12 @@ class CameraProxy(DeviceProxy[CameraType]):
         async with self.call_method_proxy_result(
             "acquire", exposures
         ) as cm_proxy, self.async_context_manager(cm_proxy) as iterator_proxy:
-            yield self._rpc_client.async_iterator(iterator_proxy)
+            try:
+                yield self._rpc_client.async_iterator(iterator_proxy)
+            except RemoteError as e:
+                if isinstance(e.__cause__, Exception):
+                    # We unwrap the remote exception to get the original exception, that
+                    # could for example be a timeout from the camera.
+                    raise e.__cause__
+                else:
+                    raise e
