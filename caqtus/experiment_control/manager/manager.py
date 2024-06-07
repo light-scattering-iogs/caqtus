@@ -333,23 +333,25 @@ class BoundProcedure(Procedure):
         with self._session_maker() as session:
             iteration = session.sequences.get_iteration_configuration(sequence)
 
-        sequence_manager = SequenceManager(
-            sequence=sequence,
-            session_maker=self._session_maker,
-            interruption_event=self._must_interrupt,
-            shot_retry_config=self._shot_retry_config,
-            global_parameters=global_parameters,
-            device_configurations=device_configurations,
-            device_manager_extension=self._device_manager_extension,
-        )
-        if not isinstance(iteration, StepsConfiguration):
-            raise NotImplementedError("Only steps iteration is supported.")
-        sequence_runner = StepSequenceRunner(
-            sequence_manager, sequence_manager.sequence_parameters
-        )
-        initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
-
         async def run():
+            sequence_manager = SequenceManager(
+                sequence=sequence,
+                session_maker=self._session_maker,
+                interruption_event=self._must_interrupt,
+                shot_retry_config=self._shot_retry_config,
+                global_parameters=global_parameters,
+                device_configurations=device_configurations,
+                device_manager_extension=self._device_manager_extension,
+            )
+            if not isinstance(iteration, StepsConfiguration):
+                raise NotImplementedError("Only steps iteration is supported.")
+            sequence_runner = StepSequenceRunner(
+                sequence_manager, sequence_manager.sequence_parameters
+            )
+            initial_context = evaluate_initial_context(
+                sequence_manager.sequence_parameters
+            )
+
             async with sequence_manager.run_sequence():
                 await sequence_runner.execute_steps(iteration.steps, initial_context)
 
