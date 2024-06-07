@@ -150,6 +150,7 @@ class SequenceManager:
         self._shot_storage_sender, self._shot_storage_receiver = (
             anyio.create_memory_object_stream(4)
         )
+        self._watch_for_interruption_scope = anyio.CancelScope()
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[None, None]:
@@ -272,13 +273,14 @@ class SequenceManager:
             session.sequences.set_state(self._sequence_path, state)
 
     async def _watch_for_interruption(self):
-        while True:
-            if self._interruption_event.is_set():
-                raise SequenceInterruptedException(
-                    f"Sequence '{self._sequence_path}' received an external "
-                    f"interruption signal."
-                )
-            await anyio.sleep(20e-3)
+        with self._watch_for_interruption_scope:
+            while True:
+                if self._interruption_event.is_set():
+                    raise SequenceInterruptedException(
+                        f"Sequence '{self._sequence_path}' received an external "
+                        f"interruption signal."
+                    )
+                await anyio.sleep(20e-3)
 
     async def _compile_shots(
         self, shot_compiler: ShotCompiler, shot_params_receiver, device_params_sender
@@ -341,6 +343,7 @@ class SequenceManager:
         async with self._shot_storage_receiver as receiver:
             async for shot_data in receiver:
                 await anyio.to_thread.run_sync(self._store_shot, shot_data)
+        self._watch_for_interruption_scope.cancel()
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {
