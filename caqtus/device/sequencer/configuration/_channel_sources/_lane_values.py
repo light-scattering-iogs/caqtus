@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional
 
 import attrs
+from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.device.sequencer.configuration.channel_output import ChannelOutput
 from caqtus.types.expression import Expression
@@ -38,16 +39,27 @@ class LaneValues(ChannelOutput):
         return self.lane
 
 
-def structure_lane_values(data, _):
-    lane = data["lane"]
-    default_data = data["default"]
-    if isinstance(default_data, str):
+def structure_lane_default(default_data, _):
+    # We need this custom structure hook, because in the past the default value of a
+    # LaneValues was a Constant and not any ChannelOutput.
+    # In that case, the type of the default value was not serialized, so we need to
+    # deal with this special case.
+    if default_data is None:
+        return None
+    elif isinstance(default_data, str):
         default_expression = serialization.structure(default_data, Expression)
-        default = Constant(value=default_expression)
+        return Constant(value=default_expression)
+    elif "type" in default_data:
+        return serialization.structure(default_data, ChannelOutput)
     else:
-        default = serialization.structure(default_data, Optional[ChannelOutput])
+        return serialization.structure(default_data, Constant)
 
-    return LaneValues(lane=lane, default=default)
+
+structure_lane_values = make_dict_structure_fn(
+    LaneValues,
+    serialization.converters["json"],
+    default=override(struct_hook=structure_lane_default),
+)
 
 
 def unstructure_lane_values(lane_values):

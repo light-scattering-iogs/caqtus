@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Optional
 
 import attrs
+from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.device.name import DeviceName
 from caqtus.device.sequencer.configuration.channel_output import ChannelOutput
 from caqtus.utils import serialization
+from ._constant import Constant
 
 
 @attrs.define
@@ -34,13 +36,24 @@ class DeviceTrigger(ChannelOutput):
         return f"trig({self.device_name})"
 
 
-def unstructure_device_trigger(device_trigger: DeviceTrigger):
-    return {
-        "device_name": device_trigger.device_name,
-        "default": serialization.unstructure(
-            device_trigger.default, Optional[ChannelOutput]
-        ),
-    }
+def structure_default(data, _):
+    # We need this custom structure hook, because in the past the default value of a
+    # DeviceTrigger was a Constant and not any ChannelOutput.
+    # In that case, the type of the default value was not serialized, so we need to
+    # deal with this special case.
+    if data is None:
+        return None
+    if "type" in data:
+        return serialization.structure(data, ChannelOutput)
+    else:
+        return serialization.structure(data, Constant)
 
 
-serialization.register_unstructure_hook(DeviceTrigger, unstructure_device_trigger)
+structure_device_trigger = make_dict_structure_fn(
+    DeviceTrigger,
+    serialization.converters["json"],
+    default=override(struct_hook=structure_default),
+)
+
+
+serialization.register_structure_hook(DeviceTrigger, structure_device_trigger)

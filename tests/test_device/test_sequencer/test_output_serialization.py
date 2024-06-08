@@ -1,3 +1,4 @@
+from caqtus.device import DeviceName
 from caqtus.device.sequencer.configuration import (
     LaneValues,
     Constant,
@@ -49,3 +50,28 @@ def test_5():
     u = serialization.unstructure(lane_output, ChannelOutput)
     s = serialization.structure(u, ChannelOutput)
     assert lane_output == s
+
+
+def test_6():
+    data = {
+        "device_name": "Fringe stabilizer",
+        "default": {"value": "Disabled"},
+        "type": "DeviceTrigger",
+    }
+    result = serialization.converters["json"].structure(data, ChannelOutput)
+    assert result == DeviceTrigger(
+        device_name=DeviceName("Fringe stabilizer"),
+        default=Constant(Expression("Disabled")),
+    )
+
+
+def test_7():
+    data = {
+        "lane": "421 cell \\ kill \\ shutter",
+        "default": {"value": "Disabled"},
+        "type": "LaneValues",
+    }
+    result = serialization.converters["json"].structure(data, ChannelOutput)
+    assert result == LaneValues(
+        "421 cell \\ kill \\ shutter", default=Constant(Expression("Disabled"))
+    )
