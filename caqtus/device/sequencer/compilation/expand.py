@@ -82,5 +82,9 @@ def expand_repeated_left(repeated: Repeated, n: int):
     overwritten_length = min(bleed, len(expanded))
     overwritten = Pattern([True]) * overwritten_length
     kept = expanded[: len(expanded) - len(overwritten)]
-    instr = (kept + overwritten) * (repeated.repetitions - 1) + expanded
-    return instr, bleed
+    left_instr = kept + overwritten
+    if expanded == left_instr:
+        return expanded * repeated.repetitions, bleed
+    else:
+        instr = (kept + overwritten) * (repeated.repetitions - 1) + expanded
+        return instr, bleed
