@@ -7,6 +7,8 @@ from typing import (
 
 import numpy as np
 
+from caqtus.device.sequencer.compilation import evaluate_device_trigger
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
 from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
 from caqtus.shot_compilation import (
     ShotContext,
@@ -18,7 +20,8 @@ from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import add_exc_note
 from ._compile_digital_lane import compile_digital_lane
-from caqtus.device.sequencer.configuration.channel_output import (
+from .compile_analog_lane import compile_analog_lane
+from ..configuration import (
     ChannelOutput,
     Advance,
     Delay,
@@ -27,9 +30,6 @@ from caqtus.device.sequencer.configuration.channel_output import (
     CalibratedAnalogMapping,
     DeviceTrigger,
 )
-from .compile_analog_lane import compile_analog_lane
-from caqtus.device.sequencer.compilation import evaluate_device_trigger
-from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
 
 
 @functools.singledispatch

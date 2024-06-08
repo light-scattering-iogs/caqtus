@@ -12,17 +12,11 @@ import attrs
 from caqtus.device.configuration import DeviceConfiguration
 from .channel_output import (
     ChannelOutput,
-    is_channel_output,
 )
 from .._controller import SequencerController
 from ..instructions import SequencerInstruction
 from ..runtime import Sequencer
 from ..trigger import Trigger, is_trigger
-
-
-def validate_channel_output(instance, attribute, value):
-    if not is_channel_output(value):
-        raise TypeError(f"Output {value} is not of type ChannelOutput")
 
 
 @attrs.define
@@ -34,7 +28,7 @@ class ChannelConfiguration(ABC):
         on_setattr=attrs.setters.convert,
     )
     output: ChannelOutput = attrs.field(
-        validator=validate_channel_output,
+        validator=attrs.validators.instance_of(ChannelOutput),
         on_setattr=attrs.setters.validate,
     )
 

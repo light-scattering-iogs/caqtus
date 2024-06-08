@@ -1,15 +1,15 @@
-from .channel_output import (
-    ChannelOutput,
-    is_channel_output,
+from caqtus.utils import serialization
+from ._calibrated_analog_mapping import CalibratedAnalogMapping, TimeIndependentMapping
+from ._channel_sources import (
     LaneValues,
     DeviceTrigger,
     Constant,
-    CalibratedAnalogMapping,
-    Advance,
-    Delay,
     ValueSource,
     is_value_source,
-    TimeIndependentMapping,
+)
+from ._timing import Advance, Delay
+from .channel_output import (
+    ChannelOutput,
 )
 from .configuration import (
     SequencerConfiguration,
@@ -18,12 +18,18 @@ from .configuration import (
     DigitalChannelConfiguration,
 )
 
+# Now that all subclasses of ChannelOutput have been defined, we can include them in
+# serialization strategy.
+# Unfortunately, this means that ChannelOutput is now closed for extension for
+# serialization.
+serialization.include_subclasses(
+    ChannelOutput, union_strategy=serialization.strategies.include_type("type")
+)
 
 __all__ = [
     "SequencerConfiguration",
     "ChannelConfiguration",
     "ChannelOutput",
-    "is_channel_output",
     "LaneValues",
     "DeviceTrigger",
     "Constant",
