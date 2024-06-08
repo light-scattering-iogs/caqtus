@@ -70,7 +70,15 @@ def expand_concatenated_left(instruction: Concatenated, n: int):
 def expand_repeated_left(repeated: Repeated, n: int):
     expanded, bleed = expand_left(repeated.instruction, n)
     if bleed == 0:
+        # This is a special were expanding the instruction has no effect on the previous
+        # instructions.
         return expanded * repeated.repetitions, bleed
+    if bleed >= len(expanded):
+        # This is a special case where the previous instructions are completely
+        # overwritten by the expanded instruction, so we can return a simplified
+        # instruction.
+        instr = Pattern([True]) * len(expanded) * (repeated.repetitions - 1) + expanded
+        return instr, bleed
     overwritten_length = min(bleed, len(expanded))
     overwritten = Pattern([True]) * overwritten_length
     kept = expanded[: len(expanded) - len(overwritten)]
