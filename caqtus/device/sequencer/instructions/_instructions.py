@@ -17,10 +17,12 @@ from typing import (
     Callable,
     TypeAlias,
     Any,
+    SupportsInt,
 )
 
 import numpy
 import numpy as np
+from numpy.typing import DTypeLike
 from typing_extensions import deprecated
 
 from caqtus.utils.itertools import pairwise
@@ -132,7 +134,10 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
                 else:
                     return Repeated(other, self)
         else:
-            return NotImplemented
+            # We specifically raise an error here and not return NotImplemented to avoid
+            # multiplication by a numpy integer taking over and returning a numpy
+            # array instead of a SequencerInstruction.
+            raise TypeError(f"Cannot multiply instruction by {other!r}")
 
     def __rmul__(self, other) -> SequencerInstruction[_T]:
         return self.__mul__(other)
@@ -164,7 +169,7 @@ class Pattern(_BaseInstruction[_T]):
 
     __slots__ = ("_pattern", "_length")
 
-    def __init__(self, pattern, dtype: Optional[np.dtype[_T]] = None):
+    def __init__(self, pattern, dtype: Optional[DTypeLike[_T]] = None):
         self._pattern = numpy.array(pattern, dtype=dtype)
         self._pattern.setflags(write=False)
         self._length = Length(len(self._pattern))
@@ -626,9 +631,17 @@ def concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction
 
     if len(instructions) == 0:
         raise ValueError("Must provide at least one instruction")
+    if not all(
+        isinstance(instruction, (Pattern, Concatenated, Repeated))
+        for instruction in instructions
+    ):
+        raise TypeError(
+            "All instructions must be instances of Pattern, Concatenated, or Repeated"
+        )
     dtype = instructions[0].dtype
     if not all(instruction.dtype == dtype for instruction in instructions):
-        raise TypeError("All instructions must have the same dtype")
+        dtypes = ", ".join(str(instruction.dtype) for instruction in instructions)
+        raise TypeError(f"All instructions must have the same dtype, got {dtypes}")
     return _concatenate(*instructions)
 
 

@@ -1,3 +1,6 @@
+import numpy as np
+import pytest
+
 from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
 from hypothesis import given
 from hypothesis.strategies import composite, integers
@@ -10,6 +13,11 @@ def test():
     a = Pattern([1, 2, 3])
     assert a[0] == 1
     assert a[0:2] == Pattern([1, 2])
+
+
+def test_0():
+    with pytest.raises(TypeError):
+        Pattern([True]) * np.int64(1)
 
 
 @composite
