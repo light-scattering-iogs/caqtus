@@ -2,7 +2,13 @@ import functools
 
 import numpy as np
 
-from ..instructions import SequencerInstruction, Pattern, Concatenated, concatenate
+from ..instructions import (
+    SequencerInstruction,
+    Pattern,
+    Concatenated,
+    concatenate,
+    Repeated,
+)
 
 
 @functools.singledispatch
@@ -58,3 +64,15 @@ def expand_concatenated_left(instruction: Concatenated, n: int):
         bleed -= len(expanded)
         bleed = max(new_bleed, bleed)
     return concatenate(*reversed(new_instructions)), bleed
+
+
+@expand_left.register
+def expand_repeated_left(repeated: Repeated, n: int):
+    expanded, bleed = expand_left(repeated.instruction, n)
+    if bleed == 0:
+        return expanded * repeated.repetitions, bleed
+    overwritten_length = min(bleed, len(expanded))
+    overwritten = Pattern([True]) * overwritten_length
+    kept = expanded[: len(expanded) - len(overwritten)]
+    instr = (kept + overwritten) * (repeated.repetitions - 1) + expanded
+    return instr, bleed

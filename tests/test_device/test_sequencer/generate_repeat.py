@@ -3,7 +3,7 @@ from hypothesis.strategies import composite, integers, permutations
 from sympy import factorint
 
 from caqtus.device.sequencer.instructions import Repeated
-from .generate_pattern import generate_pattern
+from .generate_pattern import generate_pattern, bool_pattern
 
 
 @composite
@@ -39,3 +39,12 @@ def factorize(draw, number: int) -> tuple[int, int]:
         a = int(np.prod(flat_factors[:a_length]))
         b = int(np.prod(flat_factors[a_length:]))
         return min(a, b), max(a, b)
+
+
+@composite
+def bool_repeated(
+    draw, repetitions=integers(min_value=2, max_value=10), bool_patterns=bool_pattern()
+) -> Repeated[bool]:
+    repetitions = draw(repetitions)
+    sub_instruction = draw(bool_patterns)
+    return Repeated(repetitions, sub_instruction)

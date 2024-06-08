@@ -2,10 +2,11 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import integers
 
-from caqtus.device.sequencer.instructions import Concatenated, Pattern
-from .generate_pattern import bool_pattern
-from .generate_concatenate import bool_concatenation
 from caqtus.device.sequencer.compilation.expand import expand_left
+from caqtus.device.sequencer.instructions import Concatenated, Pattern
+from .generate_concatenate import bool_concatenation
+from .generate_pattern import bool_pattern
+from .generate_repeat import bool_repeated
 
 
 @given(bool_pattern(), integers(min_value=0))
@@ -39,3 +40,20 @@ def test_0():
     expanded, excess = expand_left(instr, 1)
     assert expanded == Pattern([False, True, True])
     assert excess == 0
+
+
+@given(bool_repeated(), integers(min_value=0))
+def test_repeated(repeated, n):
+    expanded, excess = expand_left(repeated, n)
+    assert len(expanded) == len(repeated)
+    obtained = expanded.to_pattern().array
+    expected = expand_left(repeated.to_pattern(), n)[0].to_pattern().array
+    assert np.array_equal(
+        obtained, expected
+    ), f"Obtained: {obtained}\nExpected: {expected}"
+
+
+def test_1():
+    instr = Pattern([False, True]) * 10
+    expanded, excess = expand_left(instr, 1)
+    assert expanded == Pattern([True, True]) * 10
