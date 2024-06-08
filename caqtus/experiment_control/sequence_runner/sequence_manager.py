@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import contextlib
 import copy
-import datetime
 import logging
 import threading
-from collections.abc import Mapping, AsyncGenerator
-from typing import Optional, Any
+from collections.abc import Mapping, AsyncGenerator, AsyncIterable
+from typing import Optional
 
 import anyio
 import anyio.to_process
 import anyio.to_thread
-import attrs
 from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device.remote import DeviceProxy
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
@@ -23,12 +22,12 @@ from caqtus.shot_compilation import (
     DeviceCompiler,
     DeviceNotUsedException,
 )
-from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import ParameterNamespace
+from .shots_manager import ShotManager, ShotData
+from .shots_manager import ShotRetryConfig
 from .._initialize_devices import create_devices
 from .._shot_handling import ShotRunner, ShotCompiler
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ...device.remote import DeviceProxy
 
 pickling_support.install()
 logger = logging.getLogger(__name__)
@@ -37,39 +36,6 @@ logger.setLevel(logging.INFO)
 
 def nothing():
     pass
-
-
-@attrs.define
-class ShotRetryConfig:
-    """Specifies how to retry a shot if an error occurs.
-
-    Attributes:
-        exceptions_to_retry: If an exception occurs while running a shot, it will be
-        retried if it is an instance of one of the exceptions in this tuple.
-        number_of_attempts: The number of times to retry a shot if an error occurs.
-    """
-
-    exceptions_to_retry: tuple[type[Exception], ...] = attrs.field(
-        factory=tuple,
-        eq=False,
-        on_setattr=attrs.setters.validate,
-    )
-    number_of_attempts: int = attrs.field(default=1, eq=False)
-
-
-def _compile_shot(
-    shot_parameters: ShotParameters, shot_compiler: ShotCompiler
-) -> DeviceParameters | Exception:
-    try:
-        compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
-        return DeviceParameters(
-            index=shot_parameters.index,
-            shot_parameters=shot_parameters.parameters,
-            device_parameters=compiled,
-            timeout=shot_duration + 10,
-        )
-    except Exception as e:
-        return e
 
 
 class SequenceManager:
@@ -132,8 +98,6 @@ class SequenceManager:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
 
-        self._current_shot = 0
-
         self._exit_stack = contextlib.AsyncExitStack()
 
         self._interruption_event = interruption_event
@@ -141,16 +105,8 @@ class SequenceManager:
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
-        self._shot_parameter_scheduler, self._shot_parameter_receiver = (
-            anyio.create_memory_object_stream[ShotParameters]()
-        )
-        self._device_parameter_sender, self._device_parameter_receiver = (
-            anyio.create_memory_object_stream[DeviceParameters](4)
-        )
-        self._shot_storage_sender, self._shot_storage_receiver = (
-            anyio.create_memory_object_stream(4)
-        )
         self._watch_for_interruption_scope = anyio.CancelScope()
+        self._shot_manager: ShotManager
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[None, None]:
@@ -167,13 +123,18 @@ class SequenceManager:
                     )
                     shot_runner = self._create_shot_runner(devices_in_use)
                     shot_compiler = self._create_shot_compiler(devices_in_use)
+                    self._shot_manager = ShotManager(
+                        shot_runner, shot_compiler, self._shot_retry_config
+                    )
                 self._set_sequence_state(State.RUNNING)
-                async with self._run(shot_runner, shot_compiler):
+                async with (
+                    anyio.create_task_group() as tg,
+                    self._shot_manager.run() as shots_data,
+                ):
+                    tg.start_soon(self._watch_for_interruption)
+                    tg.start_soon(self._store_shots, shots_data)
                     yield
-        except* anyio.BrokenResourceError:
-            # We ignore this error because the error that causes it will anyway be
-            # raised, and we don't want to clutter the error traceback.
-            pass
+                    self._watch_for_interruption_scope.cancel()
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
@@ -182,25 +143,6 @@ class SequenceManager:
             raise
         else:
             self._set_sequence_state(State.FINISHED)
-
-    @contextlib.asynccontextmanager
-    async def _run(
-        self, shot_runner: ShotRunner, shot_compiler: ShotCompiler
-    ) -> AsyncGenerator[None, None]:
-        async with anyio.create_task_group() as tg:
-            tg.start_soon(self._watch_for_interruption)
-            tg.start_soon(self._store_shots)
-            async with self._device_parameter_sender, self._shot_parameter_receiver:
-                for _ in range(4):
-                    tg.start_soon(
-                        self._compile_shots,
-                        shot_compiler,
-                        self._shot_parameter_receiver.clone(),
-                        self._device_parameter_sender.clone(),
-                    )
-            tg.start_soon(self._run_shots, shot_runner)
-            async with self._shot_parameter_scheduler:
-                yield
 
     @contextlib.asynccontextmanager
     async def _create_devices_in_use(
@@ -251,12 +193,7 @@ class SequenceManager:
         return shot_compiler
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
-        shot_parameters = ShotParameters(
-            index=self._current_shot, parameters=shot_variables
-        )
-
-        await self._shot_parameter_scheduler.send(shot_parameters)
-        self._current_shot += 1
+        await self._shot_manager.schedule_shot(shot_variables)
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
@@ -282,68 +219,9 @@ class SequenceManager:
                     )
                 await anyio.sleep(20e-3)
 
-    async def _compile_shots(
-        self, shot_compiler: ShotCompiler, shot_params_receiver, device_params_sender
-    ):
-        async with device_params_sender, shot_params_receiver:
-            async for shot_parameters in shot_params_receiver:
-                result = await anyio.to_process.run_sync(
-                    _compile_shot, shot_parameters, shot_compiler
-                )
-                if isinstance(result, Exception):
-                    raise result
-                await device_params_sender.send(result)
-
-    async def _run_shots(self, shot_runner: ShotRunner):
-        async with (
-            self._shot_storage_sender,
-            self._device_parameter_receiver as receiver,
-        ):
-            async for device_parameters in receiver:
-                shot_data = await self._run_shot_with_retry(
-                    device_parameters, shot_runner
-                )
-                await self._shot_storage_sender.send(shot_data)
-
-    async def _run_shot_with_retry(
-        self, device_parameters: DeviceParameters, shot_runner: ShotRunner
-    ) -> ShotData:
-        exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
-        number_of_attempts = self._shot_retry_config.number_of_attempts
-        if number_of_attempts < 1:
-            raise ValueError("number_of_attempts must be >= 1")
-
-        errors: list[Exception] = []
-
-        for attempt in range(number_of_attempts):
-            try:
-                start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-                data = await shot_runner.run_shot(
-                    device_parameters.device_parameters, device_parameters.timeout
-                )
-                end_time = datetime.datetime.now(tz=datetime.timezone.utc)
-            except* exceptions_to_retry as e:
-                errors.extend(e.exceptions)
-                logger.warning(
-                    f"Attempt {attempt+1}/{number_of_attempts} failed", exc_info=e
-                )
-            else:
-                return ShotData(
-                    index=device_parameters.index,
-                    start_time=start_time,
-                    end_time=end_time,
-                    variables=device_parameters.shot_parameters,
-                    data=data,
-                )
-        raise ExceptionGroup(
-            f"Could not execute shot after {number_of_attempts} attempts", errors
-        )
-
-    async def _store_shots(self) -> None:
-        async with self._shot_storage_receiver as receiver:
-            async for shot_data in receiver:
-                await anyio.to_thread.run_sync(self._store_shot, shot_data)
-        self._watch_for_interruption_scope.cancel()
+    async def _store_shots(self, shots_data: AsyncIterable[ShotData]):
+        async for shot_data in shots_data:
+            self._store_shot(shot_data)
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {
@@ -358,35 +236,6 @@ class SequenceManager:
                 shot_data.start_time,
                 shot_data.end_time,
             )
-
-
-@attrs.frozen(order=True)
-class ShotParameters:
-    """Holds information necessary to compile a shot."""
-
-    index: int
-    parameters: VariableNamespace = attrs.field(eq=False)
-
-
-@attrs.frozen(order=True)
-class DeviceParameters:
-    """Holds information necessary to run a shot."""
-
-    index: int
-    shot_parameters: VariableNamespace = attrs.field(eq=False)
-    device_parameters: Mapping[DeviceName, Mapping[str, Any]] = attrs.field(eq=False)
-    timeout: float = attrs.field()
-
-
-@attrs.frozen(order=True)
-class ShotData:
-    """Holds information necessary to store a shot."""
-
-    index: int
-    start_time: datetime.datetime = attrs.field(eq=False)
-    end_time: datetime.datetime = attrs.field(eq=False)
-    variables: VariableNamespace = attrs.field(eq=False)
-    data: Mapping[DataLabel, Data] = attrs.field(eq=False)
 
 
 class SequenceInterruptedException(RuntimeError):
