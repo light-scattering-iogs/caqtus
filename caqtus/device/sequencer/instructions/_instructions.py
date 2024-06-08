@@ -304,7 +304,7 @@ class Concatenated(_BaseInstruction[_T]):
 
     def __repr__(self):
         inner = ", ".join(repr(instruction) for instruction in self._instructions)
-        return f"Concatenate({inner})"
+        return f"Concatenated({inner})"
 
     def __str__(self):
         sub_strings = [str(instruction) for instruction in self._instructions]
@@ -456,7 +456,7 @@ class Repeated(_BaseInstruction[_T]):
 
     def __repr__(self):
         return (
-            f"Repeat(repetitions={self._repetitions!r},"
+            f"Repeated(repetitions={self._repetitions!r},"
             f" instruction={self._instruction!r})"
         )
 
