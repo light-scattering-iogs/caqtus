@@ -2,7 +2,7 @@ import functools
 
 import numpy as np
 
-from ..instructions import SequencerInstruction, Pattern
+from ..instructions import SequencerInstruction, Pattern, Concatenated, concatenate
 
 
 @functools.singledispatch
@@ -35,10 +35,26 @@ def expand_pattern_left(instruction: Pattern, n: int):
     pulse = np.full(pulse_length, True)
     convolution = np.convolve(instruction.array, pulse)
     result = convolution[pulse_length - 1 :]
-    high_indices = result.nonzero()[0]
+    high_indices = instruction.array.nonzero()[0]
     if len(high_indices) == 0:
         excess = 0
     else:
-        first_high_index = high_indices[0]
+        first_high_index = int(high_indices[0])  # need to avoid numpy integers
         excess = max(0, n - first_high_index)
     return Pattern.create_without_copy(result), excess
+
+
+@expand_left.register
+def expand_concatenated_left(instruction: Concatenated, n: int):
+    new_instructions = []
+    bleed = 0
+    for sub_instruction in reversed(instruction.instructions):
+        expanded, new_bleed = expand_left(sub_instruction, n)
+        overwritten_length = min(bleed, len(expanded))
+        overwritten = Pattern([True]) * overwritten_length
+        new_instructions.append(overwritten)
+        kept = expanded[: len(expanded) - len(overwritten)]
+        new_instructions.append(kept)
+        bleed -= len(expanded)
+        bleed = max(new_bleed, bleed)
+    return concatenate(*reversed(new_instructions)), bleed
