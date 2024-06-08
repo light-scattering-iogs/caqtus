@@ -12,32 +12,27 @@ from ..instructions import (
 
 
 @functools.singledispatch
-def expand_left(
-    instruction: SequencerInstruction[bool], n: int
-) -> tuple[SequencerInstruction[bool], int]:
-    """Expand the instruction to the left by n steps.
+def broaden_left(instruction, width: int) -> tuple[SequencerInstruction[bool], int]:
+    """Broaden the instruction to the left by n steps.
 
     Returns:
-        A tuple (result, excess) where:
-        - result: The expanded instruction.
-            result[i] = any(instruction[i:i+n+1])
-        - excess: The number of steps before this instruction that must be set to True.
-            excess = max(0, n - first)
-            where first is the index of the first True value in the instruction if it
-            exists, otherwise excess = 0.
-
+        - result: The expanded instruction, where the high values are expanded to the
+            left, i.e. result[i] = any(instruction[i:i+width+1])
+        - bleed: The number of steps before this instruction that must be set to True,
+            i.e. bleed = max(0, width - first) where first is the index of the first
+            high value in the instruction if it exists, otherwise bleed = 0.
     """
 
     raise NotImplementedError(
-        f"Don't know how to expand instruction of type {type(instruction)}"
+        f"Don't know how to broaden instruction of type {type(instruction)}"
     )
 
 
-@expand_left.register
-def expand_pattern_left(instruction: Pattern, n: int):
+@broaden_left.register
+def expand_pattern_left(instruction: Pattern, width: int):
     if not instruction.dtype == np.bool_:
         raise TypeError("Instruction must have dtype bool")
-    pulse_length = min(len(instruction), n + 1)
+    pulse_length = min(len(instruction), width + 1)
     pulse = np.full(pulse_length, True)
     convolution = np.convolve(instruction.array, pulse)
     result = convolution[pulse_length - 1 :]
@@ -46,16 +41,16 @@ def expand_pattern_left(instruction: Pattern, n: int):
         excess = 0
     else:
         first_high_index = int(high_indices[0])  # need to avoid numpy integers
-        excess = max(0, n - first_high_index)
+        excess = max(0, width - first_high_index)
     return Pattern.create_without_copy(result), excess
 
 
-@expand_left.register
-def expand_concatenated_left(instruction: Concatenated, n: int):
+@broaden_left.register
+def expand_concatenated_left(instruction: Concatenated, width: int):
     new_instructions = []
     bleed = 0
     for sub_instruction in reversed(instruction.instructions):
-        expanded, new_bleed = expand_left(sub_instruction, n)
+        expanded, new_bleed = broaden_left(sub_instruction, width)
         overwritten_length = min(bleed, len(expanded))
         overwritten = Pattern([True]) * overwritten_length
         new_instructions.append(overwritten)
@@ -66,9 +61,9 @@ def expand_concatenated_left(instruction: Concatenated, n: int):
     return concatenate(*reversed(new_instructions)), bleed
 
 
-@expand_left.register
-def expand_repeated_left(repeated: Repeated, n: int):
-    expanded, bleed = expand_left(repeated.instruction, n)
+@broaden_left.register
+def expand_repeated_left(repeated: Repeated, width: int):
+    expanded, bleed = broaden_left(repeated.instruction, width)
     if bleed == 0:
         # This is a special were expanding the instruction has no effect on the previous
         # instructions.
