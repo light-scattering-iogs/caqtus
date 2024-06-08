@@ -1,7 +1,7 @@
 from hypothesis.strategies import composite, integers
 from caqtus.device.sequencer.instructions import Concatenated
 
-from .generate_pattern import generate_pattern
+from .generate_pattern import generate_pattern, bool_pattern
 
 
 @composite
@@ -20,3 +20,14 @@ def generate_concatenate(draw, length: int, offset: int = 0) -> Concatenated:
                 generate_concatenate(right_length, offset=offset + left_length)
             )
         return left + right
+
+
+@composite
+def bool_concatenation(
+    draw,
+    number_patterns=integers(min_value=2, max_value=10),
+    bool_patterns=bool_pattern(),
+) -> Concatenated[bool]:
+    length = draw(number_patterns)
+    patterns = [draw(bool_patterns) for _ in range(length)]
+    return Concatenated(*patterns)
