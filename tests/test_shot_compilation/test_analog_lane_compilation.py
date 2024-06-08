@@ -5,9 +5,9 @@ from caqtus.device.sequencer.compilation.compile_analog_lane import (
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import TimeLanes
-from caqtus.types.timelane import AnalogTimeLane, Ramp
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
+from caqtus.types.timelane import AnalogTimeLane, Ramp
 
 
 def test_0():
@@ -18,6 +18,7 @@ def test_0():
             step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
         ),
         variables={},
+        device_compilers={},
     )
     result = compile_analog_lane(lane, None, 1, shot_context)
     expected = Pattern([1.0]) * 10 + Pattern([10.0]) * 10
@@ -35,6 +36,7 @@ def test_1():
             step_durations=[Expression("10 ns")] * 3,
         ),
         variables={},
+        device_compilers={},
     )
     result = compile_analog_lane(lane, None, 1, shot_context)
     expected = (
@@ -65,6 +67,7 @@ def test_2():
             step_durations=[Expression("10 ns")] * 3,
         ),
         variables={},
+        device_compilers={},
     )
     result = compile_analog_lane(lane, "dB", 1, shot_context)
     expected = (
@@ -94,6 +97,7 @@ def test_4():
             step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
         ),
         variables={},
+        device_compilers={},
     )
     result = compile_analog_lane(lane, "Hz", 1, shot_context)
     expected = Pattern([10.0]) * 10 + Pattern([1000.0]) * 10
@@ -108,6 +112,7 @@ def test_5():
             step_names=["step1"], step_durations=[Expression("10 ns")]
         ),
         variables={},
+        device_compilers={},
     )
     result = compile_analog_lane(lane, "Hz", 1, shot_context)
     expected = Pattern([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])

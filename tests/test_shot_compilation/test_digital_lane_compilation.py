@@ -16,6 +16,7 @@ def test_0():
             step_names=["a", "b"], step_durations=[Expression("1 s"), Expression("1 s")]
         ),
         variables={},
+        device_compilers={},
     )
     lane = DigitalTimeLane([True, False])
     result = compile_digital_lane(lane, 1, shot_context)
@@ -29,6 +30,7 @@ def test_1():
             step_names=["a", "b"], step_durations=[Expression("1 s"), Expression("1 s")]
         ),
         variables={DottedVariableName("a"): True, DottedVariableName("b"): False},
+        device_compilers={},
     )
     lane = DigitalTimeLane([Expression("a"), Expression("b")])
     result = compile_digital_lane(lane, 1, shot_context)
@@ -44,6 +46,7 @@ def test_2():
             step_durations=[Expression("1 s")] * 3,
         ),
         variables={},
+        device_compilers={},
     )
     lane = DigitalTimeLane([True] * 2 + [False])
     result = compile_digital_lane(lane, 1, shot_context)
@@ -106,6 +109,7 @@ def test_3():
             step_durations=lane_durations,
         ),
         variables=variables.dict(),
+        device_compilers={},
     )
     result = compile_digital_lane(lane, 1, shot_context)
     assert len(result) == 310_000_001
