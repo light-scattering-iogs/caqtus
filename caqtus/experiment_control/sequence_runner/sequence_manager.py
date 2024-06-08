@@ -4,7 +4,7 @@ import contextlib
 import copy
 import logging
 import threading
-from collections.abc import Mapping, AsyncGenerator, AsyncIterable
+from collections.abc import Mapping, AsyncGenerator
 from typing import Optional
 
 import anyio
@@ -129,12 +129,12 @@ class SequenceManager:
                 self._set_sequence_state(State.RUNNING)
                 async with (
                     anyio.create_task_group() as tg,
-                    self._shot_manager.run() as shots_data,
+                    self._shot_manager.start_scheduling(),
                 ):
                     tg.start_soon(self._watch_for_interruption)
-                    tg.start_soon(self._store_shots, shots_data)
+                    tg.start_soon(self._store_shots)
                     yield
-                    self._watch_for_interruption_scope.cancel()
+
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
@@ -219,9 +219,11 @@ class SequenceManager:
                     )
                 await anyio.sleep(20e-3)
 
-    async def _store_shots(self, shots_data: AsyncIterable[ShotData]):
-        async for shot_data in shots_data:
-            self._store_shot(shot_data)
+    async def _store_shots(self):
+        async with self._shot_manager.run() as shots_data:
+            async for shot_data in shots_data:
+                self._store_shot(shot_data)
+        self._watch_for_interruption_scope.cancel()
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {

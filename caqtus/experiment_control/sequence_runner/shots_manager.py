@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 from collections.abc import AsyncGenerator, AsyncIterable
-from typing import Mapping, Any
+from typing import Mapping, Any, Protocol
 
 import anyio
 import anyio.to_process
@@ -13,7 +13,18 @@ from caqtus.device import DeviceName
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
-from .._shot_handling import ShotRunner, ShotCompiler
+
+
+class ShotRunner(Protocol):
+    async def run_shot(
+        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
+    ) -> Mapping[DataLabel, Data]: ...
+
+
+class ShotCompiler(Protocol):
+    def compile_shot(
+        self, shot_parameters: VariableNamespace
+    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]: ...
 
 
 class ShotManager:
@@ -53,7 +64,7 @@ class ShotManager:
                             self._device_parameter_sender.clone(),
                         )
                 tg.start_soon(self._run_shots, self._shot_runner)
-                async with self._shot_data_receiver, self._shot_parameter_scheduler:
+                async with self._shot_data_receiver:
                     yield self._shot_data_receiver
         except* anyio.BrokenResourceError:
             # We ignore this error because the error that caused it will anyway be
@@ -61,6 +72,11 @@ class ShotManager:
             # Can't use contextlib.suppress because it only supports exception groups
             # starting from Python 3.12.
             pass
+
+    @contextlib.asynccontextmanager
+    async def start_scheduling(self) -> AsyncGenerator[None, None]:
+        async with self._shot_parameter_scheduler:
+            yield
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
