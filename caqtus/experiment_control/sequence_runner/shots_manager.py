@@ -95,8 +95,6 @@ class ShotManager:
                 result = await anyio.to_process.run_sync(
                     _compile_shot, shot_parameters, shot_compiler
                 )
-                if isinstance(result, Exception):
-                    raise result
                 await device_params_sender.send(result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
@@ -176,17 +174,14 @@ class ShotData:
 
 def _compile_shot(
     shot_parameters: ShotParameters, shot_compiler: ShotCompiler
-) -> DeviceParameters | Exception:
-    try:
-        compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
-        return DeviceParameters(
-            index=shot_parameters.index,
-            shot_parameters=shot_parameters.parameters,
-            device_parameters=compiled,
-            timeout=shot_duration + 10,
-        )
-    except Exception as e:
-        return e
+) -> DeviceParameters:
+    compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
+    return DeviceParameters(
+        index=shot_parameters.index,
+        shot_parameters=shot_parameters.parameters,
+        device_parameters=compiled,
+        timeout=shot_duration + 10,
+    )
 
 
 @attrs.define
