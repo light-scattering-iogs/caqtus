@@ -3,10 +3,9 @@ from collections.abc import Callable
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
+from caqtus.device.remote import DeviceProxy, RPCConfiguration
 from caqtus.shot_compilation import DeviceCompiler
 from ._protocol import DeviceManagerExtensionProtocol
-from ...device.remote import DeviceProxy
-from ...device.remote_server import RPCConfiguration
 
 
 class DeviceManagerExtension(DeviceManagerExtensionProtocol):

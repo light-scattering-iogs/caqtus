@@ -3,7 +3,10 @@ from typing import Concatenate, ParamSpec, TypeVar
 
 import attrs
 
+from caqtus.device.configuration import DeviceServerName
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
+from caqtus.device.remote import RPCConfiguration
+from caqtus.experiment_control.device_manager_extension import DeviceManagerExtension
 from caqtus.gui.condetrol.extension import CondetrolExtension
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session.sql._serializer import SerializerProtocol, Serializer
@@ -11,9 +14,6 @@ from caqtus.types.timelane.serializer import TimeLaneSerializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
 from ..time_lane_extension import TimeLaneExtension
-from ...device.configuration import DeviceServerName
-from ...device.remote_server import RPCConfiguration
-from ...experiment_control.device_manager_extension import DeviceManagerExtension
 
 P = ParamSpec("P")
 T = TypeVar("T", bound=ExperimentSessionMaker)

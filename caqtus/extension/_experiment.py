@@ -12,8 +12,7 @@ from ._caqtus_extension import CaqtusExtension
 from .device_extension import DeviceExtension
 from .time_lane_extension import TimeLaneExtension
 from ..device.configuration import DeviceServerName
-from ..device.remote import Server
-from ..device.remote_server import RPCConfiguration
+from ..device.remote import Server, RPCConfiguration
 from ..experiment_control import ExperimentManager, ShotRetryConfig
 from ..experiment_control.manager import (
     ExperimentManagerConnection,

@@ -4,8 +4,7 @@ from typing import Protocol
 from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
-from caqtus.device.remote import DeviceProxy
-from caqtus.device.remote_server import RPCConfiguration
+from caqtus.device.remote import DeviceProxy, RPCConfiguration
 from caqtus.shot_compilation import DeviceCompiler
 
 

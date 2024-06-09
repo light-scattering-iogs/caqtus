@@ -5,8 +5,7 @@ from typing import TypeVar
 import anyio
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
-from caqtus.device.remote import Client, DeviceProxy
-from caqtus.device.remote_server import RPCConfiguration
+from caqtus.device.remote import Client, DeviceProxy, RPCConfiguration
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
