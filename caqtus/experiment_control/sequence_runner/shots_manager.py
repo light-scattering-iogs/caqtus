@@ -131,6 +131,9 @@ class ShotManager:
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
                 errors.extend(e.exceptions)
+                # We sleep a bit to allow to recover from the error, for example if it
+                # is a timeout.
+                await anyio.sleep(0.1)
                 logger.warning(
                     f"Attempt {attempt+1}/{number_of_attempts} failed", exc_info=e
                 )
