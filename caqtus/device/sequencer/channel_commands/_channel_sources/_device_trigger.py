@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional
+from collections.abc import Mapping
+from typing import Optional, Any
 from typing import assert_never, TYPE_CHECKING
 
 import attrs
@@ -21,6 +22,7 @@ from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.units import Unit
+from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._adaptative_clock import get_adaptive_clock
 from ._constant import Constant
@@ -84,6 +86,13 @@ class DeviceTrigger(ChannelOutput):
             device, device_config, required_time_step, shot_context
         )
         return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        return 0, 0
 
 
 def structure_default(data, _):

@@ -3,15 +3,16 @@ from __future__ import annotations
 import abc
 import functools
 from collections.abc import Iterable
-from typing import Optional
+from typing import Optional, Mapping, Any
 
 import attrs
 import cattrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.units import Unit
 from caqtus.types.parameter import add_unit, magnitude_in_unit
+from caqtus.types.units import Unit
+from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput
@@ -34,6 +35,18 @@ class TimeIndependentMapping(ChannelOutput, abc.ABC):
         """Returns the input values of the mapping."""
 
         raise NotImplementedError
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        advances_and_delays = [
+            input_.evaluate_max_advance_and_delay(time_step, variables)
+            for input_ in self.inputs()
+        ]
+        advances, delays = zip(*advances_and_delays)
+        return max(advances), max(delays)
 
 
 def data_points_converter(data_points: Iterable[tuple[float, float]]):

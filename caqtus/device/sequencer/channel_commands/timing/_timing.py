@@ -13,11 +13,6 @@ from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from .broaden import BroadenLeft
-from .._calibrated_analog_mapping import (
-    TimeIndependentMapping,
-)
-from .._channel_sources import is_value_source
 from .._structure_hook import structure_channel_output
 from ..channel_output import ChannelOutput
 from ...instructions import SequencerInstruction
@@ -66,6 +61,20 @@ class Advance(ChannelOutput):
             append + number_ticks_to_advance,
             shot_context,
         )
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
+        if advance < 0:
+            raise ValueError(f"Advance must be a positive number.")
+        advance_ticks = round(advance / time_step)
+        input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        return advance_ticks + input_advance, input_delay
 
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
@@ -117,6 +126,20 @@ class Delay(ChannelOutput):
             shot_context,
         )
 
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        delay = _evaluate_expression_in_unit(self.delay, Unit("ns"), variables)
+        if delay < 0:
+            raise ValueError(f"Delay must be a positive number.")
+        delay_ticks = round(delay / time_step)
+        input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
+            time_step, variables
+        )
+        return input_advance, delay_ticks + input_delay
+
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
 delay_structure_hook = cattrs.gen.make_dict_structure_fn(
@@ -136,50 +159,3 @@ def _evaluate_expression_in_unit(
     value = expression.evaluate(variables)
     magnitude = magnitude_in_unit(value, required_unit)
     return magnitude
-
-
-def evaluate_max_advance_and_delay(
-    channel_function: ChannelOutput,
-    time_step: int,
-    variables: Mapping[DottedVariableName, Any],
-) -> tuple[int, int]:
-    # TODO: Make this function a method of ChannelOutput
-    if is_value_source(channel_function):
-        return 0, 0
-    elif isinstance(channel_function, TimeIndependentMapping):
-        advances_and_delays = [
-            evaluate_max_advance_and_delay(input_, time_step, variables)
-            for input_ in channel_function.inputs()
-        ]
-        advances, delays = zip(*advances_and_delays)
-        return max(advances), max(delays)
-    elif isinstance(channel_function, BroadenLeft):
-        return evaluate_max_advance_and_delay(
-            channel_function.input_, time_step, variables
-        )
-    elif isinstance(channel_function, Advance):
-        advance = _evaluate_expression_in_unit(
-            channel_function.advance, Unit("ns"), variables
-        )
-        if advance < 0:
-            raise ValueError(f"Advance must be a positive number.")
-        advance_ticks = round(advance / time_step)
-        input_advance, input_delay = evaluate_max_advance_and_delay(
-            channel_function.input_, time_step, variables
-        )
-        return advance_ticks + input_advance, input_delay
-    elif isinstance(channel_function, Delay):
-        delay = _evaluate_expression_in_unit(
-            channel_function.delay, Unit("ns"), variables
-        )
-        if delay < 0:
-            raise ValueError(f"Delay must be a positive number.")
-        delay_ticks = round(delay / time_step)
-        input_advance, input_delay = evaluate_max_advance_and_delay(
-            channel_function.input_, time_step, variables
-        )
-        return input_advance, delay_ticks + input_delay
-    else:
-        raise NotImplementedError(
-            f"Cannot evaluate max advance and delay for {channel_function}"
-        )

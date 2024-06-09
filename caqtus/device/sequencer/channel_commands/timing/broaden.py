@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Optional
+from typing import Optional, Mapping, Any
 
 import attrs
 import cattrs
@@ -11,6 +11,7 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.timing import duration_to_ticks
 from caqtus.types.expression import Expression
 from caqtus.types.units import Unit, Quantity
+from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .._structure_hook import structure_channel_output
 from ..channel_output import ChannelOutput
@@ -83,6 +84,13 @@ class BroadenLeft(ChannelOutput):
         broadened, bleed = _broaden_left(instruction, ticks)
 
         return broadened
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        return self.input_.evaluate_max_advance_and_delay(time_step, variables)
 
 
 broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Mapping, Any
 
 import attrs
 
+from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
-from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
-from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
+from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.define
@@ -47,3 +48,10 @@ class Constant(ChannelOutput):
         value = self.value.evaluate(shot_context.get_variables())
         magnitude = magnitude_in_unit(value, required_unit)
         return Pattern([magnitude]) * length
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        return 0, 0

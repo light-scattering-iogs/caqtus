@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Mapping, Any
 
 import attrs
 from cattrs.gen import make_dict_structure_fn, override
@@ -9,6 +9,7 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
 from caqtus.types.units import Unit
+from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization, add_exc_note
 from ._compile_digital_lane import compile_digital_lane
 from ._constant import Constant
@@ -100,6 +101,13 @@ class LaneValues(ChannelOutput):
         prepend_pattern = prepend * Pattern([lane_values[0]])
         append_pattern = append * Pattern([lane_values[-1]])
         return prepend_pattern + lane_values + append_pattern
+
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
+        return 0, 0
 
 
 def structure_lane_default(default_data, _):

@@ -17,13 +17,15 @@ For more information on how the output is evaluated, see
 from __future__ import annotations
 
 import abc
-from typing import Optional
+from collections.abc import Mapping
+from typing import Optional, Any
 
 import attrs
 
 from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.units import Unit
+from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.define
@@ -49,4 +51,12 @@ class ChannelOutput(abc.ABC):
             shot_context: The context of the shot in which the output is evaluated.
         """
 
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def evaluate_max_advance_and_delay(
+        self,
+        time_step: int,
+        variables: Mapping[DottedVariableName, Any],
+    ) -> tuple[int, int]:
         raise NotImplementedError
