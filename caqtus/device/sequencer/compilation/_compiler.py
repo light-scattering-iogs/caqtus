@@ -6,7 +6,6 @@ from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from ._evaluate_output import evaluate_output
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -58,8 +57,7 @@ class SequencerCompiler(DeviceCompiler):
             else:
                 required_unit = None
             try:
-                output_values = evaluate_output(
-                    channel.output,
+                output_values = channel.output.evaluate(
                     self.__configuration.time_step,
                     required_unit,
                     max_advance,
