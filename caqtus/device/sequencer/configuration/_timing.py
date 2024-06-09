@@ -87,6 +87,31 @@ class Delay(ChannelOutput):
     def __str__(self):
         return f"{self.delay} >> {self.input_}"
 
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        evaluated_delay = _evaluate_expression_in_unit(
+            self.delay, Unit("ns"), shot_context.get_variables()
+        )
+        number_ticks_to_delay = round(evaluated_delay / required_time_step)
+        if number_ticks_to_delay < 0:
+            raise ValueError(
+                f"Cannot delay by a negative number of time steps "
+                f"({number_ticks_to_delay})"
+            )
+        return self.input_.evaluate(
+            required_time_step,
+            required_unit,
+            prepend + number_ticks_to_delay,
+            append - number_ticks_to_delay,
+            shot_context,
+        )
+
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
 delay_structure_hook = cattrs.gen.make_dict_structure_fn(
