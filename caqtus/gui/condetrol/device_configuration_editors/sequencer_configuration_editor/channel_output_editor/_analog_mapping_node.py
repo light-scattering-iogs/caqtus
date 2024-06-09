@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QItemEditorFactory,
     QDoubleSpinBox,
     QStyledItemDelegate,
+    QVBoxLayout,
 )
 
 from caqtus.gui.condetrol.icons import get_icon
@@ -84,9 +85,9 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self.add_button.clicked.connect(self.on_add_button_clicked)
         self.remove_button.clicked.connect(self.on_remove_button_clicked)
 
-        styledItemDelegate = QStyledItemDelegate(self)
-        styledItemDelegate.setItemEditorFactory(ItemEditorFactory())
-        self.tableView.setItemDelegate(styledItemDelegate)
+        delegate = QStyledItemDelegate(self)
+        delegate.setItemEditorFactory(ItemEditorFactory())
+        self.tableView.setItemDelegate(delegate)
 
         self._chart = QChart()
         self._chart.setAnimationOptions(QChart.AnimationOption.AllAnimations)
@@ -108,7 +109,9 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._chart.axisX().setTitleText("Input")
         self._chart.axisY().setTitleText("Output")
 
-        self.layout().addWidget(self._chartView, 1)
+        layout = QVBoxLayout()
+        layout.addWidget(self._chartView)
+        self.curve_tab.setLayout(layout)
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
@@ -222,9 +225,9 @@ class ItemEditorFactory(QItemEditorFactory):
 
     def createEditor(self, userType, parent):
         if userType == 6:
-            doubleSpinBox = QDoubleSpinBox(parent)
-            doubleSpinBox.setDecimals(3)
-            doubleSpinBox.setMaximum(1000)
-            return doubleSpinBox
+            spin_box = QDoubleSpinBox(parent)
+            spin_box.setDecimals(3)
+            spin_box.setMaximum(1000)
+            return spin_box
         else:
             return super().createEditor(userType, parent)
