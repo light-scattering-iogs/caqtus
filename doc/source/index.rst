@@ -14,6 +14,7 @@ Welcome to experiment-control's documentation!
    how-to/how-to
    reference/reference
    explanations/explanations
+   manual/index
 
 
 
