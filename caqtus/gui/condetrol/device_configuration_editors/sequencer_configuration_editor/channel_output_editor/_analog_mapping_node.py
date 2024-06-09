@@ -2,7 +2,13 @@ from collections.abc import Sequence
 from typing import Optional
 
 from NodeGraphQt import BaseNode, NodeBaseWidget
-from PySide6.QtCharts import QChart, QLineSeries, QVXYModelMapper, QChartView
+from PySide6.QtCharts import (
+    QChart,
+    QLineSeries,
+    QVXYModelMapper,
+    QChartView,
+    QValueAxis,
+)
 from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
@@ -103,12 +109,20 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._mapper.setSeries(self._series)
         self._mapper.setModel(self._sorted_model)
         self._chart.addSeries(self._series)
-        self._chart.createDefaultAxes()
+
+        self.x_axis = QValueAxis()
+        self.x_axis.setTitleText("Input")
+        self._chart.addAxis(self.x_axis, Qt.Alignment.AlignBottom)
+        self._series.attachAxis(self.x_axis)
+
+        self.y_axis = QValueAxis()
+        self.y_axis.setTitleText("Output")
+        self._chart.addAxis(self.y_axis, Qt.Alignment.AlignRight)
+        self._series.attachAxis(self.y_axis)
+
         self._chart.layout().setContentsMargins(0, 0, 0, 0)
         self._chartView = QChartView(self._chart, self)
         self._chartView.setRenderHint(QPainter.Antialiasing)
-        self._chart.axisX().setTitleText("Input")
-        self._chart.axisY().setTitleText("Output")
         self.inputUnitLineEdit.textChanged.connect(self.set_input_units)
         self.outputUnitLineEdit.textChanged.connect(self.set_output_units)
 
@@ -121,22 +135,22 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
     def set_input_units(self, input_units: Optional[str]) -> None:
         if input_units:
             self.inputUnitLineEdit.setText(input_units)
-            self._chart.axisX().setTitleText(f"Input [{input_units}]")
+            self.x_axis.setTitleText(f"Input [{input_units}]")
         else:
             # This handles both the case where the input_units is None and the case
             # where the input_units is an empty string.
             self.inputUnitLineEdit.clear()
-            self._chart.axisX().setTitleText("Input")
+            self.x_axis.setTitleText("Input")
 
     def set_output_units(self, output_units: Optional[str]) -> None:
         if output_units:
             self.outputUnitLineEdit.setText(output_units)
-            self._chart.axisY().setTitleText(f"Output [{output_units}]")
+            self.y_axis.setTitleText(f"Output [{output_units}]")
         else:
             # This handles both the case where the input_units is None and the case
             # where the input_units is an empty string.
             self.outputUnitLineEdit.clear()
-            self._chart.axisY().setTitleText("Output")
+            self.y_axis.setTitleText("Output")
 
     def set_units(
         self, input_units: Optional[str], output_units: Optional[str]
