@@ -11,11 +11,11 @@ import numpy as np
 
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.units import Unit
-
+from caqtus.types.parameter import add_unit, magnitude_in_unit
 from caqtus.utils import serialization
 from ._structure_hook import structure_channel_output
-from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
-from caqtus.device.sequencer.instructions import SequencerInstruction
+from .channel_output import ChannelOutput
+from ..instructions import SequencerInstruction
 
 
 class TimeIndependentMapping(ChannelOutput, abc.ABC):
