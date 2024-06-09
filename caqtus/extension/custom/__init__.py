@@ -30,7 +30,6 @@ Then in the script to launch the experiment:
             my_experiment.launch_condetrol()
 """
 
-from caqtus.device.remote_server import RemoteDeviceManager
 from .._experiment import Experiment
 from ..time_lane_extension import (
     digital_time_lane_extension,
@@ -39,13 +38,8 @@ from ..time_lane_extension import (
 )
 
 
-class _RemoteDeviceManager(RemoteDeviceManager):
-    pass
-
-
 _injector = Experiment()
 
-_injector.register_remote_device_manager_class(_RemoteDeviceManager)
 
 _injector.register_time_lane_extension(digital_time_lane_extension)
 _injector.register_time_lane_extension(analog_time_lane_extension)

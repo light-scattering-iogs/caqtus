@@ -5,7 +5,7 @@ from caqtus.device import DeviceConfiguration, Device
 from caqtus.device.configuration import DeviceServerName
 from caqtus.device.controller import DeviceController
 from caqtus.device.remote import DeviceProxy
-from caqtus.device.remote_server import RemoteDeviceManager, RPCConfiguration
+from caqtus.device.remote_server import RPCConfiguration
 from caqtus.shot_compilation import DeviceCompiler
 
 
@@ -35,10 +35,5 @@ class DeviceManagerExtensionProtocol(Protocol):
         raises:
             KeyError: If no configuration is found for the given device server.
         """
-
-        ...
-
-    def get_remote_device_manager_class(self) -> type[RemoteDeviceManager]:
-        """Returns the class used to create remote device managers."""
 
         ...

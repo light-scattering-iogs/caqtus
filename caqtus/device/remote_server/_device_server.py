@@ -53,29 +53,6 @@ class RemoteDeviceServer:
         server.serve_forever()
 
 
-class RemoteDeviceManager(BaseManager):
-    @classmethod
-    def register_device(
-        cls, device_type: str | type[Device], proxy_type: type[DeviceProxy]
-    ):
-        if isinstance(device_type, str):
-            cls.register(
-                typeid=device_type,
-                proxytype=proxy_type,
-            )
-        else:
-            cls.register(
-                typeid=device_type.__name__,
-                callable=device_type,
-                proxytype=proxy_type,
-            )
-        cls.register(
-            typeid=proxy_type._method_to_typeid_["__enter__"],
-            proxytype=proxy_type,
-            create_method=False,
-        )
-
-
 class DeviceProxy(BaseProxy, Device):
     """Proxy for a device running in a different process.
 
