@@ -7,8 +7,12 @@ from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.device.name import DeviceName
 from caqtus.device.sequencer.configuration.channel_output import ChannelOutput
+from caqtus.shot_compilation import ShotContext
+from caqtus.types.units import Unit
 from caqtus.utils import serialization
 from ._constant import Constant
+from ...compilation import evaluate_device_trigger
+from ...instructions import SequencerInstruction, Pattern
 
 
 @attrs.define
@@ -34,6 +38,41 @@ class DeviceTrigger(ChannelOutput):
 
     def __str__(self):
         return f"trig({self.device_name})"
+
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        device = self.device_name
+        try:
+            device_config = shot_context.get_device_config(device)
+        except KeyError:
+            if self.default is not None:
+                return self.default.evaluate(
+                    required_time_step,
+                    required_unit,
+                    prepend,
+                    append,
+                    shot_context,
+                )
+            else:
+                raise ValueError(
+                    f"Could not find device <{device}> when evaluating output "
+                    f"<{self}>"
+                )
+        if required_unit is not None:
+            raise ValueError(
+                f"Cannot evaluate trigger for device <{device}> with unit "
+                f"{required_unit:~}"
+            )
+        trigger_values = evaluate_device_trigger(
+            device, device_config, required_time_step, shot_context
+        )
+        return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
 
 
 def structure_default(data, _):

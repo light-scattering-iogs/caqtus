@@ -7,8 +7,7 @@ from typing import (
 
 import numpy as np
 
-from caqtus.device.sequencer.compilation import evaluate_device_trigger
-from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
+from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import (
     ShotContext,
 )
@@ -18,9 +17,6 @@ from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from ..configuration import (
     ChannelOutput,
-    Advance,
-    Delay,
-    DeviceTrigger,
 )
 
 
@@ -47,44 +43,6 @@ def evaluate_output(
     """
 
     raise NotImplementedError(f"Cannot evaluate output <{output_}>")
-
-
-@evaluate_output.register
-def _(
-    output_: DeviceTrigger,
-    required_time_step: int,
-    required_unit: Optional[Unit],
-    prepend: int,
-    append: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction[np.bool_]:
-    device = output_.device_name
-    try:
-        device_config = shot_context.get_device_config(device)
-    except KeyError:
-        if output_.default is not None:
-            return evaluate_output(
-                output_.default,
-                required_time_step,
-                required_unit,
-                prepend,
-                append,
-                shot_context,
-            )
-        else:
-            raise ValueError(
-                f"Could not find device <{device}> when evaluating output "
-                f"<{output_}>"
-            )
-    if required_unit is not None:
-        raise ValueError(
-            f"Cannot evaluate trigger for device <{device}> with unit "
-            f"{required_unit:~}"
-        )
-    trigger_values = evaluate_device_trigger(
-        device, device_config, required_time_step, shot_context
-    )
-    return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
 
 
 def _evaluate_expression_in_unit(
