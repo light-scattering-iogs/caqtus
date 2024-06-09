@@ -1,14 +1,69 @@
-import functools
+from __future__ import annotations
 
+import functools
+from typing import Optional
+
+import attrs
+import cattrs
 import numpy as np
 
-from ..instructions import (
+from caqtus.shot_compilation import ShotContext
+from caqtus.types.expression import Expression
+from caqtus.types.units import Unit
+from caqtus.utils import serialization
+from .._structure_hook import structure_channel_output
+from ..channel_output import ChannelOutput
+from ...instructions import (
     SequencerInstruction,
     Pattern,
     Concatenated,
     concatenate,
     Repeated,
 )
+
+
+@attrs.define
+class BroadenLeft(ChannelOutput):
+    """Indicates that output should go high before the input pulses go high.
+
+    The output y(t) of this operation should be high when any of the input x(s) is high
+    for s in [t, t + width].
+
+    The operation is only valid for boolean inputs, and it will produce a boolean
+    output.
+
+    It is meant to be used to compensate for finite rise times in the hardware.
+    For example, if a shutter takes 10 ms to open, and we want to open it at time t, we
+    can use this operation to start opening the shutter at time t - 10 ms.
+    """
+
+    input_: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+        on_setattr=attrs.setters.validate,
+    )
+    width: Expression = attrs.field(
+        validator=attrs.validators.instance_of(Expression),
+        on_setattr=attrs.setters.validate,
+    )
+
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        raise NotImplementedError("BroadenLeft.evaluate is not implemented")
+
+
+broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
+    BroadenLeft,
+    serialization.converters["json"],
+    input_=cattrs.override(struct_hook=structure_channel_output),
+)
+
+serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
 
 
 @functools.singledispatch

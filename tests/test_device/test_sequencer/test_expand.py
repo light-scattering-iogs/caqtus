@@ -2,8 +2,8 @@ import numpy as np
 from hypothesis import given
 from hypothesis.strategies import integers
 
-from caqtus.device.sequencer.compilation.broaden import broaden_left
-from caqtus.device.sequencer.instructions import Concatenated, Pattern, Repeated
+from caqtus.device.sequencer.channel_commands.timing.broaden import broaden_left
+from caqtus.device.sequencer.instructions import Concatenated, Pattern
 from .generate_concatenate import bool_concatenation
 from .generate_pattern import bool_pattern
 from .generate_repeat import bool_repeated
