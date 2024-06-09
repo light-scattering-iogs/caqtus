@@ -147,6 +147,16 @@ class BroadenLeft(ChannelOutput):
         on_setattr=attrs.setters.validate,
     )
 
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        raise NotImplementedError("BroadenLeft.evaluate is not implemented")
+
 
 broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
     BroadenLeft,
