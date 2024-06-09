@@ -17,10 +17,24 @@ For more information on how the output is evaluated, see
 from __future__ import annotations
 
 import abc
+from typing import Optional
 
 import attrs
+
+from caqtus.device.sequencer.instructions import SequencerInstruction
+from caqtus.shot_compilation import ShotContext
+from caqtus.types.units import Unit
 
 
 @attrs.define
 class ChannelOutput(abc.ABC):
-    pass
+    @abc.abstractmethod
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        raise NotImplementedError
