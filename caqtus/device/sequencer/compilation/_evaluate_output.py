@@ -88,39 +88,6 @@ def _(
 
 
 @evaluate_output.register
-def evaluate_advanced_output(
-    output_: Advance,
-    required_time_step: int,
-    required_unit: Optional[Unit],
-    prepend: int,
-    append: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction:
-    evaluated_advance = _evaluate_expression_in_unit(
-        output_.advance, Unit("ns"), shot_context.get_variables()
-    )
-    number_ticks_to_advance = round(evaluated_advance / required_time_step)
-    if number_ticks_to_advance < 0:
-        raise ValueError(
-            f"Cannot advance by a negative number of time steps "
-            f"({number_ticks_to_advance})"
-        )
-    if number_ticks_to_advance > prepend:
-        raise ValueError(
-            f"Cannot advance by {number_ticks_to_advance} time steps when only "
-            f"{prepend} are available"
-        )
-    return evaluate_output(
-        output_.input_,
-        required_time_step,
-        required_unit,
-        prepend - number_ticks_to_advance,
-        append + number_ticks_to_advance,
-        shot_context,
-    )
-
-
-@evaluate_output.register
 def evaluate_delayed_output(
     output_: Delay,
     required_time_step: int,

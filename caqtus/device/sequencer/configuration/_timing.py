@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Optional, Any
+
 import attrs
 import cattrs
+import numpy as np
 
+from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
+from caqtus.types.parameter import magnitude_in_unit
+from caqtus.types.units import Unit
+from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput
+from ..instructions import SequencerInstruction
 
 
 @attrs.define
@@ -22,6 +31,36 @@ class Advance(ChannelOutput):
 
     def __str__(self):
         return f"{self.input_} << {self.advance}"
+
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        evaluated_advance = _evaluate_expression_in_unit(
+            self.advance, Unit("ns"), shot_context.get_variables()
+        )
+        number_ticks_to_advance = round(evaluated_advance / required_time_step)
+        if number_ticks_to_advance < 0:
+            raise ValueError(
+                f"Cannot advance by a negative number of time steps "
+                f"({number_ticks_to_advance})"
+            )
+        if number_ticks_to_advance > prepend:
+            raise ValueError(
+                f"Cannot advance by {number_ticks_to_advance} time steps when only "
+                f"{prepend} are available"
+            )
+        return self.input_.evaluate(
+            required_time_step,
+            required_unit,
+            prepend - number_ticks_to_advance,
+            append + number_ticks_to_advance,
+            shot_context,
+        )
 
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
@@ -91,3 +130,13 @@ broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
 )
 
 serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
+
+
+def _evaluate_expression_in_unit(
+    expression: Expression,
+    required_unit: Optional[Unit],
+    variables: Mapping[DottedVariableName, Any],
+) -> np.floating:
+    value = expression.evaluate(variables)
+    magnitude = magnitude_in_unit(value, required_unit)
+    return magnitude
