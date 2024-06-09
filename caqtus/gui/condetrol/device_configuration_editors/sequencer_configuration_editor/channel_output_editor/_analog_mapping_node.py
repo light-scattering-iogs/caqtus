@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QItemEditorFactory,
     QDoubleSpinBox,
     QStyledItemDelegate,
-    QVBoxLayout,
 )
 
 from caqtus.gui.condetrol.icons import get_icon
@@ -29,8 +28,10 @@ class CalibratedAnalogMappingNode(BaseNode):
         self._widget = NodeWidgetWrapper(self.view)
         self.add_custom_widget(self._widget)
 
-    def set_units(self, input_units: str, output_units: str) -> None:
-        (self._widget._widget.set_units(input_units, output_units))
+    def set_units(
+        self, input_units: Optional[str], output_units: Optional[str]
+    ) -> None:
+        self._widget._widget.set_units(input_units, output_units)
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._widget._widget.set_data_points(values)
@@ -108,6 +109,8 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._chartView.setRenderHint(QPainter.Antialiasing)
         self._chart.axisX().setTitleText("Input")
         self._chart.axisY().setTitleText("Output")
+        self.inputUnitLineEdit.textChanged.connect(self.set_input_units)
+        self.outputUnitLineEdit.textChanged.connect(self.set_output_units)
 
         self.tabWidget.insertTab(0, self._chartView, "Curve")
         self.tabWidget.setCurrentIndex(0)
@@ -115,11 +118,31 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
 
-    def set_units(self, input_units: str, output_units: str) -> None:
-        self.inputUnitLineEdit.setText(input_units)
-        self.outputUnitLineEdit.setText(output_units)
-        self._chart.axisX().setTitleText(f"Input ({input_units})")
-        self._chart.axisY().setTitleText(f"Output ({output_units})")
+    def set_input_units(self, input_units: Optional[str]) -> None:
+        if input_units:
+            self.inputUnitLineEdit.setText(input_units)
+            self._chart.axisX().setTitleText(f"Input [{input_units}]")
+        else:
+            # This handles both the case where the input_units is None and the case
+            # where the input_units is an empty string.
+            self.inputUnitLineEdit.clear()
+            self._chart.axisX().setTitleText("Input")
+
+    def set_output_units(self, output_units: Optional[str]) -> None:
+        if output_units:
+            self.outputUnitLineEdit.setText(output_units)
+            self._chart.axisY().setTitleText(f"Output [{output_units}]")
+        else:
+            # This handles both the case where the input_units is None and the case
+            # where the input_units is an empty string.
+            self.outputUnitLineEdit.clear()
+            self._chart.axisY().setTitleText("Output")
+
+    def set_units(
+        self, input_units: Optional[str], output_units: Optional[str]
+    ) -> None:
+        self.set_input_units(input_units)
+        self.set_output_units(output_units)
 
     def get_data_points(self) -> list[tuple[float, float]]:
         return self._model.get_values()
