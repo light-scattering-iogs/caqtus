@@ -3,12 +3,10 @@ from typing import Mapping, Any
 import numpy as np
 
 from caqtus.device import DeviceName, DeviceParameter
-from caqtus.device.sequencer.channel_commands.timinig import (
-    evaluate_max_advance_and_delay,
-)
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
+from ..channel_commands.timing import evaluate_max_advance_and_delay
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,

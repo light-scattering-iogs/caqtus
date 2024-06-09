@@ -1,23 +1,23 @@
 import functools
 from typing import Optional
 
+from NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from NodeGraphQt import NodeGraph, BaseNode, NodesPaletteWidget
-from caqtus.device.sequencer.configuration import (
+from caqtus.device.sequencer.channel_commands import (
     ChannelOutput,
     Constant,
     DeviceTrigger,
     LaneValues,
-    Advance,
     CalibratedAnalogMapping,
 )
+from caqtus.device.sequencer.channel_commands.timing import Advance
+from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
 from ._output_node import OutputNode
 from ._timing_nodes import AdvanceNode
-from ._analog_mapping_node import CalibratedAnalogMappingNode
 
 
 class ChannelOutputEditor(QWidget):

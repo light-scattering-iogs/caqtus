@@ -1,14 +1,12 @@
 from caqtus.device import DeviceName
-from caqtus.device.sequencer.configuration import (
+from caqtus.device.sequencer.channel_commands import (
     LaneValues,
     Constant,
     ChannelOutput,
     DeviceTrigger,
     CalibratedAnalogMapping,
-    Advance,
-    Delay,
-    BroadenLeft,
 )
+from caqtus.device.sequencer.channel_commands.timing import Advance, Delay, BroadenLeft
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 
