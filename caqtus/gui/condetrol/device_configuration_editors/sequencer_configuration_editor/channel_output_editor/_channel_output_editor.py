@@ -11,13 +11,13 @@ from caqtus.device.sequencer.channel_commands import (
     LaneValues,
     CalibratedAnalogMapping,
 )
-from caqtus.device.sequencer.channel_commands.timing import Advance
+from caqtus.device.sequencer.channel_commands.timing import Advance, BroadenLeft
 from ._analog_mapping_node import CalibratedAnalogMappingNode
 from ._constant_node import ConstantNode
 from ._device_trigger_node import DeviceTriggerNode
 from ._lane_node import LaneNode
 from ._output_node import OutputNode
-from ._timing_nodes import AdvanceNode
+from ._timing_nodes import AdvanceNode, BroadenLeftNode
 
 
 class ChannelOutputEditor(QWidget):
@@ -30,6 +30,7 @@ class ChannelOutputEditor(QWidget):
         self.graph.register_node(LaneNode)
         self.graph.register_node(AdvanceNode)
         self.graph.register_node(CalibratedAnalogMappingNode)
+        self.graph.register_node(BroadenLeftNode)
         self.nodes_tree = NodesPaletteWidget(node_graph=self.graph, parent=self)
         self.nodes_tree.set_category_label("caqtus.sequencer_node.source", "Source")
         self.nodes_tree.set_category_label("caqtus.sequencer_node.timing", "Timing")
@@ -113,6 +114,15 @@ class ChannelOutputEditor(QWidget):
         input_node.outputs()["out"].connect_to(node.input_port)
         return node
 
+    @build_node.register
+    def build_broaden_left_node(self, broaden_left: BroadenLeft) -> BroadenLeftNode:
+        node = BroadenLeftNode()
+        node.set_width(broaden_left.width)
+        self.graph.add_node(node, selected=False, push_undo=False)
+        input_node = self.build_node(broaden_left.input_)
+        input_node.outputs()["out"].connect_to(node.input_port)
+        return node
+
 
 @functools.singledispatch
 def construct_output(node) -> ChannelOutput:
@@ -175,6 +185,19 @@ def construct_analog_mapping(
         output_units=output_units,
         measured_data_points=tuple(node.get_data_points()),
     )
+
+
+@construct_output.register
+def construct_broaden_left(node: BroadenLeftNode) -> BroadenLeft:
+    width = node.get_width()
+    input_node = node.get_input_node()
+    if input_node is None:
+        raise MissingInputError(
+            f"Broaden left node {node.name()} must have an input node"
+        )
+    else:
+        input_ = construct_output(input_node)
+    return BroadenLeft(width=width, input_=input_)
 
 
 class InvalidNodeConfigurationError(ValueError):
