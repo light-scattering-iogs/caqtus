@@ -13,7 +13,6 @@ from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
 from caqtus.shot_compilation import (
     ShotContext,
 )
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit, add_unit
 from caqtus.types.units import Unit
@@ -25,7 +24,6 @@ from ..configuration import (
     ChannelOutput,
     Advance,
     Delay,
-    Constant,
     LaneValues,
     CalibratedAnalogMapping,
     DeviceTrigger,
@@ -55,35 +53,6 @@ def evaluate_output(
     """
 
     raise NotImplementedError(f"Cannot evaluate output <{output_}>")
-
-
-@evaluate_output.register
-def _(
-    output_: Constant,
-    required_time_step: int,
-    required_unit: Optional[Unit],
-    prepend: int,
-    append: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction:
-    """Evaluate a constant output.
-
-    Returns an instruction that has constant values for the entire shot duration.
-    The constant value is obtained by evaluating the value stored in the constant
-    output within the shot namespace.
-    Note that `constant` refers to a value constant in shot time, not necessarily
-    constant across shots.
-    """
-
-    length = (
-        number_ticks(0, shot_context.get_shot_duration(), required_time_step * ns)
-        + prepend
-        + append
-    )
-    expression = output_.value
-    value = expression.evaluate(shot_context.get_variables())
-    magnitude = magnitude_in_unit(value, required_unit)
-    return Pattern([magnitude]) * length
 
 
 @evaluate_output.register
