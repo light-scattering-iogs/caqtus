@@ -9,6 +9,7 @@ import cattrs
 import numpy as np
 
 from caqtus.utils import serialization
+from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput
 
 
@@ -151,9 +152,7 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
 structure_hook = cattrs.gen.make_dict_structure_fn(
     CalibratedAnalogMapping,
     serialization.converters["json"],
-    input_=cattrs.override(
-        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
-    ),
+    input_=cattrs.override(struct_hook=structure_channel_output),
 )
 
 serialization.register_structure_hook(CalibratedAnalogMapping, structure_hook)

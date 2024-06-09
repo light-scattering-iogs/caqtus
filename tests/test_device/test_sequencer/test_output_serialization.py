@@ -121,3 +121,18 @@ def test_11():
     u = serialization.unstructure(broaden_left, ChannelOutput)
     reconstructed = serialization.structure(u, ChannelOutput)
     assert broaden_left == reconstructed
+
+
+def test_12():
+    data = {
+        "input_": {"lane": "421 cell \\ kill \\ EOM", "default": {"value": "Disabled"}},
+        "advance": "224 ns",
+        "type": "Advance",
+    }
+    result = serialization.converters["json"].structure(data, ChannelOutput)
+    assert result == Advance(
+        input_=LaneValues(
+            "421 cell \\ kill \\ EOM", default=Constant(Expression("Disabled"))
+        ),
+        advance=Expression("224 ns"),
+    )

@@ -5,6 +5,7 @@ import cattrs
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
+from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput
 
 
@@ -27,9 +28,7 @@ class Advance(ChannelOutput):
 advance_structure_hook = cattrs.gen.make_dict_structure_fn(
     Advance,
     serialization.converters["json"],
-    input_=cattrs.override(
-        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
-    ),
+    input_=cattrs.override(struct_hook=structure_channel_output),
 )
 
 serialization.register_structure_hook(Advance, advance_structure_hook)
@@ -54,9 +53,7 @@ class Delay(ChannelOutput):
 delay_structure_hook = cattrs.gen.make_dict_structure_fn(
     Delay,
     serialization.converters["json"],
-    input_=cattrs.override(
-        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
-    ),
+    input_=cattrs.override(struct_hook=structure_channel_output),
 )
 
 serialization.register_structure_hook(Delay, delay_structure_hook)
@@ -90,9 +87,7 @@ class BroadenLeft(ChannelOutput):
 broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
     BroadenLeft,
     serialization.converters["json"],
-    input_=cattrs.override(
-        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
-    ),
+    input_=cattrs.override(struct_hook=structure_channel_output),
 )
 
 serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
