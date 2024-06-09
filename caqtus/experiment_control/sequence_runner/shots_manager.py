@@ -82,8 +82,12 @@ class ShotManager:
         shot_parameters = ShotParameters(
             index=self._current_shot, parameters=shot_variables
         )
-
-        await self._shot_parameter_scheduler.send(shot_parameters)
+        try:
+            await self._shot_parameter_scheduler.send(shot_parameters)
+        except anyio.BrokenResourceError:
+            # We ignore this error because the error that caused it will anyway be
+            # raised, and we don't want to clutter the exception traceback.
+            pass
         self._current_shot += 1
 
     @staticmethod
