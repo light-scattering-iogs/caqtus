@@ -89,7 +89,6 @@ class Expression:
         allow_percentage: bool = True,
         allow_degree: bool = True,
     ):
-
         self.body = body
         self._implicit_multiplication = implicit_multiplication
         self._allow_percentage = allow_percentage
@@ -200,21 +199,6 @@ class Expression:
             return self.body == other.body
         else:
             return NotImplemented
-
-    # This is a hack to use expressions as pydantic fields. The two methods below
-    # can be removed once we remove pydantic dependency from the project.
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if isinstance(v, Expression):
-            return v
-        elif isinstance(v, str):
-            return Expression(v)
-        else:
-            raise TypeError("Expression must be a string or Expression object")
 
     def __getstate__(self):
         return {
