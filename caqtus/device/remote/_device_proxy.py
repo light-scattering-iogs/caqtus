@@ -60,9 +60,13 @@ class DeviceProxy(Generic[DeviceType]):
             )
         except RemoteError as e:
             if isinstance(e.__cause__, Exception):
-                raise e.__cause__
+                error = e.__cause__
             else:
-                raise e
+                error = e
+        # We don't raise the exception while handling the remote one to avoid it
+        # being raised as 'during handling of the above exception, another
+        # exception occurred'
+        raise error
 
     def call_method_proxy_result(
         self,
