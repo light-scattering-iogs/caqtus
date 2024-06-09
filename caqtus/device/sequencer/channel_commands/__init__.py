@@ -7,7 +7,11 @@ from ._channel_sources import (
     is_value_source,
 )
 from .channel_output import ChannelOutput
-from ._timing import Advance, Delay, BroadenLeft
+from caqtus.device.sequencer.channel_commands.timinig._timing import (
+    Advance,
+    Delay,
+    BroadenLeft,
+)
 from ._calibrated_analog_mapping import CalibratedAnalogMapping, TimeIndependentMapping
 
 serialization.include_subclasses(

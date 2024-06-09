@@ -15,9 +15,13 @@ from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from ._calibrated_analog_mapping import TimeIndependentMapping
-from ._channel_sources import is_value_source
-from ._structure_hook import structure_channel_output
+from caqtus.device.sequencer.channel_commands._calibrated_analog_mapping import (
+    TimeIndependentMapping,
+)
+from caqtus.device.sequencer.channel_commands._channel_sources import is_value_source
+from caqtus.device.sequencer.channel_commands._structure_hook import (
+    structure_channel_output,
+)
 
 
 @attrs.define
@@ -179,7 +183,7 @@ def _evaluate_expression_in_unit(
     return magnitude
 
 
-def _evaluate_max_advance_and_delay(
+def evaluate_max_advance_and_delay(
     channel_function: ChannelOutput,
     time_step: int,
     variables: Mapping[DottedVariableName, Any],
@@ -188,7 +192,7 @@ def _evaluate_max_advance_and_delay(
         return 0, 0
     elif isinstance(channel_function, TimeIndependentMapping):
         advances_and_delays = [
-            _evaluate_max_advance_and_delay(input_, time_step, variables)
+            evaluate_max_advance_and_delay(input_, time_step, variables)
             for input_ in channel_function.inputs()
         ]
         advances, delays = zip(*advances_and_delays)
@@ -200,7 +204,7 @@ def _evaluate_max_advance_and_delay(
         if advance < 0:
             raise ValueError(f"Advance must be a positive number.")
         advance_ticks = round(advance / time_step)
-        input_advance, input_delay = _evaluate_max_advance_and_delay(
+        input_advance, input_delay = evaluate_max_advance_and_delay(
             channel_function.input_, time_step, variables
         )
         return advance_ticks + input_advance, input_delay
@@ -211,7 +215,7 @@ def _evaluate_max_advance_and_delay(
         if delay < 0:
             raise ValueError(f"Delay must be a positive number.")
         delay_ticks = round(delay / time_step)
-        input_advance, input_delay = _evaluate_max_advance_and_delay(
+        input_advance, input_delay = evaluate_max_advance_and_delay(
             channel_function.input_, time_step, variables
         )
         return input_advance, delay_ticks + input_delay

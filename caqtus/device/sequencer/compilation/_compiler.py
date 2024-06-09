@@ -3,10 +3,12 @@ from typing import Mapping, Any
 import numpy as np
 
 from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device.sequencer.channel_commands.timinig import (
+    evaluate_max_advance_and_delay,
+)
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from ..channel_commands._timing import _evaluate_max_advance_and_delay
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -84,7 +86,7 @@ class SequencerCompiler(DeviceCompiler):
         self, variables: Mapping[DottedVariableName, Any]
     ) -> tuple[int, int]:
         advances_and_delays = [
-            _evaluate_max_advance_and_delay(
+            evaluate_max_advance_and_delay(
                 channel.output, self.__configuration.time_step, variables
             )
             for channel in self.__configuration.channels
