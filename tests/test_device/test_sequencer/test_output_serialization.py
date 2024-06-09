@@ -4,6 +4,10 @@ from caqtus.device.sequencer.configuration import (
     Constant,
     ChannelOutput,
     DeviceTrigger,
+    CalibratedAnalogMapping,
+    Advance,
+    Delay,
+    BroadenLeft,
 )
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
@@ -75,3 +79,45 @@ def test_7():
     assert result == LaneValues(
         "421 cell \\ kill \\ shutter", default=Constant(Expression("Disabled"))
     )
+
+
+def test_8():
+    lane = CalibratedAnalogMapping(
+        input_=Constant(Expression("0 V")),
+        output_units="V",
+        input_units="V",
+        measured_data_points=((0.0, 0.0), (1.0, 1.0), (2.0, 2.0)),
+    )
+    u = serialization.unstructure(lane, ChannelOutput)
+    reconstructed = serialization.structure(u, ChannelOutput)
+    assert lane == reconstructed
+
+
+def test_9():
+    advance = Advance(
+        input_=Constant(Expression("0 V")),
+        advance=Expression("10 ms"),
+    )
+    u = serialization.unstructure(advance, ChannelOutput)
+    reconstructed = serialization.structure(u, ChannelOutput)
+    assert advance == reconstructed
+
+
+def test_10():
+    delay = Delay(
+        input_=Constant(Expression("0 V")),
+        delay=Expression("10 ms"),
+    )
+    u = serialization.unstructure(delay, ChannelOutput)
+    reconstructed = serialization.structure(u, ChannelOutput)
+    assert delay == reconstructed
+
+
+def test_11():
+    broaden_left = BroadenLeft(
+        input_=Constant(Expression("0 V")),
+        width=Expression("10 ms"),
+    )
+    u = serialization.unstructure(broaden_left, ChannelOutput)
+    reconstructed = serialization.structure(u, ChannelOutput)
+    assert broaden_left == reconstructed

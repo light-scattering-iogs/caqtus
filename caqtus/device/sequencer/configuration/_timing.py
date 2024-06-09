@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import attrs
+import cattrs
 
 from caqtus.types.expression import Expression
+from caqtus.utils import serialization
 from .channel_output import ChannelOutput
 
 
@@ -21,6 +23,18 @@ class Advance(ChannelOutput):
         return f"{self.input_} << {self.advance}"
 
 
+# Workaround for https://github.com/python-attrs/cattrs/issues/430
+advance_structure_hook = cattrs.gen.make_dict_structure_fn(
+    Advance,
+    serialization.converters["json"],
+    input_=cattrs.override(
+        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
+    ),
+)
+
+serialization.register_structure_hook(Advance, advance_structure_hook)
+
+
 @attrs.define
 class Delay(ChannelOutput):
     input_: ChannelOutput = attrs.field(
@@ -34,6 +48,18 @@ class Delay(ChannelOutput):
 
     def __str__(self):
         return f"{self.delay} >> {self.input_}"
+
+
+# Workaround for https://github.com/python-attrs/cattrs/issues/430
+delay_structure_hook = cattrs.gen.make_dict_structure_fn(
+    Delay,
+    serialization.converters["json"],
+    input_=cattrs.override(
+        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
+    ),
+)
+
+serialization.register_structure_hook(Delay, delay_structure_hook)
 
 
 @attrs.define
@@ -59,3 +85,14 @@ class BroadenLeft(ChannelOutput):
         validator=attrs.validators.instance_of(Expression),
         on_setattr=attrs.setters.validate,
     )
+
+
+broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
+    BroadenLeft,
+    serialization.converters["json"],
+    input_=cattrs.override(
+        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
+    ),
+)
+
+serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)

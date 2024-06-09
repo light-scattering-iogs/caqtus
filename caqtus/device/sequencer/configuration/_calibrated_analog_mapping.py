@@ -5,8 +5,10 @@ from collections.abc import Iterable
 from typing import Optional
 
 import attrs
+import cattrs
 import numpy as np
 
+from caqtus.utils import serialization
 from .channel_output import ChannelOutput
 
 
@@ -143,3 +145,15 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
 
     def __str__(self):
         return f"{self.input_} [{self.input_units}] -> [{self.output_units}]"
+
+
+# Workaround for https://github.com/python-attrs/cattrs/issues/430
+structure_hook = cattrs.gen.make_dict_structure_fn(
+    CalibratedAnalogMapping,
+    serialization.converters["json"],
+    input_=cattrs.override(
+        struct_hook=lambda x, _: serialization.structure(x, ChannelOutput)
+    ),
+)
+
+serialization.register_structure_hook(CalibratedAnalogMapping, structure_hook)

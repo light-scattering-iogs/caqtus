@@ -7,7 +7,7 @@ from ._channel_sources import (
     ValueSource,
     is_value_source,
 )
-from ._timing import Advance, Delay
+from ._timing import Advance, Delay, BroadenLeft
 from .channel_output import (
     ChannelOutput,
 )
@@ -18,10 +18,6 @@ from .configuration import (
     DigitalChannelConfiguration,
 )
 
-# Now that all subclasses of ChannelOutput have been defined, we can include them in
-# serialization strategy.
-# Unfortunately, this means that ChannelOutput is now closed for extension for
-# serialization.
 serialization.include_subclasses(
     ChannelOutput, union_strategy=serialization.strategies.include_type("type")
 )
@@ -41,4 +37,5 @@ __all__ = [
     "ValueSource",
     "is_value_source",
     "TimeIndependentMapping",
+    "BroadenLeft",
 ]
