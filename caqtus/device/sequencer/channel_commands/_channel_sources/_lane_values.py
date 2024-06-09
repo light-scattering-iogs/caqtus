@@ -5,18 +5,16 @@ from typing import Optional
 import attrs
 from cattrs.gen import make_dict_structure_fn, override
 
-from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
 from caqtus.types.units import Unit
 from caqtus.utils import serialization, add_exc_note
+from ._compile_digital_lane import compile_digital_lane
 from ._constant import Constant
-from caqtus.device.sequencer.compilation._compile_digital_lane import (
-    compile_digital_lane,
-)
-from caqtus.device.sequencer.compilation.compile_analog_lane import compile_analog_lane
-from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
+from .compile_analog_lane import compile_analog_lane
+from ..channel_output import ChannelOutput
+from ...instructions import SequencerInstruction, Pattern
 
 
 @attrs.define
