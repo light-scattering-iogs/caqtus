@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import functools
 from collections.abc import Iterable
 from typing import Optional
 
@@ -8,9 +9,13 @@ import attrs
 import cattrs
 import numpy as np
 
+from caqtus.shot_compilation import ShotContext
+from caqtus.types.units import Unit
+
 from caqtus.utils import serialization
 from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput
+from ..instructions import SequencerInstruction
 
 
 class TimeIndependentMapping(ChannelOutput, abc.ABC):
@@ -147,6 +152,32 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
     def __str__(self):
         return f"{self.input_} [{self.input_units}] -> [{self.output_units}]"
 
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        input_values = self.input_.evaluate(
+            required_time_step,
+            self.input_units,
+            prepend,
+            append,
+            shot_context,
+        )
+        output_values = input_values.apply(self.interpolate)
+        if required_unit != self.output_units:
+            output_values = output_values.apply(
+                functools.partial(
+                    _convert_units,
+                    input_unit=self.output_units,
+                    output_unit=required_unit,
+                )
+            )
+        return output_values
+
 
 # Workaround for https://github.com/python-attrs/cattrs/issues/430
 structure_hook = cattrs.gen.make_dict_structure_fn(
@@ -156,3 +187,11 @@ structure_hook = cattrs.gen.make_dict_structure_fn(
 )
 
 serialization.register_structure_hook(CalibratedAnalogMapping, structure_hook)
+
+
+def _convert_units(
+    array: np.ndarray, input_unit: Optional[str], output_unit: Optional[str]
+) -> np.ndarray:
+    if input_unit == output_unit:
+        return array
+    return magnitude_in_unit(add_unit(array, input_unit), output_unit)  # type: ignore

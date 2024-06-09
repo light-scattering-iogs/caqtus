@@ -13,14 +13,13 @@ from caqtus.shot_compilation import (
     ShotContext,
 )
 from caqtus.types.expression import Expression
-from caqtus.types.parameter import magnitude_in_unit, add_unit
+from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from ..configuration import (
     ChannelOutput,
     Advance,
     Delay,
-    CalibratedAnalogMapping,
     DeviceTrigger,
 )
 
@@ -48,35 +47,6 @@ def evaluate_output(
     """
 
     raise NotImplementedError(f"Cannot evaluate output <{output_}>")
-
-
-@evaluate_output.register
-def _(
-    mapping: CalibratedAnalogMapping,
-    required_time_step: int,
-    required_unit: Optional[Unit],
-    prepend: int,
-    append: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction[np.floating]:
-    input_values = evaluate_output(
-        mapping.input_,
-        required_time_step,
-        mapping.input_units,
-        prepend,
-        append,
-        shot_context,
-    )
-    output_values = input_values.apply(mapping.interpolate)
-    if required_unit != mapping.output_units:
-        output_values = output_values.apply(
-            functools.partial(
-                _convert_units,
-                input_unit=mapping.output_units,
-                output_unit=required_unit,
-            )
-        )
-    return output_values
 
 
 @evaluate_output.register
@@ -186,11 +156,3 @@ def _evaluate_expression_in_unit(
     value = expression.evaluate(variables)
     magnitude = magnitude_in_unit(value, required_unit)
     return magnitude
-
-
-def _convert_units(
-    array: np.ndarray, input_unit: Optional[str], output_unit: Optional[str]
-) -> np.ndarray:
-    if input_unit == output_unit:
-        return array
-    return magnitude_in_unit(add_unit(array, input_unit), output_unit)  # type: ignore
