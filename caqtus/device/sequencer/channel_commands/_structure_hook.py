@@ -1,6 +1,6 @@
 from caqtus.utils import serialization
 from ._channel_sources import LaneValues, Constant
-from .channel_output import ChannelOutput
+from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
 
 
 def structure_channel_output(data, _):

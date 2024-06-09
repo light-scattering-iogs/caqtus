@@ -6,18 +6,13 @@ from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
+from ..channel_commands._timing import _evaluate_max_advance_and_delay
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
-    ChannelOutput,
-    is_value_source,
-    TimeIndependentMapping,
-    Advance,
-    Delay,
 )
-from ..configuration._timing import _evaluate_expression_in_unit
 from ..instructions import with_name, stack_instructions, SequencerInstruction
 
 
@@ -104,48 +99,6 @@ class SequencerCompilationError(ExceptionGroup):
 
 class ChannelCompilationError(Exception):
     pass
-
-
-def _evaluate_max_advance_and_delay(
-    channel_function: ChannelOutput,
-    time_step: int,
-    variables: Mapping[DottedVariableName, Any],
-) -> tuple[int, int]:
-    if is_value_source(channel_function):
-        return 0, 0
-    elif isinstance(channel_function, TimeIndependentMapping):
-        advances_and_delays = [
-            _evaluate_max_advance_and_delay(input_, time_step, variables)
-            for input_ in channel_function.inputs()
-        ]
-        advances, delays = zip(*advances_and_delays)
-        return max(advances), max(delays)
-    elif isinstance(channel_function, Advance):
-        advance = _evaluate_expression_in_unit(
-            channel_function.advance, Unit("ns"), variables
-        )
-        if advance < 0:
-            raise ValueError(f"Advance must be a positive number.")
-        advance_ticks = round(advance / time_step)
-        input_advance, input_delay = _evaluate_max_advance_and_delay(
-            channel_function.input_, time_step, variables
-        )
-        return advance_ticks + input_advance, input_delay
-    elif isinstance(channel_function, Delay):
-        delay = _evaluate_expression_in_unit(
-            channel_function.delay, Unit("ns"), variables
-        )
-        if delay < 0:
-            raise ValueError(f"Delay must be a positive number.")
-        delay_ticks = round(delay / time_step)
-        input_advance, input_delay = _evaluate_max_advance_and_delay(
-            channel_function.input_, time_step, variables
-        )
-        return input_advance, delay_ticks + input_delay
-    else:
-        raise NotImplementedError(
-            f"Cannot evaluate max advance and delay for {channel_function}"
-        )
 
 
 def _convert_channel_instruction(

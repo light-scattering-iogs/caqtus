@@ -1,26 +1,23 @@
-from caqtus.utils import serialization
-from ._calibrated_analog_mapping import CalibratedAnalogMapping, TimeIndependentMapping
-from ._channel_sources import (
-    LaneValues,
-    DeviceTrigger,
-    Constant,
-    ValueSource,
-    is_value_source,
-)
-from ._timing import Advance, Delay, BroadenLeft
-from .channel_output import (
-    ChannelOutput,
-)
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
     AnalogChannelConfiguration,
     DigitalChannelConfiguration,
 )
-
-serialization.include_subclasses(
-    ChannelOutput, union_strategy=serialization.strategies.include_type("type")
+from ..channel_commands import (
+    ChannelOutput,
+    LaneValues,
+    DeviceTrigger,
+    Constant,
+    ValueSource,
+    is_value_source,
+    Advance,
+    Delay,
+    BroadenLeft,
+    CalibratedAnalogMapping,
+    TimeIndependentMapping,
 )
+
 
 __all__ = [
     "SequencerConfiguration",

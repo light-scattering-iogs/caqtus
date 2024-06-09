@@ -14,8 +14,8 @@ from caqtus.types.units import Unit
 
 from caqtus.utils import serialization
 from ._structure_hook import structure_channel_output
-from .channel_output import ChannelOutput
-from ..instructions import SequencerInstruction
+from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
+from caqtus.device.sequencer.instructions import SequencerInstruction
 
 
 class TimeIndependentMapping(ChannelOutput, abc.ABC):

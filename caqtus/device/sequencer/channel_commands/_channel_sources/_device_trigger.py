@@ -1,25 +1,116 @@
+from __future__ import annotations
+
+from typing import Optional
 from typing import assert_never, TYPE_CHECKING
 
+import attrs
 import numpy as np
+from cattrs.gen import make_dict_structure_fn, override
 
-from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.device.camera import CameraConfiguration
+from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
 )
 from caqtus.device.sequencer.trigger import ExternalClockOnChange, ExternalTriggerStart
+from caqtus.device.sequencer.trigger import Trigger
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.types.units import Unit
+from caqtus.utils import serialization
 from ._adaptative_clock import get_adaptive_clock
-from ..trigger import Trigger
+from ._constant import Constant
+
+
+@attrs.define
+class DeviceTrigger(ChannelOutput):
+    """Indicates that the output should be a trigger for a given device.
+
+    Fields:
+        device_name: The name of the device to generate a trigger for.
+        default: If the device is not used in the sequence, fallback to this.
+    """
+
+    device_name: DeviceName = attrs.field(
+        converter=lambda x: DeviceName(str(x)),
+        on_setattr=attrs.setters.convert,
+    )
+    default: Optional[ChannelOutput] = attrs.field(
+        default=None,
+        validator=attrs.validators.optional(
+            attrs.validators.instance_of(ChannelOutput)
+        ),
+        on_setattr=attrs.setters.validate,
+    )
+
+    def __str__(self):
+        return f"trig({self.device_name})"
+
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        device = self.device_name
+        try:
+            device_config = shot_context.get_device_config(device)
+        except KeyError:
+            if self.default is not None:
+                return self.default.evaluate(
+                    required_time_step,
+                    required_unit,
+                    prepend,
+                    append,
+                    shot_context,
+                )
+            else:
+                raise ValueError(
+                    f"Could not find device <{device}> when evaluating output "
+                    f"<{self}>"
+                )
+        if required_unit is not None:
+            raise ValueError(
+                f"Cannot evaluate trigger for device <{device}> with unit "
+                f"{required_unit:~}"
+            )
+        trigger_values = evaluate_device_trigger(
+            device, device_config, required_time_step, shot_context
+        )
+        return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
+
+
+def structure_default(data, _):
+    # We need this custom structure hook, because in the past the default value of a
+    # DeviceTrigger was a Constant and not any ChannelOutput.
+    # In that case, the type of the default value was not serialized, so we need to
+    # deal with this special case.
+    if data is None:
+        return None
+    if "type" in data:
+        return serialization.structure(data, ChannelOutput)
+    else:
+        return serialization.structure(data, Constant)
+
+
+structure_device_trigger = make_dict_structure_fn(
+    DeviceTrigger,
+    serialization.converters["json"],
+    default=override(struct_hook=structure_default),
+)
+
+
+serialization.register_structure_hook(DeviceTrigger, structure_device_trigger)
+
 
 if TYPE_CHECKING:
-    from caqtus.device.sequencer.configuration.configuration import (
-        SequencerConfiguration,
-    )
+    from ...configuration import SequencerConfiguration
 
 
 def evaluate_device_trigger(
@@ -39,7 +130,7 @@ def evaluate_device_trigger(
     half.
     """
 
-    from ..configuration import SequencerConfiguration
+    from ...configuration import SequencerConfiguration
 
     if isinstance(device_config, SequencerConfiguration):
         slave_parameters = shot_context.get_shot_parameters(device)

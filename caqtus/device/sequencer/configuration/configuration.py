@@ -10,7 +10,7 @@ from typing import (
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
-from .channel_output import (
+from caqtus.device.sequencer.channel_commands.channel_output import (
     ChannelOutput,
 )
 from .._controller import SequencerController

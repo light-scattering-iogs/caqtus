@@ -9,8 +9,8 @@ from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
-from ..channel_output import ChannelOutput
-from ...instructions import SequencerInstruction, Pattern
+from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
+from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
 
 
 @attrs.define

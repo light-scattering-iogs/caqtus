@@ -1,6 +1,6 @@
 import functools
 
-from ..instructions import (
+from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     Concatenated,
