@@ -66,11 +66,6 @@ class Ui_CalibratedAnalogMappingWigdet(object):
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.tabWidget = QTabWidget(CalibratedAnalogMappingWigdet)
         self.tabWidget.setObjectName("tabWidget")
-        self.curve_tab = QWidget()
-        self.curve_tab.setObjectName("curve_tab")
-        self.verticalLayout_2 = QVBoxLayout(self.curve_tab)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.tabWidget.addTab(self.curve_tab, "")
         self.tab_2 = QWidget()
         self.tab_2.setObjectName("tab_2")
         self.verticalLayout_3 = QVBoxLayout(self.tab_2)
@@ -146,10 +141,6 @@ class Ui_CalibratedAnalogMappingWigdet(object):
     def retranslateUi(self, CalibratedAnalogMappingWigdet):
         CalibratedAnalogMappingWigdet.setWindowTitle(
             QCoreApplication.translate("CalibratedAnalogMappingWigdet", "Form", None)
-        )
-        self.tabWidget.setTabText(
-            self.tabWidget.indexOf(self.curve_tab),
-            QCoreApplication.translate("CalibratedAnalogMappingWigdet", "Curve", None),
         )
         self.inputUnitLabel.setText(
             QCoreApplication.translate(

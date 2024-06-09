@@ -19,12 +19,6 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="curve_tab">
-      <attribute name="title">
-       <string>Curve</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2"/>
-     </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
        <string>Values</string>

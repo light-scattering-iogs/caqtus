@@ -109,9 +109,8 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._chart.axisX().setTitleText("Input")
         self._chart.axisY().setTitleText("Output")
 
-        layout = QVBoxLayout()
-        layout.addWidget(self._chartView)
-        self.curve_tab.setLayout(layout)
+        self.tabWidget.insertTab(0, self._chartView, "Curve")
+        self.tabWidget.setCurrentIndex(0)
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
