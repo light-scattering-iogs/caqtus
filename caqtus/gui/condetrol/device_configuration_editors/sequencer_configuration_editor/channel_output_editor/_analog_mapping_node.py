@@ -227,6 +227,7 @@ class ItemEditorFactory(QItemEditorFactory):
             spin_box = QDoubleSpinBox(parent)
             spin_box.setDecimals(3)
             spin_box.setMaximum(1000)
+            spin_box.setMinimum(-1000)
             return spin_box
         else:
             return super().createEditor(userType, parent)
