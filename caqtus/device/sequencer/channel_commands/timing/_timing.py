@@ -13,6 +13,7 @@ from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
+from .broaden import BroadenLeft
 from .._calibrated_analog_mapping import (
     TimeIndependentMapping,
 )
@@ -142,6 +143,7 @@ def evaluate_max_advance_and_delay(
     time_step: int,
     variables: Mapping[DottedVariableName, Any],
 ) -> tuple[int, int]:
+    # TODO: Make this function a method of ChannelOutput
     if is_value_source(channel_function):
         return 0, 0
     elif isinstance(channel_function, TimeIndependentMapping):
@@ -151,6 +153,10 @@ def evaluate_max_advance_and_delay(
         ]
         advances, delays = zip(*advances_and_delays)
         return max(advances), max(delays)
+    elif isinstance(channel_function, BroadenLeft):
+        return evaluate_max_advance_and_delay(
+            channel_function.input_, time_step, variables
+        )
     elif isinstance(channel_function, Advance):
         advance = _evaluate_expression_in_unit(
             channel_function.advance, Unit("ns"), variables
