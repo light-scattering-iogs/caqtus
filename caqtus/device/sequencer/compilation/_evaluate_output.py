@@ -1,20 +1,13 @@
 import functools
-from collections.abc import Mapping
 from typing import (
     Optional,
-    Any,
 )
-
-import numpy as np
 
 from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import (
     ShotContext,
 )
-from caqtus.types.expression import Expression
-from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.units import Unit
-from caqtus.types.variable_name import DottedVariableName
 from ..configuration import (
     ChannelOutput,
 )
@@ -43,13 +36,3 @@ def evaluate_output(
     """
 
     raise NotImplementedError(f"Cannot evaluate output <{output_}>")
-
-
-def _evaluate_expression_in_unit(
-    expression: Expression,
-    required_unit: Optional[Unit],
-    variables: Mapping[DottedVariableName, Any],
-) -> np.floating:
-    value = expression.evaluate(variables)
-    magnitude = magnitude_in_unit(value, required_unit)
-    return magnitude

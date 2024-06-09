@@ -6,7 +6,7 @@ from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from ._evaluate_output import evaluate_output, _evaluate_expression_in_unit
+from ._evaluate_output import evaluate_output
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -18,11 +18,11 @@ from ..configuration import (
     Advance,
     Delay,
 )
+from ..configuration._timing import _evaluate_expression_in_unit
 from ..instructions import with_name, stack_instructions, SequencerInstruction
 
 
 class SequencerCompiler(DeviceCompiler):
-
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
         configuration = sequence_context.get_device_configuration(device_name)
