@@ -6,14 +6,21 @@ import attrs
 from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.device.sequencer.configuration.channel_output import ChannelOutput
+from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
-from caqtus.utils import serialization
+from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
+from caqtus.types.units import Unit
+from caqtus.utils import serialization, add_exc_note
 from ._constant import Constant
+from ...compilation._compile_digital_lane import compile_digital_lane
+from ...compilation.compile_analog_lane import compile_analog_lane
+from ...instructions import SequencerInstruction, Pattern
 
 
 @attrs.define
 class LaneValues(ChannelOutput):
     """Indicates that the output should be the values taken by a given lane.
+
 
     Attributes:
         lane: The name of the lane from which to take the values.
@@ -37,6 +44,62 @@ class LaneValues(ChannelOutput):
         if self.default is not None:
             return f"{self.lane} | {self.default}"
         return self.lane
+
+    def evaluate(
+        self,
+        required_time_step: int,
+        required_unit: Optional[Unit],
+        prepend: int,
+        append: int,
+        shot_context: ShotContext,
+    ) -> SequencerInstruction:
+        """Evaluate the output of a channel as the values of a lane.
+
+        This function will look in the shot time lanes to find the lane referenced by
+        the output and evaluate the values of this lane.
+        If the lane cannot be found, and the output has a default value, this default
+        value will be used.
+        If the lane cannot be found and there is no default value, a ValueError will be
+        raised.
+        """
+
+        lane_name = self.lane
+        try:
+            lane = shot_context.get_lane(lane_name)
+        except KeyError:
+            if self.default is not None:
+                return self.default.evaluate(
+                    required_time_step,
+                    required_unit,
+                    prepend,
+                    append,
+                    shot_context,
+                )
+            else:
+                raise ValueError(
+                    f"Could not find lane <{lane_name}> when evaluating output "
+                    f"<{self}>"
+                )
+        if isinstance(lane, DigitalTimeLane):
+            if required_unit is not None:
+                raise ValueError(
+                    f"Cannot evaluate digital lane <{lane_name}> with unit "
+                    f"{required_unit:~}"
+                )
+            with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
+                lane_values = compile_digital_lane(
+                    lane, required_time_step, shot_context
+                )
+        elif isinstance(lane, AnalogTimeLane):
+            with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
+                lane_values = compile_analog_lane(
+                    lane, required_unit, required_time_step, shot_context
+                )
+        else:
+            raise TypeError(f"Cannot evaluate values of lane with type {type(lane)}")
+        prepend_pattern = prepend * Pattern([lane_values[0]])
+        append_pattern = append * Pattern([lane_values[-1]])
+        return prepend_pattern + lane_values + append_pattern
 
 
 def structure_lane_default(default_data, _):

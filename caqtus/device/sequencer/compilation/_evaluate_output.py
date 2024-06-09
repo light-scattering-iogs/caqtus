@@ -9,7 +9,6 @@ import numpy as np
 
 from caqtus.device.sequencer.compilation import evaluate_device_trigger
 from caqtus.device.sequencer.instructions import SequencerInstruction, Pattern
-from caqtus.session.shot import DigitalTimeLane, AnalogTimeLane
 from caqtus.shot_compilation import (
     ShotContext,
 )
@@ -17,14 +16,10 @@ from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit, add_unit
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import add_exc_note
-from ._compile_digital_lane import compile_digital_lane
-from .compile_analog_lane import compile_analog_lane
 from ..configuration import (
     ChannelOutput,
     Advance,
     Delay,
-    LaneValues,
     CalibratedAnalogMapping,
     DeviceTrigger,
 )
@@ -53,63 +48,6 @@ def evaluate_output(
     """
 
     raise NotImplementedError(f"Cannot evaluate output <{output_}>")
-
-
-@evaluate_output.register
-def _(
-    output_: LaneValues,
-    required_time_step: int,
-    required_unit: Optional[Unit],
-    prepend: int,
-    append: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction:
-    """Evaluate the output of a channel as the values of a lane.
-
-    This function will look in the shot time lanes to find the lane referenced by
-    the output and evaluate the values of this lane.
-    If the lane cannot be found, and the output has a default value, this default
-    value will be used.
-    If the lane cannot be found and there is no default value, a ValueError will be
-    raised.
-    """
-
-    lane_name = output_.lane
-    try:
-        lane = shot_context.get_lane(lane_name)
-    except KeyError:
-        if output_.default is not None:
-            return evaluate_output(
-                output_.default,
-                required_time_step,
-                required_unit,
-                prepend,
-                append,
-                shot_context,
-            )
-        else:
-            raise ValueError(
-                f"Could not find lane <{lane_name}> when evaluating output "
-                f"<{output_}>"
-            )
-    if isinstance(lane, DigitalTimeLane):
-        if required_unit is not None:
-            raise ValueError(
-                f"Cannot evaluate digital lane <{lane_name}> with unit "
-                f"{required_unit:~}"
-            )
-        with add_exc_note(f"When evaluating digital lane <{lane_name}>"):
-            lane_values = compile_digital_lane(lane, required_time_step, shot_context)
-    elif isinstance(lane, AnalogTimeLane):
-        with add_exc_note(f"When evaluating analog lane <{lane_name}>"):
-            lane_values = compile_analog_lane(
-                lane, required_unit, required_time_step, shot_context
-            )
-    else:
-        raise TypeError(f"Cannot evaluate values of lane with type {type(lane)}")
-    prepend_pattern = prepend * Pattern([lane_values[0]])
-    append_pattern = append * Pattern([lane_values[-1]])
-    return prepend_pattern + lane_values + append_pattern
 
 
 @evaluate_output.register
