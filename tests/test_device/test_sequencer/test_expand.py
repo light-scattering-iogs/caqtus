@@ -64,3 +64,13 @@ def test_2():
     expanded, excess = _broaden_left(instr, 1)
     assert excess == 0
     assert expanded == Pattern([False, True, True]) * 10 + Pattern([True, True])
+
+
+def test_3():
+    instr = (
+        Pattern([False]) * 100_000_000
+        + Pattern([True]) * 50_000_000
+        + Pattern([False]) * 100_000_000
+    )
+    expanded, excess = _broaden_left(instr, 10_000_000)
+    assert excess == 0
