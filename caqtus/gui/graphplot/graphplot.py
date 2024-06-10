@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Self, Optional
+from typing import Optional
 
 import PySide6.QtAsyncio as QtAsyncio
 import polars
@@ -9,22 +9,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 
 from caqtus.analysis.loading import DataImporter
-from caqtus.gui.common.sequence_hierarchy import PathHierarchyView
+from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import ExperimentSessionMaker
 from .data_loading import DataLoader
 from .graphplot_main_window_ui import Ui_GraphPlotMainWindow
 from .views.error_bar_view import ErrorBarView
 
 logger = logging.getLogger(__name__)
-
-
-async def wrap(coro):
-    # noinspection PyBroadException
-    try:
-        return await coro
-    except Exception:
-        logger.critical("Unhandled exception", exc_info=True)
-        QApplication.quit()
 
 
 class GraphPlot:
@@ -44,9 +35,8 @@ class GraphPlot:
         self.main_window = GraphPlotMainWindow(data_importer, session_maker)
 
     def run(self) -> None:
-        with self.main_window:
-            self.main_window.show()
-            QtAsyncio.run(self.main_window.start())
+        self.main_window.show()
+        QtAsyncio.run(self.main_window.start())
 
 
 class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
@@ -69,7 +59,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
         self.setupUi(self)
 
         self.session_maker = session_maker
-        self.path_view = PathHierarchyView(self.session_maker, self)
+        self.path_view = AsyncPathHierarchyView(self.session_maker, self)
         paths_dock = QDockWidget("Sequences", self)
         paths_dock.setWidget(self.path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
@@ -88,10 +78,10 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
         self.task: Optional[asyncio.Task] = None
 
     async def start(self):
-        # TODO: Remove this when QtAsyncio has proper exception handling in tasks
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(wrap(self.loader.process()))
-            tg.create_task(wrap(self.update_view()))
+            tg.create_task(self.path_view.run_async())
+            tg.create_task(self.loader.process())
+            tg.create_task(self.update_view())
 
     async def update_view(self):
         while True:
@@ -105,10 +95,3 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
                 data = polars.DataFrame()
             await self.view.update_data(data)
             await asyncio.sleep(400e-3)
-
-    def __enter__(self) -> Self:
-        self.path_view.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
-        return self.path_view.__exit__(exc_type, exc_val, exc_tb)
