@@ -138,13 +138,13 @@ class ErrorBarPlot(pyqtgraph.PlotWidget):
         self.scatter_plot.setData(x=x, y=y)
 
         if x_unit:
-            x_label = f"{self.x_column} [{x_unit:~}]"
+            x_label = f"{self.x_column} [{x_unit}]"
         else:
             x_label = self.x_column
         self.plot_item.setLabel("bottom", x_label)
 
         if y_unit:
-            y_label = f"{self.y_column} [{y_unit:~}]"
+            y_label = f"{self.y_column} [{y_unit}]"
         else:
             y_label = self.y_column
         self.plot_item.setLabel("left", y_label)
