@@ -1,7 +1,7 @@
 import itertools
 from typing import Optional
 
-from PySide6.QtCore import Signal, Qt, QModelIndex
+from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
 from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
     QTableView,
@@ -326,3 +326,21 @@ class TimeLanesView(QTableView):
 
     def add_lane(self, lane_name: str, lane: TimeLane):
         self._model.insert_time_lane(lane_name, lane)
+
+    def visualRect(self, index):
+        rect = super().visualRect(index)
+        if not isinstance(rect, QRect):
+            # Not sure this case can actually happen, maybe rect can be None?
+            return rect
+
+        # Here we make sure that the rect is within the viewport horizontally.
+        # This is useful because when a delegate creates an editor widget, it uses
+        # the visualRect method to position the editor.
+        # We want the editor to always be fully visible in the viewport, even if the
+        # cell is only partially visible.
+        viewport_rect = self.viewport().rect()
+        if rect.left() < viewport_rect.left():
+            rect.setLeft(viewport_rect.left())
+        if rect.right() > viewport_rect.right():
+            rect.setRight(viewport_rect.right())
+        return rect
