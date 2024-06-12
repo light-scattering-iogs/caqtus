@@ -172,6 +172,9 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
 
         raise NotImplementedError
 
+    def __ror__(self, other):
+        return self.__or__(other)
+
     @abc.abstractmethod
     def apply(
         self, func: Callable[[Array1D[_T]], Array1D[_S]]
@@ -408,26 +411,19 @@ class Concatenated(_BaseInstruction[_T]):
     def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
-        match other:
-            case Pattern() as pattern:
-                return self.to_pattern() | pattern
-            case Concatenated() as concatenated:
-                new_bounds = merge(
-                    self._instruction_bounds, concatenated._instruction_bounds
-                )
-                results = [empty_like(self) | empty_like(concatenated)]
-                for start, stop in pairwise(new_bounds):
-                    results.append(self[start:stop] | concatenated[start:stop])
-                return concatenate(*results)
-            case Repeated() as repeat:
-                results = [empty_like(self) | empty_like(repeat)]
-                for (start, stop), instruction in zip(
-                    pairwise(self._instruction_bounds), self._instructions
-                ):
-                    results.append(instruction | repeat[start:stop])
-                return concatenate(*results)
-            case _:
-                assert_never(other)
+        if isinstance(other, Concatenated):
+            new_bounds = merge(self._instruction_bounds, other._instruction_bounds)
+            results = [empty_like(self) | empty_like(other)]
+            for start, stop in pairwise(new_bounds):
+                results.append(self[start:stop] | other[start:stop])
+            return concatenate(*results)
+        else:
+            results = [empty_like(self) | empty_like(other)]
+            for (start, stop), instruction in zip(
+                pairwise(self._instruction_bounds), self._instructions
+            ):
+                results.append(instruction | other[start:stop])
+            return concatenate(*results)
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenated[_S]:
         return Concatenated(
@@ -557,31 +553,20 @@ class Repeated(_BaseInstruction[_T]):
     def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
-        match other:
-            case Pattern() as pattern:
-                return self.to_pattern() | pattern
-            case Concatenated(instructions) as concatenated:
-                results = [empty_like(self) | empty_like(concatenated)]
-                for (start, stop), instruction in zip(
-                    pairwise(concatenated._instruction_bounds),
-                    instructions,
-                ):
-                    results.append(self[start:stop] | instruction)
-                return concatenate(*results)
-            case Repeated(instruction=other_repeated, repetitions=other_repetitions):
-                lcm = math.lcm(len(self._instruction), len(other_repeated))
-                if lcm == len(self):
-                    b_a = tile(self.instruction, self.repetitions)
-                    b_b = tile(other_repeated, other_repetitions)
-                else:
-                    r_a = lcm // len(self._instruction)
-                    b_a = self._instruction * r_a
-                    r_b = lcm // len(other_repeated)
-                    b_b = other_repeated * r_b
-                block = b_a | b_b
-                return block * (len(self) // len(block))
-            case _:
-                assert_never(other)
+        if isinstance(other, Repeated):
+            lcm = math.lcm(len(self._instruction), len(other.instruction))
+            if lcm == len(self):
+                b_a = tile(self.instruction, self.repetitions)
+                b_b = tile(other.instruction, other.repetitions)
+            else:
+                r_a = lcm // len(self._instruction)
+                b_a = self._instruction * r_a
+                r_b = lcm // len(other.instruction)
+                b_b = other.instruction * r_b
+            block = b_a | b_b
+            return block * (len(self) // len(block))
+        else:
+            return NotImplemented
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Repeated[_S]:
         return Repeated(self._repetitions, self._instruction.apply(func))
