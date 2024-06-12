@@ -74,7 +74,12 @@ class Ramp(SequencerInstruction[_T]):
 
     def _get_index(self, index: int) -> _T:
         index = _normalize_index(index, len(self))
-        return self._start + index * (self._stop - self._start) / self._length
+        value = tuple(
+            self._start[name]
+            + index * (self._stop[name] - self._start[name]) / self._length
+            for name in self.dtype.names
+        )
+        return np.array(value, dtype=self.dtype)
 
     def _get_slice(self, slice_: slice) -> SequencerInstruction[_T]:
         start_index, stop_index, step = _normalize_slice(slice_, len(self))
