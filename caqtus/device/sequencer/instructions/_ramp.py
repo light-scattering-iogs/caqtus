@@ -14,6 +14,7 @@ from ._instructions import (
     Pattern,
     Array1D,
     Repeated,
+    _normalize_index,
 )
 
 _T = TypeVar("_T", covariant=True, bound=numpy.generic)
@@ -72,6 +73,7 @@ class Ramp(SequencerInstruction[_T]):
             return self._get_channel(item)
 
     def _get_index(self, index: int) -> _T:
+        index = _normalize_index(index, len(self))
         return self._start + index * (self._stop - self._start) / self._length
 
     def _get_slice(self, slice_: slice) -> SequencerInstruction[_T]:
