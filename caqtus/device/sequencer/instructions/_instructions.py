@@ -17,7 +17,6 @@ from typing import (
     Callable,
     TypeAlias,
     Any,
-    SupportsInt,
 )
 
 import numpy
@@ -48,6 +47,10 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
     the values.
     The width of the instruction is the number of channels that are output at each time
     step.
+
+    Instructions can be concatenated in time using the `+` operator or the
+    :fun:`concatenate`.
+    An instruction can be repeated using the `*` operator with an integer.
     """
 
     @abc.abstractmethod
@@ -151,7 +154,22 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         return pattern
 
     @abc.abstractmethod
-    def merge_channels(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
+    def __or__(
+        self, other: SequencerInstruction[_S]
+    ) -> SequencerInstruction[_U] | NotImplemented:
+        """Merge the channels of this instruction with another instruction.
+
+        other:
+            The other instruction to merge with this instruction.
+            It must have the same length as the current instruction.
+
+        Returns:
+            A new instruction with the channels of this instruction and the other
+            instruction merged to be output in parallel if this is supported.
+            NotImplemented if the instructions cannot be merged. In this case, the
+            caller should try the reverse order of the merge.
+        """
+
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -229,7 +247,7 @@ class Pattern(_BaseInstruction[_T]):
         else:
             return NotImplemented
 
-    def merge_channels(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
+    def __or__(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         if self.dtype.fields is None:
@@ -387,30 +405,26 @@ class Concatenated(_BaseInstruction[_T]):
             return NotImplemented
 
     # noinspection PyProtectedMember
-    def merge_channels(
-        self, other: SequencerInstruction[_S]
-    ) -> SequencerInstruction[_U]:
+    def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         match other:
             case Pattern() as pattern:
-                return self.to_pattern().merge_channels(pattern)
+                return self.to_pattern() | pattern
             case Concatenated() as concatenated:
                 new_bounds = merge(
                     self._instruction_bounds, concatenated._instruction_bounds
                 )
-                results = [empty_like(self).merge_channels(empty_like(concatenated))]
+                results = [empty_like(self) | empty_like(concatenated)]
                 for start, stop in pairwise(new_bounds):
-                    results.append(
-                        self[start:stop].merge_channels(concatenated[start:stop])
-                    )
+                    results.append(self[start:stop] | concatenated[start:stop])
                 return concatenate(*results)
             case Repeated() as repeat:
-                results = [empty_like(self).merge_channels(empty_like(repeat))]
+                results = [empty_like(self) | empty_like(repeat)]
                 for (start, stop), instruction in zip(
                     pairwise(self._instruction_bounds), self._instructions
                 ):
-                    results.append(instruction.merge_channels(repeat[start:stop]))
+                    results.append(instruction | repeat[start:stop])
                 return concatenate(*results)
             case _:
                 assert_never(other)
@@ -540,21 +554,19 @@ class Repeated(_BaseInstruction[_T]):
         else:
             return NotImplemented
 
-    def merge_channels(
-        self, other: SequencerInstruction[_S]
-    ) -> SequencerInstruction[_U]:
+    def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         match other:
             case Pattern() as pattern:
-                return self.to_pattern().merge_channels(pattern)
+                return self.to_pattern() | pattern
             case Concatenated(instructions) as concatenated:
-                results = [empty_like(self).merge_channels(empty_like(concatenated))]
+                results = [empty_like(self) | empty_like(concatenated)]
                 for (start, stop), instruction in zip(
                     pairwise(concatenated._instruction_bounds),
                     instructions,
                 ):
-                    results.append(self[start:stop].merge_channels(instruction))
+                    results.append(self[start:stop] | instruction)
                 return concatenate(*results)
             case Repeated(instruction=other_repeated, repetitions=other_repetitions):
                 lcm = math.lcm(len(self._instruction), len(other_repeated))
@@ -566,7 +578,7 @@ class Repeated(_BaseInstruction[_T]):
                     b_a = self._instruction * r_a
                     r_b = lcm // len(other_repeated)
                     b_b = other_repeated * r_b
-                block = b_a.merge_channels(b_b)
+                block = b_a | b_b
                 return block * (len(self) // len(block))
             case _:
                 assert_never(other)
