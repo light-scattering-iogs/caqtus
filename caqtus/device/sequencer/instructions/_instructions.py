@@ -589,7 +589,11 @@ def _normalize_slice(slice_: slice, length: int) -> tuple[int, int, int]:
 
 
 def empty_like(instruction: SequencerInstruction[_T]) -> Pattern[_T]:
-    return Pattern([], dtype=instruction.dtype)
+    return empty_with_dtype(instruction.dtype)
+
+
+def empty_with_dtype(dtype: numpy.dtype[_T]) -> Pattern[_T]:
+    return Pattern([], dtype=dtype)
 
 
 def to_flat_dict(instruction: SequencerInstruction[_T]) -> dict[str, np.ndarray]:
