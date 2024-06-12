@@ -85,11 +85,14 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
     @property
-    @abc.abstractmethod
     def width(self) -> Width:
         """Returns the number of parallel channels that are output at each time step."""
 
-        raise NotImplementedError
+        fields = self.dtype.fields
+        if fields is None:
+            return Width(1)
+        else:
+            return Width(len(fields))
 
     @property
     @abc.abstractmethod
@@ -227,14 +230,6 @@ class Pattern(SequencerInstruction[_T]):
 
     def __len__(self) -> Length:
         return self._length
-
-    @property
-    def width(self) -> Width:
-        fields = self.dtype.fields
-        if fields is None:
-            return Width(1)
-        else:
-            return Width(len(fields))
 
     @property
     def depth(self) -> Depth:
@@ -385,10 +380,6 @@ class Concatenated(SequencerInstruction[_T]):
         return self._length
 
     @property
-    def width(self) -> Width:
-        return self._instructions[0].width
-
-    @property
     def depth(self) -> Depth:
         return Depth(max(instruction.depth for instruction in self._instructions) + 1)
 
@@ -525,10 +516,6 @@ class Repeated(SequencerInstruction[_T]):
 
     def as_type(self, dtype: numpy.dtype[_S]) -> Repeated[_S]:
         return type(self)(self._repetitions, self._instruction.as_type(dtype))
-
-    @property
-    def width(self) -> Width:
-        return self._instruction.width
 
     @property
     def depth(self) -> Depth:
