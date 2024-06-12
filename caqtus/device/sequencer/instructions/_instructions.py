@@ -147,14 +147,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     def __rmul__(self, other) -> SequencerInstruction[_T]:
         return self.__mul__(other)
 
-    @classmethod
-    def _create_pattern_without_copy(cls, array: Array1D[_S]) -> Pattern[_S]:
-        array.setflags(write=False)
-        pattern = Pattern.__new__(Pattern)
-        pattern._pattern = array
-        pattern._length = Length(len(array))
-        return pattern
-
     @abc.abstractmethod
     def __or__(
         self, other: SequencerInstruction[_S]
@@ -207,9 +199,9 @@ class Pattern(SequencerInstruction[_T]):
         if isinstance(item, int):
             return self._pattern[item]
         elif isinstance(item, slice):
-            return self.create_without_copy(self._pattern[item])
+            return Pattern.create_without_copy(self._pattern[item])
         elif isinstance(item, str):
-            return self.create_without_copy(self._pattern[item])
+            return Pattern.create_without_copy(self._pattern[item])
         else:
             assert_never(item)
 
@@ -226,7 +218,7 @@ class Pattern(SequencerInstruction[_T]):
         return self._pattern.dtype
 
     def as_type(self, dtype: numpy.dtype[_S]) -> Pattern[_S]:
-        return self.create_without_copy(self._pattern.astype(dtype, copy=False))
+        return Pattern.create_without_copy(self._pattern.astype(dtype, copy=False))
 
     def __len__(self) -> Length:
         return self._length
@@ -261,13 +253,13 @@ class Pattern(SequencerInstruction[_T]):
             merged[name] = self._pattern[name]
         for name in other_pattern.dtype.names:
             merged[name] = other_pattern._pattern[name]
-        return self._create_pattern_without_copy(merged)
+        return Pattern.create_without_copy(merged)
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Pattern[_S]:
         result = func(self._pattern)
         if len(result) != len(self):
             raise ValueError("Function must return an array of the same length")
-        return self._create_pattern_without_copy(result)
+        return Pattern.create_without_copy(result)
 
     @property
     def array(self) -> Array1D[_T]:
@@ -389,7 +381,7 @@ class Concatenated(SequencerInstruction[_T]):
             [instruction.to_pattern()._pattern for instruction in self._instructions],
             casting="safe",
         )
-        return self._create_pattern_without_copy(new_array)
+        return Pattern.create_without_copy(new_array)
 
     def __eq__(self, other):
         if isinstance(other, Concatenated):
@@ -525,7 +517,7 @@ class Repeated(SequencerInstruction[_T]):
         inner_pattern = self._instruction.to_pattern()
         # noinspection PyProtectedMember
         new_array = numpy.tile(inner_pattern._pattern, self._repetitions)
-        return self._create_pattern_without_copy(new_array)
+        return Pattern.create_without_copy(new_array)
 
     def __eq__(self, other):
         if isinstance(other, Repeated):
