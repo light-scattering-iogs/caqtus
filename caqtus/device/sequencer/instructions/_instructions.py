@@ -15,7 +15,6 @@ from typing import (
     Optional,
     assert_never,
     Callable,
-    TypeAlias,
     Any,
 )
 
@@ -37,7 +36,7 @@ _U = TypeVar("_U", covariant=True, bound=numpy.generic)
 Array1D = numpy.ndarray[Any, numpy.dtype[_T]]
 
 
-class _BaseInstruction(abc.ABC, Generic[_T]):
+class SequencerInstruction(abc.ABC, Generic[_T]):
     """An immutable representation of instructions to output on a sequencer.
 
     This represents a high-level series of instructions to output on a sequencer.
@@ -113,7 +112,7 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
     def __add__(self, other) -> SequencerInstruction[_T]:
-        if isinstance(other, _BaseInstruction):
+        if isinstance(other, SequencerInstruction):
             if len(self) == 0:
                 return other
             elif len(other) == 0:
@@ -182,7 +181,7 @@ class _BaseInstruction(abc.ABC, Generic[_T]):
         raise NotImplementedError
 
 
-class Pattern(_BaseInstruction[_T]):
+class Pattern(SequencerInstruction[_T]):
     """An instruction representing a sequence of values.
 
     This is a fully explicit instruction for which each sample point must be given.
@@ -280,7 +279,7 @@ class Pattern(_BaseInstruction[_T]):
         return self._pattern
 
 
-class Concatenated(_BaseInstruction[_T]):
+class Concatenated(SequencerInstruction[_T]):
     """Represents an immutable concatenation of instructions."""
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
@@ -431,7 +430,7 @@ class Concatenated(_BaseInstruction[_T]):
         )
 
 
-class Repeated(_BaseInstruction[_T]):
+class Repeated(SequencerInstruction[_T]):
     """Represents a repetition of an instruction.
 
     Attributes:
@@ -699,7 +698,3 @@ def _break_concatenations(
         else:
             flat.append(instruction)
     return flat
-
-
-#: Union that represents the allowed typed for an instruction.
-SequencerInstruction: TypeAlias = Pattern[_T] | Concatenated[_T] | Repeated[_T]
