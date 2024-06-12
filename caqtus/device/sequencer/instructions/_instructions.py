@@ -611,12 +611,9 @@ def concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction
     if len(instructions) == 0:
         raise ValueError("Must provide at least one instruction")
     if not all(
-        isinstance(instruction, (Pattern, Concatenated, Repeated))
-        for instruction in instructions
+        isinstance(instruction, SequencerInstruction) for instruction in instructions
     ):
-        raise TypeError(
-            "All instructions must be instances of Pattern, Concatenated, or Repeated"
-        )
+        raise TypeError("All instructions must be instances of SequencerInstruction")
     dtype = instructions[0].dtype
     if not all(instruction.dtype == dtype for instruction in instructions):
         dtypes = ", ".join(str(instruction.dtype) for instruction in instructions)
