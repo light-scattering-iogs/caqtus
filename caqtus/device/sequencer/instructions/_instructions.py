@@ -166,8 +166,9 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
 
         raise NotImplementedError
 
+    @abc.abstractmethod
     def __ror__(self, other):
-        return self.__or__(other)
+        raise NotImplementedError
 
     @abc.abstractmethod
     def apply(
@@ -244,15 +245,28 @@ class Pattern(SequencerInstruction[_T]):
         if other.dtype.fields is None:
             raise ValueError("Pattern must have at least one channel")
         other_pattern = other.to_pattern()
-        merged_dtype = numpy.dtype(
-            [(name, self.dtype[name]) for name in self.dtype.names]
-            + [(name, other_pattern.dtype[name]) for name in other_pattern.dtype.names]
-        )
+        merged_dtype = merge_dtypes(self.dtype, other_pattern.dtype)
         merged = numpy.empty(len(self), dtype=merged_dtype)
         for name in self.dtype.names:
             merged[name] = self._pattern[name]
         for name in other_pattern.dtype.names:
             merged[name] = other_pattern._pattern[name]
+        return Pattern.create_without_copy(merged)
+
+    def __ror__(self, other):
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        if self.dtype.fields is None:
+            raise ValueError("Pattern must have at least one channel")
+        if other.dtype.fields is None:
+            raise ValueError("Pattern must have at least one channel")
+        other_pattern = other.to_pattern()
+        merged_dtype = merge_dtypes(other_pattern.dtype, self.dtype)
+        merged = numpy.empty(len(self), dtype=merged_dtype)
+        for name in other_pattern.dtype.names:
+            merged[name] = other_pattern._pattern[name]
+        for name in self.dtype.names:
+            merged[name] = self._pattern[name]
         return Pattern.create_without_copy(merged)
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Pattern[_S]:
@@ -390,22 +404,43 @@ class Concatenated(SequencerInstruction[_T]):
             return NotImplemented
 
     # noinspection PyProtectedMember
-    def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
+    def __or__(self, other) -> SequencerInstruction[_U] | NotImplemented:
+        if not isinstance(other, SequencerInstruction):
+            return NotImplemented
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
+        results = []
         if isinstance(other, Concatenated):
             new_bounds = merge(self._instruction_bounds, other._instruction_bounds)
-            results = [empty_like(self) | empty_like(other)]
             for start, stop in pairwise(new_bounds):
                 results.append(self[start:stop] | other[start:stop])
-            return concatenate(*results)
         else:
-            results = [empty_like(self) | empty_like(other)]
             for (start, stop), instruction in zip(
                 pairwise(self._instruction_bounds), self._instructions
             ):
                 results.append(instruction | other[start:stop])
-            return concatenate(*results)
+        if not results:
+            return empty_like(self) | empty_like(other)
+        return concatenate(*results)
+
+    def __ror__(self, other):
+        if not isinstance(other, SequencerInstruction):
+            return NotImplemented
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        results = []
+        if isinstance(other, Concatenated):
+            new_bounds = merge(self._instruction_bounds, other._instruction_bounds)
+            for start, stop in pairwise(new_bounds):
+                results.append(other[start:stop] | self[start:stop])
+        else:
+            for (start, stop), instruction in zip(
+                pairwise(self._instruction_bounds), self._instructions
+            ):
+                results.append(other[start:stop] | instruction)
+        if not results:
+            return empty_like(other) | empty_like(self)
+        return concatenate(*results)
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenated[_S]:
         return Concatenated(
@@ -529,6 +564,8 @@ class Repeated(SequencerInstruction[_T]):
             return NotImplemented
 
     def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
+        if not isinstance(other, SequencerInstruction):
+            return NotImplemented
         if len(self) != len(other):
             raise ValueError("Instructions must have the same length")
         if isinstance(other, Repeated):
@@ -542,6 +579,26 @@ class Repeated(SequencerInstruction[_T]):
                 r_b = lcm // len(other.instruction)
                 b_b = other.instruction * r_b
             block = b_a | b_b
+            return block * (len(self) // len(block))
+        else:
+            return NotImplemented
+
+    def __ror__(self, other):
+        if not isinstance(other, SequencerInstruction):
+            return NotImplemented
+        if len(self) != len(other):
+            raise ValueError("Instructions must have the same length")
+        if isinstance(other, Repeated):
+            lcm = math.lcm(len(self._instruction), len(other.instruction))
+            if lcm == len(self):
+                b_a = tile(self.instruction, self.repetitions)
+                b_b = tile(other.instruction, other.repetitions)
+            else:
+                r_a = lcm // len(self._instruction)
+                b_a = self._instruction * r_a
+                r_b = lcm // len(other.instruction)
+                b_b = other.instruction * r_b
+            block = b_b | b_a
             return block * (len(self) // len(block))
         else:
             return NotImplemented
@@ -678,3 +735,10 @@ def _break_concatenations(
         else:
             flat.append(instruction)
     return flat
+
+
+def merge_dtypes(a: numpy.dtype[_T], b: numpy.dtype[_S]) -> numpy.dtype[_U]:
+    merged_dtype = numpy.dtype(
+        [(name, a[name]) for name in a.names] + [(name, b[name]) for name in b.names]
+    )
+    return merged_dtype

@@ -15,6 +15,7 @@ from ._instructions import (
     Array1D,
     Repeated,
     _normalize_index,
+    merge_dtypes,
 )
 
 _T = TypeVar("_T", covariant=True, bound=numpy.generic)
@@ -74,19 +75,25 @@ class Ramp(SequencerInstruction[_T]):
 
     def _get_index(self, index: int) -> _T:
         index = _normalize_index(index, len(self))
-        value = tuple(
-            self._start[name]
-            + index * (self._stop[name] - self._start[name]) / self._length
-            for name in self.dtype.names
-        )
-        return np.array(value, dtype=self.dtype)
+        if self.dtype.fields is None:
+            return self._start + index * (self._stop - self._start) / self._length
+        else:
+            value = tuple(
+                self._start[name]
+                + index * (self._stop[name] - self._start[name]) / self._length
+                for name in self.dtype.names
+            )
+            return np.array(value, dtype=self.dtype)
 
     def _get_slice(self, slice_: slice) -> SequencerInstruction[_T]:
         start_index, stop_index, step = _normalize_slice(slice_, len(self))
         if step != 1:
             raise NotImplementedError
         start_value = self._get_index(start_index)
-        stop_value = self._get_index(stop_index)
+        if stop_index == len(self):
+            stop_value = self._stop
+        else:
+            stop_value = self._get_index(stop_index)
         return ramp(start_value, stop_value, stop_index - start_index)
 
     def _get_channel(self, channel: str) -> SequencerInstruction:
@@ -134,10 +141,7 @@ class Ramp(SequencerInstruction[_T]):
                 raise ValueError("Pattern must have at least one channel")
             if other.dtype.fields is None:
                 raise ValueError("Pattern must have at least one channel")
-            merged_dtype = numpy.dtype(
-                [(name, self.dtype[name]) for name in self.dtype.names]
-                + [(name, other.dtype[name]) for name in other.dtype.names]
-            )
+            merged_dtype = merge_dtypes(self.dtype, other.dtype)
             start = np.array(
                 tuple(self._start[name] for name in self.dtype.names)
                 + tuple(other._start[name] for name in other.dtype.names),
@@ -152,10 +156,7 @@ class Ramp(SequencerInstruction[_T]):
         elif isinstance(other, Repeated):
             if len(other.instruction) == 1:
                 value = other.instruction[0]
-                merged_dtype = numpy.dtype(
-                    [(name, self.dtype[name]) for name in self.dtype.names]
-                    + [(name, other.dtype[name]) for name in other.dtype.names]
-                )
+                merged_dtype = merge_dtypes(self.dtype, other.dtype)
                 start = np.array(
                     tuple(self._start[name] for name in self.dtype.names)
                     + tuple(value[name] for name in other.dtype.names),
@@ -169,6 +170,49 @@ class Ramp(SequencerInstruction[_T]):
                 return Ramp(start, stop, len(self))
             else:
                 return self.to_pattern() | other.to_pattern()
+        else:
+            return NotImplemented
+
+    def __ror__(self, other):
+        if not isinstance(other, SequencerInstruction):
+            return NotImplemented
+        if len(other) != len(self):
+            raise ValueError("Instructions must have the same length.")
+
+        if isinstance(other, Ramp):
+            if self.dtype.fields is None:
+                raise ValueError("Pattern must have at least one channel")
+            if other.dtype.fields is None:
+                raise ValueError("Pattern must have at least one channel")
+            merged_dtype = merge_dtypes(self.dtype, other.dtype)
+            start = np.array(
+                tuple(other._start[name] for name in other.dtype.names)
+                + tuple(self._start[name] for name in self.dtype.names),
+                dtype=merged_dtype,
+            )
+            stop = np.array(
+                tuple(other._stop[name] for name in other.dtype.names)
+                + tuple(self._stop[name] for name in self.dtype.names),
+                dtype=merged_dtype,
+            )
+            return Ramp(start, stop, len(self))
+        elif isinstance(other, Repeated):
+            if len(other.instruction) == 1:
+                value = other.instruction[0]
+                merged_dtype = merge_dtypes(other.dtype, self.dtype)
+                start = np.array(
+                    tuple(value[name] for name in other.dtype.names)
+                    + tuple(self._start[name] for name in self.dtype.names),
+                    dtype=merged_dtype,
+                )
+                stop = np.array(
+                    tuple(value[name] for name in other.dtype.names)
+                    + tuple(self._stop[name] for name in self.dtype.names),
+                    dtype=merged_dtype,
+                )
+                return Ramp(start, stop, len(self))
+            else:
+                return other.to_pattern() | self.to_pattern()
         else:
             return NotImplemented
 
