@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TypeVar, SupportsInt, Callable
+from typing import TypeVar, SupportsInt, Callable, SupportsFloat
 
 import numpy
 import numpy as np
-
 from ._instructions import (
     SequencerInstruction,
     _normalize_slice,
@@ -94,12 +93,12 @@ class Ramp(SequencerInstruction[_T]):
             stop_value = self._stop
         else:
             stop_value = self._get_index(stop_index)
-        return ramp(start_value, stop_value, stop_index - start_index)
+        return Ramp(start_value, stop_value, stop_index - start_index)
 
     def _get_channel(self, channel: str) -> SequencerInstruction:
         start_value = self._start[channel]
         stop_value = self._stop[channel]
-        return ramp(start_value, stop_value, self._length)
+        return Ramp(start_value, stop_value, self._length)
 
     def as_type(self, dtype: numpy.dtype[_S]) -> Ramp[_S]:
         return type(self)(
@@ -217,7 +216,9 @@ class Ramp(SequencerInstruction[_T]):
             return NotImplemented
 
 
-def ramp(start: _T, stop: _T, length: SupportsInt) -> SequencerInstruction[_T]:
+def ramp(
+    start: SupportsFloat, stop: SupportsFloat, length: SupportsInt
+) -> SequencerInstruction[_T]:
     """Create a linear ramp between two values.
 
     Args:
@@ -228,8 +229,8 @@ def ramp(start: _T, stop: _T, length: SupportsInt) -> SequencerInstruction[_T]:
 
     length = int(length)
 
-    start = np.array(start)
-    stop = np.array(stop)
+    start = np.float64(start)
+    stop = np.float64(stop)
 
     if length < 0:
         raise ValueError("Length must be non-negative.")
