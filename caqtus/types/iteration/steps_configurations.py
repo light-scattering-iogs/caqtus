@@ -43,6 +43,13 @@ class ContainsSubSteps:
 
 @attrs.define
 class VariableDeclaration:
+    """Represents the declaration of a variable.
+
+    Attributes:
+        variable: The name of the variable.
+        value: The unevaluated to assign to the variable.
+    """
+
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -58,7 +65,7 @@ class VariableDeclaration:
 
 @attrs.define
 class LinspaceLoop(ContainsSubSteps):
-    """Represents a loop that iterates over a variable from a start to a stop value.
+    """Represents a loop that iterates between two values with a fixed number of steps.
 
     Attributes:
         variable: The name of the variable that is being iterated over.
@@ -126,6 +133,15 @@ class LinspaceLoop(ContainsSubSteps):
 
 @attrs.define
 class ArangeLoop(ContainsSubSteps):
+    """Represents a loop that iterates between two values with a fixed step size.
+
+    Attributes:
+        variable: The name of the variable that is being iterated over.
+        start: The start value of the variable.
+        stop: The stop value of the variable.
+        step: The step size between each value.
+    """
+
     __match_args__ = ("variable", "start", "stop", "step", "sub_steps")
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
@@ -191,6 +207,8 @@ class ArangeLoop(ContainsSubSteps):
 
 @attrs.define
 class ExecuteShot:
+    """Step that represents the execution of a shot."""
+
     pass
 
 
@@ -206,7 +224,7 @@ serialization.register_unstructure_hook(ExecuteShot, unstructure_hook)
 
 serialization.register_structure_hook(ExecuteShot, structure_hook)
 
-
+"""TypeAlias for the different types of steps."""
 Step: TypeAlias = ExecuteShot | VariableDeclaration | LinspaceLoop | ArangeLoop
 
 
