@@ -10,4 +10,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Drag/drop for multiple parameter steps at once
-- Copy, paste, cut for sequence steps
+- Copy, paste, cut for sequence steps (Ctrl+C, Ctrl+V, Ctrl+X)
+- Select all steps shortcut (Ctrl+A)
