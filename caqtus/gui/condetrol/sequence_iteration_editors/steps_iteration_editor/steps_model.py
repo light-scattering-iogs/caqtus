@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import functools
 from abc import ABCMeta
 from typing import Iterable, Optional
@@ -93,7 +94,7 @@ class StepsModel(QAbstractItemModel):
 
     def get_steps(self) -> StepsConfiguration:
         return StepsConfiguration(
-            steps=[item.step for item in self._steps],
+            steps=[copy.deepcopy(item.step) for item in self._steps],
         )
 
     def set_steps(self, steps: StepsConfiguration):
