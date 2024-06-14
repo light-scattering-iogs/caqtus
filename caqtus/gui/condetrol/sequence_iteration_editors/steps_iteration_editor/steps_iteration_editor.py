@@ -51,6 +51,11 @@ def create_arange_loop():
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
     """Editor for the steps of a sequence.
 
+    .. figure:: screenshot_StepsIterationEditor.png
+       :align: center
+
+       Example of a StepsIterationEditor.
+
     Args:
         parent: The parent widget of the editor.
 
