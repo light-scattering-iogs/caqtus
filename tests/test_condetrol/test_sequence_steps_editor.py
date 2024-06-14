@@ -27,7 +27,8 @@ def test(qtbot: QtBot):
             ),
         ]
     )
-    editor.set_iteration(steps)
+    with qtbot.assert_not_emitted(editor.iteration_edited):
+        editor.set_iteration(steps)
 
     qtbot.addWidget(editor)
 
