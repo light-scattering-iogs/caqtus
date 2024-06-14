@@ -50,6 +50,8 @@ class VariableDeclaration:
         value: The unevaluated to assign to the variable.
     """
 
+    __match_args__ = ("variable", "value")
+
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
