@@ -256,6 +256,8 @@ class StepsModel(QStandardItemModel):
     def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
         if self._read_only:
             return False
+        if not data.hasFormat("application/json"):
+            return False
         return super().canDropMimeData(data, action, row, column, parent)
 
     def dropMimeData(
@@ -266,10 +268,9 @@ class StepsModel(QStandardItemModel):
         column: int,
         parent: QModelIndex,
     ) -> bool:
-        if self._read_only:
+        if not self.canDropMimeData(data, action, row, column, parent):
             return False
-        if not data.hasFormat("application/json"):
-            return False
+
         json_string = data.data("application/json").data().decode()
         try:
             steps = serialization.from_json(json_string, list[Step])
