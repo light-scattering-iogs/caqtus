@@ -242,6 +242,11 @@ class StepsModel(QStandardItemModel):
     def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
         items = [self.itemFromIndex(index) for index in indexes]
         assert all(isinstance(item, StepItem) for item in items)
+        descendants = []
+        for item in items:
+            descendants.extend(get_strict_descendants(item))
+        items = [item for item in items if item not in descendants]
+
         steps = [item.get_step() for item in items]
         serialized = serialization.to_json(steps)
         mime_data = QMimeData()
@@ -297,3 +302,12 @@ class StepsModel(QStandardItemModel):
             )
             new_item = StepItem.construct(step)
             parent_item.insertRows(index.row(), [new_item])
+
+
+def get_strict_descendants(parent: QStandardItem) -> list[QStandardItem]:
+    children = [parent.child(i) for i in range(parent.rowCount())]
+    descendants = []
+    descendants.extend(children)
+    for child in children:
+        descendants.extend(get_strict_descendants(child))
+    return descendants
