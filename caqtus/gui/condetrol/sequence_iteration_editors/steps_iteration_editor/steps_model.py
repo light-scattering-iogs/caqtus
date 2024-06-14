@@ -17,6 +17,7 @@ from caqtus.types.iteration import (
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
+    ArangeLoop,
 )
 from caqtus.types.variable_name import DottedVariableName
 
@@ -98,13 +99,20 @@ class StepItem(QStandardItem):
     @classmethod
     def construct(cls, step: Step) -> StepItem:
         item = cls()
+        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         match step:
             case ExecuteShot():
-                item.setData(ExecuteShotData(), Qt.ItemDataRole.UserRole + 1)
+                item.setData(ExecuteShotData(), Qt.ItemDataRole.EditRole)
+                item.setFlags(flags | Qt.ItemFlag.ItemNeverHasChildren)
             case VariableDeclaration(variable=variable, value=value):
                 item.setData(
                     VariableDeclarationData(variable=variable, value=value),
-                    Qt.ItemDataRole.UserRole + 1,
+                    Qt.ItemDataRole.EditRole,
+                )
+                item.setFlags(
+                    flags
+                    | Qt.ItemFlag.ItemIsEditable
+                    | Qt.ItemFlag.ItemNeverHasChildren
                 )
             case LinspaceLoop(
                 variable=variable, start=start, stop=stop, num=num, sub_steps=sub_steps
@@ -114,9 +122,26 @@ class StepItem(QStandardItem):
                     LinspaceLoopData(
                         variable=variable, start=start, stop=stop, num=num
                     ),
-                    Qt.ItemDataRole.UserRole + 1,
+                    Qt.ItemDataRole.EditRole,
                 )
                 item.appendRows(children)
+                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable)
+            case ArangeLoop(
+                variable=variable,
+                start=start,
+                stop=stop,
+                step=step,
+                sub_steps=sub_steps,
+            ):
+                children = [cls.construct(sub_step) for sub_step in sub_steps]
+                item.setData(
+                    ArrangeLoopData(
+                        variable=variable, start=start, stop=stop, step=step
+                    ),
+                    Qt.ItemDataRole.EditRole,
+                )
+                item.appendRows(children)
+                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable)
             case _:
                 raise NotImplementedError(f"Step {step} not supported")
 
@@ -124,13 +149,13 @@ class StepItem(QStandardItem):
 
     def data(self, role: Qt.ItemDataRole.DisplayRole = Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
-            step_data = self.data(Qt.ItemDataRole.UserRole + 1)
+            step_data = self.data(Qt.ItemDataRole.EditRole)
             assert isinstance(step_data, StepData)
             return step_data.display_data()
         return super().data(role)
 
     def get_step(self) -> Step:
-        data = self.data(role=Qt.ItemDataRole.UserRole + 1)
+        data = self.data(role=Qt.ItemDataRole.EditRole)
         match data:
             case ExecuteShotData():
                 return ExecuteShot()
@@ -177,16 +202,7 @@ class StepsModel(QStandardItemModel):
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if self._read_only:
             return False
-        if not index.isValid():
-            return False
-        if role == Qt.ItemDataRole.EditRole:
-            step = index.internalPointer().step
-            for attribute, new_value in value.items():
-                setattr(step, attribute, new_value)
-            self.dataChanged.emit(index, index)
-            return True
-        else:
-            return False
+        return super().setData(index, value, role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         flags = super().flags(index)

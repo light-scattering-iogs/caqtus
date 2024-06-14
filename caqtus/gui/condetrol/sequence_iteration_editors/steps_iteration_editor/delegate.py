@@ -15,7 +15,6 @@ from PySide6.QtGui import (
     QFocusEvent,
 )
 from PySide6.QtWidgets import (
-    QLineEdit,
     QWidget,
     QStyleOptionViewItem,
     QHBoxLayout,
@@ -27,7 +26,6 @@ from PySide6.QtWidgets import (
 
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
-    Step,
     VariableDeclaration,
     LinspaceLoop,
     ArangeLoop,
@@ -35,6 +33,12 @@ from caqtus.types.iteration import (
 from caqtus.types.variable_name import (
     DottedVariableName,
     InvalidVariableNameError,
+)
+from .steps_model import (
+    StepData,
+    VariableDeclarationData,
+    LinspaceLoopData,
+    ArrangeLoopData,
 )
 from ...qt_util import AutoResizeLineEdit, HTMLItemDelegate
 
@@ -52,12 +56,13 @@ class StepDelegate(HTMLItemDelegate):
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
     ) -> QWidget:
-        value = index.data(role=Qt.DisplayRole)
-        if isinstance(value, VariableDeclaration):
+        value = index.data(role=Qt.ItemDataRole.EditRole)
+        assert isinstance(value, StepData)
+        if isinstance(value, VariableDeclarationData):
             editor = VariableDeclarationEditor(parent, option.font)
-        elif isinstance(value, LinspaceLoop):
+        elif isinstance(value, LinspaceLoopData):
             editor = LinspaceLoopEditor(parent, option.font)
-        elif isinstance(value, ArangeLoop):
+        elif isinstance(value, ArrangeLoopData):
             editor = ArrangeLoopEditor(parent, option.font)
         else:
             assert_never(value)
@@ -65,17 +70,18 @@ class StepDelegate(HTMLItemDelegate):
         return editor
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
-        data: Step = index.data(role=Qt.ItemDataRole.EditRole)
+        data = index.data(role=Qt.ItemDataRole.EditRole)
+        assert isinstance(data, StepData)
         match data:
-            case VariableDeclaration() as declaration:
+            case VariableDeclarationData() as declaration:
                 assert isinstance(editor, VariableDeclarationEditor)
-                editor.set_value(declaration)
-            case LinspaceLoop() as loop:
+                editor.set_step_data(declaration)
+            case LinspaceLoopData() as loop:
                 assert isinstance(editor, LinspaceLoopEditor)
-                editor.set_value(loop)
-            case ArangeLoop():
+                editor.set_step_data(loop)
+            case ArrangeLoopData():
                 assert isinstance(editor, ArrangeLoopEditor)
-                editor.set_value(data)
+                editor.set_step_data(data)
             case _:
                 raise ValueError(f"Can't set editor data for {data}")
 
@@ -88,38 +94,33 @@ class StepDelegate(HTMLItemDelegate):
     def setModelData(
         self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
     ) -> None:
-        editor: QLineEdit
-        previous_data: Step = index.data(role=Qt.ItemDataRole.EditRole)
-
+        previous_data = index.data(role=Qt.ItemDataRole.EditRole)
+        assert isinstance(previous_data, StepData)
         match previous_data:
-            case VariableDeclaration():
+            case VariableDeclarationData():
                 assert isinstance(editor, VariableDeclarationEditor)
                 try:
-                    new_declaration = editor.get_value()
+                    new_data = editor.get_step_data()
                 except InvalidVariableNameError:
                     return
                 else:
-                    new_attributes = {
-                        "variable": new_declaration.variable,
-                        "value": new_declaration.value,
-                    }
-                    model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
-            case LinspaceLoop():
+                    model.setData(index, new_data, Qt.ItemDataRole.EditRole)
+            case LinspaceLoopData():
                 assert isinstance(editor, LinspaceLoopEditor)
                 try:
-                    new_values = editor.get_values()
+                    new_data = editor.get_step_data()
                 except InvalidVariableNameError:
                     return
                 else:
-                    model.setData(index, new_values, Qt.ItemDataRole.EditRole)
-            case ArangeLoop():
+                    model.setData(index, new_data, Qt.ItemDataRole.EditRole)
+            case ArrangeLoopData():
                 assert isinstance(editor, ArrangeLoopEditor)
                 try:
-                    new_attributes = editor.get_values()
+                    new_data = editor.get_step_data()
                 except InvalidVariableNameError:
                     return
                 else:
-                    model.setData(index, new_attributes, Qt.ItemDataRole.EditRole)
+                    model.setData(index, new_data, Qt.ItemDataRole.EditRole)
             case _:
                 assert_never(previous_data)
 
@@ -195,19 +196,19 @@ class LinspaceLoopEditor(CompoundWidget):
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
-    def set_value(self, loop: LinspaceLoop) -> None:
+    def set_step_data(self, loop: LinspaceLoopData) -> None:
         self.name_editor.setText(str(loop.variable))
         self.start_editor.setText(str(loop.start))
         self.stop_editor.setText(str(loop.stop))
         self.num_editor.setValue(loop.num)
 
-    def get_values(self) -> dict:
-        return {
-            "variable": DottedVariableName(self.name_editor.text()),
-            "start": Expression(self.start_editor.text()),
-            "stop": Expression(self.stop_editor.text()),
-            "num": self.num_editor.value(),
-        }
+    def get_step_data(self) -> LinspaceLoopData:
+        return LinspaceLoopData(
+            variable=DottedVariableName(self.name_editor.text()),
+            start=Expression(self.start_editor.text()),
+            stop=Expression(self.stop_editor.text()),
+            num=self.num_editor.value(),
+        )
 
     def set_name_completer(self, completer: QCompleter) -> None:
         self.name_editor.setCompleter(completer)
@@ -235,14 +236,15 @@ class VariableDeclarationEditor(CompoundWidget):
         self.name_editor.setPlaceholderText("Parameter name")
         self.value_editor.setPlaceholderText("Parameter value")
 
-    def set_value(self, declaration: VariableDeclaration) -> None:
+    def set_step_data(self, declaration: VariableDeclarationData) -> None:
         self.name_editor.setText(str(declaration.variable))
         self.value_editor.setText(str(declaration.value))
 
-    def get_value(self) -> VariableDeclaration:
-        name = DottedVariableName(self.name_editor.text())
-        value = Expression(self.value_editor.text())
-        return VariableDeclaration(variable=name, value=value)
+    def get_step_data(self) -> VariableDeclarationData:
+        return VariableDeclarationData(
+            variable=DottedVariableName(self.name_editor.text()),
+            value=Expression(self.value_editor.text()),
+        )
 
     def set_name_completer(self, completer: QCompleter) -> None:
         self.name_editor.setCompleter(completer)
@@ -290,19 +292,19 @@ class ArrangeLoopEditor(CompoundWidget):
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
-    def set_value(self, loop: ArangeLoop) -> None:
+    def set_step_data(self, loop: ArrangeLoopData) -> None:
         self.name_editor.setText(str(loop.variable))
         self.start_editor.setText(str(loop.start))
         self.stop_editor.setText(str(loop.stop))
         self.step_editor.setText(str(loop.step))
 
-    def get_values(self) -> dict:
-        return {
-            "variable": DottedVariableName(self.name_editor.text()),
-            "start": Expression(self.start_editor.text()),
-            "stop": Expression(self.stop_editor.text()),
-            "step": Expression(self.step_editor.text()),
-        }
+    def get_step_data(self) -> ArrangeLoopData:
+        return ArrangeLoopData(
+            variable=DottedVariableName(self.name_editor.text()),
+            start=Expression(self.start_editor.text()),
+            stop=Expression(self.stop_editor.text()),
+            step=Expression(self.step_editor.text()),
+        )
 
     def set_name_completer(self, completer: QCompleter) -> None:
         self.name_editor.setCompleter(completer)
