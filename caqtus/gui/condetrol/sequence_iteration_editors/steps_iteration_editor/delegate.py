@@ -25,11 +25,6 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.types.expression import Expression
-from caqtus.types.iteration import (
-    VariableDeclaration,
-    LinspaceLoop,
-    ArangeLoop,
-)
 from caqtus.types.variable_name import (
     DottedVariableName,
     InvalidVariableNameError,
