@@ -1,3 +1,4 @@
+from pytestqt.modeltest import ModelTester
 from pytestqt.qtbot import QtBot
 
 from caqtus.gui.condetrol.sequence_iteration_editors import StepsIterationEditor
@@ -17,7 +18,7 @@ from caqtus.types.iteration import (
 from caqtus.types.variable_name import DottedVariableName
 
 
-def test_0(qtbot: QtBot):
+def test_0(qtbot: QtBot, qtmodeltester: ModelTester):
     # Simple instantiation test that can also be used to screenshot the widget for the
     # documentation.
     editor = StepsIterationEditor()
@@ -47,6 +48,7 @@ def test_0(qtbot: QtBot):
 
     editor.show()
     assert editor.get_iteration() == steps
+    qtmodeltester.check(editor.model())
 
 
 def test_1(qtbot: QtBot):
