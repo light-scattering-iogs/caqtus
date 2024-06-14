@@ -4,6 +4,7 @@ from caqtus.gui.condetrol.sequence_iteration_editors import StepsIterationEditor
 from caqtus.gui.condetrol.sequence_iteration_editors.steps_iteration_editor.steps_model import (
     VariableDeclarationData,
     LinspaceLoopData,
+    ArrangeLoopData,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -11,6 +12,7 @@ from caqtus.types.iteration import (
     VariableDeclaration,
     LinspaceLoop,
     ExecuteShot,
+    ArangeLoop,
 )
 from caqtus.types.variable_name import DottedVariableName
 
@@ -27,6 +29,13 @@ def test_0(qtbot: QtBot):
                 start=Expression("0"),
                 stop=Expression("1"),
                 num=10,
+                sub_steps=[ExecuteShot()],
+            ),
+            ArangeLoop(
+                variable=DottedVariableName("c"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                step=Expression("0.1"),
                 sub_steps=[ExecuteShot()],
             ),
         ]
@@ -99,6 +108,49 @@ def test_2(qtbot: QtBot):
                 start=Expression("2"),
                 stop=Expression("3"),
                 num=10,
+                sub_steps=[ExecuteShot()],
+            )
+        ]
+    )
+
+
+def test_3(qtbot: QtBot):
+    editor = StepsIterationEditor()
+    qtbot.addWidget(editor)
+    editor.set_read_only(False)
+
+    steps = StepsConfiguration(
+        [
+            ArangeLoop(
+                variable=DottedVariableName("b"),
+                start=Expression("0"),
+                stop=Expression("1"),
+                step=Expression("0.1"),
+                sub_steps=[ExecuteShot()],
+            )
+        ]
+    )
+    editor.set_iteration(steps)
+
+    editor.show()
+
+    editor.model().setData(
+        editor.model().index(0, 0),
+        ArrangeLoopData(
+            variable=DottedVariableName("c"),
+            start=Expression("2"),
+            stop=Expression("3"),
+            step=Expression("0.2"),
+        ),
+    )
+    qtbot.wait_signal(editor.iteration_edited)
+    assert editor.get_iteration() == StepsConfiguration(
+        [
+            ArangeLoop(
+                variable=DottedVariableName("c"),
+                start=Expression("2"),
+                stop=Expression("3"),
+                step=Expression("0.2"),
                 sub_steps=[ExecuteShot()],
             )
         ]

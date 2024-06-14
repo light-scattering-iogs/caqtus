@@ -182,6 +182,16 @@ class StepItem(QStandardItem):
                     num=num,
                     sub_steps=sub_steps,
                 )
+            case ArrangeLoopData(variable=variable, start=start, stop=stop, step=step):
+                child_items = [self.child(i) for i in range(self.rowCount())]
+                sub_steps = [item.get_step() for item in child_items]
+                return ArangeLoop(
+                    variable=variable,
+                    start=start,
+                    stop=stop,
+                    step=step,
+                    sub_steps=sub_steps,
+                )
             case _:
                 raise NotImplementedError(f"Step {data} not supported")
 
