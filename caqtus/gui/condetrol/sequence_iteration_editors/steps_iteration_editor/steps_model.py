@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import functools
-from abc import ABCMeta
 from typing import Iterable, Optional
 
 from PySide6.QtCore import (
@@ -13,6 +12,7 @@ from PySide6.QtCore import (
     QObject,
 )
 from anytree import NodeMixin
+
 from caqtus.types.iteration import (
     StepsConfiguration,
     Step,
@@ -23,10 +23,6 @@ from caqtus.types.iteration import (
     ContainsSubSteps,
 )
 from caqtus.utils import serialization
-
-
-class QABCMeta(type(QObject), ABCMeta):
-    pass
 
 
 class StepsItem(NodeMixin):
