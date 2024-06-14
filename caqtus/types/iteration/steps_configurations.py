@@ -58,6 +58,15 @@ class VariableDeclaration:
 
 @attrs.define
 class LinspaceLoop(ContainsSubSteps):
+    """Represents a loop that iterates over a variable from a start to a stop value.
+
+    Attributes:
+        variable: The name of the variable that is being iterated over.
+        start: The start value of the variable.
+        stop: The stop value of the variable.
+        num: The number of steps to take between the start and stop values.
+    """
+
     __match_args__ = ("variable", "start", "stop", "num", "sub_steps")
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
@@ -215,6 +224,12 @@ def is_step(step) -> TypeGuard[Step]:
 
 @attrs.define
 class StepsConfiguration(IterationConfiguration):
+    """Define the parameter iteration of a sequence as a list of steps.
+
+    Attributes:
+        steps: The steps of the iteration.
+    """
+
     steps: list[Step] = attrs.field(
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
