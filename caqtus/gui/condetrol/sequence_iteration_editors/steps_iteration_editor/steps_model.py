@@ -237,7 +237,7 @@ class StepsModel(QStandardItemModel):
         return Qt.DropAction.MoveAction
 
     def mimeTypes(self) -> list[str]:
-        return ["text/plain"]
+        return ["application/json"]
 
     def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
         items = [self.itemFromIndex(index) for index in indexes]
@@ -245,7 +245,7 @@ class StepsModel(QStandardItemModel):
         steps = [item.get_step() for item in items]
         serialized = serialization.to_json(steps)
         mime_data = QMimeData()
-        mime_data.setText(serialized)
+        mime_data.setData("application/json", serialized.encode())
         return mime_data
 
     def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
@@ -263,7 +263,9 @@ class StepsModel(QStandardItemModel):
     ) -> bool:
         if self._read_only:
             return False
-        json_string = data.text()
+        if not data.hasFormat("application/json"):
+            return False
+        json_string = data.data("application/json").data().decode()
         try:
             steps = serialization.from_json(json_string, list[Step])
         except ValueError:
