@@ -102,6 +102,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
     def _emit_iteration_edited(self, *args, **kwargs):
         self.iteration_edited.emit(self.get_iteration())
+        self.expandAll()
 
     def get_iteration(self) -> StepsConfiguration:
         """Returns the iteration currently displayed by the editor.
