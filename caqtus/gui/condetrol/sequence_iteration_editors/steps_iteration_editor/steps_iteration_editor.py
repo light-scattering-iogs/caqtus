@@ -8,6 +8,7 @@ from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from caqtus.gui.qtutil import block_signals
+from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
     VariableDeclaration,
@@ -15,7 +16,6 @@ from caqtus.types.iteration import (
     LinspaceLoop,
     ArangeLoop,
 )
-from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
 from .delegate import StepDelegate
 from .steps_model import StepsModel
@@ -49,6 +49,17 @@ def create_arange_loop():
 
 
 class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration]):
+    """Editor for the steps of a sequence.
+
+    Args:
+        parent: The parent widget of the editor.
+
+    Signals:
+        iteration_edited: Emitted when the iteration displayed by the editor is changed
+            by the user.
+            This signal is not emitted when the iteration is set programmatically.
+    """
+
     iteration_edited = QtCore.Signal(StepsConfiguration)
 
     def __init__(self, parent: Optional[QWidget] = None):
@@ -65,7 +76,6 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setDropIndicatorShown(True)
         self.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.setDefaultDropAction(Qt.DropAction.MoveAction)
-        # self.setDragDropOverwriteMode(False)
 
         self.delete_shortcut = QShortcut(QKeySequence("Delete"), self)
         self.delete_shortcut.activated.connect(self.delete_selected)
@@ -73,19 +83,25 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
 
-        self._model.dataChanged.connect(self.emit_iteration_edited)
-        self._model.rowsInserted.connect(self.emit_iteration_edited)
-        self._model.rowsRemoved.connect(self.emit_iteration_edited)
-        self._model.modelReset.connect(self.emit_iteration_edited)
+        self._model.dataChanged.connect(self._emit_iteration_edited)
+        self._model.rowsInserted.connect(self._emit_iteration_edited)
+        self._model.rowsRemoved.connect(self._emit_iteration_edited)
+        self._model.modelReset.connect(self._emit_iteration_edited)
 
         font = QFont("JetBrains Mono")
         font.setPixelSize(13)
         self.setFont(font)
 
-    def emit_iteration_edited(self, *args, **kwargs):
+    def _emit_iteration_edited(self, *args, **kwargs):
         self.iteration_edited.emit(self.get_iteration())
 
     def get_iteration(self) -> StepsConfiguration:
+        """Returns the iteration currently displayed by the editor.
+
+        This method returns a copy of the iteration, so the caller can modify it
+        without affecting the editor.
+        """
+
         return self._model.get_steps()
 
     def set_iteration(self, iteration: StepsConfiguration):
@@ -107,7 +123,14 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
         self._delegate.set_available_names(parameter_names)
 
-    def set_read_only(self, read_only: bool):
+    def set_read_only(self, read_only: bool) -> None:
+        """Sets the editor in read-only mode.
+
+        When the editor is in read-only mode, the user cannot edit the steps.
+        Even if the editor is in read-only mode, the iteration can still be set
+        programmatically with :meth:`set_iteration`.
+        """
+
         self._model.set_read_only(read_only)
 
     def delete_selected(self):
