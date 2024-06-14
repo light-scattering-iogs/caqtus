@@ -271,18 +271,17 @@ class StepsModel(QStandardItemModel):
         parent_item.insertRows(row, new_items)
         return True
 
-    # def insert_above(self, step: Step, index: QModelIndex):
-    #     if self._read_only:
-    #         return
-    #     if not index.isValid():
-    #         return
-    #     else:
-    #         parent = index.parent()
-    #         new_item = StepsItem.construct(step)
-    #         self.beginInsertRows(parent, index.row(), index.row())
-    #         if not parent.isValid():
-    #             self._steps.insert(index.row(), new_item)
-    #         else:
-    #             parent_item: StepsItem = parent.internalPointer()
-    #             parent_item.insert(index.row(), [new_item])
-    #         self.endInsertRows()
+    def insert_above(self, step: Step, index: QModelIndex):
+        if self._read_only:
+            return
+        if not index.isValid():
+            return
+        else:
+            parent = index.parent()
+            parent_item = (
+                self.itemFromIndex(parent)
+                if parent.isValid()
+                else self.invisibleRootItem()
+            )
+            new_item = StepItem.construct(step)
+            parent_item.insertRows(index.row(), [new_item])
