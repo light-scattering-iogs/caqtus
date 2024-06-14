@@ -3,7 +3,7 @@ from collections.abc import Set
 from typing import Optional
 
 from PySide6 import QtCore
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPersistentModelIndex
 from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
@@ -93,6 +93,9 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.rowsRemoved.connect(self._emit_iteration_edited)
         self._model.modelReset.connect(self._emit_iteration_edited)
 
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
         font = QFont("JetBrains Mono")
         font.setPixelSize(13)
         self.setFont(font)
@@ -138,10 +141,15 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
         self._model.set_read_only(read_only)
 
-    def delete_selected(self):
-        selected = self.selectedIndexes()
-        if selected:
-            self._model.removeRow(selected[0].row(), selected[0].parent())
+    def delete_selected(self) -> None:
+        # Need to be careful that the indexes are not invalidated by the removal of
+        # previous rows, that's why we convert them to QPersistentModelIndex.
+        selected_indexes = [
+            QPersistentModelIndex(index) for index in self.selectedIndexes()
+        ]
+        for index in selected_indexes:
+            if index.isValid():
+                self._model.removeRow(index.row(), index.parent())
 
     def show_context_menu(self, position):
         index = self.indexAt(position)
