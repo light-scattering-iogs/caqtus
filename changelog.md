@@ -9,4 +9,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Possibility to drag/drop multiple steps at once in sequence parameter editor
+- Drag/drop for multiple parameter steps at once
+- Copy, paste, cut for sequence steps

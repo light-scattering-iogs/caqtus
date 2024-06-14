@@ -1,10 +1,10 @@
 import functools
-from collections.abc import Set
+from collections.abc import Set, Iterable
 from typing import Optional
 
 from PySide6 import QtCore
-from PySide6.QtCore import Qt, QPersistentModelIndex
-from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont
+from PySide6.QtCore import Qt, QPersistentModelIndex, QModelIndex
+from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont, QGuiApplication
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
 
 from caqtus.gui.qtutil import block_signals
@@ -96,6 +96,19 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
+        self.copy_action = QAction("Copy")
+        self.copy_action.setShortcut(QKeySequence("Ctrl+C"))
+        self.copy_action.triggered.connect(self.copy_selection)
+        self.addAction(self.copy_action)
+        self.cut_action = QAction("Cut")
+        self.cut_action.setShortcut(QKeySequence("Ctrl+X"))
+        self.cut_action.triggered.connect(self.cut_selected)
+        self.addAction(self.cut_action)
+        self.paste_action = QAction("Paste")
+        self.paste_action.setShortcut(QKeySequence("Ctrl+V"))
+        self.paste_action.triggered.connect(self.paste)
+        self.addAction(self.paste_action)
+
         font = QFont("JetBrains Mono")
         font.setPixelSize(13)
         self.setFont(font)
@@ -143,14 +156,40 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.set_read_only(read_only)
 
     def delete_selected(self) -> None:
+        self.remove_indices(self.selectedIndexes())
+
+    def remove_indices(self, indices: Iterable[QModelIndex]) -> None:
         # Need to be careful that the indexes are not invalidated by the removal of
         # previous rows, that's why we convert them to QPersistentModelIndex.
-        selected_indexes = [
-            QPersistentModelIndex(index) for index in self.selectedIndexes()
-        ]
-        for index in selected_indexes:
+        persistent_indices = [QPersistentModelIndex(index) for index in indices]
+        for index in persistent_indices:
             if index.isValid():
                 self._model.removeRow(index.row(), index.parent())
+
+    def copy_selection(self) -> None:
+        selected_indexes = self.selectedIndexes()
+        data = self._model.mimeData(selected_indexes)
+        clipboard = QGuiApplication.clipboard()
+        clipboard.setMimeData(data)
+
+    def cut_selected(self) -> None:
+        self.copy_selection()
+        self.remove_indices(self.selectedIndexes())
+
+    def paste(self) -> None:
+        clipboard = QGuiApplication.clipboard()
+        data = clipboard.mimeData()
+
+        if self.selectedIndexes():
+            first = QPersistentModelIndex(self.selectedIndexes()[0])
+            parent = first.parent()
+            row = first.row()
+            if self._model.dropMimeData(data, Qt.DropAction.MoveAction, row, 0, parent):
+                self._model.removeRow(first.row(), first.parent())
+        else:
+            parent = QModelIndex()
+            row = self._model.rowCount()
+            self._model.dropMimeData(data, Qt.DropAction.MoveAction, row, 0, parent)
 
     def show_context_menu(self, position):
         index = self.indexAt(position)
