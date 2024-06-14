@@ -1,153 +1,178 @@
 from __future__ import annotations
 
-import copy
-import functools
-from typing import Iterable, Optional
+from typing import Optional
 
+import attrs
 from PySide6.QtCore import (
-    QAbstractItemModel,
     QModelIndex,
     Qt,
-    QMimeData,
     QObject,
 )
-from anytree import NodeMixin
+from PySide6.QtGui import QStandardItem, QStandardItemModel, QPalette
 
+from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
     Step,
-    ArangeLoop,
     ExecuteShot,
     VariableDeclaration,
     LinspaceLoop,
-    ContainsSubSteps,
 )
-from caqtus.utils import serialization
+from caqtus.types.variable_name import DottedVariableName
+
+NAME_COLOR = "#AA4926"
+VALUE_COLOR = "#6897BB"
+HIGHLIGHT_COLOR = "#cc7832"
 
 
-class StepsItem(NodeMixin):
-    def __init__(
-        self,
-        step: Step,
-        parent: Optional[StepsItem] = None,
-        children: Iterable[StepsItem] = tuple(),
-    ):
-        super().__init__()
-        self.step = step
-        self.parent = parent
-        self.children = children
+@attrs.define
+class ExecuteShotData:
+    def display_data(self) -> str:
+        return f"<span style='color:{HIGHLIGHT_COLOR}'>do shot</span>"
 
-    def remove_child(self, row: int):
-        if isinstance(self.step, ContainsSubSteps):
-            self.children[row].parent = None
-            del self.step.sub_steps[row]
-        else:
-            raise TypeError(f"Cannot remove child from {self.step}")
 
-    def insert(self, row: int, items: list[StepsItem]):
-        if isinstance(self.step, ContainsSubSteps):
-            children = list(self.children)
-            children[row:row] = items
-            self.children = children
-            self.step.sub_steps[row:row] = [item.step for item in items]
-        else:
-            raise TypeError(f"Cannot insert child into {self.step}")
+@attrs.define
+class VariableDeclarationData:
+    variable: DottedVariableName
+    value: Expression
 
-    @functools.singledispatchmethod
+    def display_data(self) -> str:
+        text_color = f"#{QPalette().text().color().rgba():X}"
+        return (
+            f"<span style='color:{NAME_COLOR}'>{self.variable}</span> "
+            f"<span style='color:{text_color}'>=</span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.value}</span>"
+        )
+
+
+@attrs.define
+class LinspaceLoopData:
+    variable: DottedVariableName
+    start: Expression
+    stop: Expression
+    num: int
+
+    def display_data(self) -> str:
+        text_color = f"#{QPalette().text().color().rgba():X}"
+        return (
+            f"<span style='color:{HIGHLIGHT_COLOR}'>for</span> "
+            f"<span style='color:{NAME_COLOR}'>{self.variable}</span> "
+            f"<span style='color:{text_color}'>=</span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.start}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>to </span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.stop}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>with </span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.num}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>steps:</span>"
+        )
+
+
+@attrs.define
+class ArrangeLoopData:
+    variable: DottedVariableName
+    start: Expression
+    stop: Expression
+    step: Expression
+
+    def display_data(self) -> str:
+        text_color = f"#{QPalette().text().color().rgba():X}"
+        return (
+            f"<span style='color:{HIGHLIGHT_COLOR}'>for</span> "
+            f"<span style='color:{NAME_COLOR}'>{self.variable}</span> "
+            f"<span style='color:{text_color}'>=</span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.start}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>to </span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.stop}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>with </span> "
+            f"<span style='color:{VALUE_COLOR}'>{self.step}</span> "
+            f"<span style='color:{HIGHLIGHT_COLOR}'>spacing:</span>"
+        )
+
+
+StepData = (
+    ExecuteShotData | VariableDeclarationData | LinspaceLoopData | ArrangeLoopData
+)
+
+
+class StepItem(QStandardItem):
     @classmethod
-    def construct(cls, step: Step) -> "StepsItem":
-        raise NotImplementedError
+    def construct(cls, step: Step) -> StepItem:
+        item = cls()
+        match step:
+            case ExecuteShot():
+                item.setData(ExecuteShotData(), Qt.ItemDataRole.UserRole + 1)
+            case VariableDeclaration(variable=variable, value=value):
+                item.setData(
+                    VariableDeclarationData(variable=variable, value=value),
+                    Qt.ItemDataRole.UserRole + 1,
+                )
+            case LinspaceLoop(
+                variable=variable, start=start, stop=stop, num=num, sub_steps=sub_steps
+            ):
+                children = [cls.construct(sub_step) for sub_step in sub_steps]
+                item.setData(
+                    LinspaceLoopData(
+                        variable=variable, start=start, stop=stop, num=num
+                    ),
+                    Qt.ItemDataRole.UserRole + 1,
+                )
+                item.appendRows(children)
+            case _:
+                raise NotImplementedError(f"Step {step} not supported")
 
-    @construct.register
-    @classmethod
-    def _(cls, step: ExecuteShot):
-        return cls(step)
+        return item
 
-    @construct.register
-    @classmethod
-    def _(cls, step: ArangeLoop):
-        return cls(step, children=[cls.construct(step) for step in step.sub_steps])
+    def data(self, role: Qt.ItemDataRole.DisplayRole = Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.DisplayRole:
+            step_data = self.data(Qt.ItemDataRole.UserRole + 1)
+            assert isinstance(step_data, StepData)
+            return step_data.display_data()
+        return super().data(role)
 
-    @construct.register
-    @classmethod
-    def _(cls, step: VariableDeclaration):
-        return cls(step)
+    def get_step(self) -> Step:
+        data = self.data(role=Qt.ItemDataRole.UserRole + 1)
+        match data:
+            case ExecuteShotData():
+                return ExecuteShot()
+            case VariableDeclarationData(variable=variable, value=value):
+                return VariableDeclaration(variable=variable, value=value)
+            case LinspaceLoopData(variable=variable, start=start, stop=stop, num=num):
+                child_items = [self.child(i) for i in range(self.rowCount())]
+                sub_steps = [item.get_step() for item in child_items]
+                return LinspaceLoop(
+                    variable=variable,
+                    start=start,
+                    stop=stop,
+                    num=num,
+                    sub_steps=sub_steps,
+                )
+            case _:
+                raise NotImplementedError(f"Step {data} not supported")
 
-    @construct.register
-    @classmethod
-    def _(cls, step: LinspaceLoop):
-        return cls(step, children=[cls.construct(step) for step in step.sub_steps])
 
-
-class StepsModel(QAbstractItemModel):
+class StepsModel(QStandardItemModel):
     def __init__(self, steps: StepsConfiguration, parent: Optional[QObject] = None):
         super().__init__(parent)
-        self._steps = [StepsItem.construct(step) for step in steps.steps]
+        self.set_steps(steps)
         self._read_only = True
 
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
 
     def get_steps(self) -> StepsConfiguration:
-        return StepsConfiguration(
-            steps=[copy.deepcopy(item.step) for item in self._steps],
-        )
+        root = self.invisibleRootItem()
+        items = [root.child(i) for i in range(root.rowCount())]
+        assert all(isinstance(item, StepItem) for item in items)
+        steps = [item.get_step() for item in items]
+        return StepsConfiguration(steps=steps)
 
     def set_steps(self, steps: StepsConfiguration):
         self.beginResetModel()
-        self._steps = [StepsItem.construct(step) for step in steps.steps]
+        self.clear()
+        items = [StepItem.construct(step) for step in steps.steps]
+        root = self.invisibleRootItem()
+        root.appendRows(items)
         self.endResetModel()
-
-    def row(self, item: StepsItem) -> int:
-        if item.parent is None:
-            return self._steps.index(item)
-        else:
-            return item.parent.children.index(item)
-
-    def index(
-        self, row: int, column: int, parent: QModelIndex = QModelIndex()
-    ) -> QModelIndex:
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
-        if not parent.isValid():
-            current_item = self._steps[row]
-        else:
-            parent_item: StepsItem = parent.internalPointer()
-            if row < len(parent_item.children):
-                current_item = parent_item.children[row]
-            else:
-                return QModelIndex()
-
-        return self.createIndex(row, column, current_item)
-
-    def parent(self, child: QModelIndex) -> QModelIndex:
-        if not child.isValid():
-            return QModelIndex()
-
-        child_item: StepsItem = child.internalPointer()
-        if child_item.parent is None:
-            return QModelIndex()
-        else:
-            parent_item = child_item.parent
-            return self.createIndex(
-                self.row(parent_item), child.column(), child_item.parent
-            )
-
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        if not parent.isValid():
-            return len(self._steps)
-        else:
-            parent_item: StepsItem = parent.internalPointer()
-            return len(parent_item.children)
-
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return 1
-
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
-            return index.internalPointer().step
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if self._read_only:
@@ -164,128 +189,119 @@ class StepsModel(QAbstractItemModel):
             return False
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
-        flags = (
-            Qt.ItemFlag.ItemIsSelectable
-            | Qt.ItemFlag.ItemIsDragEnabled
-            | Qt.ItemFlag.ItemIsDropEnabled
-            | Qt.ItemFlag.ItemIsEnabled
-        )
-        if index.isValid():
-            step = index.internalPointer().step
-            if not isinstance(step, ExecuteShot):
-                flags |= Qt.ItemFlag.ItemIsEditable
+        flags = super().flags(index)
 
         if self._read_only:
             flags &= ~Qt.ItemFlag.ItemIsEditable
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
         return flags
 
-    def supportedDropActions(self) -> Qt.DropAction:
-        return Qt.DropAction.MoveAction
+    # def supportedDropActions(self) -> Qt.DropAction:
+    #     return Qt.DropAction.MoveAction
+    #
+    # def mimeTypes(self) -> list[str]:
+    #     return ["text/plain"]
+    #
+    # def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+    #     data = [self.data(index, Qt.ItemDataRole.EditRole) for index in indexes]
+    #     serialized = serialization.to_json(data)
+    #     mime_data = QMimeData()
+    #     mime_data.setText(serialized)
+    #     return mime_data
+    #
+    # def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
+    #     can_drop = super().canDropMimeData(data, action, row, column, parent)
+    #     if can_drop and row == -1:
+    #         if parent.isValid():
+    #             parent_item: StepsItem = parent.internalPointer()
+    #             return isinstance(parent_item.step, ContainsSubSteps)
+    #     return can_drop
+    #
+    # def dropMimeData(
+    #     self,
+    #     data: QMimeData,
+    #     action: Qt.DropAction,
+    #     row: int,
+    #     column: int,
+    #     parent: QModelIndex,
+    # ) -> bool:
+    #     if self._read_only:
+    #         return False
+    #     json_string = data.text()
+    #     try:
+    #         steps = serialization.from_json(json_string, list[Step])
+    #     except ValueError:
+    #         return False
+    #
+    #     new_items = [StepsItem.construct(step) for step in steps]
+    #     if row == -1:
+    #         if not parent.isValid():
+    #             return False
+    #         parent_item: StepsItem = parent.internalPointer()
+    #         if not isinstance(parent_item.step, ContainsSubSteps):
+    #             return False
+    #         self.beginInsertRows(
+    #             parent,
+    #             len(parent_item.children),
+    #             len(parent_item.children) + len(new_items) - 1,
+    #         )
+    #         parent_item.insert(len(parent_item.children), new_items)
+    #         self.endInsertRows()
+    #         return True
+    #
+    #     if not parent.isValid():
+    #         self.beginInsertRows(parent, row, row + len(new_items) - 1)
+    #         self._steps[row:row] = new_items
+    #         self.endInsertRows()
+    #         return True
+    #     else:
+    #         parent_item: StepsItem = parent.internalPointer()
+    #         self.beginInsertRows(parent, row, row + len(new_items) - 1)
+    #         parent_item.insert(row, new_items)
+    #         self.endInsertRows()
+    #         return True
 
-    def mimeTypes(self) -> list[str]:
-        return ["text/plain"]
-
-    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
-        data = [self.data(index, Qt.ItemDataRole.EditRole) for index in indexes]
-        serialized = serialization.to_json(data)
-        mime_data = QMimeData()
-        mime_data.setText(serialized)
-        return mime_data
-
-    def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
-        can_drop = super().canDropMimeData(data, action, row, column, parent)
-        if can_drop and row == -1:
-            if parent.isValid():
-                parent_item: StepsItem = parent.internalPointer()
-                return isinstance(parent_item.step, ContainsSubSteps)
-        return can_drop
-
-    def dropMimeData(
-        self,
-        data: QMimeData,
-        action: Qt.DropAction,
-        row: int,
-        column: int,
-        parent: QModelIndex,
-    ) -> bool:
-        if self._read_only:
-            return False
-        json_string = data.text()
-        try:
-            steps = serialization.from_json(json_string, list[Step])
-        except ValueError:
-            return False
-
-        new_items = [StepsItem.construct(step) for step in steps]
-        if row == -1:
-            if not parent.isValid():
-                return False
-            parent_item: StepsItem = parent.internalPointer()
-            if not isinstance(parent_item.step, ContainsSubSteps):
-                return False
-            self.beginInsertRows(
-                parent,
-                len(parent_item.children),
-                len(parent_item.children) + len(new_items) - 1,
-            )
-            parent_item.insert(len(parent_item.children), new_items)
-            self.endInsertRows()
-            return True
-
-        if not parent.isValid():
-            self.beginInsertRows(parent, row, row + len(new_items) - 1)
-            self._steps[row:row] = new_items
-            self.endInsertRows()
-            return True
-        else:
-            parent_item: StepsItem = parent.internalPointer()
-            self.beginInsertRows(parent, row, row + len(new_items) - 1)
-            parent_item.insert(row, new_items)
-            self.endInsertRows()
-            return True
-
-    def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
-        if self._read_only:
-            return False
-        if not parent.isValid():
-            self.beginRemoveRows(parent, row, row)
-            del self._steps[row]
-            self.endRemoveRows()
-        else:
-            self.beginRemoveRows(parent, row, row)
-            parent_item: StepsItem = parent.internalPointer()
-            parent_item.remove_child(row)
-            self.endRemoveRows()
-        return True
-
-    def removeRows(
-        self, row: int, count: int, parent: QModelIndex = QModelIndex()
-    ) -> bool:
-        if self._read_only:
-            return False
-        self.beginRemoveRows(parent, row, row + count - 1)
-        if not parent.isValid():
-            del self._steps[row : row + count]
-        else:
-            parent_item: StepsItem = parent.internalPointer()
-            for _ in range(count):
-                parent_item.remove_child(row)
-        self.endRemoveRows()
-        return True
-
-    def insert_above(self, step: Step, index: QModelIndex):
-        if self._read_only:
-            return
-        if not index.isValid():
-            return
-        else:
-            parent = index.parent()
-            new_item = StepsItem.construct(step)
-            self.beginInsertRows(parent, index.row(), index.row())
-            if not parent.isValid():
-                self._steps.insert(index.row(), new_item)
-            else:
-                parent_item: StepsItem = parent.internalPointer()
-                parent_item.insert(index.row(), [new_item])
-            self.endInsertRows()
+    # def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
+    #     if self._read_only:
+    #         return False
+    #     if not parent.isValid():
+    #         self.beginRemoveRows(parent, row, row)
+    #         del self._steps[row]
+    #         self.endRemoveRows()
+    #     else:
+    #         self.beginRemoveRows(parent, row, row)
+    #         parent_item: StepsItem = parent.internalPointer()
+    #         parent_item.remove_child(row)
+    #         self.endRemoveRows()
+    #     return True
+    #
+    # def removeRows(
+    #     self, row: int, count: int, parent: QModelIndex = QModelIndex()
+    # ) -> bool:
+    #     if self._read_only:
+    #         return False
+    #     self.beginRemoveRows(parent, row, row + count - 1)
+    #     if not parent.isValid():
+    #         del self._steps[row : row + count]
+    #     else:
+    #         parent_item: StepsItem = parent.internalPointer()
+    #         for _ in range(count):
+    #             parent_item.remove_child(row)
+    #     self.endRemoveRows()
+    #     return True
+    #
+    # def insert_above(self, step: Step, index: QModelIndex):
+    #     if self._read_only:
+    #         return
+    #     if not index.isValid():
+    #         return
+    #     else:
+    #         parent = index.parent()
+    #         new_item = StepsItem.construct(step)
+    #         self.beginInsertRows(parent, index.row(), index.row())
+    #         if not parent.isValid():
+    #             self._steps.insert(index.row(), new_item)
+    #         else:
+    #             parent_item: StepsItem = parent.internalPointer()
+    #             parent_item.insert(index.row(), [new_item])
+    #         self.endInsertRows()

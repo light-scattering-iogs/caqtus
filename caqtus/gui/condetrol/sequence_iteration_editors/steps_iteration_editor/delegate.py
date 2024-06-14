@@ -31,7 +31,6 @@ from caqtus.types.iteration import (
     VariableDeclaration,
     LinspaceLoop,
     ArangeLoop,
-    ExecuteShot,
 )
 from caqtus.types.variable_name import (
     DottedVariableName,
@@ -44,57 +43,11 @@ VALUE_COLOR = "#6897BB"
 HIGHLIGHT_COLOR = "#cc7832"
 
 
-def to_str(step: Step) -> str:
-    hl = HIGHLIGHT_COLOR
-    text_color = f"#{QPalette().text().color().rgba():X}"
-    var_col = NAME_COLOR
-    val_col = VALUE_COLOR
-    match step:
-        case ExecuteShot():
-            return f"<span style='color:{hl}'>do shot</span>"
-        case VariableDeclaration(variable, value):
-            return (
-                f"<span style='color:{var_col}'>{variable}</span> "
-                f"<span style='color:{text_color}'>=</span> "
-                f"<span style='color:{val_col}'>{value}</span>"
-            )
-        case ArangeLoop(variable, start, stop, step, sub_steps):
-            return (
-                f"<span style='color:{hl}'>for</span> "
-                f"<span style='color:{var_col}'>{variable}</span> "
-                f"<span style='color:{text_color}'>=</span> "
-                f"<span style='color:{val_col}'>{start}</span> "
-                f"<span style='color:{hl}'>to </span> "
-                f"<span style='color:{val_col}'>{stop}</span> "
-                f"<span style='color:{hl}'>with </span> "
-                f"<span style='color:{val_col}'>{step}</span> "
-                f"<span style='color:{hl}'>spacing:</span>"
-            )
-        case LinspaceLoop(variable, start, stop, num, sub_steps):
-            return (
-                f"<span style='color:{hl}'>for</span> "
-                f"<span style='color:{var_col}'>{variable}</span> "
-                f"<span style='color:{text_color}'>=</span> "
-                f"<span style='color:{val_col}'>{start}</span> "
-                f"<span style='color:{hl}'>to </span> "
-                f"<span style='color:{val_col}'>{stop}</span> "
-                f"<span style='color:{hl}'>with </span> "
-                f"<span style='color:{val_col}'>{num}</span> "
-                f"<span style='color:{hl}'>steps:</span>"
-            )
-        case _:
-            assert_never(step)
-
-
 class StepDelegate(HTMLItemDelegate):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.doc = QTextDocument(self)
         self._completer = QCompleter(self)
-
-    def get_text_to_render(self, index: QModelIndex) -> str:
-        step: Step = index.data(role=Qt.DisplayRole)
-        return to_str(step)
 
     def createEditor(
         self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex
