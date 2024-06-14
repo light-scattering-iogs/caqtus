@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Optional
 
 import attrs
@@ -7,6 +8,7 @@ from PySide6.QtCore import (
     QModelIndex,
     Qt,
     QObject,
+    QMimeData,
 )
 from PySide6.QtGui import QStandardItem, QStandardItemModel, QPalette
 
@@ -20,6 +22,7 @@ from caqtus.types.iteration import (
     ArangeLoop,
 )
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils import serialization
 
 NAME_COLOR = "#AA4926"
 VALUE_COLOR = "#6897BB"
@@ -99,7 +102,11 @@ class StepItem(QStandardItem):
     @classmethod
     def construct(cls, step: Step) -> StepItem:
         item = cls()
-        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        flags = (
+            Qt.ItemFlag.ItemIsEnabled
+            | Qt.ItemFlag.ItemIsSelectable
+            | Qt.ItemFlag.ItemIsDragEnabled
+        )
         match step:
             case ExecuteShot():
                 item.setData(ExecuteShotData(), Qt.ItemDataRole.EditRole)
@@ -125,7 +132,9 @@ class StepItem(QStandardItem):
                     Qt.ItemDataRole.EditRole,
                 )
                 item.appendRows(children)
-                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable)
+                item.setFlags(
+                    flags | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDropEnabled
+                )
             case ArangeLoop(
                 variable=variable,
                 start=start,
@@ -141,7 +150,9 @@ class StepItem(QStandardItem):
                     Qt.ItemDataRole.EditRole,
                 )
                 item.appendRows(children)
-                item.setFlags(flags | Qt.ItemFlag.ItemIsEditable)
+                item.setFlags(
+                    flags | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsDropEnabled
+                )
             case _:
                 raise NotImplementedError(f"Step {step} not supported")
 
@@ -212,100 +223,54 @@ class StepsModel(QStandardItemModel):
             flags &= ~Qt.ItemFlag.ItemIsDropEnabled
         return flags
 
-    # def supportedDropActions(self) -> Qt.DropAction:
-    #     return Qt.DropAction.MoveAction
-    #
-    # def mimeTypes(self) -> list[str]:
-    #     return ["text/plain"]
-    #
-    # def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
-    #     data = [self.data(index, Qt.ItemDataRole.EditRole) for index in indexes]
-    #     serialized = serialization.to_json(data)
-    #     mime_data = QMimeData()
-    #     mime_data.setText(serialized)
-    #     return mime_data
-    #
-    # def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
-    #     can_drop = super().canDropMimeData(data, action, row, column, parent)
-    #     if can_drop and row == -1:
-    #         if parent.isValid():
-    #             parent_item: StepsItem = parent.internalPointer()
-    #             return isinstance(parent_item.step, ContainsSubSteps)
-    #     return can_drop
-    #
-    # def dropMimeData(
-    #     self,
-    #     data: QMimeData,
-    #     action: Qt.DropAction,
-    #     row: int,
-    #     column: int,
-    #     parent: QModelIndex,
-    # ) -> bool:
-    #     if self._read_only:
-    #         return False
-    #     json_string = data.text()
-    #     try:
-    #         steps = serialization.from_json(json_string, list[Step])
-    #     except ValueError:
-    #         return False
-    #
-    #     new_items = [StepsItem.construct(step) for step in steps]
-    #     if row == -1:
-    #         if not parent.isValid():
-    #             return False
-    #         parent_item: StepsItem = parent.internalPointer()
-    #         if not isinstance(parent_item.step, ContainsSubSteps):
-    #             return False
-    #         self.beginInsertRows(
-    #             parent,
-    #             len(parent_item.children),
-    #             len(parent_item.children) + len(new_items) - 1,
-    #         )
-    #         parent_item.insert(len(parent_item.children), new_items)
-    #         self.endInsertRows()
-    #         return True
-    #
-    #     if not parent.isValid():
-    #         self.beginInsertRows(parent, row, row + len(new_items) - 1)
-    #         self._steps[row:row] = new_items
-    #         self.endInsertRows()
-    #         return True
-    #     else:
-    #         parent_item: StepsItem = parent.internalPointer()
-    #         self.beginInsertRows(parent, row, row + len(new_items) - 1)
-    #         parent_item.insert(row, new_items)
-    #         self.endInsertRows()
-    #         return True
+    def supportedDropActions(self) -> Qt.DropAction:
+        return Qt.DropAction.MoveAction
 
-    # def removeRow(self, row: int, parent: QModelIndex = QModelIndex()) -> bool:
-    #     if self._read_only:
-    #         return False
-    #     if not parent.isValid():
-    #         self.beginRemoveRows(parent, row, row)
-    #         del self._steps[row]
-    #         self.endRemoveRows()
-    #     else:
-    #         self.beginRemoveRows(parent, row, row)
-    #         parent_item: StepsItem = parent.internalPointer()
-    #         parent_item.remove_child(row)
-    #         self.endRemoveRows()
-    #     return True
-    #
-    # def removeRows(
-    #     self, row: int, count: int, parent: QModelIndex = QModelIndex()
-    # ) -> bool:
-    #     if self._read_only:
-    #         return False
-    #     self.beginRemoveRows(parent, row, row + count - 1)
-    #     if not parent.isValid():
-    #         del self._steps[row : row + count]
-    #     else:
-    #         parent_item: StepsItem = parent.internalPointer()
-    #         for _ in range(count):
-    #             parent_item.remove_child(row)
-    #     self.endRemoveRows()
-    #     return True
-    #
+    def mimeTypes(self) -> list[str]:
+        return ["text/plain"]
+
+    def mimeData(self, indexes: Iterable[QModelIndex]) -> QMimeData:
+        items = [self.itemFromIndex(index) for index in indexes]
+        assert all(isinstance(item, StepItem) for item in items)
+        steps = [item.get_step() for item in items]
+        serialized = serialization.to_json(steps)
+        mime_data = QMimeData()
+        mime_data.setText(serialized)
+        return mime_data
+
+    def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
+        if self._read_only:
+            return False
+        return super().canDropMimeData(data, action, row, column, parent)
+
+    def dropMimeData(
+        self,
+        data: QMimeData,
+        action: Qt.DropAction,
+        row: int,
+        column: int,
+        parent: QModelIndex,
+    ) -> bool:
+        if self._read_only:
+            return False
+        json_string = data.text()
+        try:
+            steps = serialization.from_json(json_string, list[Step])
+        except ValueError:
+            return False
+
+        new_items = [StepItem.construct(step) for step in steps]
+
+        parent_item = (
+            self.itemFromIndex(parent) if parent.isValid() else self.invisibleRootItem()
+        )
+        if not (parent_item.flags() & Qt.ItemFlag.ItemIsDropEnabled):
+            return False
+        if row == -1:
+            row = parent_item.rowCount()
+        parent_item.insertRows(row, new_items)
+        return True
+
     # def insert_above(self, step: Step, index: QModelIndex):
     #     if self._read_only:
     #         return
