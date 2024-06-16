@@ -1,3 +1,4 @@
+from PySide6.QtWidgets import QTreeView
 from pytestqt.modeltest import ModelTester
 from pytestqt.qtbot import QtBot
 
@@ -6,6 +7,7 @@ from caqtus.gui.condetrol.sequence_iteration_editors.steps_iteration_editor.step
     VariableDeclarationData,
     LinspaceLoopData,
     ArrangeLoopData,
+    StepsModel,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -188,19 +190,20 @@ def test_4(qtbot: QtBot, qtmodeltester: ModelTester):
         },
     ]
     steps = serialization.converters["json"].structure(steps_data, list[Step])
-    editor = StepsIterationEditor()
+    editor = QTreeView()
     qtbot.addWidget(editor)
-    editor.set_read_only(False)
-    editor.set_iteration(StepsConfiguration(steps))
     editor.show()
-    model = editor.model()
+    model = StepsModel(StepsConfiguration(steps))
+    editor.setModel(model)
+    editor.expandAll()
 
     def remove():
         first_loop_index = model.index(0, 0)
         second_loop_index = model.index(0, 0, first_loop_index)
         third_loop_index = model.index(0, 0, second_loop_index)
-        editor.remove_indices([third_loop_index])
+        model.removeRow(0, second_loop_index)
 
     remove()
     qtbot.wait_for_window_shown(editor)
     qtmodeltester.check(model)
+    qtbot.stop()
