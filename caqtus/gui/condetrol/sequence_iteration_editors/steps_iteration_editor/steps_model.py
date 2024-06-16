@@ -251,6 +251,7 @@ class StepsModel(QStandardItemModel):
         serialized = serialization.to_json(steps)
         mime_data = QMimeData()
         mime_data.setData("application/json", serialized.encode())
+        mime_data.setText(serialized)
         return mime_data
 
     def canDropMimeData(self, data, action, row: int, column: int, parent: QModelIndex):
