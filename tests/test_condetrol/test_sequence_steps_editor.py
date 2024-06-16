@@ -200,7 +200,6 @@ def test_4(qtbot: QtBot, qtmodeltester: ModelTester):
     def remove():
         first_loop_index = model.index(0, 0)
         second_loop_index = model.index(0, 0, first_loop_index)
-        third_loop_index = model.index(0, 0, second_loop_index)
         model.removeRow(0, second_loop_index)
 
     remove()
