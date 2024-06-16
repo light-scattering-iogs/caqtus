@@ -1,4 +1,3 @@
-from PySide6.QtWidgets import QTreeView
 from pytestqt.modeltest import ModelTester
 from pytestqt.qtbot import QtBot
 
@@ -7,7 +6,6 @@ from caqtus.gui.condetrol.sequence_iteration_editors.steps_iteration_editor.step
     VariableDeclarationData,
     LinspaceLoopData,
     ArrangeLoopData,
-    StepsModel,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -164,6 +162,10 @@ def test_3(qtbot: QtBot):
 
 
 def test_4(qtbot: QtBot, qtmodeltester: ModelTester):
+    # Test for issue #17.
+    # Issue was fixed by replacing QStandardItem.appendRows with
+    # QStandardItem.appendRow.
+    # Seems like a bug in Qt/Pyside6?
     steps_data = [
         {
             "sub_steps": [
@@ -190,19 +192,18 @@ def test_4(qtbot: QtBot, qtmodeltester: ModelTester):
         },
     ]
     steps = serialization.converters["json"].structure(steps_data, list[Step])
-    editor = QTreeView()
+    editor = StepsIterationEditor()
+    editor.set_read_only(False)
+    editor.set_iteration(StepsConfiguration(steps))
     qtbot.addWidget(editor)
     editor.show()
-    model = StepsModel(StepsConfiguration(steps))
-    editor.setModel(model)
-    editor.expandAll()
 
     def remove():
+        model = editor.model()
         first_loop_index = model.index(0, 0)
         second_loop_index = model.index(0, 0, first_loop_index)
         model.removeRow(0, second_loop_index)
 
     remove()
     qtbot.wait_for_window_shown(editor)
-    qtmodeltester.check(model)
-    qtbot.stop()
+    qtmodeltester.check(editor.model())
