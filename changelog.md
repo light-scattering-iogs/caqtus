@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Minimize and maximize buttons for device configuration dialog
 
+### Changed
+
+- Load only sequence specific parameters by default
+
 ## [3.5.1] - 2024-06-16
 
 ### Fixed

@@ -22,19 +22,12 @@ class LoadShotParameters(CombinableLoader):
 
     Attributes:
         which: the parameters to load from a shot.
-        If it is "sequence", only the parameters defined at the sequence level are
-        loaded.
-        If it is "globals", only the values of the global parameters at the time the
-        sequence was launched are loaded.
-        Note that the values of the globals parameters will be constant for all shot
-        of a given sequence, unless they
-        are overwritten by the sequence iteration.
-        If "all", both sequence specific and global parameters are loaded.
-        If it is an iterable of strings, only the parameters with the given names are
-        loaded.
+            If it is "sequence", only the parameters defined at the sequence level are
+            loaded.
+            If "all", both sequence specific and global parameters are loaded.
     """
 
-    which: Literal["sequence", "all"] = "all"
+    which: Literal["sequence", "all"] = "sequence"
 
     def __attrs_post_init__(self):
         self._get_local_parameters = cache_per_sequence(get_local_parameters)
