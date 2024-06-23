@@ -46,6 +46,7 @@ class ShotExecutionQueue:
 
         shot_index = shot_parameters.index
         if shot_index != self._next_shot:
+            assert shot_index > self._next_shot
             try:
                 event = self._can_push_events[shot_index]
             except KeyError:
