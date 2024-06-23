@@ -30,12 +30,21 @@ class ShotCompiler(Protocol):
 
 
 class ShotExecutionQueue:
-    def __init__(self, shot_execution_queue: MemoryObjectSendStream[DeviceParameters]):
-        self._shot_execution_queue = shot_execution_queue
+    """Wraps a memory object send stream to ensure that shots are executed in order."""
+
+    def __init__(self, shot_execution_stream: MemoryObjectSendStream[DeviceParameters]):
+        self._shot_execution_stream = shot_execution_stream
         self._next_shot = 0
         self._can_push_events = weakref.WeakValueDictionary[int, anyio.Event]()
 
-    async def push(self, shot_index: int, shot_parameters: DeviceParameters) -> None:
+    async def push(self, shot_parameters: DeviceParameters) -> None:
+        """Pushes a shot to the execution queue.
+
+        Push the shot parameters to the execution queue when the shot index matches the
+        next shot to run.
+        """
+
+        shot_index = shot_parameters.index
         if shot_index != self._next_shot:
             try:
                 event = self._can_push_events[shot_index]
@@ -46,7 +55,7 @@ class ShotExecutionQueue:
 
         assert shot_index == self._next_shot
 
-        await self._shot_execution_queue.send(shot_parameters)
+        await self._shot_execution_stream.send(shot_parameters)
         self._next_shot += 1
         try:
             self._can_push_events[self._next_shot].set()
@@ -137,7 +146,7 @@ class ShotManager:
                 result = await anyio.to_process.run_sync(
                     _compile_shot, shot_params, shot_compiler
                 )
-                await shot_execution_queue.push(shot_params.index, result)
+                await shot_execution_queue.push(result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
         async with (
