@@ -64,18 +64,19 @@ class ShotManager:
         self._shot_runner = shot_runner
         self._shot_compiler = shot_compiler
         self._shot_retry_config = shot_retry_config
+        # These streams must be closed in the order defined here.
         (
-            self._shot_parameter_scheduler,
-            self._shot_parameter_receiver,
+            self._shot_parameters_input_stream,
+            self._shot_parameters_output_stream,
         ) = anyio.create_memory_object_stream[ShotParameters]()
         (
-            self._device_parameter_sender,
-            self._device_parameter_receiver,
+            self._shot_execution_input_stream,
+            self._shot_execution_output_stream,
         ) = anyio.create_memory_object_stream[DeviceParameters]()
         (
-            self._shot_data_sender,
-            self._shot_data_receiver,
-        ) = anyio.create_memory_object_stream(4)
+            self._shot_data_input_stream,
+            self._shot_data_output_stream,
+        ) = anyio.create_memory_object_stream(1)
         self._current_shot = 0
 
     @contextlib.asynccontextmanager
@@ -84,8 +85,8 @@ class ShotManager:
             async with anyio.create_task_group() as tg:
                 tg.start_soon(self._compile_shots_in_order)
                 tg.start_soon(self._run_shots, self._shot_runner)
-                async with self._shot_data_receiver:
-                    yield self._shot_data_receiver
+                async with self._shot_data_output_stream:
+                    yield self._shot_data_output_stream
         except* anyio.BrokenResourceError:
             # We ignore this error because the error that caused it will anyway be
             # raised, and we don't want to clutter the exception traceback.
@@ -95,7 +96,7 @@ class ShotManager:
 
     @contextlib.asynccontextmanager
     async def start_scheduling(self) -> AsyncGenerator[None, None]:
-        async with self._shot_parameter_scheduler:
+        async with self._shot_parameters_input_stream:
             yield
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
@@ -103,7 +104,7 @@ class ShotManager:
             index=self._current_shot, parameters=shot_variables
         )
         try:
-            await self._shot_parameter_scheduler.send(shot_parameters)
+            await self._shot_parameters_input_stream.send(shot_parameters)
         except anyio.BrokenResourceError:
             # We ignore this error because the error that caused it will anyway be
             # raised, and we don't want to clutter the exception traceback.
@@ -112,42 +113,42 @@ class ShotManager:
 
     async def _compile_shots_in_order(self):
         async with (
-            self._device_parameter_sender,
+            self._shot_execution_input_stream,
             anyio.create_task_group() as tg,
-            self._shot_parameter_receiver,
+            self._shot_parameters_output_stream,
         ):
-            shot_ordering_event = ShotExecutionQueue(self._device_parameter_sender)
+            shot_execution_queue = ShotExecutionQueue(self._shot_execution_input_stream)
             for _ in range(4):
                 tg.start_soon(
                     self._compile_shots,
                     self._shot_compiler,
-                    self._shot_parameter_receiver.clone(),
-                    shot_ordering_event,
+                    self._shot_parameters_output_stream.clone(),
+                    shot_execution_queue,
                 )
 
     @staticmethod
     async def _compile_shots(
         shot_compiler: ShotCompiler,
-        shot_params_receiver: MemoryObjectReceiveStream[ShotParameters],
+        shot_params_output_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionQueue,
     ):
-        async with shot_params_receiver:
-            async for shot_parameters in shot_params_receiver:
+        async with shot_params_output_stream:
+            async for shot_params in shot_params_output_stream:
                 result = await anyio.to_process.run_sync(
-                    _compile_shot, shot_parameters, shot_compiler
+                    _compile_shot, shot_params, shot_compiler
                 )
-                await shot_execution_queue.push(shot_parameters.index, result)
+                await shot_execution_queue.push(shot_params.index, result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
         async with (
-            self._shot_data_sender,
-            self._device_parameter_receiver as receiver,
+            self._shot_data_input_stream,
+            self._shot_execution_output_stream as receiver,
         ):
             async for device_parameters in receiver:
                 shot_data = await self._run_shot_with_retry(
                     device_parameters, shot_runner
                 )
-                await self._shot_data_sender.send(shot_data)
+                await self._shot_data_input_stream.send(shot_data)
 
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunner
