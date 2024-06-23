@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import weakref
 from collections.abc import AsyncGenerator, AsyncIterable
 from typing import Mapping, Any, Protocol
 
 import anyio
 import anyio.to_process
 import attrs
+from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import VariableNamespace
@@ -27,6 +29,31 @@ class ShotCompiler(Protocol):
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]: ...
 
 
+class ShotExecutionQueue:
+    def __init__(self, shot_execution_queue: MemoryObjectSendStream[DeviceParameters]):
+        self._shot_execution_queue = shot_execution_queue
+        self._next_shot = 0
+        self._can_push_events = weakref.WeakValueDictionary[int, anyio.Event]()
+
+    async def push(self, shot_index: int, shot_parameters: DeviceParameters) -> None:
+        if shot_index != self._next_shot:
+            try:
+                event = self._can_push_events[shot_index]
+            except KeyError:
+                event = anyio.Event()
+                self._can_push_events[shot_index] = event
+            await event.wait()
+
+        assert shot_index == self._next_shot
+
+        await self._shot_execution_queue.send(shot_parameters)
+        self._next_shot += 1
+        try:
+            self._can_push_events[self._next_shot].set()
+        except KeyError:
+            pass
+
+
 class ShotManager:
     def __init__(
         self,
@@ -44,7 +71,7 @@ class ShotManager:
         (
             self._device_parameter_sender,
             self._device_parameter_receiver,
-        ) = anyio.create_memory_object_stream[DeviceParameters](4)
+        ) = anyio.create_memory_object_stream[DeviceParameters]()
         (
             self._shot_data_sender,
             self._shot_data_receiver,
@@ -55,14 +82,7 @@ class ShotManager:
     async def run(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
         try:
             async with anyio.create_task_group() as tg:
-                async with self._device_parameter_sender, self._shot_parameter_receiver:
-                    for _ in range(4):
-                        tg.start_soon(
-                            self._compile_shots,
-                            self._shot_compiler,
-                            self._shot_parameter_receiver.clone(),
-                            self._device_parameter_sender.clone(),
-                        )
+                tg.start_soon(self._compile_shots_in_order)
                 tg.start_soon(self._run_shots, self._shot_runner)
                 async with self._shot_data_receiver:
                     yield self._shot_data_receiver
@@ -90,16 +110,33 @@ class ShotManager:
             pass
         self._current_shot += 1
 
+    async def _compile_shots_in_order(self):
+        async with (
+            self._device_parameter_sender,
+            anyio.create_task_group() as tg,
+            self._shot_parameter_receiver,
+        ):
+            shot_ordering_event = ShotExecutionQueue(self._device_parameter_sender)
+            for _ in range(4):
+                tg.start_soon(
+                    self._compile_shots,
+                    self._shot_compiler,
+                    self._shot_parameter_receiver.clone(),
+                    shot_ordering_event,
+                )
+
     @staticmethod
     async def _compile_shots(
-        shot_compiler: ShotCompiler, shot_params_receiver, device_params_sender
+        shot_compiler: ShotCompiler,
+        shot_params_receiver: MemoryObjectReceiveStream[ShotParameters],
+        shot_execution_queue: ShotExecutionQueue,
     ):
-        async with device_params_sender, shot_params_receiver:
+        async with shot_params_receiver:
             async for shot_parameters in shot_params_receiver:
                 result = await anyio.to_process.run_sync(
                     _compile_shot, shot_parameters, shot_compiler
                 )
-                await device_params_sender.send(result)
+                await shot_execution_queue.push(shot_parameters.index, result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
         async with (

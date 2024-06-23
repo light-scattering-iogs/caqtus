@@ -39,7 +39,7 @@ def test_0():
 
     async def schedule_shots(shot_manager: ShotManager):
         async with shot_manager.start_scheduling():
-            for shot in range(1000):
+            for shot in range(10):
                 await shot_manager.schedule_shot(VariableNamespace({"rep": shot}))
 
     shot_results = []
@@ -56,4 +56,5 @@ def test_0():
             tg.start_soon(schedule_shots, shot_manager)
 
     anyio.run(fun)
-    assert len(shot_results) == 1000
+    shot_indices = [shot_data.index for shot_data in shot_results]
+    assert shot_indices == list(range(10))
