@@ -1,3 +1,4 @@
+import abc
 from typing import runtime_checkable, Protocol, Self, ParamSpec
 
 from ..name import DeviceName
@@ -15,6 +16,7 @@ class Device(Protocol[InitParams, UpdateParams]):
     used in an experiment.
     """
 
+    @abc.abstractmethod
     def __init__(self, *args: InitParams.args, **kwargs: InitParams.kwargs) -> None:
         """Device constructor.
 
@@ -23,7 +25,7 @@ class Device(Protocol[InitParams, UpdateParams]):
         Instead, use the :meth:`__enter__` method to acquire the necessary resources.
         """
 
-        ...
+        raise NotImplementedError
 
     def get_name(self) -> DeviceName:
         """A unique name given to the device.
@@ -37,6 +39,7 @@ class Device(Protocol[InitParams, UpdateParams]):
     def __str__(self) -> str:
         return self.get_name()
 
+    @abc.abstractmethod
     def __enter__(self) -> Self:
         """Initialize the device.
 
@@ -45,7 +48,7 @@ class Device(Protocol[InitParams, UpdateParams]):
         No initialization should be done in the constructor.
         """
 
-        ...
+        raise NotImplementedError
 
     def update_parameters(
         self, *args: UpdateParams.args, **kwargs: UpdateParams.kwargs
@@ -54,13 +57,14 @@ class Device(Protocol[InitParams, UpdateParams]):
 
         ...
 
+    @abc.abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Shutdown the device.
 
         Used to terminate communication to the device and free the associated resources.
         """
 
-        ...
+        raise NotImplementedError
 
 
 @runtime_checkable
