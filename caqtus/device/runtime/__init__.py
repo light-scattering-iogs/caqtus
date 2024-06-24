@@ -17,8 +17,8 @@ Below is a very basic usage example of a device that satisfies this protocol:
                 rotation_stage.update_parameters(angle=angle)
 """
 
-from ._device import Device, AcquisitionDevice
+from ._device import Device
 from ._installed_devices_discovery import load_installed_devices
 from .runtime_device import RuntimeDevice
 
-__all__ = ["Device", "RuntimeDevice", "load_installed_devices", "AcquisitionDevice"]
+__all__ = ["Device", "RuntimeDevice", "load_installed_devices"]

@@ -2,7 +2,6 @@ import abc
 from typing import runtime_checkable, Protocol, Self, ParamSpec
 
 from ..name import DeviceName
-from ...types.data import Data, DataLabel
 
 UpdateParams = ParamSpec("UpdateParams")
 InitParams = ParamSpec("InitParams")
@@ -65,13 +64,3 @@ class Device(Protocol[InitParams, UpdateParams]):
         """
 
         raise NotImplementedError
-
-
-@runtime_checkable
-class AcquisitionDevice(Protocol):
-    """Defines the interface that a device must satisfy to provide data."""
-
-    def get_data(self) -> dict[DataLabel, Data]:
-        """Return the data produced by the device."""
-
-        ...
