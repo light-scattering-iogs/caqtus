@@ -9,4 +9,5 @@ How to
    how-to-add-new-device
    ui
    add lane
+   device-extension
 

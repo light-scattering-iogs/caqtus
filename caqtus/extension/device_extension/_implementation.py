@@ -25,8 +25,16 @@ class DeviceExtension(Generic[C]):
     Attributes:
         label: A human-readable label for the type of device represented by this
             extension.
-            This label will be displayed to the user when they are selecting a device
-            to add to the experiment.
+            This label describes the type of device and will be displayed to the user
+            when they are selecting a device to add to the experiment.
+            No two device extensions should have the same label.
+        device_type: A callable that returns a new device instance.
+            This function will be called when a device associated with this extension
+            needs to be created.
+            The arguments passed are obtained by calling the method
+            :meth:`caqtus.device.compiler.DeviceCompiler.compile_initialization_parameters`
+            of the compiler associated with the device.
+            This function needs to be pickleable as it will be sent to a remote process.
         configuration_type: The type of configuration used to store the settings of
             the device.
         configuration_factory: A factory function that returns a new instance of the
