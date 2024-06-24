@@ -81,3 +81,8 @@ def to_json(obj: Any, unstructure_as: Any = None) -> str:
 def from_json(serialized: str, cls: type[T]) -> T:
     converter: JsonConverter = converters["json"]  # type: ignore
     return converter.loads(serialized, cls)
+
+def copy_converter() -> Converter:
+    """Return a copy of a serialization converter with common hooks registered."""
+
+    return converters["json"].copy()

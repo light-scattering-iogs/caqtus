@@ -8,6 +8,7 @@ from .converters import (
     register_structure_hook,
     to_json,
     from_json,
+    copy_converter,
 )
 from .customize import customize, AttributeOverride
 from .json import JSON
@@ -28,4 +29,5 @@ __all__ = [
     "configure_tagged_union",
     "include_type",
     "JSON",
+    "copy_converter",
 ]
