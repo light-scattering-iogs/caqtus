@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HOWTO for creating device extension
 - Function to get a copy of caqtus serialization converter
+- Export `FormDeviceConfigurationEditor` in `caqtus.gui.condetrol.device_configuration_editors`
 
 ### Changed
 
