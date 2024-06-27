@@ -2,7 +2,7 @@ import contextlib
 from collections.abc import Callable
 from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any
 
-from .rpc import RPCClient, Proxy
+from .rpc import Client, Proxy
 from .rpc.server import RemoteError
 from .. import Device
 
@@ -16,7 +16,7 @@ T = TypeVar("T")
 class DeviceProxy(Generic[DeviceType]):
     def __init__(
         self,
-        rpc_client: RPCClient,
+        rpc_client: Client,
         device_type: Callable[P, DeviceType],
         *args: P.args,
         **kwargs: P.kwargs,
