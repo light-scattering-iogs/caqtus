@@ -5,7 +5,8 @@ from typing import TypeVar
 import anyio
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
-from caqtus.device.remote import Client, DeviceProxy, RPCConfiguration
+from caqtus.device.remote import DeviceProxy, RPCConfiguration
+from caqtus.device.remote.rpc import RPCClient
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
@@ -48,11 +49,11 @@ async def create_devices(
 @contextlib.asynccontextmanager
 async def create_rpc_clients(
     device_server_configs: Mapping[str, RPCConfiguration],
-) -> AsyncGenerator[dict[str, Client], None]:
-    clients: dict[str, Client] = {}
+) -> AsyncGenerator[dict[str, RPCClient], None]:
+    clients: dict[str, RPCClient] = {}
     async with contextlib.AsyncExitStack() as stack:
         for server_name, config in device_server_configs.items():
-            client = Client(config)
+            client = RPCClient(config.host, config.port)
             await stack.enter_async_context(client)
             clients[server_name] = client
         yield clients
