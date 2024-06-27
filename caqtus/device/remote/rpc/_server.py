@@ -5,15 +5,12 @@ import pickle
 import warnings
 from collections.abc import Callable
 from enum import Enum, auto
-from typing import Never, Any, TypeVar, Self
+from typing import Never, Any, TypeVar
 
 import anyio
 import anyio.to_thread
 import attrs
 
-from ._configuration import (
-    RPCConfiguration,
-)
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from .proxy import Proxy
 from .server import RemoteError, InvalidProxyError
@@ -164,19 +161,3 @@ class RPCServer:
 
     def run(self) -> Never:
         anyio.run(self.run_async)
-
-
-class Server:
-    def __init__(self, config: RPCConfiguration) -> None:
-        self._server = RPCServer(config.port)
-
-    def wait_for_termination(self) -> None:
-        self._server.run()
-
-    def __enter__(self) -> Self:
-        self._server.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self._server.__exit__(exc_type, exc_value, traceback)
-        logger.info("Server stopped")
