@@ -8,7 +8,7 @@ from ._configuration import (
 from ._server import RPCServer
 from .client import Client
 from .proxy import Proxy
-from ._server import Server
+from .server import Server
 
 __all__ = [
     "Server",
