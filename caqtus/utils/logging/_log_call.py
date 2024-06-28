@@ -22,7 +22,6 @@ def log_call(
     def decorator(func: Callable[_P, _T]) -> Callable[_P, _T]:
         @functools.wraps(func)
         def wrapper(
-            log=logger.log(level, f"Finished calling %s.", func.__name__),
             *args: _P.args,
             **kwargs: _P.kwargs,
         ) -> _T:
