@@ -11,6 +11,8 @@ from typing import Mapping, Any, Protocol
 import anyio
 import anyio.to_process
 import attrs
+from anyio import TASK_STATUS_IGNORED
+from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
 from caqtus.device import DeviceName
@@ -81,73 +83,64 @@ class ShotManager:
         self._shot_compiler = shot_compiler
         self._shot_retry_config = shot_retry_config
         # These streams must be closed in the order defined here.
-        (
-            self._shot_parameters_input_stream,
-            self._shot_parameters_output_stream,
-        ) = anyio.create_memory_object_stream[ShotParameters]()
-        (
-            self._shot_execution_input_stream,
-            self._shot_execution_output_stream,
-        ) = anyio.create_memory_object_stream[DeviceParameters]()
-        (
-            self._shot_data_input_stream,
-            self._shot_data_output_stream,
-        ) = anyio.create_memory_object_stream(1)
 
         self._exit_stack = contextlib.AsyncExitStack()
 
     async def __aenter__(self) -> AsyncIterable[ShotData]:
         await self._exit_stack.__aenter__()
+        (
+            shot_data_send_stream,
+            shot_data_receive_stream,
+        ) = anyio.create_memory_object_stream[ShotData](1)
         await self._exit_stack.enter_async_context(
-            _log_async_cm(self._shot_data_output_stream, name="shot_data_output_stream")
+            _log_async_cm(shot_data_receive_stream, name="shot_data_receive_stream")
         )
-        await self._exit_stack.enter_async_context(
-            _log_async_cm(self._shot_data_input_stream, name="shot_data_input_stream")
+        task_group = await self._exit_stack.enter_async_context(
+            create_task_group_message("Errors occurred while processing shots")
+        )
+        (
+            device_parameters_send_stream,
+            device_parameters_receive_stream,
+        ) = anyio.create_memory_object_stream[DeviceParameters]()
+        await task_group.start(
+            self.run_shots,
+            self._shot_runner,
+            device_parameters_receive_stream,
+            shot_data_send_stream,
+        )
+        (
+            self._shot_parameters_send_stream,
+            shot_parameters_receive_stream,
+        ) = anyio.create_memory_object_stream[ShotParameters]()
+        await task_group.start(
+            self.compile_shots,
+            self._shot_compiler,
+            shot_parameters_receive_stream,
+            device_parameters_send_stream,
         )
 
-        # Shot execution
-        await self._exit_stack.enter_async_context(
-            _log_async_cm(
-                self._shot_execution_output_stream, name="shot_execution_output_stream"
-            )
-        )
-        shot_execution_tg = await self._exit_stack.enter_async_context(
-            anyio.create_task_group()
-        )
-        shot_execution_tg.start_soon(self._run_shots, self._shot_runner)
-        await self._exit_stack.enter_async_context(
-            _log_async_cm(
-                self._shot_execution_input_stream, name="shot_execution_input_stream"
-            )
-        )
-        shot_execution_queue = ShotExecutionQueue(self._shot_execution_input_stream)
-
-        # Shot compilation
-        shot_parameter_output_streams = []
-        async with self._shot_parameters_output_stream:
-            for i in range(1):
-                stream = await self._exit_stack.enter_async_context(
-                    _log_async_cm(
-                        self._shot_parameters_output_stream.clone(),
-                        name=f"shot_params_output_stream.clone({i})",
-                    )
-                )
-                shot_parameter_output_streams.append(stream)
-        shot_compilation_tg = await self._exit_stack.enter_async_context(
-            _log_async_cm(anyio.create_task_group(), name="shot_compilation_task_group")
-        )
-        for stream in shot_parameter_output_streams:
-            shot_compilation_tg.start_soon(
-                self._compile_shots,
-                self._shot_compiler,
-                stream,
-                shot_execution_queue,
-            )
-
-        return self._shot_data_output_stream
+        return shot_data_receive_stream
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
+
+    async def run_shots(
+        self,
+        shot_runner: ShotRunner,
+        device_parameters_output_stream: MemoryObjectReceiveStream[DeviceParameters],
+        shot_data_input_stream: MemoryObjectSendStream[ShotData],
+        *,
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ) -> None:
+        async with shot_data_input_stream, device_parameters_output_stream:
+            task_status.started()
+            async for device_parameters in device_parameters_output_stream:
+                shot_data = await self._run_shot_with_retry(
+                    device_parameters, shot_runner
+                )
+                logger.debug("Shot %d executed.", device_parameters.index)
+                await shot_data_input_stream.send(shot_data)
+                logger.debug("Shot %d data sent.", device_parameters.index)
 
     @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
@@ -159,29 +152,49 @@ class ShotManager:
         """
 
         async with _log_async_cm(
-            self._shot_parameters_input_stream, name="shot_parameters_input_stream"
+            self._shot_parameters_send_stream, name="shot_parameters_input_stream"
         ):
-            yield ShotScheduler(self._shot_parameters_input_stream)
+            yield ShotScheduler(self._shot_parameters_send_stream)
+
+    async def compile_shots(
+        self,
+        shot_compiler: ShotCompiler,
+        shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
+        device_parameters_send_stream: MemoryObjectSendStream[DeviceParameters],
+        *,
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ):
+        async with (
+            device_parameters_send_stream,
+            create_task_group_message("Errors occurred during shot compilation") as tg,
+        ):
+            shot_execution_queue = ShotExecutionQueue(device_parameters_send_stream)
+            async with shot_params_receive_stream:
+                for i in range(4):
+                    await tg.start(
+                        self._compile_shots,
+                        shot_compiler,
+                        shot_params_receive_stream.clone(),
+                        shot_execution_queue,
+                    )
+            task_status.started()
 
     @staticmethod
     async def _compile_shots(
         shot_compiler: ShotCompiler,
-        shot_params_output_stream: MemoryObjectReceiveStream[ShotParameters],
+        shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionQueue,
-    ):
-        async for shot_params in shot_params_output_stream:
-            result = await anyio.to_process.run_sync(
-                _compile_shot, shot_params, shot_compiler
-            )
-            logger.debug("Pushing shot %d to execution queue.", shot_params.index)
-            await shot_execution_queue.push(result)
-
-    async def _run_shots(self, shot_runner: ShotRunner):
-        async for device_parameters in self._shot_execution_output_stream:
-            shot_data = await self._run_shot_with_retry(device_parameters, shot_runner)
-            logger.debug("Shot %d executed.", device_parameters.index)
-            await self._shot_data_input_stream.send(shot_data)
-            logger.debug("Shot %d data sent.", device_parameters.index)
+        *,
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ) -> None:
+        async with shot_params_receive_stream:
+            task_status.started()
+            async for shot_params in shot_params_receive_stream:
+                result = await anyio.to_process.run_sync(
+                    _compile_shot, shot_params, shot_compiler
+                )
+                logger.debug("Pushing shot %d to execution queue.", shot_params.index)
+                await shot_execution_queue.push(result)
 
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunner
@@ -298,3 +311,18 @@ class ShotScheduler:
             # raised, and we don't want to clutter the exception traceback.
             pass
         self._current_shot += 1
+
+
+@contextlib.contextmanager
+def renamed_exception_group(message: str):
+    try:
+        yield
+    except ExceptionGroup as e:
+        raise ExceptionGroup(message, e.exceptions) from None
+
+
+@contextlib.asynccontextmanager
+async def create_task_group_message(message: str):
+    with renamed_exception_group(message):
+        async with anyio.create_task_group() as tg:
+            yield tg
