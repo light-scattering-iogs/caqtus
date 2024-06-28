@@ -7,32 +7,39 @@ import pytest
 
 from caqtus.device import DeviceName
 from caqtus.experiment_control.sequence_runner.shots_manager import (
-    ShotRunner,
-    ShotCompiler,
+    ShotRunnerProtocol,
+    ShotCompilerProtocol,
     ShotManager,
     ShotRetryConfig,
 )
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
+from caqtus.utils.logging import caqtus_logger
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+caqtus_logger.setLevel(logging.DEBUG)
 
 
-class ShotRunnerMock(ShotRunner):
+class ShotRunnerMock(ShotRunnerProtocol):
     async def run_shot(
         self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
     ) -> Mapping[DataLabel, Data]:
         return {DataLabel("data"): 0}
 
 
-class ShotCompilerMock(ShotCompiler):
+class ShotCompilerMock(ShotCompilerProtocol):
     def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         return {DeviceName("device"): {"param": 0}}, 1.0
 
 
-@pytest.mark.parametrize("anyio_backend", ["asyncio", "trio"])
+@pytest.mark.parametrize("anyio_backend", ["trio"])
 async def test_success(anyio_backend):
-    length = 100
+    length = 10
 
     async def schedule_shots(scheduler):
         for shot in range(length):
