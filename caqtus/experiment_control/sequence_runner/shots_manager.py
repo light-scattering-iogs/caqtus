@@ -4,7 +4,7 @@ import contextlib
 import datetime
 import weakref
 from collections.abc import AsyncGenerator, AsyncIterable
-from typing import Mapping, Any, Protocol
+from typing import Mapping, Any, Protocol, Self
 
 import anyio
 import anyio.to_process
@@ -87,39 +87,39 @@ class ShotManager:
             self._shot_data_input_stream,
             self._shot_data_output_stream,
         ) = anyio.create_memory_object_stream(1)
-        self._current_shot = 0
+
+        self._task_group = anyio.create_task_group()
+
+    async def __aenter__(self) -> Self:
+        await self._task_group.__aenter__()
+        self._task_group.start_soon(self._compile_shots_in_order)
+        self._task_group.start_soon(self._run_shots, self._shot_runner)
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return await self._task_group.__aexit__(exc_type, exc_value, traceback)
 
     @contextlib.asynccontextmanager
-    async def run(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
-        try:
-            async with anyio.create_task_group() as tg:
-                tg.start_soon(self._compile_shots_in_order)
-                tg.start_soon(self._run_shots, self._shot_runner)
-                async with self._shot_data_output_stream:
-                    yield self._shot_data_output_stream
-        except* anyio.BrokenResourceError:
-            # We ignore this error because the error that caused it will anyway be
-            # raised, and we don't want to clutter the exception traceback.
-            # Can't use contextlib.suppress because it only supports exception groups
-            # starting from Python 3.12.
-            pass
+    async def data_output_stream(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
+        """Returns an iterable of the data produced by the shots."""
+
+        # We suppress BrokenResourceError because the error that caused it will anyway
+        # be raised, and we don't want to clutter the exception traceback.
+        with contextlib.suppress(anyio.BrokenResourceError):
+            async with self._shot_data_output_stream:
+                yield self._shot_data_output_stream
 
     @contextlib.asynccontextmanager
-    async def start_scheduling(self) -> AsyncGenerator[None, None]:
+    async def scheduler(self):
+        """Returns an object that allows to schedule shots.
+
+        Warnings:
+            This method should be used as a context manager.
+            It does NOT support being called several times.
+        """
+
         async with self._shot_parameters_input_stream:
-            yield
-
-    async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
-        shot_parameters = ShotParameters(
-            index=self._current_shot, parameters=shot_variables
-        )
-        try:
-            await self._shot_parameters_input_stream.send(shot_parameters)
-        except anyio.BrokenResourceError:
-            # We ignore this error because the error that caused it will anyway be
-            # raised, and we don't want to clutter the exception traceback.
-            pass
-        self._current_shot += 1
+            yield ShotScheduler(self._shot_parameters_input_stream)
 
     async def _compile_shots_in_order(self):
         async with (
@@ -255,3 +255,23 @@ class ShotRetryConfig:
         on_setattr=attrs.setters.validate,
     )
     number_of_attempts: int = attrs.field(default=1, eq=False)
+
+
+class ShotScheduler:
+    def __init__(
+        self, shot_parameters_input_stream: MemoryObjectSendStream[ShotParameters]
+    ):
+        self._shot_parameters_input_stream = shot_parameters_input_stream
+        self._current_shot = 0
+
+    async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
+        shot_parameters = ShotParameters(
+            index=self._current_shot, parameters=shot_variables
+        )
+        try:
+            await self._shot_parameters_input_stream.send(shot_parameters)
+        except anyio.BrokenResourceError:
+            # We ignore this error because the error that caused it will anyway be
+            # raised, and we don't want to clutter the exception traceback.
+            pass
+        self._current_shot += 1
