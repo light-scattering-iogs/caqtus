@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Mapping
 from typing import Any
 
@@ -13,6 +14,11 @@ from caqtus.experiment_control.sequence_runner.shots_manager import (
 )
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
+from caqtus.utils.logging import caqtus_logger
+
+logging.basicConfig(level=logging.INFO)
+
+caqtus_logger.setLevel(logging.DEBUG)
 
 
 def do_nothing():
