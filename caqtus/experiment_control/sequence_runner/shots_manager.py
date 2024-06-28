@@ -11,7 +11,6 @@ from typing import Mapping, Any, Protocol
 import anyio
 import anyio.to_process
 import attrs
-from anyio import TASK_STATUS_IGNORED
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
@@ -149,7 +148,7 @@ class ShotManager:
         device_parameters_output_stream: MemoryObjectReceiveStream[DeviceParameters],
         shot_data_input_stream: MemoryObjectSendStream[ShotData],
         *,
-        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
         async with shot_data_input_stream, device_parameters_output_stream:
             task_status.started()
@@ -181,7 +180,7 @@ class ShotManager:
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         device_parameters_send_stream: MemoryObjectSendStream[DeviceParameters],
         *,
-        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ):
         async with (
             device_parameters_send_stream,
@@ -204,7 +203,7 @@ class ShotManager:
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionSorter,
         *,
-        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+        task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
         async with shot_params_receive_stream:
             task_status.started()
