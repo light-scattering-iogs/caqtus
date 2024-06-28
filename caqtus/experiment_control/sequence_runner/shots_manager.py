@@ -5,8 +5,8 @@ import datetime
 import functools
 import logging
 import weakref
-from collections.abc import AsyncGenerator, AsyncIterable
-from typing import Mapping, Any, Protocol, Self
+from collections.abc import AsyncIterable
+from typing import Mapping, Any, Protocol
 
 import anyio
 import anyio.to_process
@@ -70,7 +70,6 @@ class ShotExecutionQueue:
             pass
 
 
-@log_async_cm_decorator(logger)
 class ShotManager:
     def __init__(
         self,
@@ -95,27 +94,60 @@ class ShotManager:
             self._shot_data_output_stream,
         ) = anyio.create_memory_object_stream(1)
 
-        self._task_group = anyio.create_task_group()
+        self._exit_stack = contextlib.AsyncExitStack()
 
-    async def __aenter__(self) -> Self:
-        await self._task_group.__aenter__()
-        self._task_group.start_soon(self._compile_shots_in_order)
-        self._task_group.start_soon(self._run_shots, self._shot_runner)
-        return self
+    async def __aenter__(self) -> AsyncIterable[ShotData]:
+        await self._exit_stack.__aenter__()
+        await self._exit_stack.enter_async_context(
+            _log_async_cm(self._shot_data_output_stream, name="shot_data_output_stream")
+        )
+        await self._exit_stack.enter_async_context(
+            _log_async_cm(self._shot_data_input_stream, name="shot_data_input_stream")
+        )
+
+        # Shot execution
+        await self._exit_stack.enter_async_context(
+            _log_async_cm(
+                self._shot_execution_output_stream, name="shot_execution_output_stream"
+            )
+        )
+        shot_execution_tg = await self._exit_stack.enter_async_context(
+            anyio.create_task_group()
+        )
+        shot_execution_tg.start_soon(self._run_shots, self._shot_runner)
+        await self._exit_stack.enter_async_context(
+            _log_async_cm(
+                self._shot_execution_input_stream, name="shot_execution_input_stream"
+            )
+        )
+        shot_execution_queue = ShotExecutionQueue(self._shot_execution_input_stream)
+
+        # Shot compilation
+        shot_parameter_output_streams = []
+        async with self._shot_parameters_output_stream:
+            for i in range(1):
+                stream = await self._exit_stack.enter_async_context(
+                    _log_async_cm(
+                        self._shot_parameters_output_stream.clone(),
+                        name=f"shot_params_output_stream.clone({i})",
+                    )
+                )
+                shot_parameter_output_streams.append(stream)
+        shot_compilation_tg = await self._exit_stack.enter_async_context(
+            _log_async_cm(anyio.create_task_group(), name="shot_compilation_task_group")
+        )
+        for stream in shot_parameter_output_streams:
+            shot_compilation_tg.start_soon(
+                self._compile_shots,
+                self._shot_compiler,
+                stream,
+                shot_execution_queue,
+            )
+
+        return self._shot_data_output_stream
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        return await self._task_group.__aexit__(exc_type, exc_value, traceback)
-
-    @log_async_cm_decorator(logger)
-    @contextlib.asynccontextmanager
-    async def data_output_stream(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
-        """Returns an iterable of the data produced by the shots."""
-
-        # We suppress BrokenResourceError because the error that caused it will anyway
-        # be raised, and we don't want to clutter the exception traceback.
-        with contextlib.suppress(anyio.BrokenResourceError):
-            async with self._shot_data_output_stream:
-                yield self._shot_data_output_stream
+        return await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
     @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
@@ -123,7 +155,6 @@ class ShotManager:
         """Returns an object that allows to schedule shots.
 
         Warnings:
-            This method should be used as a context manager.
             It does NOT support being called several times.
         """
 
@@ -132,51 +163,25 @@ class ShotManager:
         ):
             yield ShotScheduler(self._shot_parameters_input_stream)
 
-    async def _compile_shots_in_order(self):
-        async with (
-            _log_async_cm(
-                self._shot_execution_input_stream, name="shot_execution_input_stream"
-            ),
-            anyio.create_task_group() as tg,
-            _log_async_cm(
-                self._shot_parameters_output_stream,
-                name="shot_parameters_output_stream",
-            ),
-        ):
-            shot_execution_queue = ShotExecutionQueue(self._shot_execution_input_stream)
-            for _ in range(4):
-                tg.start_soon(
-                    self._compile_shots,
-                    self._shot_compiler,
-                    self._shot_parameters_output_stream.clone(),
-                    shot_execution_queue,
-                )
-
     @staticmethod
     async def _compile_shots(
         shot_compiler: ShotCompiler,
         shot_params_output_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionQueue,
     ):
-        async with _log_async_cm(
-            shot_params_output_stream, name="shot_params_output_stream.clone()"
-        ):
-            async for shot_params in shot_params_output_stream:
-                result = await anyio.to_process.run_sync(
-                    _compile_shot, shot_params, shot_compiler
-                )
-                await shot_execution_queue.push(result)
+        async for shot_params in shot_params_output_stream:
+            result = await anyio.to_process.run_sync(
+                _compile_shot, shot_params, shot_compiler
+            )
+            logger.debug("Pushing shot %d to execution queue.", shot_params.index)
+            await shot_execution_queue.push(result)
 
     async def _run_shots(self, shot_runner: ShotRunner):
-        async with (
-            _log_async_cm(self._shot_data_input_stream) as sender,
-            _log_async_cm(self._shot_execution_output_stream) as receiver,
-        ):
-            async for device_parameters in receiver:
-                shot_data = await self._run_shot_with_retry(
-                    device_parameters, shot_runner
-                )
-                await sender.send(shot_data)
+        async for device_parameters in self._shot_execution_output_stream:
+            shot_data = await self._run_shot_with_retry(device_parameters, shot_runner)
+            logger.debug("Shot %d executed.", device_parameters.index)
+            await self._shot_data_input_stream.send(shot_data)
+            logger.debug("Shot %d data sent.", device_parameters.index)
 
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunner

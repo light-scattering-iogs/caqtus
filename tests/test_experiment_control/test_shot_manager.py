@@ -40,26 +40,30 @@ class ShotCompilerMock(ShotCompiler):
 
 
 def test_0():
-    async def schedule_shots(shot_manager: ShotManager):
-        async with shot_manager.scheduler() as scheduler:
-            for shot in range(10):
-                await scheduler.schedule_shot(VariableNamespace({"rep": shot}))
+    async def schedule_shots(scheduler):
+        for shot in range(10):
+            await scheduler.schedule_shot(VariableNamespace({"rep": shot}))
 
     shot_results = []
 
-    async def collect_data(shot_manager: ShotManager) -> list[Mapping[DataLabel, Data]]:
-        async with shot_manager.data_output_stream() as shots_data:
-            async for shot in shots_data:
-                shot_results.append(shot)
+    async def collect_data(shots_data) -> list[Mapping[DataLabel, Data]]:
+        async for shot in shots_data:
+            shot_results.append(shot)
         return shot_results
 
     async def fun():
-        async with anyio.create_task_group() as tg, ShotManager(
+        shot_manager = ShotManager(
             ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()
-        ) as shot_manager:
-            tg.start_soon(collect_data, shot_manager)
-            tg.start_soon(schedule_shots, shot_manager)
+        )
+        async with (
+            shot_manager as data_output_stream,
+            anyio.create_task_group() as data_tg,
+            shot_manager.scheduler() as scheduler,
+            anyio.create_task_group() as scheduler_tg,
+        ):
+            data_tg.start_soon(collect_data, data_output_stream)
+            scheduler_tg.start_soon(schedule_shots, scheduler)
 
-    anyio.run(fun)
+    anyio.run(fun, backend="trio")
     shot_indices = [shot_data.index for shot_data in shot_results]
     assert shot_indices == list(range(10))
