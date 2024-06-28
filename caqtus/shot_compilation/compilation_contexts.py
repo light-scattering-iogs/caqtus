@@ -16,13 +16,53 @@ if TYPE_CHECKING:
 LaneType = TypeVar("LaneType", bound=TimeLane)
 
 
+@attrs.define(slots=False)
+class SequenceContext:
+    """Contains information about a sequence being compiled."""
+
+    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
+    _time_lanes: TimeLanes
+
+    def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
+        """Returns the configuration for the given device.
+
+        raises:
+            KeyError: If no configuration is found for the given device.
+        """
+
+        return self._device_configurations[device_name]
+
+    def get_lane(self, name: str) -> TimeLane:
+        """Returns the time lane with the given name.
+
+        raises:
+            KeyError: If no lane with the given name is not found in the sequence
+            context.
+        """
+
+        return self._time_lanes.lanes[name]
+
+    def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
+        """Returns the lanes used during the shot with the given type."""
+
+        return {
+            name: lane
+            for name, lane in self._time_lanes.lanes.items()
+            if isinstance(lane, lane_type)
+        }
+
+    def get_step_names(self) -> tuple[str, ...]:
+        """Returns the names of the steps in the sequence."""
+
+        return tuple(self._time_lanes.step_names)
+
+
 @attrs.define
 class ShotContext:
     """Contains information about a shot being compiled."""
 
-    _time_lanes: TimeLanes
+    _sequence_context: SequenceContext
     _variables: Mapping[DottedVariableName, Any]
-    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
     _device_compilers: Mapping[DeviceName, "DeviceCompiler"]
 
     _step_durations: tuple[float, ...] = attrs.field(init=False)
@@ -31,6 +71,11 @@ class ShotContext:
     _computed_shot_parameters: dict[DeviceName, Mapping[str, Any]] = attrs.field(
         init=False
     )
+
+    @property
+    def _time_lanes(self) -> TimeLanes:
+        # noinspection PyProtectedMember
+        return self._sequence_context._time_lanes
 
     def __attrs_post_init__(self):
         self._step_durations = tuple(
@@ -51,23 +96,20 @@ class ShotContext:
             KeyError: If no lane with the given name is present for the shot.
         """
 
-        result = self._time_lanes.lanes[name]
+        lane = self._sequence_context.get_lane(name)
         self._was_lane_used[name] = True
-        return result
+        return lane
 
     def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
         """Returns the lanes used during the shot with the given type."""
 
-        return {
-            name: lane
-            for name, lane in self._time_lanes.lanes.items()
-            if isinstance(lane, lane_type)
-        }
+        # Unclear if the lanes obtained here should be marked as used or not.
+        return self._sequence_context.get_lanes_with_type(lane_type)
 
     def get_step_names(self) -> tuple[str, ...]:
         """Returns the names of the steps in the shot."""
 
-        return tuple(self._time_lanes.step_names)
+        return self._sequence_context.get_step_names()
 
     def get_step_durations(self) -> tuple[float, ...]:
         """Returns the durations of each step in seconds."""
@@ -96,7 +138,7 @@ class ShotContext:
             KeyError: If no configuration is found for the given device.
         """
 
-        return self._device_configurations[device_name]
+        return self._sequence_context.get_device_configuration(device_name)
 
     def get_shot_parameters(self, device_name: DeviceName) -> Mapping[str, Any]:
         """Returns the parameters computed for the given device."""
@@ -111,33 +153,6 @@ class ShotContext:
 
     def _unused_lanes(self) -> set[str]:
         return {name for name, used in self._was_lane_used.items() if not used}
-
-
-@attrs.define(slots=False)
-class SequenceContext:
-    """Contains information about a sequence being compiled."""
-
-    _device_configurations: Mapping[DeviceName, DeviceConfiguration]
-    _time_lanes: TimeLanes
-
-    def get_device_configuration(self, device_name: DeviceName) -> DeviceConfiguration:
-        """Returns the configuration for the given device.
-
-        raises:
-            KeyError: If no configuration is found for the given device.
-        """
-
-        return self._device_configurations[device_name]
-
-    def get_lane(self, name: str) -> TimeLane:
-        """Returns the time lane with the given name.
-
-        raises:
-            KeyError: If no lane with the given name is not found in the sequence
-            context.
-        """
-
-        return self._time_lanes.lanes[name]
 
 
 def evaluate_step_durations(
