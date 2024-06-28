@@ -73,6 +73,22 @@ class ShotExecutionQueue:
 
 
 class ShotManager:
+    """Manages the execution of shots.
+
+    This object acts as an execution queue for shots on the experiment.
+
+    When entered as a context manager, it returns two objects:
+    - A stream of shot data.
+    - A context manager that allows to schedule shots.
+
+    The context manager must be entered and closed before the ShotManager is closed.
+    This is necessary to know when all shots have been scheduled.
+
+    Examples:
+        async with (ShotManager(...) as (data_stream, scheduler_ctx), scheduler_ctx as scheduler:
+            # Schedule shots and collect data.
+    """
+
     def __init__(
         self,
         shot_runner: ShotRunner,
@@ -82,11 +98,14 @@ class ShotManager:
         self._shot_runner = shot_runner
         self._shot_compiler = shot_compiler
         self._shot_retry_config = shot_retry_config
-        # These streams must be closed in the order defined here.
 
         self._exit_stack = contextlib.AsyncExitStack()
 
-    async def __aenter__(self) -> AsyncIterable[ShotData]:
+    async def __aenter__(
+        self,
+    ) -> tuple[
+        AsyncIterable[ShotData], contextlib.AbstractAsyncContextManager[ShotScheduler]
+    ]:
         await self._exit_stack.__aenter__()
         (
             shot_data_send_stream,
@@ -119,7 +138,7 @@ class ShotManager:
             device_parameters_send_stream,
         )
 
-        return shot_data_receive_stream
+        return shot_data_receive_stream, self.scheduler()
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
