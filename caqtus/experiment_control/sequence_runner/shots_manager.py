@@ -37,7 +37,7 @@ class ShotCompiler(Protocol):
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]: ...
 
 
-class ShotExecutionQueue:
+class ShotExecutionSorter:
     """Wraps a memory object send stream to ensure that shots are executed in order."""
 
     def __init__(self, shot_execution_stream: MemoryObjectSendStream[DeviceParameters]):
@@ -187,7 +187,7 @@ class ShotManager:
             device_parameters_send_stream,
             create_task_group_message("Errors occurred during shot compilation") as tg,
         ):
-            shot_execution_queue = ShotExecutionQueue(device_parameters_send_stream)
+            shot_execution_queue = ShotExecutionSorter(device_parameters_send_stream)
             async with shot_params_receive_stream:
                 for i in range(4):
                     await tg.start(
@@ -202,7 +202,7 @@ class ShotManager:
     async def _compile_shots(
         shot_compiler: ShotCompiler,
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
-        shot_execution_queue: ShotExecutionQueue,
+        shot_execution_queue: ShotExecutionSorter,
         *,
         task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
     ) -> None:
