@@ -31,7 +31,7 @@ class ShotCompilerMock(ShotCompiler):
 
 
 @pytest.mark.parametrize("anyio_backend", ["asyncio", "trio"])
-async def test_on_asyncio_only(anyio_backend):
+async def test_success(anyio_backend):
     length = 100
 
     async def schedule_shots(scheduler):
