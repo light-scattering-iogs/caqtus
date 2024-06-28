@@ -57,6 +57,8 @@ async def log_async_cm(
 
     to_print = cm if name is None else name
     logger.log(level, "Enter cm: %s.", to_print)
-    async with cm as value:
-        yield value
-    logger.log(level, f"Exit  cm: %s.", to_print)
+    try:
+        async with cm as value:
+            yield value
+    finally:
+        logger.log(level, f"Exit  cm: %s.", to_print)

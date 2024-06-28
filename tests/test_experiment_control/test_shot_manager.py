@@ -1,4 +1,4 @@
-import logging
+import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -14,11 +14,6 @@ from caqtus.experiment_control.sequence_runner.shots_manager import (
 )
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
-from caqtus.utils.logging import caqtus_logger
-
-logging.basicConfig(level=logging.INFO)
-
-caqtus_logger.setLevel(logging.DEBUG)
 
 
 def do_nothing():
@@ -40,8 +35,10 @@ class ShotCompilerMock(ShotCompiler):
 
 
 def test_0():
+    length = 100
+
     async def schedule_shots(scheduler):
-        for shot in range(10):
+        for shot in range(length):
             await scheduler.schedule_shot(VariableNamespace({"rep": shot}))
 
     shot_results = []
@@ -64,6 +61,9 @@ def test_0():
             data_tg.start_soon(collect_data, data_output_stream)
             scheduler_tg.start_soon(schedule_shots, scheduler)
 
+    t0 = time.perf_counter()
     anyio.run(fun, backend="trio")
+    t1 = time.perf_counter()
+    print(f"Time taken: {t1 - t0:.2f} s")
     shot_indices = [shot_data.index for shot_data in shot_results]
-    assert shot_indices == list(range(10))
+    assert shot_indices == list(range(length))
