@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import functools
 import logging
 import weakref
 from collections.abc import AsyncGenerator, AsyncIterable
@@ -15,9 +16,11 @@ from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStre
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
-from caqtus.utils.logging import log_async_cm
+from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 
 logger = logging.getLogger(__name__)
+
+_log_async_cm = functools.partial(log_async_cm, logger=logger)
 
 
 class ShotRunner(Protocol):
@@ -67,7 +70,7 @@ class ShotExecutionQueue:
             pass
 
 
-@log_async_cm(logger)
+@log_async_cm_decorator(logger)
 class ShotManager:
     def __init__(
         self,
@@ -103,7 +106,7 @@ class ShotManager:
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self._task_group.__aexit__(exc_type, exc_value, traceback)
 
-    @log_async_cm(logger)
+    @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
     async def data_output_stream(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
         """Returns an iterable of the data produced by the shots."""
@@ -114,7 +117,7 @@ class ShotManager:
             async with self._shot_data_output_stream:
                 yield self._shot_data_output_stream
 
-    @log_async_cm(logger)
+    @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
     async def scheduler(self):
         """Returns an object that allows to schedule shots.
@@ -124,14 +127,21 @@ class ShotManager:
             It does NOT support being called several times.
         """
 
-        async with self._shot_parameters_input_stream:
+        async with _log_async_cm(
+            self._shot_parameters_input_stream, name="shot_parameters_input_stream"
+        ):
             yield ShotScheduler(self._shot_parameters_input_stream)
 
     async def _compile_shots_in_order(self):
         async with (
-            self._shot_execution_input_stream,
+            _log_async_cm(
+                self._shot_execution_input_stream, name="shot_execution_input_stream"
+            ),
             anyio.create_task_group() as tg,
-            self._shot_parameters_output_stream,
+            _log_async_cm(
+                self._shot_parameters_output_stream,
+                name="shot_parameters_output_stream",
+            ),
         ):
             shot_execution_queue = ShotExecutionQueue(self._shot_execution_input_stream)
             for _ in range(4):
@@ -148,7 +158,9 @@ class ShotManager:
         shot_params_output_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionQueue,
     ):
-        async with shot_params_output_stream:
+        async with _log_async_cm(
+            shot_params_output_stream, name="shot_params_output_stream.clone()"
+        ):
             async for shot_params in shot_params_output_stream:
                 result = await anyio.to_process.run_sync(
                     _compile_shot, shot_params, shot_compiler
@@ -157,14 +169,14 @@ class ShotManager:
 
     async def _run_shots(self, shot_runner: ShotRunner):
         async with (
-            self._shot_data_input_stream,
-            self._shot_execution_output_stream as receiver,
+            _log_async_cm(self._shot_data_input_stream) as sender,
+            _log_async_cm(self._shot_execution_output_stream) as receiver,
         ):
             async for device_parameters in receiver:
                 shot_data = await self._run_shot_with_retry(
                     device_parameters, shot_runner
                 )
-                await self._shot_data_input_stream.send(shot_data)
+                await sender.send(shot_data)
 
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunner
