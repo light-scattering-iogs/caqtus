@@ -36,25 +36,15 @@ psycopg = {extras = ["binary"], version = "^3.1.18"}
 
 # GUI dependencies
 pyside6 = {version = ">=6.6"}
-anytree = {version = "^2.12.1"}
 qtawesome = {version = "^1.3.0"}
 pyqtgraph = {version = "^0.13.4"}
 matplotlib = "^3.8.3"
 nodegraphqt = {git = "https://github.com/light-scattering-io/NodeGraphQt.git"}
-hypothesis = {extras = ["numpy"], version = "^6.103.1"}
-
-
-
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.1.1"
 pytest-qt = "^4.4.0"
-
-caqtus_devices-ni6738_analog_card = {git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.ni6738_analog_card"}
-caqtus_devices-orca_quest = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.orca_quest" }
-caqtus_devices-swabian_pulse_streamer = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.swabian_pulse_streamer" }
-caqtus_devices-spincore_pulse_blaster = { git = "https://github.com/light-scattering-io/caqtus_devices.git", subdirectory = "caqtus_devices.spincore_pulse_blaster" }
-
+hypothesis = {extras = ["numpy"], version = "^6.103.1"}
 
 [tool.poetry.group.doc.dependencies]
 sphinx = "^7.2.6"
@@ -64,7 +54,6 @@ requests = "^2.31.0"
 sphobjinv = "^2.3.1"
 sphinx-autodoc-typehints = "^2.0.0"
 sphinx-rtd-theme = "^2.0.0"
-
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
