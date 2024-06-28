@@ -1,9 +1,9 @@
-import time
 from collections.abc import Mapping
 from typing import Any
 
 import anyio
 import anyio.to_process
+import pytest
 
 from caqtus.device import DeviceName
 from caqtus.experiment_control.sequence_runner.shots_manager import (
@@ -14,10 +14,6 @@ from caqtus.experiment_control.sequence_runner.shots_manager import (
 )
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
-
-
-def do_nothing():
-    pass
 
 
 class ShotRunnerMock(ShotRunner):
@@ -34,7 +30,8 @@ class ShotCompilerMock(ShotCompiler):
         return {DeviceName("device"): {"param": 0}}, 1.0
 
 
-def test_0():
+@pytest.mark.parametrize("anyio_backend", ["asyncio", "trio"])
+async def test_on_asyncio_only(anyio_backend):
     length = 100
 
     async def schedule_shots(scheduler):
@@ -48,22 +45,17 @@ def test_0():
             shot_results.append(shot)
         return shot_results
 
-    async def fun():
-        shot_manager = ShotManager(
-            ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()
-        )
-        async with (
-            shot_manager as data_output_stream,
-            anyio.create_task_group() as data_tg,
-            shot_manager.scheduler() as scheduler,
-            anyio.create_task_group() as scheduler_tg,
-        ):
-            data_tg.start_soon(collect_data, data_output_stream)
-            scheduler_tg.start_soon(schedule_shots, scheduler)
+    async with (
+        ShotManager(ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()) as (
+            data_output_stream,
+            scheduler_manager,
+        ),
+        anyio.create_task_group() as data_tg,
+        scheduler_manager as scheduler,
+        anyio.create_task_group() as scheduler_tg,
+    ):
+        data_tg.start_soon(collect_data, data_output_stream)
+        scheduler_tg.start_soon(schedule_shots, scheduler)
 
-    t0 = time.perf_counter()
-    anyio.run(fun, backend="trio")
-    t1 = time.perf_counter()
-    print(f"Time taken: {t1 - t0:.2f} s")
     shot_indices = [shot_data.index for shot_data in shot_results]
     assert shot_indices == list(range(length))
