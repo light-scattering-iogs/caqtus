@@ -4,9 +4,10 @@ import contextlib
 import datetime
 import functools
 import logging
+import warnings
 import weakref
 from collections.abc import AsyncIterable
-from typing import Mapping, Any, Protocol
+from typing import Mapping, Any, Protocol, TypeVar
 
 import anyio
 import anyio.to_process
@@ -24,13 +25,13 @@ logger = logging.getLogger(__name__)
 _log_async_cm = functools.partial(log_async_cm, logger=logger)
 
 
-class ShotRunner(Protocol):
+class ShotRunnerProtocol(Protocol):
     async def run_shot(
         self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
     ) -> Mapping[DataLabel, Data]: ...
 
 
-class ShotCompiler(Protocol):
+class ShotCompilerProtocol(Protocol):
     def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]: ...
@@ -76,6 +77,11 @@ class ShotManager:
 
     This object acts as an execution queue for shots on the experiment.
 
+    When a shot is scheduled, the shot parameters are compiled into device parameters.
+    The device parameters are then queued to run a shot on the experiment.
+    The data produced by the shot is then yielded. The data must be consumed to allow
+    further shots to be executed and scheduled.
+
     When entered as a context manager, it returns two objects:
     - A stream of shot data.
     - A context manager that allows to schedule shots.
@@ -83,15 +89,16 @@ class ShotManager:
     The context manager must be entered and closed before the ShotManager is closed.
     This is necessary to know when all shots have been scheduled.
 
-    Examples:
-        async with (ShotManager(...) as (data_stream, scheduler_ctx), scheduler_ctx as scheduler:
-            # Schedule shots and collect data.
+    Args:
+        shot_runner: The object that will actually execute the shots on the experiment.
+        shot_compiler: The object that compiles shot parameters into device parameters.
+        shot_retry_config: Specifies how to retry a shot if an error occurs.
     """
 
     def __init__(
         self,
-        shot_runner: ShotRunner,
-        shot_compiler: ShotCompiler,
+        shot_runner: ShotRunnerProtocol,
+        shot_compiler: ShotCompilerProtocol,
         shot_retry_config: ShotRetryConfig,
     ):
         self._shot_runner = shot_runner
@@ -105,11 +112,32 @@ class ShotManager:
     ) -> tuple[
         AsyncIterable[ShotData], contextlib.AbstractAsyncContextManager[ShotScheduler]
     ]:
+        """Enters the context manager.
+
+        When entered, is will start background tasks to compile and run shots.
+
+        Returns:
+            A tuple with two objects:
+            - A stream of shot data.
+            - A context manager that allows to schedule shots.
+
+            The context manager must be entered and closed before the ShotManager is
+            closed because it is necessary to know when all shots have been scheduled.
+
+            The data produced must be consumed to allow further shots to be executed.
+        """
+
         await self._exit_stack.__aenter__()
         (
             shot_data_send_stream,
             shot_data_receive_stream,
         ) = anyio.create_memory_object_stream[ShotData](1)
+        # We suppress BrokenResourceError because it is raised when one of the streams
+        # had its partner stream closed due to another error.
+        # We don't want to raise an error in this case because the error that caused the
+        # stream to be closed will be raised anyway, and we don't want to clutter the
+        # exception traceback.
+        self._exit_stack.enter_context(contextlib.suppress(anyio.BrokenResourceError))
         await self._exit_stack.enter_async_context(
             _log_async_cm(shot_data_receive_stream, name="shot_data_receive_stream")
         )
@@ -144,7 +172,7 @@ class ShotManager:
 
     async def run_shots(
         self,
-        shot_runner: ShotRunner,
+        shot_runner: ShotRunnerProtocol,
         device_parameters_output_stream: MemoryObjectReceiveStream[DeviceParameters],
         shot_data_input_stream: MemoryObjectSendStream[ShotData],
         *,
@@ -157,8 +185,9 @@ class ShotManager:
                     device_parameters, shot_runner
                 )
                 logger.debug("Shot %d executed.", device_parameters.index)
-                await shot_data_input_stream.send(shot_data)
-                logger.debug("Shot %d data sent.", device_parameters.index)
+                await send_fast(
+                    shot_data_input_stream, shot_data, "generated shot data stream"
+                )
 
     @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
@@ -176,7 +205,7 @@ class ShotManager:
 
     async def compile_shots(
         self,
-        shot_compiler: ShotCompiler,
+        shot_compiler: ShotCompilerProtocol,
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         device_parameters_send_stream: MemoryObjectSendStream[DeviceParameters],
         *,
@@ -199,7 +228,7 @@ class ShotManager:
 
     @staticmethod
     async def _compile_shots(
-        shot_compiler: ShotCompiler,
+        shot_compiler: ShotCompilerProtocol,
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionSorter,
         *,
@@ -215,7 +244,7 @@ class ShotManager:
                 await shot_execution_queue.push(result)
 
     async def _run_shot_with_retry(
-        self, device_parameters: DeviceParameters, shot_runner: ShotRunner
+        self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
     ) -> ShotData:
         exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
         number_of_attempts = self._shot_retry_config.number_of_attempts
@@ -282,7 +311,7 @@ class ShotData:
 
 
 def _compile_shot(
-    shot_parameters: ShotParameters, shot_compiler: ShotCompiler
+    shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
 ) -> DeviceParameters:
     compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
     return DeviceParameters(
@@ -322,12 +351,7 @@ class ShotScheduler:
         shot_parameters = ShotParameters(
             index=self._current_shot, parameters=shot_variables
         )
-        try:
-            await self._shot_parameters_input_stream.send(shot_parameters)
-        except anyio.BrokenResourceError:
-            # We ignore this error because the error that caused it will anyway be
-            # raised, and we don't want to clutter the exception traceback.
-            pass
+        await self._shot_parameters_input_stream.send(shot_parameters)
         self._current_shot += 1
 
 
@@ -344,3 +368,26 @@ async def create_task_group_message(message: str):
     with renamed_exception_group(message):
         async with anyio.create_task_group() as tg:
             yield tg
+
+
+_T = TypeVar("_T")
+
+
+async def send_fast(
+    stream: MemoryObjectSendStream[_T], value: _T, stream_name: str
+) -> None:
+    try:
+        return stream.send_nowait(value)
+    except anyio.WouldBlock:
+        try:
+            with anyio.fail_after(1):
+                await stream.send(value)
+        except TimeoutError:
+            raise RuntimeError(f"Could not push value to {stream_name}") from None
+        message = (
+            f"Could not push value to {stream_name} instantly. "
+            "The data consumer can't keep up, which might cause a slowdown of the "
+            "experiment."
+        )
+        warnings.warn(message)
+        logger.warning(message)
