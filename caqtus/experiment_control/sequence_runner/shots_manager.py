@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import logging
 import weakref
 from collections.abc import AsyncGenerator, AsyncIterable
 from typing import Mapping, Any, Protocol, Self
@@ -14,7 +15,9 @@ from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStre
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
-from .._logger import logger
+from caqtus.utils.logging import log_async_cm
+
+logger = logging.getLogger(__name__)
 
 
 class ShotRunner(Protocol):
@@ -64,6 +67,7 @@ class ShotExecutionQueue:
             pass
 
 
+@log_async_cm(logger)
 class ShotManager:
     def __init__(
         self,
@@ -99,6 +103,7 @@ class ShotManager:
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self._task_group.__aexit__(exc_type, exc_value, traceback)
 
+    @log_async_cm(logger)
     @contextlib.asynccontextmanager
     async def data_output_stream(self) -> AsyncGenerator[AsyncIterable[ShotData], None]:
         """Returns an iterable of the data produced by the shots."""
@@ -109,6 +114,7 @@ class ShotManager:
             async with self._shot_data_output_stream:
                 yield self._shot_data_output_stream
 
+    @log_async_cm(logger)
     @contextlib.asynccontextmanager
     async def scheduler(self):
         """Returns an object that allows to schedule shots.
