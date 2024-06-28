@@ -1,4 +1,3 @@
-import time
 from collections.abc import Mapping
 from typing import Any
 
@@ -35,23 +34,23 @@ class ShotCompilerMock(ShotCompiler):
 
 
 def test_0():
-    shot_manager = ShotManager(ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig())
-
     async def schedule_shots(shot_manager: ShotManager):
-        async with shot_manager.start_scheduling():
+        async with shot_manager.scheduler() as scheduler:
             for shot in range(10):
-                await shot_manager.schedule_shot(VariableNamespace({"rep": shot}))
+                await scheduler.schedule_shot(VariableNamespace({"rep": shot}))
 
     shot_results = []
 
-    async def collect_data(shot_manager) -> list[Mapping[DataLabel, Data]]:
-        async with shot_manager.run() as shots_data:
+    async def collect_data(shot_manager: ShotManager) -> list[Mapping[DataLabel, Data]]:
+        async with shot_manager.data_output_stream() as shots_data:
             async for shot in shots_data:
                 shot_results.append(shot)
         return shot_results
 
     async def fun():
-        async with anyio.create_task_group() as tg:
+        async with anyio.create_task_group() as tg, ShotManager(
+            ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()
+        ) as shot_manager:
             tg.start_soon(collect_data, shot_manager)
             tg.start_soon(schedule_shots, shot_manager)
 
