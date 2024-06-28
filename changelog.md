@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Display better error messages when an error occurs while running a sequence
 - Replaced grpc remote devices with anyio remote devices
 
 ## [3.8.0] - 2024-06-28
