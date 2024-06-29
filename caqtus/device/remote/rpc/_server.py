@@ -1,3 +1,4 @@
+import contextlib
 import functools
 import itertools
 import logging
@@ -87,7 +88,8 @@ class RPCServer:
 
     async def run_async(self) -> Never:
         listener = await anyio.create_tcp_listener(local_port=self._port)
-        await listener.serve(self.handle)
+        async with contextlib.aclosing(listener):
+            await listener.serve(self.handle)
 
     async def handle(self, client: anyio.abc.ByteStream) -> None:
         async with client:
