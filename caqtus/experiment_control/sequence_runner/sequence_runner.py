@@ -10,7 +10,7 @@ from caqtus.types.iteration import (
     LinspaceLoop,
 )
 from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
-from .sequence_manager import SequenceManager
+from .shots_manager import ShotScheduler
 from .step_context import StepContext
 
 S = TypeVar("S", bound=Step)
@@ -31,12 +31,27 @@ def wrap_error(
     return wrapper
 
 
+async def execute_steps(
+    steps: Iterable[Step],
+    initial_context: StepContext[Parameter],
+    shot_scheduler: ShotScheduler,
+):
+    """Execute a sequence of steps on the experiment.
+
+    This method will recursively execute each step in the sequence passed as
+    argument and scheduling the shots when encountering a shot step.
+    """
+
+    for context in walk_steps(steps, initial_context):
+        await shot_scheduler.schedule_shot(context.variables)
+
+
 def walk_steps(
     steps: Iterable[Step], initial_context: StepContext
 ) -> Iterable[StepContext]:
     """Yields the context for each shot defined by the steps.
 
-    This function will recursively execute each step in the sequence passed as
+    This function will recursively evaluate each step in the sequence passed as
     argument.
     Before executing the sequence, an empty context is initialized.
     The context holds the value of the parameters at a given point in the sequence.
@@ -47,33 +62,6 @@ def walk_steps(
 
     for step in steps:
         context = yield from walk_step(step, context)
-
-
-class StepSequenceRunner:
-    """Execute a sequence of steps on the experiment."""
-
-    def __init__(
-        self,
-        sequence_manager: SequenceManager,
-        initial_parameters: ParameterNamespace,
-    ):
-        self._sequence_manager = sequence_manager
-        self._initial_parameters = initial_parameters
-
-    async def execute_steps(
-        self, steps: Iterable[Step], initial_context: StepContext[Parameter]
-    ):
-        """Execute a sequence of steps on the experiment.
-
-        This method will recursively execute each step in the sequence passed as
-        argument.
-        Before executing the sequence, an empty context is initialized.
-        The context holds the value of the parameters at a given point in the sequence.
-        Each step has the possibility to update the context with new values.
-        """
-
-        for context in walk_steps(steps, initial_context):
-            await self._sequence_manager.schedule_shot(context.variables)
 
 
 @functools.singledispatch
