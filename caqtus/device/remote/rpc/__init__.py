@@ -1,19 +1,21 @@
+from ._client import RPCClient
 from ._configuration import (
     RPCConfiguration,
     SecureRPCConfiguration,
     InsecureRPCConfiguration,
     LocalRPCCredentials,
 )
-from .client import Client
+from ._server import RPCServer
 from .proxy import Proxy
-from .server import Server
+from ._server import Server
 
 __all__ = [
     "Server",
-    "Client",
     "Proxy",
     "RPCConfiguration",
     "SecureRPCConfiguration",
     "InsecureRPCConfiguration",
     "LocalRPCCredentials",
+    "RPCServer",
+    "RPCClient",
 ]
