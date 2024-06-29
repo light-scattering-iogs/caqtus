@@ -82,13 +82,6 @@ class ShotManager:
     The data produced by the shot is then yielded. The data must be consumed to allow
     further shots to be executed and scheduled.
 
-    When entered as a context manager, it returns two objects:
-    - A stream of shot data.
-    - A context manager that allows to schedule shots.
-
-    The context manager must be entered and closed before the ShotManager is closed.
-    This is necessary to know when all shots have been scheduled.
-
     Args:
         shot_runner: The object that will actually execute the shots on the experiment.
         shot_compiler: The object that compiles shot parameters into device parameters.
@@ -110,19 +103,19 @@ class ShotManager:
     async def __aenter__(
         self,
     ) -> tuple[
-        AsyncIterable[ShotData], contextlib.AbstractAsyncContextManager[ShotScheduler]
+        contextlib.AbstractAsyncContextManager[ShotScheduler],
+        contextlib.AbstractAsyncContextManager[AsyncIterable[ShotData]],
     ]:
-        """Enters the context manager.
-
-        When entered, is will start background tasks to compile and run shots.
+        """Start background tasks to compile and run shots.
 
         Returns:
             A tuple with two objects:
-            - A stream of shot data.
             - A context manager that allows to schedule shots.
+            - A context manager that yields shot data.
 
-            The context manager must be entered and closed before the ShotManager is
-            closed because it is necessary to know when all shots have been scheduled.
+            The context managers must be entered and closed before the ShotManager is
+            closed because it is necessary to know when all shots have been scheduled
+            and the data has been consumed.
 
             The data produced must be consumed to allow further shots to be executed.
         """
@@ -138,11 +131,8 @@ class ShotManager:
         # stream to be closed will be raised anyway, and we don't want to clutter the
         # exception traceback.
         self._exit_stack.enter_context(contextlib.suppress(anyio.BrokenResourceError))
-        await self._exit_stack.enter_async_context(
-            _log_async_cm(shot_data_receive_stream, name="shot_data_receive_stream")
-        )
         task_group = await self._exit_stack.enter_async_context(
-            create_task_group_message("Errors occurred while processing shots")
+            create_task_group_message("Errors occurred while managing shots execution")
         )
         (
             device_parameters_send_stream,
@@ -165,7 +155,7 @@ class ShotManager:
             device_parameters_send_stream,
         )
 
-        return shot_data_receive_stream, self.scheduler()
+        return self.scheduler(), shot_data_receive_stream
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         return await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
