@@ -5,6 +5,7 @@ from collections.abc import Callable, AsyncGenerator, Iterator, AsyncIterator
 from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
 
 import anyio
+import eliot
 
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from ._server import (
@@ -14,6 +15,7 @@ from ._server import (
     CallResponseSuccess,
     CallResponseFailure,
     DeleteProxyRequest,
+    TerminateRequest,
 )
 from .proxy import Proxy
 from .server import RemoteError
@@ -28,12 +30,18 @@ class RPCClient:
         self._host = host
         self._port = port
 
+        self._exit_stack = contextlib.AsyncExitStack()
+
     async def __aenter__(self):
+        await self._exit_stack.__aenter__()
+        self._exit_stack.enter_context(eliot.start_action(action_type="rpc client"))
         self._stream = await anyio.connect_tcp(self._host, self._port)
+        await self._exit_stack.enter_async_context(self._stream)
+        self._exit_stack.push_async_callback(self.terminate)
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._stream.__aexit__(exc_type, exc_value, traceback)
+        await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
     async def call(
         self,
@@ -41,12 +49,15 @@ class RPCClient:
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        request = self._build_request(fun, args, kwargs, "copy")
-        pickled = pickle.dumps(request)
-        await send_with_size_prefix(self._stream, pickled)
-        bytes_response = await receive_with_size_prefix(self._stream)
-        response = pickle.loads(bytes_response)
-        return self._build_result(response)
+        with eliot.start_action(action_type="call", function=str(fun)):
+            with eliot.start_action(action_type="send"):
+                request = self._build_request(fun, args, kwargs, "copy")
+                pickled = pickle.dumps(request)
+                await send_with_size_prefix(self._stream, pickled)
+            with eliot.start_action(action_type="receive"):
+                bytes_response = await receive_with_size_prefix(self._stream)
+                response = pickle.loads(bytes_response)
+                return self._build_result(response)
 
     async def call_method(
         self,
@@ -57,6 +68,11 @@ class RPCClient:
     ) -> Any:
         caller = operator.methodcaller(method, *args, **kwargs)
         return await self.call(caller, obj)
+
+    async def terminate(self):
+        request = TerminateRequest()
+        pickled_request = pickle.dumps(request)
+        await send_with_size_prefix(self._stream, pickled_request)
 
     @contextlib.asynccontextmanager
     async def call_method_proxy_result(
@@ -78,7 +94,6 @@ class RPCClient:
     async def call_proxy_result(
         self, fun: Callable[..., T], *args: Any, **kwargs: Any
     ) -> AsyncGenerator[Proxy[T], None]:
-
         request = self._build_request(fun, args, kwargs, "proxy")
         pickled_request = pickle.dumps(request)
         with anyio.CancelScope(shield=True):

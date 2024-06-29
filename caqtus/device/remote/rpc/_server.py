@@ -1,4 +1,5 @@
 import functools
+import itertools
 import logging
 import os
 import pickle
@@ -55,6 +56,10 @@ class CallResponseSuccess:
     result: Any
 
 
+class TerminateRequest:
+    pass
+
+
 CallResponse = CallResponseFailure | CallResponseSuccess
 
 T = TypeVar("T")
@@ -82,12 +87,17 @@ class RPCServer:
 
     async def handle(self, client):
         async with client:
-            request_bytes = await receive_with_size_prefix(client)
-            request = pickle.loads(request_bytes)
-            if isinstance(request, CallRequest):
-                await self.handle_call_request(client, request)
-            elif isinstance(request, DeleteProxyRequest):
-                self.handle_delete_proxy_request(request)
+            for _ in itertools.count():
+                request_bytes = await receive_with_size_prefix(client)
+                request = pickle.loads(request_bytes)
+                if isinstance(request, CallRequest):
+                    await self.handle_call_request(client, request)
+                elif isinstance(request, DeleteProxyRequest):
+                    self.handle_delete_proxy_request(request)
+                elif isinstance(request, TerminateRequest):
+                    break
+                else:
+                    raise ValueError(f"Unknown request type: {request}")
 
     async def handle_call_request(self, client, request: CallRequest) -> None:
         try:
