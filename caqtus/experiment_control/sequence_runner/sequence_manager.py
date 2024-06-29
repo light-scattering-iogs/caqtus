@@ -4,56 +4,31 @@ import contextlib
 import copy
 import logging
 import threading
-from collections.abc import Mapping, AsyncGenerator
+from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
 import anyio
 import anyio.to_process
 import anyio.to_thread
-from tblib import pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.device.remote import DeviceProxy
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.sequence import State
 from caqtus.shot_compilation import (
-    VariableNamespace,
-    SequenceContext,
     DeviceCompiler,
-    DeviceNotUsedException,
+    SequenceContext,
 )
 from caqtus.types.parameter import ParameterNamespace
-from .shots_manager import ShotManager, ShotData
+from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
-from .._initialize_devices import create_devices
-from .._shot_handling import ShotRunner, ShotCompiler
 from ..device_manager_extension import DeviceManagerExtensionProtocol
+from ..initialize_resources import create_shot_runner, create_shot_compiler
 
-pickling_support.install()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-
-def nothing():
-    pass
 
 
 class SequenceManager:
     """Manages the execution of a sequence.
-
-    Instances of this class run background tasks to compile and run shots for a given
-    sequence.
-    It will properly manage the state of the sequence, meaning it will set it to
-    PREPARING while acquiring the necessary resources, RUNNING while running the shots,
-    FINISHED when the sequence is done normally, CRASHED if an error occurs, and
-    INTERRUPTED if the sequence is interrupted by the user.
-
-    When calling :meth:`schedule_shot`, the parameters for a shot are queued for
-    compilation.
-    A :py:class:`ShotCompiler` will compile the shot parameters into device parameters.
-    The device parameters are then queued to run a shot on the experiment.
-    When a shot runs, it produces data.
-    The data is then queued for storage.
 
     Args:
         sequence: The sequence to run.
@@ -98,43 +73,60 @@ class SequenceManager:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
 
-        self._exit_stack = contextlib.AsyncExitStack()
-
         self._interruption_event = interruption_event
 
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
         self._watch_for_interruption_scope = anyio.CancelScope()
-        self._shot_manager: ShotManager
 
     @contextlib.asynccontextmanager
-    async def run_sequence(self) -> AsyncGenerator[None, None]:
+    async def run_sequence(self) -> AsyncGenerator[ShotScheduler, None]:
+        """Run background tasks to compile and run shots for a given sequence.
+
+        Returns:
+            A asynchronous context manager that yields a shot scheduler object.
+
+            When the context manager is entered, it will set the sequence to PREPARING
+            while acquiring the necessary resources and the transition to RUNNING.
+
+            The context manager will yield a shot scheduler object that can be used to
+            push shots to the sequence execution queue.
+            When a shot is done, its associated data will be stored in the associated
+            sequence.
+
+            One shot scheduling is over, the context manager will be exited.
+            At this point is will finish the sequence and transition the sequence state
+            to FINISHED when the sequence terminated normally, CRASHED if an error
+            occurred or INTERRUPTED if the sequence was interrupted by the user.
+        """
+
         self._prepare_sequence()
         try:
-            async with self._exit_stack:
-                async with anyio.create_task_group() as tg:
-                    # this task is present below to force the initialization of the
-                    # process pool while the devices are being initialized.
-                    tg.start_soon(anyio.to_process.run_sync, nothing)
-
-                    devices_in_use = await self._exit_stack.enter_async_context(
-                        self._create_devices_in_use()
-                    )
-                    shot_runner = self._create_shot_runner(devices_in_use)
-                    shot_compiler = self._create_shot_compiler(devices_in_use)
-                    self._shot_manager = ShotManager(
-                        shot_runner, shot_compiler, self._shot_retry_config
-                    )
+            shot_compiler = create_shot_compiler(
+                SequenceContext(
+                    device_configurations=self.device_configurations,
+                    time_lanes=self.time_lanes,
+                ),
+                self._device_manager_extension,
+            )
+            async with (
+                create_shot_runner(
+                    shot_compiler, self._device_manager_extension
+                ) as shot_runner,
+                ShotManager(shot_runner, shot_compiler, self._shot_retry_config) as (
+                    scheduler_cm,
+                    data_stream_cm,
+                ),
+            ):
                 self._set_sequence_state(State.RUNNING)
                 async with (
                     anyio.create_task_group() as tg,
-                    self._shot_manager.start_scheduling(),
+                    scheduler_cm as scheduler,
                 ):
                     tg.start_soon(self._watch_for_interruption)
-                    tg.start_soon(self._store_shots)
-                    yield
-
+                    tg.start_soon(self._store_shots, data_stream_cm)
+                    yield scheduler
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
@@ -143,57 +135,6 @@ class SequenceManager:
             raise
         else:
             self._set_sequence_state(State.FINISHED)
-
-    @contextlib.asynccontextmanager
-    async def _create_devices_in_use(
-        self,
-    ) -> AsyncGenerator[dict[DeviceName, DeviceProxy], None]:
-        sequence_context = SequenceContext(
-            device_configurations=self.device_configurations, time_lanes=self.time_lanes
-        )
-        self._device_compilers = {}
-        device_types = {}
-        for device_name, device_configuration in self.device_configurations.items():
-            compiler_type = self._device_manager_extension.get_device_compiler_type(
-                device_configuration
-            )
-            try:
-                compiler = compiler_type(device_name, sequence_context)
-            except DeviceNotUsedException:
-                continue
-            else:
-                self._device_compilers[device_name] = compiler
-                device_types[device_name] = (
-                    self._device_manager_extension.get_device_type(device_configuration)
-                )
-        async with create_devices(
-            self._device_compilers,
-            self.device_configurations,
-            device_types,
-            self._device_manager_extension,
-        ) as devices_in_use:
-            yield devices_in_use
-
-    def _create_shot_runner(self, devices_in_use) -> ShotRunner:
-        device_controller_types = {
-            name: self._device_manager_extension.get_device_controller_type(
-                self.device_configurations[name]
-            )
-            for name in devices_in_use
-        }
-        shot_runner = ShotRunner(devices_in_use, device_controller_types)
-        return shot_runner
-
-    def _create_shot_compiler(self, devices_in_use) -> ShotCompiler:
-        shot_compiler = ShotCompiler(
-            self.time_lanes,
-            {name: self.device_configurations[name] for name in devices_in_use},
-            self._device_compilers,
-        )
-        return shot_compiler
-
-    async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
-        await self._shot_manager.schedule_shot(shot_variables)
 
     def _prepare_sequence(self):
         with self._session_maker() as session:
@@ -219,8 +160,11 @@ class SequenceManager:
                     )
                 await anyio.sleep(20e-3)
 
-    async def _store_shots(self):
-        async with self._shot_manager.run() as shots_data:
+    async def _store_shots(
+        self,
+        data_stream_cm: contextlib.AbstractAsyncContextManager[AsyncIterable[ShotData]],
+    ):
+        async with data_stream_cm as shots_data:
             async for shot_data in shots_data:
                 self._store_shot(shot_data)
         self._watch_for_interruption_scope.cancel()
@@ -241,8 +185,4 @@ class SequenceManager:
 
 
 class SequenceInterruptedException(RuntimeError):
-    pass
-
-
-class ProcessingFinishedException(Exception):
     pass
