@@ -5,6 +5,7 @@ from collections.abc import Callable, AsyncGenerator, Iterator, AsyncIterator
 from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
 
 import anyio
+import attrs
 import eliot
 from anyio.streams.buffered import BufferedByteReceiveStream
 
@@ -24,6 +25,17 @@ from .proxy import Proxy
 T = TypeVar("T")
 
 ReturnedType: TypeAlias = Literal["copy", "proxy"]
+
+
+@attrs.frozen
+class MethodCaller:
+    method: LiteralString
+
+    def __call__(self, obj: Any, *args: Any, **kwargs: Any) -> Any:
+        return getattr(obj, self.method)(*args, **kwargs)
+
+    def __str__(self):
+        return f"call method {self.method}"
 
 
 class RPCClient:
@@ -68,8 +80,12 @@ class RPCClient:
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        caller = operator.methodcaller(method, *args, **kwargs)
-        return await self.call(caller, obj)
+        return await self.call(
+            MethodCaller(method=method),
+            obj,
+            *args,
+            **kwargs,
+        )
 
     async def terminate(self):
         request = TerminateRequest()
