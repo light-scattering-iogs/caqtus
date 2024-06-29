@@ -16,8 +16,8 @@ from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.utils import log_exception
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ..sequence_runner import SequenceManager, StepSequenceRunner, ShotRetryConfig
-from ..sequence_runner.sequence_runner import evaluate_initial_context
+from ..sequence_runner import SequenceManager, ShotRetryConfig
+from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -344,18 +344,16 @@ class BoundProcedure(Procedure):
                 device_manager_extension=self._device_manager_extension,
             )
             if not isinstance(iteration, StepsConfiguration):
-                raise NotImplementedError("Only steps iteration is supported.")
-            sequence_runner = StepSequenceRunner(
-                sequence_manager, sequence_manager.sequence_parameters
-            )
+                raise NotImplementedError(
+                    "Only steps iteration is supported at the moment."
+                )
             initial_context = evaluate_initial_context(
                 sequence_manager.sequence_parameters
             )
+            async with sequence_manager.run_sequence() as shot_scheduler:
+                await execute_steps(iteration.steps, initial_context, shot_scheduler)
 
-            async with sequence_manager.run_sequence():
-                await sequence_runner.execute_steps(iteration.steps, initial_context)
-
-        anyio.run(run)
+        anyio.run(run, backend="trio")
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
