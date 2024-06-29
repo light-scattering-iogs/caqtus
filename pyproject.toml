@@ -25,8 +25,6 @@ attrs = "^23.2.0"
 cattrs = "^23.2.3"
 pyyaml = "^6.0.1"
 typing-extensions = "^4.10.0"
-grpcio = "^1.64.0"
-grpcio-tools = "^1.64.1"
 eliot = "^1.15.0"
 
 # SQL dependencies
