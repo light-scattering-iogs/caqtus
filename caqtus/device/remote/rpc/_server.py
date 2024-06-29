@@ -178,7 +178,7 @@ class RPCServer:
             return obj
 
     def run(self) -> Never:
-        anyio.run(self.run_async)
+        anyio.run(self.run_async, backend="trio")
 
 
 class Server:
