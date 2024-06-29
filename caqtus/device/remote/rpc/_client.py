@@ -6,6 +6,7 @@ from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
 
 import anyio
 import eliot
+from anyio.streams.buffered import BufferedByteReceiveStream
 
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from ._server import (
@@ -36,6 +37,7 @@ class RPCClient:
         await self._exit_stack.__aenter__()
         self._exit_stack.enter_context(eliot.start_action(action_type="rpc client"))
         self._stream = await anyio.connect_tcp(self._host, self._port)
+        self._receive_stream = BufferedByteReceiveStream(self._stream)
         await self._exit_stack.enter_async_context(self._stream)
         self._exit_stack.push_async_callback(self.terminate)
         return self
@@ -55,7 +57,7 @@ class RPCClient:
                 pickled = pickle.dumps(request)
                 await send_with_size_prefix(self._stream, pickled)
             with eliot.start_action(action_type="receive"):
-                bytes_response = await receive_with_size_prefix(self._stream)
+                bytes_response = await receive_with_size_prefix(self._receive_stream)
                 response = pickle.loads(bytes_response)
                 return self._build_result(response)
 
@@ -98,7 +100,7 @@ class RPCClient:
         pickled_request = pickle.dumps(request)
         with anyio.CancelScope(shield=True):
             await send_with_size_prefix(self._stream, pickled_request)
-            pickled_response = await receive_with_size_prefix(self._stream)
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
             response = pickle.loads(pickled_response)
 
             proxy = self._build_result(response)

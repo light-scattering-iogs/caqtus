@@ -9,9 +9,11 @@ from enum import Enum, auto
 from typing import Never, Any, TypeVar, Self
 
 import anyio
+import anyio.abc
 import anyio.to_thread
 import attrs
 import tblib.pickling_support
+from anyio.streams.buffered import BufferedByteReceiveStream
 
 from ._configuration import (
     RPCConfiguration,
@@ -87,10 +89,11 @@ class RPCServer:
         listener = await anyio.create_tcp_listener(local_port=self._port)
         await listener.serve(self.handle)
 
-    async def handle(self, client):
+    async def handle(self, client: anyio.abc.ByteStream) -> None:
         async with client:
+            receive_stream = BufferedByteReceiveStream(client)
             for _ in itertools.count():
-                request_bytes = await receive_with_size_prefix(client)
+                request_bytes = await receive_with_size_prefix(receive_stream)
                 request = pickle.loads(request_bytes)
                 if isinstance(request, CallRequest):
                     await self.handle_call_request(client, request)
