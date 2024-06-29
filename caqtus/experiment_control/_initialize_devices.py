@@ -23,14 +23,18 @@ async def create_devices(
     device_manager_extension: DeviceManagerExtensionProtocol,
 ) -> AsyncGenerator[dict[DeviceName, DeviceProxy], None]:
     device_server_configs = {}
-    for device_config in device_configs.values():
+    device_to_server = {}
+    for device_name, device_config in device_configs.items():
         remote_server = device_config.remote_server
         if remote_server is not None:
             device_server_configs[remote_server] = (
                 device_manager_extension.get_device_server_config(remote_server)
             )
+            device_to_server[device_name] = remote_server
 
-    async with create_rpc_clients(device_server_configs) as rpc_clients:
+    async with create_rpc_clients(
+        device_to_server, device_server_configs
+    ) as rpc_clients:
         uninitialized_proxies = {}
         for device_name, device_compiler in device_compilers.items():
             init_params = device_compiler.compile_initialization_parameters()
@@ -38,7 +42,7 @@ async def create_devices(
             device_type = device_types[device_name]
             if device_config.remote_server is None:
                 raise NotImplementedError
-            client = rpc_clients[device_config.remote_server]
+            client = rpc_clients[device_name]
             proxy_type = device_manager_extension.get_proxy_type(device_config)
             device_proxy = proxy_type(client, device_type, **init_params)
             uninitialized_proxies[device_name] = device_proxy
@@ -48,14 +52,16 @@ async def create_devices(
 
 @contextlib.asynccontextmanager
 async def create_rpc_clients(
+    device_servers: Mapping[DeviceName, str],
     device_server_configs: Mapping[str, RPCConfiguration],
-) -> AsyncGenerator[dict[str, RPCClient], None]:
-    clients: dict[str, RPCClient] = {}
+) -> AsyncGenerator[dict[DeviceName, RPCClient], None]:
+    clients: dict[DeviceName, RPCClient] = {}
     async with contextlib.AsyncExitStack() as stack:
-        for server_name, config in device_server_configs.items():
+        for device_name, server in device_servers.items():
+            config = device_server_configs[server]
             client = RPCClient(config.host, config.port)
             await stack.enter_async_context(client)
-            clients[server_name] = client
+            clients[device_name] = client
         yield clients
 
 
