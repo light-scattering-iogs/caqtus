@@ -1,3 +1,5 @@
+import eliot
+
 from caqtus.device.controller import (
     DeviceController,
 )

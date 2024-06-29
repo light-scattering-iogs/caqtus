@@ -16,6 +16,7 @@ from typing import (
 
 import anyio
 import anyio.to_thread
+import eliot
 
 from caqtus.types.data import DataLabel, Data
 from ..name import DeviceName
@@ -70,27 +71,29 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
     async def _run_shot(
         self, device: DeviceProxyType, *args: _P.args, **kwargs: _P.kwargs
     ) -> ShotStats:
-        start_time = self._event_dispatcher.shot_time()
-        await self.run_shot(device, *args, **kwargs)
-        finished_time = self._event_dispatcher.shot_time()
-        if not self._signaled_ready.is_set():
-            raise RuntimeError(
-                f"wait_all_devices_ready was not called in run_shot for {self}"
-            )
-        assert self._signaled_ready_time is not None
-        assert self._finished_waiting_ready_time is not None
+        with eliot.start_action(action_type="control device", device=self.device_name):
+            start_time = self._event_dispatcher.shot_time()
+            await self.run_shot(device, *args, **kwargs)
+            finished_time = self._event_dispatcher.shot_time()
+            if not self._signaled_ready.is_set():
+                raise RuntimeError(
+                    f"wait_all_devices_ready was not called in run_shot for {self}"
+                )
+            assert self._signaled_ready_time is not None
+            assert self._finished_waiting_ready_time is not None
 
-        return ShotStats(
-            start_time=start_time,
-            signaled_ready_time=self._signaled_ready_time,
-            finished_waiting_ready_time=self._finished_waiting_ready_time,
-            finished_time=finished_time,
-            thread_stats=self._thread_times,
-            data_waits=self._data_waits,
-            data_signals=self._data_signals,
-        )
+            return ShotStats(
+                start_time=start_time,
+                signaled_ready_time=self._signaled_ready_time,
+                finished_waiting_ready_time=self._finished_waiting_ready_time,
+                finished_time=finished_time,
+                thread_stats=self._thread_times,
+                data_waits=self._data_waits,
+                data_signals=self._data_signals,
+            )
 
     @final
+    @eliot.log_call(include_args=[], include_result=False)
     async def wait_all_devices_ready(self) -> None:
         """Wait for all devices to be ready for time-sensitive operations.
 
@@ -102,10 +105,6 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         The method will wait for all devices to be ready before returning.
         """
 
-        logger.debug(
-            f"Device {self.device_name} is waiting for all devices to be ready"
-        )
-
         if self._signaled_ready.is_set():
             raise RuntimeError(
                 f"wait_all_devices_ready must be called exactly once for {self}"
@@ -114,9 +113,6 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         self._signaled_ready_time = self._event_dispatcher.shot_time()
         await self._event_dispatcher.wait_all_devices_ready()
         self._finished_waiting_ready_time = self._event_dispatcher.shot_time()
-        logger.debug(
-            f"Device {self.device_name} finished waiting for all devices to be ready"
-        )
 
     @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
@@ -126,6 +122,7 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         self._data_signals.append((label, self._event_dispatcher.shot_time()))
 
     @final
+    @eliot.log_call(include_args=["label"], include_result=False)
     async def wait_data_acquired(self, label: DataLabel) -> Data:
         """Waits until the data with the given label has been acquired."""
 
