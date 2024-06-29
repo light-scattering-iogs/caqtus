@@ -4,7 +4,7 @@ from typing import Any
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes
 from caqtus.shot_compilation import DeviceCompiler
-from caqtus.shot_compilation.compilation_contexts import ShotContext
+from caqtus.shot_compilation.compilation_contexts import ShotContext, SequenceContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 
 
@@ -17,15 +17,17 @@ class ShotCompiler:
     ):
         self.shot_time_lanes = shot_timelanes
         self.device_configurations = device_configurations
+        self._sequence_context = SequenceContext(
+            device_configurations=device_configurations, time_lanes=shot_timelanes
+        )
         self.device_compilers = device_compilers
 
     def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         shot_context = ShotContext(
-            time_lanes=self.shot_time_lanes,
+            sequence_context=self._sequence_context,
             variables=shot_parameters.dict(),
-            device_configurations=self.device_configurations,
             device_compilers=self.device_compilers,
         )
 
