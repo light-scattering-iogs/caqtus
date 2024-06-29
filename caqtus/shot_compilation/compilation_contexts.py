@@ -32,6 +32,11 @@ class SequenceContext:
 
         return self._device_configurations[device_name]
 
+    def get_all_device_configurations(self) -> Mapping[DeviceName, DeviceConfiguration]:
+        """Returns all device configurations available in this sequence."""
+
+        return self._device_configurations
+
     def get_lane(self, name: str) -> TimeLane:
         """Returns the time lane with the given name.
 
