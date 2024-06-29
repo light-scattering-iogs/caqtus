@@ -125,12 +125,6 @@ class ShotManager:
             shot_data_send_stream,
             shot_data_receive_stream,
         ) = anyio.create_memory_object_stream[ShotData](1)
-        # We suppress BrokenResourceError because it is raised when one of the streams
-        # had its partner stream closed due to another error.
-        # We don't want to raise an error in this case because the error that caused the
-        # stream to be closed will be raised anyway, and we don't want to clutter the
-        # exception traceback.
-        self._exit_stack.enter_context(contextlib.suppress(anyio.BrokenResourceError))
         task_group = await self._exit_stack.enter_async_context(
             create_task_group_message("Errors occurred while managing shots execution")
         )
@@ -168,16 +162,19 @@ class ShotManager:
         *,
         task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
-        async with shot_data_input_stream, device_parameters_output_stream:
-            task_status.started()
-            async for device_parameters in device_parameters_output_stream:
-                shot_data = await self._run_shot_with_retry(
-                    device_parameters, shot_runner
-                )
-                logger.debug("Shot %d executed.", device_parameters.index)
-                await send_fast(
-                    shot_data_input_stream, shot_data, "generated shot data stream"
-                )
+        # Suppress BrokenResourceError because the stream if the stream is closed due
+        # to an error on the other side, we don't want to clutter the traceback.
+        with contextlib.suppress(anyio.BrokenResourceError):
+            async with shot_data_input_stream, device_parameters_output_stream:
+                task_status.started()
+                async for device_parameters in device_parameters_output_stream:
+                    shot_data = await self._run_shot_with_retry(
+                        device_parameters, shot_runner
+                    )
+                    logger.debug("Shot %d executed.", device_parameters.index)
+                    await send_fast(
+                        shot_data_input_stream, shot_data, "generated shot data stream"
+                    )
 
     @log_async_cm_decorator(logger)
     @contextlib.asynccontextmanager
@@ -224,14 +221,19 @@ class ShotManager:
         *,
         task_status: TaskStatus[None] = anyio.TASK_STATUS_IGNORED,
     ) -> None:
-        async with shot_params_receive_stream:
-            task_status.started()
-            async for shot_params in shot_params_receive_stream:
-                result = await anyio.to_process.run_sync(
-                    _compile_shot, shot_params, shot_compiler
-                )
-                logger.debug("Pushing shot %d to execution queue.", shot_params.index)
-                await shot_execution_queue.push(result)
+        # Suppress BrokenResourceError because the stream if the stream is closed due
+        # to an error on the other side, we don't want to clutter the traceback.
+        with contextlib.suppress(anyio.BrokenResourceError):
+            async with shot_params_receive_stream:
+                task_status.started()
+                async for shot_params in shot_params_receive_stream:
+                    result = await anyio.to_process.run_sync(
+                        _compile_shot, shot_params, shot_compiler
+                    )
+                    logger.debug(
+                        "Pushing shot %d to execution queue.", shot_params.index
+                    )
+                    await shot_execution_queue.push(result)
 
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
