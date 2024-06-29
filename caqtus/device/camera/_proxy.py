@@ -17,7 +17,7 @@ class CameraProxy(DeviceProxy[CameraType]):
     @contextlib.asynccontextmanager
     async def acquire(
         self, exposures: list[float]
-    ) -> AsyncGenerator[AsyncIterable[Image], None, None]:
+    ) -> AsyncGenerator[AsyncIterable[Image], None]:
         async with self.call_method_proxy_result(
             "acquire", exposures
         ) as cm_proxy, self.async_context_manager(cm_proxy) as iterator_proxy:
