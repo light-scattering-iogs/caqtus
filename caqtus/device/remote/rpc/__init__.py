@@ -6,13 +6,11 @@ from ._configuration import (
     LocalRPCCredentials,
 )
 from ._server import RPCServer
-from .client import Client
 from .proxy import Proxy
 from ._server import Server
 
 __all__ = [
     "Server",
-    "Client",
     "Proxy",
     "RPCConfiguration",
     "SecureRPCConfiguration",

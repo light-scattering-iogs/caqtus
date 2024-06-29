@@ -5,7 +5,7 @@ from typing import TypeVar
 from caqtus.device.remote import DeviceProxy
 from caqtus.types.image import Image
 from ._runtime import Camera
-from ..remote.rpc.server import RemoteError
+from ..remote.rpc._server import RemoteError
 
 CameraType = TypeVar("CameraType", bound=Camera)
 

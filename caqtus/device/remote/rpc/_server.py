@@ -11,13 +11,15 @@ from typing import Never, Any, TypeVar, Self
 import anyio
 import anyio.to_thread
 import attrs
+import tblib.pickling_support
 
 from ._configuration import (
     RPCConfiguration,
 )
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from .proxy import Proxy
-from .server import RemoteError, InvalidProxyError
+
+tblib.pickling_support.install()
 
 logger = logging.getLogger(__name__)
 
@@ -190,3 +192,11 @@ class Server:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self._server.__exit__(exc_type, exc_value, traceback)
         logger.info("Server stopped")
+
+
+class RemoteError(Exception):
+    pass
+
+
+class InvalidProxyError(RemoteError):
+    pass

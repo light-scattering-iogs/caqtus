@@ -16,9 +16,9 @@ from ._server import (
     CallResponseFailure,
     DeleteProxyRequest,
     TerminateRequest,
+    RemoteError,
 )
 from .proxy import Proxy
-from .server import RemoteError
 
 T = TypeVar("T")
 

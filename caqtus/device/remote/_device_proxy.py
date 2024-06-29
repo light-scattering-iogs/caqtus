@@ -3,7 +3,7 @@ from collections.abc import Callable
 from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any
 
 from .rpc import RPCClient, Proxy
-from .rpc.server import RemoteError
+from .rpc._server import RemoteError
 from .. import Device
 
 P = ParamSpec("P")
