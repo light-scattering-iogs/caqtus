@@ -5,7 +5,7 @@ from caqtus.device.sequencer.channel_commands._channel_sources.compile_analog_la
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import TimeLanes
-from caqtus.shot_compilation import ShotContext
+from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import AnalogTimeLane, Ramp
 
@@ -13,9 +13,11 @@ from caqtus.types.timelane import AnalogTimeLane, Ramp
 def test_0():
     lane = AnalogTimeLane([Expression("0 dB"), Expression("10 dB")])
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
+        sequence_context=SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
+            ),
         ),
         variables={},
         device_compilers={},
@@ -30,10 +32,12 @@ def test_0():
 def test_1():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["step1", "step2", "step3"],
-            step_durations=[Expression("10 ns")] * 3,
+        sequence_context=SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["step1", "step2", "step3"],
+                step_durations=[Expression("10 ns")] * 3,
+            ),
         ),
         variables={},
         device_compilers={},
@@ -61,10 +65,12 @@ def test_1():
 def test_2():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["step1", "step2", "step3"],
-            step_durations=[Expression("10 ns")] * 3,
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["step1", "step2", "step3"],
+                step_durations=[Expression("10 ns")] * 3,
+            ),
         ),
         variables={},
         device_compilers={},
@@ -92,9 +98,11 @@ def test_2():
 def test_4():
     lane = AnalogTimeLane([Expression("10 Hz"), Expression("1 kHz")])
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["step1", "step2"], step_durations=[Expression("10 ns")] * 2
+            ),
         ),
         variables={},
         device_compilers={},
@@ -107,9 +115,11 @@ def test_4():
 def test_5():
     lane = AnalogTimeLane([Expression("t / (10 ns) * 1 Hz")])
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["step1"], step_durations=[Expression("10 ns")]
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["step1"], step_durations=[Expression("10 ns")]
+            ),
         ),
         variables={},
         device_compilers={},

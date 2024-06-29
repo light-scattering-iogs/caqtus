@@ -3,7 +3,7 @@ from caqtus.device.sequencer.channel_commands._channel_sources._compile_digital_
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import DigitalTimeLane, TimeLanes
-from caqtus.shot_compilation import VariableNamespace, ShotContext
+from caqtus.shot_compilation import VariableNamespace, ShotContext, SequenceContext
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
@@ -11,9 +11,12 @@ from caqtus.types.variable_name import DottedVariableName
 
 def test_0():
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["a", "b"], step_durations=[Expression("1 s"), Expression("1 s")]
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a", "b"],
+                step_durations=[Expression("1 s"), Expression("1 s")],
+            ),
         ),
         variables={},
         device_compilers={},
@@ -25,9 +28,12 @@ def test_0():
 
 def test_1():
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["a", "b"], step_durations=[Expression("1 s"), Expression("1 s")]
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a", "b"],
+                step_durations=[Expression("1 s"), Expression("1 s")],
+            ),
         ),
         variables={DottedVariableName("a"): True, DottedVariableName("b"): False},
         device_compilers={},
@@ -40,10 +46,12 @@ def test_1():
 
 def test_2():
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=["a", "b", "c"],
-            step_durations=[Expression("1 s")] * 3,
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a", "b", "c"],
+                step_durations=[Expression("1 s")] * 3,
+            ),
         ),
         variables={},
         device_compilers={},
@@ -103,10 +111,12 @@ def test_3():
         }
     )
     shot_context = ShotContext(
-        device_configurations={},
-        time_lanes=TimeLanes(
-            step_names=lane_names,
-            step_durations=lane_durations,
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=lane_names,
+                step_durations=lane_durations,
+            ),
         ),
         variables=variables.dict(),
         device_compilers={},
