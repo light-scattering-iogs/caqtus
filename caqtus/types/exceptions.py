@@ -1,3 +1,5 @@
+from typing import Optional
+
 import tblib.pickling_support
 
 
@@ -37,6 +39,18 @@ def is_recoverable(error: BaseException) -> bool:
         return all(is_recoverable(e) for e in error.exceptions)
 
     return False
+
+
+def split_recoverable(
+    exception: BaseException,
+) -> tuple[Optional[BaseException], Optional[BaseException]]:
+    if isinstance(exception, BaseExceptionGroup):
+        return exception.split(is_recoverable)
+    else:
+        if is_recoverable(exception):
+            return exception, None
+        else:
+            return None, exception
 
 
 @tblib.pickling_support.install

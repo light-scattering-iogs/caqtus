@@ -16,6 +16,7 @@ from caqtus.gui.common.exception_tree import ExceptionDialog
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.types.exceptions import split_recoverable
 from caqtus.types.parameter import ParameterNamespace
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import DeviceConfigurationsDialog
@@ -118,6 +119,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 self._connect_to_experiment_manager,
             )
         except Exception as e:
+            logger.error("Failed to connect to experiment manager.", exc_info=e)
             self.display_error("Failed to connect to experiment manager.", e)
             return
         sequence_already_running = (
@@ -137,9 +139,24 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
 
     def on_procedure_exception(self, exception: Exception):
+        recoverable, non_recoverable = split_recoverable(exception)
+        if recoverable:
+            logger.warning(
+                f"Recoverable exception occurred while running a sequence",
+                exc_info=recoverable,
+            )
+        if non_recoverable:
+            logger.error(
+                f"Non-recoverable exception occurred while running a sequence",
+                exc_info=non_recoverable,
+            )
+            raise non_recoverable
+
+        assert recoverable is not None
+
         self.display_error(
             f"An error occurred while running a sequence.",
-            exception,
+            recoverable,
         )
 
     def open_device_configurations_editor(self) -> None:
@@ -182,8 +199,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
 
-    def display_error(self, message: str, exception: Exception):
-        logger.error(message, exc_info=exception)
+    def display_error(self, message: str, exception: BaseException):
         exception_dialog = ExceptionDialog(self)
         exception_dialog.set_exception(exception)
         exception_dialog.set_message(message)
