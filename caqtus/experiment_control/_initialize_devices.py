@@ -10,6 +10,7 @@ from caqtus.device.remote.rpc import RPCClient
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
+from caqtus.formatter import fmt
 from caqtus.shot_compilation import (
     DeviceCompiler,
 )
@@ -64,7 +65,11 @@ async def create_rpc_clients(
                 await stack.enter_async_context(client)
             except Exception as e:
                 raise ConnectionError(
-                    f"Failed to connect to server {server} for device {device_name}"
+                    fmt(
+                        "Failed to connect to {:device server} for {:device}",
+                        server,
+                        device_name,
+                    )
                 ) from e
             clients[device_name] = client
         yield clients

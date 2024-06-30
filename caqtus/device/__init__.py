@@ -1,6 +1,6 @@
-from .name import DeviceName
-from .configuration import DeviceConfiguration, get_configurations_by_type
 from caqtus.device.configuration._parameter import DeviceParameter
+from .configuration import DeviceConfiguration, get_configurations_by_type
+from .name import DeviceName
 from .runtime import Device, RuntimeDevice
 
 __all__ = [
