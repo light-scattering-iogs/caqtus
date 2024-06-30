@@ -1,9 +1,13 @@
 import anyio
+import anyio.to_thread
+import numpy as np
 import pytest
 
 from caqtus.device import Device
+from caqtus.device.camera import Camera, CameraProxy
 from caqtus.device.remote import DeviceProxy
 from caqtus.device.remote.rpc import RPCServer, RPCClient
+from caqtus.types.image import Image
 
 
 class DeviceMock(Device):
@@ -53,3 +57,52 @@ async def test_0(anyio_backend, capsys):
     captured = capsys.readouterr()
 
     assert captured.out == "enter\nexit\n"
+
+
+class MockCamera(Camera):
+    def __init__(self, name: str):
+        self.name = name
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def update_parameters(self, timeout: float, *args, **kwargs) -> None:
+        pass
+
+    def _start_acquisition(self, exposures: list[float]) -> None:
+        print("start acquisition")
+
+    def _read_image(self, exposure: float) -> Image:
+        return np.array([[0, 1], [2, 3]]) * exposure
+
+    def _stop_acquisition(self) -> None:
+        print("stop acquisition")
+
+
+async def test_camera(anyio_backend, capsys):
+    server_scope = anyio.CancelScope()
+
+    images = []
+
+    async def run_client():
+        async with (
+            RPCClient("localhost", 12345) as client,
+            CameraProxy(client, MockCamera, "test") as camera,
+        ):
+            async with camera.acquire([1, 2]) as image_stream:
+                async for image in image_stream:
+                    images.append(image)
+
+        server_scope.cancel()
+
+    async with anyio.create_task_group() as tg:
+        await tg.start(run_server, server_scope)
+        tg.start_soon(run_client)
+
+    captured = capsys.readouterr()
+
+    assert captured.out == "start acquisition\nstop acquisition\n"
+    assert np.allclose(images, [np.array([[0, 1], [2, 3]]), np.array([[0, 2], [4, 6]])])

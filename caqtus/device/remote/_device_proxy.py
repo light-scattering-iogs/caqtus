@@ -87,7 +87,6 @@ class DeviceProxy(Generic[DeviceType]):
             self._device_proxy, method_name, *args, **kwargs
         )
 
-    @unwrap_remote_error
     def call_method_proxy_result(
         self,
         method_name: LiteralString,

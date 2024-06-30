@@ -7,7 +7,7 @@ import pickle
 import warnings
 from collections.abc import Callable
 from enum import Enum, auto
-from typing import Never, Any, TypeVar, Self
+from typing import Never, Any, TypeVar, Self, ParamSpec
 
 import anyio
 import anyio.abc
@@ -108,8 +108,12 @@ class RPCServer:
         try:
             args = [self.resolve(arg) for arg in request.args]
             kwargs = {key: self.resolve(value) for key, value in request.kwargs.items()}
+            # We can't have the function raise StopIteration since the coroutine will
+            # then raise this exception which is invalid.
+            # To prevent this, we replace StopIteration with our own exception.
+            fun = _transform_stop_iteration(request.function)
             value = await anyio.to_thread.run_sync(
-                functools.partial(request.function, *args, **kwargs)
+                functools.partial(fun, *args, **kwargs)
             )
 
             if request.return_value == ReturnValue.SERIALIZED:
@@ -119,10 +123,10 @@ class RPCServer:
             else:
                 assert False, f"Unknown return value: {request.return_value}"
             result = CallResponseSuccess(result=result)
-        except StopIteration as e:
+        except _StopIteration as e:
             # Don't log this exception, as it can occur during normal operation if we're
             # calling __next__ on an iterator.
-            result = self._construct_error_response(request.function, e)
+            result = self._construct_error_response(request.function, StopIteration())
         except Exception as e:
             logger.exception(
                 f"Error during call with request {request!r}", exc_info=True
@@ -214,4 +218,22 @@ class RemoteCallError(RemoteError):
 
 @tblib.pickling_support.install
 class InvalidProxyError(RemoteError):
+    pass
+
+
+P = ParamSpec("P")
+
+
+def _transform_stop_iteration(fun: Callable[P, T]) -> Callable[P, T]:
+    @functools.wraps(fun)
+    def wrapper(*args: Any, **kwargs: Any) -> T:
+        try:
+            return fun(*args, **kwargs)
+        except StopIteration:
+            raise _StopIteration() from None
+
+    return wrapper
+
+
+class _StopIteration(BaseException):
     pass
