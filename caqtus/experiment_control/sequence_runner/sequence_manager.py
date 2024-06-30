@@ -19,11 +19,11 @@ from caqtus.shot_compilation import (
     SequenceContext,
 )
 from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.recoverable_exceptions import SequenceInterruptedException
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..initialize_resources import create_shot_runner, create_shot_compiler
-from ...types.recoverable_exceptions import RecoverableException
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +183,3 @@ class SequenceManager:
                 shot_data.start_time,
                 shot_data.end_time,
             )
-
-
-class SequenceInterruptedException(RecoverableException):
-    pass

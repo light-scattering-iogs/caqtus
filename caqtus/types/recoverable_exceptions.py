@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import tblib.pickling_support
@@ -93,5 +95,11 @@ class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
 
     This error is raised when the number of shot attempts exceeds the maximum.
     """
+
+    pass
+
+
+class SequenceInterruptedException(RecoverableException):
+    """Raised when a sequence is interrupted by the user before it finishes."""
 
     pass
