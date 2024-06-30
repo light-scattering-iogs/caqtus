@@ -2,6 +2,7 @@ from collections.abc import Mapping, Iterable
 from typing import Any, TypeVar, TYPE_CHECKING
 
 import attrs
+import tblib.pickling_support
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes, TimeLane
@@ -153,12 +154,27 @@ class ShotContext:
             return self._computed_shot_parameters[device_name]
         else:
             compiler = self._device_compilers[device_name]
-            shot_parameters = compiler.compile_shot_parameters(self)
+            try:
+                shot_parameters = compiler.compile_shot_parameters(self)
+            except Exception as e:
+                raise DeviceCompilationError(
+                    fmt(
+                        "Couldn't compile parameters for {:device}",
+                        device_name,
+                    )
+                ) from e
             self._computed_shot_parameters[device_name] = shot_parameters
             return shot_parameters
 
     def _unused_lanes(self) -> set[str]:
         return {name for name, used in self._was_lane_used.items() if not used}
+
+
+@tblib.pickling_support.install
+class DeviceCompilationError(Exception):
+    """Raised when compilation for a device fails."""
+
+    pass
 
 
 def evaluate_step_durations(

@@ -40,6 +40,10 @@ class CaqtusFormatter(string.Formatter):
             value = f"parameter '{value}'"
         elif format_spec == "type":
             value = f"type '{value.__name__}'"
+        elif format_spec == "shot":
+            if not isinstance(value, int):
+                raise ValueError("Shot number must be an integer")
+            value = f"shot {value}"
 
         return super().format(value, "")
 

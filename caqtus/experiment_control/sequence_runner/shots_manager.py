@@ -12,10 +12,12 @@ from typing import Mapping, Any, Protocol, TypeVar
 import anyio
 import anyio.to_process
 import attrs
+import tblib.pickling_support
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
 from caqtus.device import DeviceName
+from caqtus.formatter import fmt
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
@@ -305,13 +307,25 @@ class ShotData:
 def _compile_shot(
     shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
 ) -> DeviceParameters:
-    compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
+    try:
+        compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
+    except Exception as e:
+        raise ShotCompilationError(
+            fmt("An error occurred while compiling {:shot}", shot_parameters.index)
+        ) from e
     return DeviceParameters(
         index=shot_parameters.index,
         shot_parameters=shot_parameters.parameters,
         device_parameters=compiled,
         timeout=shot_duration + 10,
     )
+
+
+@tblib.pickling_support.install
+class ShotCompilationError(RuntimeError):
+    """Error raised when an error occurs while compiling a shot."""
+
+    pass
 
 
 @attrs.define
