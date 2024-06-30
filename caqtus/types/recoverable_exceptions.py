@@ -1,22 +1,23 @@
+"""This module defines recoverable exceptions.
+
+These are exceptions that can occur during the normal execution of a program, for
+example when the user enters an invalid value, or when a connection to an external
+resource fails.
+
+These errors will not crash the application, but instead will be caught and
+displayed to the user, so that they can fix the error and retry the operation.
+
+Exceptions that are not recoverable will not be caught, and are allowed to crash
+the application.
+
+Only make exceptions recoverable if you expect them to happen in normal operation.
+"""
+
 from __future__ import annotations
 
 from typing import Optional
 
 import tblib.pickling_support
-
-
-@tblib.pickling_support.install
-class RecoverableException(Exception):
-    """An error that can be recovered from.
-
-    This is an error that happen when the user does something wrong, and it is possible
-    to retry the operation after they fixe the error.
-
-    This is a base class for all recoverable errors.
-    It should not be raised directly, instead raise a subclass.
-    """
-
-    pass
 
 
 def is_recoverable(error: BaseException) -> bool:
@@ -41,6 +42,20 @@ def is_recoverable(error: BaseException) -> bool:
         return all(is_recoverable(e) for e in error.exceptions)
 
     return False
+
+
+@tblib.pickling_support.install
+class RecoverableException(Exception):
+    """An error that can be recovered from.
+
+    This is an error that happen when the user does something wrong, and it is possible
+    to retry the operation after they fixe the error.
+
+    This is a base class for all recoverable errors.
+    It should not be raised directly, instead raise a subclass.
+    """
+
+    pass
 
 
 def split_recoverable(
@@ -93,20 +108,19 @@ class ConnectionFailedError(ConnectionError, RecoverableException):
 
 @tblib.pickling_support.install
 class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
-    """Raised when the number of shot attempts exceeds the maximum.
-
-    This error is raised when the number of shot attempts exceeds the maximum.
-    """
+    """Raised when the number of shot attempts exceeds the maximum allowed."""
 
     pass
 
 
+@tblib.pickling_support.install
 class SequenceInterruptedException(RecoverableException):
     """Raised when a sequence is interrupted by the user before it finishes."""
 
     pass
 
 
+@tblib.pickling_support.install
 class EvaluationError(RecoverableException):
     """Raised when an error occurs during the evaluation of an expression.
 
