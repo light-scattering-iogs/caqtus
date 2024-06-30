@@ -338,12 +338,18 @@ class ShotScheduler:
     ):
         self._shot_parameters_input_stream = shot_parameters_input_stream
         self._current_shot = 0
+        self._closed = False
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
+        if self._closed:
+            raise RuntimeError("The shot scheduler is closed.")
         shot_parameters = ShotParameters(
             index=self._current_shot, parameters=shot_variables
         )
-        await self._shot_parameters_input_stream.send(shot_parameters)
+        try:
+            await self._shot_parameters_input_stream.send(shot_parameters)
+        except anyio.BrokenResourceError:
+            self._closed = True
         self._current_shot += 1
 
 
