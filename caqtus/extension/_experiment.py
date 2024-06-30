@@ -1,4 +1,6 @@
+import ctypes
 import logging.config
+import platform
 import warnings
 from typing import Optional, assert_never
 
@@ -232,6 +234,12 @@ class Experiment:
         """
 
         tblib.pickling_support.install()
+
+        if platform.system() == "Windows":
+            # This is necessary to use the UI icon in the taskbar and not the default
+            # Python icon.
+            app_id = "caqtus.condetrol"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
         if not isinstance(
             self._experiment_manager_location, RemoteExperimentManagerConfiguration
