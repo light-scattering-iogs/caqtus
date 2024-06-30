@@ -9,7 +9,7 @@ class ExceptionDialog(QDialog, Ui_ExceptionDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setupUi(self)
-        self.exception_tree.setItemDelegate(HTMLItemDelegate(self))
+        self.exception_tree.setItemDelegateForColumn(2, HTMLItemDelegate(self))
 
     def set_exception(self, exception: BaseException):
         self.exception_tree.setColumnCount(3)
