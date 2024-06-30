@@ -41,40 +41,48 @@ def process_text(text: str) -> str:
     text = highlight_expression(text, color)
     text = highlight_parameter(text, color)
     text = highlight_type(text, color)
+    text = highlight_step(text, color)
 
     return text
 
 
 def highlight_device_name(value: str, color) -> str:
     def replace(match):
-        return f'device <font color="{color}">{match.group(1)}</font>'
+        return f'device <b><font color="{color}">{match.group(1)}</font></b>'
 
     return re.sub(r"device '(.+?)'", replace, value)
 
 
 def highlight_device_servers(text: str, color) -> str:
     def replace(match):
-        return f'device server <font color="{color}">{match.group(1)}</font>'
+        return f'device server <b><font color="{color}">{match.group(1)}</font></b>'
 
     return re.sub(r"device server '(.+?)'", replace, text)
 
 
 def highlight_expression(text: str, color) -> str:
     def replace(match):
-        return f'expression <font color="{color}">{match.group(1)}</font>'
+        return f'expression <b><font color="{color}">{match.group(1)}</font></b>'
 
     return re.sub(r"expression '(.+?)'", replace, text)
 
 
 def highlight_parameter(text: str, color) -> str:
     def replace(match):
-        return f'parameter <font color="{color}">{match.group(1)}</font>'
+        return f'parameter <b><font color="{color}">{match.group(1)}</font></b>'
 
     return re.sub(r"parameter '(.+?)'", replace, text)
 
 
 def highlight_type(text: str, color) -> str:
     def replace(match):
-        return f'type <font color="{color}">{match.group(1)}</font>'
+        return f'type <b><font color="{color}">{match.group(1)}</font></b>'
 
     return re.sub(r"type '(.+?)'", replace, text)
+
+
+def highlight_step(text: str, color) -> str:
+    def replace(match):
+        return f'step <b><font color="{color}">{match.group(1)} (<i>{match.group(2)}</i>)</font></b>'
+
+    return re.sub(r"step ([0-9]+) \((.+?)\)", replace, text)
