@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.abspath("./caqtus"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "experiment-control"
+project = "caqtus"
 copyright = "2023, Caqtus"
 author = "Caqtus"
 
