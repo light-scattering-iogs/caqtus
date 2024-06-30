@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.3.0] - 2024-06-30
 
-- Added better error message when an error occurs while connecting to a remote server
+### Added
+
+- Better error message when an error occurs while connecting to a remote server
 
 ## [4.2.0] - 2024-06-30
 
