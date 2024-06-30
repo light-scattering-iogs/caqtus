@@ -1,14 +1,15 @@
 import numpy as np
 
-from caqtus.types.timelane import DigitalTimeLane
-from caqtus.shot_compilation.compilation_contexts import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from caqtus.types.expression import Expression
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
 )
+from caqtus.formatter import fmt
+from caqtus.shot_compilation.compilation_contexts import ShotContext
+from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.types.expression import Expression
+from caqtus.types.timelane import DigitalTimeLane
 
 
 def compile_digital_lane(
@@ -33,8 +34,12 @@ def compile_digital_lane(
             value = cell_value.evaluate(shot_context.get_variables())
             if not isinstance(value, bool):
                 raise TypeError(
-                    f"Expression {cell_value} does not evaluate to bool, but to"
-                    f" {value}"
+                    fmt(
+                        "{:expression} does not evaluate to {:type}, but to {:type}",
+                        cell_value,
+                        bool,
+                        type(value),
+                    )
                 )
             instructions.append(get_constant_instruction(value, length))
 

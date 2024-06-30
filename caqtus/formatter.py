@@ -30,6 +30,16 @@ class CaqtusFormatter(string.Formatter):
             elif format_spec == "device server":
                 value = f"device server '{value}'"
                 format_spec = ""
+            elif format_spec == "expression":
+                value = f"expression '{value}'"
+                format_spec = ""
+            elif format_spec == "parameter":
+                value = f"parameter '{value}'"
+                format_spec = ""
+        if isinstance(value, type):
+            if format_spec == "type":
+                value = f"type '{value.__name__}'"
+                format_spec = ""
         return super().format(value, format_spec)
 
 

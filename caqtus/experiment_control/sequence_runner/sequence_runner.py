@@ -12,6 +12,7 @@ from caqtus.types.iteration import (
 from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
 from .shots_manager import ShotScheduler
 from .step_context import StepContext
+from ...formatter import fmt
 
 S = TypeVar("S", bound=Step)
 
@@ -191,8 +192,14 @@ def evaluate_initial_context(parameters: ParameterNamespace) -> StepContext:
         value = expression.evaluate({})
         if not is_parameter(value):
             raise TypeError(
-                f"Expression <{expression}> for parameter <{name}> does not evaluate "
-                f"to a valid parameter type, got <{type(value)}>."
+                fmt(
+                    "{:expression} for {:parameter} does not evaluate "
+                    "to {:type}, but to {:type}.",
+                    expression,
+                    name,
+                    Parameter,
+                    type(value),
+                )
             )
         context = context.update_variable(name, value)
 

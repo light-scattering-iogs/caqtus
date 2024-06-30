@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence, Mapping
 from typing import Union, Any, Self
 
+from caqtus.formatter import fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import Parameter, is_parameter
 from caqtus.types.variable_name import DottedVariableName
@@ -149,8 +150,13 @@ class ParameterNamespace:
             value = expression.evaluate(results)
             if not is_parameter(value):
                 raise TypeError(
-                    f"Expression <{expression}> for parameter <{name}> does not "
-                    f"evaluate to a valid parameter type, got <{type(value)}>."
+                    fmt(
+                        "{:expression}> for {:parameter}> does not "
+                        "evaluate to a valid parameter type, got {:type}.",
+                        expression,
+                        name,
+                        type(value),
+                    )
                 )
             results[name] = value
 
