@@ -174,7 +174,7 @@ def evaluate_step_durations(
         except Exception as e:
             raise ValueError(
                 fmt(
-                    "Couldn't evaluate {:expression} for duration of step {:step}",
+                    "Couldn't evaluate {:expression} for duration of {:step}",
                     duration,
                     (step, name),
                 )
@@ -183,7 +183,7 @@ def evaluate_step_durations(
         if not is_quantity(evaluated):
             raise TypeError(
                 fmt(
-                    "{:expression} for duration of step {:step} does not evaluate "
+                    "{:expression} for duration of {:step} does not evaluate "
                     "to a quantity",
                     duration,
                     (step, name),
@@ -195,7 +195,7 @@ def evaluate_step_durations(
         except Exception as error:
             raise ValueError(
                 fmt(
-                    "Couldn't convert {:expression} for duration of step {:step} to "
+                    "Couldn't convert {:expression} for duration of {:step} to "
                     "seconds",
                     duration,
                     (step, name),
@@ -204,7 +204,7 @@ def evaluate_step_durations(
         if seconds < 0:
             raise ValueError(
                 fmt(
-                    "{:expression} for duration of step {:step} is negative",
+                    "{:expression} for duration of {:step} is negative",
                     duration,
                     (step, name),
                 )
