@@ -358,14 +358,16 @@ class BoundProcedure(Procedure):
             anyio.run(run, backend="trio")
         except BaseExceptionGroup as e:
             recoverable, non_recoverable = e.split(is_recoverable)
-            logger.warning(
-                "A recoverable error occurred while running the sequence.",
-                exc_info=recoverable,
-            )
-            logger.error(
-                "A non-recoverable error occurred while running the sequence.",
-                exc_info=non_recoverable,
-            )
+            if recoverable:
+                logger.warning(
+                    "A recoverable error occurred while running the sequence.",
+                    exc_info=recoverable,
+                )
+            if non_recoverable:
+                logger.error(
+                    "A non-recoverable error occurred while running the sequence.",
+                    exc_info=non_recoverable,
+                )
             raise
         except Exception as e:
             if is_recoverable(e):
