@@ -171,10 +171,17 @@ class ShotManager:
             async with shot_data_input_stream, device_parameters_output_stream:
                 task_status.started()
                 async for device_parameters in device_parameters_output_stream:
-                    shot_data = await self._run_shot_with_retry(
-                        device_parameters, shot_runner
-                    )
-                    logger.debug("Shot %d executed.", device_parameters.index)
+                    try:
+                        shot_data = await self._run_shot_with_retry(
+                            device_parameters, shot_runner
+                        )
+                    except Exception as e:
+                        raise RuntimeError(
+                            fmt(
+                                "An error occurred while executing {:shot}",
+                                device_parameters.index,
+                            )
+                        ) from e
                     await send_fast(
                         shot_data_input_stream, shot_data, "generated shot data stream"
                     )
