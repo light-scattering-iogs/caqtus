@@ -2,7 +2,7 @@ import tblib.pickling_support
 
 
 @tblib.pickling_support.install
-class RecoverableError(Exception):
+class RecoverableException(Exception):
     """An error that can be recovered from.
 
     This is an error that happen when the user does something wrong, and it is possible
@@ -27,7 +27,7 @@ def is_recoverable(error: BaseException) -> bool:
     the error itself is recoverable.
     """
 
-    if isinstance(error, RecoverableError):
+    if isinstance(error, RecoverableException):
         return True
 
     if error.__cause__ is not None:
@@ -40,7 +40,7 @@ def is_recoverable(error: BaseException) -> bool:
 
 
 @tblib.pickling_support.install
-class InvalidTypeError(TypeError, RecoverableError):
+class InvalidTypeError(TypeError, RecoverableException):
     """Raised when a value is not of the expected type.
 
     This error is raised when a value is not of the expected type, but it is possible
@@ -51,7 +51,7 @@ class InvalidTypeError(TypeError, RecoverableError):
 
 
 @tblib.pickling_support.install
-class InvalidValueError(ValueError, RecoverableError):
+class InvalidValueError(ValueError, RecoverableException):
     """Raised when a value is invalid.
 
     This error is raised when a value is invalid, but it is possible to recover from the
