@@ -234,7 +234,7 @@ class Experiment:
                 "errors": {
                     "level": "ERROR",
                     "formatter": "standard",
-                    "class": "logging.RotatingFileHandler",
+                    "class": "logging.handlers.RotatingFileHandler",
                     "filename": "condetrol.log",
                     "maxBytes": 1_000_000,
                 },
