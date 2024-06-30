@@ -215,6 +215,12 @@ class Experiment:
 
         setup_condetrol_logs()
 
+        if platform.system() == "Windows":
+            # This is necessary to use the UI icon in the taskbar and not the default
+            # Python icon.
+            app_id = "caqtus.condetrol"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+
         app = Condetrol(
             self.get_session_maker(),
             connect_to_experiment_manager=self.connect_to_experiment_manager,
@@ -238,7 +244,7 @@ class Experiment:
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
             # Python icon.
-            app_id = "caqtus.condetrol"
+            app_id = "caqtus.experiment_server"
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
         if not isinstance(
@@ -273,6 +279,12 @@ class Experiment:
         """
 
         tblib.pickling_support.install()
+
+        if platform.system() == "Windows":
+            # This is necessary to use the UI icon in the taskbar and not the default
+            # Python icon.
+            app_id = "caqtus.device_server"
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
 
         with Server(config) as server:
             print("Ready")
