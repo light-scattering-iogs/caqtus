@@ -60,7 +60,12 @@ async def create_rpc_clients(
         for device_name, server in device_servers.items():
             config = device_server_configs[server]
             client = RPCClient(config.host, config.port)
-            await stack.enter_async_context(client)
+            try:
+                await stack.enter_async_context(client)
+            except Exception as e:
+                raise ConnectionError(
+                    f"Failed to connect to server {server} for device {device_name}"
+                ) from e
             clients[device_name] = client
         yield clients
 
