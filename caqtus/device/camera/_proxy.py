@@ -29,10 +29,11 @@ class CameraProxy(DeviceProxy[CameraType]):
                     yield self._rpc_client.async_iterator(iterator_proxy)
                     return
                 except RemoteError as e:
-                    if isinstance(e.__cause__, Exception):
+                    if e.__cause__:
                         # We unwrap the remote exception to get the original exception,
                         # that could for example be a timeout from the camera.
-                        error = e.__cause__
+                        raise e.__cause__ from None
                     else:
-                        error = e
-                raise error
+                        # In principle there should always be a cause, but we handle the
+                        # case where there isn't one just in case.
+                        raise e from None
