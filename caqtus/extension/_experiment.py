@@ -251,7 +251,11 @@ class Experiment:
             connect_to_experiment_manager=self.connect_to_experiment_manager,
             extension=self._extension.condetrol_extension,
         )
-        app.run()
+        try:
+            app.run()
+        except:
+            logging.exception("An error occurred.", exc_info=True)
+            raise
 
     def launch_experiment_server(self) -> None:
         """Launch the experiment server.

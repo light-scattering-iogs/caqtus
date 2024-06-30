@@ -146,10 +146,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 exc_info=recoverable,
             )
         if non_recoverable:
-            logger.error(
-                f"Non-recoverable exception occurred while running a sequence",
-                exc_info=non_recoverable,
-            )
+            # The exception will be logged anyway when condetrol crashes, so we don't
+            # need to log it here.
             raise non_recoverable
 
         assert recoverable is not None
