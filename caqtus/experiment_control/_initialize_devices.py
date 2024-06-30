@@ -14,7 +14,7 @@ from caqtus.formatter import fmt
 from caqtus.shot_compilation import (
     DeviceCompiler,
 )
-from caqtus.types.exceptions import ConnectionFailedError
+from caqtus.types.recoverable_exceptions import ConnectionFailedError
 
 
 @contextlib.asynccontextmanager

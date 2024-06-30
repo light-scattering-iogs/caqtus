@@ -17,7 +17,7 @@ from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
-from ...types.exceptions import is_recoverable
+from ...types.recoverable_exceptions import is_recoverable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

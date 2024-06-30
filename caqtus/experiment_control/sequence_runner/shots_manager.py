@@ -20,7 +20,7 @@ from caqtus.device import DeviceName
 from caqtus.formatter import fmt
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
-from caqtus.types.exceptions import ShotAttemptsExceededError
+from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 
 logger = logging.getLogger(__name__)

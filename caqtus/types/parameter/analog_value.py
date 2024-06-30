@@ -4,7 +4,7 @@ from typing import Any, Optional, TypeGuard, overload, TypeVar
 import numpy as np
 from numpy.typing import NDArray
 
-from ..exceptions import InvalidTypeError
+from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless
 
 AnalogValue = Real | NDArray[np.floating] | Quantity

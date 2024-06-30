@@ -16,7 +16,7 @@ from caqtus.gui.common.exception_tree import ExceptionDialog
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.types.exceptions import split_recoverable
+from caqtus.types.recoverable_exceptions import split_recoverable
 from caqtus.types.parameter import ParameterNamespace
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import DeviceConfigurationsDialog

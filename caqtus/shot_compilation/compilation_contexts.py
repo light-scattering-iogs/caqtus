@@ -9,7 +9,7 @@ from caqtus.session.shot import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
 from ..formatter import fmt
-from ..types.exceptions import InvalidValueError
+from ..types.recoverable_exceptions import InvalidValueError
 from ..types.expression import Expression
 from ..types.expression.expression import EvaluationError
 from ..types.parameter import is_quantity, magnitude_in_unit

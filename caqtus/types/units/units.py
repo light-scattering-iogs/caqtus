@@ -2,7 +2,7 @@ import importlib.resources
 
 import pint
 
-from caqtus.types.exceptions import InvalidValueError
+from caqtus.types.recoverable_exceptions import InvalidValueError
 
 units_definition_file = importlib.resources.files("caqtus.types.units").joinpath(
     "units_definition.txt"
