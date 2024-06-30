@@ -9,8 +9,13 @@ from caqtus.session.shot import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
 from ..formatter import fmt
+from ..types.exceptions import InvalidValueError
 from ..types.expression import Expression
+from ..types.expression.expression import EvaluationError
 from ..types.parameter import is_quantity, magnitude_in_unit
+from ..types.parameter.analog_value import NotQuantityError
+from ..types.units import DimensionalityError
+from ..types.units.units import InvalidDimensionalityError
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler
@@ -187,8 +192,8 @@ def evaluate_step_durations(
     for step, (name, duration) in enumerate(zip(step_names, step_durations)):
         try:
             evaluated = duration.evaluate(variables)
-        except Exception as e:
-            raise ValueError(
+        except EvaluationError as e:
+            raise EvaluationError(
                 fmt(
                     "Couldn't evaluate {:expression} for duration of {:step}",
                     duration,
@@ -197,7 +202,7 @@ def evaluate_step_durations(
             ) from e
 
         if not is_quantity(evaluated):
-            raise TypeError(
+            raise NotQuantityError(
                 fmt(
                     "{:expression} for duration of {:step} does not evaluate "
                     "to a quantity",
@@ -208,8 +213,8 @@ def evaluate_step_durations(
 
         try:
             seconds = magnitude_in_unit(evaluated, "s")
-        except Exception as error:
-            raise ValueError(
+        except DimensionalityError as error:
+            raise InvalidDimensionalityError(
                 fmt(
                     "Couldn't convert {:expression} for duration of {:step} to "
                     "seconds",
@@ -218,7 +223,7 @@ def evaluate_step_durations(
                 )
             ) from error
         if seconds < 0:
-            raise ValueError(
+            raise InvalidValueError(
                 fmt(
                     "{:expression} for duration of {:step} is negative",
                     duration,

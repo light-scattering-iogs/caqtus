@@ -2,6 +2,8 @@ import importlib.resources
 
 import pint
 
+from caqtus.types.exceptions import InvalidValueError
+
 units_definition_file = importlib.resources.files("caqtus.types.units").joinpath(
     "units_definition.txt"
 )
@@ -56,3 +58,13 @@ UNITS = (
     | DISTANCE_UNITS
     | DEGREE_UNITS
 )
+
+
+class InvalidDimensionalityError(InvalidValueError):
+    """Raised when a value has an invalid dimensionality.
+
+    This error is raised when a value has an invalid dimensionality and the user
+    should fix it.
+    """
+
+    pass

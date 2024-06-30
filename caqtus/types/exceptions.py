@@ -22,6 +22,9 @@ def is_recoverable(error: BaseException) -> bool:
     - The error is an instance of RecoverableError.
     - The error was caused by a recoverable error.
     - The error is a group containing only recoverable errors.
+
+    Note that if an error can be recoverable even if its cause is not recoverable, if
+    the error itself is recoverable.
     """
 
     if isinstance(error, RecoverableError):
@@ -34,3 +37,25 @@ def is_recoverable(error: BaseException) -> bool:
         return all(is_recoverable(e) for e in error.exceptions)
 
     return False
+
+
+@tblib.pickling_support.install
+class InvalidTypeError(TypeError, RecoverableError):
+    """Raised when a value is not of the expected type.
+
+    This error is raised when a value is not of the expected type, but it is possible
+    to recover from the error by changing the value to the correct type.
+    """
+
+    pass
+
+
+@tblib.pickling_support.install
+class InvalidValueError(ValueError, RecoverableError):
+    """Raised when a value is invalid.
+
+    This error is raised when a value is invalid, but it is possible to recover from the
+    error by changing the value to a valid one.
+    """
+
+    pass
