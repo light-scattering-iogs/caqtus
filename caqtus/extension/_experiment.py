@@ -20,6 +20,7 @@ from ..experiment_control.manager import (
     RemoteExperimentManagerConfiguration,
 )
 from ..session import ExperimentSessionMaker
+import tblib.pickling_support
 
 
 class Experiment:
@@ -206,6 +207,8 @@ class Experiment:
         configurations.
         """
 
+        tblib.pickling_support.install()
+
         app = Condetrol(
             self.get_session_maker(),
             connect_to_experiment_manager=self.connect_to_experiment_manager,
@@ -219,6 +222,8 @@ class Experiment:
         The experiment server is used to run procedures on the experiment manager from a
         remote process.
         """
+
+        tblib.pickling_support.install()
 
         if not isinstance(
             self._experiment_manager_location, RemoteExperimentManagerConfiguration
@@ -250,6 +255,8 @@ class Experiment:
 
         This method will block until the server is stopped.
         """
+
+        tblib.pickling_support.install()
 
         with Server(config) as server:
             print("Ready")

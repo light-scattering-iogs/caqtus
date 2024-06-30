@@ -22,8 +22,6 @@ from ._configuration import (
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from .proxy import Proxy
 
-tblib.pickling_support.install()
-
 logger = logging.getLogger(__name__)
 
 
@@ -147,9 +145,10 @@ class RPCServer:
 
     @staticmethod
     def _construct_error_response(fun, e: Exception) -> CallResponseFailure:
-        error = RemoteError(f"Error during call to {fun}")
-        error.__cause__ = e
-        return CallResponseFailure(error=error)
+        try:
+            raise RemoteCallError(f"Error during call to {fun}") from e
+        except RemoteCallError as error:
+            return CallResponseFailure(error=error)
 
     def create_proxy(self, obj: T) -> Proxy[T]:
         obj_id = id(obj)
@@ -161,7 +160,7 @@ class RPCServer:
 
     def get_referent(self, proxy: Proxy[T]) -> T:
         if proxy._pid != os.getpid():
-            raise RuntimeError(
+            raise InvalidProxyError(
                 "Proxy cannot be resolved in a different process than the one it was "
                 "created in"
             )
@@ -199,9 +198,20 @@ class Server:
         logger.info("Server stopped")
 
 
+@tblib.pickling_support.install
 class RemoteError(Exception):
+    """Base class for errors that occur on the server side."""
+
     pass
 
 
+@tblib.pickling_support.install
+class RemoteCallError(RemoteError):
+    """Error that occurs when calling a remote function."""
+
+    pass
+
+
+@tblib.pickling_support.install
 class InvalidProxyError(RemoteError):
     pass

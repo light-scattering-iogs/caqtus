@@ -5,20 +5,12 @@ import time
 from collections.abc import Mapping
 from typing import Optional
 
-from tblib import pickling_support
-
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace
 from .manager import ExperimentManager, Procedure, LocalExperimentManager
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import ShotRetryConfig
-
-# This is necessary to be able to pass exception properly between the experiment server
-# process and the clients.
-# It allows sending the exception cause, context, notes, and traceback.
-# It is not safe since it allows arbitrary code execution upon unpickling.
-pickling_support.install()
 
 experiment_manager: Optional[LocalExperimentManager] = None
 

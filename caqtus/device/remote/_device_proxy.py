@@ -1,19 +1,50 @@
 import contextlib
-from collections.abc import Callable
-from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any
+import functools
+from collections.abc import Callable, Coroutine
+from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any, final
 
-from .rpc import RPCClient, Proxy
-from .rpc._server import RemoteError
-from .. import Device
+from caqtus.device import Device
+from .rpc import RPCClient, Proxy, RemoteCallError
 
+T = TypeVar("T")
 P = ParamSpec("P")
 
 DeviceType = TypeVar("DeviceType", bound=Device)
 
-T = TypeVar("T")
+
+def unwrap_remote_error(fun: Callable[P, Coroutine[Any, Any, T]]):
+    """Decorator that unwraps RemoteError and raises the original exception.
+
+    It pretends that the original exception occurred on the client side.
+
+    It is useful to help catch device specific exceptions for example timeouts, since
+    then we can directly catch TimeoutError and not RemoteError.
+    """
+
+    @functools.wraps(fun)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        try:
+            return await fun(*args, **kwargs)
+        except RemoteCallError as e:
+            if isinstance(e.__cause__, BaseException):
+                error = e.__cause__
+            else:
+                error = e
+            raise error from None
+
+    return wrapper
 
 
 class DeviceProxy(Generic[DeviceType]):
+    """Proxy to a remote device.
+
+    This class is used on the client side to interact with a device running on a remote
+    server.
+    It provides asynchronous methods to get attributes and call methods remotely
+    without blocking the client.
+    """
+
+    @final
     def __init__(
         self,
         rpc_client: RPCClient,
@@ -41,33 +72,22 @@ class DeviceProxy(Generic[DeviceType]):
         )
         return self
 
+    @unwrap_remote_error
     async def get_attribute(self, attribute_name: LiteralString) -> Any:
         return await self._rpc_client.get_attribute(self._device_proxy, attribute_name)
 
+    @unwrap_remote_error
     async def call_method(
         self,
         method_name: LiteralString,
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        # Here we raise the original exception if there is one and not the remote error.
-        # This way we can forget that the device is remote.
-        # It is useful to catch device specific exceptions like camera or tweezer
-        # arranger timeouts.
-        try:
-            return await self._rpc_client.call_method(
-                self._device_proxy, method_name, *args, **kwargs
-            )
-        except RemoteError as e:
-            if isinstance(e.__cause__, Exception):
-                error = e.__cause__
-            else:
-                error = e
-        # We don't raise the exception while handling the remote one to avoid it
-        # being raised as 'during handling of the above exception, another
-        # exception occurred'
-        raise error
+        return await self._rpc_client.call_method(
+            self._device_proxy, method_name, *args, **kwargs
+        )
 
+    @unwrap_remote_error
     def call_method_proxy_result(
         self,
         method_name: LiteralString,
