@@ -14,10 +14,10 @@ from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.utils import log_exception
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
+from ...types.exceptions import is_recoverable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -321,7 +321,6 @@ class BoundProcedure(Procedure):
         if self.is_running_sequence():
             self._sequence_future.result()
 
-    @log_exception(logger)
     def _run_sequence(
         self,
         sequence: PureSequencePath,
@@ -330,30 +329,56 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
-        with self._session_maker() as session:
-            iteration = session.sequences.get_iteration_configuration(sequence)
+        try:
+            with self._session_maker() as session:
+                iteration = session.sequences.get_iteration_configuration(sequence)
 
-        async def run():
-            sequence_manager = SequenceManager(
-                sequence=sequence,
-                session_maker=self._session_maker,
-                interruption_event=self._must_interrupt,
-                shot_retry_config=self._shot_retry_config,
-                global_parameters=global_parameters,
-                device_configurations=device_configurations,
-                device_manager_extension=self._device_manager_extension,
-            )
-            if not isinstance(iteration, StepsConfiguration):
-                raise NotImplementedError(
-                    "Only steps iteration is supported at the moment."
+            async def run():
+                sequence_manager = SequenceManager(
+                    sequence=sequence,
+                    session_maker=self._session_maker,
+                    interruption_event=self._must_interrupt,
+                    shot_retry_config=self._shot_retry_config,
+                    global_parameters=global_parameters,
+                    device_configurations=device_configurations,
+                    device_manager_extension=self._device_manager_extension,
                 )
-            initial_context = evaluate_initial_context(
-                sequence_manager.sequence_parameters
-            )
-            async with sequence_manager.run_sequence() as shot_scheduler:
-                await execute_steps(iteration.steps, initial_context, shot_scheduler)
+                if not isinstance(iteration, StepsConfiguration):
+                    raise NotImplementedError(
+                        "Only steps iteration is supported at the moment."
+                    )
+                initial_context = evaluate_initial_context(
+                    sequence_manager.sequence_parameters
+                )
+                async with sequence_manager.run_sequence() as shot_scheduler:
+                    await execute_steps(
+                        iteration.steps, initial_context, shot_scheduler
+                    )
 
-        anyio.run(run, backend="trio")
+            anyio.run(run, backend="trio")
+        except BaseExceptionGroup as e:
+            recoverable, non_recoverable = e.split(is_recoverable)
+            logger.warning(
+                "A recoverable error occurred while running the sequence.",
+                exc_info=recoverable,
+            )
+            logger.error(
+                "A non-recoverable error occurred while running the sequence.",
+                exc_info=non_recoverable,
+            )
+            raise
+        except Exception as e:
+            if is_recoverable(e):
+                logger.warning(
+                    "A recoverable error occurred while running the sequence.",
+                    exc_info=e,
+                )
+            else:
+                logger.error(
+                    "A non-recoverable error occurred while running the sequence.",
+                    exc_info=e,
+                )
+            raise
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
