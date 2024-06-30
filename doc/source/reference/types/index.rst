@@ -6,3 +6,4 @@ Types
 
    expression
    iteration
+   recoverable_exceptions

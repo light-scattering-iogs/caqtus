@@ -28,7 +28,9 @@ extensions = [
 
 autodoc_typehints = "signature"
 autodoc_preserve_defaults = True
+autodoc_member_order = "bysource"
 maximum_signature_line_length = 80
+
 
 autodoc_type_aliases = {
     "LaneFactory": "LaneFactory",
