@@ -1,3 +1,5 @@
+import re
+
 from PySide6.QtGui import Qt, QPalette
 from PySide6.QtWidgets import QTreeWidgetItem, QApplication
 
@@ -9,6 +11,7 @@ def create_exception_tree(
     text = str(exception)
     if isinstance(exception, ExceptionGroup):
         text = exception.args[0]
+    text = process_text(text)
     exception_label = type(exception).__name__
     exception_item = QTreeWidgetItem(None, [prepend, exception_label, text])
     error_color = Qt.GlobalColor.red
@@ -29,3 +32,24 @@ def create_exception_tree(
         for cause in create_exception_tree(exception.__cause__, "because:"):
             exception_item.addChild(cause)
     return result
+
+
+def process_text(text: str) -> str:
+    color = QApplication.palette().color(QPalette.ColorRole.Accent).name()
+    text = highlight_device_name(text, color)
+    text = highlight_device_servers(text, color)
+    return text
+
+
+def highlight_device_name(value: str, color) -> str:
+    def replace(match):
+        return f'device <font color="{color}">{match.group(1)}</font>'
+
+    return re.sub(r"device '(.+?)'", replace, value)
+
+
+def highlight_device_servers(text: str, color) -> str:
+    def replace(match):
+        return f'device server <font color="{color}">{match.group(1)}</font>'
+
+    return re.sub(r"device server '(.+?)'", replace, text)

@@ -28,7 +28,7 @@ class CaqtusFormatter(string.Formatter):
                 value = f"device '{value}'"
                 format_spec = ""
             elif format_spec == "device server":
-                value = f"remote server '{value}'"
+                value = f"device server '{value}'"
                 format_spec = ""
         return super().format(value, format_spec)
 
