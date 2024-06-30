@@ -27,7 +27,7 @@ def is_recoverable(error: BaseException) -> bool:
     - The error was caused by a recoverable error.
     - The error is a group containing only recoverable errors.
 
-    Note that if an error can be recoverable even if its cause is not recoverable, if
+    Note that an error can be recoverable even if its cause is not recoverable, if
     the error itself is recoverable.
     """
 
@@ -46,6 +46,8 @@ def is_recoverable(error: BaseException) -> bool:
 def split_recoverable(
     exception: BaseException,
 ) -> tuple[Optional[BaseException], Optional[BaseException]]:
+    """Split an exception into recoverable and non-recoverable parts."""
+
     if isinstance(exception, BaseExceptionGroup):
         return exception.split(is_recoverable)
     else:
