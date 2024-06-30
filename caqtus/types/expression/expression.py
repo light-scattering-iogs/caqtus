@@ -8,7 +8,7 @@ import numpy
 import token_utils
 
 from caqtus.utils import serialization
-from ..recoverable_exceptions import RecoverableException
+from ..recoverable_exceptions import EvaluationError
 from ..units import units
 from ..variable_name import DottedVariableName, VariableName
 
@@ -258,7 +258,3 @@ def add_implicit_multiplication(source: str) -> str:
         prev_token = token
 
     return token_utils.untokenize(new_tokens)
-
-
-class EvaluationError(RecoverableException):
-    pass

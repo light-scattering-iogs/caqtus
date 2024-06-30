@@ -105,3 +105,14 @@ class SequenceInterruptedException(RecoverableException):
     """Raised when a sequence is interrupted by the user before it finishes."""
 
     pass
+
+
+class EvaluationError(RecoverableException):
+    """Raised when an error occurs during the evaluation of an expression.
+
+    This error is raised when an error occurs during the evaluation of an expression
+    entered by the user.
+    The user should fix the expression and retry the operation.
+    """
+
+    pass

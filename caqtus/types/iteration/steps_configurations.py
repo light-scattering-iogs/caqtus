@@ -8,7 +8,6 @@ import attrs
 import numpy
 
 from caqtus.types.expression import Expression
-from caqtus.types.expression.expression import EvaluationError
 from caqtus.types.parameter import (
     AnalogValue,
     is_analog_value,
@@ -19,6 +18,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
+from ..recoverable_exceptions import EvaluationError
 from ..units import DimensionalityError
 from ..variable_name import DottedVariableName
 
