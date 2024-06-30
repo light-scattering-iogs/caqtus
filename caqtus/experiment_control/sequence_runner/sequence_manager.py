@@ -23,6 +23,7 @@ from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..initialize_resources import create_shot_runner, create_shot_compiler
+from ...types.exceptions import RecoverableException
 
 logger = logging.getLogger(__name__)
 
@@ -184,5 +185,5 @@ class SequenceManager:
             )
 
 
-class SequenceInterruptedException(RuntimeError):
+class SequenceInterruptedException(RecoverableException):
     pass
