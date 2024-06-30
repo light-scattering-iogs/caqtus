@@ -85,3 +85,13 @@ class ConnectionFailedError(ConnectionError, RecoverableException):
     """
 
     pass
+
+
+@tblib.pickling_support.install
+class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
+    """Raised when the number of shot attempts exceeds the maximum.
+
+    This error is raised when the number of shot attempts exceeds the maximum.
+    """
+
+    pass
