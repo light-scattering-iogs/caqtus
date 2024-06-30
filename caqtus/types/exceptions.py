@@ -73,3 +73,15 @@ class InvalidValueError(ValueError, RecoverableException):
     """
 
     pass
+
+
+@tblib.pickling_support.install
+class ConnectionFailedError(ConnectionError, RecoverableException):
+    """Raised when a connection to an external resource fails.
+
+    This error is raised when a connection to an external resource fails, but it is
+    possible to recover from the error by retrying the connection or fixing the
+    connection settings.
+    """
+
+    pass

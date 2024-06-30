@@ -14,6 +14,7 @@ from caqtus.formatter import fmt
 from caqtus.shot_compilation import (
     DeviceCompiler,
 )
+from caqtus.types.exceptions import ConnectionFailedError
 
 
 @contextlib.asynccontextmanager
@@ -63,8 +64,8 @@ async def create_rpc_clients(
             client = RPCClient(config.host, config.port)
             try:
                 await stack.enter_async_context(client)
-            except Exception as e:
-                raise ConnectionError(
+            except OSError as e:
+                raise ConnectionFailedError(
                     fmt(
                         "Failed to connect to {:device server} for {:device}",
                         server,
