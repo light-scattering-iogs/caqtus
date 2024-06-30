@@ -211,40 +211,7 @@ class Experiment:
 
         tblib.pickling_support.install()
 
-        log_config = {
-            "version": 1,
-            "formatters": {
-                "standard": {
-                    "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-                },
-            },
-            "handlers": {
-                "default": {
-                    "level": "INFO",
-                    "formatter": "standard",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stdout",
-                },
-                "warnings": {
-                    "level": "WARNING",
-                    "formatter": "standard",
-                    "class": "logging.StreamHandler",
-                    "stream": "ext://sys.stderr",
-                },
-                "errors": {
-                    "level": "ERROR",
-                    "formatter": "standard",
-                    "class": "logging.handlers.RotatingFileHandler",
-                    "filename": "condetrol.log",
-                    "maxBytes": 1_000_000,
-                },
-            },
-            "loggers": {
-                "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
-            },
-        }
-
-        logging.config.dictConfig(log_config)
+        setup_condetrol_logs()
 
         app = Condetrol(
             self.get_session_maker(),
@@ -302,3 +269,38 @@ class Experiment:
         with Server(config) as server:
             print("Ready")
             server.wait_for_termination()
+
+
+def setup_condetrol_logs():
+    log_config = {
+        "version": 1,
+        "formatters": {
+            "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+        },
+        "handlers": {
+            "default": {
+                "level": "INFO",
+                "formatter": "standard",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+            },
+            "warnings": {
+                "level": "WARNING",
+                "formatter": "standard",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stderr",
+            },
+            "errors": {
+                "level": "ERROR",
+                "formatter": "standard",
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": "condetrol.log",
+                "maxBytes": 1_000_000,
+            },
+        },
+        "loggers": {
+            "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
+        },
+    }
+
+    logging.config.dictConfig(log_config)
