@@ -1,5 +1,8 @@
+import logging.config
 import warnings
 from typing import Optional, assert_never
+
+import tblib.pickling_support
 
 from caqtus.experiment_control.manager import (
     LocalExperimentManager,
@@ -20,7 +23,6 @@ from ..experiment_control.manager import (
     RemoteExperimentManagerConfiguration,
 )
 from ..session import ExperimentSessionMaker
-import tblib.pickling_support
 
 
 class Experiment:
@@ -31,7 +33,7 @@ class Experiment:
     components of the application with the dependency extracted from the configuration.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._session_maker_config: Optional[PostgreSQLConfig] = None
         self._extension = CaqtusExtension()
         self._experiment_manager: Optional[LocalExperimentManager] = None
@@ -208,6 +210,41 @@ class Experiment:
         """
 
         tblib.pickling_support.install()
+
+        log_config = {
+            "version": 1,
+            "formatters": {
+                "standard": {
+                    "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+                },
+            },
+            "handlers": {
+                "default": {
+                    "level": "INFO",
+                    "formatter": "standard",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                },
+                "warnings": {
+                    "level": "WARNING",
+                    "formatter": "standard",
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stderr",
+                },
+                "errors": {
+                    "level": "ERROR",
+                    "formatter": "standard",
+                    "class": "logging.RotatingFileHandler",
+                    "filename": "condetrol.log",
+                    "maxBytes": 1_000_000,
+                },
+            },
+            "loggers": {
+                "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
+            },
+        }
+
+        logging.config.dictConfig(log_config)
 
         app = Condetrol(
             self.get_session_maker(),
