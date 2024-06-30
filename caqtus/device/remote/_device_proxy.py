@@ -25,12 +25,17 @@ def unwrap_remote_error(fun: Callable[P, Coroutine[Any, Any, T]]):
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
             return await fun(*args, **kwargs)
-        except RemoteCallError as e:
-            if isinstance(e.__cause__, BaseException):
-                error = e.__cause__
+        except RemoteCallError as remote:
+            if original := remote.__cause__:
+                # Here we need to break the circle of exceptions.
+                # Indeed, original.__context__ is now remote, and remote.__cause__ is
+                # original.
+                # If not handled, this would cause recursion issues when anything tries
+                # to handle the exception down the line.
+                remote.__cause__ = None
+                raise original
             else:
-                error = e
-            raise error from None
+                raise
 
     return wrapper
 
