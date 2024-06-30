@@ -253,7 +253,7 @@ class ShotManager:
         if number_of_attempts < 1:
             raise ValueError("number_of_attempts must be >= 1")
 
-        errors: list[Exception] = []
+        errors: list[ExceptionGroup] = []
 
         for attempt in range(number_of_attempts):
             try:
@@ -263,7 +263,11 @@ class ShotManager:
                 )
                 end_time = datetime.datetime.now(tz=datetime.timezone.utc)
             except* exceptions_to_retry as e:
-                errors.extend(e.exceptions)
+                errors.append(
+                    ExceptionGroup(
+                        f"Attempt {attempt+1}/{number_of_attempts} failed", e.exceptions
+                    )
+                )
                 # We sleep a bit to allow to recover from the error, for example if it
                 # is a timeout.
                 await anyio.sleep(0.1)
