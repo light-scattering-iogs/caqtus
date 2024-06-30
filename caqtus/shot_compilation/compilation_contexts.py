@@ -7,6 +7,7 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
+from ..formatter import fmt
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
 
@@ -167,30 +168,46 @@ def evaluate_step_durations(
 ) -> list[float]:
     result = []
 
-    for name, duration in zip(step_names, step_durations):
+    for step, (name, duration) in enumerate(zip(step_names, step_durations)):
         try:
             evaluated = duration.evaluate(variables)
         except Exception as e:
             raise ValueError(
-                f"Couldn't evaluate duration <{duration}> of step <{name}>"
+                fmt(
+                    "Couldn't evaluate {:expression} for duration of step {:step}",
+                    duration,
+                    (step, name),
+                )
             ) from e
 
         if not is_quantity(evaluated):
             raise TypeError(
-                f"Duration <{duration}> of step <{name}> is not a quantity "
-                f"({evaluated})"
+                fmt(
+                    "{:expression} for duration of step {:step} does not evaluate "
+                    "to a quantity",
+                    duration,
+                    (step, name),
+                )
             )
 
         try:
             seconds = magnitude_in_unit(evaluated, "s")
         except Exception as error:
             raise ValueError(
-                f"Duration <{duration}> of step <{name}> can't be converted to seconds "
-                f"({evaluated})"
+                fmt(
+                    "Couldn't convert {:expression} for duration of step {:step} to "
+                    "seconds",
+                    duration,
+                    (step, name),
+                )
             ) from error
         if seconds < 0:
             raise ValueError(
-                f"Duration <{duration}> of step <{name}> is negative ({seconds})"
+                fmt(
+                    "{:expression} for duration of step {:step} is negative",
+                    duration,
+                    (step, name),
+                )
             )
         result.append(float(seconds))
     return result

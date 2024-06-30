@@ -23,24 +23,25 @@ class CaqtusFormatter(string.Formatter):
     """
 
     def format_field(self, value, format_spec):
-        if isinstance(value, str):
-            if format_spec == "device":
-                value = f"device '{value}'"
-                format_spec = ""
-            elif format_spec == "device server":
-                value = f"device server '{value}'"
-                format_spec = ""
-            elif format_spec == "expression":
-                value = f"expression '{value}'"
-                format_spec = ""
-            elif format_spec == "parameter":
-                value = f"parameter '{value}'"
-                format_spec = ""
-        if isinstance(value, type):
-            if format_spec == "type":
-                value = f"type '{value.__name__}'"
-                format_spec = ""
-        return super().format(value, format_spec)
+        if format_spec == "step":
+            step_index, step_name = value
+            if not isinstance(step_index, int):
+                raise ValueError("Step index must be an integer")
+            if not isinstance(step_name, str):
+                raise ValueError("Step name must be a string")
+            value = f"step {step_index} ({step_name})"
+        elif format_spec == "device":
+            value = f"device '{value}'"
+        elif format_spec == "device server":
+            value = f"device server '{value}'"
+        elif format_spec == "expression":
+            value = f"expression '{value}'"
+        elif format_spec == "parameter":
+            value = f"parameter '{value}'"
+        elif format_spec == "type":
+            value = f"type '{value.__name__}'"
+
+        return super().format(value, "")
 
 
 caqtus_formatter = CaqtusFormatter()
