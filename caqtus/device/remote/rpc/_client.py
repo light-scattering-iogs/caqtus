@@ -63,15 +63,19 @@ class RPCClient:
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        with eliot.start_action(action_type="call", function=str(fun)):
-            with eliot.start_action(action_type="send"):
-                request = self._build_request(fun, args, kwargs, "copy")
-                pickled = pickle.dumps(request)
-                await send_with_size_prefix(self._stream, pickled)
-            with eliot.start_action(action_type="receive"):
-                bytes_response = await receive_with_size_prefix(self._receive_stream)
-                response = pickle.loads(bytes_response)
-                return self._build_result(response)
+        # We cancel this scope to be sure that the request always come to completion.
+        # The issue is if we make a request and an external exceptions cancel waiting for the answer, then we would not
+        # read the answer, and it would remain in the buffer.
+        with anyio.CancelScope(shield=True):
+            with eliot.start_action(action_type="call", function=str(fun)):
+                with eliot.start_action(action_type="send"):
+                    request = self._build_request(fun, args, kwargs, "copy")
+                    pickled = pickle.dumps(request)
+                    await send_with_size_prefix(self._stream, pickled)
+                with eliot.start_action(action_type="receive"):
+                    bytes_response = await receive_with_size_prefix(self._receive_stream)
+                    response = pickle.loads(bytes_response)
+                    return self._build_result(response)
 
     async def call_method(
         self,
