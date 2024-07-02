@@ -12,7 +12,7 @@ def renamed_exception_group(message: str):
 
 
 @contextlib.asynccontextmanager
-async def create_task_group_with_message(message: str):
+async def task_group_with_error_message(message: str):
     with renamed_exception_group(message):
         async with anyio.create_task_group() as tg:
             yield tg

@@ -22,7 +22,7 @@ from caqtus.types.data import DataLabel, Data
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 
-from .._async_utils import create_task_group_with_message
+from .._async_utils import task_group_with_error_message
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ class ShotManager:
             shot_data_receive_stream,
         ) = anyio.create_memory_object_stream[ShotData](1)
         task_group = await self._exit_stack.enter_async_context(
-            create_task_group_with_message("Errors occurred while managing shots execution")
+            task_group_with_error_message("Errors occurred while managing shots execution")
         )
         (
             device_parameters_send_stream,
@@ -211,7 +211,7 @@ class ShotManager:
     ):
         async with (
             device_parameters_send_stream,
-            create_task_group_with_message("Errors occurred during shot compilation") as tg,
+            task_group_with_error_message("Errors occurred during shot compilation") as tg,
         ):
             shot_execution_queue = ShotExecutionSorter(device_parameters_send_stream)
             async with shot_params_receive_stream:
