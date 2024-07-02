@@ -39,10 +39,12 @@ def process_text(text: str) -> str:
     text = highlight_device_name(text, color)
     text = highlight_device_servers(text, color)
     text = highlight_expression(text, color)
+    # device parameter must be highlighted before parameter, because they match the
+    # same pattern
+    text = hightlight_device_parameter(text, color)
     text = highlight_parameter(text, color)
     text = highlight_type(text, color)
     text = highlight_step(text, color)
-    text = hightlight_device_parameter(text, color)
 
     return text
 
