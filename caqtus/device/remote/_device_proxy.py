@@ -12,7 +12,7 @@ P = ParamSpec("P")
 DeviceType = TypeVar("DeviceType", bound=Device)
 
 
-def unwrap_remote_error(fun: Callable[P, Coroutine[Any, Any, T]]):
+def unwrap_remote_error_decorator(fun: Callable[P, Coroutine[Any, Any, T]]):
     """Decorator that unwraps RemoteError and raises the original exception.
 
     It pretends that the original exception occurred on the client side.
@@ -23,21 +23,27 @@ def unwrap_remote_error(fun: Callable[P, Coroutine[Any, Any, T]]):
 
     @functools.wraps(fun)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        try:
+        with unwrap_remote_error_cm():
             return await fun(*args, **kwargs)
-        except RemoteCallError as remote:
-            if original := remote.__cause__:
-                # Here we need to break the circle of exceptions.
-                # Indeed, original.__context__ is now remote, and remote.__cause__ is
-                # original.
-                # If not handled, this would cause recursion issues when anything tries
-                # to handle the exception down the line.
-                remote.__cause__ = None
-                raise original
-            else:
-                raise
 
     return wrapper
+
+
+@contextlib.contextmanager
+def unwrap_remote_error_cm():
+    try:
+        yield
+    except RemoteCallError as remote:
+        if original := remote.__cause__:
+            # Here we need to break the circle of exceptions.
+            # Indeed, original.__context__ is now remote, and remote.__cause__ is
+            # original.
+            # If not handled, this would cause recursion issues when anything tries
+            # to handle the exception down the line.
+            remote.__cause__ = None
+            raise original
+        else:
+            raise
 
 
 class DeviceProxy(Generic[DeviceType]):
@@ -72,16 +78,17 @@ class DeviceProxy(Generic[DeviceType]):
                 self._device_type, *self._args, **self._kwargs
             )
         )
-        await self._async_exit_stack.enter_async_context(
-            self.async_context_manager(self._device_proxy)
-        )
+        with unwrap_remote_error_cm():
+            await self._async_exit_stack.enter_async_context(
+                self.async_context_manager(self._device_proxy)
+            )
         return self
 
-    @unwrap_remote_error
+    @unwrap_remote_error_decorator
     async def get_attribute(self, attribute_name: LiteralString) -> Any:
         return await self._rpc_client.get_attribute(self._device_proxy, attribute_name)
 
-    @unwrap_remote_error
+    @unwrap_remote_error_decorator
     async def call_method(
         self,
         method_name: LiteralString,
