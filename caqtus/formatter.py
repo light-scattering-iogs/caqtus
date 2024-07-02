@@ -80,7 +80,7 @@ def fmt_type(value: type | str) -> str:
     return f"type '{value.__name__}'"
 
 
-def fmt_device_param(name: str, value: str) -> str:
+def device_param(name: str, value: str) -> str:
     return f"device parameter '{name}' = '{value}'"
 
 
