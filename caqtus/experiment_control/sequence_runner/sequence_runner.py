@@ -2,6 +2,7 @@ import functools
 from collections.abc import Iterable, Callable, Generator
 from typing import assert_never, TypeVar
 
+from caqtus.formatter import fmt_param_assign, fmt_type
 from caqtus.types.iteration import (
     Step,
     ArangeLoop,
@@ -12,7 +13,6 @@ from caqtus.types.iteration import (
 from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
 from .shots_manager import ShotScheduler
 from .step_context import StepContext
-from ...formatter import fmt
 
 S = TypeVar("S", bound=Step)
 
@@ -192,14 +192,8 @@ def evaluate_initial_context(parameters: ParameterNamespace) -> StepContext:
         value = expression.evaluate({})
         if not is_parameter(value):
             raise TypeError(
-                fmt(
-                    "{:expression} for {:parameter} does not evaluate "
-                    "to {:type}, but to {:type}.",
-                    expression,
-                    name,
-                    Parameter,
-                    type(value),
-                )
+                f"{fmt_param_assign(name, value)} does not evaluate "
+                f"to {fmt_type('Parameter')}, but to {fmt_type(type(value))}.",
             )
         context = context.update_variable(name, value)
 
