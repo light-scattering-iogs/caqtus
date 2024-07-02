@@ -81,7 +81,7 @@ def fmt_type(value: type | str) -> str:
 
 
 def fmt_device_param(name: str, value: str) -> str:
-    return f"device parameter '{name}': '{value}'"
+    return f"device parameter '{name}' = '{value}'"
 
 
 def fmt(s: str, *args, **kwargs):

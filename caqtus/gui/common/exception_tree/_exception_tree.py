@@ -42,6 +42,7 @@ def process_text(text: str) -> str:
     text = highlight_parameter(text, color)
     text = highlight_type(text, color)
     text = highlight_step(text, color)
+    text = hightlight_device_parameter(text, color)
 
     return text
 
@@ -86,3 +87,10 @@ def highlight_step(text: str, color) -> str:
         return f'step <b><font color="{color}">{match.group(1)} (<i>{match.group(2)}</i>)</font></b>'
 
     return re.sub(r"step ([0-9]+) \((.+?)\)", replace, text)
+
+
+def hightlight_device_parameter(text: str, color) -> str:
+    def replace(match):
+        return f'device parameter <b><font color="{color}">{match.group(1)} = {match.group(2)}</font></b>'
+
+    return re.sub(r"device parameter '(.+?)' = '(.+?)'", replace, text)
