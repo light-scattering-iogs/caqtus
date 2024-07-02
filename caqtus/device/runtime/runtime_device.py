@@ -1,6 +1,6 @@
 import abc
 from contextlib import ExitStack, AbstractContextManager
-from typing import ClassVar, Optional, TypeVar, Self
+from typing import Optional, TypeVar, Self
 
 import attrs
 
@@ -29,7 +29,6 @@ class RuntimeDevice(Device, abc.ABC):
     name: DeviceName = attrs.field(on_setattr=attrs.setters.frozen)
 
     _close_stack: Optional[ExitStack] = attrs.field(init=False, default=None)
-    __devices_already_in_use: ClassVar[dict[DeviceName, "RuntimeDevice"]] = {}
 
     @name.validator  # type: ignore
     def _validate_name(self, _, value):
@@ -46,12 +45,7 @@ class RuntimeDevice(Device, abc.ABC):
         It must be called when subclassing this class.
         """
 
-        self._close_stack = ExitStack()
-
-        if self.name in self.__devices_already_in_use:
-            raise ValueError(f"A device with name {self.name} is already in use")
-        self.__devices_already_in_use[self.name] = self
-        self._add_closing_callback(self.__devices_already_in_use.pop, self.name)
+        pass
 
     def _add_closing_callback(self, callback, /, *args, **kwargs):
         """Add a callback function to be called when the device is closed.
@@ -89,8 +83,7 @@ class RuntimeDevice(Device, abc.ABC):
 
         if self._close_stack is None:
             raise UninitializedDeviceError(
-                f"method initialize of RuntimeDevice must be called before calling "
-                f"close."
+                f"method RuntimeDevice for {self.name} must be entered called before calling close."
             )
         self._close_stack.close()
         self._close_stack = None
@@ -107,9 +100,11 @@ class RuntimeDevice(Device, abc.ABC):
         This will ensure proper cleanup.
         """
 
+        self._close_stack = ExitStack()
+
         try:
             self.initialize()
-        except Exception:
+        except:
             self.close()
             raise
         return self
