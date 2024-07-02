@@ -73,7 +73,9 @@ class RPCClient:
                     pickled = pickle.dumps(request)
                     await send_with_size_prefix(self._stream, pickled)
                 with eliot.start_action(action_type="receive"):
-                    bytes_response = await receive_with_size_prefix(self._receive_stream)
+                    bytes_response = await receive_with_size_prefix(
+                        self._receive_stream
+                    )
                     response = pickle.loads(bytes_response)
                     return self._build_result(response)
 
@@ -132,14 +134,22 @@ class RPCClient:
 
     @contextlib.asynccontextmanager
     async def async_context_manager(
-        self, proxy: Proxy[contextlib.AbstractContextManager[T]]
+        self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
     ) -> AsyncGenerator[Proxy[T], None]:
         with anyio.CancelScope(shield=True):
+            stack = contextlib.AsyncExitStack()
             try:
-                async with self.call_method_proxy_result(proxy, "__enter__") as result:
-                    yield result
-            finally:
-                await self.call_method(proxy, "__exit__", None, None, None)
+                result_proxy = await stack.enter_async_context(
+                    self.call_method_proxy_result(cm_proxy, "__enter__")
+                )
+            except Exception:
+                raise
+            else:
+                try:
+                    async with stack:
+                        yield result_proxy
+                finally:
+                    await self.call_method(cm_proxy, "__exit__", None, None, None)
 
     async def async_iterator(self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
         while True:
