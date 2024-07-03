@@ -5,9 +5,5 @@ How to
    :maxdepth: 1
 
    install
-   how-to-use-sql-server
-   how-to-add-new-device
-   ui
-   add lane
    device-extension
-
+   handle-recoverable-exceptions
