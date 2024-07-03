@@ -2,8 +2,6 @@ import contextlib
 from collections.abc import Mapping, AsyncGenerator, Callable
 from typing import TypeVar
 
-import anyio
-
 from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote import DeviceProxy, RPCConfiguration
 from caqtus.device.remote.rpc import RPCClient
@@ -15,6 +13,8 @@ from caqtus.shot_compilation import (
     DeviceCompiler,
 )
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
+
+from ._async_utils import task_group_with_error_message
 
 
 @contextlib.asynccontextmanager
@@ -79,14 +79,17 @@ async def create_rpc_clients(
 T = TypeVar("T")
 
 
-async def enter_and_push(
+async def enter_and_push_device(
     stack: contextlib.AsyncExitStack,
-    key: str,
+    device: DeviceName,
     cm: contextlib.AbstractAsyncContextManager[T],
     results: dict,
 ):
-    value = await stack.enter_async_context(cm)
-    results[key] = value
+    try:
+        value = await stack.enter_async_context(cm)
+    except Exception as e:
+        raise RuntimeError(fmt("Failed to initialize {:device}", device)) from e
+    results[device] = value
 
 
 @contextlib.asynccontextmanager
@@ -95,7 +98,9 @@ async def context_group(
 ) -> AsyncGenerator[Mapping[str, T], None]:
     results = {}
     async with contextlib.AsyncExitStack() as stack:
-        async with anyio.create_task_group() as tg:
+        async with task_group_with_error_message(
+            "Errors occurred while initializing devices"
+        ) as tg:
             for key, cm in cms.items():
-                tg.start_soon(enter_and_push, stack, key, cm, results)
+                tg.start_soon(enter_and_push_device, stack, key, cm, results)
         yield results

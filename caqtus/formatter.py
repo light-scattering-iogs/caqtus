@@ -1,4 +1,9 @@
 import string
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from caqtus.types.expression import Expression
+    from caqtus.types.variable_name import DottedVariableName
 
 
 class CaqtusFormatter(string.Formatter):
@@ -12,6 +17,19 @@ class CaqtusFormatter(string.Formatter):
     It is useful to use this formatter to display objects in the caqtus package
     consistently.
     This allows parsing the string produced by the formatter to find the fields.
+
+    Allowed format specifiers:
+
+    * :step: to format a :data:`tuple[int, str]` as a step index and name.
+    * :device: to format a :class:`str` as the name of a device.
+    * :device server: to format a :class:`str` as the name of a remote server.
+    * :expression: to format a :class:`caqtus.types.expressions.Expression` as the
+    value of an expression.
+    * :parameter assignment: to format a
+    :data:`tuple[str, caqtus.types.expressions.Expression]` as the name and value of a
+    parameter assignment.
+    * :device parameter: to format a :data:`typle[str, Any]` as the name and value of
+    a parameter for a device.
 
     Example:
     ```
@@ -36,19 +54,34 @@ class CaqtusFormatter(string.Formatter):
             value = f"device server '{value}'"
         elif format_spec == "expression":
             value = f"expression '{value}'"
-        elif format_spec == "parameter":
-            value = f"parameter '{value}'"
+        elif format_spec == "parameter assignment":
+            parameter_name, parameter_value = value
+            value = f"parameter assignment '{parameter_name}' = '{parameter_value}'"
         elif format_spec == "type":
             value = f"type '{value.__name__}'"
         elif format_spec == "shot":
             if not isinstance(value, int):
                 raise ValueError("Shot number must be an integer")
             value = f"shot {value}"
-
+        elif format_spec == "device parameter":
+            parameter_name, parameter_value = value
+            value = f"device parameter '{parameter_name}' = '{parameter_value}'"
         return super().format(value, "")
 
 
 caqtus_formatter = CaqtusFormatter()
+
+
+def fmt_param_assign(name: "DottedVariableName", expression: "Expression") -> str:
+    return f"parameter assignment '{name}' = '{expression}'"
+
+
+def fmt_type(value: type | str) -> str:
+    return f"type '{value.__name__}'"
+
+
+def device_param(name: str, value: str) -> str:
+    return f"device parameter '{name}' = '{value}'"
 
 
 def fmt(s: str, *args, **kwargs):
