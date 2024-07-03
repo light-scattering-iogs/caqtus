@@ -84,5 +84,18 @@ def device_param(name: str, value: str) -> str:
     return f"device parameter '{name}' = '{value}'"
 
 
+def expression(expression: "Expression") -> str:
+    return f"expression '{expression}'"
+
+
+def type_(value: type | str) -> str:
+    if isinstance(value, type):
+        return f"type '{value.__name__}'"
+    elif isinstance(value, str):
+        return f"type '{value}'"
+    else:
+        raise ValueError("Invalid type value")
+
+
 def fmt(s: str, *args, **kwargs):
     return caqtus_formatter.format(s, *args, **kwargs)

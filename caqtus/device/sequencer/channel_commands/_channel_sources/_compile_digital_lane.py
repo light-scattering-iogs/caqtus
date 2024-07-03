@@ -1,11 +1,11 @@
 import numpy as np
 
+import caqtus.formatter as fmt
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
 )
-from caqtus.formatter import fmt
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
@@ -35,12 +35,8 @@ def compile_digital_lane(
             value = cell_value.evaluate(shot_context.get_variables())
             if not isinstance(value, bool):
                 raise InvalidTypeError(
-                    fmt(
-                        "{:expression} does not evaluate to {:type}, but to {:type}",
-                        cell_value,
-                        bool,
-                        type(value),
-                    )
+                    f"{fmt.expression(cell_value)} does not evaluate to "
+                    f"{fmt.type_(bool)}, but to {fmt.type_(type(value))}",
                 )
             instructions.append(get_constant_instruction(value, length))
 
