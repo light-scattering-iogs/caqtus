@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from caqtus.device.sequencer.channel_commands._channel_sources.compile_analog_lane import (
     compile_analog_lane,
@@ -7,6 +8,7 @@ from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import TimeLanes
 from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import AnalogTimeLane, Ramp
 
 
@@ -129,3 +131,20 @@ def test_5():
     assert np.allclose(result.to_pattern().array, expected.to_pattern().array), str(
         result
     )
+
+
+def test_invalid_expression_cell():
+    shot_context = ShotContext(
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a"],
+                step_durations=[Expression("1 s")],
+            ),
+        ),
+        variables={},
+        device_compilers={},
+    )
+    lane = AnalogTimeLane([Expression("...")])
+    with pytest.raises(RecoverableException):
+        compile_analog_lane(lane, "MHz", 1, shot_context)

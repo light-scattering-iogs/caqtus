@@ -3,12 +3,12 @@ from typing import assert_never, Optional, Any
 
 import numpy as np
 
+import caqtus.formatter as fmt
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
 )
-from caqtus.formatter import fmt
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import (
     start_tick,
@@ -23,6 +23,7 @@ from caqtus.types.parameter import (
     is_quantity,
     magnitude_in_unit,
 )
+from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import AnalogTimeLane, Ramp
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import VariableName, DottedVariableName
@@ -110,13 +111,8 @@ def _compile_expression_cell(
         result = Pattern(magnitude_in_unit(evaluated, unit), dtype=np.float64)
     if not len(result) == length:
         raise ValueError(
-            fmt(
-                "{:expression} evaluates to an array of {:length}"
-                " while {:length} is expected",
-                expression,
-                len(result),
-                length,
-            )
+            f"{expression} evaluates to an array of length {len(result)}"
+            f" while {length} is expected",
         )
     return result
 
@@ -156,13 +152,10 @@ def _compile_ramp_cell(
 def _evaluate_expression(
     expression: Expression, variables: Mapping[DottedVariableName, Any]
 ) -> AnalogValue:
-    try:
-        value = expression.evaluate(variables)
-    except Exception as e:
-        raise ValueError(fmt("Could not evaluate {:expression}", expression)) from e
+    value = expression.evaluate(variables)
     if not is_analog_value(value):
-        raise ValueError(
-            fmt("{:expression} evaluates to a non-analog value", expression)
+        raise InvalidValueError(
+            f"{fmt.expression(expression)} evaluates to a non-analog value"
         )
     return value
 
