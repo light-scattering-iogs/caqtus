@@ -9,6 +9,7 @@ from caqtus.formatter import fmt
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
 
 
@@ -33,7 +34,7 @@ def compile_digital_lane(
         elif isinstance(cell_value, Expression):
             value = cell_value.evaluate(shot_context.get_variables())
             if not isinstance(value, bool):
-                raise TypeError(
+                raise InvalidTypeError(
                     fmt(
                         "{:expression} does not evaluate to {:type}, but to {:type}",
                         cell_value,
