@@ -236,6 +236,8 @@ class TimeLanesView(QTableView):
         return self._model.is_read_only()
 
     def show_steps_context_menu(self, pos):
+        if self.is_read_only():
+            return
         menu = QMenu(self.horizontalHeader())
 
         index = self.horizontalHeader().logicalIndexAt(pos.x())
@@ -269,6 +271,8 @@ class TimeLanesView(QTableView):
         menu.deleteLater()
 
     def show_lanes_context_menu(self, pos):
+        if self.is_read_only():
+            return
         menu = QMenu(self.verticalHeader())
 
         index = self.verticalHeader().logicalIndexAt(pos.y())
@@ -289,6 +293,8 @@ class TimeLanesView(QTableView):
         menu.deleteLater()
 
     def show_cell_context_menu(self, pos):
+        if self.is_read_only():
+            return
         index = self.indexAt(pos)
         cell_actions = self._model.get_cell_context_actions(index)
         selection = self.selectionModel().selection()
