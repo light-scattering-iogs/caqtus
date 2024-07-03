@@ -45,7 +45,7 @@ class TimeLanesEditor(QWidget):
             parent=self,
         )
         self._extension = extension
-        self.view.time_lanes_changed.connect(self.time_lanes_edited)
+        self.view.time_lanes_changed.connect(self._on_time_lanes_changed)
         self.toolbar = QToolBar(self)
         self.toolbar.setFloatable(False)
         self.toolbar.setMovable(False)
