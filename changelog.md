@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.10.3] - 2024-07-03
+
+### Fixed
+
+- Bug which crashed the application if the cell in a lane does not evaluate to the
+  correct type
+
 ## [4.10.2] - 2024-07-03
 
 ### Fixed
@@ -78,7 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - HOWTO for creating device extension
 - Function to get a copy of caqtus serialization converter
-- Export `FormDeviceConfigurationEditor` in `caqtus.gui.condetrol.device_configuration_editors`
+- Export `FormDeviceConfigurationEditor`
+  in `caqtus.gui.condetrol.device_configuration_editors`
 
 ### Changed
 
