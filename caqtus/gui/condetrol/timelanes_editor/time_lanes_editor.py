@@ -79,6 +79,10 @@ class TimeLanesEditor(QWidget):
         self.view.set_read_only(read_only)
         self.toolbar.setEnabled(not read_only)
 
+    def _on_time_lanes_changed(self, time_lanes: TimeLanes) -> None:
+        if not self.view.is_read_only():
+            self.time_lanes_edited.emit(time_lanes)
+
     def set_time_lanes(self, time_lanes: TimeLanes) -> None:
         """Set the time lanes to be edited.
 
@@ -124,9 +128,9 @@ class TimeLanesView(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(extension, self)
-        self._device_configurations: dict[DeviceName, DeviceConfiguration] = (
-            device_configurations
-        )
+        self._device_configurations: dict[
+            DeviceName, DeviceConfiguration
+        ] = device_configurations
         self._extension = extension
         self.setModel(self._model)
 
@@ -227,6 +231,9 @@ class TimeLanesView(QTableView):
 
     def set_read_only(self, read_only: bool) -> None:
         self._model.set_read_only(read_only)
+
+    def is_read_only(self) -> bool:
+        return self._model.is_read_only()
 
     def show_steps_context_menu(self, pos):
         menu = QMenu(self.horizontalHeader())

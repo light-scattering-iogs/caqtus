@@ -428,6 +428,9 @@ class TimeLanesModel(QAbstractTableModel, metaclass=qabc.QABCMeta):
     def set_read_only(self, read_only: bool) -> None:
         self._read_only = read_only
 
+    def is_read_only(self) -> bool:
+        return self._read_only
+
     def on_step_names_data_changed(
         self,
         top_left: QModelIndex,
