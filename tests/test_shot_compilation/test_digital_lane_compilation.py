@@ -1,3 +1,5 @@
+import pytest
+
 from caqtus.device.sequencer.channel_commands._channel_sources._compile_digital_lane import (
     compile_digital_lane,
 )
@@ -5,6 +7,7 @@ from caqtus.device.sequencer.instructions import Pattern
 from caqtus.session.shot import DigitalTimeLane, TimeLanes
 from caqtus.shot_compilation import VariableNamespace, ShotContext, SequenceContext
 from caqtus.types.expression import Expression
+from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 
@@ -123,3 +126,21 @@ def test_3():
     )
     result = compile_digital_lane(lane, 1, shot_context)
     assert len(result) == 310_000_001
+
+
+# test for issue #23
+def test_invalid_expression_cell():
+    shot_context = ShotContext(
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a"],
+                step_durations=[Expression("1 s")],
+            ),
+        ),
+        variables={},
+        device_compilers={},
+    )
+    lane = DigitalTimeLane([Expression("...")])
+    with pytest.raises(RecoverableException):
+        compile_digital_lane(lane, 1, shot_context)
