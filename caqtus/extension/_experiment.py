@@ -211,9 +211,9 @@ class Experiment:
         configurations.
         """
 
-        tblib.pickling_support.install()
+        setup_logs("caqtus.log")
 
-        setup_condetrol_logs()
+        tblib.pickling_support.install()
 
         if platform.system() == "Windows":
             # This is necessary to use the UI icon in the taskbar and not the default
@@ -238,6 +238,8 @@ class Experiment:
         The experiment server is used to run procedures on the experiment manager from a
         remote process.
         """
+
+        setup_logs("experiment_server.log")
 
         tblib.pickling_support.install()
 
@@ -272,11 +274,19 @@ class Experiment:
             server.serve_forever()
 
     @staticmethod
-    def launch_device_server(config: RPCConfiguration) -> None:
+    def launch_device_server(
+        config: RPCConfiguration, name: str = "device_server"
+    ) -> None:
         """Launch a device server in the current process.
 
         This method will block until the server is stopped.
+
+        Args:
+            config: The configuration of the server.
+            name: The name of the server. It is used to create the log file.
         """
+
+        setup_logs(f"{name}.log")
 
         tblib.pickling_support.install()
 
@@ -291,7 +301,7 @@ class Experiment:
             server.wait_for_termination()
 
 
-def setup_condetrol_logs():
+def setup_logs(file_name: str):
     log_config = {
         "version": 1,
         "formatters": {
@@ -314,7 +324,7 @@ def setup_condetrol_logs():
                 "level": "ERROR",
                 "formatter": "standard",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": "condetrol.log",
+                "filename": file_name,
                 "maxBytes": 1_000_000,
             },
         },
