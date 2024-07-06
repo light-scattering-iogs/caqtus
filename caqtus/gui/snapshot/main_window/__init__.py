@@ -1,3 +1,3 @@
-from ._shot_viewer import ShotViewer
+from ._snapshot import SnapShot
 
-__all__ = ["ShotViewer"]
+__all__ = ["SnapShot"]

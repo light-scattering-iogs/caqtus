@@ -10,7 +10,7 @@ from .single_shot_widget import ShotViewerMainWindow, ViewCreator, ShotView
 from ...qtutil import QtAsyncio
 
 
-class ShotViewer:
+class SnapShot:
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
