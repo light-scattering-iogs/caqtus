@@ -194,11 +194,6 @@ class RPCServer:
         anyio.run(self.run_async, backend="trio")
 
 
-async def _send_obj(client: anyio.abc.ByteStream, obj: Any) -> None:
-    obj_bytes = pickle.dumps(obj)
-    await send_with_size_prefix(client, obj_bytes)
-
-
 class Server:
     def __init__(self, config: RPCConfiguration) -> None:
         self._server = RPCServer(config.port)
