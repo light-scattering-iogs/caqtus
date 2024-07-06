@@ -15,10 +15,10 @@ from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentS
 from caqtus.session.sequence import State
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.recoverable_exceptions import split_recoverable
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
-from ...types.recoverable_exceptions import is_recoverable
 
 logger = logging.getLogger(__name__)
 
@@ -366,10 +366,10 @@ class BoundProcedure(Procedure):
                     )
 
             anyio.run(run, backend="trio")
-        except BaseExceptionGroup as e:
-            recoverable, non_recoverable = e.split(is_recoverable)
+        except Exception as e:
+            recoverable, non_recoverable = split_recoverable(e)
             if recoverable:
-                logger.warning(
+                logger.info(
                     "A recoverable error occurred while running the sequence.",
                     exc_info=recoverable,
                 )
@@ -378,19 +378,7 @@ class BoundProcedure(Procedure):
                     "A non-recoverable error occurred while running the sequence.",
                     exc_info=non_recoverable,
                 )
-            raise
-        except Exception as e:
-            if is_recoverable(e):
-                logger.warning(
-                    "A recoverable error occurred while running the sequence.",
-                    exc_info=e,
-                )
-            else:
-                logger.error(
-                    "A non-recoverable error occurred while running the sequence.",
-                    exc_info=e,
-                )
-            raise
+                raise
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
