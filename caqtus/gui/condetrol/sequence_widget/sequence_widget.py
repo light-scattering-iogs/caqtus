@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import abc
-import asyncio
 from collections.abc import Set
 from typing import Optional, assert_never, Literal
 
+import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QIcon
@@ -84,7 +84,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             device_configurations = dict(session.default_device_configurations)
 
         self._state: _State = _SequenceNotSetState()
-        self._state_lock = asyncio.Lock()
+        self._state_lock = anyio.Lock()
 
         self.parameters_editor = ParameterNamespaceEditor(self)
         self.parameters_editor.set_read_only(True)
@@ -136,7 +136,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     async def exec_async(self) -> None:
         while True:
             await self.watch_sequence()
-            await asyncio.sleep(10e-3)
+            await anyio.sleep(10e-3)
 
     async def watch_sequence(self) -> None:
         if isinstance(self._state, _SequenceNotSetState):
