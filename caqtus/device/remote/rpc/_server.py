@@ -122,19 +122,15 @@ class RPCServer:
                 result = self.create_proxy(value)
             else:
                 assert False, f"Unknown return value: {request.return_value}"
-            result = CallResponseSuccess(result=result)
-        except _StopIteration as e:
+        except _StopIteration:
             # Don't log this exception, as it can occur during normal operation if we're
             # calling __next__ on an iterator.
-            result = self._construct_error_response(request.function, StopIteration())
+            await self.send_failure_response(client, request, StopIteration())
         except Exception as e:
-            logger.exception(
-                f"Error during call with request {request!r}", exc_info=True
-            )
-            result = self._construct_error_response(request.function, e)
-
-        pickled_result = pickle.dumps(result)
-        await send_with_size_prefix(client, pickled_result)
+            logger.exception(f"Error during request call {request!r}")
+            await self.send_failure_response(client, request, e)
+        else:
+            await self.send_success_response(client, request, result)
 
     def handle_delete_proxy_request(self, request: DeleteProxyRequest) -> None:
         proxy = request.proxy
@@ -148,11 +144,23 @@ class RPCServer:
             del self._objects[proxy._obj_id]
 
     @staticmethod
-    def _construct_error_response(fun, e: Exception) -> CallResponseFailure:
+    async def send_failure_response(
+        client: anyio.abc.ByteStream, request: CallRequest, e: Exception
+    ) -> None:
         try:
-            raise RemoteCallError(f"Error during call to {fun}") from e
+            raise RemoteCallError(f"Error during call to {request.function}") from e
         except RemoteCallError as error:
-            return CallResponseFailure(error=error)
+            response = CallResponseFailure(error=error)
+        pickled_response = pickle.dumps(response)
+        await send_with_size_prefix(client, pickled_response)
+
+    @staticmethod
+    async def send_success_response(
+        client: anyio.abc.ByteStream, request: CallRequest, result: Any
+    ) -> None:
+        response = CallResponseSuccess(result=result)
+        pickled_response = pickle.dumps(response)
+        await send_with_size_prefix(client, pickled_response)
 
     def create_proxy(self, obj: T) -> Proxy[T]:
         obj_id = id(obj)
@@ -184,6 +192,11 @@ class RPCServer:
 
     def run(self) -> Never:
         anyio.run(self.run_async, backend="trio")
+
+
+async def _send_obj(client: anyio.abc.ByteStream, obj: Any) -> None:
+    obj_bytes = pickle.dumps(obj)
+    await send_with_size_prefix(client, obj_bytes)
 
 
 class Server:
