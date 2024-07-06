@@ -101,21 +101,25 @@ class Camera(Device, abc.ABC):
 
             When the context manager exits, the camera stops the acquisition.
 
-        Example:
-              This demonstrates how to use this method to take images:
+        Raises:
+            CameraTimeoutError: In the iterator if the camera could not acquire an
+                image after the timeout specified by the method
+                :meth:`update_parameters`.
 
-              .. code-block:: python
+            RuntimeError: when the context manager is exited without error before all
+                images have been acquired.
+
+        Example:
+
+            This demonstrates how to use this method to take images:
+
+            .. code-block:: python
 
                 with camera.acquire(exposures=[0.1, 0.5, 1.0]) as images:
                     for image in images:
                         print(image)
 
-        Raises:
-            The iterator raises a :class:`CameraTimeoutError` if the camera does not
-            acquire an image after the timeout specified by the method
-            :meth:`update_parameters`.
-            The context manager should raise an error if it is exited without error
-            before the acquisition is completed.
+
         """
 
         raise NotImplementedError
