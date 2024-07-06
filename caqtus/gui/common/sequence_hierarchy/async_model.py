@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import abc
-import asyncio
 import datetime
 from typing import Optional, TypeGuard
 
+import anyio
 import attrs
 from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt, QDateTime
 from PySide6.QtGui import QStandardItemModel, QStandardItem
@@ -18,12 +18,12 @@ from caqtus.session import (
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence import State
-from caqtus.types.iteration import is_unknown
 from caqtus.session.sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
 )
+from caqtus.types.iteration import is_unknown
 
 NODE_DATA_ROLE = Qt.UserRole + 1
 
@@ -313,7 +313,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     async def watch_session(self) -> None:
         while True:
             await self.update_from_session()
-            await asyncio.sleep(0)
+            await anyio.sleep(0)
 
     async def update_from_session(self) -> None:
         await self.prune()
