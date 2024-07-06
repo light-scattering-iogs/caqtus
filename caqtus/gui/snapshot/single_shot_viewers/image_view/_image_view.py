@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Optional, assert_never
 
 import attrs
@@ -11,7 +10,7 @@ from PySide6.QtWidgets import QWidget
 from caqtus.device import DeviceName
 from caqtus.session import Shot, ExperimentSessionMaker
 from caqtus.types.data import DataLabel
-from caqtus.types.image import ImageLabel, Image
+from caqtus.types.image import ImageLabel, Image, is_image
 from caqtus.utils import serialization
 from .image_view_dialog_ui import Ui_ImageViewDialog
 from ..single_shot_view import ShotView
@@ -54,9 +53,13 @@ class ImageView(ShotView, pyqtgraph.ImageView):
     async def display_shot(self, shot: Shot) -> None:
         camera_name = self._state.camera_name
         picture_name = self._state.image
-        image = await asyncio.to_thread(
-            shot.get_data_by_label, DataLabel(f"{camera_name}\\{picture_name}")
-        )
+        async with self._session_maker.async_session() as session:
+            image_label = DataLabel(f"{camera_name}\\{picture_name}")
+            image = await session.sequences.get_shot_data_by_label(
+                shot.sequence_path, shot.index, image_label
+            )
+            if not is_image(image):
+                raise ValueError(f"Data {image_label} is not an image.")
         self.set_image(image)
 
     def set_image(self, image: Image) -> None:
