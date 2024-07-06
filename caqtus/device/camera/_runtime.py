@@ -6,9 +6,9 @@ from typing import ClassVar
 from attrs import define, field
 from attrs.setters import frozen, convert
 from attrs.validators import instance_of
-
 from caqtus.device import Device
 from caqtus.types.image import Image
+
 from ._configuration import RectangularROI
 
 
@@ -101,13 +101,14 @@ class Camera(Device, abc.ABC):
 
             When the context manager exits, the camera stops the acquisition.
 
+            Note that not all images might have been acquired when the context manager
+            exits, if not all images have been consumed by the user due to an exception
+            or a break in the with statement.
+
         Raises:
             CameraTimeoutError: In the iterator if the camera could not acquire an
                 image after the timeout specified by the method
                 :meth:`update_parameters`.
-
-            RuntimeError: when the context manager is exited without error before all
-                images have been acquired.
 
         Example:
 
