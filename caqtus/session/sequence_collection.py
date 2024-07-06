@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import abc
 import datetime
-from collections.abc import Mapping, Set
+from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional
 
 import attrs
-from returns.result import Result
-
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from returns.result import Result
+
 from .path import PureSequencePath
 from .path_hierarchy import PathError, PathNotFoundError
 from .sequence.state import State
@@ -25,6 +25,7 @@ class PathIsSequenceError(PathError):
 
 class PathIsNotSequenceError(PathError):
     pass
+
 
 class DataNotFoundError(RuntimeError):
     pass
@@ -237,7 +238,6 @@ class SequenceCollection(Protocol):
     def get_shot_parameters(
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
-
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -262,8 +262,9 @@ class SequenceCollection(Protocol):
 
         raise NotImplementedError
 
-
-    def get_shot_data_by_labels(self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]) -> Mapping[DataLabel, Data]:
+    def get_shot_data_by_labels(
+        self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]
+    ) -> Mapping[DataLabel, Data]:
         """Return the data with the given labels for the shot at the given index.
 
         This method is equivalent to calling :meth:`get_shot_data_by_label` for each
@@ -308,6 +309,12 @@ class SequenceCollection(Protocol):
         It should not be used to record the start and end time of a sequence during
         normal operation.
         """
+
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_sequences_in_state(self, state: State) -> Iterable[PureSequencePath]:
+        """Return all sequences in the given state."""
 
         raise NotImplementedError
 

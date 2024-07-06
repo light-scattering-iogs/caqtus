@@ -9,11 +9,12 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 import anyio
-
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
+
+from session.sequence import State
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
@@ -195,6 +196,16 @@ class LocalExperimentManager(ExperimentManager):
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
         self._device_manager_extension = device_manager_extension
+
+        # We crash the sequences that might have been running previously.
+        # This ensures that only one experiment manager is active at a time.
+        # It also cleans up previous sequences that might still be running if the
+        # previous experiment manager was not properly closed.
+        self._crash_running_sequences()
+
+    def _crash_running_sequences(self) -> None:
+        with self._session_maker() as session:
+            _crash_running_sequences(session)
 
     def __enter__(self):
         self._thread_pool.__enter__()
@@ -391,6 +402,13 @@ class BoundProcedure(Procedure):
         finally:
             self._parent._active_procedure = None
             self._running.release()
+
+
+def _crash_running_sequences(session: ExperimentSession) -> None:
+    for path in session.sequences.get_sequences_in_state(State.RUNNING):
+        session.sequences.set_state(path, State.CRASHED)
+    for path in session.sequences.get_sequences_in_state(State.PREPARING):
+        session.sequences.set_state(path, State.CRASHED)
 
 
 class SequenceAlreadyRunningError(RuntimeError):

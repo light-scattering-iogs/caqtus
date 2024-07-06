@@ -2,16 +2,11 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping, Set
-from typing import TYPE_CHECKING, Optional, assert_never
+from typing import TYPE_CHECKING, Optional, assert_never, Iterable
 
 import attrs
 import numpy as np
 import sqlalchemy.orm
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.types.data import DataLabel, Data, is_data
 from caqtus.types.expression import Expression
@@ -24,6 +19,11 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -385,6 +385,13 @@ class SQLSequenceCollection(SequenceCollection):
             if end_time
             else None
         )
+
+    def get_sequences_in_state(self, state: State) -> Iterable[PureSequencePath]:
+        stmt = (
+            select(SQLSequencePath).join(SQLSequence).where(SQLSequence.state == state)
+        )
+        result = self._get_sql_session().execute(stmt).scalars().all()
+        return (PureSequencePath(row.path) for row in result)
 
     def _query_path_model(
         self, path: PureSequencePath
