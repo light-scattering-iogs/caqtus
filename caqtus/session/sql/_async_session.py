@@ -1,8 +1,9 @@
-import asyncio
 import contextlib
+import functools
 from datetime import datetime
 from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping, Optional, Self
 
+import anyio.to_thread
 import attrs
 from returns.result import Result
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -112,11 +113,11 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
     async def __aenter__(self):
         if self._session is not None:
             raise RuntimeError("Session is already active")
-        self._session = await asyncio.to_thread(self._session_context.__enter__)
+        self._session = await anyio.to_thread.run_sync(self._session_context.__enter__)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await asyncio.to_thread(
+        await anyio.to_thread.run_sync(
             self._session_context.__exit__, exc_type, exc_val, exc_tb
         )
 
@@ -130,7 +131,8 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
             raise ExperimentSessionNotActiveError(
                 "Experiment session was not activated"
             )
-        return await asyncio.to_thread(fun, self._session, *args, **kwargs)
+        wrapped = functools.partial(fun, self._session, *args, **kwargs)
+        return await anyio.to_thread.run_sync(wrapped)
 
 
 @attrs.frozen
