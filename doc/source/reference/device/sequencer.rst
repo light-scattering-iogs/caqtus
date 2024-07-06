@@ -1,5 +1,5 @@
-Sequencer
-=========
+caqtus.device.sequencer
+=======================
 
 .. automodule:: caqtus.device.sequencer
 

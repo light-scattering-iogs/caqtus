@@ -6,3 +6,4 @@ Device
 
    device
    sequencer
+   camera

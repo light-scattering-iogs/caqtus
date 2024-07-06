@@ -37,6 +37,7 @@ autodoc_type_aliases = {
     "JSON": "JSON",
     "Step": "Step",
     "AnalogValue": "AnalogValue",
+    "Image": "Image",
 }
 
 intersphinx_mapping = {
