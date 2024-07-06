@@ -9,19 +9,18 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 import anyio
+
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
+from caqtus.session.sequence import State
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
-
-from session.sequence import State
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
 from ...types.recoverable_exceptions import is_recoverable
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class ExperimentManager(abc.ABC):

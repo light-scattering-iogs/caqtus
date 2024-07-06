@@ -1,3 +1,5 @@
+import contextlib
+
 import anyio
 import anyio.to_thread
 import numpy as np
@@ -71,6 +73,14 @@ class MockCamera(Camera):
 
     def update_parameters(self, timeout: float, *args, **kwargs) -> None:
         pass
+
+    @contextlib.contextmanager
+    def acquire(self, exposures: list[float]):
+        self._start_acquisition(exposures)
+        try:
+            yield (self._read_image(exposure) for exposure in exposures)
+        finally:
+            self._stop_acquisition()
 
     def _start_acquisition(self, exposures: list[float]) -> None:
         print("start acquisition")
