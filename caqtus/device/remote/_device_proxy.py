@@ -14,6 +14,7 @@ from typing import (
 
 from caqtus.device import Device
 from .rpc import RPCClient, Proxy, RemoteCallError
+from ...utils.contextlib import aclose_on_error
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -91,16 +92,16 @@ class DeviceProxy(Generic[DeviceType]):
         self._async_exit_stack = contextlib.AsyncExitStack()
 
     async def __aenter__(self) -> Self:
-        await self._async_exit_stack.__aenter__()
-        self._device_proxy = await self._async_exit_stack.enter_async_context(
-            self._rpc_client.call_proxy_result(
-                self._device_type, *self._args, **self._kwargs
+        async with aclose_on_error(self._async_exit_stack):
+            self._device_proxy = await self._async_exit_stack.enter_async_context(
+                self._rpc_client.call_proxy_result(
+                    self._device_type, *self._args, **self._kwargs
+                )
             )
-        )
-        with unwrap_remote_error_cm():
-            await self._async_exit_stack.enter_async_context(
-                self.async_context_manager(self._device_proxy)
-            )
+            with unwrap_remote_error_cm():
+                await self._async_exit_stack.enter_async_context(
+                    self.async_context_manager(self._device_proxy)
+                )
         return self
 
     @unwrap_remote_error_decorator
