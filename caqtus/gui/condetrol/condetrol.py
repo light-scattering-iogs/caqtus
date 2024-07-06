@@ -11,7 +11,8 @@ from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
 from .extension import CondetrolExtension, CondetrolExtensionProtocol
 from .main_window import CondetrolMainWindow
-from ..qtutil import QtAsyncio
+from .main_window._main_window import CondetrolWindowHandler
+from ..qtutil import qt_trio
 
 
 # noinspection PyTypeChecker
@@ -47,6 +48,7 @@ class Condetrol:
         ] = default_connect_to_experiment_manager,
         extension: Optional[CondetrolExtensionProtocol] = None,
     ):
+        self.session_maker = session_maker
         if extension is None:
             extension = CondetrolExtension()
         app = QApplication.instance()
@@ -91,7 +93,11 @@ class Condetrol:
         previous_excepthook = sys.excepthook
         sys.excepthook = excepthook
 
+        async def run_condetrol():
+            handler = CondetrolWindowHandler(self.window, self.session_maker)
+            await handler.run_async()
+
         try:
-            QtAsyncio.run(self.window.run_async(), keep_running=False)
+            qt_trio.run(run_condetrol)
         finally:
             sys.excepthook = previous_excepthook
