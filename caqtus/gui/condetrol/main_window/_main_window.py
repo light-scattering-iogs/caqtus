@@ -3,6 +3,8 @@ import functools
 from collections.abc import Callable
 from typing import Optional
 
+import anyio
+import anyio.to_thread
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtWidgets import (
     QMainWindow,
@@ -228,12 +230,12 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             if parameters != self._global_parameters_editor.get_parameters():
                 self._global_parameters_editor.set_parameters(parameters)
                 self.sequence_widget.set_available_parameter_names(parameters.names())
-            await asyncio.sleep(0.2)
+            await anyio.sleep(0.2)
 
     async def _run_sequence(self, procedure: Procedure, sequence):
         with procedure:
             try:
-                await asyncio.to_thread(procedure.start_sequence, sequence)
+                await anyio.to_thread.run_sync(procedure.start_sequence, sequence)
             except Exception as e:
                 exception = RuntimeError(
                     f"An error occurred while starting the sequence {sequence}."
@@ -242,8 +244,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
                 self._signal_exception_while_running_sequence(exception)
                 return
 
-            while await asyncio.to_thread(procedure.is_running_sequence):
-                await asyncio.sleep(50e-3)
+            while await anyio.to_thread.run_sync(procedure.is_running_sequence):
+                await anyio.sleep(50e-3)
 
             if (exc := procedure.exception()) is not None:
                 # Here we ignore the SequenceInterruptedException because it is
