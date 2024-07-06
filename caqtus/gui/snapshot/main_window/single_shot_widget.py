@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import abc
-import asyncio
 import datetime
 import functools
 from collections.abc import Callable
 from typing import Optional, Mapping, assert_never, TypeAlias
 
+import anyio
 import attrs
 from PySide6.QtCore import QSettings, Qt, QByteArray
 from PySide6.QtWidgets import (
@@ -17,9 +17,7 @@ from PySide6.QtWidgets import (
     QDockWidget,
 )
 
-from caqtus.gui.common.sequence_hierarchy import (
-    AsyncPathHierarchyView,
-)
+from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
@@ -38,7 +36,89 @@ from ..single_shot_viewers import ShotView, ManagerName
 ViewCreator: TypeAlias = Callable[[], tuple[str, ShotView]]
 
 
-class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
+class SnapShotWindowHandler:
+    def __init__(
+        self,
+        window: SnapShotMainWindow,
+        experiment_session_maker: ExperimentSessionMaker,
+    ):
+        super().__init__()
+        self.window = window
+        self.experiment_session_maker = experiment_session_maker
+        self.task_group = anyio.create_task_group()
+        self.state_lock = anyio.Lock()
+
+        self._state: WidgetState = NoSequenceSelected()
+        # Lock to prevent changing the state while comparing if the state is different
+        # from the stored sequence.
+        self._state_lock = anyio.Lock()
+
+        self.window.hierarchy_view.sequence_double_clicked.connect(
+            self.on_sequence_double_clicked
+        )
+
+    async def exec_async(self):
+        async with self.task_group:
+            self.task_group.start_soon(self.watch)
+            self.task_group.start_soon(self.window.hierarchy_view.run_async)
+
+    async def watch(self):
+        while True:
+            await self.update_state()
+            await anyio.sleep(50e-3)
+
+    def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
+        # We can't transition synchronously now, because the widget might be in the
+        # middle of a state comparison or a transition.
+        # So instead we schedule the transition to happen asynchronously once it's safe.
+        self.task_group.start_soon(self._on_sequence_double_clicked_async, path)
+
+    async def _on_sequence_double_clicked_async(self, path: PureSequencePath) -> None:
+        async with (
+            self._state_lock,
+            self.experiment_session_maker.async_session() as session,
+        ):
+            state = await get_state_async(path, session)
+            await self._transition(state)
+
+    async def update_state(self) -> None:
+        """Ensure that the widget displays the up-to-date state of the sequence."""
+
+        async with self._state_lock:
+            match self._state:
+                case NoSequenceSelected():
+                    return
+                case SequenceSelected(path=path):
+                    async with (
+                        self.experiment_session_maker.async_session() as session,
+                    ):
+                        new_state = await get_state_async(path, session)
+                        if new_state != self._state:
+                            await self._transition(new_state)
+                case _:
+                    assert_never(self._state)
+
+    async def _transition(self, state: WidgetState) -> None:
+        if isinstance(state, SequenceSelected):
+            if state.shots:
+                last_shot = max(state.shots, key=lambda s: s.index)
+                await self._update_views(last_shot)
+        self._state = state
+
+    async def _update_views(self, shot: PureShot) -> None:
+        async with anyio.create_task_group() as tg:
+            for view in self.window.get_views().values():
+                tg.start_soon(self._update_view, shot, view)
+
+    async def _update_view(self, shot: PureShot, view: ShotView) -> None:
+        # We need to create a new session for each view, because otherwise the views
+        # might use the same session concurrently, which is not allowed.
+        with self.experiment_session_maker() as session:
+            bound_shot = Shot.bound(shot, session)
+            await view.display_shot(bound_shot)
+
+
+class SnapShotMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
     """The main window of the shot viewer application.
 
     This window displays the sequences in a dock widget.
@@ -50,7 +130,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def __init__(
         self,
-        experiment_session_maker: ExperimentSessionMaker,
+        hierarchy_view: AsyncPathHierarchyView,
         view_creators: Mapping[str, ViewCreator],
         view_dumper: Callable[[ShotView], JSON],
         view_loader: Callable[[JSON], ShotView],
@@ -59,30 +139,17 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         super().__init__(parent)
 
         self._views: dict[str, tuple[ManagerName, ShotView]] = {}
-        self._experiment_session_maker = experiment_session_maker
         self._view_creators = view_creators
         self._mdi_area = QMdiArea()
 
-        self._hierarchy_view = AsyncPathHierarchyView(
-            self._experiment_session_maker, self
-        )
+        self.hierarchy_view = hierarchy_view
         self._setup_ui()
         self.restore_state()
-        self._task_group = asyncio.TaskGroup()
 
         self._view_dumper = view_dumper
         self._view_loader = view_loader
 
-        self._state: WidgetState = NoSequenceSelected()
-        # Lock to prevent changing the state while comparing if the state is different
-        # from the stored sequence.
-        self._state_lock = asyncio.Lock()
         self.tile_action.triggered.connect(self._mdi_area.tileSubWindows)
-
-    async def exec_async(self):
-        async with self._task_group:
-            self._task_group.create_task(self.watch())
-            self._task_group.create_task(self._hierarchy_view.run_async())
 
     def restore_state(self):
         ui_settings = QSettings("Caqtus", "ShotViewer")
@@ -99,11 +166,8 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         self.setupUi(self)
         paths_dock = QDockWidget("Sequences", self)
         paths_dock.setObjectName("SequencesDock")
-        paths_dock.setWidget(self._hierarchy_view)
+        paths_dock.setWidget(self.hierarchy_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
-        self._hierarchy_view.sequence_double_clicked.connect(
-            self.on_sequence_double_clicked
-        )
 
         self.action_save_workspace_as.triggered.connect(self.save_workspace_as)
         self.action_load_workspace.triggered.connect(self.load_workspace)
@@ -129,7 +193,7 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         sub_window.setWindowTitle(view_name)
         sub_window.show()
 
-    def _get_views(self) -> dict[str, ShotView]:
+    def get_views(self) -> dict[str, ShotView]:
         return {
             sub_window.windowTitle(): sub_window.widget()
             for sub_window in self._mdi_area.subWindowList()
@@ -195,61 +259,6 @@ class ShotViewerMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
                 json_string = f.read()
             workspace = serialization.from_json(json_string, WorkSpace)
             self.set_workspace(workspace)
-
-    def on_sequence_double_clicked(self, path: PureSequencePath) -> None:
-        # We can't transition synchronously now, because the widget might be in the
-        # middle of a state comparison or a transition.
-        # So instead we schedule the transition to happen asynchronously once it's safe.
-        self._task_group.create_task(self._on_sequence_double_clicked_async(path))
-
-    async def _on_sequence_double_clicked_async(self, path: PureSequencePath) -> None:
-        async with (
-            self._state_lock,
-            self._experiment_session_maker.async_session() as session,
-        ):
-            state = await get_state_async(path, session)
-            await self._transition(state)
-
-    async def watch(self):
-        while True:
-            await self.update_state()
-            await asyncio.sleep(50e-3)
-
-    async def update_state(self) -> None:
-        """Ensure that the widget displays the up-to-date state of the sequence."""
-
-        async with self._state_lock:
-            match self._state:
-                case NoSequenceSelected():
-                    return
-                case SequenceSelected(path=path):
-                    async with (
-                        self._experiment_session_maker.async_session() as session,
-                    ):
-                        new_state = await get_state_async(path, session)
-                        if new_state != self._state:
-                            await self._transition(new_state)
-                case _:
-                    assert_never(self._state)
-
-    async def _transition(self, state: WidgetState) -> None:
-        if isinstance(state, SequenceSelected):
-            if state.shots:
-                last_shot = max(state.shots, key=lambda s: s.index)
-                await self._update_views(last_shot)
-        self._state = state
-
-    async def _update_views(self, shot: PureShot) -> None:
-        async with asyncio.TaskGroup() as tg:
-            for view in self._get_views().values():
-                tg.create_task(self._update_view(shot, view))
-
-    async def _update_view(self, shot: PureShot, view: ShotView) -> None:
-        # We need to create a new session for each view, because otherwise the views
-        # might use the same session concurrently, which is not allowed.
-        with self._experiment_session_maker() as session:
-            shot = Shot.bound(shot, session)
-            await view.display_shot(shot)
 
 
 def _str_to_bytes_array(string: str) -> QByteArray:

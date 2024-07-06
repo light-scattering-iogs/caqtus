@@ -6,8 +6,14 @@ from PySide6.QtWidgets import QApplication
 
 from caqtus.session import ExperimentSessionMaker
 from caqtus.utils.serialization import JSON
-from .single_shot_widget import ShotViewerMainWindow, ViewCreator, ShotView
-from ...qtutil import QtAsyncio
+from .single_shot_widget import (
+    SnapShotMainWindow,
+    ViewCreator,
+    ShotView,
+    SnapShotWindowHandler,
+)
+from ...common.sequence_hierarchy import AsyncPathHierarchyView
+from ...qtutil import qt_trio
 
 
 class SnapShot:
@@ -19,6 +25,7 @@ class SnapShot:
         view_loader: Callable[[JSON], ShotView],
     ):
         app = QApplication.instance()
+        self.session_maker = session_maker
         if app is None:
             self.app = QApplication([])
             self.app.setOrganizationName("Caqtus")
@@ -30,8 +37,10 @@ class SnapShot:
         else:
             self.app = app
 
-        self.window = ShotViewerMainWindow(
-            experiment_session_maker=session_maker,
+        hierarchy_view = AsyncPathHierarchyView(session_maker)
+
+        self.window = SnapShotMainWindow(
+            hierarchy_view=hierarchy_view,
             view_creators=view_creators,
             view_dumper=view_dumper,
             view_loader=view_loader,
@@ -53,8 +62,12 @@ class SnapShot:
 
         previous_excepthook = sys.excepthook
 
+        async def handle():
+            handler = SnapShotWindowHandler(self.window, self.session_maker)
+            await handler.exec_async()
+
         try:
             sys.excepthook = excepthook
-            QtAsyncio.run(self.window.exec_async(), keep_running=False)
+            qt_trio.run(handle)
         finally:
             sys.excepthook = previous_excepthook
