@@ -378,7 +378,7 @@ class BoundProcedure(Procedure):
                     "A non-recoverable error occurred while running the sequence.",
                     exc_info=non_recoverable,
                 )
-                raise
+            raise
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
