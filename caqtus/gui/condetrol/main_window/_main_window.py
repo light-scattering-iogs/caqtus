@@ -1,7 +1,7 @@
-import asyncio
+from __future__ import annotations
+
 import functools
 from collections.abc import Callable
-from typing import Optional
 
 import anyio
 import anyio.to_thread
@@ -30,6 +30,93 @@ from ..path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget
 
 
+class CondetrolWindowHandler:
+    def __init__(
+        self, main_window: CondetrolMainWindow, session_maker: ExperimentSessionMaker
+    ):
+        self.main_window = main_window
+        self.session_maker = session_maker
+        self.task_group = anyio.create_task_group()
+        self.is_running_sequence = False
+
+        self.main_window.path_view.sequence_start_requested.connect(self.start_sequence)
+        self.main_window.sequence_widget.sequence_start_requested.connect(
+            self.start_sequence
+        )
+
+    async def run_async(self) -> None:
+        """Run the main window asynchronously."""
+
+        async with self.task_group:
+            self.task_group.start_soon(self.main_window.path_view.run_async)
+            self.task_group.start_soon(self._monitor_global_parameters)
+            self.task_group.start_soon(self.main_window.sequence_widget.exec_async)
+
+    async def _monitor_global_parameters(self) -> None:
+        while True:
+            async with self.session_maker.async_session() as session:
+                parameters = await session.get_global_parameters()
+            if parameters != self.main_window.global_parameters_editor.get_parameters():
+                self.main_window.global_parameters_editor.set_parameters(parameters)
+                self.main_window.sequence_widget.set_available_parameter_names(
+                    parameters.names()
+                )
+            await anyio.sleep(0.2)
+
+    def start_sequence(self, path: PureSequencePath):
+        try:
+            experiment_manager = run_with_wip_widget(
+                self.main_window,
+                "Connecting to experiment manager...",
+                self.main_window.connect_to_experiment_manager,
+            )
+        except Exception as e:
+            logger.error("Failed to connect to experiment manager.", exc_info=e)
+            self.main_window.display_error(
+                "Failed to connect to experiment manager.", e
+            )
+            return
+
+        if self.is_running_sequence:
+            self.main_window.display_error(
+                "A sequence is already running.",
+                RuntimeError("A sequence is already running."),
+            )
+            return
+        procedure = experiment_manager.create_procedure(
+            "sequence launched from GUI", acquisition_timeout=1
+        )
+        self.task_group.start_soon(self._run_sequence, procedure, path)
+        self.is_running_sequence = True
+
+    async def _run_sequence(self, procedure: Procedure, sequence):
+        with procedure:
+            try:
+                await anyio.to_thread.run_sync(procedure.start_sequence, sequence)
+            except Exception as e:
+                exception = RuntimeError(
+                    f"An error occurred while starting the sequence {sequence}."
+                )
+                exception.__cause__ = e
+                self.main_window.signal_exception_while_running_sequence(exception)
+                return
+
+            while await anyio.to_thread.run_sync(procedure.is_running_sequence):
+                await anyio.sleep(50e-3)
+
+            if (exc := procedure.exception()) is not None:
+                # Here we ignore the SequenceInterruptedException because it is
+                # expected to happen when the sequence is interrupted and we don't
+                # want to display it to the user as an actual error.
+                if isinstance(exc, SequenceInterruptedException):
+                    exc = None
+                elif isinstance(exc, ExceptionGroup):
+                    _, exc = exc.split(SequenceInterruptedException)
+                if exc is not None:
+                    self.main_window.signal_exception_while_running_sequence(exc)
+        self.is_running_sequence = False
+
+
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     """The main window of the Condetrol GUI.
 
@@ -56,9 +143,9 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         extension: CondetrolExtensionProtocol,
     ):
         super().__init__()
-        self._path_view = EditablePathHierarchyView(session_maker, self)
-        self._global_parameters_editor = ParameterNamespaceEditor()
-        self._connect_to_experiment_manager = connect_to_experiment_manager
+        self.path_view = EditablePathHierarchyView(session_maker, self)
+        self.global_parameters_editor = ParameterNamespaceEditor()
+        self.connect_to_experiment_manager = connect_to_experiment_manager
         self.session_maker = session_maker
         self.sequence_widget = SequenceWidget(
             self.session_maker, extension.lane_extension, parent=self
@@ -69,28 +156,18 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
-        self._task_group = asyncio.TaskGroup()
-        self._run_sequence_task: Optional[asyncio.Task] = None
         self.timer = QTimer(self)
-
-    async def run_async(self) -> None:
-        """Run the main window asynchronously."""
-
-        async with self._task_group:
-            self._task_group.create_task(self._path_view.run_async())
-            self._task_group.create_task(self._monitor_global_parameters())
-            self._task_group.create_task(self.sequence_widget.exec_async())
 
     def setup_ui(self):
         self.setupUi(self)
         self.setCentralWidget(self.sequence_widget)
         paths_dock = QDockWidget("Sequences", self)
         paths_dock.setObjectName("SequencesDock")
-        paths_dock.setWidget(self._path_view)
+        paths_dock.setWidget(self.path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
         self.dock_menu.addAction(paths_dock.toggleViewAction())
         global_parameters_dock = QDockWidget("Global parameters", self)
-        global_parameters_dock.setWidget(self._global_parameters_editor)
+        global_parameters_dock.setWidget(self.global_parameters_editor)
         global_parameters_dock.setObjectName("GlobalParametersDock")
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, global_parameters_dock
@@ -104,43 +181,14 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.action_edit_device_configurations.triggered.connect(
             self.open_device_configurations_editor
         )
-        self._path_view.sequence_double_clicked.connect(self.set_edited_sequence)
-        self._path_view.sequence_start_requested.connect(self.start_sequence)
-        self._path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
-        self.sequence_widget.sequence_start_requested.connect(self.start_sequence)
-        self._global_parameters_editor.parameters_edited.connect(
+        self.path_view.sequence_double_clicked.connect(self.set_edited_sequence)
+        self.path_view.sequence_interrupt_requested.connect(self.interrupt_sequence)
+        self.global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
-
-    def start_sequence(self, path: PureSequencePath):
-        try:
-            experiment_manager = run_with_wip_widget(
-                self,
-                "Connecting to experiment manager...",
-                self._connect_to_experiment_manager,
-            )
-        except Exception as e:
-            logger.error("Failed to connect to experiment manager.", exc_info=e)
-            self.display_error("Failed to connect to experiment manager.", e)
-            return
-        sequence_already_running = (
-            self._run_sequence_task is not None and not self._run_sequence_task.done()
-        )
-        if sequence_already_running:
-            self.display_error(
-                "A sequence is already running.",
-                RuntimeError("A sequence is already running."),
-            )
-            return
-        procedure = experiment_manager.create_procedure(
-            "sequence launched from GUI", acquisition_timeout=1
-        )
-        self._run_sequence_task = self._task_group.create_task(
-            self._run_sequence(procedure, path)
-        )
 
     def on_procedure_exception(self, exception: Exception):
         recoverable, non_recoverable = split_recoverable(exception)
@@ -211,7 +259,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         experiment_manager = run_with_wip_widget(
             self,
             "Connecting to experiment manager...",
-            self._connect_to_experiment_manager,
+            self.connect_to_experiment_manager,
         )
         # we're actually lying here because we interrupt the running procedure, which
         # may be different from the one passed in argument.
@@ -223,42 +271,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             logger.info(f"Global parameters written to storage: {parameters}")
         self.sequence_widget.set_available_parameter_names(parameters.names())
 
-    async def _monitor_global_parameters(self) -> None:
-        while True:
-            async with self.session_maker.async_session() as session:
-                parameters = await session.get_global_parameters()
-            if parameters != self._global_parameters_editor.get_parameters():
-                self._global_parameters_editor.set_parameters(parameters)
-                self.sequence_widget.set_available_parameter_names(parameters.names())
-            await anyio.sleep(0.2)
-
-    async def _run_sequence(self, procedure: Procedure, sequence):
-        with procedure:
-            try:
-                await anyio.to_thread.run_sync(procedure.start_sequence, sequence)
-            except Exception as e:
-                exception = RuntimeError(
-                    f"An error occurred while starting the sequence {sequence}."
-                )
-                exception.__cause__ = e
-                self._signal_exception_while_running_sequence(exception)
-                return
-
-            while await anyio.to_thread.run_sync(procedure.is_running_sequence):
-                await anyio.sleep(50e-3)
-
-            if (exc := procedure.exception()) is not None:
-                # Here we ignore the SequenceInterruptedException because it is
-                # expected to happen when the sequence is interrupted and we don't
-                # want to display it to the user as an actual error.
-                if isinstance(exc, SequenceInterruptedException):
-                    exc = None
-                elif isinstance(exc, ExceptionGroup):
-                    _, exc = exc.split(SequenceInterruptedException)
-                if exc is not None:
-                    self._signal_exception_while_running_sequence(exc)
-
-    def _signal_exception_while_running_sequence(self, exception: Exception):
+    def signal_exception_while_running_sequence(self, exception: Exception):
         # This is a bit ugly because on_procedure_exception runs a dialog, which
         # messes up the event loop, so instead we schedule the exception handling
         # to be done in the next event loop iteration.
