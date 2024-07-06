@@ -56,9 +56,12 @@ def unwrap_remote_error_cm():
 
 
 async def unwrap_remote_error_iterator(iterator: AsyncIterator[T]) -> AsyncIterator[T]:
+    stop = object()
     while True:
         with unwrap_remote_error_cm():
-            next_value = await anext(iterator)
+            next_value = await anext(iterator, default=stop)
+        if next_value is stop:
+            break
         yield next_value
 
 
