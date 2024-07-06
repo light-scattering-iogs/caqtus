@@ -1,7 +1,16 @@
 import contextlib
 import functools
-from collections.abc import Callable, Coroutine
-from typing import Self, ParamSpec, TypeVar, Generic, LiteralString, Any, final
+from collections.abc import Callable, Coroutine, Iterator
+from typing import (
+    Self,
+    ParamSpec,
+    TypeVar,
+    Generic,
+    LiteralString,
+    Any,
+    final,
+    AsyncIterator,
+)
 
 from caqtus.device import Device
 from .rpc import RPCClient, Proxy, RemoteCallError
@@ -44,6 +53,13 @@ def unwrap_remote_error_cm():
             raise original
         else:
             raise
+
+
+async def unwrap_remote_error_iterator(iterator: AsyncIterator[T]) -> AsyncIterator[T]:
+    while True:
+        with unwrap_remote_error_cm():
+            next_value = await anext(iterator)
+        yield next_value
 
 
 class DeviceProxy(Generic[DeviceType]):
@@ -113,6 +129,9 @@ class DeviceProxy(Generic[DeviceType]):
         self, proxy: Proxy[contextlib.AbstractContextManager[T]]
     ) -> contextlib.AbstractAsyncContextManager[Proxy[T]]:
         return self._rpc_client.async_context_manager(proxy)
+
+    def async_iterator(self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
+        return unwrap_remote_error_iterator(self._rpc_client.async_iterator(proxy))
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         await self._async_exit_stack.__aexit__(exc_type, exc_value, traceback)
