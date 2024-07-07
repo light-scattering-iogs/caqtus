@@ -34,6 +34,8 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
     :class:`caqtus.types.expression.Expression` objects that only make sense in the
     context of a shot.
 
+    Subclasses should add necessary attributes depending on the device.
+
     Attributes:
         remote_server: Indicates the name of the computer on which the device should be
             instantiated.
