@@ -10,6 +10,9 @@ caqtus.device
 .. autoclass:: DeviceConfiguration
    :members:
 
+.. autoclass:: DeviceController
+   :members:
+
 .. autoclass:: DeviceName
 
 

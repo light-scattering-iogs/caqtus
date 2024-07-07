@@ -7,6 +7,7 @@ from .configuration import (
 )
 from .name import DeviceName
 from .runtime import Device, RuntimeDevice
+from .controller import DeviceController
 
 __all__ = [
     "DeviceName",
@@ -15,4 +16,5 @@ __all__ = [
     "Device",
     "RuntimeDevice",
     "get_configurations_by_type",
+    "DeviceController",
 ]
