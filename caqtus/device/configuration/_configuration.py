@@ -5,12 +5,10 @@ from __future__ import annotations
 import abc
 from collections.abc import Mapping
 from typing import (
-    Any,
     TypeVar,
     Optional,
     NewType,
     Generic,
-    Self,
 )
 
 import attrs
@@ -25,13 +23,10 @@ DeviceType = TypeVar("DeviceType", bound=Device)
 
 @attrs.define
 class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
-    """Maps from user-level configuration of a device to low-level device parameters.
+    """Contains static information about a device.
 
-    This is an abstract class, generic in :data:`DeviceType` that contains all the
-    information necessary to run a device of type :data:`DeviceType`.
-
-    Typically, this class hold the information that is necessary to instantiate a
-    device and the information necessary to update the device's state during a shot.
+    This is an abstract class, generic in :data:`DeviceType` that stores the information
+    necessary to connect to a device and program it during a sequencer.
 
     This information is meant to be encoded in a user-friendly way that might not be
     possible to be directly programmed on a device.
@@ -64,27 +59,3 @@ def get_configurations_by_type(
         for name, configuration in device_configurations.items()
         if isinstance(configuration, device_type)
     }
-
-
-@attrs.define
-class LocalProcessInitialization:
-    device_type: type[Device]
-    init_kwargs: dict[str, Any]
-
-    def with_extra_parameters(self, **kwargs) -> Self:
-        self.init_kwargs.update(kwargs)
-        return self
-
-
-@attrs.define
-class RemoteProcessInitialization:
-    server_name: DeviceServerName
-    device_type: str
-    init_kwargs: dict[str, Any]
-
-    def with_extra_parameters(self, **kwargs) -> Self:
-        self.init_kwargs.update(kwargs)
-        return self
-
-
-DeviceInitializationMethod = LocalProcessInitialization | RemoteProcessInitialization
