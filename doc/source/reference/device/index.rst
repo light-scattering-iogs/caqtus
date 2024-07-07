@@ -5,7 +5,7 @@ caqtus.device
 
 .. autoclass:: Device
    :members:
-   :special-members: __enter__, __exit__
+   :special-members: __init__ ,__enter__, __exit__
 
 .. autoclass:: DeviceConfiguration
    :members:
@@ -22,6 +22,5 @@ caqtus.device
 .. toctree::
    :maxdepth: 1
 
-   controller
    sequencer
    camera

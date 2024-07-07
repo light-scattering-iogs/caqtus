@@ -7,3 +7,4 @@ How to
    install
    device-extension
    handle-recoverable-exceptions
+   cleanup-in-enter
