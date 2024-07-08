@@ -9,11 +9,11 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 from caqtus.analysis.loading import DataImporter
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import ExperimentSessionMaker
-from gui.qtutil import qt_trio
 
 from .data_loading import DataLoader
 from .graphplot_main_window_ui import Ui_GraphPlotMainWindow
 from .views.error_bar_view import ErrorBarView
+from ..qtutil import qt_trio
 
 logger = logging.getLogger(__name__)
 
