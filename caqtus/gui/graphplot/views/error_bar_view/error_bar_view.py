@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Optional
 
+import anyio.to_thread
 import attrs
 import numpy as np
 import polars
@@ -11,11 +11,11 @@ import qtawesome
 from PySide6.QtCore import QStringListModel, QTimer, Qt
 from PySide6.QtGui import QPen, QFont
 from PySide6.QtWidgets import QWidget, QDialog, QCompleter
-
 from caqtus.analysis.stats import compute_stats_average, get_nominal_value, get_error
 from caqtus.analysis.units import extract_unit
-from caqtus.gui.qtutil import temporary_widget
 from caqtus.gui.graphplot.views.view import DataView
+from caqtus.gui.qtutil import temporary_widget
+
 from .error_bar_view_ui import Ui_ErrorBarView
 from .settings_dialog_ui import Ui_SettingsDialog
 
@@ -122,7 +122,7 @@ class ErrorBarPlot(pyqtgraph.PlotWidget):
         if data.is_empty():
             self.clear()
             return
-        average = await asyncio.to_thread(
+        average = await anyio.to_thread.run_sync(
             compute_stats_average, data, [self.y_column], [self.x_column]
         )
         x_magnitudes, x_unit = extract_unit(average[self.x_column])
