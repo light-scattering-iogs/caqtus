@@ -1,6 +1,5 @@
 import logging
 
-import PySide6.QtAsyncio as QtAsyncio
 import anyio
 import anyio.to_thread
 import polars
@@ -10,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 from caqtus.analysis.loading import DataImporter
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import ExperimentSessionMaker
+from gui.qtutil import qt_trio
 
 from .data_loading import DataLoader
 from .graphplot_main_window_ui import Ui_GraphPlotMainWindow
@@ -36,7 +36,7 @@ class GraphPlot:
 
     def run(self) -> None:
         self.main_window.show()
-        QtAsyncio.run(self.main_window.start())
+        qt_trio.run(self.main_window.start)
 
 
 class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
