@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Optional
 
+import anyio.to_thread
 import attrs
 import numpy as np
 import polars
@@ -10,9 +10,9 @@ import pyqtgraph
 import qtawesome
 from PySide6.QtCore import QStringListModel
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QCompleter
-
 from caqtus.analysis.units import extract_unit
 from caqtus.gui.graphplot.views.view import DataView
+
 from .scatter_view_ui import Ui_ScatterView
 
 
@@ -65,7 +65,7 @@ class ScatterView(DataView, Ui_ScatterView):
         if data.is_empty():
             self.clear()
             return
-        to_plot = await asyncio.to_thread(
+        to_plot = await anyio.to_thread.run_sync(
             self.update_plot, self.x_column, self.y_column, data
         )
         self.scatter_plot.setData(to_plot.x_values, to_plot.y_values)

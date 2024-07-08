@@ -1,16 +1,16 @@
-import asyncio
 import logging
-from typing import Optional
 
 import PySide6.QtAsyncio as QtAsyncio
+import anyio
+import anyio.to_thread
 import polars
 import qtawesome
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
-
 from caqtus.analysis.loading import DataImporter
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import ExperimentSessionMaker
+
 from .data_loading import DataLoader
 from .graphplot_main_window_ui import Ui_GraphPlotMainWindow
 from .views.error_bar_view import ErrorBarView
@@ -75,13 +75,12 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
         )
         self.view = ErrorBarView(self)
         self.setCentralWidget(self.view)
-        self.task: Optional[asyncio.Task] = None
 
     async def start(self):
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(self.path_view.run_async())
-            tg.create_task(self.loader.process())
-            tg.create_task(self.update_view())
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(self.path_view.run_async)
+            tg.start_soon(self.loader.process)
+            tg.start_soon(self.update_view)
 
     async def update_view(self):
         while True:
@@ -90,8 +89,10 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
                 d for d in sequences_data.values() if not d.is_empty()
             ]
             if non_empty_dataframes:
-                data = await asyncio.to_thread(polars.concat, non_empty_dataframes)
+                data = await anyio.to_thread.run_sync(
+                    polars.concat, non_empty_dataframes
+                )
             else:
                 data = polars.DataFrame()
             await self.view.update_data(data)
-            await asyncio.sleep(400e-3)
+            await anyio.sleep(400e-3)

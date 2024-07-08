@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import datetime
 from typing import Optional
 
+import anyio
+import anyio.to_thread
 import attrs
 import polars
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
-
 from caqtus.analysis.loading import DataImporter
 from caqtus.session import (
     PureSequencePath,
@@ -19,6 +19,7 @@ from caqtus.session._return_or_raise import unwrap
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.sequence_collection import PathIsNotSequenceError, PureShot
 from caqtus.utils.itertools import batched
+
 from .loader_ui import Ui_Loader
 
 
@@ -90,7 +91,7 @@ class DataLoader(QWidget, Ui_Loader):
     async def process(self):
         while True:
             await self.single_process()
-            await asyncio.sleep(1e-3)
+            await anyio.sleep(1e-3)
 
     async def single_process(self):
         # Can't update over the dict watchlist, because it might be updated during the processing
@@ -98,13 +99,11 @@ class DataLoader(QWidget, Ui_Loader):
             await self.process_new_shots(sequence_path)
 
     async def process_new_shots(self, sequence: PureSequencePath) -> None:
-        with self.session_maker() as session:
+        async with self.session_maker.async_session() as session:
             # Check if the sequence has been reset by comparing the start time
             # of the sequence in the watchlist with the start time of the sequence in the session.
             # If the start time is different, the sequence has been reset, and we clear the processed shots.
-            stats_result = await asyncio.to_thread(
-                session.sequences.get_stats, sequence
-            )
+            stats_result = await session.sequences.get_stats(sequence)
             try:
                 stats = unwrap(stats_result)
             except (PathNotFoundError, PathIsNotSequenceError):
@@ -122,7 +121,7 @@ class DataLoader(QWidget, Ui_Loader):
                     dataframe=empty_dataframe(),
                 )
                 return
-            result = await asyncio.to_thread(session.sequences.get_shots, sequence)
+            result = await session.sequences.get_shots(sequence)
             try:
                 shots: list[PureShot] = unwrap(result)
             except (PathNotFoundError, PathIsNotSequenceError):
@@ -145,7 +144,7 @@ class DataLoader(QWidget, Ui_Loader):
                 # self.update_progress_bar()
 
     async def process_shot(self, shot: Shot) -> None:
-        new_data = await asyncio.to_thread(self.shot_loader, shot)
+        new_data = await anyio.to_thread.run_sync(self.shot_loader, shot)
         try:
             processing_info = self.watchlist[shot.sequence.path]
         except KeyError:
