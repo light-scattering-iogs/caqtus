@@ -1,6 +1,8 @@
 import string
 from typing import TYPE_CHECKING
 
+from caqtus.types.units.units import UnitLike
+
 if TYPE_CHECKING:
     from caqtus.types.expression import Expression
     from caqtus.types.variable_name import DottedVariableName
@@ -88,7 +90,7 @@ def expression(expression: "Expression") -> str:
     return f"expression '{expression}'"
 
 
-def unit(value: str) -> str:
+def unit(value: UnitLike) -> str:
     return f"unit '{value}'"
 
 

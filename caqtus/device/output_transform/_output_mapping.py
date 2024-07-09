@@ -1,21 +1,17 @@
-import abc
-import functools
+from __future__ import annotations
+
 from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, Optional
 
 import attrs
-import cattrs.strategies
 import numpy as np
 
 import caqtus.formatter as fmt
-from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
-    is_quantity,
-    is_parameter,
-    Parameter,
     magnitude_in_unit,
     add_unit,
     AnalogValue,
+    is_analog_value,
 )
 from caqtus.types.recoverable_exceptions import InvalidTypeError, NotDefinedUnitError
 from caqtus.types.units import Unit, Quantity
@@ -25,30 +21,13 @@ from caqtus.types.units.units import (
     InvalidDimensionalityError,
 )
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils.serialization import copy_converter
-
-
-@attrs.define
-class OutputMapping(abc.ABC):
-    @abc.abstractmethod
-    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Parameter:
-        raise NotImplementedError
-
-
-@attrs.define
-class ExpressionValue(OutputMapping):
-    value: Expression = attrs.field(validator=attrs.validators.instance_of(Expression))
-
-    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Parameter:
-        evaluated = self.value.evaluate(variables)
-        if not is_parameter(evaluated):
-            raise InvalidTypeError(
-                f"{fmt.expression(self.value)} does not evaluate to a parameter, "
-                f"got {fmt.type_(type(evaluated))}.",
-            )
-        if is_quantity(evaluated):
-            return evaluated.to_base_units()
-        return evaluated
+from .transformation import (
+    Transformation,
+    EvaluableOutput,
+    evaluable_output_validator,
+    OutputValue,
+    evaluate,
+)
 
 
 def _data_points_converter(data_points: Iterable[tuple[float, float]]):
@@ -57,16 +36,22 @@ def _data_points_converter(data_points: Iterable[tuple[float, float]]):
 
 
 @attrs.define
-class CalibratedMapping(OutputMapping):
-    input_: OutputMapping = attrs.field(
-        validator=attrs.validators.instance_of(OutputMapping),
+class LinearInterpolation(Transformation):
+    """Transforms an input value by applying a piecewise linear interpolation.
+
+    This transformation stores a set of measured data points and interpolates the
+    output value based on the input value.
+    """
+
+    input_: EvaluableOutput = attrs.field(
+        validator=evaluable_output_validator,
         on_setattr=attrs.setters.validate,
     )
-    input_units: Optional[str] = attrs.field(
+    input_points_unit: Optional[str] = attrs.field(
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
-    output_units: Optional[str] = attrs.field(
+    output_points_unit: Optional[str] = attrs.field(
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
@@ -74,10 +59,14 @@ class CalibratedMapping(OutputMapping):
         converter=_data_points_converter, on_setattr=attrs.setters.convert
     )
 
-    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Parameter:
-        input_value = self.input_.evaluate(variables)
+    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
+        input_value = evaluate(self.input_, variables)
+        if not is_analog_value(input_value):
+            raise InvalidTypeError(
+                f"Expected an analog value, got {fmt.type_(type(input_value))}."
+            )
         interpolator = Interpolator(
-            self.measured_data_points, self.input_units, self.output_units
+            self.measured_data_points, self.input_points_unit, self.output_points_unit
         )
         try:
             return interpolator(input_value)
@@ -86,7 +75,7 @@ class CalibratedMapping(OutputMapping):
 
 
 def to_base_units(
-    values: Sequence[float], required_unit: Optional[str]
+    values: Sequence[float], required_unit: Optional[UnitLike]
 ) -> tuple[Sequence[float], Optional[Unit]]:
 
     if required_unit is None:
@@ -128,16 +117,3 @@ class Interpolator:
             right=self.output_points[-1],
         )
         return add_unit(output_magnitude, self.output_unit)
-
-
-def get_converter() -> cattrs.Converter:
-    converter = copy_converter()
-
-    cattrs.strategies.include_subclasses(
-        OutputMapping,
-        converter=converter,
-        union_strategy=functools.partial(
-            cattrs.strategies.configure_tagged_union, tag_name="type"
-        ),
-    )
-    return converter

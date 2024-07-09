@@ -1,12 +1,10 @@
 import numpy as np
 import pytest
 
-from caqtus.device.sequencer.output_mapping import (
-    ExpressionValue,
-    OutputMapping,
-    get_converter,
+from caqtus.device.output_transform import (
+    evaluate,
 )
-from caqtus.device.sequencer.output_mapping._output_mapping import Interpolator
+from caqtus.device.output_transform._output_mapping import Interpolator
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit
 
@@ -16,36 +14,21 @@ def variables():
     return {}
 
 
-def test_expression_value(variables):
-    output = ExpressionValue(Expression("1 V"))
-
-    assert output.evaluate(variables) == Quantity(1, "V")
+def test_expression_value():
+    assert evaluate(Expression("1 V"), {}) == Quantity(1, "V")
 
 
 def test_expression_value_db(variables):
-    output = ExpressionValue(Expression("0 dB"))
-
-    evaluated = output.evaluate(variables)
+    evaluated = evaluate(Expression("0 dB"), {})
     assert evaluated.units == Unit("dimensionless")
     assert evaluated.magnitude == 1
 
 
 def test_expression_value_dbm(variables):
-    output = ExpressionValue(Expression("0 dBm"))
 
-    evaluated = output.evaluate(variables)
+    evaluated = evaluate(Expression("0 dBm"), {})
     assert evaluated.units == Unit("W")
     assert evaluated.magnitude == 1e-3
-
-
-def test_serialization():
-    output = ExpressionValue(Expression("1 V"))
-    converter = get_converter()
-    serialized = converter.unstructure(output, OutputMapping)
-    assert serialized == {"type": "ExpressionValue", "value": "1 V"}
-
-    structured = converter.structure(serialized, OutputMapping)
-    assert structured == output
 
 
 def test_interpolation():
