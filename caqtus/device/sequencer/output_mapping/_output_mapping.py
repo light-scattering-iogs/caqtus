@@ -37,12 +37,14 @@ class ExpressionValue(OutputMapping):
         return evaluated
 
 
-converter = copy_converter()
+def get_converter() -> cattrs.Converter:
+    converter = copy_converter()
 
-cattrs.strategies.include_subclasses(
-    OutputMapping,
-    converter=converter,
-    union_strategy=functools.partial(
-        cattrs.strategies.configure_tagged_union, tag_name="type"
-    ),
-)
+    cattrs.strategies.include_subclasses(
+        OutputMapping,
+        converter=converter,
+        union_strategy=functools.partial(
+            cattrs.strategies.configure_tagged_union, tag_name="type"
+        ),
+    )
+    return converter

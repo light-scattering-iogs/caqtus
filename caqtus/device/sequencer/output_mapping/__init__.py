@@ -1,7 +1,7 @@
-from ._output_mapping import OutputMapping, ExpressionValue, converter
+from ._output_mapping import OutputMapping, ExpressionValue, get_converter
 
 __all__ = [
     "OutputMapping",
     "ExpressionValue",
-    "converter",
+    "get_converter",
 ]
