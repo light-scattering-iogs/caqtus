@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from caqtus.device.sequencer.output_mapping import (
@@ -5,6 +6,7 @@ from caqtus.device.sequencer.output_mapping import (
     OutputMapping,
     get_converter,
 )
+from caqtus.device.sequencer.output_mapping._output_mapping import Interpolator
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit
 
@@ -44,3 +46,16 @@ def test_serialization():
 
     structured = converter.structure(serialized, OutputMapping)
     assert structured == output
+
+
+def test_interpolation():
+    interpolator = Interpolator([(0, 0), (1, 2)], "A", "V")
+    assert interpolator(Quantity(0.5, "A")) == Quantity(1, "V")
+    assert interpolator(Quantity(-0.5, "A")) == Quantity(0, "V")
+    assert interpolator(Quantity(1.5, "A")) == Quantity(2, "V")
+
+
+def test_interpolation_db():
+    interpolator = Interpolator([(0, 0), (10, 1)], "dB", "V")
+    computed = interpolator((1 + 10) / 2)
+    assert np.allclose(computed.to("V").magnitude, 0.5)

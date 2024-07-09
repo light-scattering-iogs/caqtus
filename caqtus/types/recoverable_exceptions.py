@@ -143,3 +143,8 @@ class EvaluationError(RecoverableException):
     """
 
     pass
+
+
+@tblib.pickling_support.install
+class NotDefinedUnitError(RecoverableException):
+    """Raised when the user tries to use a unit that is not defined."""

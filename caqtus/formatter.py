@@ -88,6 +88,10 @@ def expression(expression: "Expression") -> str:
     return f"expression '{expression}'"
 
 
+def unit(value: str) -> str:
+    return f"unit '{value}'"
+
+
 def type_(value: type | str) -> str:
     if isinstance(value, type):
         return f"type '{value.__name__}'"
