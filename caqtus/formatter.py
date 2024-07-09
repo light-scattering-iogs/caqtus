@@ -88,6 +88,10 @@ def expression(expression: "Expression") -> str:
     return f"expression '{expression}'"
 
 
+def shot_param(name: DottedVariableName) -> str:
+    return f"shot parameter '{name}'"
+
+
 def type_(value: type | str) -> str:
     if isinstance(value, type):
         return f"type '{value.__name__}'"

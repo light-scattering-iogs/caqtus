@@ -2,7 +2,7 @@ import functools
 from collections.abc import Iterable, Callable, Generator
 from typing import assert_never, TypeVar
 
-from caqtus.formatter import fmt_param_assign, fmt_type
+import caqtus.formatter as fmt
 from caqtus.types.iteration import (
     Step,
     ArangeLoop,
@@ -11,6 +11,7 @@ from caqtus.types.iteration import (
     LinspaceLoop,
 )
 from caqtus.types.parameter import is_parameter, Parameter, ParameterNamespace
+from caqtus.types.recoverable_exceptions import InvalidTypeError
 from .shots_manager import ShotScheduler
 from .step_context import StepContext
 
@@ -98,17 +99,17 @@ def _(
     This step updates the context passed with the value of the variable declared.
     """
 
+    value = declaration.value.evaluate(context.variables.dict())
+    if not is_parameter(value):
+        raise InvalidTypeError(
+            f"{fmt.expression(declaration.value)}> does not evaluate to a parameter, "
+            f"but to {fmt.type_(type(value))}.",
+        )
+    return context.update_variable(declaration.variable, value)
+
     # This code is unreachable, but it is kept here to make the function a generator.
     if False:
         yield context
-
-    value = declaration.value.evaluate(context.variables.dict())
-    if not is_parameter(value):
-        raise TypeError(
-            f"Value of variable declaration <{declaration}> has type "
-            f"{type(value)}, which is not a valid parameter type."
-        )
-    return context.update_variable(declaration.variable, value)
 
 
 @walk_step.register
@@ -191,9 +192,9 @@ def evaluate_initial_context(parameters: ParameterNamespace) -> StepContext:
     for name, expression in flat_parameters:
         value = expression.evaluate({})
         if not is_parameter(value):
-            raise TypeError(
-                f"{fmt_param_assign(name, value)} does not evaluate "
-                f"to {fmt_type('Parameter')}, but to {fmt_type(type(value))}.",
+            raise InvalidTypeError(
+                f"{fmt.expression(value)} for {fmt.shot_param(name)} does not evaluate "
+                f"to a parameter, but to {fmt.type_(type(value))}",
             )
         context = context.update_variable(name, value)
 

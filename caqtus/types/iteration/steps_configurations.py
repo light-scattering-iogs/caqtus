@@ -7,6 +7,7 @@ from typing import TypeAlias, TypeGuard, assert_never, Any
 import attrs
 import numpy
 
+import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     AnalogValue,
@@ -20,6 +21,7 @@ from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
 from ..recoverable_exceptions import EvaluationError
 from ..units import DimensionalityError
+from ..units.units import InvalidDimensionalityError
 from ..variable_name import DottedVariableName
 
 
@@ -96,9 +98,7 @@ class LinspaceLoop(ContainsSubSteps):
     )
 
     def __str__(self):
-        return (
-            f"for {self.variable} = {self.start} to {self.stop} with {self.num} steps"
-        )
+        return f"linspace loop over {fmt.shot_param(self.variable)}"
 
     def loop_values(
         self, evaluation_context: Mapping[DottedVariableName, Any]
@@ -118,14 +118,20 @@ class LinspaceLoop(ContainsSubSteps):
 
         start = self.start.evaluate(evaluation_context)
         if not is_analog_value(start):
-            raise NotAnalogValueError(f"Start of '{self}' is not an analog value.")
+            raise NotAnalogValueError(f"Start of {self} is not an analog value")
         stop = self.stop.evaluate(evaluation_context)
         if not is_analog_value(stop):
-            raise NotAnalogValueError(f"Stop of '{self}' is not an analog value.")
+            raise NotAnalogValueError(f"Stop of {self} is not an analog value")
 
         unit = get_unit(start)
+
         start_magnitude = magnitude_in_unit(start, unit)
-        stop_magnitude = magnitude_in_unit(stop, unit)
+        try:
+            stop_magnitude = magnitude_in_unit(stop, unit)
+        except DimensionalityError as e:
+            raise InvalidDimensionalityError(
+                f"Start of {self} has invalid dimensionality"
+            ) from e
 
         for value in numpy.linspace(start_magnitude, stop_magnitude, self.num):
             # val.item() is used to convert numpy scalar to python scalar
@@ -163,10 +169,7 @@ class ArangeLoop(ContainsSubSteps):
     )
 
     def __str__(self):
-        return (
-            f"for {self.variable} = {self.start} to {self.stop} with {self.step} "
-            f"spacing"
-        )
+        return f"arange loop over {fmt.shot_param(self.variable)}"
 
     def loop_values(
         self, evaluation_context: Mapping[DottedVariableName, Any]
@@ -188,18 +191,28 @@ class ArangeLoop(ContainsSubSteps):
 
         start = self.start.evaluate(evaluation_context)
         if not is_analog_value(start):
-            raise NotAnalogValueError(f"Start of '{self}' is not an analog value.")
+            raise NotAnalogValueError(f"Start of {self} is not an analog value.")
         stop = self.stop.evaluate(evaluation_context)
         if not is_analog_value(stop):
-            raise NotAnalogValueError(f"Stop of '{self}' is not an analog value.")
+            raise NotAnalogValueError(f"Stop of {self} is not an analog value.")
         step = self.step.evaluate(evaluation_context)
         if not is_analog_value(step):
-            raise NotAnalogValueError(f"Step of '{self}' is not an analog value.")
+            raise NotAnalogValueError(f"Step of {self} is not an analog value.")
 
         unit = get_unit(start)
         start_magnitude = magnitude_in_unit(start, unit)
-        stop_magnitude = magnitude_in_unit(stop, unit)
-        step_magnitude = magnitude_in_unit(step, unit)
+        try:
+            stop_magnitude = magnitude_in_unit(stop, unit)
+        except DimensionalityError as e:
+            raise InvalidDimensionalityError(
+                f"Start of {self} has invalid dimensionality."
+            ) from e
+        try:
+            step_magnitude = magnitude_in_unit(step, unit)
+        except DimensionalityError as e:
+            raise InvalidDimensionalityError(
+                f"Step of {self} has invalid dimensionality."
+            ) from e
 
         for value in numpy.arange(start_magnitude, stop_magnitude, step_magnitude):
             # val.item() is used to convert numpy scalar to python scalar
