@@ -1,14 +1,17 @@
 import abc
+import functools
 from collections.abc import Mapping
 from typing import Any
 
 import attrs
+import cattrs.strategies
 
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import is_quantity, is_parameter, Parameter
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils.serialization import copy_converter
 
 
 @attrs.define
@@ -32,3 +35,14 @@ class ExpressionValue(OutputMapping):
         if is_quantity(evaluated):
             return evaluated.to_base_units()
         return evaluated
+
+
+converter = copy_converter()
+
+cattrs.strategies.include_subclasses(
+    OutputMapping,
+    converter=converter,
+    union_strategy=functools.partial(
+        cattrs.strategies.configure_tagged_union, tag_name="type"
+    ),
+)

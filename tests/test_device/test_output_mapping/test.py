@@ -1,6 +1,10 @@
 import pytest
 
-from caqtus.device.sequencer.output_mapping import ExpressionValue
+from caqtus.device.sequencer.output_mapping import (
+    ExpressionValue,
+    OutputMapping,
+    converter,
+)
 from caqtus.types.expression import Expression
 from caqtus.types.units import Quantity, Unit
 
@@ -30,3 +34,12 @@ def test_expression_value_dbm(variables):
     evaluated = output.evaluate(variables)
     assert evaluated.units == Unit("W")
     assert evaluated.magnitude == 1e-3
+
+
+def test_serialization():
+    output = ExpressionValue(Expression("1 V"))
+    serialized = converter.unstructure(output, OutputMapping)
+    assert serialized == {"type": "ExpressionValue", "value": "1 V"}
+
+    structured = converter.structure(serialized, OutputMapping)
+    assert structured == output
