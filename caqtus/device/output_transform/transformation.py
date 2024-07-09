@@ -16,10 +16,21 @@ from caqtus.types.parameter import (
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.variable_name import DottedVariableName
 
+
+@attrs.define
+class Transformation(abc.ABC):
+    """Defines a transformation that can be applied to produce an output value."""
+
+    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
+        """Evaluates the transformation using the given variables."""
+
+        raise NotImplementedError
+
+
 OutputValue: TypeAlias = Parameter
 """A value that can be used to compute the output of a device."""
 
-EvaluableOutput: TypeAlias = Union[Expression, "Transformation"]
+EvaluableOutput: TypeAlias = Union[Expression, Transformation]
 """Defines an operation that can be evaluated to an output value.
 
 Evaluable object can be used in the :func:`evaluate` function.
@@ -49,16 +60,6 @@ def evaluate(
         # and dBm.
         return evaluated.to_base_units()
     return evaluated
-
-
-@attrs.define
-class Transformation(abc.ABC):
-    """Defines a transformation that can be applied to produce an output value."""
-
-    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
-        """Evaluates the transformation using the given variables."""
-
-        raise NotImplementedError
 
 
 evaluable_output_validator = attrs.validators.instance_of((Expression, Transformation))

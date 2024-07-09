@@ -6,13 +6,27 @@ This module contains classes that can be used to construct complex tree structur
 represent user defined transformations.
 """
 
-from ._converter import get_converter
+import functools
+
+import cattrs.strategies
+
+from ._converter import converter, structure_evaluable_output
 from ._output_mapping import LinearInterpolation
-from .transformation import Transformation, evaluate
+from .transformation import Transformation, evaluate, EvaluableOutput
+
+cattrs.strategies.include_subclasses(
+    Transformation,
+    converter=converter,
+    union_strategy=functools.partial(
+        cattrs.strategies.configure_tagged_union, tag_name="type"
+    ),
+)
+converter.register_structure_hook(EvaluableOutput, structure_evaluable_output)
 
 __all__ = [
     "Transformation",
     "LinearInterpolation",
-    "get_converter",
     "evaluate",
+    "EvaluableOutput",
+    "converter",
 ]

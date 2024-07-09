@@ -4,6 +4,7 @@ from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, Optional
 
 import attrs
+import cattrs
 import numpy as np
 
 import caqtus.formatter as fmt
@@ -11,9 +12,8 @@ from caqtus.types.parameter import (
     magnitude_in_unit,
     add_unit,
     AnalogValue,
-    is_analog_value,
 )
-from caqtus.types.recoverable_exceptions import InvalidTypeError, NotDefinedUnitError
+from caqtus.types.recoverable_exceptions import NotDefinedUnitError
 from caqtus.types.units import Unit, Quantity
 from caqtus.types.units.units import (
     UnitLike,
@@ -21,6 +21,7 @@ from caqtus.types.units.units import (
     InvalidDimensionalityError,
 )
 from caqtus.types.variable_name import DottedVariableName
+from ._converter import converter, structure_evaluable_output
 from .transformation import (
     Transformation,
     EvaluableOutput,
@@ -41,11 +42,24 @@ class LinearInterpolation(Transformation):
 
     This transformation stores a set of measured data points and interpolates the
     output value based on the input value.
+
+    Attributes:
+        input_: An operation that can be evaluated to an output value.
+            The transformation is applied to this value.
+        measured_data_points: A list of measured data points as tuples of input and
+            output values.
+        input_points_unit: The unit of the input points.
+            The result of the input evaluation will be converted to this unit.
+        output_points_unit: The unit of the output points.
+            The result of the transformation will be converted to this unit.
     """
 
     input_: EvaluableOutput = attrs.field(
         validator=evaluable_output_validator,
         on_setattr=attrs.setters.validate,
+    )
+    measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
+        converter=_data_points_converter, on_setattr=attrs.setters.convert
     )
     input_points_unit: Optional[str] = attrs.field(
         converter=attrs.converters.optional(str),
@@ -55,16 +69,9 @@ class LinearInterpolation(Transformation):
         converter=attrs.converters.optional(str),
         on_setattr=attrs.setters.convert,
     )
-    measured_data_points: tuple[tuple[float, float], ...] = attrs.field(
-        converter=_data_points_converter, on_setattr=attrs.setters.convert
-    )
 
     def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> OutputValue:
         input_value = evaluate(self.input_, variables)
-        if not is_analog_value(input_value):
-            raise InvalidTypeError(
-                f"Expected an analog value, got {fmt.type_(type(input_value))}."
-            )
         interpolator = Interpolator(
             self.measured_data_points, self.input_points_unit, self.output_points_unit
         )
@@ -72,6 +79,16 @@ class LinearInterpolation(Transformation):
             return interpolator(input_value)
         except DimensionalityError as e:
             raise InvalidDimensionalityError(f"Invalid dimensionality") from e
+
+
+# Workaround for https://github.com/python-attrs/cattrs/issues/430
+structure_hook = cattrs.gen.make_dict_structure_fn(
+    LinearInterpolation,
+    converter,
+    input_=cattrs.override(struct_hook=structure_evaluable_output),
+)
+
+converter.register_structure_hook(LinearInterpolation, structure_hook)
 
 
 def to_base_units(

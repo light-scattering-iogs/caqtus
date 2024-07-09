@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 
 from caqtus.device.output_transform import (
+    LinearInterpolation,
     evaluate,
+    converter,
+    EvaluableOutput,
 )
 from caqtus.device.output_transform._output_mapping import Interpolator
 from caqtus.types.expression import Expression
@@ -42,3 +45,23 @@ def test_interpolation_db():
     interpolator = Interpolator([(0, 0), (10, 1)], "dB", "V")
     computed = interpolator((1 + 10) / 2)
     assert np.allclose(computed.to("V").magnitude, 0.5)
+
+
+def test_linear_interpolation_serialization():
+    output = LinearInterpolation(Expression("0.5 V"), ((0, 0), (1, 1)), "V", "V")
+
+    unstructured = converter.unstructure(output, EvaluableOutput)
+
+    structured = converter.structure(unstructured, EvaluableOutput)
+
+    assert structured == output
+
+
+def test_expression_serialization():
+    output = Expression("0.5 V")
+
+    unstructured = converter.unstructure(output, EvaluableOutput)
+
+    structured = converter.structure(unstructured, EvaluableOutput)
+
+    assert structured == output
