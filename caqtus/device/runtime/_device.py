@@ -14,7 +14,6 @@ class Device(Protocol[InitParams]):
     should be implemented.
     """
 
-    @abc.abstractmethod
     def __init__(self, *args: InitParams.args, **kwargs: InitParams.kwargs) -> None:
         """Device constructor.
 
@@ -23,7 +22,7 @@ class Device(Protocol[InitParams]):
         Instead, use the :meth:`__enter__` method to acquire the necessary resources.
         """
 
-        raise NotImplementedError
+        pass
 
     @abc.abstractmethod
     def __enter__(self) -> Self:
