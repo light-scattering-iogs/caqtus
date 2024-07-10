@@ -1,6 +1,6 @@
 import importlib.resources
 
-import pint
+import pint._typing
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
 
@@ -17,6 +17,7 @@ unit_registry = ureg
 pint.set_application_registry(unit_registry)
 Quantity = pint.Quantity
 Unit = pint.Unit
+UnitLike = pint._typing.UnitLike
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
