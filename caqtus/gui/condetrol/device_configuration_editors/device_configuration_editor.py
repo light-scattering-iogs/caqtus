@@ -24,13 +24,12 @@ class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
 
 
 class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
-    """An editor for a device configuration displaying a list of fields.
+    """Displays a list of fields to edit the configuration of a device.
 
-    Attributes:
-        device_configuration: The device configuration stored in the editor.
-        form: The form layout used to display the different fields of the configuration.
-        remote_server_line_edit: The line edit used to edit the remote server name.
-        It is placed at index 0 in the form layout.
+    Widgets of this class initially only present a single field to edit the remote
+    server name.
+
+    Other device specific fields can be added by calling the :meth:`insert_row` method.
     """
 
     def __init__(self, device_configuration: T, parent: Optional[QWidget] = None):
@@ -39,11 +38,30 @@ class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
         self.device_configuration = device_configuration
         self.remote_server_line_edit = QLineEdit(self)
         self.remote_server_line_edit.setPlaceholderText("None")
-        self.remote_server_line_edit.setText(device_configuration.remote_server)
+        self.remote_server_line_edit.setText(device_configuration.remote_server or "")
         self.form.addRow("Remote server", self.remote_server_line_edit)
         self.setLayout(self.form)
 
+    def append_row(self, label: str, widget: QWidget):
+        """Append a widget field at the end of the form."""
+
+        self.form.addRow(label, widget)
+
+    def insert_row(self, label: str, widget: QWidget, row: int):
+        """Insert a widget field at the specified row."""
+
+        self.form.insertRow(row, label, widget)
+
     def get_configuration(self) -> T:
+        """Return the initial configuration with fields updated from the UI.
+
+        Returns:
+            The configuration that was passed to the constructor with the remote server
+            field updated to the value set in the UI.
+
+            Subclasses should override this method to update other fields as well.
+        """
+
         text = self.remote_server_line_edit.text()
         if text == "":
             self.device_configuration.remote_server = None
