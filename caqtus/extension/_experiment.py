@@ -28,11 +28,11 @@ from ..session import ExperimentSessionMaker
 
 
 class Experiment:
-    """Dispatches configuration and extensions to the appropriate components.
+    """Used to configure parameters and register extensions for a specific experiment.
 
     There should be only a single instance of this class in the entire application.
     It is used to configure the experiment and knows how to launch the different
-    components of the application with the dependency extracted from the configuration.
+    components of the application after it has been configured.
     """
 
     def __init__(self) -> None:

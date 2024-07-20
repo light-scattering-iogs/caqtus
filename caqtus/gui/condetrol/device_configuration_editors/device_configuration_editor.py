@@ -11,11 +11,14 @@ T = TypeVar("T", bound=DeviceConfiguration)
 
 
 class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
-    """Base class for device configuration editors."""
+    """A widget that allows to edit the configuration of a device.
+
+    This class is generic in the type of the device configuration it presents.
+    """
 
     @abc.abstractmethod
     def get_configuration(self) -> T:
-        """Return the configuration displayed in the editor."""
+        """Return the configuration currently displayed in the editor."""
 
         raise NotImplementedError
 

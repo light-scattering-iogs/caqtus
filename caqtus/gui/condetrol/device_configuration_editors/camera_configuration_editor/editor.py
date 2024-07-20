@@ -15,6 +15,8 @@ T = TypeVar("T", bound=CameraConfiguration)
 class CameraConfigurationEditor(
     DeviceConfigurationEditor[T], Ui_CameraConfigurationEditor, qabc.QABC
 ):
+    """A widget that allows to edit the configuration of a camera."""
+
     @abc.abstractmethod
     def __init__(self, configuration: T, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)

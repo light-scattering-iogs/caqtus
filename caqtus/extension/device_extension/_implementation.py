@@ -25,36 +25,56 @@ class DeviceExtension(Generic[C]):
     Attributes:
         label: A human-readable label for the type of device represented by this
             extension.
+
             This label describes the type of device and will be displayed to the user
             when they are selecting a device to add to the experiment.
+
             No two device extensions should have the same label.
+
         device_type: A callable that returns a new device instance.
+
             This function will be called when a device associated with this extension
             needs to be created.
             The arguments passed are obtained by calling the method
             :meth:`caqtus.device.compiler.DeviceCompiler.compile_initialization_parameters`
             of the compiler associated with the device.
+
             This function needs to be pickleable as it will be sent to a remote process.
+
         configuration_type: The type of configuration used to store the settings of
             the device.
+
+            The name of the type is used to identify the configuration type.
+            It is thus not recommended to change the name of the type after it has been
+            used in the application, as the new name will not be recognized as the same
+            type.
+
         configuration_factory: A factory function that returns a new instance of the
             configuration type.
+
             This function will be called when a new device of this type is added to the
             experiment.
             It should return a default instance of the configuration type.
+
         configuration_dumper: A function that converts a configuration instance to a
             JSON-serializable format.
             This function will be used to save the configuration.
+
         configuration_loader: A function that converts a JSON-serializable format to a
             configuration instance.
             This function will be used to load the configuration.
             It is passed the JSON-serializable format saved by the
             `configuration_dumper` function.
-        editor_type: A function that returns an editor for the device configuration.
+
+        editor_type: A function that creates an editor for the device configuration.
+
             When the user wants to edit the configuration of a device of this type,
             this function will be called to create an editor for the configuration.
-            The method :meth:`DeviceConfiguration.get_configuration` of the editor will
-            be called when the user validates the configuration.
+            The function is passed as argument the configuration instance to edit.
+
+            Once the user has finished editing the configuration, the method
+            :meth:`DeviceConfiguration.get_configuration` of the editor is called and
+            the result is saved.
     """
 
     label: str = attrs.field(converter=str)

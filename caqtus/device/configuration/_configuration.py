@@ -36,6 +36,8 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
     Subclasses should add necessary attributes depending on the device.
 
+    The dunder method :meth:`__eq__` should be implemented.
+
     Attributes:
         remote_server: Indicates the name of the computer on which the device should be
             instantiated.
