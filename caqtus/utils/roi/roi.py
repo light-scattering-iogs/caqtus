@@ -17,12 +17,13 @@ class ROI(ABC):
     """
 
     original_image_size: tuple[Width, Height] = attrs.field(
-        converter=tuple,
-        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
+        on_setattr=attrs.setters.validate,
     )
 
     @original_image_size.validator
     def _validate_original_image_size(self, _, value):
+        if not isinstance(value, tuple):
+            raise TypeError(f"original_image_size must be a tuple, got {type(value)}")
         if len(value) != 2:
             raise ValueError(
                 "original_image_size must be a tuple (width, height) with two elements"
@@ -43,7 +44,7 @@ class ROI(ABC):
 
     @abstractmethod
     def get_indices(self) -> tuple[Iterable[int], Iterable[int]]:
-        """Return the indices of the pixels in the original image that are part of the region of interest."""
+        """Return the indices of the pixels in the ROI."""
 
         raise NotImplementedError
 
