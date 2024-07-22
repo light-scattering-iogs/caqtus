@@ -5,11 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.16.0] - 2024-07-22
+
+### Changed
+
+- Camera configuration editor is now consistent with other device configuration editors
+
+### Fixed
+
+- Bug which caused device configurations to not always be saved in the device configuration dialog
+
 ## [4.15.0] - 2024-07-10
 
 ### Added
 
-- Possibility to put complex transformations for device output 
+- Possibility to put complex transformations for device output
 
 ## [4.13.4] - 2024-07-09
 
