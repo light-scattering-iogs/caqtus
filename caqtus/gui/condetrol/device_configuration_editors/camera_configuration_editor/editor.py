@@ -1,6 +1,5 @@
-import abc
 import copy
-from typing import TypeVar, Optional
+from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
 
@@ -8,54 +7,27 @@ from caqtus.device.camera import CameraConfiguration
 from caqtus.utils.roi import RectangularROI, Width, Height
 from ..device_configuration_editor import FormDeviceConfigurationEditor
 
-T = TypeVar("T", bound=CameraConfiguration)
 
+class CameraConfigurationEditor[T: CameraConfiguration](
+    FormDeviceConfigurationEditor[T]
+):
+    """A widget that allows to edit the configuration of a camera.
 
-class CameraConfigurationEditor(FormDeviceConfigurationEditor[T]):
-    """A widget that allows to edit the configuration of a camera."""
+    This widget has the same fields as the base form editor and adds a field to edit
+    the region of interest of the image to take.
+    """
 
-    @abc.abstractmethod
     def __init__(self, configuration: T, parent: Optional[QWidget] = None) -> None:
         super().__init__(configuration, parent)
-        self._update_camera_fields(self.device_config)
+
+        self._roi_editor = RectangularROIEditor(parent=self)
+        self.append_row("ROI", self._roi_editor)
+        self._roi_editor.set_roi(configuration.roi)
 
     def get_configuration(self) -> T:
-        self.device_config = self.update_config_from_ui(self.device_config)
-        return self.device_config
-
-    def set_configuration(self, device_configuration: T) -> None:
-        self.device_config = device_configuration
-        self.update_ui_from_config(self.device_config)
-
-    def _update_camera_fields(self, device_config: T) -> None:
-        self._left_spinbox.setRange(0, device_config.roi.original_width - 1)
-        self._left_spinbox.setValue(device_config.roi.left)
-
-        self._right_spinbox.setRange(0, device_config.roi.original_width - 1)
-        self._right_spinbox.setValue(device_config.roi.right)
-
-        self._bottom_spinbox.setRange(0, device_config.roi.original_height - 1)
-        self._bottom_spinbox.setValue(device_config.roi.bottom)
-
-        self._top_spinbox.setRange(0, device_config.roi.original_height - 1)
-        self._top_spinbox.setValue(device_config.roi.top)
-
-    @abc.abstractmethod
-    def update_ui_from_config(self, device_config: T) -> None:
-        self._update_camera_fields(device_config)
-
-    @abc.abstractmethod
-    def update_config_from_ui(self, device_config: T) -> T:
-        device_config = copy.deepcopy(device_config)
-        device_config.roi.x = self._left_spinbox.value()
-        device_config.roi.width = (
-            self._right_spinbox.value() - self._left_spinbox.value() + 1
-        )
-        device_config.roi.y = self._bottom_spinbox.value()
-        device_config.roi.height = (
-            self._top_spinbox.value() - self._bottom_spinbox.value() + 1
-        )
-        return device_config
+        configuration = super().get_configuration()
+        configuration.roi = copy.deepcopy(self._roi_editor.get_roi())
+        return configuration
 
 
 class RectangularROIEditor(QWidget):
@@ -73,6 +45,7 @@ class RectangularROIEditor(QWidget):
         self._max_height = max_height
 
         layout = QFormLayout(self)
+        layout.setContentsMargins(0, 3, 0, 0)
         self.setLayout(layout)
 
         self._x_spinbox = QSpinBox(self)
