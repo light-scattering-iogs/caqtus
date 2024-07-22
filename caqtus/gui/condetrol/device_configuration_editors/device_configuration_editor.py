@@ -1,6 +1,6 @@
 import abc
 import copy
-from typing import Optional, Generic, TypeVar
+from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit
 
@@ -8,23 +8,25 @@ import caqtus.gui.qtutil.qabc as qabc
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration import DeviceServerName
 
-T = TypeVar("T", bound=DeviceConfiguration)
 
-
-class DeviceConfigurationEditor(QWidget, Generic[T], metaclass=qabc.QABCMeta):
+class DeviceConfigurationEditor[T: DeviceConfiguration](
+    QWidget, metaclass=qabc.QABCMeta
+):
     """A widget that allows to edit the configuration of a device.
 
-    This class is generic in the type of the device configuration it presents.
+    This class is generic in the type of the device configuration it allows to edit.
     """
 
     @abc.abstractmethod
     def get_configuration(self) -> T:
-        """Return the configuration currently displayed in the editor."""
+        """Return a new configuration that represents what is currently displayed."""
 
         raise NotImplementedError
 
 
-class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
+class FormDeviceConfigurationEditor[T: DeviceConfiguration](
+    DeviceConfigurationEditor[T]
+):
     """Displays a list of fields to edit the configuration of a device.
 
     Widgets of this class initially only present a single field to edit the remote
@@ -54,11 +56,11 @@ class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
         self.form.insertRow(row, label, widget)
 
     def get_configuration(self) -> T:
-        """Return the initial configuration with fields updated from the UI.
+        """Return a new configuration with fields updated from the UI.
 
         Returns:
-            The configuration that was passed to the constructor with the remote server
-            field updated to the value set in the UI.
+            A copy of the configuration that was passed to the constructor with the
+            remote server field updated to the value set in the UI.
 
             Subclasses should override this method to update other fields as well.
         """
