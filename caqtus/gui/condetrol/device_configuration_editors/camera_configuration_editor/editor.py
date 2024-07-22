@@ -1,4 +1,3 @@
-import copy
 from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
@@ -25,8 +24,16 @@ class CameraConfigurationEditor[T: CameraConfiguration](
         self._roi_editor.set_roi(configuration.roi)
 
     def get_configuration(self) -> T:
+        """Return a new configuration that represents what is currently displayed.
+
+        The configuration returns has the remote server and the ROI set from what is
+        displayed in the editor.
+
+        Other fields should be updated by subclasses.
+        """
+
         configuration = super().get_configuration()
-        configuration.roi = copy.deepcopy(self._roi_editor.get_roi())
+        configuration.roi = self._roi_editor.get_roi()
         return configuration
 
 
