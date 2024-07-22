@@ -57,7 +57,7 @@ sphinx-rtd-theme = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
-mypy = "^1.9.0"
+mypy = ">=1.11.0"
 pyright = "^1.1.355"
 coverage = "^7.4.4"
 licensecheck = "^2024.1.4"
