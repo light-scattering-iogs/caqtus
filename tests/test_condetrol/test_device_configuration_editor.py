@@ -1,7 +1,7 @@
-from PySide6.QtCore import Qt
 from pytestqt.qtbot import QtBot
 
 from caqtus.device import DeviceName
+from caqtus.device.configuration import DeviceServerName
 from caqtus.gui.condetrol.device_configuration_editors import (
     DeviceConfigurationsDialog,
 )
@@ -30,8 +30,8 @@ def test_edit(qtbot: QtBot):
     widget.edit(0)
     editor = widget.editor()
     assert isinstance(editor, FormDeviceConfigurationEditor)
-    assert editor.remote_server_line_edit.text() == "default"
-    editor.remote_server_line_edit.setText("new")
+    assert editor.read_remote_server() == DeviceServerName("default")
+    editor.set_remote_server(DeviceServerName("new"))
     new_configs = widget.get_device_configurations()
     assert new_configs[DeviceName("Device 1")].remote_server == "new"
     assert new_configs[DeviceName("Device 2")].remote_server == "default"
@@ -44,13 +44,14 @@ def test_edit_1(qtbot: QtBot):
     }
     widget = DeviceConfigurationsEditor(CondetrolDeviceExtension(), parent=None)
     widget.set_device_configurations(device_configurations)
+    widget.show()
     qtbot.addWidget(widget)
 
     widget.edit(0)
     editor = widget.editor()
     assert isinstance(editor, FormDeviceConfigurationEditor)
-    assert editor.remote_server_line_edit.text() == "default"
-    editor.remote_server_line_edit.setText("new")
+    assert editor.read_remote_server() == "default"
+    editor.set_remote_server("new")
     widget._list_view.setCurrentIndex(widget._model.index(1, 0))
     new_configs = widget.get_device_configurations()
     assert new_configs[DeviceName("Device 1")].remote_server == "new"

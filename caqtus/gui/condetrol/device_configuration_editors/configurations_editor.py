@@ -184,6 +184,7 @@ class DeviceEditorDelegate(QStyledItemDelegate):
         return editor
 
     def setEditorData(self, editor, index):
+        # Data is already set in the editor when it is created.
         pass
 
     def setModelData(self, editor, model, index):
@@ -241,6 +242,13 @@ class DeviceConfigurationModel(QAbstractListModel):
         if role == _CONFIG_ROLE:
             return self._device_configurations[index.row()][1]
         return None
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole) -> bool:
+        if role == _CONFIG_ROLE:
+            name = self._device_configurations[index.row()][0]
+            self._device_configurations[index.row()] = (name, value)
+            return True
+        return False
 
     def flags(self, index):
         return (
