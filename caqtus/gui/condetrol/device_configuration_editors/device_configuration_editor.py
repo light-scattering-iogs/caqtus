@@ -1,4 +1,5 @@
 import abc
+import copy
 from typing import Optional, Generic, TypeVar
 
 from PySide6.QtWidgets import QWidget, QFormLayout, QLineEdit
@@ -35,10 +36,10 @@ class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
     def __init__(self, device_configuration: T, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.form = QFormLayout()
-        self.device_configuration = device_configuration
+        self.device_configuration = copy.deepcopy(device_configuration)
         self.remote_server_line_edit = QLineEdit(self)
         self.remote_server_line_edit.setPlaceholderText("None")
-        self.remote_server_line_edit.setText(device_configuration.remote_server or "")
+        self.set_remote_server(self.device_configuration.remote_server)
         self.form.addRow("Remote server", self.remote_server_line_edit)
         self.setLayout(self.form)
 
@@ -62,9 +63,19 @@ class FormDeviceConfigurationEditor(DeviceConfigurationEditor[T], Generic[T]):
             Subclasses should override this method to update other fields as well.
         """
 
+        configuration = copy.deepcopy(self.device_configuration)
+        configuration.remote_server = self.read_remote_server()
+        return configuration
+
+    def set_remote_server(self, remote_server: Optional[DeviceServerName]) -> None:
+        """Set the remote server name in the editor."""
+
+        self.remote_server_line_edit.setText(remote_server or "")
+
+    def read_remote_server(self) -> Optional[DeviceServerName]:
+        """Read the remote server name from the editor."""
+
         text = self.remote_server_line_edit.text()
         if text == "":
-            self.device_configuration.remote_server = None
-        else:
-            self.device_configuration.remote_server = DeviceServerName(text)
-        return self.device_configuration
+            return None
+        return DeviceServerName(text)
