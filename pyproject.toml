@@ -40,6 +40,7 @@ dependencies = [
     "typing-extensions>=4.10.0",
     "eliot>=1.15.0",
     "multipledispatch>=1.0.0",
+    "graphviz>=0.20.3",
     # SQL dependencies
     "sqlalchemy>=2.0.28",
     "sqlalchemy-utils>=0.41.1",
