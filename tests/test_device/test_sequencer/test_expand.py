@@ -1,20 +1,24 @@
 import numpy as np
 from hypothesis import given
 from hypothesis.strategies import integers
+from numpy.typing import NDArray
 
 from caqtus.device.sequencer.channel_commands.timing.broaden import _broaden_left
 from caqtus.device.sequencer.instructions import Concatenated, Pattern
-from .generate_concatenate import bool_concatenation
-from .generate_pattern import bool_pattern
-from .generate_repeat import bool_repeated
+from .generate_concatenate import concatenation
+from .generate_pattern import pattern
+from .generate_repeat import repeated
+from .instruction_strategy import digital_instruction
+
+np.typing.NDArray = np.ndarray
 
 
-@given(bool_pattern(), integers(min_value=0))
-def test_pattern(pattern, n):
-    expanded, excess = _broaden_left(pattern, n)
-    assert len(expanded) == len(pattern)
+@given(pattern(dtype=np.bool_, min_length=1), integers(min_value=0))
+def test_pattern(p, n):
+    expanded, excess = _broaden_left(p, n)
+    assert len(expanded) == len(p)
     for i in range(len(expanded)):
-        assert expanded.array[i] == any(pattern.array[i : i + n + 1])
+        assert expanded.array[i] == any(p.array[i : i + n + 1])
 
 
 def test_pattern_0():
@@ -24,7 +28,7 @@ def test_pattern_0():
     assert excess == 0
 
 
-@given(bool_concatenation(), integers(min_value=0))
+@given(concatenation(pattern(np.bool_, min_length=1)), integers(min_value=0))
 def test_concatenation(concatenated, n):
     expanded, excess = _broaden_left(concatenated, n)
     assert len(expanded) == len(concatenated)
@@ -42,12 +46,12 @@ def test_0():
     assert excess == 0
 
 
-@given(bool_repeated(), integers(min_value=0))
-def test_repeated(repeated, n):
-    expanded, excess = _broaden_left(repeated, n)
-    assert len(expanded) == len(repeated)
+@given(repeated(pattern(np.bool_, min_length=1, max_length=100)), integers(min_value=0))
+def test_repeated(r, n):
+    expanded, excess = _broaden_left(r, n)
+    assert len(expanded) == len(r)
     obtained = expanded.to_pattern().array
-    expected = _broaden_left(repeated.to_pattern(), n)[0].to_pattern().array
+    expected = _broaden_left(r.to_pattern(), n)[0].to_pattern().array
     assert np.array_equal(
         obtained, expected
     ), f"Obtained: {obtained}\nExpected: {expected}"
@@ -74,3 +78,14 @@ def test_3():
     )
     expanded, excess = _broaden_left(instr, 10_000_000)
     assert excess == 0
+
+
+@given(digital_instruction(max_leaves=30), integers(min_value=0))
+def test_4(instr, n):
+    expanded, excess = _broaden_left(instr, n)
+    assert len(expanded) == len(instr)
+    obtained = expanded.to_pattern().array
+    expected = _broaden_left(instr.to_pattern(), n)[0].to_pattern().array
+    assert np.array_equal(
+        obtained, expected
+    ), f"Obtained: {obtained}\nExpected: {expected}"
