@@ -18,9 +18,13 @@ caqtus.device
 
 .. autoclass:: DeviceParameter
 
+Subpackages
+-----------
+
+These packages provide base implementation for common devices.
 
 .. toctree::
    :maxdepth: 1
 
-   sequencer
+   sequencer/sequencer
    camera

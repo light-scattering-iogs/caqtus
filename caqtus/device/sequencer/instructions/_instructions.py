@@ -7,6 +7,7 @@ import itertools
 import math
 from collections.abc import Sequence
 from heapq import merge
+from types import NotImplementedType
 from typing import (
     NewType,
     TypeVar,
@@ -29,9 +30,9 @@ Length = NewType("Length", int)
 Width = NewType("Width", int)
 Depth = NewType("Depth", int)
 
-_S = TypeVar("_S", covariant=True, bound=numpy.generic)
-_T = TypeVar("_T", covariant=True, bound=numpy.generic)
-_U = TypeVar("_U", covariant=True, bound=numpy.generic)
+_S = TypeVar("_S", covariant=True, bound=DTypeLike)
+_T = TypeVar("_T", covariant=True, bound=DTypeLike)
+_U = TypeVar("_U", covariant=True, bound=DTypeLike)
 
 Array1D = numpy.ndarray[Any, numpy.dtype[_T]]
 
@@ -150,7 +151,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     @abc.abstractmethod
     def __or__(
         self, other: SequencerInstruction[_S]
-    ) -> SequencerInstruction[_U] | NotImplemented:
+    ) -> SequencerInstruction[_U] | NotImplementedType:
         """Merge the channels of this instruction with another instruction.
 
         other:
@@ -175,6 +176,12 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         self, func: Callable[[Array1D[_T]], Array1D[_S]]
     ) -> SequencerInstruction[_S]:
         raise NotImplementedError
+
+    def _repr_mimebundle_(self, include=None, exclude=None):
+        from ._to_graph import to_graph
+
+        graph = to_graph(self)
+        return graph._repr_mimebundle_(include, exclude)
 
 
 class Pattern(SequencerInstruction[_T]):
@@ -281,7 +288,16 @@ class Pattern(SequencerInstruction[_T]):
 
 
 class Concatenated(SequencerInstruction[_T]):
-    """Represents an immutable concatenation of instructions."""
+    """Represents an immutable concatenation of instructions.
+
+    Use the `+` operator or the function :func:`concatenate` to concatenate instructions.
+    Do not use the class constructor directly.
+
+    Attributes:
+        instructions: The instructions concatenated by this instruction.
+            This instruction is equivalent to chaining the instructions in this list
+            one after the other.
+    """
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
     __match_args__ = ("instructions",)
@@ -293,11 +309,10 @@ class Concatenated(SequencerInstruction[_T]):
         return self._instructions
 
     def __init__(self, *instructions: SequencerInstruction[_T]):
-        """Do not use this constructor in user code.
-        Instead, use the `+` operator or the function :fun:`concatenate`.
-        :meta private:
-        """
-
+        assert all(
+            isinstance(instruction, SequencerInstruction)
+            for instruction in instructions
+        )
         # The following assertions define a "pure" concatenation.
         # (i.e. no empty instructions, no nested concatenations, and at least two
         # instructions).
@@ -451,6 +466,9 @@ class Concatenated(SequencerInstruction[_T]):
 class Repeated(SequencerInstruction[_T]):
     """Represents a repetition of an instruction.
 
+    Use the `*` operator with an integer to repeat an instruction.
+    Do not use the class constructor directly.
+
     Attributes:
         instruction: The instruction to repeat.
         repetitions: The number of times to repeat the instruction.
@@ -473,9 +491,10 @@ class Repeated(SequencerInstruction[_T]):
         """
 
         assert isinstance(repetitions, int)
-        assert isinstance(instruction, (Pattern, Concatenated, Repeated))
+        assert isinstance(instruction, SequencerInstruction)
         assert repetitions >= 2
         assert len(instruction) >= 1
+        assert not isinstance(instruction, Repeated)
 
         self._repetitions = repetitions
         self._instruction = instruction
@@ -673,8 +692,12 @@ def concatenate(*instructions: SequencerInstruction[_T]) -> SequencerInstruction
         raise TypeError("All instructions must be instances of SequencerInstruction")
     dtype = instructions[0].dtype
     if not all(instruction.dtype == dtype for instruction in instructions):
-        dtypes = ", ".join(str(instruction.dtype) for instruction in instructions)
-        raise TypeError(f"All instructions must have the same dtype, got {dtypes}")
+        result_dtype = np.result_type(
+            *[instruction.dtype for instruction in instructions]
+        )
+        instructions = [
+            instruction.as_type(result_dtype) for instruction in instructions
+        ]
     return _concatenate(*instructions)
 
 

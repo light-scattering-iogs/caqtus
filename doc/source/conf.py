@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_rtd_theme",
     "sphinx.ext.inheritance_diagram",
+    "nbsphinx",
 ]
 
 autodoc_typehints = "signature"
@@ -44,10 +45,11 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "PySide6": ("https://doc.qt.io/qtforpython-6", None),
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
+    "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
 }
 
 templates_path = ["_templates"]
-exclude_patterns = []
+exclude_patterns = ["reference/device/sequencer/sequencer_instruction_example.ipynb"]
 
 
 # -- Options for HTML output -------------------------------------------------
