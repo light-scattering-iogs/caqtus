@@ -20,7 +20,7 @@ def test_1():
     a = with_name(instr1, "a")
     b = with_name(instr2, "b")
 
-    stacked = stack_instructions([a, b])
+    stacked = stack_instructions(a, b)
     assert stacked["b"] == instr2
 
 
@@ -31,5 +31,5 @@ def test_2():
     a = with_name(instr1, "a")
     b = with_name(instr2, "b")
 
-    stacked = stack_instructions([a, b])
+    stacked = stack_instructions(a, b)
     assert stacked["a"] == Pattern([0, 1, 0, 1, 0, 1])

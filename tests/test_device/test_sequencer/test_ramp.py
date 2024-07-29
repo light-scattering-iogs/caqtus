@@ -42,6 +42,6 @@ def test_3():
     r = ramp(0.0, 1.0, 5)
     pattern = Pattern([0]) * 3 + Pattern([1]) * 2
 
-    merged = stack_instructions([with_name(r, "a"), with_name(pattern, "b")])
+    merged = stack_instructions(with_name(r, "a"), with_name(pattern, "b"))
 
     assert merged["a"] == ramp(0.0, 0.6, 3) + ramp(0.6, 1.0, 2)

@@ -37,7 +37,7 @@ def draw_two_repeat(draw, max_length: int) -> tuple[Repeated, Repeated]:
 def test_merge_1(args):
     repeat1 = args[0].as_type(np.dtype([("f0", np.int64)]))
     repeat2 = args[1].as_type(np.dtype([("f1", np.int64)]))
-    merged = stack_instructions([with_name(repeat1, "f0"), with_name(repeat2, "f1")])
+    merged = stack_instructions(with_name(repeat1, "f0"), with_name(repeat2, "f1"))
     assert merged["f0"].to_pattern() == repeat1.to_pattern()
     assert merged["f1"].to_pattern() == repeat2.to_pattern()
 
@@ -45,7 +45,7 @@ def test_merge_1(args):
 def test_merge_2():
     repeat1 = 4 * Pattern([0, 1]).as_type(np.dtype([("f0", np.int64)]))
     repeat2 = 2 * Pattern([0, 1, 2, 3]).as_type(np.dtype([("f1", np.int64)]))
-    merged = stack_instructions([with_name(repeat1, "f0"), with_name(repeat2, "f1")])
+    merged = stack_instructions(with_name(repeat1, "f0"), with_name(repeat2, "f1"))
     assert merged["f0"].to_pattern() == repeat1.to_pattern()
     assert merged["f1"].to_pattern() == repeat2.to_pattern()
 
@@ -53,7 +53,7 @@ def test_merge_2():
 def test_merge_3():
     repeat_1 = 6 * Pattern([0, 1])
     repeat_2 = 4 * Pattern([0, 1, 2])
-    stacked = stack_instructions([with_name(repeat_1, "f0"), with_name(repeat_2, "f1")])
+    stacked = stack_instructions(with_name(repeat_1, "f0"), with_name(repeat_2, "f1"))
     assert stacked["f0"] == Pattern([0, 1, 0, 1, 0, 1]) * 2
     assert stacked["f1"] == Pattern([0, 1, 2, 0, 1, 2]) * 2
 

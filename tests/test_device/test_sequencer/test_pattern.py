@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
-
-from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
+from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
 from .generate_concatenate import generate_concatenate
 from .generate_pattern import generate_pattern
 
@@ -33,7 +32,7 @@ def test_merge(args):
     concatenation = args[0]
     pattern = args[1]
     merged = stack_instructions(
-        [with_name(pattern, "f0"), with_name(concatenation, "f1")]
+        with_name(pattern, "f0"), with_name(concatenation, "f1")
     )
     assert merged["f0"].to_pattern() == pattern
     assert merged["f1"].to_pattern() == concatenation.to_pattern()

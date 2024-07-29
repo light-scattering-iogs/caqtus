@@ -1,6 +1,5 @@
 import heapq
 import math
-from collections.abc import Sequence
 
 import multipledispatch
 import numpy as np
@@ -17,7 +16,7 @@ from ._instructions import (
 
 
 def stack_instructions(
-    instructions: Sequence[SequencerInstruction[np.void]],
+    *instructions: SequencerInstruction[np.void],
 ) -> SequencerInstruction[np.void]:
     """Stack several instructions along their dtype names.
 
@@ -45,11 +44,11 @@ def stack_instructions(
         if not issubclass(instruction.dtype.type, np.void):
             raise ValueError("Instruction must have a structured dtype")
 
-    return _stack_instructions_no_checks(instructions)
+    return _stack_instructions_no_checks(*instructions)
 
 
 def _stack_instructions_no_checks(
-    instructions: Sequence[SequencerInstruction[np.void]],
+    *instructions: SequencerInstruction[np.void],
 ) -> SequencerInstruction:
     # This uses a divide-and-conquer approach to merge the instructions.
     # Another approach is to stack the instructions into a single accumulator, but
@@ -61,8 +60,8 @@ def _stack_instructions_no_checks(
         return stack(instructions[0], instructions[1])
     else:
         length = len(instructions) // 2
-        sub_block_1 = _stack_instructions_no_checks(instructions[:length])
-        sub_block_2 = _stack_instructions_no_checks(instructions[length:])
+        sub_block_1 = _stack_instructions_no_checks(*instructions[:length])
+        sub_block_2 = _stack_instructions_no_checks(*instructions[length:])
         return stack(sub_block_1, sub_block_2)
 
 

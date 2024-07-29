@@ -76,7 +76,7 @@ class SequencerCompiler(DeviceCompiler):
                 f"{self.__device_name}",
                 exceptions,
             )
-        stacked = stack_instructions(channel_instructions)
+        stacked = stack_instructions(*channel_instructions)
         return {"sequence": stacked}
 
     def _find_max_advance_and_delays(
