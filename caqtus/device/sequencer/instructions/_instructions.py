@@ -7,7 +7,6 @@ import itertools
 import math
 from collections.abc import Sequence
 from heapq import merge
-from types import NotImplementedType
 from typing import (
     NewType,
     TypeVar,
@@ -21,6 +20,7 @@ from typing import (
 
 import numpy
 import numpy as np
+from multipledispatch import dispatch
 from numpy.typing import DTypeLike
 from typing_extensions import deprecated
 
@@ -149,29 +149,6 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
         return self.__mul__(other)
 
     @abc.abstractmethod
-    def __or__(
-        self, other: SequencerInstruction[_S]
-    ) -> SequencerInstruction[_U] | NotImplementedType:
-        """Merge the channels of this instruction with another instruction.
-
-        other:
-            The other instruction to merge with this instruction.
-            It must have the same length as the current instruction.
-
-        Returns:
-            A new instruction with the channels of this instruction and the other
-            instruction merged to be output in parallel if this is supported.
-            NotImplemented if the instructions cannot be merged. In this case, the
-            caller should try the reverse order of the merge.
-        """
-
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def __ror__(self, other):
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def apply(
         self, func: Callable[[Array1D[_T]], Array1D[_S]]
     ) -> SequencerInstruction[_S]:
@@ -182,6 +159,30 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
 
         graph = to_graph(self)
         return graph._repr_mimebundle_(include, exclude)
+
+
+@dispatch(SequencerInstruction, SequencerInstruction)
+def stack(a: SequencerInstruction, b: SequencerInstruction) -> SequencerInstruction:
+    if len(a) != len(b):
+        raise ValueError("Instructions must have the same length")
+
+    if a.dtype.fields is None:
+        raise ValueError("Instruction must have at least one channel")
+
+    if b.dtype.fields is None:
+        raise ValueError("Instruction must have at least one channel")
+
+    return _stack_patterns(a.to_pattern(), b.to_pattern())
+
+
+def _stack_patterns(a: Pattern, b: Pattern) -> Pattern:
+    merged_dtype = merge_dtypes(a.dtype, b.dtype)
+    merged = numpy.empty(len(a), dtype=merged_dtype)
+    for name in a.dtype.names:
+        merged[name] = a.array[name]
+    for name in b.dtype.names:
+        merged[name] = b.array[name]
+    return Pattern.create_without_copy(merged)
 
 
 class Pattern(SequencerInstruction[_T]):
@@ -243,38 +244,6 @@ class Pattern(SequencerInstruction[_T]):
             return numpy.array_equal(self._pattern, other._pattern)
         else:
             return NotImplemented
-
-    def __or__(self, other: SequencerInstruction[_S]) -> Pattern[_U]:
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        if self.dtype.fields is None:
-            raise ValueError("Pattern must have at least one channel")
-        if other.dtype.fields is None:
-            raise ValueError("Pattern must have at least one channel")
-        other_pattern = other.to_pattern()
-        merged_dtype = merge_dtypes(self.dtype, other_pattern.dtype)
-        merged = numpy.empty(len(self), dtype=merged_dtype)
-        for name in self.dtype.names:
-            merged[name] = self._pattern[name]
-        for name in other_pattern.dtype.names:
-            merged[name] = other_pattern._pattern[name]
-        return Pattern.create_without_copy(merged)
-
-    def __ror__(self, other):
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        if self.dtype.fields is None:
-            raise ValueError("Pattern must have at least one channel")
-        if other.dtype.fields is None:
-            raise ValueError("Pattern must have at least one channel")
-        other_pattern = other.to_pattern()
-        merged_dtype = merge_dtypes(other_pattern.dtype, self.dtype)
-        merged = numpy.empty(len(self), dtype=merged_dtype)
-        for name in other_pattern.dtype.names:
-            merged[name] = other_pattern._pattern[name]
-        for name in self.dtype.names:
-            merged[name] = self._pattern[name]
-        return Pattern.create_without_copy(merged)
 
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Pattern[_S]:
         result = func(self._pattern)
@@ -418,49 +387,53 @@ class Concatenated(SequencerInstruction[_T]):
         else:
             return NotImplemented
 
-    # noinspection PyProtectedMember
-    def __or__(self, other) -> SequencerInstruction[_U] | NotImplemented:
-        if not isinstance(other, SequencerInstruction):
-            return NotImplemented
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        results = []
-        if isinstance(other, Concatenated):
-            new_bounds = merge(self._instruction_bounds, other._instruction_bounds)
-            for start, stop in pairwise(new_bounds):
-                results.append(self[start:stop] | other[start:stop])
-        else:
-            for (start, stop), instruction in zip(
-                pairwise(self._instruction_bounds), self._instructions
-            ):
-                results.append(instruction | other[start:stop])
-        if not results:
-            return empty_like(self) | empty_like(other)
-        return concatenate(*results)
-
-    def __ror__(self, other):
-        if not isinstance(other, SequencerInstruction):
-            return NotImplemented
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        results = []
-        if isinstance(other, Concatenated):
-            new_bounds = merge(self._instruction_bounds, other._instruction_bounds)
-            for start, stop in pairwise(new_bounds):
-                results.append(other[start:stop] | self[start:stop])
-        else:
-            for (start, stop), instruction in zip(
-                pairwise(self._instruction_bounds), self._instructions
-            ):
-                results.append(other[start:stop] | instruction)
-        if not results:
-            return empty_like(other) | empty_like(self)
-        return concatenate(*results)
-
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Concatenated[_S]:
         return Concatenated(
             *(instruction.apply(func) for instruction in self._instructions)
         )
+
+
+@dispatch(Concatenated, Concatenated)
+def stack(a: Concatenated, b: Concatenated) -> SequencerInstruction:
+    if len(a) != len(b):
+        raise ValueError("Instructions must have the same length")
+    new_bounds = merge(a._instruction_bounds, b._instruction_bounds)
+    results = []
+    for start, stop in pairwise(new_bounds):
+        results.append(stack(a[start:stop], b[start:stop]))
+    if not results:
+        return stack(empty_like(a), empty_like(b))
+    return concatenate(*results)
+
+
+@dispatch(Concatenated, SequencerInstruction)
+def stack(a: Concatenated, b: SequencerInstruction) -> SequencerInstruction:
+    if len(a) != len(b):
+        raise ValueError("Instructions must have the same length")
+
+    results = []
+    for (start, stop), instruction in zip(
+        pairwise(a._instruction_bounds), a.instructions
+    ):
+        results.append(stack(instruction, b[start:stop]))
+    if not results:
+        return stack(empty_like(a), empty_like(b))
+    return concatenate(*results)
+
+
+@dispatch(SequencerInstruction, Concatenated)
+def stack(a: SequencerInstruction, b: Concatenated) -> SequencerInstruction:
+    if len(a) != len(b):
+        raise ValueError("Instructions must have the same length")
+
+    results = []
+    for (start, stop), instruction in zip(
+        pairwise(b._instruction_bounds), b.instructions
+    ):
+        results.append(stack(a[start:stop], instruction))
+    if not results:
+        return stack(empty_like(a), empty_like(b))
+    return concatenate(*results)
 
 
 class Repeated(SequencerInstruction[_T]):
@@ -582,48 +555,25 @@ class Repeated(SequencerInstruction[_T]):
         else:
             return NotImplemented
 
-    def __or__(self, other: SequencerInstruction[_S]) -> SequencerInstruction[_U]:
-        if not isinstance(other, SequencerInstruction):
-            return NotImplemented
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        if isinstance(other, Repeated):
-            lcm = math.lcm(len(self._instruction), len(other.instruction))
-            if lcm == len(self):
-                b_a = tile(self.instruction, self.repetitions)
-                b_b = tile(other.instruction, other.repetitions)
-            else:
-                r_a = lcm // len(self._instruction)
-                b_a = self._instruction * r_a
-                r_b = lcm // len(other.instruction)
-                b_b = other.instruction * r_b
-            block = b_a | b_b
-            return block * (len(self) // len(block))
-        else:
-            return NotImplemented
-
-    def __ror__(self, other):
-        if not isinstance(other, SequencerInstruction):
-            return NotImplemented
-        if len(self) != len(other):
-            raise ValueError("Instructions must have the same length")
-        if isinstance(other, Repeated):
-            lcm = math.lcm(len(self._instruction), len(other.instruction))
-            if lcm == len(self):
-                b_a = tile(self.instruction, self.repetitions)
-                b_b = tile(other.instruction, other.repetitions)
-            else:
-                r_a = lcm // len(self._instruction)
-                b_a = self._instruction * r_a
-                r_b = lcm // len(other.instruction)
-                b_b = other.instruction * r_b
-            block = b_b | b_a
-            return block * (len(self) // len(block))
-        else:
-            return NotImplemented
-
     def apply(self, func: Callable[[Array1D[_T]], Array1D[_S]]) -> Repeated[_S]:
         return Repeated(self._repetitions, self._instruction.apply(func))
+
+
+@dispatch(Repeated, Repeated)
+def stack(a: Repeated, b: Repeated) -> SequencerInstruction:
+    if len(a) != len(b):
+        raise ValueError("Instructions must have the same length")
+    lcm = math.lcm(len(a.instruction), len(b.instruction))
+    if lcm == len(a):
+        b_a = tile(a.instruction, a.repetitions)
+        b_b = tile(b.instruction, b.repetitions)
+    else:
+        r_a = lcm // len(a.instruction)
+        b_a = a.instruction * r_a
+        r_b = lcm // len(b.instruction)
+        b_b = b.instruction * r_b
+    block = stack(b_a, b_b)
+    return block * (len(a) // len(block))
 
 
 def _normalize_index(index: int, length: int) -> int:
