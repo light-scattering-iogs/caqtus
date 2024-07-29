@@ -1,5 +1,8 @@
 from caqtus.device.sequencer.compilation import get_adaptive_clock
-from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
+from caqtus.device.sequencer.instructions import (
+    Pattern,
+    merge_instructions,
+)
 
 
 def test_0():
@@ -17,10 +20,7 @@ def test_1():
 
     instr2 = (Pattern([True]) * 2 + Pattern([False]) * 2) * 2
 
-    a = with_name(instr1, "a")
-    b = with_name(instr2, "b")
-
-    stacked = stack_instructions(a, b)
+    stacked = merge_instructions(a=instr1, b=instr2)
     assert stacked["b"] == instr2
 
 
@@ -28,8 +28,5 @@ def test_2():
     instr1 = Pattern([0, 1]) * 3
     instr2 = Pattern([0, 1, 2]) * 2
 
-    a = with_name(instr1, "a")
-    b = with_name(instr2, "b")
-
-    stacked = stack_instructions(a, b)
+    stacked = merge_instructions(a=instr1, b=instr2)
     assert stacked["a"] == Pattern([0, 1, 0, 1, 0, 1])

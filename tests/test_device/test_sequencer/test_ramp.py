@@ -1,7 +1,11 @@
 import pytest
 
-from caqtus.device.sequencer.instructions import Pattern, with_name, ramp
-from caqtus.device.sequencer.instructions import stack_instructions
+from caqtus.device.sequencer.instructions import (
+    Pattern,
+    with_name,
+    ramp,
+    merge_instructions,
+)
 
 
 def test():
@@ -18,7 +22,7 @@ def test():
 def test_0():
     r = ramp(0, 1, 5)
     pattern = Pattern([0]) * 5
-    merged = with_name(r, "a") | with_name(pattern, "b")
+    merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
     assert merged["b"] == ramp(0, 0, 5)
@@ -27,7 +31,7 @@ def test_0():
 def test_1():
     r = ramp(0, 1, 5)
     pattern = Pattern([0]) * 5
-    merged = with_name(pattern, "b") | with_name(r, "a")
+    merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
     assert merged["b"] == ramp(0, 0, 5)
@@ -42,6 +46,6 @@ def test_3():
     r = ramp(0.0, 1.0, 5)
     pattern = Pattern([0]) * 3 + Pattern([1]) * 2
 
-    merged = stack_instructions(with_name(r, "a"), with_name(pattern, "b"))
+    merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == ramp(0.0, 0.6, 3) + ramp(0.6, 1.0, 2)

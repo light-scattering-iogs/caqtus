@@ -3,7 +3,7 @@ import pytest
 from hypothesis import given
 from hypothesis.strategies import composite, integers
 
-from caqtus.device.sequencer.instructions import Pattern, stack_instructions, with_name
+from caqtus.device.sequencer.instructions import Pattern, merge_instructions
 from .generate_concatenate import generate_concatenate
 from .generate_pattern import generate_pattern
 
@@ -31,9 +31,7 @@ def draw_concatenation_and_pattern(draw, max_length: int):
 def test_merge(args):
     concatenation = args[0]
     pattern = args[1]
-    merged = stack_instructions(
-        with_name(pattern, "f0"), with_name(concatenation, "f1")
-    )
+    merged = merge_instructions(f0=pattern, f1=concatenation)
     assert merged["f0"].to_pattern() == pattern
     assert merged["f1"].to_pattern() == concatenation.to_pattern()
     assert merged.depth == 0
