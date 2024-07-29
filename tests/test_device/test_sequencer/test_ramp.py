@@ -20,7 +20,7 @@ def test():
 
 
 def test_0():
-    r = ramp(0, 1, 5)
+    r = ramp(0.0, 1.0, 5)
     pattern = Pattern([0]) * 5
     merged = merge_instructions(a=r, b=pattern)
 
