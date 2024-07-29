@@ -63,6 +63,7 @@ coverage = "^7.4.4"
 licensecheck = "^2024.1.4"
 pre-commit = "^3.7.0"
 eliot-tree = "^21.0.0"
+ruff = "^0.5.5"
 
 [build-system]
 requires = ["poetry-core"]
