@@ -3,8 +3,7 @@ import math
 from collections.abc import Sequence
 
 import multipledispatch
-import numpy
-from numpy.typing import DTypeLike
+import numpy as np
 
 from caqtus.utils.itertools import pairwise
 from ._instructions import (
@@ -18,8 +17,8 @@ from ._instructions import (
 
 
 def stack_instructions(
-    instructions: Sequence[SequencerInstruction],
-) -> SequencerInstruction:
+    instructions: Sequence[SequencerInstruction[np.void]],
+) -> SequencerInstruction[np.void]:
     """Stack several instructions along their dtype names.
 
     Args:
@@ -43,14 +42,14 @@ def stack_instructions(
 
     # Check that all instructions have a structured dtype
     for instruction in instructions:
-        if instruction.dtype.fields is None:
-            raise ValueError("Instruction must have at least one channel")
+        if not issubclass(instruction.dtype.type, np.void):
+            raise ValueError("Instruction must have a structured dtype")
 
     return _stack_instructions_no_checks(instructions)
 
 
 def _stack_instructions_no_checks(
-    instructions: Sequence[SequencerInstruction],
+    instructions: Sequence[SequencerInstruction[np.void]],
 ) -> SequencerInstruction:
     # This uses a divide-and-conquer approach to merge the instructions.
     # Another approach is to stack the instructions into a single accumulator, but
@@ -71,8 +70,8 @@ stack = multipledispatch.Dispatcher("stack")
 
 
 @stack.register(SequencerInstruction, SequencerInstruction)
-def stack_instructions(
-    a: SequencerInstruction, b: SequencerInstruction
+def stack_generic(
+    a: SequencerInstruction[np.void], b: SequencerInstruction[np.void]
 ) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
@@ -86,11 +85,15 @@ def stack_instructions(
     return _stack_patterns(a.to_pattern(), b.to_pattern())
 
 
-def _stack_patterns(a: Pattern, b: Pattern) -> Pattern:
+def _stack_patterns(a: Pattern[np.void], b: Pattern[np.void]) -> Pattern[np.void]:
     merged_dtype = merge_dtypes(a.dtype, b.dtype)
-    merged = numpy.empty(len(a), dtype=merged_dtype)
+    merged = np.empty(len(a), dtype=merged_dtype)
+
+    assert a.dtype.names is not None
     for name in a.dtype.names:
         merged[name] = a.array[name]
+
+    assert b.dtype.names is not None
     for name in b.dtype.names:
         merged[name] = b.array[name]
     return Pattern.create_without_copy(merged)
@@ -160,16 +163,16 @@ def stack_repeated(a: Repeated, b: Repeated) -> SequencerInstruction:
     return block * (len(a) // len(block))
 
 
-def merge_dtypes[
-    S: DTypeLike, T: DTypeLike, U: DTypeLike
-](a: numpy.dtype[S], b: numpy.dtype[T]) -> numpy.dtype[U]:
-    merged_dtype = numpy.dtype(
+def merge_dtypes(a: np.dtype[np.void], b: np.dtype[np.void]) -> np.dtype[np.void]:
+    assert a.names is not None
+    assert b.names is not None
+    merged_dtype = np.dtype(
         [(name, a[name]) for name in a.names] + [(name, b[name]) for name in b.names]
     )
     return merged_dtype
 
 
 def tile[
-    T: DTypeLike
+    T: np.generic
 ](instruction: SequencerInstruction[T], repetitions: int) -> SequencerInstruction[T]:
     return concatenate(*([instruction] * repetitions))
