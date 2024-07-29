@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Function `plot_instruction` to plot values takes by a sequencer instruction
 - Function `to_graph` to visualize sequencer instruction
 
+### Changed
+
+- Upgraded to numpy 2.0
+
 ## [4.16.0] - 2024-07-22
 
 ### Changed
