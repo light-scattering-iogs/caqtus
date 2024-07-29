@@ -13,6 +13,33 @@ from ._instructions import (
     empty_like,
     concatenate,
 )
+from ._with_name import with_name
+
+
+def merge_instructions(**instructions: SequencerInstruction) -> SequencerInstruction:
+    """Merge several instructions by name.
+
+    Args:
+        instructions: The instructions to merge by name.
+
+    Returns:
+        A new instruction with the same length as the input instructions,
+        and a structured dtype with a field for each input instruction.
+    """
+
+    if not instructions:
+        raise ValueError("No instructions to merge")
+
+    # Check that all instructions have the same length
+    length = len(next(iter(instructions.values())))
+    for instruction in instructions.values():
+        if len(instruction) != length:
+            raise ValueError("Instructions must have the same length")
+
+    named_instructions = [
+        with_name(instruction, name) for name, instruction in instructions.items()
+    ]
+    return _stack_instructions_no_checks(*named_instructions)
 
 
 def stack_instructions(
