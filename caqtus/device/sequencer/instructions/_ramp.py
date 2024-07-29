@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from typing import (
-    TypeVar,
     SupportsInt,
     Callable,
     SupportsFloat,
     overload,
 )
 
-import numpy
 import numpy as np
 
 from ._instructions import (
@@ -21,8 +19,6 @@ from ._instructions import (
     _normalize_index,
     Length,
 )
-
-_T = TypeVar("_T", covariant=True, bound=numpy.generic)
 
 
 class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
@@ -61,7 +57,7 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
         return self._stop
 
     @property
-    def dtype(self) -> numpy.dtype[T]:
+    def dtype(self) -> np.dtype[T]:
         return self._start.dtype
 
     def __len__(self) -> Length:
@@ -135,7 +131,7 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
         stop_value = self._stop[channel]
         return Ramp(start_value, stop_value, self._length)
 
-    def as_type[S: np.generic](self, dtype: numpy.dtype[S]) -> SequencerInstruction[S]:
+    def as_type[S: np.generic](self, dtype: np.dtype[S]) -> SequencerInstruction[S]:
         start = self._start.astype(dtype)
         if not isinstance(start, (np.floating, np.void)):
             raise TypeError("Can only convert to floating point or structured type.")
@@ -155,18 +151,16 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
             assert self.dtype.names is not None
             assert isinstance(self._start, np.void)
             assert isinstance(self._stop, np.void)
-            values = numpy.empty(len(self), dtype=self.dtype)
+            values = np.empty(len(self), dtype=self.dtype)
             for name in self.dtype.names:
-                values[name] = numpy.linspace(
+                values[name] = np.linspace(
                     self._start[name], self._stop[name], len(self), endpoint=False
                 )
             return Pattern.create_without_copy(values)
         else:
             assert isinstance(self._start, np.floating)
             assert isinstance(self._stop, np.floating)
-            values = numpy.linspace(
-                self._start, self._stop, self._length, endpoint=False
-            )
+            values = np.linspace(self._start, self._stop, self._length, endpoint=False)
             return Pattern.create_without_copy(values)
 
     def __eq__(self, other):
