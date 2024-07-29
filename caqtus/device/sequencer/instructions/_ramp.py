@@ -102,7 +102,11 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
                 + index * (self._stop[name] - self._start[name]) / self._length
                 for name in self.dtype.names
             )
-            return np.void(value, dtype=self.dtype)
+
+            return np.void(  # pyright: ignore[reportCallIssue]
+                value,
+                dtype=self.dtype,  # pyright: ignore[reportArgumentType]
+            )
         else:
             assert isinstance(self._start, np.floating)
             assert isinstance(self._stop, np.floating)
