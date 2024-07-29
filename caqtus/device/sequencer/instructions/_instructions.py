@@ -26,7 +26,7 @@ Depth = NewType("Depth", int)
 
 _S = TypeVar("_S", covariant=True, bound=DTypeLike)
 
-type Array1D[T] = npt.NDArray[T]
+type Array1D[T: np.generic] = npt.NDArray[T]
 
 
 class SequencerInstruction[T: np.generic](abc.ABC):
@@ -52,12 +52,14 @@ class SequencerInstruction[T: np.generic](abc.ABC):
         raise NotImplementedError
 
     @overload
+    @abc.abstractmethod
     def __getitem__(self, item: int) -> T:
         """Returns the value at the given index."""
 
         ...
 
     @overload
+    @abc.abstractmethod
     def __getitem__(self, item: slice) -> SequencerInstruction[T]:
         """Returns a sub-instruction over the given slice.
 
@@ -69,7 +71,8 @@ class SequencerInstruction[T: np.generic](abc.ABC):
         ...
 
     @overload
-    def __getitem__[S: np.generic](self, item: str) -> SequencerInstruction[S]:
+    @abc.abstractmethod
+    def __getitem__(self, item: str) -> SequencerInstruction:
         """Returns a sub-instruction over the given field.
 
         Returns:
@@ -219,7 +222,7 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: slice) -> Pattern[T]: ...
 
     @overload
-    def __getitem__[S: np.generic](self, item: str) -> SequencerInstruction[S]: ...
+    def __getitem__(self, item: str) -> SequencerInstruction: ...
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -341,7 +344,7 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: slice) -> SequencerInstruction[T]: ...
 
     @overload
-    def __getitem__[S: np.generic](self, item: str) -> SequencerInstruction[S]: ...
+    def __getitem__(self, item: str) -> SequencerInstruction: ...
 
     def __getitem__(self, item):
         match item:
@@ -482,7 +485,7 @@ class Repeated[T: np.generic](SequencerInstruction[T]):
     def __getitem__(self, item: slice) -> SequencerInstruction[T]: ...
 
     @overload
-    def __getitem__[S: np.generic](self, item: str) -> SequencerInstruction[S]: ...
+    def __getitem__(self, item: str) -> SequencerInstruction: ...
 
     def __getitem__(self, item):
         if isinstance(item, int):
