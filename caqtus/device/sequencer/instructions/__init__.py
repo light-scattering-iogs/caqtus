@@ -5,7 +5,6 @@ from ._instructions import (
     Concatenated,
     Repeated,
     Pattern,
-    join,
     concatenate,
 )
 from ._plot import plot_instruction
@@ -23,7 +22,6 @@ __all__ = [
     "convert_to_change_arrays",
     "with_name",
     "stack_instructions",
-    "join",
     "concatenate",
     "ramp",
     "Ramp",
