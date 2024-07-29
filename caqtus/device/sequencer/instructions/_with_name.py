@@ -1,14 +1,10 @@
-from typing import TypeVar
-
 import numpy as np
 
 from ._instructions import SequencerInstruction
 
-_T = TypeVar("_T", bound=np.generic)
-
 
 def with_name(
-    instruction: SequencerInstruction[_T], name: str
+    instruction: SequencerInstruction, name: str
 ) -> SequencerInstruction[np.void]:
     """
     Change the dtype of the instruction into a structured array with a single field
