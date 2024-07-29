@@ -1,10 +1,11 @@
 import pytest
 
 from caqtus.device.sequencer.instructions import Pattern, with_name, ramp
+from caqtus.device.sequencer.instructions import stack_instructions
 
 
 def test():
-    r = ramp(0.0, 1.0, 5)
+    r = ramp(0, 1, 5)
     assert r[0] == 0
     assert r[1] == 0.2
     assert r[2] == 0.4
@@ -41,6 +42,6 @@ def test_3():
     r = ramp(0.0, 1.0, 5)
     pattern = Pattern([0]) * 3 + Pattern([1]) * 2
 
-    merged = with_name(r, "a") | with_name(pattern, "b")
+    merged = stack_instructions([with_name(r, "a"), with_name(pattern, "b")])
 
     assert merged["a"] == ramp(0.0, 0.6, 3) + ramp(0.6, 1.0, 2)
