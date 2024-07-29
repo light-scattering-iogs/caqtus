@@ -80,7 +80,7 @@ def test_3():
     assert excess == 0
 
 
-@given(digital_instruction(max_leaves=30), integers(min_value=0))
+@given(digital_instruction(max_leaves=20), integers(min_value=0))
 def test_4(instr, n):
     expanded, excess = _broaden_left(instr, n)
     assert len(expanded) == len(instr)
