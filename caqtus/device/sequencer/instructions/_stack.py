@@ -20,11 +20,41 @@ from ._instructions import (
 def stack_instructions(
     instructions: Sequence[SequencerInstruction],
 ) -> SequencerInstruction:
-    """Stack several instructions along their dtype names."""
+    """Stack several instructions along their dtype names.
 
+    Args:
+        instructions: A sequence of instructions to stack.
+            They must all have the same length.
+            They must have a structured dtype with named fields.
+
+    Returns:
+        A new instruction with the same length as the input instructions,
+        and a dtype that is the union of the input dtypes.
+    """
+
+    if not instructions:
+        raise ValueError("No instructions to stack")
+
+    # Check that all instructions have the same length
+    length = len(instructions[0])
+    for instruction in instructions[1:]:
+        if len(instruction) != length:
+            raise ValueError("Instructions must have the same length")
+
+    # Check that all instructions have a structured dtype
+    for instruction in instructions:
+        if instruction.dtype.fields is None:
+            raise ValueError("Instruction must have at least one channel")
+
+    return _stack_instructions_no_checks(instructions)
+
+
+def _stack_instructions_no_checks(
+    instructions: Sequence[SequencerInstruction],
+) -> SequencerInstruction:
     # This uses a divide-and-conquer approach to merge the instructions.
     # Another approach is to stack the instructions into a single accumulator, but
-    # it seems to give worse performance.
+    # it seems to give worse performance on typical uses.
 
     if len(instructions) == 1:
         return instructions[0]
@@ -32,8 +62,8 @@ def stack_instructions(
         return stack(instructions[0], instructions[1])
     else:
         length = len(instructions) // 2
-        sub_block_1 = stack_instructions(instructions[:length])
-        sub_block_2 = stack_instructions(instructions[length:])
+        sub_block_1 = _stack_instructions_no_checks(instructions[:length])
+        sub_block_2 = _stack_instructions_no_checks(instructions[length:])
         return stack(sub_block_1, sub_block_2)
 
 
