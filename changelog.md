@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Upgraded to numpy 2.0
+- Upgraded to polars 1.3
 
 ## [4.16.0] - 2024-07-22
 
