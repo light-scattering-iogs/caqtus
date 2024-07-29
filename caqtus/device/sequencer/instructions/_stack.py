@@ -19,12 +19,27 @@ from ._with_name import with_name
 def merge_instructions(**instructions: SequencerInstruction) -> SequencerInstruction:
     """Merge several instructions by name.
 
+    This function finds a common structure to the different instructions and produces
+    a single instruction with parallel fields for each input instruction.
+
     Args:
         instructions: The instructions to merge by name.
+            There must be at least one instruction.
+            They must all have the same length.
 
     Returns:
         A new instruction with the same length as the input instructions,
         and a structured dtype with a field for each input instruction.
+
+    Warning:
+        If the input instructions have no simple common structure, this function will
+        convert each instruction to an explicit pattern and merge them.
+        If the input instructions have a very long length, this function might be slow
+        and consume a lot of memory.
+
+    Raises:
+        ValueError: If the instructions have different lengths or no instructions are
+            provided.
     """
 
     if not instructions:
@@ -99,21 +114,13 @@ stack = multipledispatch.Dispatcher("stack")
 def stack_generic(
     a: SequencerInstruction[np.void], b: SequencerInstruction[np.void]
 ) -> SequencerInstruction:
-    if len(a) != len(b):
-        raise ValueError("Instructions must have the same length")
-
-    if a.dtype.fields is None:
-        raise ValueError("Instruction must have at least one channel")
-
-    if b.dtype.fields is None:
-        raise ValueError("Instruction must have at least one channel")
-
+    assert len(a) == len(b)
     return _stack_patterns(a.to_pattern(), b.to_pattern())
 
 
 def _stack_patterns(a: Pattern[np.void], b: Pattern[np.void]) -> Pattern[np.void]:
     merged_dtype = merge_dtypes(a.dtype, b.dtype)
-    merged = np.empty(len(a), dtype=merged_dtype)
+    merged = np.zeros(len(a), dtype=merged_dtype)
 
     assert a.dtype.names is not None
     for name in a.dtype.names:
@@ -127,8 +134,8 @@ def _stack_patterns(a: Pattern[np.void], b: Pattern[np.void]) -> Pattern[np.void
 
 @stack.register(Concatenated, Concatenated)
 def stack_concatenations(a: Concatenated, b: Concatenated) -> SequencerInstruction:
-    if len(a) != len(b):
-        raise ValueError("Instructions must have the same length")
+    assert len(a) == len(b)
+
     new_bounds = heapq.merge(a._instruction_bounds, b._instruction_bounds)
     results = []
     for start, stop in pairwise(new_bounds):
@@ -142,8 +149,7 @@ def stack_concatenations(a: Concatenated, b: Concatenated) -> SequencerInstructi
 def stack_concatenation_left(
     a: Concatenated, b: SequencerInstruction
 ) -> SequencerInstruction:
-    if len(a) != len(b):
-        raise ValueError("Instructions must have the same length")
+    assert len(a) == len(b)
 
     results = []
     for (start, stop), instruction in zip(
@@ -159,8 +165,7 @@ def stack_concatenation_left(
 def stack_concatenation_right(
     a: SequencerInstruction, b: Concatenated
 ) -> SequencerInstruction:
-    if len(a) != len(b):
-        raise ValueError("Instructions must have the same length")
+    assert len(a) == len(b)
 
     results = []
     for (start, stop), instruction in zip(
@@ -174,8 +179,8 @@ def stack_concatenation_right(
 
 @stack.register(Repeated, Repeated)
 def stack_repeated(a: Repeated, b: Repeated) -> SequencerInstruction:
-    if len(a) != len(b):
-        raise ValueError("Instructions must have the same length")
+    assert len(a) == len(b)
+
     lcm = math.lcm(len(a.instruction), len(b.instruction))
     if lcm == len(a):
         b_a = tile(a.instruction, a.repetitions)
