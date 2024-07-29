@@ -2,8 +2,8 @@ import heapq
 import math
 from collections.abc import Sequence
 
+import multipledispatch
 import numpy
-from multipledispatch import dispatch
 from numpy.typing import DTypeLike
 
 from caqtus.utils.itertools import pairwise
@@ -37,8 +37,13 @@ def stack_instructions(
         return stack(sub_block_1, sub_block_2)
 
 
-@dispatch(SequencerInstruction, SequencerInstruction)
-def stack(a: SequencerInstruction, b: SequencerInstruction) -> SequencerInstruction:
+stack = multipledispatch.Dispatcher("stack")
+
+
+@stack.register(SequencerInstruction, SequencerInstruction)
+def stack_instructions(
+    a: SequencerInstruction, b: SequencerInstruction
+) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
 
@@ -61,8 +66,8 @@ def _stack_patterns(a: Pattern, b: Pattern) -> Pattern:
     return Pattern.create_without_copy(merged)
 
 
-@dispatch(Concatenated, Concatenated)
-def stack(a: Concatenated, b: Concatenated) -> SequencerInstruction:
+@stack.register(Concatenated, Concatenated)
+def stack_concatenations(a: Concatenated, b: Concatenated) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
     new_bounds = heapq.merge(a._instruction_bounds, b._instruction_bounds)
@@ -74,8 +79,10 @@ def stack(a: Concatenated, b: Concatenated) -> SequencerInstruction:
     return concatenate(*results)
 
 
-@dispatch(Concatenated, SequencerInstruction)
-def stack(a: Concatenated, b: SequencerInstruction) -> SequencerInstruction:
+@stack.register(Concatenated, SequencerInstruction)
+def stack_concatenation_left(
+    a: Concatenated, b: SequencerInstruction
+) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
 
@@ -89,8 +96,10 @@ def stack(a: Concatenated, b: SequencerInstruction) -> SequencerInstruction:
     return concatenate(*results)
 
 
-@dispatch(SequencerInstruction, Concatenated)
-def stack(a: SequencerInstruction, b: Concatenated) -> SequencerInstruction:
+@stack.register(SequencerInstruction, Concatenated)
+def stack_concatenation_right(
+    a: SequencerInstruction, b: Concatenated
+) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
 
@@ -104,8 +113,8 @@ def stack(a: SequencerInstruction, b: Concatenated) -> SequencerInstruction:
     return concatenate(*results)
 
 
-@dispatch(Repeated, Repeated)
-def stack(a: Repeated, b: Repeated) -> SequencerInstruction:
+@stack.register(Repeated, Repeated)
+def stack_repeated(a: Repeated, b: Repeated) -> SequencerInstruction:
     if len(a) != len(b):
         raise ValueError("Instructions must have the same length")
     lcm = math.lcm(len(a.instruction), len(b.instruction))
