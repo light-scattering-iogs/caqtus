@@ -71,7 +71,6 @@ def split_recoverable(
             return None, exception
 
 
-@tblib.pickling_support.install
 class RecoverableException(Exception):
     """An error that can be recovered from.
 
@@ -85,7 +84,6 @@ class RecoverableException(Exception):
     pass
 
 
-@tblib.pickling_support.install
 class InvalidTypeError(TypeError, RecoverableException):
     """Raised when a value is not of the expected type.
 
@@ -96,7 +94,6 @@ class InvalidTypeError(TypeError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class InvalidValueError(ValueError, RecoverableException):
     """Raised when a value is invalid.
 
@@ -107,7 +104,6 @@ class InvalidValueError(ValueError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class ConnectionFailedError(ConnectionError, RecoverableException):
     """Raised when a connection to an external resource fails.
 
@@ -119,21 +115,18 @@ class ConnectionFailedError(ConnectionError, RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
     """Raised when the number of shot attempts exceeds the maximum allowed."""
 
     pass
 
 
-@tblib.pickling_support.install
 class SequenceInterruptedException(RecoverableException):
     """Raised when a sequence is interrupted by the user before it finishes."""
 
     pass
 
 
-@tblib.pickling_support.install
 class EvaluationError(RecoverableException):
     """Raised when an error occurs during the evaluation of an expression.
 
@@ -145,6 +138,17 @@ class EvaluationError(RecoverableException):
     pass
 
 
-@tblib.pickling_support.install
 class NotDefinedUnitError(RecoverableException):
     """Raised when the user tries to use a unit that is not defined."""
+
+
+tblib.pickling_support.install(
+    RecoverableException,
+    InvalidTypeError,
+    InvalidValueError,
+    ConnectionFailedError,
+    ShotAttemptsExceededError,
+    SequenceInterruptedException,
+    EvaluationError,
+    NotDefinedUnitError,
+)
