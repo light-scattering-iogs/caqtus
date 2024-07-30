@@ -17,4 +17,4 @@ build:
      # Install the project dependencies and build the documentation in the virtualenv
      # created by poetry
      - poetry install --with doc
-     - poetry run python -m sphinx doc/source $READTHEDOCS_OUTPUT/html/
+     - poetry run python -m sphinx doc/source $READTHEDOCS_OUTPUT/html/ --fail-on-warning --keep-going
