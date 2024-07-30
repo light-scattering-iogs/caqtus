@@ -48,7 +48,7 @@ class SequencerInstruction(abc.ABC, Generic[_T]):
     step.
 
     Instructions can be concatenated in time using the `+` operator or the
-    :fun:`concatenate`.
+    :func:`concatenate`.
     An instruction can be repeated using the `*` operator with an integer.
     """
 

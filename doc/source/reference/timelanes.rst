@@ -19,7 +19,6 @@ The core project provides the following timelanes:
 - :class:`caqtus.session.shot.CameraTimeLane`
 
 More lanes can be added by the user by subclassing :class:`caqtus.session.shot.TimeLane`.
-See :ref:`How to add a lane` for more information.
 
 Timelanes can directly represent the output of a device's channel, for example by having a :class:`caqtus.session.shot.DigitalTimeLane` object to indicate when a digital channel controlling a shutter or an AOM should be high or low.
 But, they can also represent more abstract concepts.
@@ -37,5 +36,3 @@ API reference
 .. autoclass:: caqtus.session.shot.AnalogTimeLane
 
 .. autoclass:: caqtus.session.shot.CameraTimeLane
-
-
