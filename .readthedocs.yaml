@@ -11,12 +11,6 @@ build:
   tools:
     python: "3.12"
   commands:
-     - git clone --depth 1 https://github.com/light-scattering-io/caqtus.git
-     - cd caqtus
-     - git fetch origin --force --prune --prune-tags --depth 50 refs/heads/main:refs/remotes/origin/main
-     - git checkout --force origin/main
-     - cat .readthedocs.yaml
-     - asdf global python 3.12.3
      - apt install pipx
      - pipx ensurepath
      - pipx install poetry
