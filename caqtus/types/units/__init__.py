@@ -16,6 +16,7 @@ from .units import (
     CURRENT_UNITS,
     VOLTAGE_UNITS,
     UNITS,
+    UnitLike,
 )
 
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     "VOLTAGE_UNITS",
     "UNITS",
     "units",
+    "UnitLike",
 ]
