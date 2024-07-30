@@ -14,6 +14,7 @@ build:
     post_create_environment:
       - . $READTHEDOCS_VIRTUALENV_PATH/bin/activate
       - curl -sSL https://install.python-poetry.org | python3 -
+      - export PATH="/home/docs/.local/bin:$PATH"
       - poetry config virtualenvs.create false
       - poetry env use $READTHEDOCS_VIRTUALENV_PATH/bin/python3
     post_install:
