@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Callable
+from collections.abc import Mapping, Callable, Iterable
 from typing import Protocol, Any, overload
 
 from caqtus.types.variable_name import DottedVariableName
@@ -24,6 +24,12 @@ class Evaluable[T](Protocol):
 
 @overload
 def evaluate[
+    T
+](evaluable: Evaluable[T], variables: Mapping[DottedVariableName, Any],) -> T: ...
+
+
+@overload
+def evaluate[
     T, R
 ](
     evaluable: Evaluable[T],
@@ -34,12 +40,22 @@ def evaluate[
 
 @overload
 def evaluate[
+    T, R1, R2
+](
+    evaluable: Evaluable[T],
+    variables: Mapping[DottedVariableName, Any],
+    transformer: tuple[Callable[[T], R1], Callable[[R1], R2]],
+) -> R2: ...
+
+
+@overload
+def evaluate[
     T
 ](
     evaluable: Evaluable[T],
     variables: Mapping[DottedVariableName, Any],
-    transformer: None,
-) -> T: ...
+    transformer: tuple[Callable, ...],
+) -> Any: ...
 
 
 def evaluate(evaluable, variables, transformer=None):
@@ -50,7 +66,7 @@ def evaluate(evaluable, variables, transformer=None):
         variables: A mapping of variable names to values.
             The evaluable object will be interpreted given the values of these
             variables.
-        transformer: A function that transforms the evaluated value.
+        transformer: Functions that transforms the evaluated value.
             For example, this can be used to convert the value to a specific unit or
             ensure that it is within a certain range.
             If None, the evaluated value is returned as is.
@@ -60,6 +76,15 @@ def evaluate(evaluable, variables, transformer=None):
 
     if transformer is None:
         return value
-    else:
-        transformed = transformer(value)
-        return transformed
+
+    if callable(transformer):
+        return transformer(value)
+
+    if not isinstance(transformer, Iterable):
+        raise TypeError(
+            "The transformer must be a callable or an iterable of callables."
+        )
+    for t in transformer:
+        value = t(value)
+
+    return value
