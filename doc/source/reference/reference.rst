@@ -10,3 +10,4 @@ Reference
    types/index
    extension/extension
    gui/index
+   shot_compilation/index
