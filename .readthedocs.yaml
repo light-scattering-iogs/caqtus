@@ -11,7 +11,7 @@ build:
   tools:
     python: "3.12"
   commands:
-     - apt install pipx
+     - sudo apt install pipx
      - pipx ensurepath
      - pipx install poetry
      - poetry install --with doc
