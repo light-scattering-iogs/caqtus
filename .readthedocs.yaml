@@ -10,20 +10,31 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
-  jobs:
-    post_create_environment:
-      - . $READTHEDOCS_VIRTUALENV_PATH/bin/activate
-      - curl -sSL https://install.python-poetry.org | python3 -
-      - export PATH="/home/docs/.local/bin:$PATH"
-      - poetry config virtualenvs.create false
-      - poetry env use $READTHEDOCS_VIRTUALENV_PATH/bin/python3
-    post_install:
-      - poetry install --with doc
+  commands:
+     - git clone --depth 1 https://github.com/light-scattering-io/caqtus.git .
+     - git fetch origin --force --prune --prune-tags --depth 50 refs/heads/main:refs/remotes/origin/main
+     - git checkout --force origin/main
+     - cat .readthedocs.yaml
+     - asdf global python 3.12.3
+     - apt install pipx
+     - pipx ensurepath
+     - pipx install poetry
+     - poetry install --with doc
+     - poetry run python -m sphinx doc/source $READTHEDOCS_OUTPUT/html/
+  # jobs:
+  #   post_create_environment:
+  #     - . $READTHEDOCS_VIRTUALENV_PATH/bin/activate
+  #     - curl -sSL https://install.python-poetry.org | python3 -
+  #     - export PATH="/home/docs/.local/bin:$PATH"
+  #     - poetry config virtualenvs.create false
+  #     - poetry env use $READTHEDOCS_VIRTUALENV_PATH/bin/python3
+  #   post_install:
+  #     - poetry install --with doc
 
 
 # Build documentation in the "docs/" directory with Sphinx
-sphinx:
-  configuration: doc/source/conf.py
+# sphinx:
+#   configuration: doc/source/conf.py
 
 # Optionally build your docs in additional formats such as PDF and ePub
 # formats:
