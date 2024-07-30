@@ -10,8 +10,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
+  apt_packages:
+     - pipx
   commands:
-     - sudo apt install pipx
      - pipx ensurepath
      - pipx install poetry
      - poetry install --with doc
