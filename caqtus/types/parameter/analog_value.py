@@ -6,6 +6,7 @@ from numpy.typing import NDArray
 
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless
+from ..units.units import UnitLike
 
 AnalogValue = Real | NDArray[np.floating] | Quantity
 
@@ -50,7 +51,7 @@ def magnitude_in_unit(value: _R, unit: None) -> _R: ...
 
 
 @overload
-def magnitude_in_unit(value: _R, unit: Unit | str) -> _R: ...
+def magnitude_in_unit(value: _R, unit: UnitLike) -> _R: ...
 
 
 @overload
@@ -61,7 +62,7 @@ def magnitude_in_unit(
 
 @overload
 def magnitude_in_unit(
-    value: Quantity, unit: Unit | str
+    value: Quantity, unit: UnitLike
 ) -> Real | NDArray[np.floating]: ...
 
 
