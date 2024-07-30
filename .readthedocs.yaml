@@ -13,7 +13,7 @@ build:
   jobs:
     post_create_environment:
       - . $READTHEDOCS_VIRTUALENV_PATH/bin/activate
-      - pip install poetry
+      - curl -sSL https://install.python-poetry.org | python3 -
       - poetry config virtualenvs.create false
       - poetry env use $READTHEDOCS_VIRTUALENV_PATH/bin/python3
     post_install:
