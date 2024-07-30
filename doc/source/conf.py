@@ -42,7 +42,7 @@ autodoc_type_aliases = {
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "PySide6": ("https://doc.qt.io/qtforpython-6", "Pyside6/PySide6.inv"),
+    "PySide6": ("https://doc.qt.io/qtforpython-6", None),
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
 }
 
