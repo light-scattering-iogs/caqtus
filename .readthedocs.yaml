@@ -12,7 +12,7 @@ build:
     python: "3.12"
   jobs:
     post_create_environment:
-      - source "${READTHEDOCS_VIRTUALENV_PATH}/bin/activate"
+      - . ${READTHEDOCS_VIRTUALENV_PATH/bin/activate
       - pip install poetry
       - poetry config virtualenvs.create false
       - poetry env info
