@@ -13,8 +13,9 @@ build:
   jobs:
     post_create_environment:
       - pip install poetry
+      - echo $VIRTUAL_ENV
       - poetry config virtualenvs.create false
-      - poetry env info
+      - poetry env use $VIRTUAL_ENV
     post_install:
       - poetry install --with doc
 
