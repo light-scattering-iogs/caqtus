@@ -108,6 +108,3 @@ class SequencerConfiguration(
 
     def __getitem__(self, item):
         return self.channels[item]
-
-    def get_controller_type(self):
-        return SequencerController
