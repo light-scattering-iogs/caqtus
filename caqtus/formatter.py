@@ -107,5 +107,9 @@ def type_(value: type | str) -> str:
         raise ValueError("Invalid type value")
 
 
+def lane(lane_name: str) -> str:
+    return f"lane '{lane_name}'"
+
+
 def fmt(s: str, *args, **kwargs):
     return caqtus_formatter.format(s, *args, **kwargs)
