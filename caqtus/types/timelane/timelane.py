@@ -5,6 +5,7 @@ from collections.abc import MutableSequence, Iterable, Sequence
 from typing import TypeVar, Generic, Self, NewType
 
 import attrs
+from typing_extensions import deprecated
 
 from caqtus.types.expression import Expression
 from caqtus.utils.asserts import assert_length_changed
@@ -96,7 +97,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
             raise IndexError(f"Index out of bounds: {step}")
         return self._get_block_bounds(find_containing_block(self._bounds, step))
 
-    def values(self) -> Iterable[T]:
+    def block_values(self) -> Iterable[T]:
         """Returns an iterator over the block values.
 
         The length of the iterator is the number of blocks in the lane, not the number
@@ -104,6 +105,10 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         """
 
         return (value for value, _ in self._spanned_values)
+
+    @deprecated("use block_values instead")
+    def values(self) -> Iterable[T]:
+        return self.block_values()
 
     def bounds(self) -> Iterable[tuple[Step, Step]]:
         """Returns an iterator over the bounds of the blocks.

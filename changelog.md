@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded to numpy 2.0
 - Upgraded to polars 1.3
 
+### Deprecated
+
+- Some methods of timelanes
+
 ## [4.16.0] - 2024-07-22
 
 ### Changed

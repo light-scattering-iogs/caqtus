@@ -45,7 +45,9 @@ class CameraCompiler(DeviceCompiler):
         step_durations = shot_context.get_step_durations()
         exposures = []
         picture_names = []
-        for value, (start, stop) in zip(self.__lane.values(), self.__lane.bounds()):
+        for value, (start, stop) in zip(
+            self.__lane.block_values(), self.__lane.bounds()
+        ):
             if isinstance(value, TakePicture):
                 exposure = sum(step_durations[start:stop])
                 exposures.append(exposure)
