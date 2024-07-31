@@ -110,14 +110,23 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     def values(self) -> Iterable[T]:
         return self.block_values()
 
-    def bounds(self) -> Iterable[tuple[Step, Step]]:
-        """Returns an iterator over the bounds of the blocks.
+    def block_bounds(self) -> Iterable[tuple[Step, Step]]:
+        """Iterates over the bounds of the blocks.
 
-        The length of the iterator is the number of blocks in the lane, not the number
-        of steps.
+        Returns:
+            An iterator over the bounds of the blocks.
+
+            Its elements are tuples of two elements: the step (inclusive) at which the
+            block starts and the step (exclusive) at which the block ends.
+
+            The length of the iterator is the number of blocks in the lane.
         """
 
-        return zip(self._bounds[:-1], self._bounds[1:])
+        return zip(self._bounds[:-1], self._bounds[1:], strict=True)
+
+    @deprecated("use block_bounds instead")
+    def bounds(self) -> Iterable[tuple[Step, Step]]:
+        return self.block_bounds()
 
     def _get_containing_block(self, index: Step) -> Block:
         return find_containing_block(self._bounds, index)

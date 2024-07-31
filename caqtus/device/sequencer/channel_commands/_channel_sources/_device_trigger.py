@@ -220,7 +220,7 @@ def compile_camera_trigger(
     step_bounds = shot_context.get_step_bounds()
 
     instructions: list[SequencerInstruction[np.bool_]] = []
-    for value, (start, stop) in zip(lane.block_values(), lane.bounds()):
+    for value, (start, stop) in zip(lane.block_values(), lane.block_bounds()):
         length = number_ticks(step_bounds[start], step_bounds[stop], time_step * ns)
         if isinstance(value, TakePicture):
             if length == 0:

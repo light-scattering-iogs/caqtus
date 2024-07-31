@@ -27,7 +27,7 @@ def compile_digital_lane(
 
     step_bounds = shot_context.get_step_bounds()
     instructions = []
-    for cell_value, (start, stop) in zip(lane.block_values(), lane.bounds()):
+    for cell_value, (start, stop) in zip(lane.block_values(), lane.block_bounds()):
         length = number_ticks(step_bounds[start], step_bounds[stop], time_step * ns)
         if isinstance(cell_value, bool):
             instructions.append(get_constant_instruction(cell_value, length))
