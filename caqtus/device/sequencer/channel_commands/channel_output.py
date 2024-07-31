@@ -58,7 +58,16 @@ class EvaluatedOutput[T: np.number]:
 
 
 @attrs.define
-class ChannelOutput(abc.ABC):
+class ChannelOutput[T: np.number](abc.ABC):
+    """Defines what should be outputted by a channel.
+
+    Subclasses of this class should have specific attributes that define how to
+    evaluate the series of values to output on the channel.
+
+    These attributes can contain other :class:`ChannelOutput` instances, which allows
+    to recursively combine transformations.
+    """
+
     @abc.abstractmethod
     def evaluate(
         self,
@@ -66,7 +75,7 @@ class ChannelOutput(abc.ABC):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> EvaluatedOutput:
+    ) -> EvaluatedOutput[T]:
         """Evaluate the output of a channel with the required parameters.
 
         Args:
