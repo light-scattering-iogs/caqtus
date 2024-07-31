@@ -30,7 +30,7 @@ from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.frozen
-class EvaluatedOutput[T: np.number]:
+class EvaluatedOutput[T: (np.number, np.bool_)]:
     """Represents a series of value to output on a channel.
 
     Parameters:
