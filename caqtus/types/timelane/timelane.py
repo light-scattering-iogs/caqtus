@@ -89,6 +89,12 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         obj._bounds = compute_bounds(span for _, span in obj._spanned_values)
         return obj
 
+    @property
+    def number_blocks(self) -> int:
+        """Returns the number of blocks in the lane."""
+
+        return len(self._spanned_values)
+
     def get_bounds(self, step: Step) -> tuple[Step, Step]:
         """Returns the bounds of the block containing the given step."""
 
