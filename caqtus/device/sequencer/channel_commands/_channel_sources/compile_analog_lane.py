@@ -131,7 +131,12 @@ def compile_analog_lane(
     block_results = expression_results | ramp_results
 
     assert len(block_results) == lane.number_blocks
-    instructions = (result.to_instruction() for result in block_results.values())
+    # Need to ensure that the instructions are sorted by block index before
+    # concatenating
+    instructions = (
+        block_results[Block(block)].to_instruction()
+        for block in range(lane.number_blocks)
+    )
     total_instruction = concatenate(*instructions)
 
     units = {result.unit for result in block_results.values()}
