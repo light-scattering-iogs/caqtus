@@ -8,7 +8,6 @@ from typing import assert_never, Optional, Any
 import attrs
 import numpy as np
 import numpy.typing as npt
-from pint.facets.plain import PlainQuantity
 
 import caqtus.formatter as fmt
 from caqtus.device.sequencer.instructions import (
@@ -223,7 +222,7 @@ def evaluate_time_dependent_expression(
     variables = dict(variables) | {TIME_VARIABLE: t}
     evaluated = expression.evaluate(variables)
 
-    if isinstance(evaluated, PlainQuantity):
+    if isinstance(evaluated, Quantity):
         in_base_units = evaluated.to_base_units()
         magnitudes = in_base_units.magnitude
         if not isinstance(magnitudes, np.ndarray):
