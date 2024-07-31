@@ -1,20 +1,22 @@
 from __future__ import annotations
 
 import functools
-from typing import Optional, Mapping, Any
+from typing import Mapping, Any
 
 import attrs
 import cattrs
 import numpy as np
 
+import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.timing import duration_to_ticks
 from caqtus.types.expression import Expression
-from caqtus.types.units import Unit, Quantity
+from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
+from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .._structure_hook import structure_channel_output
-from ..channel_output import ChannelOutput
+from ..channel_output import ChannelOutput, EvaluatedOutput
 from ...instructions import (
     SequencerInstruction,
     Pattern,
@@ -51,39 +53,36 @@ class BroadenLeft(ChannelOutput):
     def evaluate(
         self,
         required_time_step: int,
-        required_unit: Optional[Unit],
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ):
         instruction = self.input_.evaluate(
-            required_time_step, required_unit, prepend, append, shot_context
+            required_time_step, prepend, append, shot_context
         )
-        if not instruction.dtype == np.bool_:
-            raise TypeError(
-                f"Can't broaden {self.input_} because it is not a digital instruction"
-            )
+        if instruction.values.dtype != np.bool_:
+            raise InvalidTypeError(f"Can't broaden non boolean instruction")
         width = self.width.evaluate(shot_context.get_variables())
         if not isinstance(width, Quantity):
-            raise TypeError(
-                f"Can't broaden {self.input_} by {width} because it is not "
-                f"a quantity"
+            raise InvalidTypeError(
+                f"Width {fmt.expression(self.width)} does not evaluate to a quantity, "
+                f"got {fmt.type_(type(width))}"
             )
         if not width.is_compatible_with(Unit("s")):
-            raise TypeError(
-                f"Can't broaden {self.input_} by {width} because it is not "
-                f"a time quantity"
+            raise InvalidDimensionalityError(
+                f"Width {fmt.expression(self.width)} does not have units of time, got "
+                f"{fmt.unit(width.units)}"
             )
         seconds = width.to(Unit("s")).magnitude
         if seconds < 0:
-            raise ValueError(
-                f"Can't broaden {self.input_} by {width} because it is negative"
+            raise InvalidValueError(
+                f"Width {fmt.expression(self.width)} evaluates to a negative value"
             )
         ticks = duration_to_ticks(seconds, required_time_step)
 
-        broadened, bleed = _broaden_left(instruction, ticks)
+        broadened, bleed = _broaden_left(instruction.values, ticks)
 
-        return broadened
+        return EvaluatedOutput(broadened, instruction.units)
 
     def evaluate_max_advance_and_delay(
         self,
@@ -103,7 +102,9 @@ serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
 
 
 @functools.singledispatch
-def _broaden_left(instruction, width: int) -> tuple[SequencerInstruction[bool], int]:
+def _broaden_left(
+    instruction, width: int
+) -> tuple[SequencerInstruction[np.bool_], int]:
     """Broaden the instruction to the left by n steps.
 
     Returns:
