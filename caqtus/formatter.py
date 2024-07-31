@@ -1,6 +1,7 @@
 import string
 from typing import TYPE_CHECKING
 
+from caqtus.device import DeviceName
 from caqtus.types.units.units import UnitLike
 
 if TYPE_CHECKING:
@@ -80,6 +81,10 @@ def fmt_param_assign(name: "DottedVariableName", expression: "Expression") -> st
 
 def fmt_type(value: type | str) -> str:
     return f"type '{value.__name__}'"
+
+
+def device(name: DeviceName) -> str:
+    return f"device '{name}'"
 
 
 def device_param(name: str, value: str) -> str:

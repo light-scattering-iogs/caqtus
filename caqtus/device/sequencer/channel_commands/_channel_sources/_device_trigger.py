@@ -8,9 +8,9 @@ import attrs
 import numpy as np
 from cattrs.gen import make_dict_structure_fn, override
 
+import caqtus.formatter as fmt
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.device.camera import CameraConfiguration
-from caqtus.device.sequencer.channel_commands.channel_output import ChannelOutput
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
@@ -21,15 +21,16 @@ from caqtus.device.sequencer.trigger import Trigger
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from caqtus.types.units import Unit
+from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._adaptative_clock import get_adaptive_clock
 from ._constant import Constant
+from ..channel_output import ChannelOutput, EvaluatedOutput
 
 
 @attrs.define
-class DeviceTrigger(ChannelOutput):
+class DeviceTrigger(ChannelOutput[np.bool_]):
     """Indicates that the output should be a trigger for a given device.
 
     Fields:
@@ -55,37 +56,45 @@ class DeviceTrigger(ChannelOutput):
     def evaluate(
         self,
         required_time_step: int,
-        required_unit: Optional[Unit],
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ):
         device = self.device_name
         try:
             device_config = shot_context.get_device_config(device)
         except KeyError:
             if self.default is not None:
-                return self.default.evaluate(
+                evaluated_default = self.default.evaluate(
                     required_time_step,
-                    required_unit,
                     prepend,
                     append,
                     shot_context,
                 )
+                if evaluated_default.units is not None:
+                    raise InvalidValueError(
+                        f"Default value for trigger for {fmt.device(device)} "
+                        f"must be dimensionless, got "
+                        f"{fmt.unit(evaluated_default.units)}"
+                    )
+                default_dtype = evaluated_default.values.dtype
+                if default_dtype != np.bool_:
+                    raise InvalidValueError(
+                        f"Default value for trigger for {fmt.device(device)} "
+                        f"must be boolean, got {default_dtype}"
+                    )
+                return evaluated_default
             else:
-                raise ValueError(
-                    f"Could not find device <{device}> when evaluating output "
-                    f"<{self}>"
+                raise InvalidValueError(
+                    f"There is no {fmt.device(device)} to generate trigger for"
                 )
-        if required_unit is not None:
-            raise ValueError(
-                f"Cannot evaluate trigger for device <{device}> with unit "
-                f"{required_unit:~}"
-            )
         trigger_values = evaluate_device_trigger(
             device, device_config, required_time_step, shot_context
         )
-        return prepend * Pattern([False]) + trigger_values + append * Pattern([False])
+        return EvaluatedOutput(
+            prepend * Pattern([False]) + trigger_values + append * Pattern([False]),
+            units=None,
+        )
 
     def evaluate_max_advance_and_delay(
         self,
