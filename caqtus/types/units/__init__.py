@@ -17,6 +17,7 @@ from .units import (
     VOLTAGE_UNITS,
     UNITS,
     UnitLike,
+    InvalidDimensionalityError,
 )
 
 __all__ = [
@@ -37,4 +38,5 @@ __all__ = [
     "UNITS",
     "units",
     "UnitLike",
+    "InvalidDimensionalityError",
 ]
