@@ -8,12 +8,12 @@ from caqtus.device.sequencer.channel_commands._channel_sources.compile_analog_la
     ConstantBlockResult,
     TimeDependentBlockResult,
 )
-from caqtus.device.sequencer.instructions import Pattern
+from caqtus.device.sequencer.instructions import Pattern, ramp
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.recoverable_exceptions import RecoverableException
 from caqtus.types.timelane import AnalogTimeLane, Ramp
-from caqtus.types.units import Unit
+from caqtus.types.units import Unit, InvalidDimensionalityError
 
 
 def test_evaluate_constant_expression_0():
@@ -104,23 +104,32 @@ def test_logarithmic_expression():
 def test_ramp():
     lane = AnalogTimeLane([Expression("0"), Ramp(), Expression("10")])
     result = compile_analog_lane(lane, {}, [0, 0, 4e-9, 4e-9], 1)
-    expected = Pattern(np.linspace(0, 10, 4, endpoint=False))
+    expected = ramp(0, 10, 4)
 
-    assert result.values == approx(expected)
+    assert result.values == expected
     assert result.units is None
 
 
 def test_logarithmic_ramp():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     result = compile_analog_lane(lane, {}, [0, 3e-9, 7e-9, 10e-9], 1)
-    expected = (
-        Pattern([1.0]) * 3
-        + Pattern(np.linspace(1, 10, 4, endpoint=False))
-        + 3 * Pattern([10.0])
-    )
+    expected = Pattern([1.0]) * 3 + ramp(1, 10, 4) + 3 * Pattern([10.0])
 
     assert result.values == approx(expected)
     assert result.units is None
+
+
+def test_ramp_time_dependent():
+    lane = AnalogTimeLane([Expression("2 * t"), Ramp(), Expression("t")])
+    result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9], 1)
+    expected = (
+        Pattern(np.linspace(0, 20, 10, endpoint=False) * 1e-9)
+        + ramp(20e-9, 0, 10)
+        + Pattern(np.linspace(0, 10, 10, endpoint=False) * 1e-9)
+    )
+
+    assert result.values == approx(expected)
+    assert result.units == Unit("s")
 
 
 def test_non_integer_ramp():
@@ -152,3 +161,31 @@ def test_invalid_expression_cell():
     lane = AnalogTimeLane([Expression("...")])
     with raises(RecoverableException):
         compile_analog_lane(lane, {}, [0, 10e-9], 1)
+
+
+def test_invalid_dimensions():
+    lane = AnalogTimeLane([Expression("1"), Expression("1 Hz")])
+
+    with raises(InvalidDimensionalityError):
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+
+
+def test_invalid_ramp():
+    lane = AnalogTimeLane([Expression("1"), Ramp()])
+
+    with raises(InvalidValueError):
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+
+
+def test_invalid_ramp_2():
+    lane = AnalogTimeLane([Ramp(), Expression("1")])
+
+    with raises(InvalidValueError):
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+
+
+def test_invalid_ramp_3():
+    lane = AnalogTimeLane([Expression("1"), Ramp(), Ramp(), Expression("1")])
+
+    with raises(InvalidValueError):
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9, 40e-9], 1)

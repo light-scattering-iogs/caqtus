@@ -108,7 +108,8 @@ def compile_analog_lane(
         )
         for unit, blocks in unique_units.items():
             error.add_note(
-                f"Blocks {blocks} evaluate to {fmt.unit(unit or dimensionless)}"
+                f"Block group {tuple(blocks)} evaluate to "
+                f"{fmt.unit(unit or dimensionless)}"
             )
         raise error
 
@@ -186,7 +187,9 @@ def evaluate_constant_expression(
         return ConstantBlockResult(
             value=float(magnitude),
             length=length,
-            unit=unit if unit != dimensionless else None,
+            unit=(
+                unit if unit != dimensionless else None
+            ),  # pyright: ignore[reportArgumentType]
         )
     elif isinstance(value, Real):
         return ConstantBlockResult(
@@ -250,7 +253,9 @@ def evaluate_time_dependent_expression(
         )
     return TimeDependentBlockResult(
         values=magnitudes[1:-1].astype(np.float64),
-        unit=unit if unit != dimensionless else None,
+        unit=(
+            unit if unit != dimensionless else None
+        ),  # pyright: ignore[reportArgumentType]
         initial_value=float(magnitudes[0]),
         final_value=float(magnitudes[-1]),
     )
@@ -398,7 +403,12 @@ class RampBlockResult:
 
         length = last_tick - first_tick
 
-        return RampBlockResult(initial_value, final_value, length, unit)
+        return RampBlockResult(
+            initial_value,
+            final_value,
+            length,
+            unit,  # pyright: ignore[reportArgumentType]
+        )
 
     def to_instruction(self) -> SequencerInstruction[np.float64]:
         return ramp(self.initial_value, self.final_value, self.length)
