@@ -1,8 +1,9 @@
-from collections.abc import Mapping, Iterable
+from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, TypeVar, TYPE_CHECKING
 
 import attrs
 import tblib.pickling_support
+from typing_extensions import deprecated
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session.shot import TimeLanes, TimeLane
@@ -127,10 +128,24 @@ class ShotContext:
 
         return self._step_durations
 
-    def get_step_bounds(self) -> tuple[float, ...]:
-        """Returns the bounds of each step in seconds."""
+    def get_step_start_times(self) -> Sequence[float]:
+        """Returns the times at which each step starts.
+
+        Returns:
+            A sequence representing the start times of each step in seconds.
+
+            For steps with durations [d_0, d_1, ..., d_(n-1)], the returned values are
+            [0, d_0, d_0 + d_1, ..., d_0 + ... + d_(n-1)].
+
+            The returned sequence has one more element than the number of steps.
+            The last element is the total duration of the shot.
+        """
 
         return self._step_bounds
+
+    @deprecated("Use get_step_start_times instead")
+    def get_step_bounds(self) -> Sequence[float]:
+        return self.get_step_start_times()
 
     def get_shot_duration(self) -> float:
         """Returns the total duration of the shot in seconds."""

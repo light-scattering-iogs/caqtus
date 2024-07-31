@@ -25,7 +25,7 @@ def compile_digital_lane(
             f" steps ({len(step_names)})"
         )
 
-    step_bounds = shot_context.get_step_bounds()
+    step_bounds = shot_context.get_step_start_times()
     instructions = []
     for cell_value, (start, stop) in zip(lane.block_values(), lane.block_bounds()):
         length = number_ticks(step_bounds[start], step_bounds[stop], time_step * ns)

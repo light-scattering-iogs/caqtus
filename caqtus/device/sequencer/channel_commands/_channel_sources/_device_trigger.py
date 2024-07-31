@@ -217,7 +217,7 @@ def evaluate_trigger_for_camera(
 def compile_camera_trigger(
     lane: CameraTimeLane, time_step: int, shot_context: ShotContext
 ) -> SequencerInstruction[np.bool_]:
-    step_bounds = shot_context.get_step_bounds()
+    step_bounds = shot_context.get_step_start_times()
 
     instructions: list[SequencerInstruction[np.bool_]] = []
     for value, (start, stop) in zip(lane.block_values(), lane.block_bounds()):
