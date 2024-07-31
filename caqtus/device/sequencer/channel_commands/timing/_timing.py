@@ -10,6 +10,7 @@ import numpy as np
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import magnitude_in_unit
+from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
@@ -35,11 +36,10 @@ class Advance(ChannelOutput):
     def evaluate(
         self,
         required_time_step: int,
-        required_unit: Optional[Unit],
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ):
         evaluated_advance = _evaluate_expression_in_unit(
             self.advance, Unit("ns"), shot_context.get_variables()
         )
@@ -56,7 +56,6 @@ class Advance(ChannelOutput):
             )
         return self.input_.evaluate(
             required_time_step,
-            required_unit,
             prepend - number_ticks_to_advance,
             append + number_ticks_to_advance,
             shot_context,
@@ -69,7 +68,7 @@ class Advance(ChannelOutput):
     ) -> tuple[int, int]:
         advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
         if advance < 0:
-            raise ValueError(f"Advance must be a positive number.")
+            raise InvalidValueError(f"Advance must be a positive number.")
         advance_ticks = round(advance / time_step)
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
@@ -104,11 +103,10 @@ class Delay(ChannelOutput):
     def evaluate(
         self,
         required_time_step: int,
-        required_unit: Optional[Unit],
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ):
         evaluated_delay = _evaluate_expression_in_unit(
             self.delay, Unit("ns"), shot_context.get_variables()
         )
@@ -118,9 +116,13 @@ class Delay(ChannelOutput):
                 f"Cannot delay by a negative number of time steps "
                 f"({number_ticks_to_delay})"
             )
+        if number_ticks_to_delay > append:
+            raise ValueError(
+                f"Cannot delay by {number_ticks_to_delay} time steps when only "
+                f"{append} are available"
+            )
         return self.input_.evaluate(
             required_time_step,
-            required_unit,
             prepend + number_ticks_to_delay,
             append - number_ticks_to_delay,
             shot_context,
