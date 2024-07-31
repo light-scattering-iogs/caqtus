@@ -30,10 +30,10 @@ from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.frozen
-class TimeOutput[T: np.number]:
+class EvaluatedOutput[T: np.number]:
     """Represents a series of value to output on a channel.
 
-    Args:
+    Parameters:
         values: The sequence of values to output.
         units: The units in which the values are expressed.
             The units must be expressed in the base units of the registry.
@@ -63,21 +63,17 @@ class ChannelOutput(abc.ABC):
     def evaluate(
         self,
         required_time_step: int,
-        required_unit: Optional[Unit],
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> SequencerInstruction:
+    ) -> EvaluatedOutput:
         """Evaluate the output of a channel with the required parameters.
 
         Args:
-            required_time_step: The time step of the sequencer that will use the
-            output, in ns.
-            required_unit: The unit in which the output should be expressed when
-            evaluated.
+            required_time_step: The time step in which to evaluate the output, in ns.
             prepend: The number of time steps to add at the beginning of the output.
             append: The number of time steps to add at the end of the output.
-            shot_context: The context of the shot in which the output is evaluated.
+            shot_context: Contains information about the current to evaluate the output.
         """
 
         raise NotImplementedError

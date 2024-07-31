@@ -35,7 +35,7 @@ from caqtus.types.units import (
     Unit,
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
-from ..channel_output import TimeOutput
+from ..channel_output import EvaluatedOutput
 
 TIME_VARIABLE = VariableName("t")
 
@@ -45,7 +45,7 @@ def compile_analog_lane(
     variables: Mapping[DottedVariableName, Any],
     step_start_times: Sequence[float],
     time_step: int,
-) -> TimeOutput[np.float64]:
+) -> EvaluatedOutput[np.float64]:
     """Compile the lane to a sequencer instruction.
 
     This function discretizes the lane time and evaluates the expressions and ramps
@@ -139,7 +139,7 @@ def compile_analog_lane(
     assert len(units) == 1
     unit = next(iter(units))
 
-    return TimeOutput(total_instruction, unit)
+    return EvaluatedOutput(total_instruction, unit)
 
 
 def get_unique_units(
