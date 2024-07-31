@@ -30,7 +30,7 @@ from ..channel_output import ChannelOutput, EvaluatedOutput
 
 
 @attrs.define
-class DeviceTrigger(ChannelOutput[np.bool_]):
+class DeviceTrigger(ChannelOutput):
     """Indicates that the output should be a trigger for a given device.
 
     Fields:

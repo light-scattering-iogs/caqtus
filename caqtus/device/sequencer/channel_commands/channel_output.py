@@ -58,7 +58,7 @@ class EvaluatedOutput[T: (np.number, np.bool_)]:
 
 
 @attrs.define
-class ChannelOutput[T: (np.number, np.bool_)](abc.ABC):
+class ChannelOutput(abc.ABC):
     """Defines what should be outputted by a channel.
 
     Subclasses of this class should have specific attributes that define how to
@@ -69,7 +69,9 @@ class ChannelOutput[T: (np.number, np.bool_)](abc.ABC):
     """
 
     @abc.abstractmethod
-    def evaluate(
+    def evaluate[
+        T: (np.number, np.bool_)
+    ](
         self,
         required_time_step: int,
         prepend: int,
