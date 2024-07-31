@@ -17,7 +17,6 @@ from caqtus.device.sequencer.instructions import (
     concatenate,
     ramp,
 )
-from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import (
     start_tick,
     stop_tick,
@@ -36,53 +35,56 @@ from caqtus.types.units import (
     Unit,
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
+from ..channel_output import TimeOutput
 
 TIME_VARIABLE = VariableName("t")
 
 
 def compile_analog_lane(
     lane: AnalogTimeLane,
+    variables: Mapping[DottedVariableName, Any],
+    step_start_times: Sequence[float],
     time_step: int,
-    shot_context: ShotContext,
-) -> SequencerInstruction[np.float64]:
+) -> TimeOutput[np.float64]:
     """Compile the lane to a sequencer instruction.
 
-    This function discretizes the lane time and replaces the expressions in the
-    lane with the given variable values.
-    It also evaluates the ramps in the lane.
-    The sequencer instruction returned is the magnitude of the lane in the given
-    unit.
+    This function discretizes the lane time and evaluates the expressions and ramps
+    in the lane for each tick.
+
+    Args:
+        lane: The lane to compile.
+        variables: The values of the variables to use when evaluating the expressions
+            in the lane.
+        step_start_times: The start times in seconds of each step.
+            This must have one more element than the number of steps in the lane, with
+            the last element being the total duration of the shot.
+        time_step: The time step in nanoseconds to use for the discretization.
+
+    Returns:
+        The computed instruction for the lane.
+        This contains an instruction with the values for each tick, and the unit in
+        which they are expressed.
     """
 
-    step_names = shot_context.get_step_names()
-    step_durations = shot_context.get_step_durations()
-    if len(lane) != len(step_names):
+    if len(lane) + 1 != len(step_start_times):
         raise ValueError(
             f"Number of steps in lane ({len(lane)}) does not match number of"
-            f" step names ({len(step_names)})"
-        )
-    if len(lane) != len(step_durations):
-        raise ValueError(
-            f"Number of steps in lane ({len(lane)}) does not match number of"
-            f" step durations ({len(step_durations)})"
+            f" step start times ({len(step_start_times)})"
         )
 
-    step_time_boundaries = shot_context.get_step_bounds()
-
-    # We do a first pass to compile the blocks that contain expressions and ignore
-    # the ramps.
-    # This is useful because the ramps need to know the value of the surrounding blocks
+    # We do a first pass to compile the blocks that contain expressions, and we ignore
+    # the blocks that contain ramps.
+    # This is necessary because ramps need to know the value of the surrounding blocks
     # to be computed.
-    # In addition, we can check that all expressions evaluates to the same unit.
     expression_results: dict[Block, ConstantBlockResult | TimeDependentBlockResult] = {}
     for block_index, block_value in enumerate(lane.block_values()):
         block_start_step, block_stop_step = lane.get_block_bounds(Block(block_index))
-        block_start_time = step_time_boundaries[block_start_step]
-        block_stop_time = step_time_boundaries[block_stop_step]
+        block_start_time = step_start_times[block_start_step]
+        block_stop_time = step_start_times[block_stop_step]
         if isinstance(block_value, Expression):
             expr_result = _compile_expression_block(
                 block_value,
-                shot_context.get_variables(),
+                variables,
                 block_start_time,
                 block_stop_time,
                 time_step,
@@ -118,7 +120,7 @@ def compile_analog_lane(
                 lane,
                 Block(block_index),
                 expression_results,
-                step_time_boundaries,
+                step_start_times,
                 time_step,
             )
             ramp_results[Block(block_index)] = ramp_result
@@ -128,12 +130,16 @@ def compile_analog_lane(
             assert_never(block_value)
 
     block_results = expression_results | ramp_results
+
     assert len(block_results) == lane.number_blocks
-    assert len({result.unit for result in block_results.values()}) == 1
-
     instructions = (result.to_instruction() for result in block_results.values())
+    total_instruction = concatenate(*instructions)
 
-    return concatenate(*instructions)
+    units = {result.unit for result in block_results.values()}
+    assert len(units) == 1
+    unit = next(iter(units))
+
+    return TimeOutput(total_instruction, unit)
 
 
 def get_unique_units(
