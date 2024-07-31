@@ -191,7 +191,7 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
 
     def __eq__(self, other):
         if not isinstance(other, Ramp):
-            return False
+            return NotImplemented
         return (
             np.all(self._start == other._start)
             and np.all(self._stop == other._stop)
