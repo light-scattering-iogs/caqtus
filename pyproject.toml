@@ -63,6 +63,12 @@ path = "caqtus/__about__.py"
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.hatch.build.targets.sdist]
+exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
+
+[tool.hatch.build.targets.wheel]
+exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
+
 [tool.hatch.envs.default]
 dependencies = [
     "coverage[toml]>=6.5",
@@ -72,7 +78,8 @@ dependencies = [
     "black>=24.3.0",
     "ruff>=0.5.5",
     "licensecheck>=2024.1.4",
-    "pre-commit>=3.7.0"
+    "pre-commit>=3.7.0",
+    "twine"
 ]
 
 [tool.hatch.envs.default.scripts]
