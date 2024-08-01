@@ -69,3 +69,19 @@ class InvalidDimensionalityError(InvalidValueError):
     """
 
     pass
+
+
+def is_in_base_units(units: Unit) -> bool:
+    """Check if the units is only expressed in terms of base SI units.
+
+    For example, `kg`, `m/s` are expressed in terms of base units, but `mg`, `km/h` or
+    `dB` are not.
+
+    Args:
+        units: The units to check.
+
+    Returns:
+        True if the units are expressed in the base units of the registry.
+    """
+
+    return (1 * units).to_base_units().units == units

@@ -25,7 +25,7 @@ import numpy as np
 
 from caqtus.device.sequencer.instructions import SequencerInstruction
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.units import Unit, dimensionless
+from caqtus.types.units import Unit, dimensionless, is_in_base_units
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -48,8 +48,7 @@ class EvaluatedOutput[T: (np.number, np.bool_)]:
     @units.validator
     def _validate_units(self, _, units: Optional[Unit]):
         if units is not None:
-            base_units = (1 * units).to_base_units().units
-            if base_units != units:
+            if not is_in_base_units(units):
                 raise ValueError(
                     f"Unit {units} is not expressed in the base units of the registry."
                 )
