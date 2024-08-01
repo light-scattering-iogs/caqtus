@@ -67,7 +67,8 @@ allow-direct-references = true
 exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
 
 [tool.hatch.build.targets.wheel]
-exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
+include = ["caqtus/"]
+exclude = ["*.ui"]
 
 [tool.hatch.envs.default]
 dependencies = [
