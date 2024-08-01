@@ -19,6 +19,7 @@ from .units import (
     UnitLike,
     InvalidDimensionalityError,
     is_in_base_units,
+    convert_to_base_units,
 )
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "UnitLike",
     "InvalidDimensionalityError",
     "is_in_base_units",
+    "convert_to_base_units",
 ]
