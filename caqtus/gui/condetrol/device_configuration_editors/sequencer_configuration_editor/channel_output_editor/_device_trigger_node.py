@@ -1,7 +1,7 @@
 from typing import Optional
 
-from NodeGraphQt import BaseNode
 from caqtus.device import DeviceName
+from caqtus.gui.common.NodeGraphQt import BaseNode
 
 
 class DeviceTriggerNode(BaseNode):

@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from typing import Optional
 
-from NodeGraphQt import BaseNode, NodeBaseWidget
 from PySide6.QtCharts import (
     QChart,
     QLineSeries,
@@ -19,6 +18,7 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
+from caqtus.gui.common.NodeGraphQt import BaseNode, NodeBaseWidget
 from caqtus.gui.condetrol.icons import get_icon
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
 
