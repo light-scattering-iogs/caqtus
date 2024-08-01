@@ -10,11 +10,21 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
-  commands:
-     # Install poetry in the virtualenv created by RTD
-     - python -mvirtualenv $READTHEDOCS_VIRTUALENV_PATH
-     - pip install poetry
-     # Install the project dependencies and build the documentation in the virtualenv
-     # created by poetry
-     - poetry install --with doc
-     - poetry run python -m sphinx doc/source $READTHEDOCS_OUTPUT/html/ --fail-on-warning --keep-going
+  apt_packages:
+    - graphviz
+  jobs:
+    # We need to use hatch to resolve the dependencies, but it will create a new
+    # virtual environment, which is not the one used to build the doc.
+    # So we reinstall the dependencies found by hatch in the RTD environment.
+    # Would be better to execute arbitrary commands to have hatch build to docs, but
+    # in this mode, we can't use apt_packages to install graphviz.
+    # See: https://github.com/readthedocs/readthedocs.org/issues/9599
+    post_create_environment:
+      - pip install hatch
+    post_install:
+      - hatch -e docs run pip freeze -> requirements.txt
+      - pip install -r requirements.txt
+
+sphinx:
+  configuration: doc/source/conf.py
+  fail_on_warning: true
