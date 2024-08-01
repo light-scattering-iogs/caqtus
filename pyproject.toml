@@ -5,10 +5,10 @@ build-backend = "hatchling.build"
 [project]
 name = "caqtus"
 dynamic = ["version"]
-description = ''
+description = "Package to control a cold atom experiment"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = { file = "license.md" }
 keywords = []
 authors = [
     { name = "light-scattering-io", email = "lecaqtus66@gmail.com" },
