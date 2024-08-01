@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "caqtus"
+name = "caqtus-suite"
 dynamic = ["version"]
 description = "Package to control a cold atom experiment"
 readme = "README.md"

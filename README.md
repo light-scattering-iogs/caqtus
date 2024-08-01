@@ -11,7 +11,7 @@ However, the architecture and modularity are similar from the [Labscript Suite](
 ## Installation
 
 ```bash
-pip install caqtus
+pip install caqtus-suite
 ```
 
 ## Configuration
