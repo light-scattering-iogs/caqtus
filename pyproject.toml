@@ -74,10 +74,6 @@ exclude = ["*.ui"]
 
 [tool.hatch.envs.default]
 dependencies = [
-    "coverage[toml]>=6.5",
-    "pytest>=8.1.1",
-    "pytest-qt>=4.4.0",
-    "hypothesis[numpy]>=6.103.1",
     "black>=24.3.0",
     "ruff>=0.5.5",
     "licensecheck>=2024.1.4",
@@ -85,17 +81,18 @@ dependencies = [
     "twine"
 ]
 
-[tool.hatch.envs.default.scripts]
-test = "python -m pytest {args:tests}"
-test-cov = "coverage run -m pytest {args:tests}"
-cov-report = [
-    "- coverage combine",
-    "coverage report",
+
+[tool.hatch.envs.test]
+dependencies = [
+    "coverage[toml]>=6.5",
+    "pytest>=8.1.1",
+    "pytest-qt>=4.4.0",
+    "hypothesis[numpy]>=6.103.1",
 ]
-cov = [
-    "test-cov",
-    "cov-report",
-]
+
+[tool.hatch.envs.test.scripts]
+pytest = "python -m pytest {args:tests}"
+
 
 [tool.hatch.envs.docs]
 dependencies = [
