@@ -192,7 +192,9 @@ class PiecewiseLinearCalibration:
         output_magnitudes, self.output_units = convert_to_base_units(
             output_points, output_point_units
         )
-        self._calibration = Calibration(list(zip(input_magnitudes, output_magnitudes)))
+        self._calibration = DimensionlessCalibration(
+            list(zip(input_magnitudes, output_magnitudes))
+        )
 
     # def __repr__(self):
     #     points = ", ".join(
@@ -231,7 +233,7 @@ class PiecewiseLinearCalibration:
         )
 
 
-class Calibration:
+class DimensionlessCalibration:
     def __init__(self, calibration_points: Sequence[tuple[float, float]]):
         if len(calibration_points) < 2:
             raise ValueError("Calibration must have at least 2 data points")
