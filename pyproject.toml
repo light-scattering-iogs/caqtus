@@ -83,7 +83,7 @@ dependencies = [
 
 
 [tool.hatch.envs.test]
-dependencies = [
+extra-dependencies = [
     "coverage[toml]>=6.5",
     "pytest>=8.1.1",
     "pytest-qt>=4.4.0",
