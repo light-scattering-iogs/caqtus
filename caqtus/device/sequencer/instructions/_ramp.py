@@ -68,13 +68,13 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
     __slots__ = ("_start", "_stop", "_length")
 
     def __init__(self, start: T, stop: T, length: int) -> None:
-        assert isinstance(start, (np.floating, np.void))
-        assert isinstance(stop, (np.floating, np.void))
-        assert isinstance(length, int)
         self._start: T = start
         self._stop: T = stop
         self._length = Length(length)
 
+        assert isinstance(start, (np.floating, np.void))
+        assert isinstance(stop, (np.floating, np.void))
+        assert isinstance(length, int)
         assert self._length >= 1
 
     @property

@@ -229,7 +229,8 @@ class PiecewiseLinearCalibration:
             )
 
         return EvaluatedOutput(
-            self._calibration.apply(instruction.as_type(np.float64)), self.output_units
+            self._calibration._apply_without_checks(instruction.as_type(np.float64)),
+            self.output_units,
         )
 
 
@@ -237,20 +238,41 @@ class DimensionlessCalibration:
     def __init__(self, calibration_points: Sequence[tuple[float, float]]):
         if len(calibration_points) < 2:
             raise ValueError("Calibration must have at least 2 data points")
-        input_points = np.array([x for x, _ in calibration_points], dtype=np.float64)
-        output_points = np.array([y for _, y in calibration_points], dtype=np.float64)
+        input_points = [x for x, _ in calibration_points]
+        output_points = [y for _, y in calibration_points]
         sorted_points = sorted(zip(input_points, output_points), key=lambda x: x[0])
-        self.input_points = np.array([x for x, _ in sorted_points])
-        self.output_points = np.array([y for _, y in sorted_points])
+        sorted_input_points = [x for x, _ in sorted_points]
+        sorted_output_points = [y for _, y in sorted_points]
+        # We add new flat segments before and after the calibration points to ensure
+        # that the calibration is defined for all input values.
+        self.input_points = np.array([-np.inf] + sorted_input_points + [+np.inf])
+        assert np.all(np.diff(self.input_points) >= 0)
+        self.output_points = np.array(
+            [sorted_output_points[0]]
+            + sorted_output_points
+            + [sorted_output_points[-1]]
+        )
 
     def __repr__(self):
         points = ", ".join(
-            f"({x}, {y})" for x, y in zip(self.input_points, self.output_points)
+            f"({x}, {y})"
+            for x, y in zip(self.input_points[1:-1], self.output_points[1:-1])
         )
         return f"Calibration({points})"
 
-    @functools.singledispatchmethod
     def apply(
+        self, instruction: SequencerInstruction[np.float64]
+    ) -> SequencerInstruction[np.float64]:
+        # We need to ignore division by zero errors when calculating the slope of the
+        # calibration segments, since have two points with the same x value is valid.
+        # However, we raise an error if we encounter any other floating point error,
+        # since they may cause the output to be NaN or infinite.
+        with np.errstate(divide="ignore", over="raise", under="raise", invalid="raise"):
+            np.diff(self.output_points) / np.diff(self.input_points)
+        return self._apply_without_checks(instruction)
+
+    @functools.singledispatchmethod
+    def _apply_without_checks(
         self, instruction: SequencerInstruction[np.float64]
     ) -> SequencerInstruction[np.float64]:
         raise NotImplementedError(
@@ -258,7 +280,7 @@ class DimensionlessCalibration:
             f"{type(instruction)}"
         )
 
-    @apply.register
+    @_apply_without_checks.register
     def _apply_calibration_pattern(self, pattern: Pattern) -> Pattern[np.float64]:
         result = self._apply_explicit(pattern.array)
         return Pattern.create_without_copy(result)
@@ -269,27 +291,32 @@ class DimensionlessCalibration:
             xp=self.input_points,
             fp=self.output_points,
         )
-        assert np.all(np.isfinite(result))
-        assert np.all(result <= max(self.output_points))
-        assert np.all(result >= min(self.output_points))
         return result
 
-    @apply.register
+    @_apply_without_checks.register
     def _apply_calibration_concatenation(
         self, concatenation: Concatenated
     ) -> SequencerInstruction[np.float64]:
         return concatenate(
-            *(self.apply(instruction) for instruction in concatenation.instructions)
+            *(
+                self._apply_without_checks(instruction)
+                for instruction in concatenation.instructions
+            )
         )
 
-    @apply.register
+    @_apply_without_checks.register
     def _apply_calibration_repetition(
         self, repetition: Repeated
     ) -> SequencerInstruction[np.float64]:
-        return repetition.repetitions * self.apply(repetition.instruction)
+        return repetition.repetitions * self._apply_without_checks(
+            repetition.instruction
+        )
 
-    @apply.register
+    @_apply_without_checks.register
     def _apply_calibration_ramp(self, r: Ramp) -> SequencerInstruction[np.float64]:
+        # Ramp maps t -> x(t) = a + (b - a) * t / l
+        # Calibration maps x -> y in a piecewise linear way
+        # We want to map t -> y(t)
         l = len(r)
         a = r.start
         b = r.stop
@@ -297,15 +324,16 @@ class DimensionlessCalibration:
         if a == b:
             return Pattern([self._apply_explicit(a)]) * l
 
-        def compute_bounds(x, y) -> tuple[float, float]:
+        def map_x_segment_to_t(x_0, x_1) -> tuple[float, float]:
             if b > a:
-                return l * (x - a) / (b - a), l * (y - a) / (b - a)
+                return l * (x_0 - a) / (b - a), l * (x_1 - a) / (b - a)
             else:
-                return l * (y - a) / (b - a), l * (x - a) / (b - a)
+                return l * (x_1 - a) / (b - a), l * (x_0 - a) / (b - a)
 
+        # Find the segments in time over which the output y(t) is linear.
         time_segments = []
         for x0, x1 in pairwise(self.input_points):
-            time_segments.append(compute_bounds(x0, x1))
+            time_segments.append(map_x_segment_to_t(x0, x1))
 
         if b < a:
             time_segments.reverse()
