@@ -241,6 +241,12 @@ class Calibration:
         self.input_points = np.array([x for x, _ in sorted_points])
         self.output_points = np.array([y for _, y in sorted_points])
 
+    def __repr__(self):
+        points = ", ".join(
+            f"({x}, {y})" for x, y in zip(self.input_points, self.output_points)
+        )
+        return f"Calibration({points})"
+
     @functools.singledispatchmethod
     def apply(
         self, instruction: SequencerInstruction[np.float64]
