@@ -36,8 +36,8 @@ def digital_instruction(
 
 
 def analog_instruction(
-    max_leaves: int = 20,
+    max_leaves: int = 20, max_length: Optional[int] = None
 ) -> SearchStrategy[SequencerInstruction[np.floating]]:
     return instruction(
-        pattern(dtype=np.float64, min_length=1, max_length=100), max_leaves
+        pattern(dtype=np.float64, min_length=1, max_length=100), max_leaves, max_length
     )

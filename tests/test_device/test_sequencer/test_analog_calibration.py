@@ -107,7 +107,7 @@ def test_calibration_on_ramp(cal: DimensionlessCalibration, instr: Ramp):
     validate_calibration(cal, instr)
 
 
-@given(calibration, analog_instruction(max_leaves=4))
+@given(calibration, analog_instruction(max_length=1000))
 def test_calibration_apply(
     cal: DimensionlessCalibration, instr: SequencerInstruction[np.floating]
 ):
