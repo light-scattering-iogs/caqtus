@@ -16,7 +16,7 @@ from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from caqtus.utils.itertools import pairwise
 from ._structure_hook import structure_channel_output
-from .channel_output import ChannelOutput, EvaluatedOutput
+from .channel_output import ChannelOutput, DimensionedSeries
 from ..instructions import (
     SequencerInstruction,
     Pattern,
@@ -146,7 +146,7 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> EvaluatedOutput[np.float64]:
+    ) -> DimensionedSeries[np.float64]:
         input_values = self.input_.evaluate(
             required_time_step,
             prepend,
@@ -163,11 +163,11 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
 
 
 def apply_piecewise_linear_calibration(
-    values: EvaluatedOutput[np.floating],
+    values: DimensionedSeries[np.floating],
     calibration_points: Sequence[tuple[float, float]],
     input_point_units: Optional[Unit],
     output_point_units: Optional[Unit],
-) -> EvaluatedOutput[np.float64]:
+) -> DimensionedSeries[np.float64]:
     """Apply a piecewise linear calibration to a sequencer instruction.
 
     Args:
@@ -209,7 +209,7 @@ def apply_piecewise_linear_calibration(
     calibration = DimensionlessCalibration(
         list(zip(input_magnitudes, output_magnitudes))
     )
-    return EvaluatedOutput(
+    return DimensionedSeries(
         calibration.apply(values.values.as_type(np.float64)),
         output_base_units,
     )

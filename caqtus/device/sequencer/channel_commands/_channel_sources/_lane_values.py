@@ -15,7 +15,7 @@ from caqtus.utils import serialization
 from ._compile_digital_lane import compile_digital_lane
 from ._constant import Constant
 from .compile_analog_lane import compile_analog_lane
-from ..channel_output import ChannelOutput, EvaluatedOutput
+from ..channel_output import ChannelOutput, DimensionedSeries
 from ...instructions import Pattern
 
 
@@ -78,7 +78,7 @@ class LaneValues(ChannelOutput):
                 raise InvalidValueError(f"Could not find lane {fmt.lane(lane_name)}")
         if isinstance(lane, DigitalTimeLane):
             lane_values = compile_digital_lane(lane, required_time_step, shot_context)
-            result = EvaluatedOutput(lane_values, units=None)
+            result = DimensionedSeries(lane_values, units=None)
         elif isinstance(lane, AnalogTimeLane):
             result = compile_analog_lane(
                 lane,
@@ -96,7 +96,7 @@ class LaneValues(ChannelOutput):
         prepend_pattern = prepend * Pattern([prepend_value])
         append_value = result.values[-1]
         append_pattern = append * Pattern([append_value])
-        return EvaluatedOutput(
+        return DimensionedSeries(
             values=prepend_pattern + result.values + append_pattern,
             units=result.units,
         )

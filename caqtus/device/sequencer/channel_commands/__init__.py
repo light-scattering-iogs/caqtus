@@ -21,7 +21,7 @@ from ._channel_sources import (
     is_value_source,
     compile_analog_lane,
 )
-from .channel_output import ChannelOutput, EvaluatedOutput
+from .channel_output import ChannelOutput, DimensionedSeries
 
 serialization.include_subclasses(
     ChannelOutput, union_strategy=serialization.strategies.include_type("type")
@@ -38,5 +38,5 @@ __all__ = [
     "TimeIndependentMapping",
     "compile_analog_lane",
     "timing",
-    "EvaluatedOutput",
+    "DimensionedSeries",
 ]

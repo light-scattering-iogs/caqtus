@@ -26,7 +26,7 @@ from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._adaptative_clock import get_adaptive_clock
 from ._constant import Constant
-from ..channel_output import ChannelOutput, EvaluatedOutput
+from ..channel_output import ChannelOutput, DimensionedSeries
 
 
 @attrs.define
@@ -91,7 +91,7 @@ class DeviceTrigger(ChannelOutput):
         trigger_values = evaluate_device_trigger(
             device, device_config, required_time_step, shot_context
         )
-        return EvaluatedOutput(
+        return DimensionedSeries(
             prepend * Pattern([False]) + trigger_values + append * Pattern([False]),
             units=None,
         )

@@ -16,7 +16,7 @@ from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .._structure_hook import structure_channel_output
-from ..channel_output import ChannelOutput, EvaluatedOutput
+from ..channel_output import ChannelOutput, DimensionedSeries
 from ...instructions import (
     SequencerInstruction,
     Pattern,
@@ -82,7 +82,7 @@ class BroadenLeft(ChannelOutput):
 
         broadened, bleed = _broaden_left(instruction.values, ticks)
 
-        return EvaluatedOutput(broadened, instruction.units)
+        return DimensionedSeries(broadened, instruction.units)
 
     def evaluate_max_advance_and_delay(
         self,

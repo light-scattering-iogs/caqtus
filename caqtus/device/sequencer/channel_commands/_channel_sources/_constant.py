@@ -8,7 +8,7 @@ import attrs
 import caqtus.formatter as fmt
 from caqtus.device.sequencer.channel_commands.channel_output import (
     ChannelOutput,
-    EvaluatedOutput,
+    DimensionedSeries,
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.shot_compilation import ShotContext
@@ -43,7 +43,7 @@ class Constant(ChannelOutput):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> EvaluatedOutput:
+    ) -> DimensionedSeries:
         length = (
             prepend
             + number_ticks(0, shot_context.get_shot_duration(), required_time_step * ns)
@@ -51,7 +51,7 @@ class Constant(ChannelOutput):
         )
         value = self.value.evaluate(shot_context.get_variables())
         magnitude, units = split_magnitude_units(value)
-        return EvaluatedOutput(Pattern([magnitude]) * length, units)
+        return DimensionedSeries(Pattern([magnitude]) * length, units)
 
     def evaluate_max_advance_and_delay(
         self,

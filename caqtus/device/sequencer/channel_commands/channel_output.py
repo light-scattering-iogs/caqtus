@@ -30,8 +30,8 @@ from caqtus.types.variable_name import DottedVariableName
 
 
 @attrs.frozen
-class EvaluatedOutput[T: (np.number, np.bool_)]:
-    """Represents a series of value to output on a channel.
+class DimensionedSeries[T: (np.number, np.bool_)]:
+    """Represents a series of value to output on a channel with their units.
 
     Parameters:
         values: The sequence of values to output.
@@ -76,7 +76,7 @@ class ChannelOutput(abc.ABC):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> EvaluatedOutput[T]:
+    ) -> DimensionedSeries[T]:
         """Evaluate the output of a channel with the required parameters.
 
         Args:
