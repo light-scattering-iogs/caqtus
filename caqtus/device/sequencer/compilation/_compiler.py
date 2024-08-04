@@ -2,10 +2,13 @@ from typing import Mapping, Any
 
 import numpy as np
 
+import caqtus.formatter as fmt
 from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import DeviceCompiler, SequenceContext, ShotContext
-from caqtus.types.units import Unit
+from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
+from caqtus.types.units.base import base_units
 from caqtus.types.variable_name import DottedVariableName
+from ..channel_commands import DimensionedSeries
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -39,6 +42,8 @@ class SequencerCompiler(DeviceCompiler):
         self,
         shot_context: ShotContext,
     ) -> Mapping[str, Any]:
+        """Evaluates the output for each channel of the sequencer."""
+
         max_advance, max_delay = self._find_max_advance_and_delays(
             shot_context.get_variables()
         )
@@ -46,17 +51,16 @@ class SequencerCompiler(DeviceCompiler):
         channel_instructions = []
         exceptions = []
         for channel_number, channel in enumerate(self.__configuration.channels):
-            if isinstance(channel, AnalogChannelConfiguration):
-                required_unit = Unit(channel.output_unit)
-            else:
-                required_unit = None
             try:
-                output_values = channel.output.evaluate(
+                output_series = channel.output.evaluate(
                     self.__configuration.time_step,
-                    required_unit,
                     max_advance,
                     max_delay,
                     shot_context,
+                )
+                instruction = _convert_series_to_instruction(output_series, channel)
+                channel_instructions.append(
+                    with_name(instruction, f"ch {channel_number}")
                 )
             except Exception as e:
                 channel_error = ChannelCompilationError(
@@ -65,15 +69,10 @@ class SequencerCompiler(DeviceCompiler):
                 )
                 channel_error.__cause__ = e
                 exceptions.append(channel_error)
-            else:
-                instruction = _convert_channel_instruction(output_values, channel)
-                channel_instructions.append(
-                    with_name(instruction, f"ch {channel_number}")
-                )
         if exceptions:
             raise SequencerCompilationError(
-                f"Errors occurred when evaluating outputs for sequencer "
-                f"{self.__device_name}",
+                f"Errors occurred when evaluating outputs for "
+                f"{fmt.device(self.__device_name)}",
                 exceptions,
             )
         stacked = stack_instructions(*channel_instructions)
@@ -100,13 +99,34 @@ class ChannelCompilationError(Exception):
     pass
 
 
-def _convert_channel_instruction(
-    instruction: SequencerInstruction, channel: ChannelConfiguration
+def _convert_series_to_instruction(
+    series: DimensionedSeries, channel: ChannelConfiguration
 ) -> SequencerInstruction:
-    match channel:
-        case DigitalChannelConfiguration():
-            return instruction.as_type(np.dtype(np.bool_))
-        case AnalogChannelConfiguration():
-            return instruction.as_type(np.dtype(np.float64))
-        case _:
-            raise NotImplementedError
+    if isinstance(channel, DigitalChannelConfiguration):
+        if series.units is not None:
+            raise InvalidDimensionalityError(
+                f"Digital channel {channel} output has units {series.units}, expected "
+                "no units"
+            )
+        instruction = series.values.as_type(np.dtype(np.bool_))
+    elif isinstance(channel, AnalogChannelConfiguration):
+        required_unit = Unit(channel.output_unit)
+        if required_unit == dimensionless:
+            if series.units is not None:
+                raise InvalidDimensionalityError(
+                    f"Analog channel {channel} output has units {series.units}, "
+                    f"expected dimensionless"
+                )
+            instruction = series.values.as_type(np.dtype(np.float64))
+        else:
+            required_base_units = base_units(required_unit)
+            if series.units != required_base_units:
+                raise InvalidDimensionalityError(
+                    f"Analog channel {channel} output has units {series.units}, "
+                    f"expected {required_base_units}"
+                )
+            instruction = series.values.as_type(np.dtype(np.float64))
+    else:
+        raise TypeError(f"Unknown channel type {type(channel)}")
+
+    return instruction
