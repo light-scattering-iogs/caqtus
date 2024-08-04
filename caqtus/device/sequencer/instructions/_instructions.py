@@ -294,8 +294,12 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
     def array(self) -> Array1D[T]:
         return self._pattern
 
+
 def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
-    return np.issubdtype(array.dtype, np.floating) and np.all(np.isfinite(array))
+    if np.issubdtype(array.dtype, np.floating):
+        return np.all(np.isfinite(array))
+    else:
+        return True
 
 
 class Concatenated[T: np.generic](SequencerInstruction[T]):
