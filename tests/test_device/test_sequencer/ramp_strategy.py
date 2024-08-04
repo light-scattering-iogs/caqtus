@@ -6,7 +6,7 @@ from caqtus.device.sequencer.instructions import Ramp
 
 def ramp_strategy() -> SearchStrategy[Ramp]:
     return builds(
-        Ramp,
+        Ramp._create,
         start=floats(
             allow_nan=False, allow_infinity=False, min_value=-1e6, max_value=1e6
         ).map(np.float64),
