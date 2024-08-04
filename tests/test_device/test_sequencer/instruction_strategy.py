@@ -13,7 +13,9 @@ T = TypeVar("T", bound=DTypeLike)
 
 
 def instruction(
-        leaf_strategy: SearchStrategy[SequencerInstruction[T]], max_leaves: int, max_length: Optional[int] = None
+    leaf_strategy: SearchStrategy[SequencerInstruction[T]],
+    max_leaves: int,
+    max_length: Optional[int] = None,
 ) -> SearchStrategy[SequencerInstruction[T]]:
     strategy = recursive(
         leaf_strategy,
@@ -26,13 +28,15 @@ def instruction(
 
 
 def digital_instruction(
-        max_leaves: int = 100, max_length: Optional[int] = None
+    max_leaves: int = 30, max_length: Optional[int] = None
 ) -> SearchStrategy[SequencerInstruction[np.bool_]]:
-    return instruction(pattern(dtype=np.bool_, min_length=1, max_length=10), max_leaves, max_length)
+    return instruction(
+        pattern(dtype=np.bool_, min_length=1, max_length=10), max_leaves, max_length
+    )
 
 
 def analog_instruction(
-        max_leaves: int = 20,
+    max_leaves: int = 20,
 ) -> SearchStrategy[SequencerInstruction[np.floating]]:
     return instruction(
         pattern(dtype=np.float64, min_length=1, max_length=100), max_leaves
