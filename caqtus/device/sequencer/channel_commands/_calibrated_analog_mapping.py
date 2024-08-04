@@ -146,92 +146,73 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         prepend: int,
         append: int,
         shot_context: ShotContext,
-    ) -> EvaluatedOutput:
+    ) -> EvaluatedOutput[np.float64]:
         input_values = self.input_.evaluate(
             required_time_step,
             prepend,
             append,
             shot_context,
         )
-        calibration = PiecewiseLinearCalibration(
-            self.measured_data_points, self.input_units, self.output_units
+
+        return apply_piecewise_linear_calibration(
+            input_values,
+            self.measured_data_points,
+            self.input_units,
+            self.output_units,
         )
-        if input_values.units != calibration.input_units:
-            raise InvalidDimensionalityError(
-                f"Can't apply calibration with units {input_values.units} to "
-                f"instruction with units {self.input_units}"
-            )
-        output_values = calibration.apply(input_values.values)
-        return output_values
 
 
-class PiecewiseLinearCalibration:
-    """Represents a piecewise linear calibration from input to output space.
+def apply_piecewise_linear_calibration(
+    values: EvaluatedOutput[np.floating],
+    calibration_points: Sequence[tuple[float, float]],
+    input_point_units: Optional[Unit],
+    output_point_units: Optional[Unit],
+) -> EvaluatedOutput[np.float64]:
+    """Apply a piecewise linear calibration to a sequencer instruction.
 
     Args:
+        values: The instruction to apply the calibration to.
         calibration_points: A sequence of (input, output) tuples that define the
             points to interpolate between.
             The input must be expressed in input_point_units.
             The output must be expressed in output_point_units.
             The points will be sorted by input value before applying the interpolation.
-        input_point_units: The units of the input points.
-        output_point_units: The units of the output points.
+        input_point_units: The units of the input points of the calibration.
+        output_point_units: The units of the output points of the calibration.
+
+    Returns:
+        A new series of values where each point is obtained by linearly interpolating
+        between calibration points.
+        This new series of values is expressed in base units corresponding to
+        output_point_units.
+
+    Raises:
+        InvalidDimensionalityError: If the units of the input points of the calibration
+            are not compatible with the units of the values to map.
     """
 
-    def __init__(
-        self,
-        calibration_points: Sequence[tuple[float, float]],
-        input_point_units: Optional[Unit],
-        output_point_units: Optional[Unit],
-    ):
-        input_points = np.array([x for x, _ in calibration_points], dtype=np.float64)
-        output_points = np.array([y for _, y in calibration_points], dtype=np.float64)
-        input_magnitudes, self.input_units = convert_to_base_units(
-            input_points, input_point_units
-        )
-        output_magnitudes, self.output_units = convert_to_base_units(
-            output_points, output_point_units
-        )
-        self._calibration = DimensionlessCalibration(
-            list(zip(input_magnitudes, output_magnitudes))
+    input_points = np.array([x for x, _ in calibration_points], dtype=np.float64)
+    output_points = np.array([y for _, y in calibration_points], dtype=np.float64)
+    input_magnitudes, input_base_units = convert_to_base_units(
+        input_points, input_point_units
+    )
+    output_magnitudes, output_base_units = convert_to_base_units(
+        output_points, output_point_units
+    )
+
+    if input_base_units != values.units:
+        raise InvalidDimensionalityError(
+            f"Can't apply calibration with units {input_base_units} to "
+            f"instruction with units {values.units}"
         )
 
-    # def __repr__(self):
-    #     points = ", ".join(
-    #         f"({x}, {y})" for x, y in zip(self.input_points, self.output_points)
-    #     )
-    #     return f"Calibration({points}, {self.input_units}, {self.output_units})"
-
-    def apply(
-        self, instruction: SequencerInstruction[np.floating], units: Optional[Unit]
-    ) -> EvaluatedOutput:
-        """Apply the calibration to a sequencer instruction.
-
-        Args:
-            instruction: The instruction to apply the calibration to.
-            units: The units in which the instruction is expressed.
-
-        Returns:
-            A new instruction where each point is obtained by interpolating calibration
-            points.
-
-            If a value in the instruction is smaller than the smallest input point, the
-            output will be the output of the smallest input point.
-
-            If a value in the instruction is larger than the largest input point, the
-            output will be the output of the largest input point.
-        """
-
-        if units != self.input_units:
-            raise InvalidDimensionalityError(
-                f"Can't apply calibration with units {units} to "
-                f"instruction with units {self.input_units}"
-            )
-
-        return EvaluatedOutput(
-            self._calibration._apply_without_checks(instruction.as_type(np.float64)),
-            self.output_units,
-        )
+    calibration = DimensionlessCalibration(
+        list(zip(input_magnitudes, output_magnitudes))
+    )
+    return EvaluatedOutput(
+        calibration.apply(values.values.as_type(np.float64)),
+        output_base_units,
+    )
 
 
 class DimensionlessCalibration:
