@@ -41,6 +41,12 @@ def ramp(
     start = np.float64(start)
     stop = np.float64(stop)
 
+    if not np.isfinite(start):
+        raise ValueError("Start must be finite.")
+
+    if not np.isfinite(stop):
+        raise ValueError("Stop must be finite.")
+
     if length < 0:
         raise ValueError("Length must be non-negative.")
     elif length == 0:
