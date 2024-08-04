@@ -30,6 +30,18 @@ calibration = lists(
 @given(calibration, pattern(np.float64, min_length=1, max_length=100))
 @example(
     cal=DimensionlessCalibration(
+        [(0.0, 0.0), (-1.5, 0.0), (-1.1754943508222875e-38, 999.9999999999999)],
+    ),
+    p=Pattern([-1.17549435e-38, 0.00000000e00]),
+)
+@example(
+    cal=DimensionlessCalibration(
+        [(3.063778061920068e-211, -83.0), (-1.0, 941.9999999999999)],
+    ),
+    p=Pattern([-1.0, 0.0]),
+)
+@example(
+    cal=DimensionlessCalibration(
         [(1.581407700243433e-47, 0.01562500000000022), (-1.0, -1.0)],
     ),
     p=Pattern([0.0]),
@@ -50,14 +62,18 @@ def test_calibration_pattern(
     else:
         assert np.all(np.isfinite(computed))
         assert np.all(computed >= min(cal.output_points)) or np.allclose(
-            computed, min(cal.output_points)
-        )
+            np.min(computed), min(cal.output_points)
+        ), f"Computed: {computed}\nMin: {min(cal.output_points)}"
         assert np.all(computed <= max(cal.output_points)) or np.allclose(
-            computed, max(cal.output_points)
+            np.max(computed), max(cal.output_points)
         )
 
 
 @given(calibration, ramp_strategy())
+@example(
+    cal=DimensionlessCalibration([(0.0, 0.0), (0.0, 1.0)]),
+    instr=ramp(start=0.0, stop=-1.0, length=3),
+)
 def test_calibration_ramp(cal, instr: Ramp):
     validate_calibration(cal, instr)
 

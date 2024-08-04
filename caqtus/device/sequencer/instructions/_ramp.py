@@ -79,8 +79,10 @@ class Ramp[T: (np.floating, np.void)](
         self._stop: T = stop
         self._length = Length(length)
 
-        assert self._start.dtype == self._stop.dtype
+        assert isinstance(self._start, np.generic)
+        assert isinstance(self._stop, np.generic)
         assert Ramp.is_valid_dtype(self._start.dtype)
+        assert self._start.dtype == self._stop.dtype
         assert isinstance(length, int)
         assert self._length >= 1
 

@@ -263,11 +263,18 @@ class DimensionlessCalibration:
     def apply(
         self, instruction: SequencerInstruction[np.float64]
     ) -> SequencerInstruction[np.float64]:
-        # We need to ignore division by zero errors when calculating the slope of the
-        # calibration segments, since have two points with the same x value is valid.
-        # However, we raise an error if we encounter any other floating point error,
-        # since they may cause the output to be NaN or infinite.
-        with np.errstate(divide="ignore", over="raise", under="raise", invalid="raise"):
+        # We raise errors in pathological cases when the calibration is not
+        # well-defined.
+        with np.errstate(
+            # Avoids ambiguous situation with 2 points at the same x coordinate, because
+            # we don't know what to output for a vertical line.
+            divide="raise",
+            # Avoid situations with 2 x points very close that cause and infinite slope.
+            over="raise",
+            # Avoids situations with 2 x points are equal and 2 y points are equal,
+            # which cause a 0/0 division.
+            invalid="raise",
+        ):
             np.diff(self.output_points) / np.diff(self.input_points)
         return self._apply_without_checks(instruction)
 
