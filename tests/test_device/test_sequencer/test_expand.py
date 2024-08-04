@@ -18,7 +18,7 @@ def test_pattern(p, n):
     expanded, excess = _broaden_left(p, n)
     assert len(expanded) == len(p)
     for i in range(len(expanded)):
-        assert expanded.array[i] == any(p.array[i : i + n + 1])
+        assert expanded.array[i] == any(p.array[i: i + n + 1])
 
 
 def test_pattern_0():
@@ -72,15 +72,15 @@ def test_2():
 
 def test_3():
     instr = (
-        Pattern([False]) * 100_000_000
-        + Pattern([True]) * 50_000_000
-        + Pattern([False]) * 100_000_000
+            Pattern([False]) * 100_000_000
+            + Pattern([True]) * 50_000_000
+            + Pattern([False]) * 100_000_000
     )
     expanded, excess = _broaden_left(instr, 10_000_000)
     assert excess == 0
 
 
-@given(digital_instruction(max_leaves=10), integers(min_value=0))
+@given(digital_instruction(max_length=10_000), integers(min_value=0))
 def test_4(instr, n):
     expanded, excess = _broaden_left(instr, n)
     assert len(expanded) == len(instr)
