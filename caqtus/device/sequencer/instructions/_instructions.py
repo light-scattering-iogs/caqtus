@@ -200,12 +200,25 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
     """An instruction representing a sequence of values.
 
     This is a fully explicit instruction for which each sample point must be given.
+
+    Args:
+        pattern: The sequence of values that this pattern represents.
+        dtype: The dtype of the pattern.
+            If not provided, it is inferred from the values.
+
+    Raises:
+        ValueError: If the pattern contains non-finite values.
     """
+
+    # All values inside the pattern MUST be finite (no NaN, no inf).
+    # This is ensured by public methods, but not necessarily by all private methods.
 
     __slots__ = ("_pattern", "_length")
 
     def __init__(self, pattern: npt.ArrayLike, dtype: Optional[np.dtype[T]] = None):
         self._pattern = numpy.array(pattern, dtype=dtype)
+        if not _has_only_finite_values(self._pattern):
+            raise ValueError("Pattern must contain only finite values")
         self._pattern.setflags(write=False)
         self._length = Length(len(self._pattern))
 
@@ -236,6 +249,8 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
 
     @classmethod
     def create_without_copy[S: np.generic](cls, array: Array1D[S]) -> Pattern[S]:
+        if not _has_only_finite_values(array):
+            raise ValueError("Pattern must contain only finite values")
         array.setflags(write=False)
         pattern = cls.__new__(cls)
         pattern._pattern = array
@@ -271,11 +286,16 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
         result = func(self._pattern)
         if len(result) != len(self):
             raise ValueError("Function must return an array of the same length")
+        if not _has_only_finite_values(result):
+            raise ValueError("Function must return an array with only finite values")
         return Pattern.create_without_copy(result)
 
     @property
     def array(self) -> Array1D[T]:
         return self._pattern
+
+def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
+    return np.issubdtype(array.dtype, np.floating) and np.all(np.isfinite(array))
 
 
 class Concatenated[T: np.generic](SequencerInstruction[T]):
