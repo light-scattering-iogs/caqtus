@@ -19,7 +19,9 @@ from ._instructions import (
     _normalize_index,
     Length,
     Repeated,
+    empty_like,
 )
+from ._no_public_constructor import NoPublicConstructor
 from ._stack import stack, merge_dtypes
 
 
@@ -44,10 +46,12 @@ def ramp(
     elif length == 0:
         return empty_with_dtype(start.dtype)
     else:
-        return Ramp(start, stop, length)
+        return Ramp._create(start, stop, length)
 
 
-class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
+class Ramp[T: (np.floating, np.void)](
+    SequencerInstruction[T], metaclass=NoPublicConstructor
+):
     """Represents an instruction that linearly ramps between two values.
 
     At index `i`, this instruction takes the value
@@ -58,9 +62,10 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
 
     This class is generic over the data type of the ramp.
     Since a ramp only makes sense for floating point values, the type parameter is
-    constrained to be a floating point type or a structured type.
+    constrained to be a floating point type or a structured type with only floating
+    point leaf fields.
 
-    Attributes:
+    Fields:
         start: The initial value of the ramp.
         stop: The final value of the ramp.
     """
@@ -68,14 +73,32 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
     __slots__ = ("_start", "_stop", "_length")
 
     def __init__(self, start: T, stop: T, length: int) -> None:
+        # The constructor is private. Use the :func:`ramp` function to create instances
+        # of this class.
         self._start: T = start
         self._stop: T = stop
         self._length = Length(length)
 
-        assert isinstance(start, (np.floating, np.void))
-        assert isinstance(stop, (np.floating, np.void))
+        assert self._start.dtype == self._stop.dtype
+        assert Ramp.is_valid_dtype(self._start.dtype)
         assert isinstance(length, int)
         assert self._length >= 1
+
+    @classmethod
+    def is_valid_dtype(cls, dtype: np.dtype) -> bool:
+        """Indicates if the dtype is valid for the start and stop values of a ramp.
+
+        Returns:
+            True if the dtype is a floating point type or a structured type with only
+            floating point leaf fields, False otherwise.
+        """
+
+        if np.issubdtype(dtype, np.floating):
+            return True
+        if np.issubdtype(dtype, np.void):
+            return all(
+                cls.is_valid_dtype(sub_dtype) for sub_dtype, *_ in dtype.fields.values()
+            )
 
     @property
     def start(self) -> T:
@@ -146,19 +169,21 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
             stop_value = self._stop
         else:
             stop_value = self._get_index(stop_index)
-        return Ramp(start_value, stop_value, stop_index - start_index)
+        length = stop_index - start_index
+        if length == 0:
+            return empty_like(self)
+        else:
+            return Ramp._create(start_value, stop_value, stop_index - start_index)
 
     def _get_channel(self, channel: str) -> SequencerInstruction:
-        if not isinstance(self._start, np.void):
-            raise ValueError("Can't get field if start is not a structured array.")
-        if not isinstance(self._stop, np.void):
-            raise ValueError("Can't get field if stop is not a structured array.")
+        if not np.issubdtype(self.dtype, np.void):
+            raise ValueError("Can't get field if dtype is not a structured type.")
         assert self.dtype.names is not None
         if channel not in self.dtype.names:
             raise ValueError(f"Channel {channel} not found in dtype {self.dtype}.")
         start_value = self._start[channel]
         stop_value = self._stop[channel]
-        return Ramp(start_value, stop_value, self._length)
+        return Ramp._create(start_value, stop_value, self._length)
 
     def as_type[S: np.generic](self, dtype: np.dtype[S]) -> SequencerInstruction[S]:
         start = self._start.astype(dtype)
@@ -169,7 +194,7 @@ class Ramp[T: (np.floating, np.void)](SequencerInstruction[T]):
         if not isinstance(stop, (np.floating, np.void)):
             raise TypeError("Can only convert to floating point or structured type.")
 
-        return Ramp(start, stop, self._length)
+        return Ramp._create(start, stop, self._length)
 
     @property
     def depth(self) -> Depth:
@@ -221,16 +246,20 @@ def _stack_ramps(a: Ramp, b: Ramp) -> SequencerInstruction:
 
     start = _merge_values(a._start, b._start)
     stop = _merge_values(a._stop, b._stop)
-    return Ramp(start, stop, len(a))
+    return Ramp._create(start, stop, len(a))
 
 
 @stack.register(Ramp, Repeated)
 def _stack_ramp_repeated(a: Ramp, b: Repeated) -> SequencerInstruction:
     if len(b.instruction) == 1:
         value = b.instruction[0]
-        start = _merge_values(a._start, value)
-        stop = _merge_values(a._stop, value)
-        return Ramp(start, stop, len(a))
+        if not Ramp.is_valid_dtype(value.dtype):
+            raise TypeError(
+                f"Can't stack a ramp with an instruction having dtype {value.dtype}."
+            )
+        start = _merge_values(a.start, value)
+        stop = _merge_values(a.stop, value)
+        return Ramp._create(start, stop, len(a))
     else:
         return stack(a.to_pattern(), b.to_pattern())
 
@@ -241,9 +270,13 @@ def _stack_repeated_ramp(a: Repeated, b: Ramp) -> SequencerInstruction:
 
     if len(a.instruction) == 1:
         value = a.instruction[0]
-        start = _merge_values(value, b._start)
-        stop = _merge_values(value, b._stop)
-        return Ramp(start, stop, len(b))
+        if not Ramp.is_valid_dtype(value.dtype):
+            raise TypeError(
+                f"Can't stack a ramp with an instruction having dtype {value.dtype}."
+            )
+        start = _merge_values(value, b.start)
+        stop = _merge_values(value, b.stop)
+        return Ramp._create(start, stop, len(b))
     else:
         return stack(a.to_pattern(), b.to_pattern())
 

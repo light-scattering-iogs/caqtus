@@ -21,7 +21,7 @@ def test():
 
 def test_0():
     r = ramp(0.0, 1.0, 5)
-    pattern = Pattern([0]) * 5
+    pattern = Pattern([0.0]) * 5
     merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
@@ -30,7 +30,7 @@ def test_0():
 
 def test_1():
     r = ramp(0, 1, 5)
-    pattern = Pattern([0]) * 5
+    pattern = Pattern([0.0]) * 5
     merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
@@ -44,7 +44,7 @@ def test_2():
 
 def test_3():
     r = ramp(0.0, 1.0, 5)
-    pattern = Pattern([0]) * 3 + Pattern([1]) * 2
+    pattern = Pattern([0.0]) * 3 + Pattern([1]) * 2
 
     merged = merge_instructions(a=r, b=pattern)
 
