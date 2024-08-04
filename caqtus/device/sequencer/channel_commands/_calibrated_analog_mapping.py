@@ -11,7 +11,8 @@ import cattrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.units import Unit, convert_to_base_units, InvalidDimensionalityError
+from caqtus.types.units import Unit, InvalidDimensionalityError
+from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from caqtus.utils.itertools import pairwise

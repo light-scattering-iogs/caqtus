@@ -1,5 +1,6 @@
 __version__ = "0.1.0"
 
+from . import base
 from .unit_namespace import units
 from .units import (
     ureg,
@@ -18,8 +19,6 @@ from .units import (
     UNITS,
     UnitLike,
     InvalidDimensionalityError,
-    is_in_base_units,
-    convert_to_base_units,
 )
 
 __all__ = [
@@ -41,6 +40,5 @@ __all__ = [
     "units",
     "UnitLike",
     "InvalidDimensionalityError",
-    "is_in_base_units",
-    "convert_to_base_units",
+    "base",
 ]
