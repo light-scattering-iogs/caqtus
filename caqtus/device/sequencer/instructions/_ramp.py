@@ -149,7 +149,7 @@ class Ramp[T: (np.floating, np.void)](
     def _get_index(self, index: int) -> T:
         index = _normalize_index(index, len(self))
 
-        if issubclass(self.dtype.type, np.void):
+        if np.issubdtype(self.dtype, np.void):
             assert isinstance(self._start, np.void)
             assert isinstance(self._stop, np.void)
             assert self.dtype.names is not None
@@ -209,7 +209,7 @@ class Ramp[T: (np.floating, np.void)](
         return Depth(1)
 
     def to_pattern(self) -> Pattern[T]:
-        if isinstance(self.dtype.type, np.void):
+        if np.issubdtype(self.dtype, np.void):
             assert self.dtype.names is not None
             assert isinstance(self._start, np.void)
             assert isinstance(self._stop, np.void)
