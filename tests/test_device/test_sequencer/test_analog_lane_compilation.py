@@ -110,6 +110,17 @@ def test_ramp():
     assert result.units is None
 
 
+def test_ramp_2():
+    lane = AnalogTimeLane([Expression("10 V"), Ramp(), Expression("100 mV")])
+    result = compile_analog_lane(
+        lane, {}, [0.0, 1e-08, 3.0000000000000004e-08, 6.000000000000001e-08], 10
+    )
+    expected = Pattern([10]) * 1 + ramp(10, 0.1, 2) + Pattern([0.1]) * 3
+
+    assert result.values[:-1] == approx(expected)
+    assert result.units == Unit("V")
+
+
 def test_logarithmic_ramp():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     result = compile_analog_lane(lane, {}, [0, 3e-9, 7e-9, 10e-9], 1)
