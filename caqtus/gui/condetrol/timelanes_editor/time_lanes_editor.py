@@ -1,4 +1,5 @@
 import itertools
+import json
 from typing import Optional
 
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QToolBar,
     QDialog,
-    QMessageBox,
+    QMessageBox, QApplication,
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
@@ -58,6 +59,11 @@ class TimeLanesEditor(QWidget):
             "Simplify",
         )
         self.simplify_action.triggered.connect(self._simplify_timelanes)
+        self.toolbar.addSeparator()
+        self.copy_to_clipboard_action = self.toolbar.addAction(
+            get_icon("copy", self.palette().buttonText().color()), "Copy to clipboard"
+        )
+        self.copy_to_clipboard_action.triggered.connect(self.copy_to_clipboard)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -77,7 +83,9 @@ class TimeLanesEditor(QWidget):
         """
 
         self.view.set_read_only(read_only)
-        self.toolbar.setEnabled(not read_only)
+
+        self.add_lane_action.setEnabled(not read_only)
+        self.simplify_action.setEnabled(not read_only)
 
     def _on_time_lanes_changed(self, time_lanes: TimeLanes) -> None:
         if not self.view.is_read_only():
@@ -114,6 +122,14 @@ class TimeLanesEditor(QWidget):
                 )
                 self.view.add_lane(lane_name, lane)
 
+    def copy_to_clipboard(self):
+        time_lanes = self.view.get_time_lanes()
+        unstructured = self._extension.unstructure_time_lanes(time_lanes)
+
+        text = json.dumps(unstructured, indent=2)
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+
 
 class TimeLanesView(QTableView):
     time_lanes_changed = Signal(TimeLanes)
@@ -128,9 +144,9 @@ class TimeLanesView(QTableView):
 
         super().__init__(parent)
         self._model = TimeLanesModel(extension, self)
-        self._device_configurations: dict[
-            DeviceName, DeviceConfiguration
-        ] = device_configurations
+        self._device_configurations: dict[DeviceName, DeviceConfiguration] = (
+            device_configurations
+        )
         self._extension = extension
         self.setModel(self._model)
 

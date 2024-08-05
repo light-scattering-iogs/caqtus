@@ -1,6 +1,8 @@
 from typing import Protocol, Optional, Any, TypeVar
 
 from caqtus.session.shot import TimeLane
+from caqtus.types.timelane import TimeLanes
+from caqtus.utils import serialization
 from .. import TimeLaneDelegate
 from ..model import TimeLaneModel
 
@@ -50,3 +52,9 @@ class CondetrolLaneExtensionProtocol(Protocol):
         """
 
         ...
+
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        """Convert the time lanes to a serializable format."""
+
+        ...
+
