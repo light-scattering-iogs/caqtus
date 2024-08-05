@@ -6,6 +6,7 @@ from caqtus.session.shot import TimeLanes
 from caqtus.shot_compilation import DeviceCompiler
 from caqtus.shot_compilation.compilation_contexts import ShotContext, SequenceContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
+from caqtus.types.recoverable_exceptions import InvalidValueError
 
 
 class ShotCompiler:
@@ -37,7 +38,7 @@ class ShotCompiler:
 
         # noinspection PyProtectedMember
         if unused_lanes := shot_context._unused_lanes():
-            raise ValueError(
+            raise InvalidValueError(
                 "The following lanes where not used during the shot: "
                 + ", ".join(unused_lanes)
             )
