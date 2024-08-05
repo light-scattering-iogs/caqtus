@@ -7,6 +7,9 @@ from PySide6.QtWidgets import QStyledItemDelegate
 from caqtus.session.shot import (
     TimeLane,
 )
+from caqtus.types.timelane import TimeLanes
+from caqtus.types.timelane.serializer import TimeLaneSerializer
+from caqtus.utils import serialization
 from ._protocol import CondetrolLaneExtensionProtocol
 from ..model import TimeLaneModel
 
@@ -42,6 +45,10 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
         self.get_lane_delegate = functools.singledispatch(default_lane_delegate_factory)
         self.get_lane_model = functools.singledispatch(default_lane_model_factory)
         self._lane_factories: dict[str, LaneFactory] = {}
+        self._lane_serializer = TimeLaneSerializer()
+
+    def set_lane_serializer(self, serializer: TimeLaneSerializer) -> None:
+        self._lane_serializer = serializer
 
     def register_lane_factory(self, lane_label: str, factory: LaneFactory) -> None:
         self._lane_factories[lane_label] = factory

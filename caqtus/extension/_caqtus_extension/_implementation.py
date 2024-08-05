@@ -30,6 +30,11 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         factory=DeviceManagerExtension
     )
 
+    def __attrs_post_init__(self):
+        self.condetrol_extension.lane_extension.set_lane_serializer(
+            self.time_lane_serializer
+        )
+
     def register_device_extension(self, device_extension: DeviceExtension) -> None:
         self.condetrol_extension.device_extension.register_device_configuration_editor(
             device_extension.configuration_type, device_extension.editor_type
@@ -85,7 +90,7 @@ class CaqtusExtension(CaqtusExtensionProtocol):
         self,
         session_maker_type: Callable[Concatenate[SerializerProtocol, P], T],
         *args: P.args,
-        **kwargs: P.kwargs
+        **kwargs: P.kwargs,
     ) -> T:
         serializer = Serializer.default()
         serializer.device_configuration_serializer = (
