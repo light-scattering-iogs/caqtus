@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QToolBar,
     QDialog,
-    QMessageBox, QApplication,
+    QMessageBox,
+    QApplication,
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
@@ -64,6 +65,13 @@ class TimeLanesEditor(QWidget):
             get_icon("copy", self.palette().buttonText().color()), "Copy to clipboard"
         )
         self.copy_to_clipboard_action.triggered.connect(self.copy_to_clipboard)
+        self.paste_from_clipboard_action = self.toolbar.addAction(
+            get_icon("paste", self.palette().buttonText().color()),
+            "Paste from clipboard",
+        )
+        self.paste_from_clipboard_action.triggered.connect(
+            self.paste_from_clipboard
+        )
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -86,6 +94,7 @@ class TimeLanesEditor(QWidget):
 
         self.add_lane_action.setEnabled(not read_only)
         self.simplify_action.setEnabled(not read_only)
+        self.paste_from_clipboard_action.setEnabled(not read_only)
 
     def _on_time_lanes_changed(self, time_lanes: TimeLanes) -> None:
         if not self.view.is_read_only():
@@ -129,6 +138,31 @@ class TimeLanesEditor(QWidget):
         text = json.dumps(unstructured, indent=2)
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
+
+    def paste_from_clipboard(self) -> bool:
+        """Paste the content of the clipboard into the editor.
+
+        Returns:
+            True if the content was successfully pasted, False otherwise.
+        """
+        if self.view.is_read_only():
+            raise False
+
+        clipboard = QApplication.clipboard()
+        text = clipboard.text()
+        try:
+            content = json.loads(text)
+        except json.JSONDecodeError as e:
+            QMessageBox.warning(
+                self,
+                "Invalid JSON",
+                f"Could not parse the clipboard content as JSON:\n {e}",
+            )
+            return False
+
+        time_lanes = self._extension.structure_time_lanes(content)
+
+        self.view.set_time_lanes(time_lanes)
 
 
 class TimeLanesView(QTableView):

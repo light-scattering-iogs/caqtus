@@ -58,3 +58,8 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
         ...
 
+    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+        """Convert the serializable format to time lanes."""
+
+        ...
+
