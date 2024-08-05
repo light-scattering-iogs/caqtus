@@ -165,6 +165,7 @@ class TimeLanesEditor(QWidget):
         time_lanes = self._extension.structure_time_lanes(content)
 
         self.view.set_time_lanes(time_lanes)
+        return True
 
 
 class TimeLanesView(QTableView):

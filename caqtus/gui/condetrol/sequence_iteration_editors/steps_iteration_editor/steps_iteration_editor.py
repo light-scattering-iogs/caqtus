@@ -248,7 +248,10 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(text)
 
-    def paste_from_clipboard(self):
+    def paste_from_clipboard(self) -> bool:
+        if self._model.is_read_only():
+            return False
+
         clipboard = QGuiApplication.clipboard()
         text = clipboard.text()
         try:
@@ -259,7 +262,10 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
                 "Invalid YAML content",
                 f"Could not parse the clipboard content as YAML:\n {e}",
             )
+            return False
 
         # TODO: raise recoverable exception if data is not valid
         steps = serialization.converters["json"].structure(data, StepsConfiguration)
         self.set_iteration(steps)
+
+        return True

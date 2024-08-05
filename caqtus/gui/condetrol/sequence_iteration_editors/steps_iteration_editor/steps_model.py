@@ -207,6 +207,9 @@ class StepsModel(QStandardItemModel):
     def set_read_only(self, read_only: bool):
         self._read_only = read_only
 
+    def is_read_only(self) -> bool:
+        return self._read_only
+
     def get_steps(self) -> StepsConfiguration:
         root = self.invisibleRootItem()
         items = [root.child(i) for i in range(root.rowCount())]
