@@ -1,7 +1,7 @@
 import itertools
-import json
 from typing import Optional
 
+import yaml
 from PySide6.QtCore import Signal, Qt, QModelIndex, QRect
 from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
@@ -135,7 +135,7 @@ class TimeLanesEditor(QWidget):
         time_lanes = self.view.get_time_lanes()
         unstructured = self._extension.unstructure_time_lanes(time_lanes)
 
-        text = json.dumps(unstructured, indent=2)
+        text = yaml.safe_dump(unstructured)
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
 
@@ -145,21 +145,23 @@ class TimeLanesEditor(QWidget):
         Returns:
             True if the content was successfully pasted, False otherwise.
         """
+
         if self.view.is_read_only():
             raise False
 
         clipboard = QApplication.clipboard()
         text = clipboard.text()
         try:
-            content = json.loads(text)
-        except json.JSONDecodeError as e:
+            content = yaml.safe_load(text)
+        except yaml.YAMLError as e:
             QMessageBox.warning(
                 self,
-                "Invalid JSON",
-                f"Could not parse the clipboard content as JSON:\n {e}",
+                "Invalid YAML content",
+                f"Could not parse the clipboard content as YAML:\n {e}",
             )
             return False
 
+        # TODO: raise recoverable error if the content is not valid
         time_lanes = self._extension.structure_time_lanes(content)
 
         self.view.set_time_lanes(time_lanes)

@@ -244,7 +244,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             steps, StepsConfiguration
         )
 
-        text = yaml.dump(unstructured, indent=4)
+        text = yaml.safe_dump(unstructured)
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(text)
 
@@ -252,5 +252,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         clipboard = QGuiApplication.clipboard()
         text = clipboard.text()
         data = yaml.safe_load(text)
+
+        # TODO: raise recoverable exception if data is not valid
         steps = serialization.converters["json"].structure(data, StepsConfiguration)
         self.set_iteration(steps)
