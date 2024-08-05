@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Documentation for sequencer instructions
 - Utility functions to visualize instructions for a sequencer
+- Actions to copy/paste from clipboards sequence iterations and time lanes
 
 ### Changed
 
