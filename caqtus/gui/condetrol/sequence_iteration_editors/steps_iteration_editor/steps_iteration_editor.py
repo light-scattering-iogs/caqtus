@@ -164,6 +164,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         """
 
         self._model.set_read_only(read_only)
+        self.paste_from_clipboard_action.setEnabled(not read_only)
 
     def delete_selected(self) -> None:
         self.remove_indices(self.selectedIndexes())
