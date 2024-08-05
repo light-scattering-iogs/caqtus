@@ -10,13 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Documentation for sequencer instructions
-- Function `plot_instruction` to plot values takes by a sequencer instruction
-- Function `to_graph` to visualize sequencer instruction
+- Utility functions to visualize instructions for a sequencer
 
 ### Changed
 
 - Upgraded to numpy 2.0
 - Upgraded to polars 1.3
+- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in the log space.
 
 ### Deprecated
 
