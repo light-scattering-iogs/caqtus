@@ -10,7 +10,7 @@ from caqtus.device.sequencer import (
     ChannelConfiguration,
     AnalogChannelConfiguration,
 )
-from caqtus.device.sequencer.channel_commands import LaneValues
+from caqtus.device.sequencer.channel_commands import LaneValues, CalibratedAnalogMapping
 from caqtus.device.sequencer.instructions import Pattern, ramp
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
@@ -20,7 +20,7 @@ from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp
 class MockSequencerConfiguration(SequencerConfiguration):
     @classmethod
     def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
-        return (AnalogChannelConfiguration,)
+        return (AnalogChannelConfiguration, AnalogChannelConfiguration)
 
 
 @pytest.fixture
@@ -33,16 +33,27 @@ def sequencer_config() -> SequencerConfiguration:
             AnalogChannelConfiguration(
                 description="Channel 0", output=LaneValues("test"), output_unit="V"
             ),
+            AnalogChannelConfiguration(
+                description="Channel 1",
+                output=CalibratedAnalogMapping(
+                    input_=LaneValues("test 1"),
+                    input_units="dB",
+                    output_units="V",
+                    measured_data_points=((0, 1), (10, 10)),
+                ),
+                output_unit="V",
+            ),
         ),
     )
 
 
-def test_single_analog_lane(sequencer_config):
+def test_multiple_analog_lane(sequencer_config):
     time_lanes = TimeLanes(
         step_names=["step 0", "step 1", "step 2"],
         step_durations=[Expression("10 ns"), Expression("20 ns"), Expression("30 ns")],
         lanes={
-            "test": AnalogTimeLane([Expression("10 V"), Ramp(), Expression("100 mV")])
+            "test": AnalogTimeLane([Expression("10 V"), Ramp(), Expression("100 mV")]),
+            "test 1": AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")]),
         },
     )
     sequence_context = SequenceContext(
@@ -55,6 +66,9 @@ def test_single_analog_lane(sequencer_config):
     )
     result = compiler.compile_shot_parameters(shot_context)
     sequence = result["sequence"]
-    assert sequence["ch 0"][:-1] == pytest.approx(
-        Pattern([10]) * 1 + ramp(10, 0.1, 2) + Pattern([0.1]) * 3
+    assert sequence["ch 0"] == pytest.approx(
+        Pattern([10]) * 1 + ramp(10, 0.1, 2) + Pattern([0.1]) * 4
+    )
+    assert sequence["ch 1"] == pytest.approx(
+        Pattern([1]) * 1 + ramp(1, 10, 2) + Pattern([10]) * 4
     )
