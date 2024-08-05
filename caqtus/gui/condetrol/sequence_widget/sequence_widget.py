@@ -116,7 +116,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.verticalLayout.insertWidget(0, self.tool_bar)
         self.stacked = QStackedWidget(self)
         self.stacked.addWidget(QWidget(self))
-        self.stacked.addWidget(QWidget(self))
+        self.stacked.addWidget(self.iteration_editor.toolbar)
         self.stacked.addWidget(self.time_lanes_editor.toolbar)
         self.stacked.setCurrentIndex(0)
         self.tool_bar.addSeparator()

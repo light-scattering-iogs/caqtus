@@ -2,7 +2,8 @@ import functools
 from collections.abc import Set, Iterable
 from typing import Optional
 
-from PySide6 import QtCore
+import yaml
+from PySide6 import QtCore, QtWidgets
 from PySide6.QtCore import Qt, QPersistentModelIndex, QModelIndex
 from PySide6.QtGui import QKeySequence, QShortcut, QAction, QFont, QGuiApplication
 from PySide6.QtWidgets import QWidget, QTreeView, QAbstractItemView, QMenu
@@ -17,9 +18,11 @@ from caqtus.types.iteration import (
     ArangeLoop,
 )
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils import serialization
 from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
+from ...icons import get_icon
 
 
 def create_variable_declaration():
@@ -108,6 +111,17 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         font = QFont("JetBrains Mono")
         font.setPixelSize(13)
         self.setFont(font)
+
+        self.toolbar = QtWidgets.QToolBar()
+        self.copy_to_clipboard_action = self.toolbar.addAction(
+            get_icon("copy", self.palette().buttonText().color()), "Copy to clipboard"
+        )
+        self.copy_to_clipboard_action.triggered.connect(self.copy_to_clipboard)
+        self.paste_from_clipboard_action = self.toolbar.addAction(
+            get_icon("paste", self.palette().buttonText().color()),
+            "Paste from clipboard",
+        )
+        self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
 
     def _emit_iteration_edited(self, *args, **kwargs):
         self.iteration_edited.emit(self.get_iteration())
@@ -222,3 +236,21 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             functools.partial(self._model.insert_above, new_arange, index)
         )
         menu.exec(self.mapToGlobal(position))
+
+    def copy_to_clipboard(self):
+        steps = self.get_iteration()
+
+        unstructured = serialization.converters["json"].unstructure(
+            steps, StepsConfiguration
+        )
+
+        text = yaml.dump(unstructured, indent=4)
+        clipboard = QGuiApplication.clipboard()
+        clipboard.setText(text)
+
+    def paste_from_clipboard(self):
+        clipboard = QGuiApplication.clipboard()
+        text = clipboard.text()
+        data = yaml.safe_load(text)
+        steps = serialization.converters["json"].structure(data, StepsConfiguration)
+        self.set_iteration(steps)
