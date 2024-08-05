@@ -1,9 +1,11 @@
 from collections.abc import Callable
 from typing import TypeVar, Optional, NewType
 
+from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from ._protocol import TimeLaneSerializerProtocol
-from ..timelane import TimeLane
+from ..timelane import TimeLane, TimeLanes
+from ...expression import Expression
 
 L = TypeVar("L", bound=TimeLane)
 
@@ -43,6 +45,20 @@ class TimeLaneSerializer(TimeLaneSerializerProtocol):
         tag = data["type"]
         loader = self.loaders[tag]
         return loader(data)
+
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        return dict(
+            step_names=serialization.converters["json"].unstructure(
+                time_lanes.step_names, list[str]
+            ),
+            step_durations=serialization.converters["json"].unstructure(
+                time_lanes.step_durations, list[Expression]
+            ),
+            lanes={
+                lane: self.dump(time_lane)
+                for lane, time_lane in time_lanes.lanes.items()
+            },
+        )
 
 
 def default_dumper(lane) -> JSON:

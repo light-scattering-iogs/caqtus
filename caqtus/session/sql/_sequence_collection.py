@@ -7,6 +7,11 @@ from typing import TYPE_CHECKING, Optional, assert_never, Iterable
 import attrs
 import numpy as np
 import sqlalchemy.orm
+from returns.result import Result
+from returns.result import Success, Failure
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.types.data import DataLabel, Data, is_data
 from caqtus.types.expression import Expression
@@ -19,11 +24,6 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from returns.result import Result
-from returns.result import Success, Failure
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -152,18 +152,7 @@ class SQLSequenceCollection(SequenceCollection):
         self._get_sql_session().add(new_sequence)
 
     def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
-        return dict(
-            step_names=serialization.converters["json"].unstructure(
-                time_lanes.step_names, list[str]
-            ),
-            step_durations=serialization.converters["json"].unstructure(
-                time_lanes.step_durations, list[Expression]
-            ),
-            lanes={
-                lane: self.serializer.dump_time_lane(time_lane)
-                for lane, time_lane in time_lanes.lanes.items()
-            },
-        )
+        return self.serializer.unstructure_time_lanes(time_lanes)
 
     def get_time_lanes(self, sequence_path: PureSequencePath) -> TimeLanes:
         return _get_time_lanes(self._get_sql_session(), sequence_path, self.serializer)

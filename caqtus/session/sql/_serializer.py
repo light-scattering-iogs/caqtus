@@ -23,6 +23,7 @@ from caqtus.types.timelane.serializer import (
     TimeLaneSerializerProtocol,
     TimeLaneSerializer,
 )
+from ...types.timelane import TimeLanes
 
 T = TypeVar("T", bound=DeviceConfiguration)
 
@@ -56,6 +57,9 @@ class SerializerProtocol(Protocol):
 
     def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
         return self.time_lane_serializer.dump(lane)
+
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        return self.time_lane_serializer.unstructure_time_lanes(time_lanes)
 
     def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
         return self.time_lane_serializer.load(content)

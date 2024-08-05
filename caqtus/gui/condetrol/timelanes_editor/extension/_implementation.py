@@ -76,6 +76,9 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
             )
         return lane
 
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        return self._lane_serializer.unstructure_time_lanes(time_lanes)
+
 
 def default_lane_model_factory(lane, name: str) -> TimeLaneModel:
     if not isinstance(lane, TimeLane):
