@@ -18,11 +18,9 @@ from caqtus.types.timelane import TimeLanes, DigitalTimeLane
 
 
 class MockSequencerConfiguration(SequencerConfiguration):
-    number_channels = 2
-
     @classmethod
     def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
-        return (DigitalChannelConfiguration, DigitalChannelConfiguration)
+        return DigitalChannelConfiguration, DigitalChannelConfiguration
 
 
 @pytest.fixture

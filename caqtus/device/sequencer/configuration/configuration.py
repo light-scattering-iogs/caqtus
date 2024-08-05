@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import (
     Type,
-    ClassVar,
     TypeVar,
     Generic,
     TypedDict,
@@ -10,7 +9,6 @@ from typing import (
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
-from .._controller import SequencerController
 from ..channel_commands import ChannelOutput
 from ..instructions import SequencerInstruction
 from ..runtime import Sequencer
@@ -74,7 +72,6 @@ class SequencerConfiguration(
             list must match the number of channels of the device.
     """
 
-    number_channels: ClassVar[int]
     time_step: int = attrs.field(
         converter=int,
         validator=attrs.validators.ge(1),
@@ -95,12 +92,14 @@ class SequencerConfiguration(
 
     @channels.validator  # type: ignore
     def validate_channels(self, _, channels):
-        if len(channels) != self.number_channels:
+        channel_types = self.channel_types()
+        number_channels = len(channel_types)
+        if len(channels) != number_channels:
             raise ValueError(
                 f"The length of channels ({len(channels)}) doesn't match the number of"
-                f" channels {self.number_channels}"
+                f" channels {number_channels}"
             )
-        for channel, channel_type in zip(channels, self.channel_types(), strict=True):
+        for channel, channel_type in zip(channels, channel_types, strict=True):
             if not isinstance(channel, channel_type):
                 raise TypeError(
                     f"Channel {channel} is not of the expected type {channel_type}"
