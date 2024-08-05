@@ -86,9 +86,11 @@ class SequencerConfiguration(
     )
     trigger: Trigger = attrs.field(validator=validate_trigger)
 
-    @classmethod
     @abstractmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]: ...
+    def channel_types(self) -> tuple[Type[ChannelConfiguration], ...]:
+        """Returns the types of the channels of the device."""
+
+        raise NotImplementedError
 
     @channels.validator  # type: ignore
     def validate_channels(self, _, channels):
