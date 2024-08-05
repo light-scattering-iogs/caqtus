@@ -17,3 +17,6 @@ class TimeLaneSerializerProtocol(Protocol):
     @abc.abstractmethod
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> JSON: ...
 
+    @abc.abstractmethod
+    def structure_time_lanes(self, content: JSON) -> TimeLanes: ...
+

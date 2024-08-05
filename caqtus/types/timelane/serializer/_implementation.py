@@ -60,6 +60,20 @@ class TimeLaneSerializer(TimeLaneSerializerProtocol):
             },
         )
 
+    def structure_time_lanes(self, content: JSON) -> TimeLanes:
+        return TimeLanes(
+            step_names=serialization.converters["json"].structure(
+                content["step_names"], list[str]
+            ),
+            step_durations=serialization.converters["json"].structure(
+                content["step_durations"], list[Expression]
+            ),
+            lanes={
+                lane: self.load(time_lane_content)
+                for lane, time_lane_content in content["lanes"].items()
+            },
+        )
+
 
 def default_dumper(lane) -> JSON:
     raise NotImplementedError(f"Unsupported type {type(lane)}")

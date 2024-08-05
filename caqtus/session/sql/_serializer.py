@@ -12,17 +12,17 @@ from caqtus.device.configuration.serializer import (
     DeviceConfigJSONSerializer,
     DeviceConfigJSONSerializerProtocol,
 )
-from caqtus.utils import serialization
-from caqtus.utils.serialization import JSON
 from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
 )
-from ..shot import TimeLane
 from caqtus.types.timelane.serializer import (
     TimeLaneSerializerProtocol,
     TimeLaneSerializer,
 )
+from caqtus.utils import serialization
+from caqtus.utils.serialization import JSON
+from ..shot import TimeLane
 from ...types.timelane import TimeLanes
 
 T = TypeVar("T", bound=DeviceConfiguration)
@@ -55,11 +55,11 @@ class SerializerProtocol(Protocol):
     ) -> serialization.JSON:
         return self.sequence_serializer.iteration_serializer(iteration)
 
-    def dump_time_lane(self, lane: TimeLane) -> serialization.JSON:
-        return self.time_lane_serializer.dump(lane)
-
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return self.time_lane_serializer.unstructure_time_lanes(time_lanes)
+
+    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+        return self.time_lane_serializer.structure_time_lanes(content)
 
     def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
         return self.time_lane_serializer.load(content)

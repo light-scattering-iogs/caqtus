@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.types.data import DataLabel, Data, is_data
-from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     IterationConfiguration,
     Unknown,
@@ -487,28 +486,11 @@ def _get_iteration_configuration(
     )
 
 
-def _construct_time_lanes(
-    time_lanes_content: serialization.JSON, serializer: SerializerProtocol
-) -> TimeLanes:
-    return TimeLanes(
-        step_names=serialization.converters["json"].structure(
-            time_lanes_content["step_names"], list[str]
-        ),
-        step_durations=serialization.converters["json"].structure(
-            time_lanes_content["step_durations"], list[Expression]
-        ),
-        lanes={
-            lane: serializer.construct_time_lane(time_lane_content)
-            for lane, time_lane_content in time_lanes_content["lanes"].items()
-        },
-    )
-
-
 def _get_time_lanes(
     session: Session, sequence_path: PureSequencePath, serializer: SerializerProtocol
 ) -> TimeLanes:
     sequence_model = unwrap(_query_sequence_model(session, sequence_path))
-    return _construct_time_lanes(sequence_model.time_lanes.content, serializer)
+    return serializer.structure_time_lanes(sequence_model.time_lanes.content)
 
 
 def _get_shots(
