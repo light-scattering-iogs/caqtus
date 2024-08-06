@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Callable
 from typing import Optional
 
@@ -54,14 +53,12 @@ class Condetrol:
         app = QApplication.instance()
         if app is None:
             self.app = QApplication([])
-            self.app.setOrganizationName("Caqtus")
-            self.app.setApplicationName("Condetrol")
-            self.app.setWindowIcon(
-                qtawesome.icon("mdi6.cactus", size=64, color="green")
-            )
-            self.app.setStyle("Fusion")
         else:
             self.app = app
+        self.app.setOrganizationName("Caqtus")
+        self.app.setApplicationName("Condetrol")
+        self.app.setWindowIcon(qtawesome.icon("mdi6.cactus", size=64, color="green"))
+        self.app.setStyle("Fusion")
 
         QFontDatabase.addApplicationFont(":/fonts/JetBrainsMono-Regular.ttf")
 
@@ -77,27 +74,10 @@ class Condetrol:
         This method will block until the GUI is closed by the user.
         """
 
-        # We set up a custom exception hook to close the application if an error occurs.
-        # By default, PySide only prints exceptions and doesn't close the app on error.
-
-        def excepthook(*args):
-            try:
-                app = QApplication.instance()
-                if app is not None:
-                    app.exit(-1)
-            finally:
-                sys.__excepthook__(*args)
-
         self.window.show()
-
-        previous_excepthook = sys.excepthook
-        sys.excepthook = excepthook
 
         async def run_condetrol():
             handler = CondetrolWindowHandler(self.window, self.session_maker)
             await handler.run_async()
 
-        try:
-            qt_trio.run(run_condetrol)
-        finally:
-            sys.excepthook = previous_excepthook
+        qt_trio.run(run_condetrol)
