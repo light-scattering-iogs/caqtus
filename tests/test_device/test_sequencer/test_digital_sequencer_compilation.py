@@ -10,8 +10,8 @@ from caqtus.device.sequencer import (
     SequencerCompiler,
     ChannelConfiguration,
 )
-from caqtus.device.sequencer.channel_commands import LaneValues
-from caqtus.device.sequencer.instructions import Pattern, with_name
+from caqtus.device.sequencer.channel_commands import LaneValues, Constant
+from caqtus.device.sequencer.instructions import Pattern
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes, DigitalTimeLane
@@ -34,7 +34,8 @@ def sequencer_config() -> SequencerConfiguration:
                 description="Channel 0", output=LaneValues("test")
             ),
             DigitalChannelConfiguration(
-                description="Channel 1", output=LaneValues("test 1")
+                description="Channel 1",
+                output=LaneValues("test 1", default=Constant(Expression("False"))),
             ),
         ),
     )
@@ -56,8 +57,8 @@ def test_single_digital_lane(sequencer_config):
     )
     result = compiler.compile_shot_parameters(shot_context)
     sequence = result["sequence"]
-    assert sequence == with_name(
-        Pattern([True]) * 1_000_000 + Pattern([False]) * 2_000_000, "ch 0"
+    assert (
+        sequence["ch 0"] == Pattern([True]) * 1_000_000 + Pattern([False]) * 2_000_000
     )
 
 
