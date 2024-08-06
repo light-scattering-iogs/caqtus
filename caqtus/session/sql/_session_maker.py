@@ -120,6 +120,12 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         )
         super().__init__(serializer, engine, async_engine)
 
+    def async_session(self) -> ThreadedAsyncSQLExperimentSession:
+        return ThreadedAsyncSQLExperimentSession(
+            self._session_maker.begin(),
+            self._serializer,
+        )
+
     def __getstate__(self):
         return {
             "path": self._engine.url.database,
