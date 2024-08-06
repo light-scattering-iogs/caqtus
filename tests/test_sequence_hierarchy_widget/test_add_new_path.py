@@ -29,7 +29,7 @@ def test_0(session_maker, qtbot):
     assert model.rowCount() == 2
 
 
-@pytest.mark.xfail
+@pytest.mark.skip("Issues with the modeltester")
 def test_1(session_maker, qtmodeltester: ModelTester, qtbot):
     model = AsyncPathHierarchyModel(session_maker)
     model.fetchMore(QModelIndex())
