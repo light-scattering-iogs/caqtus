@@ -1,4 +1,3 @@
-import sys
 from collections.abc import Mapping, Callable
 
 import qtawesome
@@ -47,27 +46,10 @@ class SnapShot:
         )
 
     def run(self) -> None:
-        # We set up a custom exception hook to close the application if an error occurs.
-        # By default, PySide only prints exceptions and doesn't close the app on error.
-
-        def excepthook(*args):
-            try:
-                app = QApplication.instance()
-                if app is not None:
-                    app.exit(-1)
-            finally:
-                sys.__excepthook__(*args)
-
         self.window.show()
-
-        previous_excepthook = sys.excepthook
 
         async def handle():
             handler = SnapShotWindowHandler(self.window, self.session_maker)
             await handler.exec_async()
 
-        try:
-            sys.excepthook = excepthook
-            qt_trio.run(handle)
-        finally:
-            sys.excepthook = previous_excepthook
+        qt_trio.run(handle)
