@@ -1,8 +1,10 @@
 from sqlite3 import Connection as SQLite3Connection
+from typing import Self
 
 import attrs
 import sqlalchemy
 import sqlalchemy.orm
+import yaml
 from sqlalchemy import event, Engine, create_engine, URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -132,11 +134,24 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
 
 @attrs.define
 class PostgreSQLConfig:
+    """Configuration for connecting to a PostgreSQL database."""
+
     username: str
     password: str
     host: str
     port: int
     database: str
+
+    @classmethod
+    def from_file(cls, path) -> Self:
+        """Create a PostgreSQLConfig from a yaml file.
+
+        The file should contain the same keys as the attributes of this class.
+        """
+
+        with open(path) as f:
+            config = yaml.safe_load(f)
+        return cls(**config)
 
 
 class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
