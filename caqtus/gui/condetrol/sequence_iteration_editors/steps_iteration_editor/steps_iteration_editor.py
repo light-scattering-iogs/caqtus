@@ -159,6 +159,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         """Sets the editor in read-only mode.
 
         When the editor is in read-only mode, the user cannot edit the steps.
+
         Even if the editor is in read-only mode, the iteration can still be set
         programmatically with :meth:`set_iteration`.
         """
@@ -166,10 +167,18 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self._model.set_read_only(read_only)
         self.paste_from_clipboard_action.setEnabled(not read_only)
 
-    def delete_selected(self) -> None:
-        self.remove_indices(self.selectedIndexes())
+    def is_read_only(self) -> bool:
+        """Returns whether the editor is in read-only mode."""
 
-    def remove_indices(self, indices: Iterable[QModelIndex]) -> None:
+        return self._model.is_read_only()
+
+    def delete_selected(self) -> bool:
+        if self.is_read_only():
+            return False
+        self._remove_indices(self.selectedIndexes())
+        return True
+
+    def _remove_indices(self, indices: Iterable[QModelIndex]) -> None:
         # Need to be careful that the indexes are not invalidated by the removal of
         # previous rows, that's why we convert them to QPersistentModelIndex.
         persistent_indices = [QPersistentModelIndex(index) for index in indices]
@@ -183,11 +192,18 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         clipboard = QGuiApplication.clipboard()
         clipboard.setMimeData(data)
 
-    def cut_selected(self) -> None:
-        self.copy_selection()
-        self.remove_indices(self.selectedIndexes())
+    def cut_selected(self) -> bool:
+        if self.is_read_only():
+            return False
 
-    def paste(self) -> None:
+        self.copy_selection()
+        self._remove_indices(self.selectedIndexes())
+        return True
+
+    def paste(self) -> bool:
+        if self.is_read_only():
+            return False
+
         clipboard = QGuiApplication.clipboard()
         data = clipboard.mimeData()
 
@@ -201,6 +217,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             parent = QModelIndex()
             row = self._model.rowCount()
             self._model.dropMimeData(data, Qt.DropAction.MoveAction, row, 0, parent)
+        return True
 
     def show_context_menu(self, position):
         index = self.indexAt(position)
@@ -250,6 +267,11 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         clipboard.setText(text)
 
     def paste_from_clipboard(self) -> bool:
+        """Attempts to paste the content of the clipboard.
+
+        If the editor is in read-only mode, this method does nothing.
+        """
+
         if self._model.is_read_only():
             return False
 
