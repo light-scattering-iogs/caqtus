@@ -16,6 +16,7 @@ class _ReenterQtEvent(QEvent):
 class _ReenterQtObject(QObject):
     def event(self, event):
         if event.type() == QEvent.Type.User + 1:
+            assert isinstance(event, _ReenterQtEvent)
             event.fn()
             return True
         return False
@@ -41,7 +42,7 @@ def run(
     If the function raises an exception, the application quits and the exception is
     raised.
     If the application is closed before the function completes, the function is
-    cancelled and remaining tasks are allowed to finish before the application quits.
+    cancelled and remaining tasks can finish before the application quits.
     """
 
     reenter_qt_object = _ReenterQtObject()
@@ -80,7 +81,7 @@ def run(
     def on_app_about_to_quit():
         cancel_scope.cancel()
         while outcome is None:
-            app.processEvents(QEventLoop.ExcludeUserInputEvents)
+            app.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
     app.aboutToQuit.connect(on_app_about_to_quit)
 
