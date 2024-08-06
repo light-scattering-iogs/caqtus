@@ -44,6 +44,26 @@ class Experiment:
         )
         self._shot_retry_config: Optional[ShotRetryConfig] = None
 
+    def setup_default_extensions(self) -> None:
+        """Register some commonly used extensions to this experiment.
+
+        This method registers the following extensions:
+
+        * digital time lanes
+        * analog time lanes
+        * camera time lanes
+        """
+
+        from caqtus.extension.time_lane_extension import (
+            digital_time_lane_extension,
+            analog_time_lane_extension,
+            camera_time_lane_extension,
+        )
+
+        self.register_time_lane_extension(digital_time_lane_extension)
+        self.register_time_lane_extension(analog_time_lane_extension)
+        self.register_time_lane_extension(camera_time_lane_extension)
+
     def configure_storage(self, backend_config: PostgreSQLConfig) -> None:
         """Configure the storage backend to be used by the application.
 
@@ -161,7 +181,7 @@ class Experiment:
         if self._session_maker_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
-                "Please call `configure_storage` with the appropriate configuration."
+                "Call `configure_storage` with the appropriate configuration."
             )
             raise error
         session_maker = self._extension.create_session_maker(
