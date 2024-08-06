@@ -1,11 +1,11 @@
 from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyModel
-from caqtus.gui.qtutil import QtAsyncio
+from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
 from tests.fixtures import steps_configuration, time_lanes
 from .session_maker import session_maker
 
 
-def test_0(session_maker, qtmodeltester):
+def test_0(session_maker, qtmodeltester, qtbot):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\test")
@@ -15,11 +15,11 @@ def test_0(session_maker, qtmodeltester):
     with session_maker() as session:
         session.paths.delete_path(path)
 
-    QtAsyncio.run(model.prune(), keep_running=False)
+    qt_trio.run(model.prune)
     assert model.rowCount() == 0
 
 
-def test_1(session_maker, qtmodeltester):
+def test_1(session_maker, qtmodeltester, qtbot):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\a\b")
@@ -29,19 +29,19 @@ def test_1(session_maker, qtmodeltester):
     with session_maker() as session:
         session.paths.delete_path(path)
 
-    QtAsyncio.run(model.prune(), keep_running=False)
+    qt_trio.run(model.prune)
     assert model.rowCount() == 1
 
     with session_maker() as session:
         path = PureSequencePath(r"\a")
         session.paths.delete_path(path)
 
-    QtAsyncio.run(model.prune(), keep_running=False)
+    qt_trio.run(model.prune)
 
     assert model.rowCount() == 0
 
 
-def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes):
+def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes, qtbot):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\a")
@@ -51,11 +51,11 @@ def test_2(session_maker, qtmodeltester, steps_configuration, time_lanes):
     with session_maker() as session:
         session.sequences.create(path, steps_configuration, time_lanes)
 
-    QtAsyncio.run(model.prune(), keep_running=False)
+    qt_trio.run(model.prune)
     assert model.rowCount() == 1
 
 
-def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes):
+def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes, qtbot):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\a")
@@ -67,5 +67,5 @@ def test_3(session_maker, qtmodeltester, steps_configuration, time_lanes):
     with session_maker() as session:
         session.paths.delete_path(path)
 
-    QtAsyncio.run(model.prune(child), keep_running=False)
+    qt_trio.run(model.prune, child)
     assert model.rowCount() == 0
