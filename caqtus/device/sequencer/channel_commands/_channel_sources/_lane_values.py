@@ -75,7 +75,9 @@ class LaneValues(ChannelOutput):
                     shot_context,
                 )
             else:
-                raise InvalidValueError(f"Could not find lane {fmt.lane(lane_name)}")
+                raise InvalidValueError(
+                    f"Could not find {fmt.lane(lane_name)}"
+                ) from None
         if isinstance(lane, DigitalTimeLane):
             lane_values = compile_digital_lane(lane, required_time_step, shot_context)
             result = DimensionedSeries(lane_values, units=None)
