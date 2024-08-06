@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable, Awaitable
 from typing import Optional, TypeVar, ParamSpec
 
@@ -85,8 +86,32 @@ def run(
 
     app.aboutToQuit.connect(on_app_about_to_quit)
 
-    app.exec()
+    previous_excepthook = sys.excepthook
+
+    exception_raised = None
+
+    def excepthook(*args):
+        nonlocal exception_raised
+        exception_raised = args[1]
+        app.exit(-1)
+
+    try:
+        sys.excepthook = excepthook
+        app.exec()
+    finally:
+        sys.excepthook = previous_excepthook
+        app.aboutToQuit.disconnect(on_app_about_to_quit)
+
     if outcome is None:
         raise RuntimeError("Application exited before trio loop completed")
+
+    try:
+        if exception_raised is not None:
+            raise RuntimeError(
+                "An exception occurred in a Qt slot"
+            ) from exception_raised
+    except:
+        outcome.unwrap()
+        raise
     else:
         return outcome.unwrap()
