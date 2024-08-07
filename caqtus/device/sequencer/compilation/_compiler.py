@@ -12,7 +12,6 @@ from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import base_units
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerCompiler
-from .. import ExternalClockOnChange, ExternalTriggerStart, SoftwareTrigger
 from ..channel_commands import DimensionedSeries
 from ..configuration import (
     SequencerConfiguration,
@@ -30,6 +29,7 @@ from ..instructions import (
     concatenate,
     Repeated,
 )
+from ..trigger import ExternalClockOnChange, ExternalTriggerStart, SoftwareTrigger
 
 
 class SequencerCompiler(TriggerCompiler):
