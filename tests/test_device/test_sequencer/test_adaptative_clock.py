@@ -1,4 +1,4 @@
-from caqtus.device.sequencer.compilation import get_adaptive_clock
+from caqtus.device.sequencer.compilation._compiler import get_adaptive_clock
 from caqtus.device.sequencer.instructions import (
     Pattern,
     merge_instructions,
