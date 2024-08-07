@@ -1,17 +1,22 @@
-from typing import Mapping, Any
+from typing import Mapping, Any, assert_never
+
+import numpy as np
 
 from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import (
-    DeviceCompiler,
     SequenceContext,
     DeviceNotUsedException,
     ShotContext,
 )
+from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
+from ..sequencer.compilation import TriggerCompiler
+from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
 
 
-class CameraCompiler(DeviceCompiler):
+class CameraCompiler(TriggerCompiler):
     """Compiler for a camera device."""
 
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
@@ -59,3 +64,30 @@ class CameraCompiler(DeviceCompiler):
             "picture_names": picture_names,
             "exposures": exposures,
         }
+
+    def compute_trigger(
+        self, sequencer_time_step: int, shot_context: ShotContext
+    ) -> SequencerInstruction[np.bool_]:
+        step_bounds = shot_context.get_step_start_times()
+
+        instructions: list[SequencerInstruction[np.bool_]] = []
+        for value, (start, stop) in zip(
+            self.__lane.block_values(), self.__lane.block_bounds()
+        ):
+            length = number_ticks(
+                step_bounds[start], step_bounds[stop], sequencer_time_step * ns
+            )
+            if isinstance(value, TakePicture):
+                if length == 0:
+                    raise InvalidValueError(
+                        f"No trigger can be generated for picture "
+                        f"'{value.picture_name}' because its exposure is too short"
+                        f"({(step_bounds[stop] - step_bounds[start]) * 1e9} ns) with "
+                        f"respect to the time step ({sequencer_time_step} ns)"
+                    )
+                instructions.append(Pattern([True]) * length)
+            elif value is None:
+                instructions.append(Pattern([False]) * length)
+            else:
+                assert_never(value)
+        return concatenate(*instructions)
