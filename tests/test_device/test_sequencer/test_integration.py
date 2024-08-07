@@ -28,3 +28,5 @@ def test_single_digital_lane(
 
     shot_context = ShotContext(sequence_context, variables, compilers)
     compilers["Spincore"].compile_shot_parameters(shot_context)
+    compilers["Swabian pulse streamer"].compile_shot_parameters(shot_context)
+    compilers["NI6738"].compile_shot_parameters(shot_context)
