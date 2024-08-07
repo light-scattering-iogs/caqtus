@@ -15,9 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in the log space.
+- **Breaking:** Trigger compilation is now delegated to the compiler of the device to be triggered.
 - Upgraded to numpy 2.0
 - Upgraded to polars 1.3
-- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in the log space.
+
 
 ### Deprecated
 
