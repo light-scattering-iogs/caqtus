@@ -23,6 +23,10 @@ class DeviceCompiler(Protocol):
 
     The for each shot, the method :meth:`compile_shot_parameters` is called to pass to
     the device controller for this shot.
+
+    If it is necessary to generate a trigger for the device under consideration, the
+    device compiler should inherit from
+    :class:`caqtus.device.sequencer.compilation.TriggerableDeviceCompiler`.
     """
 
     @abc.abstractmethod
