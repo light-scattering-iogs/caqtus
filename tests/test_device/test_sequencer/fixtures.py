@@ -598,8 +598,6 @@ def ni6738_configuration():
                     input_units="dB",
                     output_units="V",
                     measured_data_points=(
-                        (-33.63, -0.35),
-                        (-33.63, -0.3),
                         (-33.63, -0.275),
                         (-30.62, -0.25),
                         (-23.46, -0.225),
