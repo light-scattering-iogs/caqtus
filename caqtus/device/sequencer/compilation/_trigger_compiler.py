@@ -35,6 +35,8 @@ class TriggerCompiler(DeviceCompiler, Protocol):
         Returns:
             A boolean sequencer instruction containing the values that the trigger
             channel of the sequencer should take.
+            The length of this instruction must be the number of ticks in the shot for
+            the sequencer time step.
         """
 
         length = number_ticks(

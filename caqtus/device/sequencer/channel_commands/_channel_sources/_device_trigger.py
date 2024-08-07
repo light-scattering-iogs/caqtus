@@ -21,12 +21,13 @@ from caqtus.device.sequencer.trigger import Trigger
 from caqtus.session.shot import CameraTimeLane, TakePicture
 from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from caqtus.types.recoverable_exceptions import InvalidValueError
+from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._adaptative_clock import get_adaptive_clock
 from ._constant import Constant
 from ..channel_output import ChannelOutput, DimensionedSeries
+from ...compilation import TriggerCompiler
 
 
 @attrs.define
@@ -60,9 +61,9 @@ class DeviceTrigger(ChannelOutput):
         append: int,
         shot_context: ShotContext,
     ):
-        device = self.device_name
+        target_device = self.device_name
         try:
-            device_config = shot_context.get_device_config(device)
+            target_device_compiler = shot_context.get_device_compiler(target_device)
         except KeyError:
             if self.default is not None:
                 evaluated_default = self.default.evaluate(
@@ -73,24 +74,54 @@ class DeviceTrigger(ChannelOutput):
                 )
                 if evaluated_default.units is not None:
                     raise InvalidValueError(
-                        f"Default value for trigger for {fmt.device(device)} "
+                        f"Default value for trigger for {fmt.device(target_device)} "
                         f"must be dimensionless, got "
                         f"{fmt.unit(evaluated_default.units)}"
                     )
                 default_dtype = evaluated_default.values.dtype
                 if default_dtype != np.bool_:
                     raise InvalidValueError(
-                        f"Default value for trigger for {fmt.device(device)} "
+                        f"Default value for trigger for {fmt.device(target_device)} "
                         f"must be boolean, got {default_dtype}"
                     )
                 return evaluated_default
             else:
                 raise InvalidValueError(
-                    f"There is no {fmt.device(device)} to generate trigger for"
+                    f"There is no {fmt.device(target_device)} to generate trigger for"
                 )
-        trigger_values = evaluate_device_trigger(
-            device, device_config, required_time_step, shot_context
+
+        if not isinstance(target_device_compiler, TriggerCompiler):
+            raise DeviceNotTriggerableError(
+                f"{fmt.device(target_device)} can't be triggered"
+            )
+
+        trigger_values = target_device_compiler.compute_trigger(
+            required_time_step, shot_context
         )
+
+        # We check that the values returned by the target device compiler are valid.
+        # If they are not, this a programming error, and it will cause an error further
+        # down the line.
+        # It means the target device compiler doesn't satisfy the trigger interface, so
+        # we want to report it early.
+        if not isinstance(trigger_values, SequencerInstruction):
+            raise TypeError(
+                f"Expected {SequencerInstruction}, got {type(trigger_values)}"
+            )
+
+        if not np.issubdtype(trigger_values.dtype, np.bool):
+            raise TypeError(f"Expected boolean trigger, got {trigger_values.dtype}")
+
+        length = number_ticks(
+            0, shot_context.get_shot_duration(), required_time_step * ns
+        )
+
+        if len(trigger_values) != length:
+            raise ValueError(
+                f"Expected an instruction with length {length}, got "
+                f"{len(trigger_values)}"
+            )
+
         return DimensionedSeries(
             prepend * Pattern([False]) + trigger_values + append * Pattern([False]),
             units=None,
@@ -282,3 +313,7 @@ def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, in
         return div, div // 2, div // 2
     else:
         return div, div // 2 + 1, div // 2
+
+
+class DeviceNotTriggerableError(RecoverableException):
+    pass
