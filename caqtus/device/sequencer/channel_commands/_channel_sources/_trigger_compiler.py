@@ -4,7 +4,7 @@ import numpy as np
 
 from caqtus.shot_compilation import ShotContext, DeviceCompiler
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
-from ..instructions import SequencerInstruction, Pattern
+from ...instructions import SequencerInstruction, Pattern
 
 
 @runtime_checkable

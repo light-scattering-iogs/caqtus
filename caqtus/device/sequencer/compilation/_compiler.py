@@ -11,8 +11,8 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import base_units
 from caqtus.types.variable_name import DottedVariableName
-from ._trigger_compiler import TriggerCompiler
 from ..channel_commands import DimensionedSeries
+from ..channel_commands._channel_sources._trigger_compiler import TriggerCompiler
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
