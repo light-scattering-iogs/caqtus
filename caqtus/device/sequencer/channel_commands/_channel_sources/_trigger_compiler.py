@@ -8,7 +8,7 @@ from ...instructions import SequencerInstruction, Pattern
 
 
 @runtime_checkable
-class TriggerCompiler(DeviceCompiler, Protocol):
+class TriggerableDeviceCompiler(DeviceCompiler, Protocol):
     """Defines the interface for a compiler that can compute the trigger of a device.
 
     The interface defined by this class is used when a sequencer is programmed to output

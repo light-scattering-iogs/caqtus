@@ -19,7 +19,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableEx
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from ._constant import Constant
-from ._trigger_compiler import TriggerCompiler
+from ._trigger_compiler import TriggerableDeviceCompiler
 from ..channel_output import ChannelOutput, DimensionedSeries
 
 
@@ -83,7 +83,7 @@ class DeviceTrigger(ChannelOutput):
                     f"There is no {fmt.device(target_device)} to generate trigger for"
                 )
 
-        if not isinstance(target_device_compiler, TriggerCompiler):
+        if not isinstance(target_device_compiler, TriggerableDeviceCompiler):
             raise DeviceNotTriggerableError(
                 f"{fmt.device(target_device)} can't be triggered"
             )

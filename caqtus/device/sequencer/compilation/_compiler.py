@@ -12,7 +12,9 @@ from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import base_units
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_commands import DimensionedSeries
-from ..channel_commands._channel_sources._trigger_compiler import TriggerCompiler
+from ..channel_commands._channel_sources._trigger_compiler import (
+    TriggerableDeviceCompiler,
+)
 from ..configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -32,7 +34,7 @@ from ..instructions import (
 from ..trigger import ExternalClockOnChange, ExternalTriggerStart, SoftwareTrigger
 
 
-class SequencerCompiler(TriggerCompiler):
+class SequencerCompiler(TriggerableDeviceCompiler):
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
         configuration = sequence_context.get_device_configuration(device_name)

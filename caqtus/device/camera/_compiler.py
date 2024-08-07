@@ -12,11 +12,11 @@ from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
-from ..sequencer.compilation import TriggerCompiler
+from ..sequencer.compilation import TriggerableDeviceCompiler
 from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
 
 
-class CameraCompiler(TriggerCompiler):
+class CameraCompiler(TriggerableDeviceCompiler):
     """Compiler for a camera device."""
 
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
