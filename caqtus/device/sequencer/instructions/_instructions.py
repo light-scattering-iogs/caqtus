@@ -223,7 +223,10 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
         self._length = Length(len(self._pattern))
 
     def __repr__(self):
-        return f"Pattern({self._pattern.tolist()!r})"
+        if np.issubdtype(self.dtype, np.void):
+            return f"Pattern({self._pattern.tolist()!r}, dtype={self.dtype})"
+        else:
+            return f"Pattern({self._pattern.tolist()!r})"
 
     def __str__(self):
         return str(self._pattern.tolist())
