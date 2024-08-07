@@ -3,6 +3,7 @@ import functools
 import numpy as np
 
 from ._instructions import SequencerInstruction, Pattern, Concatenated, Repeated
+from ._ramp import Ramp
 
 
 def convert_to_change_arrays(
@@ -35,11 +36,16 @@ def _convert_to_change_arrays(
 
 
 @_convert_to_change_arrays.register
-def _(sequence: Pattern) -> tuple[np.ndarray, np.ndarray]:
+def _convert_pattern(sequence: Pattern) -> tuple[np.ndarray, np.ndarray]:
     times = np.arange(len(sequence), dtype=np.int64)
     values = sequence.array
 
     return times, values
+
+
+@_convert_to_change_arrays.register
+def _convert_ramp(sequence: Ramp) -> tuple[np.ndarray, np.ndarray]:
+    return _convert_pattern(sequence.to_pattern())
 
 
 @_convert_to_change_arrays.register
