@@ -4,6 +4,8 @@
 
 The `caqtus` package can be used to run precisely timed cold atom experiments.
 
+<img src="doc/source/_static/screenshot.png" width="640" alt="Screenshot of the GUI">
+
 The graphical interface is based on the table format used for example for the [Cicero Word Generator](https://github.com/akeshet/Cicero-Word-Generator).
 
 However, the architecture and modularity are similar from the [Labscript Suite](https://github.com/labscript-suite).
