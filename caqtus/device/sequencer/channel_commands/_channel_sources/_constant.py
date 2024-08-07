@@ -15,7 +15,7 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
-from caqtus.types.units import Quantity, Unit
+from caqtus.types.units import Quantity, Unit, dimensionless
 from caqtus.types.variable_name import DottedVariableName
 
 
@@ -65,7 +65,7 @@ def split_magnitude_units(value: Any) -> tuple[bool | int | float, Optional[Unit
     if isinstance(value, Quantity):
         in_base_units = value.to_base_units()
         magnitude = float(in_base_units.magnitude)
-        units = in_base_units.units
+        units = in_base_units.units if in_base_units.units != dimensionless else None
     elif isinstance(value, bool):
         magnitude = value
         units = None

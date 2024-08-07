@@ -6,6 +6,7 @@ from caqtus.device.sequencer.instructions import (
     Concatenated,
     concatenate,
     Repeated,
+    Ramp,
 )
 
 
@@ -15,12 +16,15 @@ def get_adaptive_clock(
 ) -> SequencerInstruction:
     """Generates a clock signal for a slave instruction."""
 
-    raise NotImplementedError(f"Target sequence {slave_instruction} not implemented")
+    raise NotImplementedError(
+        f"Don't know how to generate a clock for an instruction of type "
+        f"{type(slave_instruction)}"
+    )
 
 
 @get_adaptive_clock.register
 def _(
-    target_sequence: Pattern, clock_pulse: SequencerInstruction
+    target_sequence: Pattern | Ramp, clock_pulse: SequencerInstruction
 ) -> SequencerInstruction:
     return clock_pulse * len(target_sequence)
 
