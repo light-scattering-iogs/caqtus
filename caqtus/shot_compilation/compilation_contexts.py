@@ -166,6 +166,15 @@ class ShotContext:
 
         return self._sequence_context.get_device_configuration(device_name)
 
+    def get_device_compiler(self, device_name: DeviceName) -> "DeviceCompiler":
+        """Returns the device compiler for the given device name.
+
+        Raises:
+            KeyError: If the requested device is not in use for the current shot.
+        """
+
+        return self._device_compilers[device_name]
+
     def get_shot_parameters(self, device_name: DeviceName) -> Mapping[str, Any]:
         """Returns the parameters computed for the given device."""
 
