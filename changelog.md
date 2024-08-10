@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Incompatibility with numpy 1.26
+- Bug with camera compiler not signaling used lane
 
 ## [5.0.0] - 2024-08-10
 
