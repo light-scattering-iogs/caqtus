@@ -4,11 +4,16 @@ from typing import Optional
 from PySide6.QtCharts import (
     QChart,
     QLineSeries,
-    QVXYModelMapper,
     QChartView,
     QValueAxis,
 )
-from PySide6.QtCore import QAbstractTableModel, Qt, QSortFilterProxyModel, QModelIndex
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    Qt,
+    QSortFilterProxyModel,
+    QModelIndex,
+    QPointF,
+)
 from PySide6.QtGui import QPainter
 from PySide6.QtWidgets import (
     QWidget,
@@ -99,35 +104,43 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self._chart = QChart()
         self._chart.setAnimationOptions(QChart.AnimationOption.AllAnimations)
         self._series = QLineSeries()
-        self._series.pointAdded.connect(self.auto_scale)
-        self._series.pointsRemoved.connect(self.auto_scale)
-        self._series.pointReplaced.connect(self.auto_scale)
         self._series.setName("Values")
-        self._mapper = QVXYModelMapper(self)
-        self._mapper.setXColumn(0)
-        self._mapper.setYColumn(1)
-        self._mapper.setSeries(self._series)
-        self._mapper.setModel(self._sorted_model)
+
+        self._model.dataChanged.connect(self._update_series)
+        self._model.rowsInserted.connect(self._update_series)
+        self._model.rowsRemoved.connect(self._update_series)
+        self._model.modelReset.connect(self._update_series)
         self._chart.addSeries(self._series)
 
         self.x_axis = QValueAxis()
         self.x_axis.setTitleText("Input")
-        self._chart.addAxis(self.x_axis, Qt.Alignment.AlignBottom)
+        self._chart.addAxis(self.x_axis, Qt.AlignmentFlag.AlignBottom)
         self._series.attachAxis(self.x_axis)
 
         self.y_axis = QValueAxis()
         self.y_axis.setTitleText("Output")
-        self._chart.addAxis(self.y_axis, Qt.Alignment.AlignRight)
+        self._chart.addAxis(self.y_axis, Qt.AlignmentFlag.AlignRight)
         self._series.attachAxis(self.y_axis)
 
         self._chart.layout().setContentsMargins(0, 0, 0, 0)
         self._chartView = QChartView(self._chart, self)
-        self._chartView.setRenderHint(QPainter.Antialiasing)
+        self._chartView.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.inputUnitLineEdit.textChanged.connect(self.set_input_units)
         self.outputUnitLineEdit.textChanged.connect(self.set_output_units)
 
         self.tabWidget.insertTab(0, self._chartView, "Curve")
         self.tabWidget.setCurrentIndex(0)
+
+    def _update_series(self):
+        new_points = []
+        for row in range(self._sorted_model.rowCount()):
+            x = self._sorted_model.data(self._sorted_model.index(row, 0))
+            y = self._sorted_model.data(self._sorted_model.index(row, 1))
+            point = QPointF(x, y)
+            new_points.append(point)
+        self._series.clear()
+        self._series.append(new_points)
+        self.auto_scale()
 
     def set_data_points(self, values: Sequence[tuple[float, float]]) -> None:
         self._model.set_values(values)
