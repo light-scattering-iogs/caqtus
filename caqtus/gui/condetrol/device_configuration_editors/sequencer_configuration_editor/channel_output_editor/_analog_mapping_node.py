@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Optional
 
+import numpy as np
 from PySide6.QtCharts import (
     QChart,
     QLineSeries,
@@ -25,6 +26,10 @@ from PySide6.QtWidgets import (
 
 from caqtus.gui.common.NodeGraphQt import BaseNode, NodeBaseWidget
 from caqtus.gui.condetrol.icons import get_icon
+from caqtus.types.parameter import add_unit, magnitude_in_unit
+from caqtus.types.units import Unit
+from caqtus.types.units.base import convert_to_base_units
+from caqtus.utils.itertools import pairwise
 from .calibrated_analog_mapping_widget_ui import Ui_CalibratedAnalogMappingWigdet
 
 
@@ -132,13 +137,38 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         self.tabWidget.setCurrentIndex(0)
 
     def _update_series(self):
-        new_points = []
-        for row in range(self._sorted_model.rowCount()):
-            x = self._sorted_model.data(self._sorted_model.index(row, 0))
-            y = self._sorted_model.data(self._sorted_model.index(row, 1))
-            point = QPointF(x, y)
-            new_points.append(point)
         self._series.clear()
+        number_points = self._sorted_model.rowCount()
+        if number_points == 0:
+            return
+        x_points = []
+        y_points = []
+        for row in range(number_points):
+            x_points.append(self._sorted_model.data(self._sorted_model.index(row, 0)))
+            y_points.append(self._sorted_model.data(self._sorted_model.index(row, 1)))
+        input_units = Unit(u) if (u := self.input_units()) else None
+        input_base_points, input_base_units = convert_to_base_units(
+            np.array(x_points), input_units
+        )
+
+        output_units = Unit(u) if (u := self.output_units()) else None
+        y_base_points, y_base_units = convert_to_base_units(
+            np.array(y_points), output_units
+        )
+
+        input_points = np.concat([np.linspace(a, b, 50) for a, b in pairwise(x_points)])
+        interpolation_input_base_points, _ = convert_to_base_units(
+            input_points, input_units
+        )
+
+        output_points_base = np.interp(
+            interpolation_input_base_points, input_base_points, y_base_points
+        )
+        output_points = magnitude_in_unit(
+            add_unit(output_points_base, y_base_units), output_units
+        )
+
+        new_points = [QPointF(x, y) for x, y in zip(input_points, output_points)]
         self._series.append(new_points)
         self.auto_scale()
 
@@ -154,6 +184,7 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             # where the input_units is an empty string.
             self.inputUnitLineEdit.clear()
             self.x_axis.setTitleText("Input")
+        self._update_series()
 
     def set_output_units(self, output_units: Optional[str]) -> None:
         if output_units:
@@ -164,6 +195,7 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             # where the input_units is an empty string.
             self.outputUnitLineEdit.clear()
             self.y_axis.setTitleText("Output")
+        self._update_series()
 
     def set_units(
         self, input_units: Optional[str], output_units: Optional[str]
@@ -175,23 +207,34 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
         return self._model.get_values()
 
     def get_units(self) -> tuple[Optional[str], Optional[str]]:
+        return self.input_units(), self.output_units()
+
+    def input_units(self) -> Optional[str]:
         input_units = self.inputUnitLineEdit.text()
         if input_units == "":
-            input_units = None
+            return None
+        return input_units
+
+    def output_units(self) -> Optional[str]:
         output_units = self.outputUnitLineEdit.text()
         if output_units == "":
-            output_units = None
-        return input_units, output_units
+            return None
+        return output_units
 
     def auto_scale(self) -> None:
         self._chart.axisX().setRange(*self._model.x_range())
         self._chart.axisY().setRange(*self._model.y_range())
 
     def on_add_button_clicked(self):
-        self._model.insertRow(self._model.rowCount(QModelIndex()))
+        self._model.insertRow(
+            self._sorted_model.mapToSource(self.tableView.currentIndex()).row() + 1
+        )
 
     def on_remove_button_clicked(self):
-        self._model.removeRow(self.tableView.currentIndex().row())
+
+        self._model.removeRow(
+            self._sorted_model.mapToSource(self.tableView.currentIndex()).row()
+        )
 
 
 class Model(QAbstractTableModel):
