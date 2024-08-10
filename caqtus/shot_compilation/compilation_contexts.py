@@ -109,8 +109,18 @@ class ShotContext:
         """
 
         lane = self._sequence_context.get_lane(name)
-        self._was_lane_used[name] = True
+        self.mark_lane_used(name)
+
         return lane
+
+    def mark_lane_used(self, name: str) -> None:
+        """Signal that a lane was consumed during the shot.
+
+        Raises:
+            KeyError: If no lane with the given name is present for the shot.
+        """
+
+        self._was_lane_used[name] = True
 
     def get_lanes_with_type(self, lane_type: type[LaneType]) -> Mapping[str, LaneType]:
         """Returns the lanes used during the shot with the given type."""

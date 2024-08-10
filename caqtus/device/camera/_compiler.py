@@ -21,6 +21,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
 
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
+        self.__device_name = device_name
         try:
             lane = sequence_context.get_lane(device_name)
         except KeyError:
@@ -50,6 +51,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
         step_durations = shot_context.get_step_durations()
         exposures = []
         picture_names = []
+        shot_context.mark_lane_used(self.__device_name)
         for value, (start, stop) in zip(
             self.__lane.block_values(), self.__lane.block_bounds()
         ):
