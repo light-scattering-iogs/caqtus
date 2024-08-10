@@ -102,7 +102,7 @@ class DeviceTrigger(ChannelOutput):
                 f"Expected {SequencerInstruction}, got {type(trigger_values)}"
             )
 
-        if not np.issubdtype(trigger_values.dtype, np.bool):
+        if not np.issubdtype(trigger_values.dtype, np.bool_):
             raise TypeError(f"Expected boolean trigger, got {trigger_values.dtype}")
 
         length = number_ticks(
