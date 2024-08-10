@@ -72,6 +72,9 @@ exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
 include = ["caqtus/"]
 exclude = ["*.ui"]
 
+[[tool.hatch.envs.all.matrix]]
+python = ["3.12"]
+
 [tool.hatch.envs.default]
 dependencies = [
     "black>=24.3.0",
@@ -83,11 +86,21 @@ dependencies = [
 
 
 [tool.hatch.envs.test]
+matrix-name-format = "{variable}={value}"
 extra-dependencies = [
     "coverage[toml]>=6.5",
     "pytest>=8.1.1",
     "pytest-qt>=4.4.0",
     "hypothesis[numpy]>=6.103.1",
+]
+
+[[tool.hatch.envs.test.matrix]]
+numpy = ["2", "1.26"]
+
+[tool.hatch.envs.test.overrides]
+matrix.numpy.dependencies = [
+    { value = "numpy>=2", if = ["2"] },
+    { value = "numpy<2", if = ["1.26"] },
 ]
 
 [tool.hatch.envs.test.scripts]
@@ -106,9 +119,6 @@ dependencies = [
     "nbsphinx>=0.9.4",
     "jupyter>=1.0.0",
 ]
-
-[[tool.hatch.envs.all.matrix]]
-python = ["3.12"]
 
 [tool.hatch.envs.types]
 dependencies = [
