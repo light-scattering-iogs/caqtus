@@ -1,3 +1,5 @@
+import decimal
+
 import pytest
 
 from caqtus.device.sequencer.channel_commands._channel_sources._compile_digital_lane import (
@@ -144,3 +146,20 @@ def test_invalid_expression_cell():
     lane = DigitalTimeLane([Expression("...")])
     with pytest.raises(RecoverableException):
         compile_digital_lane(lane, 1, shot_context)
+
+
+def test_non_integer_time_step():
+    shot_context = ShotContext(
+        SequenceContext(
+            device_configurations={},
+            time_lanes=TimeLanes(
+                step_names=["a", "b"],
+                step_durations=[Expression("1 s"), Expression("1 s")],
+            ),
+        ),
+        variables={},
+        device_compilers={},
+    )
+    lane = DigitalTimeLane([True, False])
+    result = compile_digital_lane(lane, decimal.Decimal(0.5), shot_context)
+    assert result == Pattern([True]) * 2_000_000_000 + Pattern([False]) * 2_000_000_000
