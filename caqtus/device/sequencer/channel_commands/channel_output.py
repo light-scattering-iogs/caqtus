@@ -47,7 +47,7 @@ class DimensionedSeries[T: (np.number, np.bool_)]:
         validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
     )
 
-    @units.validator
+    @units.validator  # type: ignore
     def _validate_units(self, _, units: Optional[Unit]):
         if units is not None:
             if not is_in_base_units(units):

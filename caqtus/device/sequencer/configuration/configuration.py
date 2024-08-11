@@ -73,7 +73,7 @@ class SequencerConfiguration(
 
     time_step: TimeStep = attrs.field(
         converter=decimal.Decimal,
-        validator=attrs.validators.gt(0),
+        validator=attrs.validators.gt(decimal.Decimal(0)),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
     channels: tuple[ChannelConfiguration, ...] = attrs.field(

@@ -44,7 +44,7 @@ class DeviceCompiler(Protocol):
             DeviceNotUsedException: If the device is not used in the current sequence.
         """
 
-        ...
+        pass
 
     @abc.abstractmethod
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:

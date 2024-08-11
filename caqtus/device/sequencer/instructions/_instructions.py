@@ -300,7 +300,7 @@ class Pattern[T: np.generic](SequencerInstruction[T]):
 
 def _has_only_finite_values[T: np.generic](array: Array1D[T]) -> bool:
     if np.issubdtype(array.dtype, np.floating):
-        return np.all(np.isfinite(array))
+        return bool(np.all(np.isfinite(array)))
     else:
         return True
 

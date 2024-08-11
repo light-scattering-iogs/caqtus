@@ -104,9 +104,11 @@ class Ramp[T: (np.floating, np.void)](
         if np.issubdtype(dtype, np.floating):
             return True
         if np.issubdtype(dtype, np.void):
+            assert dtype.fields is not None
             return all(
                 cls.is_valid_dtype(sub_dtype) for sub_dtype, *_ in dtype.fields.values()
             )
+        return False
 
     @property
     def start(self) -> T:
@@ -189,6 +191,8 @@ class Ramp[T: (np.floating, np.void)](
         assert self.dtype.names is not None
         if channel not in self.dtype.names:
             raise ValueError(f"Channel {channel} not found in dtype {self.dtype}.")
+        assert isinstance(self._start, np.void)
+        assert isinstance(self._stop, np.void)
         start_value = self._start[channel]
         stop_value = self._stop[channel]
         return Ramp._create(start_value, stop_value, self._length)
