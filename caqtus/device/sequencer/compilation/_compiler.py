@@ -11,6 +11,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import base_units
 from caqtus.types.variable_name import DottedVariableName
+from .._time_step import TimeStep
 from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (
     TriggerableDeviceCompiler,
@@ -107,7 +108,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         return max(advances), max(delays)
 
     def compute_trigger(
-        self, sequencer_time_step: int, shot_context: ShotContext
+        self, sequencer_time_step: TimeStep, shot_context: ShotContext
     ) -> SequencerInstruction[np.bool_]:
         length = number_ticks(
             0, shot_context.get_shot_duration(), sequencer_time_step * ns
@@ -136,7 +137,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
 
 
 def get_master_clock_pulse(
-    slave_time_step: int, master_time_step: int
+    slave_time_step: TimeStep, master_time_step: TimeStep
 ) -> SequencerInstruction[np.bool_]:
     _, high, low = high_low_clicks(slave_time_step, master_time_step)
     single_clock_pulse = Pattern([True]) * high + Pattern([False]) * low
@@ -144,7 +145,9 @@ def get_master_clock_pulse(
     return single_clock_pulse
 
 
-def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, int, int]:
+def high_low_clicks(
+    slave_time_step: TimeStep, master_timestep: TimeStep
+) -> tuple[int, int, int]:
     """Return the number of steps the master sequencer must be high then low to
     produce a clock pulse for the slave sequencer.
 
@@ -157,15 +160,17 @@ def high_low_clicks(slave_time_step: int, master_timestep: int) -> tuple[int, in
     """
 
     if not slave_time_step >= 2 * master_timestep:
-        raise ValueError(
+        raise InvalidValueError(
             "Slave time step must be at least twice the master sequencer time step"
         )
-    div, mod = divmod(slave_time_step, master_timestep)
+    div_decimal, mod = divmod(slave_time_step, master_timestep)
     if not mod == 0:
-        raise ValueError(
+        raise InvalidValueError(
             "Slave time step must be an integer multiple of the master sequencer time "
             "step"
         )
+    div, denominator = div_decimal.as_integer_ratio()
+    assert denominator == 1
     if div % 2 == 0:
         return div, div // 2, div // 2
     else:
