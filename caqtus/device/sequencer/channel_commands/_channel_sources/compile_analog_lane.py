@@ -314,11 +314,9 @@ def is_constant(expression: Expression) -> bool:
 
 
 def get_time_array(start: float, stop: float, time_step: TimeStep) -> np.ndarray:
-    times = (
-        np.arange(start_tick(start, time_step * ns), stop_tick(stop, time_step * ns))
-        * time_step
-        * ns
-    )
+    times = np.arange(
+        start_tick(start, time_step * ns), stop_tick(stop, time_step * ns)
+    ) * float(time_step * ns)
     return times
 
 

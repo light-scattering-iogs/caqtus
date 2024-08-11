@@ -1,3 +1,4 @@
+import decimal
 from typing import Type
 
 import pytest
@@ -468,7 +469,7 @@ def spincore_config():
                 description="", output=Constant(value=Expression("Disabled"))
             ),
         ),
-        time_step=50,
+        time_step=decimal.Decimal(50),
     )
 
 
@@ -797,7 +798,7 @@ def ni6738_configuration():
                 output_unit="V",
             ),
         ),
-        time_step=3000,
+        time_step=decimal.Decimal(3000),
     )
 
 
@@ -811,7 +812,7 @@ class SwabianPulseStreamerConfiguration(SequencerConfiguration):
 def swabian_configuration():
     return SwabianPulseStreamerConfiguration(
         remote_server="James",
-        time_step=1,
+        time_step=decimal.Decimal(1),
         trigger=ExternalTriggerStart(edge=TriggerEdge.RISING),
         channels=(
             DigitalChannelConfiguration(

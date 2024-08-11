@@ -1,3 +1,5 @@
+import decimal
+
 import numpy as np
 from pytest import approx, raises
 
@@ -53,7 +55,9 @@ def test_evaluate_time_dependent_expression_0():
 
     variables = {}
 
-    result = evaluate_time_dependent_expression(expression, variables, 0, 10e-9, 1)
+    result = evaluate_time_dependent_expression(
+        expression, variables, 0, 10e-9, decimal.Decimal(1)
+    )
 
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -68,7 +72,9 @@ def test_evaluate_time_dependent_expression_1():
 
     variables = {}
 
-    result = evaluate_time_dependent_expression(expression, variables, 0, 10e-9, 1)
+    result = evaluate_time_dependent_expression(
+        expression, variables, 0, 10e-9, decimal.Decimal(1)
+    )
 
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -83,7 +89,9 @@ def test_evaluate_time_dependent_expression_2():
 
     variables = {}
 
-    result = evaluate_time_dependent_expression(expression, variables, 0, 10e-9, 1)
+    result = evaluate_time_dependent_expression(
+        expression, variables, 0, 10e-9, decimal.Decimal(1)
+    )
 
     assert result == TimeDependentBlockResult(
         values=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
@@ -95,7 +103,7 @@ def test_evaluate_time_dependent_expression_2():
 
 def test_logarithmic_expression():
     lane = AnalogTimeLane([Expression("0 dB"), Expression("10 dB")])
-    result = compile_analog_lane(lane, {}, [0.0, 10e-9, 20e-9], 1)
+    result = compile_analog_lane(lane, {}, [0.0, 10e-9, 20e-9], decimal.Decimal(1))
     expected = Pattern([1]) * 10 + Pattern([10]) * 10
     assert result.values == approx(expected)
     assert result.units is None
@@ -103,7 +111,7 @@ def test_logarithmic_expression():
 
 def test_ramp():
     lane = AnalogTimeLane([Expression("0"), Ramp(), Expression("10")])
-    result = compile_analog_lane(lane, {}, [0, 0, 4e-9, 4e-9], 1)
+    result = compile_analog_lane(lane, {}, [0, 0, 4e-9, 4e-9], decimal.Decimal(1))
     expected = ramp(0, 10, 4)
 
     assert result.values == expected
@@ -113,7 +121,10 @@ def test_ramp():
 def test_ramp_2():
     lane = AnalogTimeLane([Expression("10 V"), Ramp(), Expression("100 mV")])
     result = compile_analog_lane(
-        lane, {}, [0.0, 1e-08, 3.0000000000000004e-08, 6.000000000000001e-08], 10
+        lane,
+        {},
+        [0.0, 1e-08, 3.0000000000000004e-08, 6.000000000000001e-08],
+        decimal.Decimal(10),
     )
     expected = Pattern([10]) * 1 + ramp(10, 0.1, 2) + Pattern([0.1]) * 3
 
@@ -123,7 +134,7 @@ def test_ramp_2():
 
 def test_logarithmic_ramp():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
-    result = compile_analog_lane(lane, {}, [0, 3e-9, 7e-9, 10e-9], 1)
+    result = compile_analog_lane(lane, {}, [0, 3e-9, 7e-9, 10e-9], decimal.Decimal(1))
     expected = Pattern([1.0]) * 3 + ramp(1, 10, 4) + 3 * Pattern([10.0])
 
     assert result.values == approx(expected)
@@ -132,7 +143,7 @@ def test_logarithmic_ramp():
 
 def test_ramp_time_dependent():
     lane = AnalogTimeLane([Expression("2 * t"), Ramp(), Expression("t")])
-    result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9], 1)
+    result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9], decimal.Decimal(1))
     expected = (
         Pattern(np.linspace(0, 20, 10, endpoint=False) * 1e-9)
         + ramp(20e-9, 0, 10)
@@ -145,7 +156,9 @@ def test_ramp_time_dependent():
 
 def test_non_integer_ramp():
     lane = AnalogTimeLane([Expression("0"), Ramp(), Expression("1")])
-    result = compile_analog_lane(lane, {}, [0.0, 0.5e-9, 2.5e-9, 4e-9], 1)
+    result = compile_analog_lane(
+        lane, {}, [0.0, 0.5e-9, 2.5e-9, 4e-9], decimal.Decimal(1)
+    )
     expected = Pattern([0, 1 / 4, 3 / 4, 1])
     assert result.values == approx(expected)
     assert result.units is None
@@ -153,7 +166,7 @@ def test_non_integer_ramp():
 
 def test_expression_with_unit():
     lane = AnalogTimeLane([Expression("10 Hz"), Expression("1 kHz")])
-    result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+    result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], decimal.Decimal(1))
     expected = Pattern([10.0]) * 10 + Pattern([1000.0]) * 10
     assert result.values == approx(expected)
     assert result.units == Unit("1/s")
@@ -161,7 +174,7 @@ def test_expression_with_unit():
 
 def test_time_dependent_expression():
     lane = AnalogTimeLane([Expression("t / (10 ns) * 1 Hz")])
-    result = compile_analog_lane(lane, {}, [0, 10e-9], 1)
+    result = compile_analog_lane(lane, {}, [0, 10e-9], decimal.Decimal(1))
     expected = Pattern([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
 
     assert result.values == approx(expected)
@@ -171,32 +184,34 @@ def test_time_dependent_expression():
 def test_invalid_expression_cell():
     lane = AnalogTimeLane([Expression("...")])
     with raises(RecoverableException):
-        compile_analog_lane(lane, {}, [0, 10e-9], 1)
+        compile_analog_lane(lane, {}, [0, 10e-9], decimal.Decimal(1))
 
 
 def test_invalid_dimensions():
     lane = AnalogTimeLane([Expression("1"), Expression("1 Hz")])
 
     with raises(InvalidDimensionalityError):
-        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], decimal.Decimal(1))
 
 
 def test_invalid_ramp():
     lane = AnalogTimeLane([Expression("1"), Ramp()])
 
     with raises(InvalidValueError):
-        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], decimal.Decimal(1))
 
 
 def test_invalid_ramp_2():
     lane = AnalogTimeLane([Ramp(), Expression("1")])
 
     with raises(InvalidValueError):
-        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], 1)
+        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9], decimal.Decimal(1))
 
 
 def test_invalid_ramp_3():
     lane = AnalogTimeLane([Expression("1"), Ramp(), Ramp(), Expression("1")])
 
     with raises(InvalidValueError):
-        compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9, 40e-9], 1)
+        compile_analog_lane(
+            lane, {}, [0, 10e-9, 20e-9, 30e-9, 40e-9], decimal.Decimal(1)
+        )
