@@ -26,7 +26,7 @@ class Sequencer(Device, ABC):
     time_step: TimeStep = attrs.field(
         on_setattr=attrs.setters.frozen,
         converter=decimal.Decimal,
-        validator=attrs.validators.gt(0),
+        validator=attrs.validators.gt(decimal.Decimal(0)),
     )
     trigger: Trigger = attrs.field(
         on_setattr=attrs.setters.frozen,
