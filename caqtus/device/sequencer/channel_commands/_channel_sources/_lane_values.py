@@ -3,17 +3,13 @@ from __future__ import annotations
 from typing import Optional, Mapping, Any
 
 import attrs
-from cattrs.gen import make_dict_structure_fn, override
 
 import caqtus.formatter as fmt
 from caqtus.shot_compilation import ShotContext
-from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane, AnalogTimeLane
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
 from ._compile_digital_lane import compile_digital_lane
-from ._constant import Constant
 from .compile_analog_lane import compile_analog_lane
 from ..channel_output import ChannelOutput, DimensionedSeries
 from ...instructions import Pattern
@@ -109,39 +105,3 @@ class LaneValues(ChannelOutput):
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return 0, 0
-
-
-def structure_lane_default(default_data, _):
-    # We need this custom structure hook, because in the past the default value of a
-    # LaneValues was a Constant and not any ChannelOutput.
-    # In that case, the type of the default value was not serialized, so we need to
-    # deal with this special case.
-    if default_data is None:
-        return None
-    elif isinstance(default_data, str):
-        default_expression = serialization.structure(default_data, Expression)
-        return Constant(value=default_expression)
-    elif "type" in default_data:
-        return serialization.structure(default_data, ChannelOutput)
-    else:
-        return serialization.structure(default_data, Constant)
-
-
-structure_lane_values = make_dict_structure_fn(
-    LaneValues,
-    serialization.converters["json"],
-    default=override(struct_hook=structure_lane_default),
-)
-
-
-def unstructure_lane_values(lane_values):
-    return {
-        "lane": lane_values.lane,
-        "default": serialization.unstructure(
-            lane_values.default, Optional[ChannelOutput]
-        ),
-    }
-
-
-serialization.register_structure_hook(LaneValues, structure_lane_values)
-serialization.register_unstructure_hook(LaneValues, unstructure_lane_values)

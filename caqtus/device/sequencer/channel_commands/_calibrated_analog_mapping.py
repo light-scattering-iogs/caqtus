@@ -7,16 +7,13 @@ from collections.abc import Iterable, Sequence
 from typing import Optional, Mapping, Any
 
 import attrs
-import cattrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
 from caqtus.types.units import Unit, InvalidDimensionalityError
 from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
 from caqtus.utils.itertools import pairwise
-from ._structure_hook import structure_channel_output
 from .channel_output import ChannelOutput, DimensionedSeries
 from ..instructions import (
     SequencerInstruction,
@@ -356,13 +353,3 @@ class DimensionlessCalibration:
 
 def evaluate_ramp(r: Ramp, t) -> float:
     return r.start + (r.stop - r.start) * t / len(r)
-
-
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-structure_hook = cattrs.gen.make_dict_structure_fn(
-    CalibratedAnalogMapping,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(CalibratedAnalogMapping, structure_hook)

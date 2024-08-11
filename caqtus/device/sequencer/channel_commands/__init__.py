@@ -10,7 +10,6 @@ This allows the user to build complex evaluation pipelines for what should be ou
 by a sequencer channel.
 """
 
-from caqtus.utils import serialization
 from . import timing
 from ._calibrated_analog_mapping import CalibratedAnalogMapping, TimeIndependentMapping
 from ._channel_sources import (
@@ -23,9 +22,6 @@ from ._channel_sources import (
 )
 from .channel_output import ChannelOutput, DimensionedSeries
 
-serialization.include_subclasses(
-    ChannelOutput, union_strategy=serialization.strategies.include_type("type")
-)
 
 __all__ = [
     "ChannelOutput",

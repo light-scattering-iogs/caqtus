@@ -4,7 +4,6 @@ import functools
 from typing import Mapping, Any
 
 import attrs
-import cattrs
 import numpy as np
 
 import caqtus.formatter as fmt
@@ -14,8 +13,6 @@ from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueError
 from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from .._structure_hook import structure_channel_output
 from ..channel_output import ChannelOutput, DimensionedSeries
 from ...instructions import (
     SequencerInstruction,
@@ -90,15 +87,6 @@ class BroadenLeft(ChannelOutput):
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return self.input_.evaluate_max_advance_and_delay(time_step, variables)
-
-
-broaden_left_structure_hook = cattrs.gen.make_dict_structure_fn(
-    BroadenLeft,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(BroadenLeft, broaden_left_structure_hook)
 
 
 @functools.singledispatch

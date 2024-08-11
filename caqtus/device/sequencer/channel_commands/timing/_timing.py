@@ -4,7 +4,6 @@ from collections.abc import Mapping
 from typing import Optional, Any
 
 import attrs
-import cattrs
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext
@@ -13,10 +12,7 @@ from caqtus.types.parameter import magnitude_in_unit
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from .._structure_hook import structure_channel_output
 from ..channel_output import ChannelOutput
-from ...instructions import SequencerInstruction
 
 
 @attrs.define
@@ -76,16 +72,6 @@ class Advance(ChannelOutput):
         return advance_ticks + input_advance, input_delay
 
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-advance_structure_hook = cattrs.gen.make_dict_structure_fn(
-    Advance,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(Advance, advance_structure_hook)
-
-
 @attrs.define
 class Delay(ChannelOutput):
     input_: ChannelOutput = attrs.field(
@@ -141,16 +127,6 @@ class Delay(ChannelOutput):
             time_step, variables
         )
         return input_advance, delay_ticks + input_delay
-
-
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-delay_structure_hook = cattrs.gen.make_dict_structure_fn(
-    Delay,
-    serialization.converters["json"],
-    input_=cattrs.override(struct_hook=structure_channel_output),
-)
-
-serialization.register_structure_hook(Delay, delay_structure_hook)
 
 
 def _evaluate_expression_in_unit(

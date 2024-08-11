@@ -5,7 +5,6 @@ from typing import Optional, Any
 
 import attrs
 import numpy as np
-from cattrs.gen import make_dict_structure_fn, override
 
 import caqtus.formatter as fmt
 from caqtus.device import DeviceName
@@ -17,8 +16,6 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils import serialization
-from ._constant import Constant
 from ._trigger_compiler import TriggerableDeviceCompiler
 from ..channel_output import ChannelOutput, DimensionedSeries
 
@@ -126,29 +123,6 @@ class DeviceTrigger(ChannelOutput):
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return 0, 0
-
-
-def structure_default(data, _):
-    # We need this custom structure hook, because in the past the default value of a
-    # DeviceTrigger was a Constant and not any ChannelOutput.
-    # In that case, the type of the default value was not serialized, so we need to
-    # deal with this special case.
-    if data is None:
-        return None
-    if "type" in data:
-        return serialization.structure(data, ChannelOutput)
-    else:
-        return serialization.structure(data, Constant)
-
-
-structure_device_trigger = make_dict_structure_fn(
-    DeviceTrigger,
-    serialization.converters["json"],
-    default=override(struct_hook=structure_default),
-)
-
-
-serialization.register_structure_hook(DeviceTrigger, structure_device_trigger)
 
 
 class DeviceNotTriggerableError(RecoverableException):

@@ -1,4 +1,5 @@
 from caqtus.device import DeviceName
+from caqtus.device.sequencer import converter
 from caqtus.device.sequencer.channel_commands import (
     LaneValues,
     Constant,
@@ -8,49 +9,48 @@ from caqtus.device.sequencer.channel_commands import (
 )
 from caqtus.device.sequencer.channel_commands.timing import Advance, Delay, BroadenLeft
 from caqtus.types.expression import Expression
-from caqtus.utils import serialization
 
 
 def test_0():
     lane_output = LaneValues("lane", default=Constant(Expression("Disabled")))
 
-    u = serialization.unstructure(lane_output, ChannelOutput)
-    s = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(lane_output, ChannelOutput)
+    s = converter.structure(u, ChannelOutput)
     assert lane_output == s
 
 
 def test_1():
     u = {"default": "Disabled", "lane": "lane", "type": "LaneValues"}
     lane_output = LaneValues("lane", default=Constant(Expression("Disabled")))
-    s = serialization.structure(u, ChannelOutput)
+    s = converter.structure(u, ChannelOutput)
     assert lane_output == s
 
 
 def test_2():
     c = Constant(value=Expression("Disabled"))
-    u = serialization.unstructure(c, ChannelOutput)
+    u = converter.unstructure(c, ChannelOutput)
     assert u["type"] == "Constant"
 
 
 def test_3():
     d = DeviceTrigger("test", default=Constant(Expression("Disabled")))
-    u = serialization.unstructure(d, ChannelOutput)
-    s = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(d, ChannelOutput)
+    s = converter.structure(u, ChannelOutput)
     assert s == d
 
 
 def test_4():
     u = {"device_name": "test", "type": "DeviceTrigger"}
     d = DeviceTrigger("test")
-    s = serialization.structure(u, ChannelOutput)
+    s = converter.structure(u, ChannelOutput)
     assert s == d
 
 
 def test_5():
     lane_output = LaneValues("lane", default=None)
 
-    u = serialization.unstructure(lane_output, ChannelOutput)
-    s = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(lane_output, ChannelOutput)
+    s = converter.structure(u, ChannelOutput)
     assert lane_output == s
 
 
@@ -60,7 +60,7 @@ def test_6():
         "default": {"value": "Disabled"},
         "type": "DeviceTrigger",
     }
-    result = serialization.converters["json"].structure(data, ChannelOutput)
+    result = converter.structure(data, ChannelOutput)
     assert result == DeviceTrigger(
         device_name=DeviceName("Fringe stabilizer"),
         default=Constant(Expression("Disabled")),
@@ -73,7 +73,7 @@ def test_7():
         "default": {"value": "Disabled"},
         "type": "LaneValues",
     }
-    result = serialization.converters["json"].structure(data, ChannelOutput)
+    result = converter.structure(data, ChannelOutput)
     assert result == LaneValues(
         "421 cell \\ kill \\ shutter", default=Constant(Expression("Disabled"))
     )
@@ -86,8 +86,8 @@ def test_8():
         input_units="V",
         measured_data_points=((0.0, 0.0), (1.0, 1.0), (2.0, 2.0)),
     )
-    u = serialization.unstructure(lane, ChannelOutput)
-    reconstructed = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(lane, ChannelOutput)
+    reconstructed = converter.structure(u, ChannelOutput)
     assert lane == reconstructed
 
 
@@ -96,8 +96,8 @@ def test_9():
         input_=Constant(Expression("0 V")),
         advance=Expression("10 ms"),
     )
-    u = serialization.unstructure(advance, ChannelOutput)
-    reconstructed = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(advance, ChannelOutput)
+    reconstructed = converter.structure(u, ChannelOutput)
     assert advance == reconstructed
 
 
@@ -106,8 +106,8 @@ def test_10():
         input_=Constant(Expression("0 V")),
         delay=Expression("10 ms"),
     )
-    u = serialization.unstructure(delay, ChannelOutput)
-    reconstructed = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(delay, ChannelOutput)
+    reconstructed = converter.structure(u, ChannelOutput)
     assert delay == reconstructed
 
 
@@ -116,8 +116,8 @@ def test_11():
         input_=Constant(Expression("0 V")),
         width=Expression("10 ms"),
     )
-    u = serialization.unstructure(broaden_left, ChannelOutput)
-    reconstructed = serialization.structure(u, ChannelOutput)
+    u = converter.unstructure(broaden_left, ChannelOutput)
+    reconstructed = converter.structure(u, ChannelOutput)
     assert broaden_left == reconstructed
 
 
@@ -127,7 +127,7 @@ def test_12():
         "advance": "224 ns",
         "type": "Advance",
     }
-    result = serialization.converters["json"].structure(data, ChannelOutput)
+    result = converter.structure(data, ChannelOutput)
     assert result == Advance(
         input_=LaneValues(
             "421 cell \\ kill \\ EOM", default=Constant(Expression("Disabled"))
