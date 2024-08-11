@@ -4,28 +4,25 @@ import decimal
 import math
 from collections.abc import Iterable
 from itertools import accumulate
-from typing import SupportsFloat, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from caqtus.device.sequencer import TimeStep
+from typing import SupportsFloat
 
 ns = decimal.Decimal("1e-9")
 
 
-def start_tick(start_time: SupportsFloat, time_step: "TimeStep") -> int:
+def start_tick(start_time: SupportsFloat, time_step: SupportsFloat) -> int:
     """Returns the included first tick index of the step starting at start_time."""
 
     return math.ceil(float(start_time) / float(time_step))
 
 
-def stop_tick(stop_time: SupportsFloat, time_step: "TimeStep") -> int:
+def stop_tick(stop_time: SupportsFloat, time_step: SupportsFloat) -> int:
     """Returns the excluded last tick index of the step ending at stop_time."""
 
     return math.ceil(float(stop_time) / float(time_step))
 
 
 def number_ticks(
-    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: "TimeStep"
+    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: SupportsFloat
 ) -> int:
     """Returns the number of ticks between start_time and stop_time.
 
