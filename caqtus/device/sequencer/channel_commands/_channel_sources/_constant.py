@@ -17,6 +17,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, Unit, dimensionless
 from caqtus.types.variable_name import DottedVariableName
+from ..._time_step import TimeStep
 
 
 @attrs.define
@@ -39,7 +40,7 @@ class Constant(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -55,7 +56,7 @@ class Constant(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return 0, 0
