@@ -13,6 +13,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput
+from ..._time_step import TimeStep
 
 
 @attrs.define
@@ -31,7 +32,7 @@ class Advance(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -39,7 +40,7 @@ class Advance(ChannelOutput):
         evaluated_advance = _evaluate_expression_in_unit(
             self.advance, Unit("ns"), shot_context.get_variables()
         )
-        number_ticks_to_advance = round(evaluated_advance / required_time_step)
+        number_ticks_to_advance = round(evaluated_advance / float(required_time_step))
         if number_ticks_to_advance < 0:
             raise ValueError(
                 f"Cannot advance by a negative number of time steps "
@@ -59,13 +60,13 @@ class Advance(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         advance = _evaluate_expression_in_unit(self.advance, Unit("ns"), variables)
         if advance < 0:
             raise InvalidValueError(f"Advance must be a positive number.")
-        advance_ticks = round(advance / time_step)
+        advance_ticks = round(advance / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
         )
@@ -88,7 +89,7 @@ class Delay(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -96,7 +97,7 @@ class Delay(ChannelOutput):
         evaluated_delay = _evaluate_expression_in_unit(
             self.delay, Unit("ns"), shot_context.get_variables()
         )
-        number_ticks_to_delay = round(evaluated_delay / required_time_step)
+        number_ticks_to_delay = round(evaluated_delay / float(required_time_step))
         if number_ticks_to_delay < 0:
             raise ValueError(
                 f"Cannot delay by a negative number of time steps "
@@ -116,13 +117,13 @@ class Delay(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         delay = _evaluate_expression_in_unit(self.delay, Unit("ns"), variables)
         if delay < 0:
             raise ValueError(f"Delay must be a positive number.")
-        delay_ticks = round(delay / time_step)
+        delay_ticks = round(delay / float(time_step))
         input_advance, input_delay = self.input_.evaluate_max_advance_and_delay(
             time_step, variables
         )
