@@ -1,3 +1,4 @@
+import decimal
 from abc import ABC, abstractmethod
 from typing import (
     Type,
@@ -59,16 +60,19 @@ class SequencerConfiguration(
     """Holds the static configuration of a sequencer device.
 
     Fields:
-        number_channels: The number of channels of the device.
-        time_step: The quantization time step used, in nanoseconds. The device can only
-            update its output at multiples of this time step.
+        time_step: The quantization time step used, in nanoseconds.
+            The device can only update its output at times that are integer multiples
+            of this time step.
+            This is a decimal number to allow sub-nanosecond precision without floating
+            point errors.
         channels: The configuration of the channels of the device. The length of this
             list must match the number of channels of the device.
+        trigger: The trigger that starts the execution of the sequencer.
     """
 
-    time_step: int = attrs.field(
-        converter=int,
-        validator=attrs.validators.ge(1),
+    time_step: decimal.Decimal = attrs.field(
+        converter=decimal.Decimal,
+        validator=attrs.validators.gt(0),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
     channels: tuple[ChannelConfiguration, ...] = attrs.field(
