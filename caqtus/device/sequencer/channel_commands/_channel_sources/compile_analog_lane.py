@@ -35,6 +35,7 @@ from caqtus.types.units import (
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
 from ..channel_output import DimensionedSeries
+from ..._time_step import TimeStep
 
 TIME_VARIABLE = VariableName("t")
 
@@ -43,7 +44,7 @@ def compile_analog_lane(
     lane: AnalogTimeLane,
     variables: Mapping[DottedVariableName, Any],
     step_start_times: Sequence[float],
-    time_step: int,
+    time_step: TimeStep,
 ) -> DimensionedSeries[np.float64]:
     """Compile the lane to a sequencer instruction.
 
@@ -163,10 +164,10 @@ def _compile_expression_block(
     variables: Mapping[DottedVariableName, Any],
     start_time: float,
     stop_time: float,
-    time_step: int,
+    time_step: TimeStep,
 ) -> ConstantBlockResult | TimeDependentBlockResult:
-    length = number_ticks(start_time, stop_time, time_step * ns)
     if is_constant(expression):
+        length = number_ticks(start_time, stop_time, time_step * ns)
         return evaluate_constant_expression(expression, variables, length)
     else:
         return evaluate_time_dependent_expression(
@@ -209,7 +210,7 @@ def evaluate_time_dependent_expression(
     variables: Mapping[DottedVariableName, Any],
     start_time: float,
     stop_time: float,
-    time_step: int,
+    time_step: TimeStep,
 ) -> TimeDependentBlockResult:
     assert not is_constant(expression)
 
@@ -266,7 +267,7 @@ def _compile_ramp_cell(
     ramp_block: Block,
     expression_blocks: dict[Block, ConstantBlockResult | TimeDependentBlockResult],
     step_bounds: Sequence[float],
-    time_step: int,
+    time_step: TimeStep,
 ) -> RampBlockResult:
     previous_block = Block(ramp_block - 1)
     if previous_block < 0:
@@ -312,7 +313,7 @@ def is_constant(expression: Expression) -> bool:
     return TIME_VARIABLE not in expression.upstream_variables
 
 
-def get_time_array(start: float, stop: float, time_step: int) -> np.ndarray:
+def get_time_array(start: float, stop: float, time_step: TimeStep) -> np.ndarray:
     times = (
         np.arange(start_tick(start, time_step * ns), stop_tick(stop, time_step * ns))
         * time_step
@@ -386,7 +387,7 @@ class RampBlockResult:
         v0: float,
         t1: float,
         v1: float,
-        time_step: int,
+        time_step: TimeStep,
         unit: Optional[UnitLike],
     ) -> RampBlockResult:
         def f(t: float) -> float:
@@ -395,8 +396,8 @@ class RampBlockResult:
         first_tick = start_tick(t0, time_step * ns)
         last_tick = stop_tick(t1, time_step * ns)
 
-        first_tick_time = first_tick * time_step * ns
-        last_tick_time = last_tick * time_step * ns
+        first_tick_time = float(first_tick * time_step * ns)
+        last_tick_time = float(last_tick * time_step * ns)
 
         initial_value = f(first_tick_time)
         final_value = f(last_tick_time)

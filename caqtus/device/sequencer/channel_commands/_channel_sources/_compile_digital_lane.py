@@ -11,11 +11,12 @@ from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
+from ..._time_step import TimeStep
 
 
 def compile_digital_lane(
     lane: DigitalTimeLane,
-    time_step: int,
+    time_step: TimeStep,
     shot_context: ShotContext,
 ) -> SequencerInstruction[np.bool_]:
     step_names = shot_context.get_step_names()
