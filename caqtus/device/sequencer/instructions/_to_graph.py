@@ -33,7 +33,7 @@ def levels_to_str(levels: list[int], port: Optional[str] = None) -> str:
 
 
 @functools.singledispatch
-def add_to_graph(instr, graph, levels: list[int]):
+def add_to_graph(instr, graph, levels: list[int]) -> None:
     raise NotImplementedError(f"Cannot add {type(instr)} to graph")
 
 
