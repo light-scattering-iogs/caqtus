@@ -3,8 +3,6 @@ from typing import TypeAlias, TypeGuard
 
 import attrs
 
-from caqtus.utils import serialization
-
 
 class TriggerEdge(Enum):
     RISING = "rising"
@@ -13,9 +11,6 @@ class TriggerEdge(Enum):
 
     def __repr__(self):
         return f"{self.__class__.__name__}.{self.name}"
-
-
-serialization.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)
 
 
 @attrs.define
@@ -48,6 +43,3 @@ def is_trigger(value) -> TypeGuard[Trigger]:
         value,
         (SoftwareTrigger, ExternalTriggerStart, ExternalClock, ExternalClockOnChange),
     )
-
-
-serialization.configure_tagged_union(Trigger, tag_name="trigger type")
