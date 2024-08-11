@@ -5,6 +5,7 @@ from typing import ClassVar
 import attrs
 
 from caqtus.device.runtime import Device
+from .._time_step import TimeStep
 from ..instructions import SequencerInstruction
 from ..trigger import Trigger, is_trigger
 
@@ -22,7 +23,7 @@ class Sequencer(Device, ABC):
 
     channel_number: ClassVar[int]
 
-    time_step: decimal.Decimal = attrs.field(
+    time_step: TimeStep = attrs.field(
         on_setattr=attrs.setters.frozen,
         converter=decimal.Decimal,
         validator=attrs.validators.gt(0),
