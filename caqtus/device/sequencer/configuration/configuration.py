@@ -3,14 +3,12 @@ from typing import (
     Type,
     TypeVar,
     Generic,
-    TypedDict,
 )
 
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
 from ..channel_commands import ChannelOutput
-from ..instructions import SequencerInstruction
 from ..runtime import Sequencer
 from ..trigger import Trigger, is_trigger
 
@@ -52,10 +50,6 @@ def validate_trigger(instance, attribute, value):
 
 
 SequencerType = TypeVar("SequencerType", bound=Sequencer)
-
-
-class SequencerUpdateParams(TypedDict):
-    sequence: SequencerInstruction
 
 
 @attrs.define
