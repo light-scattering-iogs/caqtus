@@ -16,23 +16,24 @@ from .channel_commands import (
 )
 from .channel_commands.timing import Advance, Delay, BroadenLeft
 from .trigger import TriggerEdge, Trigger
+from ._time_step import TimeStep
 
 converter = serialization.copy_converter()
 """A converter than can serialize and deserialize sequencer configuration."""
 
 
-def _structure_decimal(value, _) -> decimal.Decimal:
+def _structure_time_step(value, _) -> TimeStep:
     return decimal.Decimal(value)
 
 
-converter.register_structure_hook(decimal.Decimal, _structure_decimal)
+converter.register_structure_hook(TimeStep, _structure_time_step)
 
 
-def _unstructure_decimal(value) -> str:
+def _unstructure_time_step(value) -> str:
     return str(value)
 
 
-converter.register_unstructure_hook(decimal.Decimal, _unstructure_decimal)
+converter.register_unstructure_hook(TimeStep, _unstructure_time_step)
 
 
 converter.register_unstructure_hook(TriggerEdge, lambda edge: edge.value)

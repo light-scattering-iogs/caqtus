@@ -9,6 +9,7 @@ from typing import (
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
+from .._time_step import TimeStep
 from ..channel_commands import ChannelOutput
 from ..runtime import Sequencer
 from ..trigger import Trigger, is_trigger
@@ -70,7 +71,7 @@ class SequencerConfiguration(
         trigger: The trigger that starts the execution of the sequencer.
     """
 
-    time_step: decimal.Decimal = attrs.field(
+    time_step: TimeStep = attrs.field(
         converter=decimal.Decimal,
         validator=attrs.validators.gt(0),
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
