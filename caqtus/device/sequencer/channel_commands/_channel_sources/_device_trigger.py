@@ -18,6 +18,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableEx
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
 from ..channel_output import ChannelOutput, DimensionedSeries
+from ..._time_step import TimeStep
 
 
 @attrs.define
@@ -46,7 +47,7 @@ class DeviceTrigger(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -119,7 +120,7 @@ class DeviceTrigger(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return 0, 0
