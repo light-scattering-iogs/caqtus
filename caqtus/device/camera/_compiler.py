@@ -12,6 +12,7 @@ from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
+from ..sequencer import TimeStep
 from ..sequencer.compilation import TriggerableDeviceCompiler
 from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
 
@@ -68,7 +69,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
         }
 
     def compute_trigger(
-        self, sequencer_time_step: int, shot_context: ShotContext
+        self, sequencer_time_step: TimeStep, shot_context: ShotContext
     ) -> SequencerInstruction[np.bool_]:
         step_bounds = shot_context.get_step_start_times()
 
