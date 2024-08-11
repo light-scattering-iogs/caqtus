@@ -28,6 +28,7 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.types.units import Unit, dimensionless
 from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import DottedVariableName
+from .._time_step import TimeStep
 
 
 @attrs.frozen
@@ -73,7 +74,7 @@ class ChannelOutput(abc.ABC):
         T: (np.number, np.bool_)
     ](
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -92,7 +93,7 @@ class ChannelOutput(abc.ABC):
     @abc.abstractmethod
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         raise NotImplementedError
