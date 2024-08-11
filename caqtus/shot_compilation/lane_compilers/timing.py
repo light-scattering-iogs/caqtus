@@ -1,35 +1,38 @@
 """Contains functions for computing timing of a sequencer."""
 
-
+import decimal
 import math
 from collections.abc import Iterable
 from itertools import accumulate
-from typing import SupportsFloat
+from typing import SupportsFloat, TYPE_CHECKING
 
-ns = 1e-9
+if TYPE_CHECKING:
+    from caqtus.device.sequencer import TimeStep
+
+ns = decimal.Decimal("1e-9")
 
 
-def start_tick(start_time: SupportsFloat, time_step: SupportsFloat) -> int:
+def start_tick(start_time: SupportsFloat, time_step: "TimeStep") -> int:
     """Returns the included first tick index of the step starting at start_time."""
 
     return math.ceil(float(start_time) / float(time_step))
 
 
-def stop_tick(stop_time: SupportsFloat, time_step: SupportsFloat) -> int:
+def stop_tick(stop_time: SupportsFloat, time_step: "TimeStep") -> int:
     """Returns the excluded last tick index of the step ending at stop_time."""
 
     return math.ceil(float(stop_time) / float(time_step))
 
 
 def number_ticks(
-    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: SupportsFloat
+    start_time: SupportsFloat, stop_time: SupportsFloat, time_step: "TimeStep"
 ) -> int:
     """Returns the number of ticks between start_time and stop_time.
 
     Args:
         start_time: The start time in seconds.
         stop_time: The stop time in seconds.
-        time_step: The time step in nanoseconds.
+        time_step: The time step in seconds.
     """
 
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)

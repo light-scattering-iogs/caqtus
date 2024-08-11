@@ -7,6 +7,7 @@ from . import instructions
 from ._controller import SequencerController
 from ._converter import converter
 from ._proxy import SequencerProxy
+from ._time_step import TimeStep
 from .compilation import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,
@@ -42,4 +43,5 @@ __all__ = [
     "channel_commands",
     "instructions",
     "converter",
+    "TimeStep",
 ]
