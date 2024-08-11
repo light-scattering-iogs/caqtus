@@ -15,6 +15,7 @@ from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.itertools import pairwise
 from .channel_output import ChannelOutput, DimensionedSeries
+from .._time_step import TimeStep
 from ..instructions import (
     SequencerInstruction,
     Pattern,
@@ -45,7 +46,7 @@ class TimeIndependentMapping(ChannelOutput, abc.ABC):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         advances_and_delays = [
@@ -140,7 +141,7 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -208,7 +209,7 @@ def apply_piecewise_linear_calibration(
         list(zip(input_magnitudes, output_magnitudes))
     )
     return DimensionedSeries(
-        calibration.apply(values.values.as_type(np.float64)),
+        calibration.apply(values.values.as_type(np.dtype(np.float64))),
         output_base_units,
     )
 
@@ -254,7 +255,9 @@ class DimensionlessCalibration:
             # which cause a 0/0 division.
             invalid="raise",
         ):
-            np.diff(self.output_points) / np.diff(self.input_points)
+            np.diff(self.output_points) / np.diff(
+                self.input_points
+            )  # pyright: ignore[reportUnusedExpression]
         return self._apply_without_checks(instruction)
 
     @functools.singledispatchmethod
