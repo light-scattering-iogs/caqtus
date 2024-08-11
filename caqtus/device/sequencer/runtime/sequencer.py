@@ -1,3 +1,4 @@
+import decimal
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
@@ -14,13 +15,17 @@ class Sequencer(Device, ABC):
 
     Fields:
         time_step: The time step of the sequencer in nanoseconds.
+            This value cannot be changed after the sequencer has been created.
         trigger: Indicates how the sequence is started and how it is clocked.
+            This value cannot be changed after the sequencer has been created.
     """
 
     channel_number: ClassVar[int]
 
-    time_step: int = attrs.field(
-        on_setattr=attrs.setters.frozen, converter=int, validator=attrs.validators.ge(1)
+    time_step: decimal.Decimal = attrs.field(
+        on_setattr=attrs.setters.frozen,
+        converter=decimal.Decimal,
+        validator=attrs.validators.gt(0),
     )
     trigger: Trigger = attrs.field(
         on_setattr=attrs.setters.frozen,
