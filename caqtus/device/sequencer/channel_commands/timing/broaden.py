@@ -14,6 +14,7 @@ from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueEr
 from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput, DimensionedSeries
+from ..._time_step import TimeStep
 from ...instructions import (
     SequencerInstruction,
     Pattern,
@@ -49,7 +50,7 @@ class BroadenLeft(ChannelOutput):
 
     def evaluate(
         self,
-        required_time_step: int,
+        required_time_step: TimeStep,
         prepend: int,
         append: int,
         shot_context: ShotContext,
@@ -83,7 +84,7 @@ class BroadenLeft(ChannelOutput):
 
     def evaluate_max_advance_and_delay(
         self,
-        time_step: int,
+        time_step: TimeStep,
         variables: Mapping[DottedVariableName, Any],
     ) -> tuple[int, int]:
         return self.input_.evaluate_max_advance_and_delay(time_step, variables)
