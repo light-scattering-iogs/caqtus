@@ -5,7 +5,6 @@ import functools
 import logging
 from collections.abc import Callable
 from typing import (
-    Generic,
     TypeVar,
     ParamSpec,
     TYPE_CHECKING,
@@ -16,7 +15,6 @@ from typing import (
 
 import anyio
 import anyio.to_thread
-import eliot
 
 from caqtus.types.data import DataLabel, Data
 from ._name import DeviceName
@@ -28,23 +26,30 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-DeviceProxyType = TypeVar("DeviceProxyType", bound=DeviceProxy)
-
-ShotParametersType = TypeVar("ShotParametersType")
-
 _T = TypeVar("_T")
-_P = ParamSpec("_P")
 _Q = ParamSpec("_Q")
 
 
-class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
-    """Controls a device during a shot."""
+class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
+    """Controls a device during a shot.
+
+    Subclasses must implement :meth:`run_shot` to define the behavior of the associated
+    device during a shot.
+
+    This class is generic in the type of device proxy that it controls and the extra
+    arguments passed to the :meth:`run_shot` method.
+
+    Attributes:
+        device_name: The name of the device being controlled.
+    """
 
     def __init__(
         self,
         device_name: DeviceName,
         shot_event_dispatcher: "ShotEventDispatcher",
     ):
+        # This method is not meant to be overridden or called directly.
+
         self.device_name = device_name
         self._event_dispatcher = shot_event_dispatcher
         self._signaled_ready = anyio.Event()
@@ -61,8 +66,11 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
         """Runs a shot on the device.
 
         This method must call :meth:`wait_all_devices_ready` exactly once.
-        The default method simply call :meth:`Device.update_parameters` with the
-        arguments passed before the shot is launched.
+
+        Args:
+            device: An asynchronous proxy to the device being controlled.
+            args, kwargs: Extra arguments than can be computed before the shot
+                and that are required to run the shot.
         """
 
         raise NotImplementedError
@@ -71,29 +79,27 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
     async def _run_shot(
         self, device: DeviceProxyType, *args: _P.args, **kwargs: _P.kwargs
     ) -> ShotStats:
-        with eliot.start_action(action_type="control device", device=self.device_name):
-            start_time = self._event_dispatcher.shot_time()
-            await self.run_shot(device, *args, **kwargs)
-            finished_time = self._event_dispatcher.shot_time()
-            if not self._signaled_ready.is_set():
-                raise RuntimeError(
-                    f"wait_all_devices_ready was not called in run_shot for {self}"
-                )
-            assert self._signaled_ready_time is not None
-            assert self._finished_waiting_ready_time is not None
-
-            return ShotStats(
-                start_time=start_time,
-                signaled_ready_time=self._signaled_ready_time,
-                finished_waiting_ready_time=self._finished_waiting_ready_time,
-                finished_time=finished_time,
-                thread_stats=self._thread_times,
-                data_waits=self._data_waits,
-                data_signals=self._data_signals,
+        start_time = self._event_dispatcher.shot_time()
+        await self.run_shot(device, *args, **kwargs)
+        finished_time = self._event_dispatcher.shot_time()
+        if not self._signaled_ready.is_set():
+            raise RuntimeError(
+                f"wait_all_devices_ready was not called in run_shot for {self}"
             )
+        assert self._signaled_ready_time is not None
+        assert self._finished_waiting_ready_time is not None
+
+        return ShotStats(
+            start_time=start_time,
+            signaled_ready_time=self._signaled_ready_time,
+            finished_waiting_ready_time=self._finished_waiting_ready_time,
+            finished_time=finished_time,
+            thread_stats=self._thread_times,
+            data_waits=self._data_waits,
+            data_signals=self._data_signals,
+        )
 
     @final
-    @eliot.log_call(include_args=[], include_result=False)
     async def wait_all_devices_ready(self) -> None:
         """Wait for all devices to be ready for time-sensitive operations.
 
@@ -116,15 +122,19 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
 
     @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
-        """Signals that data has been acquired from the device."""
+        """Signals that data has been acquired from the device.
+
+        Args:
+            label: The label of the data.
+            data: The data that was acquired.
+        """
 
         self._event_dispatcher.signal_data_acquired(self.device_name, label, data)
         self._data_signals.append((label, self._event_dispatcher.shot_time()))
 
     @final
-    @eliot.log_call(include_args=["label"], include_result=False)
     async def wait_data_acquired(self, label: DataLabel) -> Data:
-        """Waits until the data with the given label has been acquired."""
+        """Waits until another device signals that some data has been acquired."""
 
         start = self._event_dispatcher.shot_time()
         data = await self._event_dispatcher.wait_data_acquired(self.device_name, label)
@@ -153,6 +163,8 @@ class DeviceController(Generic[DeviceProxyType, _P], abc.ABC):
 
     @final
     async def sleep(self, seconds: float) -> None:
+        """Sleeps for a given number of seconds."""
+
         await anyio.sleep(seconds)
 
 

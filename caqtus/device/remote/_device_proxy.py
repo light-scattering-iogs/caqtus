@@ -12,8 +12,8 @@ from typing import (
     AsyncIterator,
 )
 
-from caqtus.device import Device
 from .rpc import RPCClient, Proxy, RemoteCallError
+from ..runtime import Device
 from ...utils.contextlib import aclose_on_error
 
 T = TypeVar("T")
