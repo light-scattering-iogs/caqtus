@@ -27,7 +27,7 @@ from ..device_configuration_editors import DeviceConfigurationsDialog
 from .._extension import CondetrolExtensionProtocol
 from .._logger import logger
 from .._path_view import EditablePathHierarchyView
-from ..sequence_widget import SequenceWidget
+from .._sequence_widget import SequenceWidget
 
 
 class CondetrolWindowHandler:
