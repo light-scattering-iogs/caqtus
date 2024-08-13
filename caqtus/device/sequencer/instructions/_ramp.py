@@ -9,6 +9,7 @@ from typing import (
 
 import numpy as np
 
+from caqtus.utils._no_public_constructor import NoPublicConstructor
 from ._instructions import (
     SequencerInstruction,
     _normalize_slice,
@@ -21,7 +22,6 @@ from ._instructions import (
     Repeated,
     empty_like,
 )
-from ._no_public_constructor import NoPublicConstructor
 from ._stack import stack, merge_dtypes
 
 
