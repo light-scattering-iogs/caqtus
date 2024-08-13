@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import collections
 import time
 from collections.abc import Set, Mapping
-from typing import Any
+from typing import Any, Optional
 
 import anyio
 import attrs
 
 from caqtus.device import DeviceName, DeviceController
+from caqtus.device.remote import DeviceProxy
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
-from ...device.remote import DeviceProxy
+from ..shot_timing import ShotTimer
 
 
 @attrs.define
@@ -28,9 +31,6 @@ class DeviceRunInfo:
 
 class ShotEventDispatcher:
     def __init__(self, device_run_configs: Mapping[DeviceName, DeviceRunConfig]):
-        logger.info(
-            f"Creating ShotEventDispatcher with devices {device_run_configs.keys()}"
-        )
         self._device_infos: dict[DeviceName, DeviceRunInfo] = {
             name: DeviceRunInfo(
                 controller=config.controller_type(name, self),
@@ -49,6 +49,8 @@ class ShotEventDispatcher:
         )
         self._acquired_data: dict[DataLabel, Data] = {}
         self._start_time = 0.0
+
+        self._shot_timer: Optional[ShotTimer] = None
 
     async def run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
         try:
@@ -82,23 +84,23 @@ class ShotEventDispatcher:
     def shot_time(self) -> float:
         return time.monotonic() - self._start_time
 
-    async def wait_all_devices_ready(self) -> None:
+    async def wait_all_devices_ready(self) -> ShotTimer:
         async with anyio.create_task_group() as tg:
             for controller in self._controllers.values():
-                # noinspection PyProtectedMember
-                tg.start_soon(controller._signaled_ready.wait)
+                if not controller._signaled_ready.is_set():
+                    # noinspection PyProtectedMember
+                    tg.start_soon(controller._signaled_ready.wait)
+
+        if self._shot_timer is None:
+            # noinspection PyProtectedMember
+            self._shot_timer = ShotTimer._create()
+        return self._shot_timer
 
     async def wait_data_acquired(
         self, waiting_device: DeviceName, label: DataLabel
     ) -> Data:
-        logger.debug(
-            f"Device {waiting_device} started waiting for data {label} to be acquired"
-        )
         if label not in self._acquired_data:
             await self._acquisition_events[label].wait()
-        logger.debug(
-            f"Device {waiting_device} finished waiting for data {label} to be acquired"
-        )
         return self._acquired_data[label]
 
     def signal_data_acquired(
@@ -110,7 +112,6 @@ class ShotEventDispatcher:
             self._acquired_data[label] = data
             if label in self._acquisition_events:
                 self._acquisition_events[label].set()
-            logger.debug(f"Device {emitting_device} acquired data {label}")
 
     def waiting_on_data(self) -> Set[DataLabel]:
         return set(

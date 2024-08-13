@@ -19,6 +19,7 @@ import anyio.to_thread
 from caqtus.types.data import DataLabel, Data
 from ._name import DeviceName
 from .remote import DeviceProxy
+from ..experiment_control.shot_timing import ShotTimer
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher
@@ -100,7 +101,7 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         )
 
     @final
-    async def wait_all_devices_ready(self) -> None:
+    async def wait_all_devices_ready(self) -> ShotTimer:
         """Wait for all devices to be ready for time-sensitive operations.
 
         This method must be called once the device has been programmed for the shot and
@@ -109,6 +110,9 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         It must be called exactly once in :meth:`run_shot`.
 
         The method will wait for all devices to be ready before returning.
+
+        Returns:
+            A timer with its start time set to the time when this function returns.
         """
 
         if self._signaled_ready.is_set():
@@ -117,8 +121,9 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
             )
         self._signaled_ready.set()
         self._signaled_ready_time = self._event_dispatcher.shot_time()
-        await self._event_dispatcher.wait_all_devices_ready()
+        timer = await self._event_dispatcher.wait_all_devices_ready()
         self._finished_waiting_ready_time = self._event_dispatcher.shot_time()
+        return timer
 
     @final
     def signal_data_acquired(self, label: DataLabel, data: Data) -> None:
