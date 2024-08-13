@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Possibility to wait for specific times during a shot while controlling a device
+
 ### Fixed
 
 - Bug were it was not possible to set the correct region of interest in the camera
