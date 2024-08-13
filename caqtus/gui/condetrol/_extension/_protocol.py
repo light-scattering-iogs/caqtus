@@ -1,10 +1,7 @@
-from typing import Protocol, TypeVar, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-from caqtus.session.shot import TimeLane
 from ..device_configuration_editors.extension import CondetrolDeviceExtensionProtocol
 from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
-
-L = TypeVar("L", bound=TimeLane)
 
 
 @runtime_checkable
