@@ -6,7 +6,7 @@ from .configuration import (
     get_configurations_by_type,
     DeviceParameter,
 )
-from .name import DeviceName
+from ._name import DeviceName
 from .runtime import Device, RuntimeDevice
 
 __all__ = [

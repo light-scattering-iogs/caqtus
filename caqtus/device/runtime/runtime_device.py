@@ -5,7 +5,7 @@ from typing import Optional, TypeVar, Self
 import attrs
 
 from ._device import Device
-from ..name import DeviceName
+from .._name import DeviceName
 
 _T = TypeVar("_T")
 

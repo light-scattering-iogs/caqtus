@@ -13,7 +13,7 @@ from typing import (
 
 import attrs
 
-from caqtus.device.name import DeviceName
+from caqtus.device._name import DeviceName
 from caqtus.device.runtime import Device
 
 DeviceServerName = NewType("DeviceServerName", str)
