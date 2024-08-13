@@ -19,8 +19,8 @@ import anyio.to_thread
 import eliot
 
 from caqtus.types.data import DataLabel, Data
-from ..name import DeviceName
-from ..remote import DeviceProxy
+from caqtus.device.name import DeviceName
+from caqtus.device.remote import DeviceProxy
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher

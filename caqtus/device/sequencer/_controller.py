@@ -1,10 +1,9 @@
 import anyio
 
-from caqtus.device.controller import DeviceController
 from ._proxy import SequencerProxy
 from .instructions import SequencerInstruction
-from .runtime import Sequencer
 from .trigger import SoftwareTrigger
+from .._controller import DeviceController
 
 
 class SequencerController(DeviceController):

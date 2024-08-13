@@ -1,9 +1,8 @@
 from collections.abc import Callable
 from typing import Protocol
 
-from caqtus.device import DeviceConfiguration, Device
+from caqtus.device import DeviceConfiguration, Device, DeviceController
 from caqtus.device.configuration import DeviceServerName
-from caqtus.device.controller import DeviceController
 from caqtus.device.remote import DeviceProxy, RPCConfiguration
 from caqtus.shot_compilation import DeviceCompiler
 

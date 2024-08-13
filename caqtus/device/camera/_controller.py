@@ -1,10 +1,6 @@
-import eliot
-
-from caqtus.device.controller import (
-    DeviceController,
-)
 from caqtus.types.data import DataLabel
 from ._proxy import CameraProxy
+from .._controller import DeviceController
 
 
 class CameraController(DeviceController):

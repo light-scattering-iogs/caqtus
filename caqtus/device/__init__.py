@@ -1,5 +1,6 @@
 """This module contains classes and functions to manage devices."""
 
+from ._controller import DeviceController
 from .configuration import (
     DeviceConfiguration,
     get_configurations_by_type,
@@ -7,7 +8,6 @@ from .configuration import (
 )
 from .name import DeviceName
 from .runtime import Device, RuntimeDevice
-from .controller import DeviceController
 
 __all__ = [
     "DeviceName",

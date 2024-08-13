@@ -6,8 +6,7 @@ from typing import Any
 import anyio
 import attrs
 
-from caqtus.device import DeviceName
-from caqtus.device.controller import DeviceController
+from caqtus.device import DeviceName, DeviceController
 from caqtus.types.data import DataLabel, Data
 from .._logger import logger
 from ...device.remote import DeviceProxy

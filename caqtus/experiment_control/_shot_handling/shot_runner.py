@@ -1,8 +1,7 @@
 from collections.abc import Mapping
 from typing import Any
 
-from caqtus.device import DeviceName, Device
-from caqtus.device.controller import DeviceController
+from caqtus.device import DeviceName, DeviceController
 from caqtus.types.data import DataLabel, Data
 from . import ShotEventDispatcher
 from ._shot_event_dispatcher import DeviceRunConfig

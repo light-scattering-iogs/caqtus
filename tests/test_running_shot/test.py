@@ -1,8 +1,7 @@
 import anyio
-from caqtus.shot_event_dispatcher import ShotEventDispatcher
 
-from caqtus.device import DeviceName
-from caqtus.device.controller import DeviceController
+from caqtus.device import DeviceName, DeviceController
+from caqtus.experiment_control._shot_handling import ShotEventDispatcher
 from tests.fixtures import MockDevice
 
 
