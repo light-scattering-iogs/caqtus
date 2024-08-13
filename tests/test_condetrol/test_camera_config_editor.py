@@ -8,7 +8,7 @@ from caqtus.utils.roi import RectangularROI
 
 def test_1(qtbot):
     roi = RectangularROI((100, 100), 0, 100, 0, 100)
-    editor = RectangularROIEditor()
+    editor = RectangularROIEditor(max_width=100, max_height=100)
     editor.set_roi(roi)
     editor.show()
     qtbot.addWidget(editor)
