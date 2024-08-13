@@ -1,8 +1,8 @@
 from pytestqt.modeltest import ModelTester
 from pytestqt.qtbot import QtBot
 
-from caqtus.gui.condetrol.sequence_iteration_editors import StepsIterationEditor
-from caqtus.gui.condetrol.sequence_iteration_editors.steps_iteration_editor.steps_model import (
+from caqtus.gui.condetrol._sequence_iteration_editors import StepsIterationEditor
+from caqtus.gui.condetrol._sequence_iteration_editors.steps_iteration_editor.steps_model import (
     VariableDeclarationData,
     LinspaceLoopData,
     ArrangeLoopData,
