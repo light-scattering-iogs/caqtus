@@ -4,11 +4,11 @@ import qtawesome
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 
-import caqtus.gui.condetrol.ressources  # noqa
+import caqtus.gui.condetrol._ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
-from ._main_window import CondetrolMainWindow, CondetrolWindowHandler
 from ._extension import CondetrolExtensionProtocol
+from ._main_window import CondetrolMainWindow, CondetrolWindowHandler
 from ..qtutil import qt_trio
 
 
