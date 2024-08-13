@@ -2,10 +2,10 @@ from pytestqt.qtbot import QtBot
 
 from caqtus.device import DeviceName
 from caqtus.device.configuration import DeviceServerName
-from caqtus.gui.condetrol.device_configuration_editors import (
+from caqtus.gui.condetrol.device_configuration_editors._configurations_editor import (
     DeviceConfigurationsDialog,
 )
-from caqtus.gui.condetrol.device_configuration_editors.configurations_editor import (
+from caqtus.gui.condetrol.device_configuration_editors._configurations_editor import (
     DeviceConfigurationsEditor,
 )
 from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (

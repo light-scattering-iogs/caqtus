@@ -23,11 +23,13 @@ from caqtus.types.recoverable_exceptions import (
     SequenceInterruptedException,
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
-from ..device_configuration_editors import DeviceConfigurationsDialog
 from .._extension import CondetrolExtensionProtocol
 from .._logger import logger
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
+from ..device_configuration_editors._configurations_editor import (
+    DeviceConfigurationsDialog,
+)
 
 
 class CondetrolWindowHandler:

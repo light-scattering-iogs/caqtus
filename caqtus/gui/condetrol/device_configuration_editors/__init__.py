@@ -3,7 +3,6 @@
 All editors must derive from :class:`DeviceConfigurationEditor`.
 """
 
-from .configurations_editor import DeviceConfigurationsDialog
 from .device_configuration_editor import (
     DeviceConfigurationEditor,
     FormDeviceConfigurationEditor,
@@ -12,5 +11,4 @@ from .device_configuration_editor import (
 __all__ = [
     "DeviceConfigurationEditor",
     "FormDeviceConfigurationEditor",
-    "DeviceConfigurationsDialog",
 ]
