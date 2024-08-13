@@ -22,7 +22,7 @@ from caqtus.utils import serialization
 from .delegate import StepDelegate
 from .steps_model import StepsModel
 from ..sequence_iteration_editor import SequenceIterationEditor
-from ...icons import get_icon
+from ..._icons import get_icon
 
 
 def create_variable_declaration():

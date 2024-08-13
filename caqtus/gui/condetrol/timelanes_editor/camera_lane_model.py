@@ -7,7 +7,7 @@ from caqtus.types.timelane import CameraTimeLane, TakePicture
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel
 from .model import TimeLaneModel
-from ..icons import get_icon
+from .._icons import get_icon
 
 
 class CameraTimeLaneModel(TimeLaneModel[CameraTimeLane, None]):

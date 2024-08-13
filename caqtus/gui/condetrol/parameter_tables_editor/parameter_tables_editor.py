@@ -37,7 +37,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from ..icons import get_icon
+from .._icons import get_icon
 from .._logger import logger
 from ..qt_util import AutoResizeLineEdit
 from ...qtutil import HTMLItemDelegate

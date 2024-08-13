@@ -20,7 +20,7 @@ from .device_configuration_editor import (
 )
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from .extension import CondetrolDeviceExtensionProtocol
-from ..icons import get_icon
+from .._icons import get_icon
 
 _CONFIG_ROLE = Qt.ItemDataRole.UserRole + 1
 

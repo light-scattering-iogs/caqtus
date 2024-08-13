@@ -29,7 +29,7 @@ from caqtus.session.sequence_collection import PathIsSequenceError
 from caqtus.session.shot import TimeLanes
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
-from .icons import get_icon
+from ._icons import get_icon
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
     steps=[

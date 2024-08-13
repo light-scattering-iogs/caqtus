@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.gui.condetrol.icons import get_icon
+from caqtus.gui.condetrol._icons import get_icon
 from caqtus.gui.qtutil import block_signals
 from caqtus.session.shot import TimeLanes, TimeLane
 from ._delegate import TimeLaneDelegate
@@ -69,9 +69,7 @@ class TimeLanesEditor(QWidget):
             get_icon("paste", self.palette().buttonText().color()),
             "Paste from clipboard",
         )
-        self.paste_from_clipboard_action.triggered.connect(
-            self.paste_from_clipboard
-        )
+        self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
