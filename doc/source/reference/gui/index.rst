@@ -1,5 +1,5 @@
-caqtus.gui
-==========
+gui
+===
 
 .. automodule:: caqtus.gui
 

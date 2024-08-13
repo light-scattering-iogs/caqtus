@@ -1,17 +1,17 @@
-caqtus.gui.condetrol.device_configuration_editors
-=================================================
+device_configuration_editors
+============================
 
 .. automodule:: caqtus.gui.condetrol.device_configuration_editors
+    :members:
 
-   These subpackages provide generic editors for some instruments:
+sequencer_configuration_editor
+------------------------------
 
-   .. toctree::
-      :maxdepth: 1
+.. automodule:: caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor
+    :members:
 
-      sequencer_configuration_editor
+camera_configuration_editor
+---------------------------
 
-   .. autoclass:: DeviceConfigurationEditor
-      :members:
-
-   .. autoclass:: FormDeviceConfigurationEditor
-      :members:
+.. automodule:: caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor
+    :members:

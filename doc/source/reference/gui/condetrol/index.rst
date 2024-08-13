@@ -1,10 +1,7 @@
-caqtus.gui.condetrol
-====================
+condetrol
+=========
 
 .. automodule:: caqtus.gui.condetrol
-
-Subpackages
------------
 
 .. toctree::
     :maxdepth: 1

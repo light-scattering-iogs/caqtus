@@ -57,3 +57,6 @@ exclude_patterns = ["reference/device/sequencer/sequencer_instruction_example.ip
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = []
+html_theme_options = {
+    "navigation_depth": 8,
+}
