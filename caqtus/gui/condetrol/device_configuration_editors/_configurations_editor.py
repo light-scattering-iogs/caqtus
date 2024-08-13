@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from .add_device_dialog_ui import Ui_AddDeviceDialog
-from .device_configuration_editor import (
+from ._device_configuration_editor import (
     DeviceConfigurationEditor,
 )
 from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog

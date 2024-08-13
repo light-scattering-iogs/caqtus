@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpinBox
 from caqtus.device.sequencer import SequencerConfiguration, TimeStep
 from ._trigger_selector import TriggerSelector
 from .channels_widget import SequencerChannelWidget
-from ..device_configuration_editor import FormDeviceConfigurationEditor
+from .._device_configuration_editor import FormDeviceConfigurationEditor
 
 S = TypeVar("S", bound=SequencerConfiguration)
 

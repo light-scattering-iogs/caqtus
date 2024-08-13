@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
 
 from caqtus.device.camera import CameraConfiguration
 from caqtus.utils.roi import RectangularROI, Width, Height
-from ..device_configuration_editor import FormDeviceConfigurationEditor
+from .._device_configuration_editor import FormDeviceConfigurationEditor
 
 
 class CameraConfigurationEditor[T: CameraConfiguration](

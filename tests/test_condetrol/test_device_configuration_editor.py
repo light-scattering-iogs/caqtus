@@ -8,7 +8,7 @@ from caqtus.gui.condetrol.device_configuration_editors._configurations_editor im
 from caqtus.gui.condetrol.device_configuration_editors._configurations_editor import (
     DeviceConfigurationsEditor,
 )
-from caqtus.gui.condetrol.device_configuration_editors.device_configuration_editor import (
+from caqtus.gui.condetrol.device_configuration_editors._device_configuration_editor import (
     FormDeviceConfigurationEditor,
 )
 from caqtus.gui.condetrol.device_configuration_editors.extension import (

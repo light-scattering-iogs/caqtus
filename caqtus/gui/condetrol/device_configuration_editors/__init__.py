@@ -3,7 +3,7 @@
 All editors must derive from :class:`DeviceConfigurationEditor`.
 """
 
-from .device_configuration_editor import (
+from ._device_configuration_editor import (
     DeviceConfigurationEditor,
     FormDeviceConfigurationEditor,
 )

@@ -4,7 +4,7 @@ from typing import TypeVar
 
 from caqtus.device import DeviceConfiguration
 from ._protocol import CondetrolDeviceExtensionProtocol
-from ..device_configuration_editor import (
+from .._device_configuration_editor import (
     DeviceConfigurationEditor,
     FormDeviceConfigurationEditor,
 )

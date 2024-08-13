@@ -1,7 +1,7 @@
 from typing import Protocol, TypeVar
 
 from caqtus.device import DeviceConfiguration
-from ..device_configuration_editor import DeviceConfigurationEditor
+from .._device_configuration_editor import DeviceConfigurationEditor
 
 C = TypeVar("C", bound=DeviceConfiguration)
 
