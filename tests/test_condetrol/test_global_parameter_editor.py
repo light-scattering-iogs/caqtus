@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtTest import QTest
 from pytestqt.qtbot import QtBot
 
-from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
+from caqtus.gui.condetrol._parameter_tables_editor import ParameterNamespaceEditor
 
 
 @pytest.mark.skip(reason="Qt test is not working for drag and drop")

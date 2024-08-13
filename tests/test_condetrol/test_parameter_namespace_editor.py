@@ -1,6 +1,6 @@
 from pytestqt.qtbot import QtBot
 
-from caqtus.gui.condetrol.parameter_tables_editor import ParameterNamespaceEditor
+from caqtus.gui.condetrol._parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace
 
