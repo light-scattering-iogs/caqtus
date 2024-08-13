@@ -11,7 +11,7 @@ from caqtus.gui.condetrol.device_configuration_editors._configurations_editor im
 from caqtus.gui.condetrol.device_configuration_editors._device_configuration_editor import (
     FormDeviceConfigurationEditor,
 )
-from caqtus.gui.condetrol.device_configuration_editors.extension import (
+from caqtus.gui.condetrol.device_configuration_editors._extension import (
     CondetrolDeviceExtension,
 )
 from tests.test_condetrol.mock_device_configuration import MockDeviceConfiguration

@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from ..device_configuration_editors.extension import CondetrolDeviceExtensionProtocol
+from ..device_configuration_editors._extension import CondetrolDeviceExtensionProtocol
 from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
 
 

@@ -1,7 +1,7 @@
 import attrs
 
 from ._protocol import CondetrolExtensionProtocol
-from ..device_configuration_editors.extension import CondetrolDeviceExtension
+from ..device_configuration_editors._extension import CondetrolDeviceExtension
 from ..timelanes_editor.extension import CondetrolLaneExtension
 
 
