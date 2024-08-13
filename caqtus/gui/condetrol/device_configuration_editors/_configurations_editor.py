@@ -14,11 +14,11 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from .add_device_dialog_ui import Ui_AddDeviceDialog
+from ._add_device_dialog_ui import Ui_AddDeviceDialog
 from ._device_configuration_editor import (
     DeviceConfigurationEditor,
 )
-from .device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
+from ._device_configurations_dialog_ui import Ui_DeviceConfigurationsDialog
 from .extension import CondetrolDeviceExtensionProtocol
 from .._icons import get_icon
 
