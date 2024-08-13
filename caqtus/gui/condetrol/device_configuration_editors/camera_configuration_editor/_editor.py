@@ -2,29 +2,42 @@ from typing import Optional
 
 from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
 
-from caqtus.device.camera import CameraConfiguration
+from caqtus.device.camera import CameraConfigurationType
 from caqtus.utils.roi import RectangularROI, Width, Height
 from .._device_configuration_editor import FormDeviceConfigurationEditor
 
 
-class CameraConfigurationEditor[T: CameraConfiguration](
-    FormDeviceConfigurationEditor[T]
-):
+class CameraConfigurationEditor(FormDeviceConfigurationEditor[CameraConfigurationType]):
     """A widget that allows to edit the configuration of a camera.
 
     This widget has the same fields as the base form editor and adds a field to edit
     the region of interest of the image to take.
+
+    The widget is generic in the type :any:`CameraConfigurationType` to allow to use
+    it with different camera configuration types.
+
+    Args:
+        configuration: The initial camera configuration to display in the editor.
+        parent: The parent widget of the editor.
+
+    Attributes:
+        roi_editor: The widget that allows to edit the region of interest of the image.
     """
 
-    def __init__(self, configuration: T, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self, configuration: CameraConfigurationType, parent: Optional[QWidget] = None
+    ) -> None:
         super().__init__(configuration, parent)
 
-        self._roi_editor = RectangularROIEditor(parent=self)
-        self.append_row("ROI", self._roi_editor)
-        self._roi_editor.set_roi(configuration.roi)
+        roi = configuration.roi
+        self.roi_editor = RectangularROIEditor(
+            max_width=roi.original_width, max_height=roi.original_height, parent=self
+        )
+        self.append_row("ROI", self.roi_editor)
+        self.roi_editor.set_roi(roi)
 
-    def get_configuration(self) -> T:
-        """Return a new configuration that represents what is currently displayed.
+    def get_configuration(self) -> CameraConfigurationType:
+        """Return a new camera configuration representing what is currently displayed.
 
         The configuration returns has the remote server and the ROI set from what is
         displayed in the editor.
@@ -33,17 +46,22 @@ class CameraConfigurationEditor[T: CameraConfiguration](
         """
 
         configuration = super().get_configuration()
-        configuration.roi = self._roi_editor.get_roi()
+        configuration.roi = self.roi_editor.get_roi()
         return configuration
 
 
 class RectangularROIEditor(QWidget):
-    """A widget that allows to edit a rectangular region of interest."""
+    """A widget that allows to edit a rectangular region of interest.
+
+    Args:
+        max_width: The maximum width in pixels that the region of interest can have.
+        max_height: The maximum height in pixels that the region of interest can have.
+    """
 
     def __init__(
         self,
-        max_width: int = 100,
-        max_height: int = 100,
+        max_width: int,
+        max_height: int,
         parent: Optional[QWidget] = None,
     ) -> None:
         super().__init__(parent)

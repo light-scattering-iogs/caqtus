@@ -1,3 +1,5 @@
+from typing import TypeVar
+
 import attrs
 
 from caqtus.utils.roi import RectangularROI
@@ -18,3 +20,6 @@ class CameraConfiguration[C: Camera](DeviceConfiguration[C]):
         validator=attrs.validators.instance_of(RectangularROI),
         on_setattr=attrs.setters.validate,
     )
+
+
+CameraConfigurationType = TypeVar("CameraConfigurationType", bound=CameraConfiguration)
