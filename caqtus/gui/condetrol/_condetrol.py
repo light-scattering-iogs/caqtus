@@ -1,5 +1,4 @@
 from collections.abc import Callable
-from typing import Optional
 
 import qtawesome
 from PySide6.QtGui import QFontDatabase
@@ -8,8 +7,8 @@ from PySide6.QtWidgets import QApplication
 import caqtus.gui.condetrol.ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
-from .extension import CondetrolExtension, CondetrolExtensionProtocol
 from ._main_window import CondetrolMainWindow, CondetrolWindowHandler
+from ._extension import CondetrolExtensionProtocol
 from ..qtutil import qt_trio
 
 
@@ -41,14 +40,12 @@ class Condetrol:
     def __init__(
         self,
         session_maker: ExperimentSessionMaker,
+        extension: CondetrolExtensionProtocol,
         connect_to_experiment_manager: Callable[
             [], ExperimentManager
         ] = default_connect_to_experiment_manager,
-        extension: Optional[CondetrolExtensionProtocol] = None,
     ):
         self.session_maker = session_maker
-        if extension is None:
-            extension = CondetrolExtension()
         app = QApplication.instance()
         if app is None:
             self.app = QApplication([])

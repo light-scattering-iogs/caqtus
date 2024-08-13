@@ -24,7 +24,7 @@ from caqtus.types.recoverable_exceptions import (
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
 from ..device_configuration_editors import DeviceConfigurationsDialog
-from ..extension import CondetrolExtensionProtocol
+from .._extension import CondetrolExtensionProtocol
 from .._logger import logger
 from .._path_view import EditablePathHierarchyView
 from ..sequence_widget import SequenceWidget

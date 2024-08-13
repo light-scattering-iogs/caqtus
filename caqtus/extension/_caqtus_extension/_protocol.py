@@ -4,7 +4,7 @@ from caqtus.device.configuration.serializer import DeviceConfigJSONSerializerPro
 from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
-from caqtus.gui.condetrol.extension import CondetrolExtensionProtocol
+from caqtus.gui.condetrol._extension import CondetrolExtensionProtocol
 from caqtus.types.timelane.serializer import TimeLaneSerializerProtocol
 
 

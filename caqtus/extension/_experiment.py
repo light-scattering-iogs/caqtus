@@ -245,8 +245,8 @@ class Experiment:
 
         app = Condetrol(
             self.get_session_maker(),
-            connect_to_experiment_manager=self.connect_to_experiment_manager,
             extension=self._extension.condetrol_extension,
+            connect_to_experiment_manager=self.connect_to_experiment_manager,
         )
         try:
             app.run()

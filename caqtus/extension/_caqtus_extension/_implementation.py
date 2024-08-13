@@ -7,7 +7,7 @@ from caqtus.device.configuration import DeviceServerName
 from caqtus.device.configuration.serializer import DeviceConfigJSONSerializer
 from caqtus.device.remote import RPCConfiguration
 from caqtus.experiment_control.device_manager_extension import DeviceManagerExtension
-from caqtus.gui.condetrol.extension import CondetrolExtension
+from caqtus.gui.condetrol._extension import CondetrolExtension
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session.sql._serializer import SerializerProtocol, Serializer
 from caqtus.types.timelane.serializer import TimeLaneSerializer
