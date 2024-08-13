@@ -5,17 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- Bug were it was not possible to set the correct region of interest in the camera
+  configuration editor
+
 ## [5.1.0] - 2024-08-11
 
 ### Changed
 
-- The time step for a sequencer can now be a decimal value and is no longer required to be an integer number of nanoseconds.
+- The time step for a sequencer can now be a decimal value and is no longer required to
+  be an integer number of nanoseconds.
 
 ## [5.0.2] - 2024-08-10
 
 ### Fixed
 
-- Piecewise linear calibration for analog sequencer displays the correct curve when using non-linear units
+- Piecewise linear calibration for analog sequencer displays the correct curve when
+  using non-linear units
 
 ## [5.0.1] - 2024-08-10
 
@@ -34,11 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in the log space.
-- **Breaking:** Trigger compilation is now delegated to the compiler of the device to be triggered.
+- **Breaking:** Ramps in logarithmic units are now linear in the base space and not in
+  the log space.
+- **Breaking:** Trigger compilation is now delegated to the compiler of the device to be
+  triggered.
 - Upgraded to numpy 2.0
 - Upgraded to polars 1.3
-
 
 ### Deprecated
 
@@ -52,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Bug which caused device configurations to not always be saved in the device configuration dialog
+- Bug which caused device configurations to not always be saved in the device
+  configuration dialog
 
 ## [4.15.0] - 2024-07-10
 
