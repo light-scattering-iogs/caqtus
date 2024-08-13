@@ -35,7 +35,7 @@ from .steps_model import (
     LinspaceLoopData,
     ArrangeLoopData,
 )
-from ...qt_util import AutoResizeLineEdit
+from ..._qt_util import AutoResizeLineEdit
 from ....qtutil import HTMLItemDelegate
 
 NAME_COLOR = "#AA4926"

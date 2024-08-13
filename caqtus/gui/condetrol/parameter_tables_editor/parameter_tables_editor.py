@@ -39,7 +39,7 @@ from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
 from .._icons import get_icon
 from .._logger import logger
-from ..qt_util import AutoResizeLineEdit
+from .._qt_util import AutoResizeLineEdit
 from ...qtutil import HTMLItemDelegate
 
 logger = logger.getChild("parameters_editor")
