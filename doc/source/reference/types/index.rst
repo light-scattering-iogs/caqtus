@@ -1,4 +1,4 @@
-Types
+types
 =====
 
 .. toctree::

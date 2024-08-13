@@ -1,5 +1,5 @@
-Experiment session
-==================
+session
+=======
 
 Description
 -----------
@@ -36,4 +36,3 @@ API reference
 
 .. autoclass:: caqtus.session.sql.SQLExperimentSessionMaker
     :members:
-

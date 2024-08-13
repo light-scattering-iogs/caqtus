@@ -1,5 +1,5 @@
-caqtus.shot_compilation
-=======================
+shot_compilation
+================
 
 .. automodule:: caqtus.shot_compilation
 

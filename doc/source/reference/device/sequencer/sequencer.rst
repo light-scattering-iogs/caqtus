@@ -1,10 +1,10 @@
-caqtus.device.sequencer
-=======================
+sequencer
+=========
 
 .. automodule:: caqtus.device.sequencer
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    channel_commands
    instructions

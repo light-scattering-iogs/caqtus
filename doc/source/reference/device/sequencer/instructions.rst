@@ -1,5 +1,5 @@
-caqtus.device.sequencer.instructions
-====================================
+instructions
+============
 
 .. module:: caqtus.device.sequencer.instructions
 

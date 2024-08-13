@@ -1,5 +1,5 @@
-caqtus.extension
-================
+extension
+=========
 
 .. automodule:: caqtus.extension
 

@@ -1,5 +1,5 @@
-caqtus.device.sequencer.channel_commands
-========================================
+channel_commands
+================
 
 .. automodule:: caqtus.device.sequencer.channel_commands
     :members:

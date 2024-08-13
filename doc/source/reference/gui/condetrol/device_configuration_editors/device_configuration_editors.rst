@@ -15,3 +15,4 @@ camera_configuration_editor
 
 .. automodule:: caqtus.gui.condetrol.device_configuration_editors.camera_configuration_editor
     :members:
+    :show-inheritance:
