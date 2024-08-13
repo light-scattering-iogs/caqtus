@@ -11,7 +11,9 @@ from caqtus.experiment_control.manager import (
     RemoteExperimentManagerClient,
     RemoteExperimentManagerServer,
 )
-from caqtus.gui.condetrol import Condetrol
+
+# noinspection PyProtectedMember
+from caqtus.gui.condetrol._condetrol import Condetrol
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from ._caqtus_extension import CaqtusExtension
 from .device_extension import DeviceExtension
