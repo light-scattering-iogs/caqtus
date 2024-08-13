@@ -19,10 +19,10 @@ import anyio.to_thread
 from caqtus.types.data import DataLabel, Data
 from ._name import DeviceName
 from .remote import DeviceProxy
-from ..experiment_control.shot_timing import ShotTimer
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher
+    from caqtus.experiment_control.shot_timing import ShotTimer
 
 logger = logging.getLogger(__name__)
 

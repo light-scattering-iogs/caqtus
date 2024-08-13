@@ -10,3 +10,4 @@ Reference
    extension/extension
    gui/index
    shot_compilation/index
+   experiment_control/index

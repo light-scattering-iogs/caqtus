@@ -6,9 +6,7 @@ from caqtus.utils._no_public_constructor import NoPublicConstructor
 class ShotTimer(metaclass=NoPublicConstructor):
     """Gives access to pseudo-real time primitives during a shot.
 
-    This give the possibility to wait for a target time in the shot to be reached, to
-    sleep for a given amount of time, or to get the elapsed time since the start of the
-    shot.
+    It gives the possibility to react at specific times during a shot.
 
     All times are relative to the start of the shot and are in seconds.
     """
@@ -37,11 +35,15 @@ class ShotTimer(metaclass=NoPublicConstructor):
 
         Warning:
             This function is not guaranteed to be precise.
-            Its accuracy depends on the underlying system and the event loop load.
+            Its accuracy depends on the underlying operating system and the event loop
+            load.
         """
 
         duration_to_sleep = target_time - self.elapsed()
-        # It is safe to sleep for a negative duration, it will return immediately, but
-        # with a checkpoint.
-        await trio.sleep(duration_to_sleep)
+
+        if duration_to_sleep < 0:
+            # We still need to await to get a checkpoint.
+            await trio.sleep(0)
+        else:
+            await trio.sleep(duration_to_sleep)
         return duration_to_sleep
