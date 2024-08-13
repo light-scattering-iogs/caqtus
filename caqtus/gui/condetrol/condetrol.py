@@ -9,8 +9,7 @@ import caqtus.gui.condetrol.ressources  # noqa
 from caqtus.experiment_control import ExperimentManager
 from caqtus.session import ExperimentSessionMaker
 from .extension import CondetrolExtension, CondetrolExtensionProtocol
-from .main_window import CondetrolMainWindow
-from .main_window._main_window import CondetrolWindowHandler
+from ._main_window import CondetrolMainWindow, CondetrolWindowHandler
 from ..qtutil import qt_trio
 
 
