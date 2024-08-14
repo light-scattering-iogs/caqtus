@@ -97,6 +97,9 @@ class TimeStepEditor(QWidget):
                 f"Time step {time_step} is not between {self.smallest_multiple} and "
                 f"{self.largest_multiple}"
             )
+        numerator, denominator = div.as_integer_ratio()
+        assert denominator == 1
+        self.spin_box.setValue(numerator)
 
     def read_time_step(self) -> TimeStep:
         multiple = self.spin_box.value()
