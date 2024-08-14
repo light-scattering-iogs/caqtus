@@ -3,6 +3,9 @@ from typing import Mapping, Any
 
 import numpy as np
 
+# TODO: Can remove tblib support once the experiment manager runs in a single process
+import tblib.pickling_support
+
 import caqtus.formatter as fmt
 from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import SequenceContext, ShotContext
@@ -222,10 +225,12 @@ def _(
         )
 
 
+@tblib.pickling_support.install
 class SequencerCompilationError(ExceptionGroup):
     pass
 
 
+@tblib.pickling_support.install
 class ChannelCompilationError(Exception):
     pass
 
