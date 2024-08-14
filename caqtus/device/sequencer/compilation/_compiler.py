@@ -83,16 +83,16 @@ class SequencerCompiler(TriggerableDeviceCompiler):
                     with_name(instruction, f"ch {channel_number}")
                 )
             except Exception as e:
-                channel_error = ChannelCompilationError(
-                    f"Error occurred when evaluating output for channel "
-                    f"{channel_number} ({channel})"
-                )
-                channel_error.__cause__ = e
-                exceptions.append(channel_error)
+                try:
+                    raise ChannelCompilationError(
+                        f"Error occurred when evaluating output for channel "
+                        f"{channel_number} ({channel})"
+                    ) from e
+                except ChannelCompilationError as channel_error:
+                    exceptions.append(channel_error)
         if exceptions:
             raise SequencerCompilationError(
-                f"Errors occurred when evaluating outputs for "
-                f"{fmt.device(self.__device_name)}",
+                f"Errors occurred when evaluating outputs",
                 exceptions,
             )
         stacked = stack_instructions(*channel_instructions)
