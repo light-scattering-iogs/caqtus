@@ -33,11 +33,17 @@ class ShotTimer(metaclass=NoPublicConstructor):
             The duration waited for the target time to be reached.
             This duration can be negative if the target time is in the past.
 
+        Raises:
+            ValueError: If the target time is negative.
+
         Warning:
             This function is not guaranteed to be precise.
             Its accuracy depends on the underlying operating system and the event loop
             load.
         """
+
+        if target_time < 0:
+            raise ValueError("The target time must be positive.")
 
         duration_to_sleep = target_time - self.elapsed()
 

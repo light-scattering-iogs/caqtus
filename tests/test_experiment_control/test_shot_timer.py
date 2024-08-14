@@ -33,3 +33,12 @@ def test_negative_wait():
         assert timer.elapsed() == pytest.approx(1, rel=1e-3)
 
     trio.run(main, clock=trio.testing.MockClock(autojump_threshold=0))
+
+
+def test_negative_target():
+    async def main():
+        timer = ShotTimer._create()
+        with pytest.raises(ValueError):
+            await timer.wait_until(-1)
+
+    trio.run(main, clock=trio.testing.MockClock(autojump_threshold=0))
