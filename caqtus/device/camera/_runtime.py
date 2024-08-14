@@ -6,13 +6,16 @@ from typing import ClassVar
 from attrs import define, field
 from attrs.setters import frozen, convert
 from attrs.validators import instance_of
+
 from caqtus.device import Device
 from caqtus.types.image import Image
-
+from caqtus.types.recoverable_exceptions import RecoverableException
 from ._configuration import RectangularROI
 
 
-class CameraTimeoutError(TimeoutError):
+# This exception is recoverable, because it can be caused by the user, for example
+# if they forget to plug the trigger cable to the camera.
+class CameraTimeoutError(TimeoutError, RecoverableException):
     """Raised when the camera did not acquire an image after a given timeout."""
 
     pass
