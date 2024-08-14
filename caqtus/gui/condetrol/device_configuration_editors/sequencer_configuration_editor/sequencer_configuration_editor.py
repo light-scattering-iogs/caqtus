@@ -42,6 +42,7 @@ class SequencerConfigurationEditor(FormDeviceConfigurationEditor[S], Generic[S])
         self.time_step_widget = TimeStepEditor(
             time_step_increment, smallest_increment_multiple, largest_increment_multiple
         )
+        self.time_step_widget.set_time_step(device_configuration.time_step)
         self.form.addRow("Time step", self.time_step_widget)
 
         self.trigger_selector = TriggerSelector(self)

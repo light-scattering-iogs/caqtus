@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Bug were it was not possible to set the correct region of interest in the camera
+- Bug where it was not possible to set the correct region of interest in the camera
   configuration editor
+- Bug causing sequencer configuration editor to not display correct time step
 
 ## [5.1.0] - 2024-08-11
 
