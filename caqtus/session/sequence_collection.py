@@ -59,7 +59,7 @@ class ShotNotFoundError(RuntimeError):
 
 
 class SequenceCollection(Protocol):
-    """A collection of sequences.
+    """A collection of sequences inside a session.
 
     This abstract class defines the interface to read and write sequences in a session.
     Objects of this class provide methods for full access to read/write operations on

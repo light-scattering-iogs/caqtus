@@ -13,10 +13,10 @@ if TYPE_CHECKING:
 
 
 class PathHierarchy(Protocol):
-    """Interface that defines the sequence hierarchy of an experiment session.
+    """A file-system-like object that exists inside a session.
 
-    This object provides a file-system-like methods that can be used to create, delete
-    and check for the existence of sequences.
+    This object provides methods that can be used to create, delete and check for the
+    existence of sequences.
     """
 
     @abstractmethod

@@ -32,7 +32,7 @@ def _convert_to_path(path: PureSequencePath | str) -> PureSequencePath:
 
 @attrs.frozen(eq=False, order=False)
 class Sequence:
-    """Gives access to the runtime information and data of a sequence.
+    """Represent a sequence in the experiment session.
 
     Sequence objects can be obtained by calling :meth:`ExperimentSession.get_sequence`.
     The returned sequence object is bound to the session and is only valid in the

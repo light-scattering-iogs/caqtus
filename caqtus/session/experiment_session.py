@@ -32,15 +32,6 @@ class ExperimentSession(
     Every function and method that read or write data do so through an experiment
     session object.
 
-    A session contains the following data:
-    - A hierarchy of paths.
-    - A collection of sequences.
-    - A default collection of device configurations used to run a sequence.
-    - A collection of global parameters.
-    Global parameters are parameters that are not specific to a sequence, but are
-    relevant for all the sequences.
-
-
     An experiment session object must be activated before it can be used.
     This is done by using the `with` statement on the session, inside which the session
     is active.
@@ -62,8 +53,13 @@ class ExperimentSession(
     """
 
     paths: PathHierarchy
+    """The hierarchy of paths in the experiment session."""
+
     sequences: SequenceCollection
+    """The collection of sequences in the experiment session."""
+
     default_device_configurations: DeviceConfigurationCollection
+    """The default device configurations used to run a sequence."""
 
     def get_sequence(self, path: PureSequencePath | str) -> Sequence:
         """Get a sequence object from the session.
@@ -83,7 +79,11 @@ class ExperimentSession(
         return Sequence(path, self)
 
     def get_global_parameters(self) -> ParameterNamespace:
-        """Returns a copy of the global parameters of the session."""
+        """Returns a copy of the global parameters of the session.
+
+        Global parameters are parameters that are not specific to a sequence, but are
+        relevant for all the sequences.
+        """
 
         ...
 

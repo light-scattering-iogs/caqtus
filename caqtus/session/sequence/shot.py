@@ -20,7 +20,7 @@ if typing.TYPE_CHECKING:
 
 @attrs.frozen(eq=False, order=False)
 class Shot:
-    """Gives access to the data of a shot."""
+    """Represents a shot inside a sequence."""
 
     sequence_path: PureSequencePath
     index: int
