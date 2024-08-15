@@ -1,3 +1,5 @@
+"""Package to control and analyze cold atom experiments."""
+
 from . import (
     analysis,
     device,
