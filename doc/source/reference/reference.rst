@@ -4,7 +4,7 @@ Reference
 .. toctree::
    :maxdepth: 1
 
-   experiment session
+   session
    device/index
    types/index
    extension/extension
