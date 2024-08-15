@@ -6,10 +6,10 @@ from hypothesis import given, HealthCheck, settings
 
 from caqtus.device import DeviceName
 from caqtus.session import (
-    BoundSequencePath,
     PureSequencePath,
     Sequence,
 )
+from caqtus.session.path import BoundSequencePath
 from caqtus.session.path_hierarchy import PathNotFoundError
 from caqtus.session.result import unwrap
 from caqtus.session.sequence import State
