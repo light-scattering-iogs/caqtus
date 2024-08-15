@@ -2,7 +2,7 @@ from typing import TypeGuard, Any
 
 import numpy as np
 
-from .data_type import Data
+from ._data_type import Data
 
 
 def is_data(data: Any) -> TypeGuard[Data]:
