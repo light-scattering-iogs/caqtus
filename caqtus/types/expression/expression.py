@@ -67,10 +67,11 @@ class Expression:
     expression is evaluated.
 
     The expression must be a valid python expression, with some exceptions:
+
     * The % symbol is understood as a multiplication by 0.01.
     * The ° symbol is understood as the degree symbol and will be replaced by the
-        name `deg` in the expression.
-    * Implicit multiplication is allowed, so that 'a b' will be parsed as 'a * b'.
+      name `deg` in the expression.
+    * Implicit multiplication is allowed, so that "a b" will be parsed as "a * b".
     """
 
     def __init__(self, body: str):
@@ -90,6 +91,41 @@ class Expression:
     def __str__(self) -> str:
         return self.body
 
+    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
+        """Evaluate an expression on specific values for its variables.
+
+        Args:
+            variables: The context in which the expression will be evaluated.
+                The variables the expression depends upon will be replaced by the values
+                in this mapping.
+                The mapping is also concatenated with some built-in functions and
+                constants.
+
+        Returns:
+            The result of the evaluation. The type of the result depends on the body of
+            the expression and the values of the upstream variables.
+
+        Raises:
+            EvaluationError: if an error occurred during evaluation.
+        """
+
+        return self._evaluate({str(expr): variables[expr] for expr in variables})
+
+    @cached_property
+    def upstream_variables(self) -> frozenset[VariableName]:
+        """Return the name of the other variables the expression depend on."""
+
+        variables = set()
+
+        class FindNameVisitor(ast.NodeVisitor):
+            def visit_Name(self, node: ast.Name):
+                if isinstance(node.ctx, ast.Load):
+                    if node.id not in BUILTINS:
+                        variables.add(VariableName(node.id))
+
+        FindNameVisitor().visit(self._ast)
+        return frozenset(variables)
+
     def check_syntax(self) -> Optional[SyntaxError]:
         """Force parsing of the expression.
 
@@ -107,42 +143,12 @@ class Expression:
         except SyntaxError as error:
             return error
 
-    def evaluate(self, variables: Mapping[DottedVariableName, Any]) -> Any:
-        """Evaluate an expression on specific values for its variables.
-
-        Args:
-            variables: a mapping of variable names to their values.
-                The variables the expression depends upon will be replaced by the values
-                in this mapping.
-                The mapping is also concatenated with the :data:`BUILTINS` dictionary.
-
-        Raises:
-            EvaluationError: if an error occurred during evaluation.
-        """
-
-        return self._evaluate({str(expr): variables[expr] for expr in variables})
-
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         try:
             value = eval(self._code, {"__builtins__": BUILTINS}, variables)
         except Exception as error:
             raise EvaluationError(f"Could not evaluate <{self.body}>") from error
         return value
-
-    @cached_property
-    def upstream_variables(self) -> frozenset[VariableName]:
-        """Return the name of the other variables the expression depend on."""
-
-        variables = set()
-
-        class FindNameVisitor(ast.NodeVisitor):
-            def visit_Name(self, node: ast.Name):
-                if isinstance(node.ctx, ast.Load):
-                    if node.id not in BUILTINS:
-                        variables.add(VariableName(node.id))
-
-        FindNameVisitor().visit(self._ast)
-        return frozenset(variables)
 
     @cached_property
     def _ast(self) -> ast.Expression:
