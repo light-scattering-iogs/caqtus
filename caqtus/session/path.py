@@ -82,7 +82,7 @@ class PureSequencePath:
     def name(self) -> Optional[str]:
         """Return the last part of the path.
 
-        For example, the name of the path "\foo\bar" is "bar".
+        For example, the name of the path \\foo\\bar is bar.
         The root path has no name and this attribute is None for it.
         """
 
