@@ -74,6 +74,10 @@ def test_calibration_pattern(
     cal=DimensionlessCalibration([(0.0, 0.0), (0.0, 1.0)]),
     instr=ramp(start=0.0, stop=-1.0, length=3),
 )
+@example(
+    cal=DimensionlessCalibration([(0.0, 0.0), (-2.220446049250313e-16, 1.0)]),
+    instr=ramp(start=np.float64(-0.5), stop=np.float64(0.5), length=98),
+)
 def test_calibration_ramp(cal, instr: Ramp):
     validate_calibration(cal, instr)
 
