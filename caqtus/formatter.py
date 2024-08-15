@@ -1,12 +1,12 @@
 import string
 from typing import TYPE_CHECKING
 
-from caqtus.device import DeviceName
-from caqtus.types.units.units import UnitLike
 
 if TYPE_CHECKING:
     from caqtus.types.expression import Expression
     from caqtus.types.variable_name import DottedVariableName
+    from caqtus.device import DeviceName
+    from caqtus.types.units.units import UnitLike
 
 
 class CaqtusFormatter(string.Formatter):
@@ -83,7 +83,7 @@ def fmt_type(value: type | str) -> str:
     return f"type '{value.__name__}'"
 
 
-def device(name: DeviceName) -> str:
+def device(name: "DeviceName") -> str:
     return f"device '{name}'"
 
 
@@ -95,7 +95,7 @@ def expression(expression: "Expression") -> str:
     return f"expression '{expression}'"
 
 
-def unit(value: UnitLike) -> str:
+def unit(value: "UnitLike") -> str:
     return f"unit '{value}'"
 
 
