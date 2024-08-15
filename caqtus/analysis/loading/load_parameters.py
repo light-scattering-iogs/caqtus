@@ -6,7 +6,7 @@ import polars
 from caqtus.session import Shot, Sequence
 from caqtus.types.parameter import is_analog_value, is_quantity, Parameter
 from caqtus.types.variable_name import DottedVariableName
-from .combinable_importers import CombinableLoader
+from ._combinable_importers import CombinableLoader
 from .sequence_cache import cache_per_sequence
 
 

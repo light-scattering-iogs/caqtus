@@ -1,7 +1,7 @@
 import polars
 
 from caqtus.session import Shot, PureSequencePath
-from .combinable_importers import CombinableLoader
+from ._combinable_importers import CombinableLoader
 
 
 class LoadShotId(CombinableLoader):

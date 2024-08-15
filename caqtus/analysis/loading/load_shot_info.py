@@ -3,7 +3,7 @@ import datetime
 import polars
 
 from caqtus.session import Shot
-from .combinable_importers import CombinableLoader
+from ._combinable_importers import CombinableLoader
 
 
 class LoadShotTime(CombinableLoader):
