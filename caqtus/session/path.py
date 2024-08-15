@@ -25,21 +25,21 @@ _PATH_REGEX = re.compile(f"^\\{_PATH_SEPARATOR}|(\\{_PATH_SEPARATOR}{_PATH_NAME}
 
 
 class PureSequencePath:
-    """Represent a path in the sequence hierarchy.
+    r"""Represent a path in the sequence hierarchy.
 
     A path is a string of names separated by a single backslash.
-    For example, "\\foo\\bar" is a path with two names, "foo" and "bar".
+    For example, "\\foo\\bar" is a path with two parts, "foo" and "bar".
     The root path is the single backslash "\\".
 
-    All methods of this class are "pure" in the sense that they do not interact with the
-    storage system.
+    All methods of this class are *pure* in the sense that they do not interact with
+    the storage system and only manipulate the path string.
     """
 
     __slots__ = ("_parts", "_str")
 
     def __init__(self, path: PureSequencePath | str):
         if isinstance(path, str):
-            self._parts = self.convert_to_parts(path)
+            self._parts = self._convert_to_parts(path)
             self._str = path
         elif isinstance(path, PureSequencePath):
             self._parts = path.parts
@@ -49,14 +49,31 @@ class PureSequencePath:
 
     @property
     def parts(self) -> tuple[str, ...]:
+        r"""Return the parts of the path.
+
+        The parts are the names that make up the path.
+
+        The root path has no parts and this attribute is an empty tuple for it.
+
+        Example:
+            >>> path = PureSequencePath(r"\foo\bar")
+            >>> path.parts
+            ('foo', 'bar')
+        """
+
         return self._parts
 
     @property
     def parent(self) -> Optional[PureSequencePath]:
-        """Return the parent of this path.
+        r"""Return the parent of this path.
 
         Returns:
-            The parent of this path, or None if this path is the root path.
+            The parent of this path, or :data:`None` if this path is the root path.
+
+        Example:
+            >>> path = PureSequencePath(r"\foo\bar")
+            >>> path.parent
+            PureSequencePath("\\foo")
         """
 
         if self.is_root():
@@ -65,11 +82,23 @@ class PureSequencePath:
             return PureSequencePath.from_parts(self._parts[:-1])
 
     def get_ancestors(self) -> Iterable[Self]:
-        """Return the ancestors of this path.
+        r"""Return the ancestors of this path.
 
         Returns:
             All the paths that are above this path in the hierarchy, ordered from the
             current path to the root, both included.
+
+            For the root path, the result will only contain the root path.
+
+        Example:
+            >>> path = PureSequencePath(r"\foo\bar\baz")
+            >>> list(path.get_ancestors())
+            [
+                PureSequencePath("\\foo\\bar\\baz"),
+                PureSequencePath("\\foo\\bar"),
+                PureSequencePath("\\foo"),
+                PureSequencePath("\\"),
+            ]
         """
 
         current = self
@@ -80,38 +109,20 @@ class PureSequencePath:
 
     @property
     def name(self) -> Optional[str]:
-        """Return the last part of the path.
+        r"""Return the last part of the path.
 
-        For example, the name of the path \\foo\\bar is bar.
         The root path has no name and this attribute is None for it.
+
+        Example:
+            >>> path = PureSequencePath(r"\foo\bar")
+            >>> path.name
+            'bar'
         """
 
         if self.is_root():
             return None
         else:
             return self._parts[-1]
-
-    @classmethod
-    def is_valid_path(cls, path: str) -> bool:
-        return bool(_PATH_REGEX.match(path))
-
-    @classmethod
-    def is_valid_name(cls, name: str) -> bool:
-        return bool(_PATH_NAME_REGEX.match(name))
-
-    @classmethod
-    def convert_to_parts(cls, path: str) -> tuple[str, ...]:
-        if cls.is_valid_path(path):
-            if path == _PATH_SEPARATOR:
-                return tuple()
-            else:
-                return tuple(path.split(_PATH_SEPARATOR)[1:])
-        else:
-            raise InvalidPathFormatError(f"Invalid path: {path}")
-
-    @classmethod
-    def from_parts(cls, parts: Iterable[str]) -> PureSequencePath:
-        return PureSequencePath(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
 
     def __str__(self) -> str:
         return self._str
@@ -126,6 +137,8 @@ class PureSequencePath:
             return NotImplemented
 
     def is_root(self) -> bool:
+        """Check if the path is the root path."""
+
         return len(self._parts) == 0
 
     def __truediv__(self, other) -> Self:
@@ -144,18 +157,46 @@ class PureSequencePath:
 
     @classmethod
     def root(cls) -> PureSequencePath:
-        """Returns the root path.
+        r"""Returns the root path.
 
-        The root path is represented by the single separator character "\".
+        The root path is represented by the single backslash character "\\".
         """
 
-        return cls(cls.separator())
+        return cls(cls._separator())
 
     @classmethod
-    def separator(cls) -> str:
+    def _separator(cls) -> str:
         """Returns the character used to separate path names."""
 
         return _PATH_SEPARATOR
+
+    @classmethod
+    def is_valid_name(cls, name: str) -> bool:
+        """Check if a string is a valid name."""
+
+        return bool(_PATH_NAME_REGEX.match(name))
+
+    @classmethod
+    def _convert_to_parts(cls, path: str) -> tuple[str, ...]:
+        if cls.is_valid_path(path):
+            if path == _PATH_SEPARATOR:
+                return tuple()
+            else:
+                return tuple(path.split(_PATH_SEPARATOR)[1:])
+        else:
+            raise InvalidPathFormatError(f"Invalid path: {path}")
+
+    @classmethod
+    def from_parts(cls, parts: Iterable[str]) -> PureSequencePath:
+        """Create a path from its parts."""
+
+        return PureSequencePath(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
+
+    @classmethod
+    def is_valid_path(cls, path: str) -> bool:
+        """Check if a string is a valid path."""
+
+        return bool(_PATH_REGEX.match(path))
 
 
 def bind(path: PureSequencePath, session: "ExperimentSession") -> BoundSequencePath:

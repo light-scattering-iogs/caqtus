@@ -176,7 +176,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         title = app.applicationName()
         if ok and text:
             try:
-                if text.startswith(PureSequencePath.separator()):
+                if text.startswith(PureSequencePath._separator()):
                     new_path = PureSequencePath(text)
                 else:
                     assert path.parent is not None
