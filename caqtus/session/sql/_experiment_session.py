@@ -48,7 +48,7 @@ class SQLExperimentSession(ExperimentSession):
     """Used to store experiment data in a SQL database.
 
     This class implements the :class:`ExperimentSession` interface and the documentation
-    of the related methods can be found in the :class:`ExperimentSession`documentation.
+    of the related methods can be found in the :class:`ExperimentSession` documentation.
     """
 
     def __init__(

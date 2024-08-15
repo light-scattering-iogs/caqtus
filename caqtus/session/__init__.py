@@ -24,6 +24,7 @@ from ._session_maker import ExperimentSessionMaker
 from .async_session import AsyncExperimentSession
 from ._sequence import Sequence, Shot
 from ._state import State
+from . import sql
 
 __all__ = [
     "ExperimentSession",
@@ -48,4 +49,5 @@ __all__ = [
     "PathNotFoundError",
     "PathIsRootError",
     "PathHasChildrenError",
+    "sql",
 ]
