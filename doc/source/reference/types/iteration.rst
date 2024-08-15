@@ -1,5 +1,5 @@
-caqtus.types.iteration
-======================
+iteration
+=========
 
 .. automodule:: caqtus.types.iteration
     :members:
