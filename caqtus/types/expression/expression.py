@@ -56,7 +56,7 @@ BUILTINS: Mapping[str, Any] = {
 
 
 class Expression:
-    """Unevaluated expression.
+    """Represents a mathematical expression that can be evaluated in a given context.
 
     This class is a wrapper around a python string expression that can be evaluated
     later when the values of the variables it depends on are known.
@@ -64,36 +64,18 @@ class Expression:
     If the expression contains syntax errors, they only will be raised when the
     expression is evaluated.
 
-    Args:
-        body: the expression body.
-            This is a string expression that must follow the specifications of the
-            python syntax, with some exceptions.
-        implicit_multiplication: if True, the expression will be parsed to allow
-            implicit multiplication, even though it is not regular python.
-            For example, 'a b' will be parsed as 'a * b'.
-            If set to False, a syntax error will be raised in such cases when evaluating
-            the expression.
-        allow_percentage: if True, the expression will be parsed to understand the
-            use of the % symbol as a multiplication by 0.01.
-            If set to False, the % symbol will be understood as a modulo operator.
-        allow_degree: if True, the expression will be parsed to understand the use
-            of the ° symbol as the degree symbol and will be replaced by the name
-            `deg` in the expression.
-            If set to False, the ° symbol will not be replaced and evaluating the
-            expression will raise a SyntaxError.
+    The expression must be a valid python expression, with some exceptions:
+    * The % symbol is understood as a multiplication by 0.01.
+    * The ° symbol is understood as the degree symbol and will be replaced by the
+        name `deg` in the expression.
+    * Implicit multiplication is allowed, so that 'a b' will be parsed as 'a * b'.
+
+    Attributes:
+        body: the underlying string representing the expression.
     """
 
-    def __init__(
-        self,
-        body: str,
-        implicit_multiplication: bool = True,
-        allow_percentage: bool = True,
-        allow_degree: bool = True,
-    ):
+    def __init__(self, body: str):
         self.body = body
-        self._implicit_multiplication = implicit_multiplication
-        self._allow_percentage = allow_percentage
-        self._allow_degree = allow_degree
 
     @property
     def body(self) -> str:
@@ -180,14 +162,10 @@ class Expression:
 
     def _parse_ast(self) -> ast.Expression:
         expr = self.body
-        if self._allow_percentage:
-            expr = expr.replace("%", "*(1e-2)")
 
-        if self._allow_degree:
-            expr = expr.replace("°", "*deg")
-
-        if self._implicit_multiplication:
-            expr = add_implicit_multiplication(expr)
+        expr = expr.replace("%", "*(1e-2)")
+        expr = expr.replace("°", "*deg")
+        expr = add_implicit_multiplication(expr)
 
         return ast.parse(expr, mode="eval")
 
@@ -202,12 +180,7 @@ class Expression:
             return NotImplemented
 
     def __getstate__(self):
-        return {
-            "body": self.body,
-            "implicit_multiplication": self._implicit_multiplication,
-            "allow_percentage": self._allow_percentage,
-            "allow_degree": self._allow_degree,
-        }
+        return {"body": self.body}
 
     def __setstate__(self, state):
         self.__init__(**state)
