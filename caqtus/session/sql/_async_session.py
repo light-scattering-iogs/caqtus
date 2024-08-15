@@ -9,8 +9,10 @@ from returns.result import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
@@ -42,8 +44,6 @@ from ..sequence_collection import (
     PathIsNotSequenceError,
     PureShot,
 )
-from ..shot import TimeLanes
-from ...types.data import DataLabel, Data
 
 _T = TypeVar("_T")
 _P = ParamSpec("_P")
@@ -84,7 +84,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
         self,
         fun: Callable[Concatenate[Session, _P], _T],
         *args: _P.args,
-        **kwargs: _P.kwargs
+        **kwargs: _P.kwargs,
     ) -> _T:
         return await self._session().run_sync(fun, *args, **kwargs)
 
@@ -125,7 +125,7 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
         self,
         fun: Callable[Concatenate[Session, _P], _T],
         *args: _P.args,
-        **kwargs: _P.kwargs
+        **kwargs: _P.kwargs,
     ) -> _T:
         if self._session is None:
             raise ExperimentSessionNotActiveError(
@@ -156,7 +156,7 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
         self,
         fun: Callable[Concatenate[Session, _P], _T],
         *args: _P.args,
-        **kwargs: _P.kwargs
+        **kwargs: _P.kwargs,
     ) -> _T:
         return await self.parent_session._run_sync(fun, *args, **kwargs)
 
@@ -223,6 +223,6 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self,
         fun: Callable[Concatenate[Session, _P], _T],
         *args: _P.args,
-        **kwargs: _P.kwargs
+        **kwargs: _P.kwargs,
     ) -> _T:
         return await self.parent_session._run_sync(fun, *args, **kwargs)

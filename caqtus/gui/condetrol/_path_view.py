@@ -10,24 +10,24 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
-from caqtus.gui.qtutil import temporary_widget
 from caqtus.gui.common.sequence_hierarchy import (
     AsyncPathHierarchyView,
 )
 from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.path import InvalidPathFormatError
 from caqtus.session.path_hierarchy import PathHasChildrenError
 from caqtus.session.result import unwrap
 from caqtus.session.sequence import State
+from caqtus.session.sequence_collection import PathIsSequenceError
+from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
     ArangeLoop,
     ExecuteShot,
 )
-from caqtus.session.sequence_collection import PathIsSequenceError
-from caqtus.session.shot import TimeLanes
-from caqtus.types.expression import Expression
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._icons import get_icon
 

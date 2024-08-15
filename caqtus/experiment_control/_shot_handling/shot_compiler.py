@@ -2,11 +2,11 @@ from collections.abc import Mapping
 from typing import Any
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session.shot import TimeLanes
 from caqtus.shot_compilation import DeviceCompiler
 from caqtus.shot_compilation.compilation_contexts import ShotContext, SequenceContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
+from caqtus.types.timelane import TimeLanes
 
 
 class ShotCompiler:

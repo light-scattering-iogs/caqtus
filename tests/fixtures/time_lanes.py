@@ -1,7 +1,7 @@
 import pytest
 
-from caqtus.session.shot import TimeLanes
 from caqtus.types.expression import Expression
+from caqtus.types.timelane import TimeLanes
 
 
 @pytest.fixture

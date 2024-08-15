@@ -18,8 +18,8 @@ from caqtus.types.iteration import (
     IterationConfiguration,
     Unknown,
 )
-from caqtus.types.parameter import Parameter
-from caqtus.types.parameter import ParameterNamespace
+from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
@@ -49,7 +49,6 @@ from ..sequence_collection import (
     DataNotFoundError,
 )
 from ..sequence_collection import SequenceCollection
-from ..shot import TimeLanes
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

@@ -8,12 +8,12 @@ from returns.result import Result
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ..path import PureSequencePath
 from ..path_hierarchy import PathNotFoundError
 from ..sequence import State
 from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
-from ..shot import TimeLanes
 
 
 class AsyncSequenceCollection(Protocol):

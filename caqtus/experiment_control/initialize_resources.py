@@ -1,13 +1,13 @@
 import contextlib
 from collections.abc import Mapping
 
+from caqtus.types.timelane import TimeLanes
 from ._initialize_devices import create_devices
 from ._shot_handling import ShotRunner, ShotCompiler
 from .device_manager_extension import DeviceManagerExtensionProtocol
 from ..device import DeviceName, DeviceConfiguration
 from ..device.remote import DeviceProxy
 from ..shot_compilation import SequenceContext, DeviceCompiler, DeviceNotUsedException
-from ..types.timelane import TimeLanes
 
 
 @contextlib.asynccontextmanager
