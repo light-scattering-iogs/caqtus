@@ -1,5 +1,4 @@
-"""This module contains classes to configure the components to use for a given
-experiment.
+"""Allows to create user-defined components to use on an experiment.
 
 The class :class:`Experiment` can be used to register extensions for a specific setup.
 

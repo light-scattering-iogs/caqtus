@@ -1,4 +1,4 @@
-"""This module contains classes and functions to manage devices."""
+"""Contains classes and functions to manage devices."""
 
 from ._controller import DeviceController
 from .configuration import (

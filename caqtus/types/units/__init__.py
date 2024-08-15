@@ -2,7 +2,7 @@ __version__ = "0.1.0"
 
 from . import base
 from .unit_namespace import units
-from .units import (
+from ._units import (
     ureg,
     unit_registry,
     Quantity,

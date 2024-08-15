@@ -1,3 +1,5 @@
+"""Defines specific types that are used throughout the package."""
+
 from . import (
     data,
     expression,

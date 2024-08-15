@@ -1,3 +1,5 @@
+"""Allows to interact with the storage of the experiment."""
+
 from .async_session import AsyncExperimentSession
 from .data_type import DataType
 from .experiment_session import ExperimentSession
