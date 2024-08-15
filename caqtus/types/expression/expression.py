@@ -124,7 +124,7 @@ class Expression:
 
     def _evaluate(self, variables: Mapping[str, Any]) -> Any:
         try:
-            value = eval(self.code, {"__builtins__": BUILTINS}, variables)
+            value = eval(self._code, {"__builtins__": BUILTINS}, variables)
         except Exception as error:
             raise EvaluationError(f"Could not evaluate <{self.body}>") from error
         return value
@@ -160,7 +160,7 @@ class Expression:
         return ast.parse(expr, mode="eval")
 
     @cached_property
-    def code(self):
+    def _code(self):
         return compile(self._ast, filename="<string>", mode="eval")
 
     def __eq__(self, other):
