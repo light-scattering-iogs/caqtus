@@ -22,7 +22,7 @@ from ._sequence_collection import (
 )
 from ._session_maker import ExperimentSessionMaker
 from .async_session import AsyncExperimentSession
-from .sequence import Sequence, Shot
+from ._sequence import Sequence, Shot
 from ._state import State
 
 __all__ = [

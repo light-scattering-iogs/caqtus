@@ -11,7 +11,7 @@ from ._path_hierarchy import PathHierarchy
 from ._sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
-    from .sequence import Sequence
+    from ._sequence import Sequence
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -74,7 +74,7 @@ class ExperimentSession(
             SequenceNotFoundError: If the sequence does not exist.
         """
 
-        from .sequence import Sequence
+        from ._sequence import Sequence
 
         return Sequence(path, self)
 
