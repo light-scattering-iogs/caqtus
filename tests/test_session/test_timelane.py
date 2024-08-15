@@ -1,4 +1,4 @@
-from caqtus.session.shot import DigitalTimeLane
+from caqtus.types.timelane import DigitalTimeLane
 
 
 def test_0():

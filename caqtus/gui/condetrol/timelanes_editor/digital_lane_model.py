@@ -4,8 +4,8 @@ from PySide6.QtCore import QObject, QModelIndex, Qt
 from PySide6.QtGui import QAction, QBrush, QPalette
 from PySide6.QtWidgets import QMenu
 
-from caqtus.session.shot import DigitalTimeLane
 from caqtus.types.expression import Expression
+from caqtus.types.timelane import DigitalTimeLane
 from .model import ColoredTimeLaneModel
 
 

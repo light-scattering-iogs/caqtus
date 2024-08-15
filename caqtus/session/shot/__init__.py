@@ -1,5 +1,4 @@
 from caqtus.types.timelane import (
-    DigitalTimeLane,
     AnalogTimeLane,
     Ramp,
     CameraTimeLane,
@@ -8,7 +7,6 @@ from caqtus.types.timelane import (
 from ..sequence.shot import Shot
 
 __all__ = [
-    "DigitalTimeLane",
     "AnalogTimeLane",
     "Ramp",
     "CameraTimeLane",

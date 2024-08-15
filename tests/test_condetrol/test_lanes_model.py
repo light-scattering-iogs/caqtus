@@ -1,11 +1,11 @@
 import pytest
 
-from caqtus.gui.condetrol.timelanes_editor import TimeLanesModel, DigitalTimeLaneModel
+from caqtus.extension.time_lane_extension import digital_time_lane_extension
+from caqtus.gui.condetrol.timelanes_editor import TimeLanesModel
 from caqtus.gui.condetrol.timelanes_editor.extension import (
     CondetrolLaneExtension,
 )
-from caqtus.session.shot import DigitalTimeLane
-from caqtus.extension.time_lane_extension import digital_time_lane_extension
+from caqtus.types.timelane import DigitalTimeLane
 
 
 def test_0():
