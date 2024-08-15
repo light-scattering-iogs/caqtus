@@ -1,5 +1,5 @@
 """Defines user expressions that can be evaluated later."""
 
-from .expression import Expression
+from ._expression import Expression
 
 __all__ = ["Expression"]
