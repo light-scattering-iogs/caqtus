@@ -8,10 +8,9 @@ from caqtus.gui.condetrol.timelanes_editor.extension import (
     LaneModelFactory,
     LaneDelegateFactory,
 )
-from caqtus.session.shot import TimeLane
 
 # noinspection PyPep8Naming
-from caqtus.types.timelane import TimeLaneType as L
+from caqtus.types.timelane import TimeLaneType as L, TimeLane
 from caqtus.utils.serialization import JSON
 
 

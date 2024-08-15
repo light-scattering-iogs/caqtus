@@ -16,14 +16,13 @@ from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
 )
+from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.timelane.serializer import (
     TimeLaneSerializerProtocol,
     TimeLaneSerializer,
 )
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
-from ..shot import TimeLane
-from ...types.timelane import TimeLanes
 
 T = TypeVar("T", bound=DeviceConfiguration)
 

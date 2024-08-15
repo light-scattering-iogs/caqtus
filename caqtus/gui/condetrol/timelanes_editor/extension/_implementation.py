@@ -4,10 +4,7 @@ from typing import Optional, TypeAlias, Protocol, TypeVar, Any
 
 from PySide6.QtWidgets import QStyledItemDelegate
 
-from caqtus.session.shot import (
-    TimeLane,
-)
-from caqtus.types.timelane import TimeLanes
+from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.timelane.serializer import TimeLaneSerializer
 from caqtus.utils import serialization
 from ._protocol import CondetrolLaneExtensionProtocol

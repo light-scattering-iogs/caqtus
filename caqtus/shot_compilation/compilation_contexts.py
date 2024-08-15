@@ -6,7 +6,7 @@ import tblib.pickling_support
 from typing_extensions import deprecated
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session.shot import TimeLanes, TimeLane
+from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds
 from ..formatter import fmt

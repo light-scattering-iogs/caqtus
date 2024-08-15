@@ -16,9 +16,8 @@ from PySide6.QtGui import QAction, QBrush, QColor, QFont
 from PySide6.QtWidgets import QMenu, QColorDialog
 
 import caqtus.gui.qtutil.qabc as qabc
-from caqtus.session.shot import TimeLane
-from caqtus.types.timelane import TimeLanes
 from caqtus.types.expression import Expression
+from caqtus.types.timelane import TimeLanes, TimeLane
 
 if TYPE_CHECKING:
     from .extension import CondetrolLaneExtensionProtocol

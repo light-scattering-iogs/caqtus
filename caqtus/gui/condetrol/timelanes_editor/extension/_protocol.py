@@ -1,7 +1,6 @@
 from typing import Protocol, Optional, Any, TypeVar
 
-from caqtus.session.shot import TimeLane
-from caqtus.types.timelane import TimeLanes
+from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.utils import serialization
 from .. import TimeLaneDelegate
 from ..model import TimeLaneModel
@@ -62,4 +61,3 @@ class CondetrolLaneExtensionProtocol(Protocol):
         """Convert the serializable format to time lanes."""
 
         ...
-
