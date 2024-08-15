@@ -8,11 +8,13 @@ from ._shot_data import DataImporter
 
 
 class CombinableLoader(DataImporter, abc.ABC):
-    """A loader that can be combined with other loaders.
+    """A callable that can load data from a shot and can be combined with other loaders.
 
     Objects that inherit from this class can be combined with other loaders using the
     `+` and `*` operators.
+
     The `+` operator will concatenate the dataframes returned by the loaders.
+
     The `*` operator will perform a cross product of the dataframes returned by the
     loaders.
     """
@@ -21,7 +23,14 @@ class CombinableLoader(DataImporter, abc.ABC):
         return self.load(shot)
 
     @abc.abstractmethod
-    def load(self, shot: Shot) -> polars.DataFrame: ...
+    def load(self, shot: Shot) -> polars.DataFrame:
+        """Load data from a shot and return it as a DataFrame.
+
+        This method must be implemented by subclasses.
+        It must return a dataframe containing the data loaded from the shot.
+        """
+
+        raise NotImplementedError
 
     def __add__(self, other):
         if isinstance(other, CombinableLoader):

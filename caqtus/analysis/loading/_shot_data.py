@@ -15,4 +15,5 @@ class ShotImporter[T](Protocol):
         raise NotImplementedError()
 
 
+#: Type alias for a data importer that imports data from a shot.
 DataImporter: TypeAlias = ShotImporter[polars.DataFrame]
