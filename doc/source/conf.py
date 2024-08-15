@@ -52,6 +52,7 @@ intersphinx_mapping = {
     "PySide6": ("https://doc.qt.io/qtforpython-6", None),
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/20/", None),
     "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 exclude_patterns = [
