@@ -11,7 +11,7 @@ from .single_shot_widget import (
     ShotView,
     SnapShotWindowHandler,
 )
-from ...common.sequence_hierarchy import AsyncPathHierarchyView
+from ..._common.sequence_hierarchy import AsyncPathHierarchyView
 from ...qtutil import qt_trio
 
 

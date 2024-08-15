@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QDockWidget,
 )
 
-from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
+from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,

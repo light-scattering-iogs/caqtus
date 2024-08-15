@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
-from caqtus.gui.common.exception_tree import ExceptionDialog
-from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.gui._common.exception_tree import ExceptionDialog
+from caqtus.gui._common.waiting_widget import run_with_wip_widget
 from caqtus.gui.condetrol._parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace

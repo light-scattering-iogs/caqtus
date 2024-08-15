@@ -1,4 +1,4 @@
-from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyModel
+from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
 from tests.fixtures import steps_configuration, time_lanes

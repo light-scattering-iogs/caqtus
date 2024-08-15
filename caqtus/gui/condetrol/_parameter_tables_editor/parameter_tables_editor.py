@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-from caqtus.gui.common.exception_tree import ExceptionDialog
+from caqtus.gui._common.exception_tree import ExceptionDialog
 from caqtus.gui.qtutil import block_signals, temporary_widget
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace

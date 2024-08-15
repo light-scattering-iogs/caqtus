@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-from caqtus.gui.common.NodeGraphQt import BaseNode, NodeBaseWidget
+from caqtus.gui._common.NodeGraphQt import BaseNode, NodeBaseWidget
 from caqtus.gui.condetrol._icons import get_icon
 from caqtus.types.parameter import add_unit, magnitude_in_unit
 from caqtus.types.units import Unit

@@ -7,7 +7,7 @@ import qtawesome
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMainWindow, QDockWidget
 from caqtus.analysis.loading import DataImporter
-from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyView
+from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyView
 from caqtus.session import ExperimentSessionMaker
 
 from .data_loading import DataLoader
@@ -52,7 +52,7 @@ class GraphPlotMainWindow(QMainWindow, Ui_GraphPlotMainWindow):
         data_loader: DataImporter,
         session_maker: ExperimentSessionMaker,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 

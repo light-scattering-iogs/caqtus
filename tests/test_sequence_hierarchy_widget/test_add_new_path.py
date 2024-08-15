@@ -4,7 +4,7 @@ import pytest
 from PySide6.QtCore import QModelIndex
 from pytestqt.modeltest import ModelTester
 
-from caqtus.gui.common.sequence_hierarchy import AsyncPathHierarchyModel
+from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
 from .session_maker import session_maker

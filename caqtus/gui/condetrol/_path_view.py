@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
-from caqtus.gui.common.sequence_hierarchy import (
+from caqtus.gui._common.sequence_hierarchy import (
     AsyncPathHierarchyView,
 )
-from caqtus.gui.common.waiting_widget import run_with_wip_widget
+from caqtus.gui._common.waiting_widget import run_with_wip_widget
 from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session.path import InvalidPathFormatError

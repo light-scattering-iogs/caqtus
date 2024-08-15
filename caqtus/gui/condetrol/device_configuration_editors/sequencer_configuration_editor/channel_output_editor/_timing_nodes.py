@@ -1,6 +1,6 @@
 from typing import Optional
 
-from caqtus.gui.common.NodeGraphQt import BaseNode
+from caqtus.gui._common.NodeGraphQt import BaseNode
 from caqtus.types.expression import Expression
 
 
