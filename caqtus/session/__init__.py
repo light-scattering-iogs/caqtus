@@ -10,6 +10,7 @@ from .session_maker import ExperimentSessionMaker
 
 __all__ = [
     "ExperimentSession",
+    "AsyncExperimentSession",
     "ExperimentSessionMaker",
     "PureSequencePath",
     "BoundSequencePath",
@@ -17,5 +18,4 @@ __all__ = [
     "PathHierarchy",
     "Sequence",
     "Shot",
-    "AsyncExperimentSession",
 ]

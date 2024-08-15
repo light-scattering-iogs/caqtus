@@ -25,7 +25,7 @@ class ExperimentSession(
     AbstractContextManager,
     Protocol,
 ):
-    """Provides a connection to access the permanent storage of the experiment.
+    """Provides a transactional connection to the storage of the experiment.
 
     An :py:class:`ExperimentSession` object allows to read and write configurations
     and data of the experiment.

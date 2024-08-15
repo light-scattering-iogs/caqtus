@@ -1,3 +1,4 @@
+import abc
 from typing import Protocol
 
 from .async_session import AsyncExperimentSession
@@ -5,10 +6,21 @@ from .experiment_session import ExperimentSession
 
 
 class ExperimentSessionMaker(Protocol):
-    """Used to create a new experiment session with predefined parameters."""
+    """Used to create a new experiment sessions."""
 
+    @abc.abstractmethod
     def __call__(self) -> ExperimentSession:
         """Create a new experiment session."""
-        ...
 
-    def async_session(self) -> AsyncExperimentSession: ...
+        raise NotImplementedError
+
+    def session(self) -> ExperimentSession:
+        """Create a new experiment session."""
+
+        return self()
+
+    @abc.abstractmethod
+    def async_session(self) -> AsyncExperimentSession:
+        """Create a new asynchronous experiment session."""
+
+        raise NotImplementedError
