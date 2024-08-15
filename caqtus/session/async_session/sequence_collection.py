@@ -12,8 +12,8 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
-from ..sequence import State
 from .._sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
+from .._state import State
 
 
 class AsyncSequenceCollection(Protocol):

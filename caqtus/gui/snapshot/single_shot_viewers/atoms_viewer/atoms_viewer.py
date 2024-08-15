@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 
 from analyza.loading.importers import AtomImporter2D
 from caqtus.session import ExperimentSession, get_standard_experiment_session
-from caqtus.session.sequence import Shot
+from caqtus.session import Shot
 from caqtus.utils import attrs, serialization
 from ..single_shot_view import ShotView
 

@@ -6,8 +6,7 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtWidgets import QWidget, QTableView, QVBoxLayout
 
 from analyza.loading.importers import ParametersImporter
-from caqtus.session import ExperimentSession, get_standard_experiment_session
-from caqtus.session.sequence import Shot
+from caqtus.session import ExperimentSession, get_standard_experiment_session, Shot
 from caqtus.types import Parameter
 from caqtus.utils import attrs, serialization
 from ..single_shot_view import ShotView

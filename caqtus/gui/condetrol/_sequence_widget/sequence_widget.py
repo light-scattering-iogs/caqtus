@@ -20,9 +20,9 @@ from caqtus.session import (
     PathNotFoundError,
     SequenceNotEditableError,
     PathIsNotSequenceError,
+    State,
 )
 from caqtus.session._return_or_raise import unwrap
-from caqtus.session.sequence import State
 from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,

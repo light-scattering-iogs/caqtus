@@ -12,8 +12,7 @@ import anyio.to_process
 import anyio.to_thread
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.session.sequence import State
+from caqtus.session import ExperimentSessionMaker, PureSequencePath, State
 from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,

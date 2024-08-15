@@ -23,10 +23,9 @@ from caqtus.session import (
     PureSequencePath,
     AsyncExperimentSession,
 )
-from caqtus.session import PathNotFoundError, PathIsNotSequenceError
+from caqtus.session import PathNotFoundError, PathIsNotSequenceError, Shot
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import PureShot
-from caqtus.session.sequence import Shot
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow

@@ -20,9 +20,9 @@ from caqtus.session import (
     InvalidPathFormatError,
     PathIsSequenceError,
     PathHasChildrenError,
+    State,
 )
 from caqtus.session._result import unwrap
-from caqtus.session.sequence import State
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,

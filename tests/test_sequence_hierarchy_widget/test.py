@@ -3,8 +3,7 @@ from pytestqt.modeltest import ModelTester
 
 from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import QtAsyncio
-from caqtus.session import PureSequencePath
-from caqtus.session.sequence import State
+from caqtus.session import PureSequencePath, State
 from tests.fixtures import steps_configuration, time_lanes
 from .session_maker import session_maker
 

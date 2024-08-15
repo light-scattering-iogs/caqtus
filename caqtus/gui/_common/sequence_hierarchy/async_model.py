@@ -19,10 +19,10 @@ from caqtus.session import (
     PathNotFoundError,
     PathIsSequenceError,
     PathIsNotSequenceError,
+    State,
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import SequenceStats
-from caqtus.session.sequence import State
 from caqtus.types.iteration import is_unknown
 
 NODE_DATA_ROLE = Qt.UserRole + 1

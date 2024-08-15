@@ -10,13 +10,9 @@ from caqtus.session import (
     DataNotFoundError,
     PathNotFoundError,
 )
-from caqtus.session import (
-    PureSequencePath,
-    Sequence,
-)
+from caqtus.session import PureSequencePath, Sequence, State
 from caqtus.session._path import BoundSequencePath
 from caqtus.session._result import unwrap
-from caqtus.session.sequence import State
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
