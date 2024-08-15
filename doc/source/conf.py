@@ -45,6 +45,7 @@ autodoc_type_aliases = {
     "AnalogValue": "AnalogValue",
     "Image": "Image",
     "Data": "Data",
+    "Parameter": "Parameter",
 }
 
 intersphinx_mapping = {

@@ -1,9 +1,9 @@
-from typing import TypeGuard, Any
+from typing import TypeGuard, Any, TypeAlias
 
 from caqtus.utils import serialization
 from .analog_value import AnalogValue, is_analog_value, Quantity
 
-Parameter = AnalogValue | int | bool
+Parameter: TypeAlias = AnalogValue | int | bool
 
 
 def unstructure_quantity(value: Quantity):

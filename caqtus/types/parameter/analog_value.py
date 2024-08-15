@@ -1,5 +1,5 @@
 from numbers import Real
-from typing import Any, Optional, TypeGuard, overload, TypeVar
+from typing import Any, Optional, TypeGuard, overload, TypeVar, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless, UnitLike
 
-AnalogValue = Real | NDArray[np.floating] | Quantity
+AnalogValue: TypeAlias = Real | NDArray[np.floating] | Quantity
 
 
 class NotAnalogValueError(InvalidTypeError):
