@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Many undocumented packages are now private
+
 ### Added
 
 - Better error messages when a camera times out
 - Better error messages when failing to compute the output of a sequencer
+
+### Documentation
+
+- API reference lists all public classes and functions
 
 ## [5.2.1] - 2024-08-14
 
