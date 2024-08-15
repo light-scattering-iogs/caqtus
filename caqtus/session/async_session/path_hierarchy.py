@@ -6,11 +6,11 @@ from typing import Protocol, TYPE_CHECKING
 
 from returns.result import Result
 
-from ..path import PureSequencePath
-from ..path_hierarchy import PathNotFoundError, PathIsRootError
+from .._path import PureSequencePath
+from .._path_hierarchy import PathNotFoundError, PathIsRootError
 
 if TYPE_CHECKING:
-    from ..sequence_collection import PathIsSequenceError
+    from .._sequence_collection import PathIsSequenceError
 
 
 class AsyncPathHierarchy(Protocol):

@@ -10,10 +10,10 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from ..path import PureSequencePath
-from ..path_hierarchy import PathNotFoundError
+from .._path import PureSequencePath
+from .._path_hierarchy import PathNotFoundError
 from ..sequence import State
-from ..sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
+from .._sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
 
 
 class AsyncSequenceCollection(Protocol):

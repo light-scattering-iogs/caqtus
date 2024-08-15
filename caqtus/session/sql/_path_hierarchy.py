@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from ._path_table import SQLSequencePath
 from .._return_or_raise import unwrap, is_success
-from ..path import PureSequencePath
-from ..path_hierarchy import (
+from .._path import PureSequencePath
+from .._path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
     PathHierarchy,
 )
-from ..sequence_collection import PathIsSequenceError
+from .._sequence_collection import PathIsSequenceError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

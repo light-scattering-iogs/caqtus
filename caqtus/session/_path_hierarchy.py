@@ -6,10 +6,10 @@ from typing import Protocol, TYPE_CHECKING
 
 from returns.result import Result
 
-from .path import PureSequencePath
+from ._path import PureSequencePath
 
 if TYPE_CHECKING:
-    from .sequence_collection import PathIsSequenceError
+    from ._sequence_collection import PathIsSequenceError
 
 
 class PathHierarchy(Protocol):
@@ -119,16 +119,24 @@ class PathHierarchy(Protocol):
 
 
 class PathError(RuntimeError):
+    """Base class for all path errors."""
+
     pass
 
 
 class PathNotFoundError(PathError):
+    """Raised when a path is not found in the session."""
+
     pass
 
 
 class PathIsRootError(PathError):
+    """Raised when an invalid operation is performed on the root path."""
+
     pass
 
 
-class PathHasChildrenError(RuntimeError):
+class PathHasChildrenError(PathError):
+    """Raised when an invalid operation is performed on a path that has children."""
+
     pass

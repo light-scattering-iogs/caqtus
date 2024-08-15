@@ -11,21 +11,24 @@ class State(Enum):
     can have data added to them.
 
     Attributes:
-        DRAFT: The sequence was not started yet and is still being edited. When the
-            sequence is passed to the experiment manager, it will transition to the
-            PREPARING state.
-        PREPARING: The sequence is being prepared to run and is currently acquiring the
-            necessary resources and devices. No shot have been scheduled to run yet. The
-            sequence cannot be interrupted while it is preparing. If the preparation
-            succeeds, the sequence will transition to the RUNNING state. If the
-            preparation fails, the sequence will transition to the CRASHED state.
-        RUNNING: The sequence is currently running shots. When all shots are completed,
-            the sequence will transition to the FINISHED state. If the sequence is
-            interrupted, it will transition to the INTERRUPTED state. If an error occurs
-            while running the sequence, it will transition to the CRASHED state.
+        DRAFT: The sequence was not started yet and is still being edited.
+            When the sequence is passed to the experiment manager, it will transition
+            to the PREPARING state.
+        PREPARING: The sequence is being prepared to run.
+            It is currently acquiring the necessary resources and devices.
+            No shot have been scheduled to run yet.
+            The sequence cannot be interrupted while it is preparing.
+            If the preparation succeeds, the sequence will transition to the RUNNING
+            state.
+            If the preparation fails, the sequence will transition to the CRASHED state.
+        RUNNING: The sequence is currently running shots.
+            When all shots are completed, the sequence will transition to the FINISHED
+            state.
+            If the sequence is interrupted, it will transition to the INTERRUPTED state.
+            If an error occurs while running the sequence, it will transition to the
+            CRASHED state.
         FINISHED: The sequence was successfully run and all shots were completed.
-        INTERRUPTED: The sequence was interrupted by the user before all shots were
-        completed.
+        INTERRUPTED: The user interrupted the sequence while it was running.
         CRASHED: An error occurred while running the sequence.
 
     The states FINISHED, INTERRUPTED and CRASHED are terminal states. Once a sequence is

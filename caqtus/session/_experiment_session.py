@@ -5,10 +5,10 @@ from contextlib import AbstractContextManager
 from typing import Protocol, TYPE_CHECKING
 
 from caqtus.types.parameter import ParameterNamespace
-from .device_configuration_collection import DeviceConfigurationCollection
-from .path import PureSequencePath
-from .path_hierarchy import PathHierarchy
-from .sequence_collection import SequenceCollection
+from ._device_configuration_collection import DeviceConfigurationCollection
+from ._path import PureSequencePath
+from ._path_hierarchy import PathHierarchy
+from ._sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
     from .sequence import Sequence

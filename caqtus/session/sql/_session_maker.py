@@ -12,7 +12,7 @@ from ._async_session import AsyncSQLExperimentSession, ThreadedAsyncSQLExperimen
 from ._experiment_session import SQLExperimentSession
 from ._serializer import SerializerProtocol
 from ._table_base import create_tables
-from ..session_maker import ExperimentSessionMaker
+from .._session_maker import ExperimentSessionMaker
 
 
 # We need to enable foreign key constraints for sqlite databases and not for other

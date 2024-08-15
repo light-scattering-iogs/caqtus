@@ -16,13 +16,13 @@ from caqtus.session import (
     ExperimentSession,
     AsyncExperimentSession,
 )
-from caqtus.session._return_or_raise import unwrap
-from caqtus.session.path_hierarchy import PathNotFoundError
-from caqtus.session.sequence import State
-from caqtus.session.sequence_collection import (
+from caqtus.session import (
+    PathNotFoundError,
     SequenceNotEditableError,
     PathIsNotSequenceError,
 )
+from caqtus.session._return_or_raise import unwrap
+from caqtus.session.sequence import State
 from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,

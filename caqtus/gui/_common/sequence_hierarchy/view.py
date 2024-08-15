@@ -7,7 +7,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.session.result import unwrap
+from caqtus.session._result import unwrap
 from .async_model import AsyncPathHierarchyModel
 from .delegate import ProgressDelegate
 

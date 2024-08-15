@@ -9,13 +9,13 @@ import attrs
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
-from ..path import PureSequencePath
-from ..sequence_collection import PureShot
+from .._path import PureSequencePath
+from .._sequence_collection import PureShot
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
     from .sequence import Sequence
-    from ..experiment_session import ExperimentSession
+    from .._experiment_session import ExperimentSession
 
 
 @attrs.frozen(eq=False, order=False)

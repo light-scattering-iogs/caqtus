@@ -10,7 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ._path_table import SQLSequencePath
 from ._shot_tables import SQLShot
 from ._table_base import Base
-from ..sequence.state import State
+from caqtus.session.state import State
 
 
 class SQLSequence(Base):

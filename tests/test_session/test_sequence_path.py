@@ -1,6 +1,6 @@
 from hypothesis import given
 from .generate_path import path, path_name
-from caqtus.session.path import PureSequencePath
+from caqtus.session import PureSequencePath
 
 
 @given(path_name)

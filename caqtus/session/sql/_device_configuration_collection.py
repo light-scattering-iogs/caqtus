@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, Session
 
 from ._serializer import SerializerProtocol
 from ._table_base import Base
-from ..device_configuration_collection import DeviceConfigurationCollection
+from .._device_configuration_collection import DeviceConfigurationCollection
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession

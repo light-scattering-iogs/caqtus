@@ -14,20 +14,26 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from returns.result import Result
 
-from .path import PureSequencePath
-from .path_hierarchy import PathError, PathNotFoundError
-from .sequence.state import State
+from ._path import PureSequencePath
+from ._path_hierarchy import PathError, PathNotFoundError
+from caqtus.session.state import State
 
 
 class PathIsSequenceError(PathError):
+    """Raised when a path is expected to be a sequence, but it is not."""
+
     pass
 
 
 class PathIsNotSequenceError(PathError):
+    """Raised when a path is expected to not be a sequence, but it is."""
+
     pass
 
 
 class DataNotFoundError(RuntimeError):
+    """Raised when data is not found in a shot."""
+
     pass
 
 
@@ -51,10 +57,14 @@ class InvalidStateTransitionError(SequenceStateError):
 
 
 class SequenceNotEditableError(SequenceStateError):
+    """Raised when trying to edit a sequence that is not in the draft state."""
+
     pass
 
 
 class ShotNotFoundError(RuntimeError):
+    """Raised when a shot is not found in a sequence."""
+
     pass
 
 

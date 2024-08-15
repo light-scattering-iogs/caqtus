@@ -7,7 +7,7 @@ from typing import Self, Optional, TYPE_CHECKING, Iterable
 from ._return_or_raise import unwrap
 
 if TYPE_CHECKING:
-    from .experiment_session import ExperimentSession
+    from ._experiment_session import ExperimentSession
 
 _PATH_SEPARATOR = "\\"
 _CHARACTER_SET = (
@@ -38,6 +38,11 @@ class PureSequencePath:
     __slots__ = ("_parts", "_str")
 
     def __init__(self, path: PureSequencePath | str):
+        """
+
+        Raises:
+            InvalidPathFormatError: If the path has an invalid format.
+        """
         if isinstance(path, str):
             self._parts = self._convert_to_parts(path)
             self._str = path
@@ -142,6 +147,17 @@ class PureSequencePath:
         return len(self._parts) == 0
 
     def __truediv__(self, other) -> Self:
+        """Add a name to the path.
+
+        Example:
+            >>> path = PureSequencePath.root()
+            >>> path / "foo"
+            PureSequencePath("\\foo")
+
+        Raises:
+            InvalidPathFormatError: If the name is not valid.
+        """
+
         if isinstance(other, str):
             if not re.match(_PATH_NAME, other):
                 raise InvalidPathFormatError("Invalid name format")
@@ -188,7 +204,11 @@ class PureSequencePath:
 
     @classmethod
     def from_parts(cls, parts: Iterable[str]) -> PureSequencePath:
-        """Create a path from its parts."""
+        """Create a path from its parts.
+
+        Raises:
+            InvalidPathFormatError: If one of the parts is not a valid name.
+        """
 
         return PureSequencePath(_PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
 
@@ -197,10 +217,6 @@ class PureSequencePath:
         """Check if a string is a valid path."""
 
         return bool(_PATH_REGEX.match(path))
-
-
-def bind(path: PureSequencePath, session: "ExperimentSession") -> BoundSequencePath:
-    return BoundSequencePath(path, session)
 
 
 class BoundSequencePath(PureSequencePath):
@@ -266,7 +282,7 @@ class BoundSequencePath(PureSequencePath):
             PathIsSequenceError: If the path is a sequence.
         """
 
-        from .sequence_collection import PathIsSequenceError
+        from ._sequence_collection import PathIsSequenceError
 
         descendants = set()
         for child in self.get_children():

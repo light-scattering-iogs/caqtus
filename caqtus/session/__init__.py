@@ -1,13 +1,28 @@
 """Allows to interact with the storage of the experiment."""
 
+from ._device_configuration_collection import DeviceConfigurationCollection
+from ._experiment_session import ExperimentSession
+from ._path import PureSequencePath, InvalidPathFormatError
+from ._path_hierarchy import (
+    PathError,
+    PathNotFoundError,
+    PathIsRootError,
+    PathHasChildrenError,
+)
+from ._path_hierarchy import PathHierarchy
+from ._sequence_collection import (
+    SequenceCollection,
+    PathIsSequenceError,
+    PathIsNotSequenceError,
+    DataNotFoundError,
+    SequenceStateError,
+    InvalidStateTransitionError,
+    SequenceNotEditableError,
+    ShotNotFoundError,
+)
+from ._session_maker import ExperimentSessionMaker
 from .async_session import AsyncExperimentSession
-from .device_configuration_collection import DeviceConfigurationCollection
-from .experiment_session import ExperimentSession
-from .path import PureSequencePath
-from .path_hierarchy import PathHierarchy
 from .sequence import Sequence, Shot
-from .sequence_collection import SequenceCollection
-from .session_maker import ExperimentSessionMaker
 
 __all__ = [
     "ExperimentSession",
@@ -16,7 +31,19 @@ __all__ = [
     "ExperimentSessionMaker",
     "PathHierarchy",
     "PureSequencePath",
+    "InvalidPathFormatError",
     "SequenceCollection",
     "DeviceConfigurationCollection",
     "AsyncExperimentSession",
+    "PathIsSequenceError",
+    "PathIsNotSequenceError",
+    "DataNotFoundError",
+    "SequenceStateError",
+    "InvalidStateTransitionError",
+    "SequenceNotEditableError",
+    "ShotNotFoundError",
+    "PathError",
+    "PathNotFoundError",
+    "PathIsRootError",
+    "PathHasChildrenError",
 ]

@@ -36,9 +36,9 @@ from ..async_session import (
     AsyncPathHierarchy,
     AsyncSequenceCollection,
 )
-from ..experiment_session import ExperimentSessionNotActiveError
-from ..path_hierarchy import PathNotFoundError, PathIsRootError
-from ..sequence_collection import (
+from .._experiment_session import ExperimentSessionNotActiveError
+from .._path_hierarchy import PathNotFoundError, PathIsRootError
+from .._sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,

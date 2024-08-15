@@ -2,7 +2,7 @@ import abc
 from typing import Protocol
 
 from .async_session import AsyncExperimentSession
-from .experiment_session import ExperimentSession
+from ._experiment_session import ExperimentSession
 
 
 class ExperimentSessionMaker(Protocol):

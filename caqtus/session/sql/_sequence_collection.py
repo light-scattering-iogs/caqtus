@@ -35,10 +35,10 @@ from ._sequence_table import (
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._return_or_raise import unwrap
-from ..path import PureSequencePath
-from ..path_hierarchy import PathNotFoundError, PathHasChildrenError
-from ..sequence.state import State
-from ..sequence_collection import (
+from .._path import PureSequencePath
+from .._path_hierarchy import PathNotFoundError, PathHasChildrenError
+from caqtus.session.state import State
+from .._sequence_collection import (
     PathIsSequenceError,
     PathIsNotSequenceError,
     InvalidStateTransitionError,
@@ -48,7 +48,7 @@ from ..sequence_collection import (
     PureShot,
     DataNotFoundError,
 )
-from ..sequence_collection import SequenceCollection
+from .._sequence_collection import SequenceCollection
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
