@@ -5,7 +5,7 @@ from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
 from caqtus.gui.condetrol._extension import CondetrolExtensionProtocol
-from caqtus.types.timelane.serializer import TimeLaneSerializerProtocol
+from caqtus.types.timelane._serializer import TimeLaneSerializerProtocol
 
 
 class CaqtusExtensionProtocol(Protocol):

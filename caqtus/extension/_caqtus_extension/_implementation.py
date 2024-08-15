@@ -10,7 +10,7 @@ from caqtus.experiment_control.device_manager_extension import DeviceManagerExte
 from caqtus.gui.condetrol._extension import CondetrolExtension
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session.sql._serializer import SerializerProtocol, Serializer
-from caqtus.types.timelane.serializer import TimeLaneSerializer
+from caqtus.types.timelane._serializer import TimeLaneSerializer
 from ._protocol import CaqtusExtensionProtocol
 from ..device_extension import DeviceExtension
 from ..time_lane_extension import TimeLaneExtension

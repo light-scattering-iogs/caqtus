@@ -17,7 +17,7 @@ from caqtus.types.iteration import (
     StepsConfiguration,
 )
 from caqtus.types.timelane import TimeLanes, TimeLane
-from caqtus.types.timelane.serializer import (
+from caqtus.types.timelane._serializer import (
     TimeLaneSerializerProtocol,
     TimeLaneSerializer,
 )
