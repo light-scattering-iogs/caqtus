@@ -5,8 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..recoverable_exceptions import InvalidTypeError
-from ..units import Quantity, Unit, dimensionless
-from ..units.units import UnitLike
+from ..units import Quantity, Unit, dimensionless, UnitLike
 
 AnalogValue = Real | NDArray[np.floating] | Quantity
 

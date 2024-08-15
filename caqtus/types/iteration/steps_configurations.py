@@ -20,8 +20,7 @@ from caqtus.types.parameter import (
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
 from ..recoverable_exceptions import EvaluationError
-from ..units import DimensionalityError
-from ..units.units import InvalidDimensionalityError
+from ..units import DimensionalityError, InvalidDimensionalityError
 from ..variable_name import DottedVariableName
 
 

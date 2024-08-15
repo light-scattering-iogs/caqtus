@@ -14,8 +14,9 @@ from caqtus.types.parameter import (
     AnalogValue,
 )
 from caqtus.types.recoverable_exceptions import NotDefinedUnitError
-from caqtus.types.units import Unit, Quantity
-from caqtus.types.units.units import (
+from caqtus.types.units import (
+    Unit,
+    Quantity,
     UnitLike,
     DimensionalityError,
     InvalidDimensionalityError,

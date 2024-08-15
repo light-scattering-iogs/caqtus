@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from caqtus.types.expression import Expression
     from caqtus.types.variable_name import DottedVariableName
     from caqtus.device import DeviceName
-    from caqtus.types.units.units import UnitLike
+    from caqtus.types.units import UnitLike
 
 
 class CaqtusFormatter(string.Formatter):

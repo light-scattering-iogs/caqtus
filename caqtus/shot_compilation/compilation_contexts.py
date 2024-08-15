@@ -14,8 +14,7 @@ from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
 from ..types.parameter.analog_value import NotQuantityError
 from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
-from ..types.units import DimensionalityError
-from ..types.units.units import InvalidDimensionalityError
+from ..types.units import DimensionalityError, InvalidDimensionalityError
 
 if TYPE_CHECKING:
     from caqtus.shot_compilation import DeviceCompiler

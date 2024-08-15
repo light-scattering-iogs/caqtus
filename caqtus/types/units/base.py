@@ -3,7 +3,7 @@ from typing import overload, Optional
 
 import numpy as np
 
-from .units import Unit, Quantity, dimensionless
+from ._units import Unit, Quantity, dimensionless
 
 
 def base_units(units: Unit) -> Unit:
