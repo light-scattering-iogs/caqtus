@@ -3,6 +3,7 @@ from contextlib import ExitStack, AbstractContextManager
 from typing import Optional, TypeVar, Self
 
 import attrs
+from typing_extensions import deprecated
 
 from ._device import Device
 from .._name import DeviceName
@@ -10,6 +11,7 @@ from .._name import DeviceName
 _T = TypeVar("_T")
 
 
+@deprecated("Use caqtus.device.Device instead.")
 @attrs.define
 class RuntimeDevice(Device, abc.ABC):
     """An implementation of the Device class that provides some useful operations.
@@ -21,9 +23,9 @@ class RuntimeDevice(Device, abc.ABC):
         name: A unique name given to the device. Cannot be changed during the lifetime
         of the device.
 
-    Warnings:
-        All device classes subclassed from this class should call parent_item class
-        initialize and close methods when overwriting them.
+    Warning:
+        This class is deprecated. Use :class:`caqtus.device.Device` instead.
+
     """
 
     name: DeviceName = attrs.field(on_setattr=attrs.setters.frozen)
@@ -43,6 +45,10 @@ class RuntimeDevice(Device, abc.ABC):
         The base class implementation registers the device in the list of devices
         already in use.
         It must be called when subclassing this class.
+
+        Warning:
+            All device classes subclassed from this class should call their parent
+            class initialize method when overwriting it.
         """
 
         pass
@@ -79,6 +85,10 @@ class RuntimeDevice(Device, abc.ABC):
         registered when it is called.
         If you only use `_enter_context` and `_add_closing_callback`, there is no need
         to reimplement this method in subclasses.
+
+        Warning:
+            All device classes subclassed from this class should call their parent
+            class close method when overwriting it.
         """
 
         if self._close_stack is None:
