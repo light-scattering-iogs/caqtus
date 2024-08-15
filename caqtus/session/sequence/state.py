@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ..data_type import DataType
-
 
 class State(Enum):
     """Indicate the state of a sequence.
@@ -50,11 +48,6 @@ class State(Enum):
         """Indicate if a sequence in this state can be edited."""
 
         return self in {State.DRAFT}
-
-    def can_add_data(self, data_type: "DataType") -> bool:
-        """Indicate if a sequence in this state can add data of the given type."""
-
-        return self in {State.RUNNING}
 
     def __str__(self):
         return self.value

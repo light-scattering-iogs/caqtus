@@ -1,7 +1,6 @@
 """Allows to interact with the storage of the experiment."""
 
 from .async_session import AsyncExperimentSession
-from .data_type import DataType
 from .experiment_session import ExperimentSession
 from .path import PureSequencePath
 from .path_hierarchy import PathHierarchy
@@ -13,7 +12,6 @@ __all__ = [
     "AsyncExperimentSession",
     "ExperimentSessionMaker",
     "PureSequencePath",
-    "DataType",
     "PathHierarchy",
     "Sequence",
     "Shot",
