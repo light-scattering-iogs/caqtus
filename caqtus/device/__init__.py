@@ -3,7 +3,6 @@
 from ._controller import DeviceController
 from .configuration import (
     DeviceConfiguration,
-    get_configurations_by_type,
     DeviceParameter,
 )
 from ._name import DeviceName
@@ -15,6 +14,5 @@ __all__ = [
     "DeviceParameter",
     "Device",
     "RuntimeDevice",
-    "get_configurations_by_type",
     "DeviceController",
 ]

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import abc
-from collections.abc import Mapping
 from typing import (
     TypeVar,
     Optional,
@@ -13,7 +12,6 @@ from typing import (
 
 import attrs
 
-from caqtus.device._name import DeviceName
 from caqtus.device.runtime import Device
 
 DeviceServerName = NewType("DeviceServerName", str)
@@ -52,14 +50,3 @@ class DeviceConfiguration(abc.ABC, Generic[DeviceType]):
 
 
 DeviceConfigType = TypeVar("DeviceConfigType", bound=DeviceConfiguration)
-
-
-def get_configurations_by_type(
-    device_configurations: Mapping[DeviceName, DeviceConfiguration],
-    device_type: type[DeviceConfigType],
-) -> dict[DeviceName, DeviceConfigType]:
-    return {
-        name: configuration
-        for name, configuration in device_configurations.items()
-        if isinstance(configuration, device_type)
-    }
