@@ -14,10 +14,10 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
-from caqtus.session.state import State
-from .._return_or_raise import unwrap
 from .._path import PureSequencePath
+from .._return_or_raise import unwrap
 from .._sequence_collection import PathIsNotSequenceError
+from .._state import State
 
 if TYPE_CHECKING:
     from .._experiment_session import ExperimentSession

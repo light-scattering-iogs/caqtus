@@ -6,17 +6,17 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional
 
 import attrs
+from returns.result import Result
+
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from returns.result import Result
-
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError
-from caqtus.session.state import State
+from ._state import State
 
 
 class PathIsSequenceError(PathError):

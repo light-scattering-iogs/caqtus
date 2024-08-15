@@ -1,8 +1,9 @@
 from tqdm import tqdm
 
-from caqtus.session import ExperimentSession, PureSequencePath
-from caqtus.session._return_or_raise import unwrap
-from caqtus.session.sequence import State
+from ._experiment_session import ExperimentSession
+from ._path import PureSequencePath
+from ._return_or_raise import unwrap
+from ._state import State
 
 
 def copy_sequence(

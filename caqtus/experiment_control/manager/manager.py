@@ -11,8 +11,12 @@ from typing import Optional
 import anyio
 
 from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.session import ExperimentSessionMaker, PureSequencePath, ExperimentSession
-from caqtus.session.sequence import State
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    ExperimentSession,
+    State,
+)
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
