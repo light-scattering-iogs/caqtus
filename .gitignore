@@ -10,3 +10,4 @@ build/
 _build/
 *.log
 dist/
+doc/source/_autosummary/

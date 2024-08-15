@@ -1,13 +1,8 @@
-Reference
-=========
+API Reference
+=============
 
-.. toctree::
-   :maxdepth: 1
+.. autosummary::
+    :toctree: ../_autosummary
+    :recursive:
 
-   session
-   device/index
-   types/index
-   extension/extension
-   gui/index
-   shot_compilation/index
-   experiment_control/index
+    caqtus

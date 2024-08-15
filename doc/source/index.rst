@@ -12,8 +12,8 @@ Welcome to caqtus's documentation!
 
    tutorials/tutorials
    how-to/how-to
-   reference/reference
    explanations/explanations
+   reference/reference
 
 
 

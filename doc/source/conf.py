@@ -21,13 +21,18 @@ author = "Caqtus"
 extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
-    "sphinx_rtd_theme",
     "sphinx.ext.inheritance_diagram",
-    "nbsphinx",
+    "sphinx_rtd_theme",
 ]
 
+templates_path = ["_templates"]
+
+autosummary_generate = True
+autosummary_ignore_module_all = False
 autodoc_typehints = "signature"
+autodoc_typehints_format = "short"
 autodoc_preserve_defaults = True
 autodoc_member_order = "bysource"
 maximum_signature_line_length = 80
@@ -39,6 +44,7 @@ autodoc_type_aliases = {
     "Step": "Step",
     "AnalogValue": "AnalogValue",
     "Image": "Image",
+    "Data": "Data",
 }
 
 intersphinx_mapping = {
@@ -48,8 +54,10 @@ intersphinx_mapping = {
     "graphviz": ("https://graphviz.readthedocs.io/en/stable/", None),
 }
 
-templates_path = ["_templates"]
-exclude_patterns = ["reference/device/sequencer/sequencer_instruction_example.ipynb"]
+exclude_patterns = [
+    "reference/device/sequencer/sequencer_instruction_example.ipynb",
+    "_templates",
+]
 
 
 # -- Options for HTML output -------------------------------------------------
