@@ -125,7 +125,7 @@ class TimeStepDurationModel(QAbstractListModel):
         if role == Qt.ItemDataRole.EditRole:
             if not isinstance(value, str):
                 raise TypeError(f"Expected str, got {type(value)}")
-            self._durations[index.row()].body = value
+            self._durations[index.row()] = Expression(value)
             self.dataChanged.emit(index, index)
             return True
         return False

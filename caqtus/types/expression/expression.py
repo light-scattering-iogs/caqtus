@@ -61,6 +61,8 @@ class Expression:
     This class is a wrapper around a python string expression that can be evaluated
     later when the values of the variables it depends on are known.
 
+    The expression is immutable.
+
     If the expression contains syntax errors, they only will be raised when the
     expression is evaluated.
 
@@ -69,30 +71,18 @@ class Expression:
     * The ° symbol is understood as the degree symbol and will be replaced by the
         name `deg` in the expression.
     * Implicit multiplication is allowed, so that 'a b' will be parsed as 'a * b'.
-
-    Attributes:
-        body: the underlying string representing the expression.
     """
 
     def __init__(self, body: str):
-        self.body = body
+        if not isinstance(body, str):
+            raise TypeError(f"Expression body must be a string, got {type(body)}")
+        self._body = body
 
     @property
     def body(self) -> str:
-        return self._body
+        """The string representation of the expression."""
 
-    # noinspection PyPropertyAccess
-    @body.setter
-    def body(self, value):
-        if not isinstance(value, str):
-            raise TypeError(f"Expression body must be a string, got {value}")
-        self._body = value
-        if hasattr(self, "ast"):
-            del self.ast
-        if hasattr(self, "code"):
-            del self.code
-        if hasattr(self, "upstream_variables"):
-            del self.upstream_variables
+        return self._body
 
     def __repr__(self) -> str:
         return f"Expression('{self.body}')"
