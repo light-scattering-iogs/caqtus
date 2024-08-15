@@ -1,3 +1,5 @@
+"""Contains functions for handling units in dataframes."""
+
 from .units import (
     extract_unit,
     extract_units,

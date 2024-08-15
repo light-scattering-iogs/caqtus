@@ -4,7 +4,7 @@ from collections.abc import Sequence, Iterable
 import polars
 
 from caqtus.session import Shot
-from .shot_data import DataImporter
+from ._shot_data import DataImporter
 
 
 class CombinableLoader(DataImporter, abc.ABC):

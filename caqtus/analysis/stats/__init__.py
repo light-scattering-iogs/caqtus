@@ -1,3 +1,5 @@
+"""Contains function for handling uncertainties in dataframes."""
+
 from .stats import (
     compute_stats_average,
     is_error_dtype,
