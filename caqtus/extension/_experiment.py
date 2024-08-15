@@ -30,7 +30,7 @@ from ..session import ExperimentSessionMaker
 
 
 class Experiment:
-    """Used to configure parameters and register extensions for a specific experiment.
+    """Configure parameters and register extensions for a specific experiment.
 
     There should be only a single instance of this class in the entire application.
     It is used to configure the experiment and knows how to launch the different

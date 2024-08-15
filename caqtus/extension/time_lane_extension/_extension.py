@@ -20,7 +20,7 @@ def no_lane_delegate_factory(lane: TimeLane, lane_name: str) -> None:
 
 @attrs.frozen
 class TimeLaneExtension:
-    """Contains the information necessary to extend Condetrol with a new lane.
+    """Define how to implement a time lane plugin.
 
     Attributes:
         label: An identifier for this type of lane to be displayed to the user.

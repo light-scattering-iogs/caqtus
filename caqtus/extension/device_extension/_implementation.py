@@ -17,7 +17,7 @@ from caqtus.utils.serialization import JSON
 
 @attrs.frozen
 class DeviceExtension(Generic[C]):
-    """Extension to define how to implement a device in the application.
+    """Define how to implement a device plugin.
 
     This class is generic in the :class:`DeviceConfiguration` type.
 
