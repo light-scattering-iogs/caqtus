@@ -1,7 +1,10 @@
-Manual
-======
+Condetrol manual
+================
+
+*Condetrol* is an application that lets you configure and launch cold atom experiments.
 
 .. toctree::
-   :caption: Contents:
+   :maxdepth: 2
+   :caption: Table of contents
 
-   devices/devices
+   components/components

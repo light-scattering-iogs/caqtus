@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "caqtus-manual"
+project = "Condetrol"
 copyright = "2024, caqtus"
 author = "caqtus"
 

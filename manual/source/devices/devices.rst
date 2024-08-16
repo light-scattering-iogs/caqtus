@@ -1,6 +1,0 @@
-Devices
-=======
-
-.. toctree::
-
-   sequencers/sequencers

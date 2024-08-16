@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Callable
 import platform
+from collections.abc import Callable
 
 import anyio
 import anyio.to_thread
@@ -27,6 +27,7 @@ from caqtus.types.recoverable_exceptions import (
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .._extension import CondetrolExtensionProtocol
+from .._help import HelpDialog
 from .._logger import logger
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
@@ -158,6 +159,8 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.device_configurations_dialog = DeviceConfigurationsDialog(
             extension.device_extension, parent=self
         )
+        self.help_dialog = HelpDialog.new(self)
+
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
@@ -195,6 +198,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.about_condetrol_action.triggered.connect(
             self._on_about_condetrol_action_triggered
         )
+        self.help_action.triggered.connect(self.help_dialog.show)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
