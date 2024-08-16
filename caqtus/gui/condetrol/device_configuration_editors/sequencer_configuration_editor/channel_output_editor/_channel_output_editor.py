@@ -42,7 +42,7 @@ class ChannelOutputEditor(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
-        self.output_node = OutputNode()
+        self.output_node = OutputNode("out")
         self.graph.add_node(
             self.output_node, selected=False, pos=[0, 0], push_undo=False
         )
