@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Help menu in Condetrol
 - Better error messages when a camera times out
 - Better error messages when failing to compute the output of a sequencer
 
