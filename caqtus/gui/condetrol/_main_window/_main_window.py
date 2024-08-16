@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable
+import platform
 
 import anyio
 import anyio.to_thread
@@ -10,8 +11,10 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QDockWidget,
     QDialog,
+    QMessageBox,
 )
 
+from caqtus.__about__ import __version__
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
 from caqtus.gui._common.exception_tree import ExceptionDialog
 from caqtus.gui._common.waiting_widget import run_with_wip_widget
@@ -188,6 +191,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.global_parameters_editor.parameters_edited.connect(
             self._on_global_parameters_edited
         )
+        self.about_qt_action.triggered.connect(self._on_about_qt_action_triggered)
+        self.about_condetrol_action.triggered.connect(
+            self._on_about_condetrol_action_triggered
+        )
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
@@ -279,4 +286,19 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         # to be done in the next event loop iteration.
         self.timer.singleShot(
             0, functools.partial(self.on_procedure_exception, exception)
+        )
+
+    def _on_about_qt_action_triggered(self):
+        QMessageBox.aboutQt(
+            self,
+        )
+
+    def _on_about_condetrol_action_triggered(self):
+        QMessageBox.about(
+            self,
+            "Condetrol",
+            "<p><i>Condetrol</i> is a graphical user interface to edit and launch cold atom "
+            "experiments.</p>"
+            f"<p><i>caqtus-suite</i> version: {__version__}</p>"
+            f"<p>Platform: {platform.platform()}</p>",
         )

@@ -20,7 +20,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>33</height>
     </rect>
    </property>
    <widget class="QMenu" name="device_configurations_menu">
@@ -34,8 +34,18 @@
      <string>Docks</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuhelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="help_action"/>
+    <addaction name="separator"/>
+    <addaction name="about_condetrol_action"/>
+    <addaction name="about_qt_action"/>
+   </widget>
    <addaction name="device_configurations_menu"/>
    <addaction name="dock_menu"/>
+   <addaction name="menuhelp"/>
   </widget>
   <action name="action_edit_device_configurations">
    <property name="text">
@@ -55,6 +65,24 @@
   <action name="action_edit_constants">
    <property name="text">
     <string>Edit...</string>
+   </property>
+  </action>
+  <action name="help_action">
+   <property name="text">
+    <string>Condetrol help</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+  </action>
+  <action name="about_qt_action">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+  </action>
+  <action name="about_condetrol_action">
+   <property name="text">
+    <string>About Condetrol</string>
    </property>
   </action>
  </widget>
