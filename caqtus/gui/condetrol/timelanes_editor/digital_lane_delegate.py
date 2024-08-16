@@ -26,7 +26,10 @@ class DigitalTimeLaneDelegate(TimeLaneDelegate):
         cell_value = index.data(Qt.ItemDataRole.EditRole)
         if isinstance(cell_value, bool):
             editor: CheckedButton
-            editor.setChecked(cell_value)
+            # We invert the value saved in the model because then when the user open
+            # the editor, the button will already have changed its state, and they
+            # don't have to click it a second time to change the value.
+            editor.setChecked(not cell_value)
         elif isinstance(cell_value, Expression):
             editor: QLineEdit
             editor.setText(str(cell_value))

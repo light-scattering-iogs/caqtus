@@ -201,6 +201,8 @@ class TimeLanesView(QTableView):
         # around on its own while the user is trying to edit the time lanes.
         self.setAutoScroll(False)
 
+        self.clicked.connect(self.edit)
+
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
             self.show_steps_context_menu
