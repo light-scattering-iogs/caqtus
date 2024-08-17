@@ -2218,8 +2218,6 @@ class NodeGraph(QtCore.QObject):
             node_height = 120
             for rank in sorted(range(len(rank_map)), reverse=not down_stream):
                 ranked_nodes = rank_map[rank]
-                max_width = max([node.view.width for node in ranked_nodes])
-                current_x += max_width
                 current_y = 0
                 for idx, node in enumerate(ranked_nodes):
                     dy = max(node_height, node.view.height)
@@ -2227,7 +2225,8 @@ class NodeGraph(QtCore.QObject):
                     node.set_pos(current_x, current_y)
                     current_y += dy * 0.5 + 10
 
-                current_x += max_width * 0.5 + 100
+                max_width = max([node.view.width for node in ranked_nodes])
+                current_x += max_width + 100
         elif node_layout_direction is LayoutDirectionEnum.VERTICAL.value:
             current_y = 0
             node_width = 250
