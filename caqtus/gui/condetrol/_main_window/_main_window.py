@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import importlib.resources
 import platform
 from collections.abc import Callable
 
@@ -27,7 +28,6 @@ from caqtus.types.recoverable_exceptions import (
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .._extension import CondetrolExtensionProtocol
-from .._help import HelpDialog
 from .._logger import logger
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
@@ -49,6 +49,7 @@ class CondetrolWindowHandler:
         self.main_window.sequence_widget.sequence_start_requested.connect(
             self.start_sequence
         )
+        self.main_window.help_action.triggered.connect(self.help_action_triggered)
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
@@ -122,6 +123,20 @@ class CondetrolWindowHandler:
                     self.main_window.signal_exception_while_running_sequence(exc)
         self.is_running_sequence = False
 
+    def help_action_triggered(self):
+        """Spawn a process to display the help file."""
+
+        help_file = importlib.resources.files("caqtus.gui.condetrol._help").joinpath(
+            "Condetrol.qhc"
+        )
+        self.task_group.start_soon(self.spawn_help_assistant, help_file)
+
+    @staticmethod
+    async def spawn_help_assistant(help_file):
+        await anyio.run_process(
+            ["pyside6-assistant", "-collectionFile", str(help_file)]
+        )
+
 
 class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
     """The main window of the Condetrol GUI.
@@ -159,7 +174,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.device_configurations_dialog = DeviceConfigurationsDialog(
             extension.device_extension, parent=self
         )
-        self.help_dialog = HelpDialog.new(self)
 
         self.setup_ui()
         self.restore_window()
@@ -198,7 +212,6 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.about_condetrol_action.triggered.connect(
             self._on_about_condetrol_action_triggered
         )
-        self.help_action.triggered.connect(self.help_dialog.show)
 
     def set_edited_sequence(self, path: PureSequencePath):
         self.sequence_widget.set_sequence(path)
