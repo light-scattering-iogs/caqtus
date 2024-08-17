@@ -12,7 +12,7 @@ build:
     python: "3.12"
   apt_packages:
     - graphviz
-    - xcb-cursor0
+    - libxcb-cursor0
   jobs:
     # We need to use hatch to resolve the dependencies, but it will create a new
     # virtual environment, which is not the one used to build the doc.
