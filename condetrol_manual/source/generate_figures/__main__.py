@@ -5,15 +5,21 @@ from PySide6.QtWidgets import QApplication
 from matplotlib import pyplot as plt
 
 from caqtus.device.sequencer.channel_commands import Constant
+from caqtus.gui.condetrol.device_configuration_editors.sequencer_configuration_editor.channel_output_editor._constant_node import (
+    ConstantNode,
+)
 from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes
-from .screenshot_output_graph import screenshot_output
+from .screenshot_output_graph import screenshot_output, screenshot_node
 
 
 def generate_for_constant():
     output = Constant(Expression("10 V"))
     screenshot_output(output, "sequencer_outputs/img/constant_graph.png")
+    node = ConstantNode()
+    node.set_value(Expression("expression"))
+    screenshot_node(node, "sequencer_outputs/img/constant_node.png")
 
     sequence_context = SequenceContext({}, TimeLanes(["step1"], [Expression("2 s")]))
     shot_context = ShotContext(sequence_context, {}, {})
@@ -36,6 +42,7 @@ def generate_for_constant():
 
 def generate_figures():
     app = QApplication([])
+    screenshot_output(None, "sequencer_outputs/img/output_node.png")
     generate_for_constant()
 
     # screenshot_output(Constant(Expression("10 MHz")), "constant.png")

@@ -49,7 +49,7 @@ class ChannelOutputEditor(QWidget):
 
 
 class ChannelOutputGraph(NodeGraph):
-    def __init__(self, channel_output: ChannelOutput):
+    def __init__(self, channel_output: Optional[ChannelOutput]):
         super().__init__()
         self.register_node(ConstantNode)
         self.register_node(DeviceTriggerNode)
@@ -61,8 +61,9 @@ class ChannelOutputGraph(NodeGraph):
         self.output_node = OutputNode("out")
         self.add_node(self.output_node, selected=False, pos=[0, 0], push_undo=False)
 
-        node = self.build_node(channel_output)
-        node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
+        if channel_output:
+            node = self.build_node(channel_output)
+            node.outputs()["out"].connect_to(self.output_node.inputs()["in"])
         self.auto_layout_nodes(down_stream=False)
         self.set_pipe_collision(True)
         self.clear_undo_stack()
@@ -80,15 +81,7 @@ class ChannelOutputGraph(NodeGraph):
     def zoom_to_nodes(self) -> QRect:
         """Zoom the graph view to fit all nodes."""
 
-        all_nodes = self.all_nodes()
-
-        group = self.scene().createItemGroup([node.view for node in all_nodes])
-        rect = group.boundingRect().adjusted(-10, -10, 10, 10)
-        self.scene().destroyItemGroup(group)
-
-        self.viewer().setSceneRect(rect)
-        self.viewer().fitInView(rect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-        return rect
+        return zoom_to_nodes(self)
 
     def resize(self) -> None:
         """Resize the graph view to fit all nodes and zoom in."""
@@ -255,3 +248,15 @@ class InvalidNodeConfigurationError(ValueError):
 
 class MissingInputError(InvalidNodeConfigurationError):
     pass
+
+
+def zoom_to_nodes(graph: NodeGraph) -> QRect:
+    all_nodes = graph.all_nodes()
+
+    group = graph.scene().createItemGroup([node.view for node in all_nodes])
+    rect = group.boundingRect().adjusted(-10, -10, 10, 10)
+    graph.scene().destroyItemGroup(group)
+
+    graph.viewer().setSceneRect(rect)
+    graph.viewer().fitInView(rect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+    return rect
