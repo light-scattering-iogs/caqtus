@@ -113,6 +113,7 @@ dependencies = [
     "sphinx-autodoc-typehints",
     "sphinx-rtd-theme",
     "jupyter>=1.0.0",
+    "matplotlib"
 ]
 
 [tool.hatch.envs.types]

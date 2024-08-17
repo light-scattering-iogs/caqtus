@@ -8,3 +8,5 @@ Condetrol manual
    :caption: Table of contents
 
    components/components
+   sequencer_outputs/sequencer_outputs
+   concepts/concepts
