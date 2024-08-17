@@ -6,6 +6,8 @@
 import os
 import sys
 
+from doc.source.generate_figures import generate_figures
+
 sys.path.insert(0, os.path.abspath("./caqtus"))
 
 # -- Project information -----------------------------------------------------
@@ -70,3 +72,12 @@ html_static_path = []
 html_theme_options = {
     "navigation_depth": 8,
 }
+
+rst_prolog = """
+.. |project| replace:: Condetrol
+.. |sequence| replace:: :ref:`sequence <concepts_sequence>`
+.. |shot| replace:: :ref:`shot <concepts_shot>`
+.. |expression| replace:: :ref:`expression <concepts_expression>`
+"""
+
+generate_figures()

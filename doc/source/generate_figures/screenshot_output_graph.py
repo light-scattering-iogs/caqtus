@@ -29,3 +29,4 @@ def screenshot_graph(graph, filename: str):
     graph.widget.resize(max_width, int(rect.height() * max_width / rect.width()))
     zoom_to_nodes(graph)
     graph.widget.grab(QRect(QPoint(0, 0), QSize(-1, -1))).save(filename)
+    graph.widget.close()

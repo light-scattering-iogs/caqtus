@@ -16,10 +16,12 @@ from .screenshot_output_graph import screenshot_output, screenshot_node
 
 def generate_for_constant():
     output = Constant(Expression("10 V"))
-    screenshot_output(output, "sequencer_outputs/img/constant_graph.png")
+    screenshot_output(
+        output, "reference/condetrol/sequencer_outputs/img/constant_graph.png"
+    )
     node = ConstantNode()
     node.set_value(Expression("expression"))
-    screenshot_node(node, "sequencer_outputs/img/constant_node.png")
+    screenshot_node(node, "reference/condetrol/sequencer_outputs/img/constant_node.png")
 
     sequence_context = SequenceContext({}, TimeLanes(["step1"], [Expression("2 s")]))
     shot_context = ShotContext(sequence_context, {}, {})
@@ -37,12 +39,15 @@ def generate_for_constant():
     ax.grid(True)
     ax.set_xlim(t[0], t[-1])
 
-    plt.savefig("sequencer_outputs/img/constant_plot.png", bbox_inches="tight")
+    plt.savefig(
+        "reference/condetrol/sequencer_outputs/img/constant_plot.png",
+        bbox_inches="tight",
+    )
 
 
 def generate_figures():
     app = QApplication([])
-    screenshot_output(None, "sequencer_outputs/img/output_node.png")
+    screenshot_output(None, "reference/condetrol/sequencer_outputs/img/output_node.png")
     generate_for_constant()
 
     # screenshot_output(Constant(Expression("10 MHz")), "constant.png")

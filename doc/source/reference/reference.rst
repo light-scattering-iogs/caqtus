@@ -1,9 +1,8 @@
-API Reference
-=============
+Reference
+=========
 
-.. autosummary::
-    :toctree: ../_autosummary
-    :template: custom-module-template.rst
-    :recursive:
+.. toctree::
+    :maxdepth: 1
 
-    caqtus
+    condetrol/manual
+    api-reference
