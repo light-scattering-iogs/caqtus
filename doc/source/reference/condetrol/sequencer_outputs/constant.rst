@@ -3,7 +3,7 @@ Constant
 
 The constant node is used to configure a channel to keep a fixed value during a |shot|.
 
-.. image:: img/constant_node.png
+.. image:: /images/sequencer_outputs/constant_node.png
     :width: 300
 
 The cell in the constant block can take any |expression| that evaluates to a scalar value.
@@ -18,7 +18,7 @@ In the example below, the output is configured to keep a constant value of 10 V.
 
 .. list-table::
 
-    * - .. image:: img/constant_graph.png
+    * - .. image:: /images/sequencer_outputs/constant_graph.png
             :width: 600
-    * - .. image:: img/constant_plot.png
+    * - .. image:: /images/sequencer_outputs/constant_plot.png
             :width: 600

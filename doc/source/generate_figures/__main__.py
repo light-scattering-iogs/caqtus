@@ -1,4 +1,5 @@
 import decimal
+import os
 
 import numpy as np
 from PySide6.QtWidgets import QApplication
@@ -16,12 +17,10 @@ from .screenshot_output_graph import screenshot_output, screenshot_node
 
 def generate_for_constant():
     output = Constant(Expression("10 V"))
-    screenshot_output(
-        output, "reference/condetrol/sequencer_outputs/img/constant_graph.png"
-    )
+    screenshot_output(output, "images/sequencer_outputs/constant_graph.png")
     node = ConstantNode()
     node.set_value(Expression("expression"))
-    screenshot_node(node, "reference/condetrol/sequencer_outputs/img/constant_node.png")
+    screenshot_node(node, "images/sequencer_outputs/constant_node.png")
 
     sequence_context = SequenceContext({}, TimeLanes(["step1"], [Expression("2 s")]))
     shot_context = ShotContext(sequence_context, {}, {})
@@ -40,21 +39,16 @@ def generate_for_constant():
     ax.set_xlim(t[0], t[-1])
 
     plt.savefig(
-        "reference/condetrol/sequencer_outputs/img/constant_plot.png",
+        "images/sequencer_outputs/constant_plot.png",
         bbox_inches="tight",
     )
 
 
 def generate_figures():
     app = QApplication([])
-    screenshot_output(None, "reference/condetrol/sequencer_outputs/img/output_node.png")
+    os.makedirs("images/sequencer_outputs", exist_ok=True)
+    screenshot_output(None, "images/sequencer_outputs/output_node.png")
     generate_for_constant()
-
-    # screenshot_output(Constant(Expression("10 MHz")), "constant.png")
-    # screenshot_output(
-    #     DeviceTrigger(DeviceName("Camera"), default=Constant(Expression("Disabled"))),
-    #     "device_trigger.png",
-    # )
 
 
 if __name__ == "__main__":

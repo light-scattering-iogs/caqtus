@@ -7,7 +7,7 @@ The editor is an editable graph that shows the value that should be connected to
 
 The output node on the right side must have another block connected to its input port.
 
-.. image:: img/output_node.png
+.. image:: /images/sequencer_outputs/output_node.png
    :width: 300
    :alt: Output node
 
