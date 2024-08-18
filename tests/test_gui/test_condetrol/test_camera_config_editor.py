@@ -3,7 +3,7 @@ from caqtus.gui.condetrol.device_configuration_editors.camera_configuration_edit
     RectangularROIEditor,
     CameraConfigurationEditor,
 )
-from caqtus.utils.roi import RectangularROI
+from caqtus.types.image import RectangularROI
 
 
 def test_1(qtbot):

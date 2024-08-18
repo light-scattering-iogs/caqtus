@@ -8,9 +8,8 @@ from attrs.setters import frozen, convert
 from attrs.validators import instance_of
 
 from caqtus.device import Device
-from caqtus.types.image import Image
+from caqtus.types.image import Image, RectangularROI
 from caqtus.types.recoverable_exceptions import RecoverableException
-from ._configuration import RectangularROI
 
 
 # This exception is recoverable, because it can be caused by the user, for example
