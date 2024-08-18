@@ -1,7 +1,7 @@
 """Defines image and region of interest types."""
 
+from . import roi
 from ._image_type import Image, is_image, ImageLabel, Width, Height
-from .roi import ROI, RectangularROI, RotatedRectangularROI, ArbitraryROI, converter
 
 __all__ = [
     "Image",
@@ -9,9 +9,5 @@ __all__ = [
     "ImageLabel",
     "Width",
     "Height",
-    "ROI",
-    "RectangularROI",
-    "RotatedRectangularROI",
-    "ArbitraryROI",
-    "converter",
+    "roi",
 ]
