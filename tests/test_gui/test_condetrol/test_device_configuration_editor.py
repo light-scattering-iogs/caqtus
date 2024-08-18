@@ -14,7 +14,9 @@ from caqtus.gui.condetrol.device_configuration_editors._device_configuration_edi
 from caqtus.gui.condetrol.device_configuration_editors._extension import (
     CondetrolDeviceExtension,
 )
-from tests.test_condetrol.mock_device_configuration import MockDeviceConfiguration
+from tests.test_gui.test_condetrol.mock_device_configuration import (
+    MockDeviceConfiguration,
+)
 
 
 def test_edit(qtbot: QtBot):
