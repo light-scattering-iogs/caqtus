@@ -3,7 +3,7 @@ from typing import Optional, assert_never
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QComboBox, QWidget
 
-from caqtus.device.sequencer import (
+from caqtus.device.sequencer.trigger import (
     Trigger,
     SoftwareTrigger,
     ExternalClockOnChange,

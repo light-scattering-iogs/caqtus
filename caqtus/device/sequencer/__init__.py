@@ -14,24 +14,11 @@ from .configuration import (
     AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
-from .trigger import (
-    Trigger,
-    SoftwareTrigger,
-    ExternalTriggerStart,
-    ExternalClock,
-    ExternalClockOnChange,
-    TriggerEdge,
-)
+from . import trigger
 
 __all__ = [
     "SequencerConfiguration",
     "Sequencer",
-    "Trigger",
-    "SoftwareTrigger",
-    "ExternalClock",
-    "ExternalTriggerStart",
-    "ExternalClockOnChange",
-    "TriggerEdge",
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
@@ -42,4 +29,5 @@ __all__ = [
     "instructions",
     "converter",
     "TimeStep",
+    "trigger",
 ]

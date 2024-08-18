@@ -4,12 +4,8 @@ from typing import Type
 import pytest
 
 from caqtus.device.sequencer import (
-    SoftwareTrigger,
     DigitalChannelConfiguration,
     AnalogChannelConfiguration,
-    ExternalClockOnChange,
-    TriggerEdge,
-    ExternalTriggerStart,
     SequencerConfiguration,
     ChannelConfiguration,
 )
@@ -20,6 +16,12 @@ from caqtus.device.sequencer.channel_commands import (
     CalibratedAnalogMapping,
 )
 from caqtus.device.sequencer.channel_commands.timing import BroadenLeft, Advance
+from caqtus.device.sequencer.trigger import (
+    SoftwareTrigger,
+    ExternalClockOnChange,
+    TriggerEdge,
+    ExternalTriggerStart,
+)
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import (

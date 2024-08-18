@@ -5,13 +5,13 @@ import pytest
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
-    SoftwareTrigger,
     DigitalChannelConfiguration,
     SequencerCompiler,
     ChannelConfiguration,
 )
 from caqtus.device.sequencer.channel_commands import LaneValues, Constant
 from caqtus.device.sequencer.instructions import Pattern
+from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes, DigitalTimeLane
