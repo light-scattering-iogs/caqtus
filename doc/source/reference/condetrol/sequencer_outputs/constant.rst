@@ -6,7 +6,7 @@ The constant node is used to configure a channel to keep a fixed value during a 
 .. image:: /images/sequencer_outputs/constant_node.png
     :width: 300
 
-The cell in the constant block can take any |expression| that evaluates to a scalar value.
+The cell in the constant node can take any |expression| that evaluates to a scalar value.
 The expression is evaluated for each |shot|.
 
 

@@ -17,3 +17,4 @@ The output node on the right side must have another block connected to its input
     :maxdepth: 1
 
     constant
+    lane
