@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Callable
-from typing import Optional, TypeAlias, Protocol, TypeVar, Any
+from typing import Optional, Protocol, TypeVar, Any
 
 from PySide6.QtWidgets import QStyledItemDelegate
 
@@ -12,10 +12,10 @@ from ..model import TimeLaneModel
 
 L = TypeVar("L", bound=TimeLane)
 
-LaneFactory: TypeAlias = Callable[[int], L]
+type LaneFactory[L: TimeLane] = Callable[[int], L]
 
 
-class LaneDelegateFactory(Protocol[L]):
+class LaneDelegateFactory[L: TimeLane](Protocol):
     """A factory for lane delegates."""
 
     def __call__(
@@ -27,7 +27,7 @@ class LaneDelegateFactory(Protocol[L]):
         ...
 
 
-class LaneModelFactory(Protocol[L]):
+class LaneModelFactory[L: TimeLane](Protocol):
     def __call__(
         self,
         lane: L,
@@ -50,15 +50,19 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
     def register_lane_factory(self, lane_label: str, factory: LaneFactory) -> None:
         self._lane_factories[lane_label] = factory
 
-    def register_lane_delegate_factory(
-        self, lane_type: type[L], factory: LaneDelegateFactory[L]
-    ) -> None:
-        self.get_lane_delegate.register(lane_type)(factory)
+    def register_lane_delegate_factory[
+        L: TimeLane
+    ](self, lane_type: type[L], factory: LaneDelegateFactory[L]) -> None:
+        self.get_lane_delegate.register(  # pyright: ignore[reportFunctionMemberAccess]
+            lane_type
+        )(factory)
 
-    def register_lane_model_factory(
-        self, lane_type: type[L], factory: LaneModelFactory[L]
-    ) -> None:
-        self.get_lane_model.register(lane_type)(factory)
+    def register_lane_model_factory[
+        L: TimeLane
+    ](self, lane_type: type[L], factory: LaneModelFactory[L]) -> None:
+        self.get_lane_model.register(  # pyright: ignore[reportFunctionMemberAccess]
+            lane_type
+        )(factory)
 
     def available_new_lanes(self) -> set[str]:
         return set(self._lane_factories.keys())
@@ -74,6 +78,7 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
         return lane
 
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+
         return self._lane_serializer.unstructure_time_lanes(time_lanes)
 
     def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
@@ -90,5 +95,5 @@ def default_lane_model_factory(lane, name: str) -> TimeLaneModel:
 def default_lane_delegate_factory(
     lane,
     lane_name: str,
-) -> Optional[QStyledItemDelegate]:
+) -> None:
     return None
