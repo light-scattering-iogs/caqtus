@@ -5,10 +5,12 @@ from numpy.typing import NDArray
 
 from caqtus.device.sequencer.channel_commands.timing.broaden import _broaden_left
 from caqtus.device.sequencer.instructions import Concatenated, Pattern
-from .generate_concatenate import concatenation
-from .generate_pattern import pattern
-from .generate_repeat import repeated
-from .instruction_strategy import digital_instruction
+from .test_instructions import (
+    concatenation,
+    pattern,
+    repeated,
+    digital_instruction,
+)
 
 np.typing.NDArray = np.ndarray
 
@@ -18,7 +20,7 @@ def test_pattern(p, n):
     expanded, excess = _broaden_left(p, n)
     assert len(expanded) == len(p)
     for i in range(len(expanded)):
-        assert expanded.array[i] == any(p.array[i: i + n + 1])
+        assert expanded.array[i] == any(p.array[i : i + n + 1])
 
 
 def test_pattern_0():
@@ -72,9 +74,9 @@ def test_2():
 
 def test_3():
     instr = (
-            Pattern([False]) * 100_000_000
-            + Pattern([True]) * 50_000_000
-            + Pattern([False]) * 100_000_000
+        Pattern([False]) * 100_000_000
+        + Pattern([True]) * 50_000_000
+        + Pattern([False]) * 100_000_000
     )
     expanded, excess = _broaden_left(instr, 10_000_000)
     assert excess == 0

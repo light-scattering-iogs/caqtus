@@ -13,9 +13,7 @@ from caqtus.device.sequencer.instructions import (
     ramp,
     Pattern,
 )
-from .generate_pattern import pattern
-from .instruction_strategy import analog_instruction
-from .ramp_strategy import ramp_strategy
+from .test_instructions import analog_instruction, pattern, ramp_strategy
 
 calibration = lists(
     tuples(
