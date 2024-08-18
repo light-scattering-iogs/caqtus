@@ -225,18 +225,25 @@ class DimensionlessCalibration:
         sorted_output_points = [y for _, y in sorted_points]
         # We add new flat segments before and after the calibration points to ensure
         # that the calibration is defined for all input values.
-        self.input_points = np.array([-np.inf] + sorted_input_points + [+np.inf])
-        assert np.all(np.diff(self.input_points) >= 0)
-        self.output_points = np.array(
+        self._input_points = np.array([-np.inf] + sorted_input_points + [+np.inf])
+        assert np.all(np.diff(self._input_points) >= 0)
+        self._output_points = np.array(
             [sorted_output_points[0]]
             + sorted_output_points
             + [sorted_output_points[-1]]
         )
 
+    @property
+    def input_points(self):
+        return self._input_points[1:-1]
+
+    @property
+    def output_points(self):
+        return self._output_points[1:-1]
+
     def __repr__(self):
         points = ", ".join(
-            f"({x}, {y})"
-            for x, y in zip(self.input_points[1:-1], self.output_points[1:-1])
+            f"({x}, {y})" for x, y in zip(self.input_points, self.output_points)
         )
         return f"Calibration({points})"
 
@@ -255,8 +262,8 @@ class DimensionlessCalibration:
             # which cause a 0/0 division.
             invalid="raise",
         ):
-            np.diff(self.output_points) / np.diff(
-                self.input_points
+            np.diff(self._output_points) / np.diff(
+                self._input_points
             )  # pyright: ignore[reportUnusedExpression]
         return self._apply_without_checks(instruction)
 
@@ -277,8 +284,8 @@ class DimensionlessCalibration:
     def _apply_explicit(self, value):
         result = np.interp(
             x=value,
-            xp=self.input_points,
-            fp=self.output_points,
+            xp=self._input_points,
+            fp=self._output_points,
         )
         return result
 
@@ -321,7 +328,7 @@ class DimensionlessCalibration:
 
         # Find the segments in time over which the output y(t) is linear.
         time_segments = []
-        for x0, x1 in pairwise(self.input_points):
+        for x0, x1 in pairwise(self._input_points):
             time_segments.append(map_x_segment_to_t(x0, x1))
 
         if b < a:
