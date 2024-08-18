@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 
 from caqtus.device.sequencer.channel_commands.timing.broaden import _broaden_left
 from caqtus.device.sequencer.instructions import Concatenated, Pattern
-from .test_instructions import (
+from ..test_instructions import (
     concatenation,
     pattern,
     repeated,
