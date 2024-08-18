@@ -11,4 +11,3 @@ _build/
 *.log
 dist/
 doc/source/_autosummary/
-doc/source/images/
