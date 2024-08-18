@@ -1,3 +1,5 @@
+"""Defines what kind of triggers can be used for a sequencer."""
+
 from ._trigger import (
     Trigger,
     SoftwareTrigger,
