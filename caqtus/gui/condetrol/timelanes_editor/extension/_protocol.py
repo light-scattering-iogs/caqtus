@@ -40,7 +40,7 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
     def get_lane_delegate(
         self,
-        lane: L,
+        lane: TimeLane,
         lane_name: str,
     ) -> Optional[TimeLaneDelegate]:
         """Return a delegate for the given lane.
