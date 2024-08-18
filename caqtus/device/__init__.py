@@ -9,6 +9,7 @@ from ._name import DeviceName
 from .runtime import Device, RuntimeDevice
 from . import sequencer
 from . import camera
+from . import output_transform
 
 __all__ = [
     "DeviceName",
@@ -19,4 +20,5 @@ __all__ = [
     "DeviceController",
     "sequencer",
     "camera",
+    "output_transform",
 ]

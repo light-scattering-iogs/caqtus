@@ -1,4 +1,4 @@
-"""This module contains utilities to generate complex values for the output of a device.
+"""Contains utilities to generate complex values for the output of a device.
 
 It is convenient to transform input values given by the user into output values that
 a device should generate.
