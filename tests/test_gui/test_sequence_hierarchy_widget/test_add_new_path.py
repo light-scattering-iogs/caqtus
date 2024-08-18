@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 from PySide6.QtCore import QModelIndex
 from pytestqt.modeltest import ModelTester
@@ -8,13 +6,6 @@ from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
 from .session_maker import session_maker
-
-
-async def wrap(coro):
-    try:
-        await coro
-    except Exception as e:
-        logging.critical("Exception in async function", exc_info=e)
 
 
 def test_0(session_maker, qtbot):
