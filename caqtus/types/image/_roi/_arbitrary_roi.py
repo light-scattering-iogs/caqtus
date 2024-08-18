@@ -4,7 +4,7 @@ from typing import Self
 import attrs
 import numpy as np
 
-from .roi import ROI, Width, Height
+from ._roi import ROI, Width, Height
 
 
 @attrs.define

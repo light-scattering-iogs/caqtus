@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import attrs
 import numpy as np
 
-from .roi import ROI
+from ._roi import ROI
 
 
 @attrs.define

@@ -1,9 +1,9 @@
 import cattrs.strategies
 
-from .arbitrary_roi import ArbitraryROI
-from .rectangular_roi import RectangularROI
-from .roi import ROI
-from .rotated_rectangular_roi import RotatedRectangularROI
+from ._arbitrary_roi import ArbitraryROI
+from ._rectangular_roi import RectangularROI
+from ._roi import ROI
+from ._rotated_rectangular_roi import RotatedRectangularROI
 
 converter = cattrs.Converter(
     unstruct_collection_overrides={tuple: tuple},
