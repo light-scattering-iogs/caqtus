@@ -2,7 +2,7 @@ from typing import TypeVar, NewType, Any, TypeGuard, TypeAlias
 
 import numpy as np
 
-from caqtus.utils.roi import Width, Height
+from ._roi import Width, Height
 from ..data import DataLabel, is_data_label
 
 T = TypeVar("T", bound=np.generic)

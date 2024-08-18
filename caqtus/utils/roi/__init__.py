@@ -1,10 +1,19 @@
-from caqtus.utils import serialization
-from .arbitrary_roi import ArbitraryROI
-from .rectangular_roi import RectangularROI
-from .roi import ROI, Width, Height
-from .rotated_rectangular_roi import RotatedRectangularROI
+import warnings
 
-serialization.include_subclasses(ROI)
+from caqtus.types.image import (
+    Width,
+    Height,
+    ArbitraryROI,
+    RectangularROI,
+    RotatedRectangularROI,
+    ROI,
+)
+
+warnings.warn(
+    "caqtus.utils.roi is deprecated, use caqtus.types.image instead.",
+    DeprecationWarning,
+)
+
 
 __all__ = [
     "ArbitraryROI",

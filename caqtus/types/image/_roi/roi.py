@@ -13,14 +13,14 @@ class ROI(ABC):
     """Base class for regions of interest inside an image.
 
     Attributes:
-        original_image_size: The size of the original image as (width, height)
+        original_image_size: The size of the original image as (width, height).
     """
 
     original_image_size: tuple[Width, Height] = attrs.field(
         on_setattr=attrs.setters.validate,
     )
 
-    @original_image_size.validator
+    @original_image_size.validator  # type: ignore
     def _validate_original_image_size(self, _, value):
         if not isinstance(value, tuple):
             raise TypeError(f"original_image_size must be a tuple, got {type(value)}")
