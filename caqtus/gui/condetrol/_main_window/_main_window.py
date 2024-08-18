@@ -1,25 +1,16 @@
 from __future__ import annotations
 
 import functools
-import importlib.resources
 import platform
 from collections.abc import Callable
 
 import anyio
 import anyio.to_thread
-from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtWidgets import (
-    QMainWindow,
-    QDockWidget,
-    QDialog,
-    QMessageBox,
-)
+from PySide6 import QtGui, QtCore, QtWidgets
+from PySide6.QtCore import Qt
 
 from caqtus.__about__ import __version__
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
-from caqtus.gui._common.exception_tree import ExceptionDialog
-from caqtus.gui._common.waiting_widget import run_with_wip_widget
-from caqtus.gui.condetrol._parameter_tables_editor import ParameterNamespaceEditor
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import (
@@ -29,11 +20,14 @@ from caqtus.types.recoverable_exceptions import (
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .._extension import CondetrolExtensionProtocol
 from .._logger import logger
+from .._parameter_tables_editor import ParameterNamespaceEditor
 from .._path_view import EditablePathHierarchyView
 from .._sequence_widget import SequenceWidget
 from ..device_configuration_editors._configurations_editor import (
     DeviceConfigurationsDialog,
 )
+from ..._common.exception_tree import ExceptionDialog
+from ..._common.waiting_widget import run_with_wip_widget
 
 
 class CondetrolWindowHandler:
@@ -49,7 +43,6 @@ class CondetrolWindowHandler:
         self.main_window.sequence_widget.sequence_start_requested.connect(
             self.start_sequence
         )
-        self.main_window.help_action.triggered.connect(self.help_action_triggered)
 
     async def run_async(self) -> None:
         """Run the main window asynchronously."""
@@ -123,22 +116,8 @@ class CondetrolWindowHandler:
                     self.main_window.signal_exception_while_running_sequence(exc)
         self.is_running_sequence = False
 
-    def help_action_triggered(self):
-        """Spawn a process to display the help file."""
 
-        help_file = importlib.resources.files("caqtus.gui.condetrol._help").joinpath(
-            "Condetrol.qhc"
-        )
-        self.task_group.start_soon(self.spawn_help_assistant, help_file)
-
-    @staticmethod
-    async def spawn_help_assistant(help_file):
-        await anyio.run_process(
-            ["pyside6-assistant", "-collectionFile", str(help_file)]
-        )
-
-
-class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
+class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
     """The main window of the Condetrol GUI.
 
     Parameters
@@ -178,17 +157,17 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.setup_ui()
         self.restore_window()
         self.setup_connections()
-        self.timer = QTimer(self)
+        self.timer = QtCore.QTimer(self)
 
     def setup_ui(self):
         self.setupUi(self)
         self.setCentralWidget(self.sequence_widget)
-        paths_dock = QDockWidget("Sequences", self)
+        paths_dock = QtWidgets.QDockWidget("Sequences", self)
         paths_dock.setObjectName("SequencesDock")
         paths_dock.setWidget(self.path_view)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, paths_dock)
         self.dock_menu.addAction(paths_dock.toggleViewAction())
-        global_parameters_dock = QDockWidget("Global parameters", self)
+        global_parameters_dock = QtWidgets.QDockWidget("Global parameters", self)
         global_parameters_dock.setWidget(self.global_parameters_editor)
         global_parameters_dock.setObjectName("GlobalParametersDock")
         self.addDockWidget(
@@ -211,6 +190,14 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.about_qt_action.triggered.connect(self._on_about_qt_action_triggered)
         self.about_condetrol_action.triggered.connect(
             self._on_about_condetrol_action_triggered
+        )
+        self.help_action.triggered.connect(self._on_help_action_triggered)
+
+    def _on_help_action_triggered(self):
+        QtGui.QDesktopServices.openUrl(
+            QtCore.QUrl(
+                "https://caqtus.readthedocs.io/en/latest/reference/condetrol/manual.html"
+            )
         )
 
     def set_edited_sequence(self, path: PureSequencePath):
@@ -241,7 +228,10 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         self.device_configurations_dialog.set_device_configurations(
             previous_device_configurations
         )
-        if self.device_configurations_dialog.exec() == QDialog.DialogCode.Accepted:
+        if (
+            self.device_configurations_dialog.exec()
+            == QtWidgets.QDialog.DialogCode.Accepted
+        ):
             new_device_configurations = (
                 self.device_configurations_dialog.get_device_configurations()
             )
@@ -262,7 +252,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         super().closeEvent(a0)
 
     def restore_window(self) -> None:
-        ui_settings = QSettings()
+        ui_settings = QtCore.QSettings()
         state = ui_settings.value(f"{__name__}/state", defaultValue=None)
         if state is not None:
             self.restoreState(state)
@@ -271,7 +261,7 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
             self.restoreGeometry(geometry)
 
     def save_window(self) -> None:
-        ui_settings = QSettings()
+        ui_settings = QtCore.QSettings()
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
 
@@ -306,12 +296,12 @@ class CondetrolMainWindow(QMainWindow, Ui_CondetrolMainWindow):
         )
 
     def _on_about_qt_action_triggered(self):
-        QMessageBox.aboutQt(
+        QtWidgets.QMessageBox.aboutQt(
             self,
         )
 
     def _on_about_condetrol_action_triggered(self):
-        QMessageBox.about(
+        QtWidgets.QMessageBox.about(
             self,
             "Condetrol",
             "<p><i>Condetrol</i> is a graphical user interface to edit and launch cold atom "
