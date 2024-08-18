@@ -12,7 +12,10 @@ from ..trigger import Trigger, is_trigger
 
 @attrs.define(slots=False)
 class Sequencer(Device, ABC):
-    """Base class for all sequencers.
+    """Abstract base class for a sequencer device.
+
+    This function defines the methods that a sequencer device must implement to be
+    compatible with the caqtus framework.
 
     Attributes:
         time_step: The time step of the sequencer in nanoseconds.
@@ -93,13 +96,6 @@ class Sequencer(Device, ABC):
         if not self._sequence_started:
             raise SequenceNotStartedError("The sequence has not been started yet.")
         return True
-
-    def wait_sequence_finished(self) -> None:
-        while not self.has_sequence_finished():
-            pass
-
-    def get_trigger(self) -> Trigger:
-        return self.trigger
 
 
 class SequencerProgrammingError(RuntimeError):
