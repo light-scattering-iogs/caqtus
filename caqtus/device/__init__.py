@@ -7,6 +7,8 @@ from .configuration import (
 )
 from ._name import DeviceName
 from .runtime import Device, RuntimeDevice
+from . import sequencer
+from . import camera
 
 __all__ = [
     "DeviceName",
@@ -15,4 +17,6 @@ __all__ = [
     "Device",
     "RuntimeDevice",
     "DeviceController",
+    "sequencer",
+    "camera",
 ]

@@ -1,6 +1,4 @@
-"""This module implement the various components for sequencer devices.
-Sequencers are devices that output values at regular time intervals.
-"""
+"""Define devices that outputs a sequence of values."""
 
 from . import channel_commands
 from . import instructions

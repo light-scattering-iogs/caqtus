@@ -1,4 +1,4 @@
-"""This module defines the camera device interface."""
+"""Define devices that captures images."""
 
 from ._compiler import CameraCompiler
 from ._configuration import CameraConfiguration, CameraConfigurationType
