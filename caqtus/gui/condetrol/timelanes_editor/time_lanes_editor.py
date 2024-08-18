@@ -145,7 +145,7 @@ class TimeLanesEditor(QWidget):
         """
 
         if self.view.is_read_only():
-            raise False
+            return False
 
         clipboard = QApplication.clipboard()
         text = clipboard.text()
