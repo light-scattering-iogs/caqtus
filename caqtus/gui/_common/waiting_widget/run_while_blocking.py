@@ -1,7 +1,7 @@
 from typing import Callable, Optional, ParamSpec, TypeVar
 
 from PySide6.QtCore import QThread, Qt
-from PySide6.QtWidgets import QWidget, QDialog, QMessageBox
+from PySide6.QtWidgets import QWidget, QMessageBox
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -26,13 +26,6 @@ class WorkerThread(QThread):
                 self.finished.emit()
 
         return _run()
-
-
-class BlockingWidget(QDialog):
-    def __init__(self, msg: str, parent: QWidget):
-        super().__init__(parent)
-        self.setModal(True)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
 
 def run_with_wip_widget(
