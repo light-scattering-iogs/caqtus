@@ -3,7 +3,8 @@ from typing import Optional
 from PySide6.QtWidgets import QWidget, QSpinBox, QFormLayout
 
 from caqtus.device.camera import CameraConfigurationType
-from caqtus.types.image import RectangularROI, Width, Height
+from caqtus.types.image import Width, Height
+from caqtus.types.image.roi import RectangularROI
 from .._device_configuration_editor import FormDeviceConfigurationEditor
 
 

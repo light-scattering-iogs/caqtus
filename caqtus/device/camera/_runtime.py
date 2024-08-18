@@ -8,7 +8,8 @@ from attrs.setters import frozen, convert
 from attrs.validators import instance_of
 
 from caqtus.device import Device
-from caqtus.types.image import Image, RectangularROI
+from caqtus.types.image import Image
+from caqtus.types.image.roi import RectangularROI
 from caqtus.types.recoverable_exceptions import RecoverableException
 
 

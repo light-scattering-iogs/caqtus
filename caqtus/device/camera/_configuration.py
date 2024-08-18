@@ -2,7 +2,7 @@ from typing import TypeVar
 
 import attrs
 
-from caqtus.types.image import RectangularROI
+from caqtus.types.image.roi import RectangularROI
 from ._runtime import Camera
 from ..configuration import DeviceConfiguration
 
