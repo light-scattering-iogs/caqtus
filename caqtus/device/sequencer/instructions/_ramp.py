@@ -70,10 +70,6 @@ class Ramp[T: (np.floating, np.void)](
     Since a ramp only makes sense for floating point values, the type parameter is
     constrained to be a floating point type or a structured type with only floating
     point leaf fields.
-
-    Fields:
-        start: The initial value of the ramp.
-        stop: The final value of the ramp.
     """
 
     __slots__ = ("_start", "_stop", "_length")
@@ -112,10 +108,14 @@ class Ramp[T: (np.floating, np.void)](
 
     @property
     def start(self) -> T:
+        """The initial value of the ramp."""
+
         return self._start
 
     @property
     def stop(self) -> T:
+        """The final value of the ramp."""
+
         return self._stop
 
     @property

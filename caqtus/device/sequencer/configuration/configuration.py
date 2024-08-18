@@ -58,17 +58,18 @@ SequencerType = TypeVar("SequencerType", bound=Sequencer)
 class SequencerConfiguration(
     DeviceConfiguration[SequencerType], ABC, Generic[SequencerType]
 ):
-    """Holds the static configuration of a sequencer device.
+    """Abstract class for the configuration of a sequencer.
 
-    Fields:
+    This class defines the attributes that a configuration of a sequencer must have.
+
+    Attributes:
         time_step: The quantization time step used, in nanoseconds.
             The device can only update its output at times that are integer multiples
-            of this time step.
-            This is a decimal number to allow sub-nanosecond precision without floating
-            point errors.
-        channels: The configuration of the channels of the device. The length of this
-            list must match the number of channels of the device.
-        trigger: The trigger that starts the execution of the sequencer.
+            of this time step. This is a decimal number to allow sub-nanosecond
+            precision without floating point errors.
+        channels: The configuration of the channels of the device.
+            The length of this list must match the number of channels of the device.
+        trigger: The trigger.
     """
 
     time_step: TimeStep = attrs.field(

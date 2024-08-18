@@ -25,7 +25,7 @@ from ..._time_step import TimeStep
 class DeviceTrigger(ChannelOutput):
     """Indicates that the output should be a trigger for a given device.
 
-    Fields:
+    Attributes:
         device_name: The name of the device to generate a trigger for.
         default: If the device is not used in the sequence, fallback to this.
     """

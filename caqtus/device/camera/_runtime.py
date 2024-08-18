@@ -28,8 +28,9 @@ class Camera(Device, abc.ABC):
     This is an abstract class that must be subclassed to implement a specific camera.
     Subclasses must implement the :meth:`update_parameters` and :meth:`acquire` methods.
 
-    Fields:
+    Attributes:
         roi: A rectangular subset of the sensor that defines the region of interest.
+
             Images returned by the camera must be of the same size as the region of
             interest.
             Some camera models allow to define the region of interest before even
@@ -40,19 +41,26 @@ class Camera(Device, abc.ABC):
             fetching the image, the region of interest should be cropped after the image
             is acquired and before it is returned to the user.
             This attribute can only be set with the :meth:`__init__` method.
+
         timeout: The maximum time in seconds that the camera must wait for an external
             trigger signal before raising a :class:`CameraTimeoutError`.
-        external_trigger: A boolean that indicates if the camera is waiting for an
-            external trigger signal to acquire an image.
+
+        external_trigger: Indicates if the camera is waiting for an external trigger
+            signal to acquire an image.
+
             If this is set to True, the camera will wait for the trigger signal before
             acquiring an image.
             If this is set to False, the camera will acquire an image as soon as
             possible after the acquisition is started.
             This attribute can only be set with the :meth:`__init__` method.
+
         sensor_width: A class attribute that defines the width of the sensor in pixels.
+
             This attribute must be set in the subclass implementation.
+
         sensor_height: A class attribute that defines the height of the sensor in
             pixels.
+
             This attribute must be set in the subclass implementation.
     """
 

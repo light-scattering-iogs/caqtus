@@ -19,7 +19,7 @@ class RuntimeDevice(Device, abc.ABC):
     Class inheriting from RuntimeDevice can use the methods `_add_closing_callback` and
     `_enter_context` to facilitate managing resources.
 
-    Fields:
+    Attributes:
         name: A unique name given to the device. Cannot be changed during the lifetime
         of the device.
 

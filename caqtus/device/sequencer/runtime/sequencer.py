@@ -14,7 +14,7 @@ from ..trigger import Trigger, is_trigger
 class Sequencer(Device, ABC):
     """Base class for all sequencers.
 
-    Fields:
+    Attributes:
         time_step: The time step of the sequencer in nanoseconds.
             This value cannot be changed after the sequencer has been created.
         trigger: Indicates how the sequence is started and how it is clocked.
