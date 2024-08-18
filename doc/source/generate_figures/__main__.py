@@ -16,14 +16,14 @@ from caqtus.shot_compilation import ShotContext, SequenceContext
 from caqtus.types.expression import Expression
 from caqtus.types.timelane import TimeLanes, AnalogTimeLane, Ramp
 from doc.source.generate_figures.screen_shot_time_lanes import screenshot_time_lanes
-from .screenshot_output_graph import screenshot_output, screenshot_node
+from screenshot_output_graph import screenshot_output, screenshot_node
 
 
 def generate_for_constant():
     output = Constant(Expression("10 V"))
     screenshot_output(output, "images/sequencer_outputs/constant_graph.png")
     node = ConstantNode()
-    node.set_value(Expression("expression"))
+    node.set_value(Expression(""))
     screenshot_node(node, "images/sequencer_outputs/constant_node.png")
 
     sequence_context = SequenceContext({}, TimeLanes(["step1"], [Expression("2 s")]))
