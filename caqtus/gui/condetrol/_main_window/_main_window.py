@@ -247,17 +247,19 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
                         device_configuration
                     )
 
-    def closeEvent(self, a0):
+    def closeEvent(self, event):
         self.save_window()
-        super().closeEvent(a0)
+        super().closeEvent(event)
 
     def restore_window(self) -> None:
         ui_settings = QtCore.QSettings()
         state = ui_settings.value(f"{__name__}/state", defaultValue=None)
         if state is not None:
+            assert isinstance(state, QtCore.QByteArray)
             self.restoreState(state)
         geometry = ui_settings.value(f"{__name__}/geometry", defaultValue=None)
         if geometry is not None:
+            assert isinstance(geometry, QtCore.QByteArray)
             self.restoreGeometry(geometry)
 
     def save_window(self) -> None:
