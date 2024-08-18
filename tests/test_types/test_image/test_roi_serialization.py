@@ -1,7 +1,6 @@
 import pytest
 
-from caqtus.types.image import RectangularROI, ROI, ArbitraryROI
-from caqtus.types.image._roi import converter
+from caqtus.types.image.roi import RectangularROI, ROI, ArbitraryROI, converter
 
 
 @pytest.mark.parametrize(
