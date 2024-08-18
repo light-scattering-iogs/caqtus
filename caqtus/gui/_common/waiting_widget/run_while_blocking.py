@@ -38,7 +38,7 @@ class BlockingWidget(QDialog):
 def run_with_wip_widget(
     parent: QWidget,
     msg: str,
-    function: Callable[[P], T],
+    function: Callable[P, T],
     *args: P.args,
     **kwargs: P.kwargs,
 ) -> T:
