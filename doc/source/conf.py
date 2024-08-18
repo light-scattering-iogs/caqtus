@@ -6,8 +6,6 @@
 import os
 import sys
 
-from doc.source.generate_figures import generate_figures
-
 sys.path.insert(0, os.path.abspath("./caqtus"))
 
 # -- Project information -----------------------------------------------------
@@ -79,5 +77,3 @@ rst_prolog = """
 .. |shot| replace:: :ref:`shot <concepts_shot>`
 .. |expression| replace:: :ref:`expression <concepts_expression>`
 """
-
-generate_figures()
