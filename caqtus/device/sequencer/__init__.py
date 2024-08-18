@@ -17,8 +17,8 @@ from .runtime import Sequencer
 from . import trigger
 
 __all__ = [
-    "SequencerConfiguration",
     "Sequencer",
+    "SequencerConfiguration",
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",

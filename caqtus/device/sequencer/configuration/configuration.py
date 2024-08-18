@@ -17,7 +17,12 @@ from ..trigger import Trigger, is_trigger
 
 @attrs.define
 class ChannelConfiguration(ABC):
-    """Contains information to computer the output of a channel."""
+    """Abstract class that defines the configuration of a channel.
+
+    Attributes:
+        description: A human-readable description of the channel.
+        output: Defines what should be output on the channel.
+    """
 
     description: str = attrs.field(
         converter=str,
@@ -31,12 +36,20 @@ class ChannelConfiguration(ABC):
 
 @attrs.define
 class DigitalChannelConfiguration(ChannelConfiguration):
+    """Configuration of a digital channel."""
+
     def __str__(self):
         return f"digital channel '{self.description}'"
 
 
 @attrs.define
 class AnalogChannelConfiguration(ChannelConfiguration):
+    """Configuration of an analog channel.
+
+    Attributes:
+        output_unit: The unit of the output of the channel.
+    """
+
     output_unit: str = attrs.field(
         converter=str,
         on_setattr=attrs.setters.convert,
