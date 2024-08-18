@@ -25,7 +25,7 @@ from ._instructions import (
 from ._stack import stack, merge_dtypes
 
 
-def ramp(
+def create_ramp(
     start: SupportsFloat, stop: SupportsFloat, length: SupportsInt
 ) -> SequencerInstruction[np.float64]:
     """Create a linear ramp between two values.

@@ -10,7 +10,7 @@ from caqtus.device.sequencer.channel_commands._calibrated_analog_mapping import 
 from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Ramp,
-    ramp,
+    create_ramp,
     Pattern,
 )
 from ..test_instructions import analog_instruction, pattern, ramp_strategy
@@ -93,7 +93,7 @@ def test_calibration_pattern(
 @given(calibration, ramp_strategy())
 @example(
     cal=DimensionlessCalibration([(0.0, 0.0), (0.0, 1.0)]),
-    instr=ramp(start=0.0, stop=-1.0, length=3),
+    instr=create_ramp(start=0.0, stop=-1.0, length=3),
 )
 # TODO: Understand why this example gives slightly different results
 # @example(
@@ -119,14 +119,23 @@ def validate_calibration(
 @pytest.mark.parametrize(
     "cal, instr",
     [
-        (DimensionlessCalibration([(0, 0), (1, 2)]), ramp(0, 1, 10)),
-        (DimensionlessCalibration([(0, 0), (1, 2)]), ramp(0.5, 0.5, 10)),
-        (DimensionlessCalibration([(0.0, 0.0), (2.0, 0.0)]), ramp(1.0, 2.0, 1)),
-        (DimensionlessCalibration([(0.0, 0.0), (1.0, 0.0)]), ramp(1.0, -1.0, 1)),
-        (DimensionlessCalibration([(0.0, 0.0), (1.0, 0.0)]), ramp(-1.0, +1.0, 1)),
-        (DimensionlessCalibration([(0.0, 1.0), (1.0, 0.0)]), ramp(4.0, 0.0, 2)),
-        (DimensionlessCalibration([(-1.0, 0.0), (0.0, 1.0)]), ramp(0.0, -4.0, 2)),
-        (DimensionlessCalibration([(-1.0, 0.0), (0.0, 1.0)]), ramp(0.5, -1.0, 3)),
+        (DimensionlessCalibration([(0, 0), (1, 2)]), create_ramp(0, 1, 10)),
+        (DimensionlessCalibration([(0, 0), (1, 2)]), create_ramp(0.5, 0.5, 10)),
+        (DimensionlessCalibration([(0.0, 0.0), (2.0, 0.0)]), create_ramp(1.0, 2.0, 1)),
+        (DimensionlessCalibration([(0.0, 0.0), (1.0, 0.0)]), create_ramp(1.0, -1.0, 1)),
+        (
+            DimensionlessCalibration([(0.0, 0.0), (1.0, 0.0)]),
+            create_ramp(-1.0, +1.0, 1),
+        ),
+        (DimensionlessCalibration([(0.0, 1.0), (1.0, 0.0)]), create_ramp(4.0, 0.0, 2)),
+        (
+            DimensionlessCalibration([(-1.0, 0.0), (0.0, 1.0)]),
+            create_ramp(0.0, -4.0, 2),
+        ),
+        (
+            DimensionlessCalibration([(-1.0, 0.0), (0.0, 1.0)]),
+            create_ramp(0.5, -1.0, 3),
+        ),
     ],
 )
 def test_calibration_on_ramp(cal: DimensionlessCalibration, instr: Ramp):

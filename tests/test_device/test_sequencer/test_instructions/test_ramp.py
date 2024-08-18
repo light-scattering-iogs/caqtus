@@ -3,13 +3,13 @@ import pytest
 from caqtus.device.sequencer.instructions import (
     Pattern,
     with_name,
-    ramp,
+    create_ramp,
     merge_instructions,
 )
 
 
 def test():
-    r = ramp(0, 1, 5)
+    r = create_ramp(0, 1, 5)
     assert r[0] == 0
     assert r[1] == 0.2
     assert r[2] == 0.4
@@ -20,32 +20,32 @@ def test():
 
 
 def test_0():
-    r = ramp(0.0, 1.0, 5)
+    r = create_ramp(0.0, 1.0, 5)
     pattern = Pattern([0.0]) * 5
     merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
-    assert merged["b"] == ramp(0, 0, 5)
+    assert merged["b"] == create_ramp(0, 0, 5)
 
 
 def test_1():
-    r = ramp(0, 1, 5)
+    r = create_ramp(0, 1, 5)
     pattern = Pattern([0.0]) * 5
     merged = merge_instructions(a=r, b=pattern)
 
     assert merged["a"] == r
-    assert merged["b"] == ramp(0, 0, 5)
+    assert merged["b"] == create_ramp(0, 0, 5)
 
 
 def test_2():
-    r = with_name(ramp(0, 1, 5), "a")
-    assert r[0:3]["a"] == ramp(0.0, 0.6, 3)
+    r = with_name(create_ramp(0, 1, 5), "a")
+    assert r[0:3]["a"] == create_ramp(0.0, 0.6, 3)
 
 
 def test_3():
-    r = ramp(0.0, 1.0, 5)
+    r = create_ramp(0.0, 1.0, 5)
     pattern = Pattern([0.0]) * 3 + Pattern([1]) * 2
 
     merged = merge_instructions(a=r, b=pattern)
 
-    assert merged["a"] == ramp(0.0, 0.6, 3) + ramp(0.6, 1.0, 2)
+    assert merged["a"] == create_ramp(0.0, 0.6, 3) + create_ramp(0.6, 1.0, 2)

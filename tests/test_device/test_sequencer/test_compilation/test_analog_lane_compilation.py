@@ -10,7 +10,7 @@ from caqtus.device.sequencer.channel_commands._channel_sources.compile_analog_la
     ConstantBlockResult,
     TimeDependentBlockResult,
 )
-from caqtus.device.sequencer.instructions import Pattern, ramp
+from caqtus.device.sequencer.instructions import Pattern, create_ramp
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.recoverable_exceptions import RecoverableException
@@ -112,7 +112,7 @@ def test_logarithmic_expression():
 def test_ramp():
     lane = AnalogTimeLane([Expression("0"), Ramp(), Expression("10")])
     result = compile_analog_lane(lane, {}, [0, 0, 4e-9, 4e-9], decimal.Decimal(1))
-    expected = ramp(0, 10, 4)
+    expected = create_ramp(0, 10, 4)
 
     assert result.values == expected
     assert result.units is None
@@ -126,7 +126,7 @@ def test_ramp_2():
         [0.0, 1e-08, 3.0000000000000004e-08, 6.000000000000001e-08],
         decimal.Decimal(10),
     )
-    expected = Pattern([10]) * 1 + ramp(10, 0.1, 2) + Pattern([0.1]) * 3
+    expected = Pattern([10]) * 1 + create_ramp(10, 0.1, 2) + Pattern([0.1]) * 3
 
     assert result.values[:-1] == approx(expected)
     assert result.units == Unit("V")
@@ -135,7 +135,7 @@ def test_ramp_2():
 def test_logarithmic_ramp():
     lane = AnalogTimeLane([Expression("0 dB"), Ramp(), Expression("10 dB")])
     result = compile_analog_lane(lane, {}, [0, 3e-9, 7e-9, 10e-9], decimal.Decimal(1))
-    expected = Pattern([1.0]) * 3 + ramp(1, 10, 4) + 3 * Pattern([10.0])
+    expected = Pattern([1.0]) * 3 + create_ramp(1, 10, 4) + 3 * Pattern([10.0])
 
     assert result.values == approx(expected)
     assert result.units is None
@@ -146,7 +146,7 @@ def test_ramp_time_dependent():
     result = compile_analog_lane(lane, {}, [0, 10e-9, 20e-9, 30e-9], decimal.Decimal(1))
     expected = (
         Pattern(np.linspace(0, 20, 10, endpoint=False) * 1e-9)
-        + ramp(20e-9, 0, 10)
+        + create_ramp(20e-9, 0, 10)
         + Pattern(np.linspace(0, 10, 10, endpoint=False) * 1e-9)
     )
 

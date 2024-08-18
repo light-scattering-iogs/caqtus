@@ -14,7 +14,7 @@ from caqtus.device.sequencer.instructions import (
     SequencerInstruction,
     Pattern,
     concatenate,
-    ramp,
+    create_ramp,
 )
 from caqtus.shot_compilation.lane_compilers.timing import (
     start_tick,
@@ -410,4 +410,4 @@ class RampBlockResult:
         )
 
     def to_instruction(self) -> SequencerInstruction[np.float64]:
-        return ramp(self.initial_value, self.final_value, self.length)
+        return create_ramp(self.initial_value, self.final_value, self.length)

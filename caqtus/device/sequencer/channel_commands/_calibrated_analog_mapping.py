@@ -23,7 +23,7 @@ from ..instructions import (
     concatenate,
     Repeated,
     Ramp,
-    ramp,
+    create_ramp,
 )
 
 
@@ -354,7 +354,7 @@ class DimensionlessCalibration:
                 in_1 = evaluate_ramp(r, i_max - 1)
                 y_1 = self._apply_explicit(in_1)
                 length = i_max - i_min
-                sub_ramp = ramp(
+                sub_ramp = create_ramp(
                     y_0, y_0 + length * (y_1 - y_0) / (length - 1), i_max - i_min
                 )
                 sub_ramps.append(sub_ramp)
