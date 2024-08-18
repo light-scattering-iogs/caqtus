@@ -310,11 +310,6 @@ class Concatenated[T: np.generic](SequencerInstruction[T]):
 
     Use the `+` operator or the function :func:`concatenate` to concatenate instructions.
     Do not use the class constructor directly.
-
-    Attributes:
-        instructions: The instructions concatenated by this instruction.
-            This instruction is equivalent to chaining the instructions in this list
-            one after the other.
     """
 
     __slots__ = ("_instructions", "_instruction_bounds", "_length")
