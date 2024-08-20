@@ -215,23 +215,23 @@ class Server:
         logger.info("Server stopped")
 
 
-@tblib.pickling_support.install
 class RemoteError(Exception):
     """Base class for errors that occur on the server side."""
 
     pass
 
 
-@tblib.pickling_support.install
 class RemoteCallError(RemoteError):
     """Error that occurs when calling a remote function."""
 
     pass
 
 
-@tblib.pickling_support.install
 class InvalidProxyError(RemoteError):
     pass
+
+
+tblib.pickling_support.install(RemoteError, RemoteCallError, InvalidProxyError)
 
 
 P = ParamSpec("P")
