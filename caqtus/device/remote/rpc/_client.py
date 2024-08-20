@@ -2,7 +2,7 @@ import contextlib
 import operator
 import pickle
 from collections.abc import Callable, Iterator
-from typing import TypeAlias, Literal
+from typing import TypeAlias, Literal, overload, Never
 from typing import (
     TypeVar,
     LiteralString,
@@ -68,6 +68,8 @@ class RPCClient(AsyncConverter):
 
         self._exit_stack = contextlib.AsyncExitStack()
 
+        self._request_id = 0
+
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
         self._stream = await anyio.connect_tcp(self._host, self._port)
@@ -95,11 +97,12 @@ class RPCClient(AsyncConverter):
         await send_with_size_prefix(self._stream, pickled)
 
         # We shield the reception from cancellation, otherwise if a cancellation
-        # occurs between the send and the receive, the received answer will stayed
+        # occurs between the send and the receive, the received answer will stay
         # in the buffer as the next answer to read.
         with anyio.CancelScope(shield=True):
             bytes_response = await receive_with_size_prefix(self._receive_stream)
         response = pickle.loads(bytes_response)
+        _ensure_response_match_request(response, request)
         return self._build_result(response)
 
     async def call_method(
@@ -152,6 +155,7 @@ class RPCClient(AsyncConverter):
         with anyio.CancelScope(shield=True):
             pickled_response = await receive_with_size_prefix(self._receive_stream)
         response = pickle.loads(pickled_response)
+        _ensure_response_match_request(response, request)
 
         with unwrap_remote_error_cm():
             proxy = self._build_result(response)
@@ -172,6 +176,7 @@ class RPCClient(AsyncConverter):
         with anyio.CancelScope(shield=True):
             pickled_response = await receive_with_size_prefix(self._receive_stream)
         response = pickle.loads(pickled_response)
+        _ensure_response_match_request(response, request)
 
         proxy = self._build_result(response)
         assert isinstance(proxy, Proxy)
@@ -220,16 +225,21 @@ class RPCClient(AsyncConverter):
                     raise
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
-        request = DeleteProxyRequest(proxy)
+        request = DeleteProxyRequest(id_=self._request_id, proxy=proxy)
+        self._request_id += 1
         pickled_request = pickle.dumps(request)
         with anyio.CancelScope(shield=True):
             await send_with_size_prefix(self._stream, pickled_request)
 
-    @staticmethod
     def _build_request(
-        fun: Callable[..., T], args: Any, kwargs: Any, returned_value: ReturnedType
+        self,
+        fun: Callable[..., T],
+        args: Any,
+        kwargs: Any,
+        returned_value: ReturnedType,
     ) -> CallRequest:
-        return CallRequest(
+        request = CallRequest(
+            id_=self._request_id,
             function=fun,
             args=args,
             kwargs=kwargs,
@@ -239,6 +249,8 @@ class RPCClient(AsyncConverter):
                 else ReturnValue.PROXY
             ),
         )
+        self._request_id += 1
+        return request
 
     @staticmethod
     def _build_result(response: CallResponse) -> Any:
@@ -251,3 +263,22 @@ class RPCClient(AsyncConverter):
 
 class Cancelled(BaseException):
     pass
+
+
+@overload
+def _ensure_response_match_request(
+    response: CallResponse, request: CallRequest
+) -> None: ...
+
+
+@overload
+def _ensure_response_match_request(response, request: CallRequest) -> Never: ...
+
+
+def _ensure_response_match_request(response, request):
+    if not isinstance(response, CallResponse):
+        raise ValueError(f"Unexpected response: {response}")
+    if not response.id_ == request.id_:
+        raise ValueError(
+            f"Unexpected response id: {response.id_} instead of {request.id_}"
+        )

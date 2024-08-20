@@ -16,9 +16,7 @@ import attrs
 import tblib.pickling_support
 from anyio.streams.buffered import BufferedByteReceiveStream
 
-from ._configuration import (
-    RPCConfiguration,
-)
+from ._configuration import RPCConfiguration
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
 from .._proxy import Proxy
 
@@ -38,6 +36,7 @@ class ReturnValue(Enum):
 
 @attrs.define
 class CallRequest:
+    id_: int
     function: Callable[..., Any]
     args: tuple[Any, ...]
     kwargs: dict[str, Any]
@@ -46,16 +45,22 @@ class CallRequest:
 
 @attrs.define
 class DeleteProxyRequest:
+    id_: int
     proxy: Proxy
+
+
+Request = CallRequest | DeleteProxyRequest
 
 
 @attrs.define
 class CallResponseFailure:
+    id_: int
     error: Exception
 
 
 @attrs.define
 class CallResponseSuccess:
+    id_: int
     result: Any
 
 
@@ -150,7 +155,7 @@ class RPCServer:
         try:
             raise RemoteCallError(f"Error during call to {request.function}") from e
         except RemoteCallError as error:
-            response = CallResponseFailure(error=error)
+            response = CallResponseFailure(error=error, id_=request.id_)
         pickled_response = pickle.dumps(response)
         await send_with_size_prefix(client, pickled_response)
 
@@ -158,7 +163,7 @@ class RPCServer:
     async def send_success_response(
         client: anyio.abc.ByteStream, request: CallRequest, result: Any
     ) -> None:
-        response = CallResponseSuccess(result=result)
+        response = CallResponseSuccess(result=result, id_=request.id_)
         pickled_response = pickle.dumps(response)
         await send_with_size_prefix(client, pickled_response)
 
