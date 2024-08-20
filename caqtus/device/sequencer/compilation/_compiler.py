@@ -1,7 +1,8 @@
 import functools
 from collections.abc import Iterable
-from typing import Mapping, Any
+from typing import Mapping, Any, Optional
 
+import attrs
 import numpy as np
 
 # TODO: Can remove tblib support once the experiment manager runs in a single process
@@ -12,18 +13,17 @@ from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
-from caqtus.types.units.base import base_units
+from caqtus.types.units.base import is_in_base_units, base_units
 from caqtus.types.variable_name import DottedVariableName
 from .._time_step import TimeStep
+from ..channel_commands import ChannelOutput
 from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (
     TriggerableDeviceCompiler,
 )
+from ..configuration import DigitalChannelConfiguration, AnalogChannelConfiguration
 from ..configuration import (
     SequencerConfiguration,
-    ChannelConfiguration,
-    DigitalChannelConfiguration,
-    AnalogChannelConfiguration,
 )
 from ..instructions import (
     with_name,
@@ -62,13 +62,39 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         self,
         shot_context: ShotContext,
     ) -> Mapping[str, Any]:
-        """Evaluates the output for each channel of the sequencer."""
+        """Evaluates the output for each channel of the sequencer.
+
+        Returns:
+            A dictionary with the following key:
+
+            * 'sequence': A :class:`SequencerInstruction` that contains the
+              instructions for all the channels of the sequencer.
+        """
+
+        instructions = {}
+
+        for channel_index, channel in enumerate(self.__configuration.channels):
+            output = channel.output
+            if isinstance(channel, DigitalChannelConfiguration):
+                dtype = np.dtype(np.bool_)
+                units = None
+            elif isinstance(channel, AnalogChannelConfiguration):
+                dtype = np.dtype(np.float64)
+                units = base_units(Unit(channel.output_unit))
+            else:
+                raise TypeError(
+                    f"Expected a digital or analog channel configuration, got "
+                    f"{type(channel)}"
+                )
+            instructions[f"ch {channel_index}"] = InstructionCompilationParameters(
+                description=channel.description,
+                output=output,
+                dtype=dtype,
+                units=units,
+            )
 
         stacked = compile_parallel_instructions(
-            {
-                f"ch {i}": channel
-                for i, channel in enumerate(self.__configuration.channels)
-            },
+            instructions,
             self.__configuration.time_step,
             shot_context,
         )
@@ -104,33 +130,86 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             )
 
 
+@attrs.frozen
+class InstructionCompilationParameters:
+    """Specify how to evaluate an instruction for a channel.
+
+    Attributes:
+        description: A human-readable description of the channel.
+
+            This is used to identify the channel in error messages.
+
+        output: The output of the channel.
+
+        dtype: The dtype in which the instruction will be converted once the output has
+            been evaluated.
+
+        units: The units in which the output of the channel is expressed.
+
+            The units must be expressed in the base units.
+            If the values are dimensionless, the units must be None.
+    """
+
+    description: str = attrs.field(converter=str)
+    output: ChannelOutput = attrs.field(
+        validator=attrs.validators.instance_of(ChannelOutput),
+    )
+    dtype: np.dtype = attrs.field(validator=attrs.validators.instance_of(np.dtype))
+    units: Optional[Unit] = attrs.field(
+        validator=attrs.validators.optional(attrs.validators.instance_of(Unit))
+    )
+
+    @units.validator  # type: ignore
+    def _validate_units(self, _, units: Optional[Unit]):
+        if units is not None:
+            if not is_in_base_units(units):
+                raise ValueError(
+                    f"Unit {units} is not expressed in the base units of the registry."
+                )
+            if units.is_compatible_with(dimensionless):
+                raise ValueError(f"Unit {units} is dimensionless and must be None.")
+
+
 def compile_parallel_instructions(
-    channels: Mapping[str, ChannelConfiguration],
+    instructions: Mapping[str, InstructionCompilationParameters],
     time_step: TimeStep,
     shot_context: ShotContext,
 ) -> SequencerInstruction:
-    """Evaluates and merges the output for different channels."""
+    """Evaluates and merges the output for different channels.
+
+    Args:
+        instructions: A mapping that indicates how to evaluate individual instructions.
+        time_step: The time step used to evaluate the instructions.
+        shot_context: The context of the shot.
+
+    Returns:
+        A :class:`SequencerInstruction` with multiple fields, each corresponding to the
+        instruction passed in the `instructions` argument.
+    """
 
     max_advance, max_delay = _find_max_advance_and_delays(
-        channels.values(), time_step, shot_context.get_variables()
+        [instruction.output for instruction in instructions.values()],
+        time_step,
+        shot_context.get_variables(),
     )
 
     channel_instructions = []
     exceptions = []
-    for channel_label, channel in channels.items():
+    for instruction_label, instruction in instructions.items():
         try:
-            output_series = channel.output.evaluate(
+            output_series = instruction.output.evaluate(
                 time_step,
                 max_advance,
                 max_delay,
                 shot_context,
             )
-            instruction = _convert_series_to_instruction(output_series, channel)
-            channel_instructions.append(with_name(instruction, channel_label))
+            instruction = _convert_series_to_instruction(output_series, instruction)
+            channel_instructions.append(with_name(instruction, instruction_label))
         except Exception as e:
             try:
                 raise ChannelCompilationError(
-                    f"Error occurred when evaluating output for channel {channel}"
+                    f"Error occurred when evaluating output for "
+                    f"'{instruction.description}'"
                 ) from e
             except ChannelCompilationError as channel_error:
                 exceptions.append(channel_error)
@@ -144,13 +223,13 @@ def compile_parallel_instructions(
 
 
 def _find_max_advance_and_delays(
-    channels: Iterable[ChannelConfiguration],
+    outputs: Iterable[ChannelOutput],
     time_step: TimeStep,
     variables: Mapping[DottedVariableName, Any],
 ) -> tuple[int, int]:
     advances_and_delays = [
-        channel.output.evaluate_max_advance_and_delay(time_step, variables)
-        for channel in channels
+        output.evaluate_max_advance_and_delay(time_step, variables)
+        for output in outputs
     ]
     advances, delays = zip(*advances_and_delays)
     return max(advances), max(delays)
@@ -253,33 +332,11 @@ class ChannelCompilationError(Exception):
 
 
 def _convert_series_to_instruction(
-    series: DimensionedSeries, channel: ChannelConfiguration
+    series: DimensionedSeries, instruction: InstructionCompilationParameters
 ) -> SequencerInstruction:
-    if isinstance(channel, DigitalChannelConfiguration):
-        if series.units is not None:
-            raise InvalidDimensionalityError(
-                f"Digital channel {channel} output has units {series.units}, expected "
-                "no units"
-            )
-        instruction = series.values.as_type(np.dtype(np.bool_))
-    elif isinstance(channel, AnalogChannelConfiguration):
-        required_unit = Unit(channel.output_unit)
-        if required_unit == dimensionless:
-            if series.units is not None:
-                raise InvalidDimensionalityError(
-                    f"Analog channel {channel} output has units {series.units}, "
-                    f"expected dimensionless"
-                )
-            instruction = series.values.as_type(np.dtype(np.float64))
-        else:
-            required_base_units = base_units(required_unit)
-            if series.units != required_base_units:
-                raise InvalidDimensionalityError(
-                    f"Analog channel {channel} output has units {series.units}, "
-                    f"expected {required_base_units}"
-                )
-            instruction = series.values.as_type(np.dtype(np.float64))
-    else:
-        raise TypeError(f"Unknown channel type {type(channel)}")
-
-    return instruction
+    if instruction.units != series.units:
+        raise InvalidDimensionalityError(
+            f"Instruction {instruction.description} output has units {series.units}, "
+            f"expected {instruction.units}"
+        )
+    return series.values.as_type(instruction.dtype)
