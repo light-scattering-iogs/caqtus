@@ -1,4 +1,5 @@
 import functools
+from collections.abc import Iterable
 from typing import Mapping, Any
 
 import numpy as np
@@ -6,7 +7,6 @@ import numpy as np
 # TODO: Can remove tblib support once the experiment manager runs in a single process
 import tblib.pickling_support
 
-import caqtus.formatter as fmt
 from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
@@ -64,51 +64,16 @@ class SequencerCompiler(TriggerableDeviceCompiler):
     ) -> Mapping[str, Any]:
         """Evaluates the output for each channel of the sequencer."""
 
-        max_advance, max_delay = self._find_max_advance_and_delays(
-            shot_context.get_variables()
+        stacked = compile_parallel_instructions(
+            {
+                f"ch {i}": channel
+                for i, channel in enumerate(self.__configuration.channels)
+            },
+            self.__configuration.time_step,
+            shot_context,
         )
 
-        channel_instructions = []
-        exceptions = []
-        for channel_number, channel in enumerate(self.__configuration.channels):
-            try:
-                output_series = channel.output.evaluate(
-                    self.__configuration.time_step,
-                    max_advance,
-                    max_delay,
-                    shot_context,
-                )
-                instruction = _convert_series_to_instruction(output_series, channel)
-                channel_instructions.append(
-                    with_name(instruction, f"ch {channel_number}")
-                )
-            except Exception as e:
-                try:
-                    raise ChannelCompilationError(
-                        f"Error occurred when evaluating output for channel "
-                        f"{channel_number} ({channel})"
-                    ) from e
-                except ChannelCompilationError as channel_error:
-                    exceptions.append(channel_error)
-        if exceptions:
-            raise SequencerCompilationError(
-                f"Errors occurred when evaluating outputs",
-                exceptions,
-            )
-        stacked = stack_instructions(*channel_instructions)
         return {"sequence": stacked}
-
-    def _find_max_advance_and_delays(
-        self, variables: Mapping[DottedVariableName, Any]
-    ) -> tuple[int, int]:
-        advances_and_delays = [
-            channel.output.evaluate_max_advance_and_delay(
-                self.__configuration.time_step, variables
-            )
-            for channel in self.__configuration.channels
-        ]
-        advances, delays = zip(*advances_and_delays)
-        return max(advances), max(delays)
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
@@ -137,6 +102,58 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             raise NotImplementedError(
                 f"Can't generate trigger for {self.__configuration.trigger}"
             )
+
+
+def compile_parallel_instructions(
+    channels: Mapping[str, ChannelConfiguration],
+    time_step: TimeStep,
+    shot_context: ShotContext,
+) -> SequencerInstruction:
+    """Evaluates and merges the output for different channels."""
+
+    max_advance, max_delay = _find_max_advance_and_delays(
+        channels.values(), time_step, shot_context.get_variables()
+    )
+
+    channel_instructions = []
+    exceptions = []
+    for channel_label, channel in channels.items():
+        try:
+            output_series = channel.output.evaluate(
+                time_step,
+                max_advance,
+                max_delay,
+                shot_context,
+            )
+            instruction = _convert_series_to_instruction(output_series, channel)
+            channel_instructions.append(with_name(instruction, channel_label))
+        except Exception as e:
+            try:
+                raise ChannelCompilationError(
+                    f"Error occurred when evaluating output for channel {channel}"
+                ) from e
+            except ChannelCompilationError as channel_error:
+                exceptions.append(channel_error)
+    if exceptions:
+        raise SequencerCompilationError(
+            f"Errors occurred when evaluating outputs",
+            exceptions,
+        )
+    stacked = stack_instructions(*channel_instructions)
+    return stacked
+
+
+def _find_max_advance_and_delays(
+    channels: Iterable[ChannelConfiguration],
+    time_step: TimeStep,
+    variables: Mapping[DottedVariableName, Any],
+) -> tuple[int, int]:
+    advances_and_delays = [
+        channel.output.evaluate_max_advance_and_delay(time_step, variables)
+        for channel in channels
+    ]
+    advances, delays = zip(*advances_and_delays)
+    return max(advances), max(delays)
 
 
 def get_master_clock_pulse(
