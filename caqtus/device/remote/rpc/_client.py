@@ -2,7 +2,7 @@ import contextlib
 import operator
 import pickle
 from collections.abc import Callable, Iterator
-from typing import TypeAlias, Literal, overload, Never
+from typing import TypeAlias, Literal
 from typing import (
     TypeVar,
     LiteralString,
@@ -137,7 +137,7 @@ class RPCClient(AsyncConverter):
         method: LiteralString,
         *args: Any,
         **kwargs: Any,
-    ) -> Any:
+    ):
         caller = operator.methodcaller(method, *args, **kwargs)
         async with self.call_proxy_result(caller, obj) as result:
             yield result
@@ -265,17 +265,7 @@ class Cancelled(BaseException):
     pass
 
 
-@overload
-def _ensure_response_match_request(
-    response: CallResponse, request: CallRequest
-) -> None: ...
-
-
-@overload
-def _ensure_response_match_request(response, request: CallRequest) -> Never: ...
-
-
-def _ensure_response_match_request(response, request):
+def _ensure_response_match_request(response, request: CallRequest):
     if not isinstance(response, CallResponse):
         raise ValueError(f"Unexpected response: {response}")
     if not response.id_ == request.id_:
