@@ -1,3 +1,5 @@
+"""Define classes and functions to evaluate output for a sequencer."""
+
 from ._compiler import (
     SequencerCompiler,
     InstructionCompilationParameters,
