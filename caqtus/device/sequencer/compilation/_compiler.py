@@ -39,6 +39,8 @@ from ..trigger import ExternalClockOnChange, ExternalTriggerStart, SoftwareTrigg
 
 
 class SequencerCompiler(TriggerableDeviceCompiler):
+    """Compile parameters for a sequencer device."""
+
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
         configuration = sequence_context.get_device_configuration(device_name)
@@ -51,6 +53,15 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         self.__device_name = device_name
 
     def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
+        """Compile the parameters needed to initialize the sequencer.
+
+        Returns:
+            A dictionary with the following keys:
+
+            * 'time_step': The time step of the sequencer, in ns.
+            * 'trigger': The trigger configuration of the sequencer.
+        """
+
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
         return {

@@ -1,7 +1,9 @@
 """Define devices that outputs a sequence of values."""
 
 from . import channel_commands
+from . import compilation
 from . import instructions
+from . import trigger
 from ._controller import SequencerController
 from ._converter import converter
 from ._proxy import SequencerProxy
@@ -14,7 +16,6 @@ from .configuration import (
     AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
-from . import trigger
 
 __all__ = [
     "Sequencer",
@@ -22,7 +23,6 @@ __all__ = [
     "ChannelConfiguration",
     "DigitalChannelConfiguration",
     "AnalogChannelConfiguration",
-    "SequencerCompiler",
     "SequencerProxy",
     "SequencerController",
     "channel_commands",
@@ -30,4 +30,5 @@ __all__ = [
     "converter",
     "TimeStep",
     "trigger",
+    "compilation",
 ]
