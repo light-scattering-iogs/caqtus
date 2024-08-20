@@ -3,7 +3,6 @@ import warnings
 from caqtus.types.image import (
     Width,
     Height,
-
 )
 from caqtus.types.image.roi import (
     ArbitraryROI,
