@@ -66,7 +66,9 @@ class ShotEventDispatcher:
     async def _run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
         self._start_time = time.monotonic()
         result = {}
-        with anyio.fail_after(timeout):
+        # We shield running a shot from external cancellation, so that external
+        # errors don't affect the shot.
+        with anyio.fail_after(timeout, shield=True):
             async with anyio.create_task_group() as tg:
                 for name, info in self._device_infos.items():
                     # noinspection PyProtectedMember
