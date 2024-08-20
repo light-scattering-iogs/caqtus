@@ -5,6 +5,7 @@ from .rpc import (
     RPCConfiguration,
     InsecureRPCConfiguration,
 )
+from ._proxy import Proxy
 
 __all__ = [
     "DeviceProxy",
@@ -12,4 +13,5 @@ __all__ = [
     "RPCConfiguration",
     "InsecureRPCConfiguration",
     "AsyncConverter",
+    "Proxy",
 ]
