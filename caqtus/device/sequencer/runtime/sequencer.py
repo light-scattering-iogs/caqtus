@@ -1,6 +1,10 @@
+from __future__ import annotations
+
+import abc
+import contextlib
 import decimal
-from abc import ABC, abstractmethod
-from typing import ClassVar
+from abc import ABC
+from typing import ClassVar, Protocol
 
 import attrs
 
@@ -35,67 +39,38 @@ class Sequencer(Device, ABC):
         on_setattr=attrs.setters.frozen,
     )
 
-    _sequence_programmed: bool = attrs.field(default=False, init=False)
-    _sequence_started: bool = attrs.field(default=False, init=False)
-
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
         if not is_trigger(value):
             raise ValueError(f"Invalid trigger {value}")
 
-    @abstractmethod
-    def update_parameters(
-        self, sequence: SequencerInstruction, *args, **kwargs
-    ) -> None:
-        """Update the parameters of the sequencer.
+    @abc.abstractmethod
+    def program_sequence(self, sequence: SequencerInstruction) -> ProgrammedSequence:
+        """Program the sequence into the device.
+
+        This method just writes the sequence to the device. It does not start the
+        sequence.
 
         Args:
             sequence: The sequence to be programmed into the sequencer.
-        """
-
-        if sequence.width != self.channel_number:
-            raise ValueError(
-                f"Invalid number of channels, expected {self.channel_number} but got"
-                f" {sequence.width}."
-            )
-
-    def _set_sequence_programmed(self) -> None:
-        """To call after successful update_parameters."""
-
-        self._sequence_started = False
-        self._sequence_programmed = True
-
-    @abstractmethod
-    def start_sequence(self) -> None:
-        """Start the sequence.
-
-        To be subclassed by the specific sequencer implementation.
-        The base class implementation checks if the sequence has been programmed and
-        sets _sequence_started to True.
-
-        Raises:
-            SequenceNotConfiguredError: If the sequence has not been configured yet.
-        """
-
-        if not self._sequence_programmed:
-            raise SequenceNotConfiguredError("The sequence has not been set yet.")
-
-        self._sequence_started = True
-        self._sequence_programmed = False
-
-    @abstractmethod
-    def has_sequence_finished(self) -> bool:
-        """Check if the sequence has finished.
 
         Returns:
-            True if the sequence has finished, False if it is still running.
-        Raises:
-            SequenceNotStartedError: If start_sequence has not been called yet.
+            An object that can be used to start the sequence.
         """
 
-        if not self._sequence_started:
-            raise SequenceNotStartedError("The sequence has not been started yet.")
-        return True
+        raise NotImplementedError
+
+
+class SequenceStatus(Protocol):
+    @abc.abstractmethod
+    def is_finished(self) -> bool:
+        raise NotImplementedError
+
+
+class ProgrammedSequence(Protocol):
+    @abc.abstractmethod
+    def run(self) -> contextlib.AbstractContextManager[SequenceStatus]:
+        raise NotImplementedError
 
 
 class SequencerProgrammingError(RuntimeError):
