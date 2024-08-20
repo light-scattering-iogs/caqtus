@@ -63,9 +63,10 @@ class RPCClient:
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        # We cancel this scope to be sure that the request always come to completion.
-        # The issue is if we make a request and an external exceptions cancel waiting for the answer, then we would not
-        # read the answer, and it would remain in the buffer.
+        # We shield this scope to be sure that the request always come to completion.
+        # The issue is if we make a request and an external exceptions cancel waiting
+        # for the answer, then we would not read the answer, and it would remain in the
+        # buffer.
         with anyio.CancelScope(shield=True):
             with eliot.start_action(action_type="call", function=str(fun)):
                 with eliot.start_action(action_type="send"):
