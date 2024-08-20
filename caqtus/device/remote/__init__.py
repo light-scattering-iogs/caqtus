@@ -1,3 +1,4 @@
+from ._async_converter import AsyncConverter
 from ._device_proxy import DeviceProxy
 from .rpc import (
     Server,
@@ -10,4 +11,5 @@ __all__ = [
     "Server",
     "RPCConfiguration",
     "InsecureRPCConfiguration",
+    "AsyncConverter",
 ]
