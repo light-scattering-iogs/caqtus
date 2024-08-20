@@ -117,9 +117,7 @@ class RPCClient(AsyncConverter):
         return await self.call(caller, obj)
 
     @contextlib.asynccontextmanager
-    async def call_proxy_result(
-        self, fun: Callable[..., T], *args: Any, **kwargs: Any
-    ):
+    async def call_proxy_result(self, fun: Callable[..., T], *args: Any, **kwargs: Any):
         request = self._build_request(fun, args, kwargs, "proxy")
         pickled_request = pickle.dumps(request)
         with anyio.CancelScope(shield=True):
