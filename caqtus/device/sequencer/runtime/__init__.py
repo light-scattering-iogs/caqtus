@@ -1,7 +1,5 @@
 from .sequencer import (
     Sequencer,
-    SequenceNotStartedError,
-    SequenceNotConfiguredError,
     ProgrammedSequence,
     SequenceStatus,
 )
@@ -16,8 +14,6 @@ from ..trigger import (
 
 __all__ = [
     "Sequencer",
-    "SequenceNotStartedError",
-    "SequenceNotConfiguredError",
     "Trigger",
     "SoftwareTrigger",
     "ExternalTriggerStart",

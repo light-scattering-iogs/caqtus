@@ -62,28 +62,30 @@ class Sequencer(Device, ABC):
 
 
 class SequenceStatus(Protocol):
+    """A protocol that defines the interface to check the status of a sequence."""
+
     @abc.abstractmethod
     def is_finished(self) -> bool:
         raise NotImplementedError
 
 
 class ProgrammedSequence(Protocol):
+    """A protocol that defines the interface to start a sequence."""
+
     @abc.abstractmethod
     def run(self) -> contextlib.AbstractContextManager[SequenceStatus]:
+        """Start the sequence.
+
+        Returns:
+            A context manager that can be used to start a sequence.
+
+            The sequence must be started when the context manager is entered.
+            The context manager must yield a status object that can be used to check
+            the progress of the sequence.
+
+            When the context manager is exited, the sequence should be stopped.
+            The context manager must not be exited without error if the sequence is
+            still running.
+        """
+
         raise NotImplementedError
-
-
-class SequencerProgrammingError(RuntimeError):
-    pass
-
-
-class SequenceNotStartedError(SequencerProgrammingError):
-    """Raised when the sequence as been configured, but has not been started yet."""
-
-    pass
-
-
-class SequenceNotConfiguredError(SequencerProgrammingError):
-    """Raised when the sequence has not been configured yet."""
-
-    pass
