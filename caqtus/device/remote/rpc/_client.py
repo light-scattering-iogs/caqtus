@@ -11,7 +11,6 @@ from typing import (
 
 import anyio
 import attrs
-import eliot
 from anyio.streams.buffered import BufferedByteReceiveStream
 
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
@@ -71,7 +70,6 @@ class RPCClient(AsyncConverter):
 
     async def __aenter__(self):
         await self._exit_stack.__aenter__()
-        self._exit_stack.enter_context(eliot.start_action(action_type="rpc client"))
         self._stream = await anyio.connect_tcp(self._host, self._port)
         self._receive_stream = BufferedByteReceiveStream(self._stream)
         await self._exit_stack.enter_async_context(self._stream)
@@ -79,7 +77,8 @@ class RPCClient(AsyncConverter):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
+        with anyio.CancelScope(shield=True):
+            await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
     async def call(self, fun: Callable[..., T], *args, **kwargs) -> T:
         with unwrap_remote_error_cm():
@@ -91,18 +90,17 @@ class RPCClient(AsyncConverter):
         *args: Any,
         **kwargs: Any,
     ) -> T:
-        # We shield this scope to be sure that the request always come to completion.
-        # The issue is if we make a request and an external exceptions cancel waiting
-        # for the answer, then we would not read the answer, and it would remain in the
-        # buffer.
-        with anyio.CancelScope(shield=True):
-            request = self._build_request(fun, args, kwargs, "copy")
-            pickled = pickle.dumps(request)
-            await send_with_size_prefix(self._stream, pickled)
+        request = self._build_request(fun, args, kwargs, "copy")
+        pickled = pickle.dumps(request)
+        await send_with_size_prefix(self._stream, pickled)
 
+        # We shield the reception from cancellation, otherwise if a cancellation
+        # occurs between the send and the receive, the received answer will stayed
+        # in the buffer as the next answer to read.
+        with anyio.CancelScope(shield=True):
             bytes_response = await receive_with_size_prefix(self._receive_stream)
-            response = pickle.loads(bytes_response)
-            return self._build_result(response)
+        response = pickle.loads(bytes_response)
+        return self._build_result(response)
 
     async def call_method(
         self, obj: Any, method: LiteralString, *args: Any, **kwargs: Any
@@ -149,18 +147,19 @@ class RPCClient(AsyncConverter):
     async def call_proxy_result(self, fun: Callable[..., T], *args: Any, **kwargs: Any):
         request = self._build_request(fun, args, kwargs, "proxy")
         pickled_request = pickle.dumps(request)
-        with anyio.CancelScope(shield=True):
-            await send_with_size_prefix(self._stream, pickled_request)
-            pickled_response = await receive_with_size_prefix(self._receive_stream)
-            response = pickle.loads(pickled_response)
 
-            with unwrap_remote_error_cm():
-                proxy = self._build_result(response)
-            assert isinstance(proxy, Proxy)
-            try:
-                yield proxy
-            finally:
-                await self._close_proxy(proxy)
+        await send_with_size_prefix(self._stream, pickled_request)
+        with anyio.CancelScope(shield=True):
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
+        response = pickle.loads(pickled_response)
+
+        with unwrap_remote_error_cm():
+            proxy = self._build_result(response)
+        assert isinstance(proxy, Proxy)
+        try:
+            yield proxy
+        finally:
+            await self._close_proxy(proxy)
 
     @contextlib.asynccontextmanager
     async def _call_proxy_result(
@@ -168,36 +167,46 @@ class RPCClient(AsyncConverter):
     ):
         request = self._build_request(fun, args, kwargs, "proxy")
         pickled_request = pickle.dumps(request)
-        with anyio.CancelScope(shield=True):
-            await send_with_size_prefix(self._stream, pickled_request)
-            pickled_response = await receive_with_size_prefix(self._receive_stream)
-            response = pickle.loads(pickled_response)
 
-            proxy = self._build_result(response)
-            assert isinstance(proxy, Proxy)
-            try:
-                yield proxy
-            finally:
-                await self._close_proxy(proxy)
+        await send_with_size_prefix(self._stream, pickled_request)
+        with anyio.CancelScope(shield=True):
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
+        response = pickle.loads(pickled_response)
+
+        proxy = self._build_result(response)
+        assert isinstance(proxy, Proxy)
+        try:
+            yield proxy
+        finally:
+            await self._close_proxy(proxy)
 
     @contextlib.asynccontextmanager
     async def async_context_manager(
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
     ):
-        with anyio.CancelScope(shield=True):
-            stack = contextlib.AsyncExitStack()
+        async with self.call_method_proxy_result(cm_proxy, "__enter__") as result_proxy:
+            exception = None
             try:
-                result_proxy = await stack.enter_async_context(
-                    self.call_method_proxy_result(cm_proxy, "__enter__")
-                )
-            except Exception:
-                raise
+                yield result_proxy
+            except BaseException as e:
+                exception = e
+        if exception is None:
+            exc_type = exc_value = exc_tb = None
+        else:
+            if isinstance(exception, anyio.get_cancelled_exc_class()):
+                reraised = Cancelled("Cancelled")
             else:
-                try:
-                    async with stack:
-                        yield result_proxy
-                finally:
-                    await self.call_method(cm_proxy, "__exit__", None, None, None)
+                reraised = type(exception)(str(exception))
+            exc_type = type(reraised)
+            exc_value = reraised
+            exc_tb = exception.__traceback__
+
+        with anyio.CancelScope(shield=True):
+            ignore_exception = await self.call_method(
+                cm_proxy, "__exit__", exc_type, exc_value, exc_tb
+            )
+        if exception is not None and not ignore_exception:
+            raise exception
 
     async def async_iterator(self, proxy: Proxy[Iterator[T]]):
         while True:
@@ -213,7 +222,8 @@ class RPCClient(AsyncConverter):
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         request = DeleteProxyRequest(proxy)
         pickled_request = pickle.dumps(request)
-        await send_with_size_prefix(self._stream, pickled_request)
+        with anyio.CancelScope(shield=True):
+            await send_with_size_prefix(self._stream, pickled_request)
 
     @staticmethod
     def _build_request(
@@ -237,3 +247,7 @@ class RPCClient(AsyncConverter):
                 return result
             case CallResponseFailure(error=error):
                 raise error
+
+
+class Cancelled(BaseException):
+    pass
