@@ -5,6 +5,8 @@ import time
 from collections.abc import Mapping
 from typing import Optional
 
+import tblib.pickling_support
+
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace
@@ -140,6 +142,7 @@ def _create_experiment_manager(
     device_manager_extension: DeviceManagerExtensionProtocol,
     shot_retry_config: Optional[ShotRetryConfig] = None,
 ) -> None:
+    tblib.pickling_support.install()
     global experiment_manager
     experiment_manager = LocalExperimentManager(
         session_maker=session_maker,
