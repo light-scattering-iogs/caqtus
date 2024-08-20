@@ -1,6 +1,4 @@
-import anyio
-
-from ._proxy import SequencerProxy
+from ._proxy import SequencerProxy, SequenceStatusProxy
 from .instructions import SequencerInstruction
 from .trigger import SoftwareTrigger
 from .._controller import DeviceController
@@ -17,22 +15,17 @@ class SequencerController(DeviceController):
         *args,
         **kwargs,
     ) -> None:
-        await sequencer.update_parameters(sequence=sequence, *args, **kwargs)
-        await self.start(sequencer)
-        await self.wait_until_finished(sequencer)
-
-    async def start(self, sequencer: SequencerProxy) -> None:
         trigger = await sequencer.get_trigger()
-        if isinstance(trigger, SoftwareTrigger):
-            await self.wait_all_devices_ready()
-            await sequencer.start_sequence()
-        else:
-            await sequencer.start_sequence()
-            await self.wait_all_devices_ready()
+        async with sequencer.program_sequence(sequence) as programmed_sequence:
+            if isinstance(trigger, SoftwareTrigger):
+                await self.wait_all_devices_ready()
+                async with programmed_sequence.run() as sequence_status:
+                    await self.wait_until_finished(sequence_status)
+            else:
+                async with programmed_sequence.run() as sequence_status:
+                    await self.wait_all_devices_ready()
+                    await self.wait_until_finished(sequence_status)
 
-    async def wait_until_finished(self, sequencer: SequencerProxy) -> None:
-        # We shield the task because we don't want the sequence to be stopped in the
-        # middle with possibly dangerous values on the sequencer channels.
-        with anyio.CancelScope(shield=True):
-            while not await sequencer.has_sequence_finished():
-                await self.sleep(0)
+    async def wait_until_finished(self, status: SequenceStatusProxy) -> None:
+        while not await status.is_finished():
+            await self.sleep(0)
