@@ -1,7 +1,7 @@
 import contextlib
 import operator
 import pickle
-from collections.abc import Callable, AsyncGenerator, Iterator, AsyncIterator
+from collections.abc import Callable, Iterator
 from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
 
 import anyio
@@ -21,6 +21,7 @@ from ._server import (
     RemoteError,
 )
 from .proxy import Proxy
+from .._async_converter import AsyncConverter
 
 T = TypeVar("T")
 
@@ -38,7 +39,7 @@ class MethodCaller:
         return f"call method {self.method}"
 
 
-class RPCClient:
+class RPCClient(AsyncConverter):
     def __init__(self, host: str, port: int):
         self._host = host
         self._port = port
@@ -118,7 +119,7 @@ class RPCClient:
     @contextlib.asynccontextmanager
     async def call_proxy_result(
         self, fun: Callable[..., T], *args: Any, **kwargs: Any
-    ) -> AsyncGenerator[Proxy[T], None]:
+    ):
         request = self._build_request(fun, args, kwargs, "proxy")
         pickled_request = pickle.dumps(request)
         with anyio.CancelScope(shield=True):
@@ -136,7 +137,7 @@ class RPCClient:
     @contextlib.asynccontextmanager
     async def async_context_manager(
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
-    ) -> AsyncGenerator[Proxy[T], None]:
+    ):
         with anyio.CancelScope(shield=True):
             stack = contextlib.AsyncExitStack()
             try:
@@ -152,7 +153,7 @@ class RPCClient:
                 finally:
                     await self.call_method(cm_proxy, "__exit__", None, None, None)
 
-    async def async_iterator(self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
+    async def async_iterator(self, proxy: Proxy[Iterator[T]]):
         while True:
             try:
                 value = await self.call_method(proxy, "__next__")

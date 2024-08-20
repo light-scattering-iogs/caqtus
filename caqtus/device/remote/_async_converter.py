@@ -136,7 +136,7 @@ class AsyncConverter(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def async_iterator[T](self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
+    def async_iterator[T](self, proxy: Proxy[Iterator[T]]) -> AsyncIterator[T]:
         """Iterate over a remote iterator asynchronously."""
 
         raise NotImplementedError
