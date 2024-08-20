@@ -4,7 +4,7 @@ from ._configuration import (
     InsecureRPCConfiguration,
 )
 from ._server import RPCServer, Server, RemoteError, RemoteCallError, InvalidProxyError
-from ..proxy import Proxy
+from .._proxy import Proxy
 
 
 __all__ = [

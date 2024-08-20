@@ -3,7 +3,7 @@ import contextlib
 from collections.abc import Callable, Iterator, AsyncIterator
 from typing import Protocol, LiteralString
 
-from caqtus.device.remote.rpc import Proxy
+from ._proxy import Proxy
 
 
 class AsyncConverter(Protocol):

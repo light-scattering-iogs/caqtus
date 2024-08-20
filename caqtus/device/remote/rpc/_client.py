@@ -27,7 +27,7 @@ from ._server import (
     RemoteCallError,
 )
 from .._async_converter import AsyncConverter
-from ..proxy import Proxy
+from .._proxy import Proxy
 
 T = TypeVar("T")
 
@@ -81,7 +81,11 @@ class RPCClient(AsyncConverter):
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self._exit_stack.__aexit__(exc_type, exc_value, traceback)
 
-    async def call(
+    async def call(self, fun: Callable[..., T], *args, **kwargs) -> T:
+        with unwrap_remote_error_cm():
+            return await self._call(fun, *args, **kwargs)
+
+    async def _call(
         self,
         fun: Callable[..., T],
         *args: Any,
@@ -101,13 +105,19 @@ class RPCClient(AsyncConverter):
             return self._build_result(response)
 
     async def call_method(
+        self, obj: Any, method: LiteralString, *args: Any, **kwargs: Any
+    ) -> Any:
+        with unwrap_remote_error_cm():
+            return await self._call_method(obj, method, *args, **kwargs)
+
+    async def _call_method(
         self,
         obj: Any,
         method: LiteralString,
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        return await self.call(
+        return await self._call(
             MethodCaller(method=method),
             obj,
             *args,
@@ -144,6 +154,25 @@ class RPCClient(AsyncConverter):
             pickled_response = await receive_with_size_prefix(self._receive_stream)
             response = pickle.loads(pickled_response)
 
+            with unwrap_remote_error_cm():
+                proxy = self._build_result(response)
+            assert isinstance(proxy, Proxy)
+            try:
+                yield proxy
+            finally:
+                await self._close_proxy(proxy)
+
+    @contextlib.asynccontextmanager
+    async def _call_proxy_result(
+        self, fun: Callable[..., T], *args: Any, **kwargs: Any
+    ):
+        request = self._build_request(fun, args, kwargs, "proxy")
+        pickled_request = pickle.dumps(request)
+        with anyio.CancelScope(shield=True):
+            await send_with_size_prefix(self._stream, pickled_request)
+            pickled_response = await receive_with_size_prefix(self._receive_stream)
+            response = pickle.loads(pickled_response)
+
             proxy = self._build_result(response)
             assert isinstance(proxy, Proxy)
             try:
@@ -173,7 +202,7 @@ class RPCClient(AsyncConverter):
     async def async_iterator(self, proxy: Proxy[Iterator[T]]):
         while True:
             try:
-                value = await self.call_method(proxy, "__next__")
+                value = await self._call_method(proxy, "__next__")
                 yield value
             except RemoteError as error:
                 if isinstance(error.__cause__, StopIteration):
@@ -207,5 +236,4 @@ class RPCClient(AsyncConverter):
             case CallResponseSuccess(result=result):
                 return result
             case CallResponseFailure(error=error):
-                with unwrap_remote_error_cm():
-                    raise error
+                raise error
