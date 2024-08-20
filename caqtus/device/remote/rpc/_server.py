@@ -20,7 +20,7 @@ from ._configuration import (
     RPCConfiguration,
 )
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
-from .proxy import Proxy
+from ..proxy import Proxy
 
 logger = logging.getLogger(__name__)
 

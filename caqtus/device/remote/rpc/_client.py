@@ -26,8 +26,8 @@ from ._server import (
     RemoteError,
     RemoteCallError,
 )
-from .proxy import Proxy
 from .._async_converter import AsyncConverter
+from ..proxy import Proxy
 
 T = TypeVar("T")
 
