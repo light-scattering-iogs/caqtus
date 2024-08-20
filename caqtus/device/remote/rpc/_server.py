@@ -76,23 +76,30 @@ T = TypeVar("T")
 class RPCServer:
     def __init__(self, port: int):
         self._port = port
-        self._objects: dict[int, ObjectReference] = {}
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._objects:
-            warnings.warn(
-                f"Not all objects were properly deleted: {self._objects}.\n"
-                f"If you acquired any proxies, make sure to close them."
-            )
-            self._objects.clear()
+        pass
+
+    def run(self) -> Never:
+        anyio.run(self.run_async, backend="trio")
 
     async def run_async(self) -> Never:
         listener = await anyio.create_tcp_listener(local_port=self._port)
         async with contextlib.aclosing(listener):
             await listener.serve(self.handle)
+
+    @staticmethod
+    async def handle(client: anyio.abc.ByteStream) -> None:
+        handler = Handler()
+        await handler.handle(client)
+
+
+class Handler:
+    def __init__(self):
+        self._objects: dict[int, ObjectReference] = {}
 
     async def handle(self, client: anyio.abc.ByteStream) -> None:
         async with client:
@@ -108,6 +115,13 @@ class RPCServer:
                     break
                 else:
                     raise ValueError(f"Unknown request type: {request}")
+
+    def check_all_proxies_closed(self) -> None:
+        if self._objects:
+            warnings.warn(
+                f"Not all objects were properly deleted: {self._objects}.\n"
+                f"If you acquired any proxies, make sure to close them."
+            )
 
     async def handle_call_request(self, client, request: CallRequest) -> None:
         try:
@@ -194,9 +208,6 @@ class RPCServer:
             return self.get_referent(obj)
         else:
             return obj
-
-    def run(self) -> Never:
-        anyio.run(self.run_async, backend="trio")
 
 
 class Server:
