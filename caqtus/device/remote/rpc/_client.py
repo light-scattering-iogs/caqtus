@@ -227,12 +227,14 @@ class RPCClient(AsyncConverter):
         while True:
             try:
                 value = await self._call_method(proxy, "__next__")
-                yield value
             except RemoteError as error:
                 if isinstance(error.__cause__, StopIteration):
                     break
                 else:
-                    raise
+                    with unwrap_remote_error_cm():
+                        raise
+            else:
+                yield value
 
     async def _close_proxy(self, proxy: Proxy[T]) -> None:
         request = DeleteProxyRequest(id_=self._request_id, proxy=proxy)
