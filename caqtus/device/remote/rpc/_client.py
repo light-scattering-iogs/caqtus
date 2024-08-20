@@ -2,7 +2,12 @@ import contextlib
 import operator
 import pickle
 from collections.abc import Callable, Iterator
-from typing import Any, TypeVar, TypeAlias, Literal, LiteralString
+from typing import TypeAlias, Literal
+from typing import (
+    TypeVar,
+    LiteralString,
+    Any,
+)
 
 import anyio
 import attrs
@@ -19,6 +24,7 @@ from ._server import (
     DeleteProxyRequest,
     TerminateRequest,
     RemoteError,
+    RemoteCallError,
 )
 from .proxy import Proxy
 from .._async_converter import AsyncConverter
@@ -26,6 +32,23 @@ from .._async_converter import AsyncConverter
 T = TypeVar("T")
 
 ReturnedType: TypeAlias = Literal["copy", "proxy"]
+
+
+@contextlib.contextmanager
+def unwrap_remote_error_cm():
+    try:
+        yield
+    except RemoteCallError as remote:
+        if original := remote.__cause__:
+            # Here we need to break the circle of exceptions.
+            # Indeed, original.__context__ is now remote, and remote.__cause__ is
+            # original.
+            # If not handled, this would cause recursion issues when anything tries
+            # to handle the exception down the line.
+            remote.__cause__ = None
+            raise original
+        else:
+            raise
 
 
 @attrs.frozen
@@ -69,17 +92,13 @@ class RPCClient(AsyncConverter):
         # for the answer, then we would not read the answer, and it would remain in the
         # buffer.
         with anyio.CancelScope(shield=True):
-            with eliot.start_action(action_type="call", function=str(fun)):
-                with eliot.start_action(action_type="send"):
-                    request = self._build_request(fun, args, kwargs, "copy")
-                    pickled = pickle.dumps(request)
-                    await send_with_size_prefix(self._stream, pickled)
-                with eliot.start_action(action_type="receive"):
-                    bytes_response = await receive_with_size_prefix(
-                        self._receive_stream
-                    )
-                    response = pickle.loads(bytes_response)
-                    return self._build_result(response)
+            request = self._build_request(fun, args, kwargs, "copy")
+            pickled = pickle.dumps(request)
+            await send_with_size_prefix(self._stream, pickled)
+
+            bytes_response = await receive_with_size_prefix(self._receive_stream)
+            response = pickle.loads(bytes_response)
+            return self._build_result(response)
 
     async def call_method(
         self,
@@ -188,4 +207,5 @@ class RPCClient(AsyncConverter):
             case CallResponseSuccess(result=result):
                 return result
             case CallResponseFailure(error=error):
-                raise error
+                with unwrap_remote_error_cm():
+                    raise error

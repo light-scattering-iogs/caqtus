@@ -125,7 +125,7 @@ class AsyncConverter(Protocol):
         T
     ](
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
-    ) -> contextlib.AbstractAsyncContextManager[Proxy[T], None]:
+    ) -> contextlib.AbstractAsyncContextManager[Proxy[T]]:
         """Wrap an async context manager proxy.
 
         Returns:

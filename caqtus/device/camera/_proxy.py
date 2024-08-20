@@ -10,15 +10,14 @@ CameraType = TypeVar("CameraType", bound=Camera)
 
 
 class CameraProxy(DeviceProxy[CameraType]):
-    @eliot.log_call(include_args=["timeout"], include_result=False)
     async def update_parameters(self, timeout: float, *args, **kwargs) -> None:
         return await self.call_method("update_parameters", timeout, *args, **kwargs)
 
     @contextlib.asynccontextmanager
     async def acquire(self, exposures: list[float]):
-        with eliot.start_action(action_type="acquire", exposures=exposures):
-            async with self.call_method_proxy_result(
-                "acquire", exposures
-            ) as cm_proxy, self.async_context_manager(cm_proxy) as iterator_proxy:
-                yield self.async_iterator(iterator_proxy)
-                return
+        async with (
+            self.call_method_proxy_result("acquire", exposures) as cm_proxy,
+            self.async_context_manager(cm_proxy) as iterator_proxy,
+        ):
+            yield self.async_iterator(iterator_proxy)
+            return
