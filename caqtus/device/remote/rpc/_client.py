@@ -189,6 +189,8 @@ class RPCClient(AsyncConverter):
     async def async_context_manager(
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
     ):
+        cause = None
+        context = None
         async with self.call_method_proxy_result(cm_proxy, "__enter__") as result_proxy:
             exception = None
             try:
@@ -201,7 +203,11 @@ class RPCClient(AsyncConverter):
             if isinstance(exception, anyio.get_cancelled_exc_class()):
                 reraised = Cancelled("Cancelled")
             else:
-                reraised = type(exception)(str(exception))
+                reraised = exception
+                cause = reraised.__cause__
+                context = reraised.__context__
+                reraised.__cause__ = None
+                reraised.__context__ = None
             exc_type = type(reraised)
             exc_value = reraised
             exc_tb = exception.__traceback__
@@ -211,6 +217,10 @@ class RPCClient(AsyncConverter):
                 cm_proxy, "__exit__", exc_type, exc_value, exc_tb
             )
         if exception is not None and not ignore_exception:
+            if cause is not None:
+                exception.__cause__ = cause
+            if context is not None:
+                exception.__context__ = context
             raise exception
 
     async def async_iterator(self, proxy: Proxy[Iterator[T]]):
