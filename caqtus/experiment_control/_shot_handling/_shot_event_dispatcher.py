@@ -68,13 +68,15 @@ class ShotEventDispatcher:
         result = {}
         # We shield running a shot from external cancellation, so that external
         # errors don't affect the shot.
-        with anyio.fail_after(timeout, shield=True):
+        with anyio.CancelScope(shield=True):
             async with anyio.create_task_group() as tg:
                 for name, info in self._device_infos.items():
                     # noinspection PyProtectedMember
                     tg.start_soon(
                         _save_in_dict,
-                        info.controller._run_shot(info.device, **info.parameters),
+                        info.controller._run_shot(
+                            info.device, timeout, **info.parameters
+                        ),
                         name,
                         result,
                     )

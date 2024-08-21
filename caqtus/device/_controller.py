@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import functools
 import logging
+import math
 from collections.abc import Callable
 from typing import (
     TypeVar,
@@ -16,9 +18,11 @@ from typing import (
 import anyio
 import anyio.to_thread
 
+import caqtus.formatter as fmt
 from caqtus.types.data import DataLabel, Data
 from ._name import DeviceName
 from .remote import DeviceProxy
+from ..types.recoverable_exceptions import RecoverableException
 
 if TYPE_CHECKING:
     from caqtus.experiment_control._shot_handling import ShotEventDispatcher
@@ -78,15 +82,24 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
 
     @final
     async def _run_shot(
-        self, device: DeviceProxyType, *args: _P.args, **kwargs: _P.kwargs
+        self,
+        device: DeviceProxyType,
+        timeout: float,
+        *args: _P.args,
+        **kwargs: _P.kwargs,
     ) -> ShotStats:
         start_time = self._event_dispatcher.shot_time()
-        await self.run_shot(device, *args, **kwargs)
-        finished_time = self._event_dispatcher.shot_time()
-        if not self._signaled_ready.is_set():
+        try:
+            with fail_after(delay=timeout, shield=False):
+                await self.run_shot(device, *args, **kwargs)
+
+            finished_time = self._event_dispatcher.shot_time()
+            if not self._signaled_ready.is_set():
+                raise RuntimeError(f"wait_all_devices_ready was not called in run_shot")
+        except BaseException as e:
             raise RuntimeError(
-                f"wait_all_devices_ready was not called in run_shot for {self}"
-            )
+                f"Error occurred for {fmt.device(self.device_name)}"
+            ) from e
         assert self._signaled_ready_time is not None
         assert self._finished_waiting_ready_time is not None
 
@@ -184,3 +197,21 @@ class ShotStats(TypedDict):
 
 
 DeviceControllerType = TypeVar("DeviceControllerType", bound=DeviceController)
+
+
+@contextlib.contextmanager
+def fail_after(delay: float | None, shield: bool = False):
+    """A copy of anyio.fail_after but with custom timeout exception."""
+
+    deadline = (anyio.current_time() + delay) if delay is not None else math.inf
+    with anyio.CancelScope(deadline=deadline, shield=shield) as cancel_scope:
+        yield cancel_scope
+
+    if cancel_scope.cancelled_caught and anyio.current_time() >= cancel_scope.deadline:
+        raise DeviceTimeoutError(f"Timeout after {delay:.2f} seconds")
+
+
+class DeviceTimeoutError(TimeoutError, RecoverableException):
+    """Raise when a device exceeded the shot timeout."""
+
+    pass
