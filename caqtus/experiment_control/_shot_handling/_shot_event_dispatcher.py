@@ -75,7 +75,7 @@ class ShotEventDispatcher:
                     tg.start_soon(
                         _save_in_dict,
                         info.controller._run_shot(
-                            info.device, timeout, **info.parameters
+                            info.device, timeout, info.parameters
                         ),
                         name,
                         result,

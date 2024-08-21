@@ -85,13 +85,12 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
         self,
         device: DeviceProxyType,
         timeout: float,
-        *args: _P.args,
-        **kwargs: _P.kwargs,
+        kwargs,
     ) -> ShotStats:
         start_time = self._event_dispatcher.shot_time()
         try:
             with fail_after(delay=timeout, shield=False):
-                await self.run_shot(device, *args, **kwargs)
+                await self.run_shot(device, **kwargs)
 
             finished_time = self._event_dispatcher.shot_time()
             if not self._signaled_ready.is_set():
