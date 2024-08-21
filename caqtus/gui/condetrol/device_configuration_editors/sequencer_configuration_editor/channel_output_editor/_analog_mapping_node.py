@@ -156,7 +156,10 @@ class CalibratedAnalogMappingWidget(QWidget, Ui_CalibratedAnalogMappingWigdet):
             np.array(y_points), output_units
         )
 
-        input_points = np.concat([np.linspace(a, b, 50) for a, b in pairwise(x_points)])
+        if len(x_points) >= 2:
+            input_points = np.concat([np.linspace(a, b, 50) for a, b in pairwise(x_points)])
+        else:
+            input_points = x_points
         interpolation_input_base_points, _ = convert_to_base_units(
             input_points, input_units
         )
