@@ -11,6 +11,7 @@ from typing import (
 
 import anyio
 import attrs
+import trio
 from anyio.streams.buffered import BufferedByteReceiveStream
 
 from ._prefix_size import receive_with_size_prefix, send_with_size_prefix
@@ -189,8 +190,6 @@ class RPCClient(AsyncConverter):
     async def async_context_manager(
         self, cm_proxy: Proxy[contextlib.AbstractContextManager[T]]
     ):
-        cause = None
-        context = None
         async with self.call_method_proxy_result(cm_proxy, "__enter__") as result_proxy:
             exception = None
             try:
@@ -200,14 +199,8 @@ class RPCClient(AsyncConverter):
         if exception is None:
             exc_type = exc_value = exc_tb = None
         else:
-            if isinstance(exception, anyio.get_cancelled_exc_class()):
-                reraised = Cancelled("Cancelled")
-            else:
-                reraised = exception
-                cause = reraised.__cause__
-                context = reraised.__context__
-                reraised.__cause__ = None
-                reraised.__context__ = None
+            # We can't pickle trio cancelled error, so we replace it with our own
+            reraised = replace_trio_cancelled(exception)
             exc_type = type(reraised)
             exc_value = reraised
             exc_tb = exception.__traceback__
@@ -217,10 +210,6 @@ class RPCClient(AsyncConverter):
                 cm_proxy, "__exit__", exc_type, exc_value, exc_tb
             )
         if exception is not None and not ignore_exception:
-            if cause is not None:
-                exception.__cause__ = cause
-            if context is not None:
-                exception.__context__ = context
             raise exception
 
     async def async_iterator(self, proxy: Proxy[Iterator[T]]):
@@ -284,3 +273,25 @@ def _ensure_response_match_request(response, request: CallRequest):
         raise ValueError(
             f"Unexpected response id: {response.id_} instead of {request.id_}"
         )
+
+
+def replace_trio_cancelled(exception) -> BaseException:
+    if exception.__cause__:
+        cause = replace_trio_cancelled(exception.__cause__)
+    else:
+        cause = None
+    if exception.__context__:
+        context = replace_trio_cancelled(exception.__context__)
+    else:
+        context = None
+    if isinstance(exception, trio.Cancelled):
+        new_exception = Cancelled()
+    elif isinstance(exception, BaseExceptionGroup):
+        new_exception = type(exception)(
+            str(exception), [replace_trio_cancelled(e) for e in exception.exceptions]
+        )
+    else:
+        new_exception = type(exception)(str(exception))
+    new_exception.__cause__ = cause
+    new_exception.__context__ = context
+    return new_exception
