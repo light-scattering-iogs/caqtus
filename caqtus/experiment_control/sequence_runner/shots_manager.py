@@ -386,7 +386,7 @@ def _compile_shot(
         index=shot_parameters.index,
         shot_parameters=shot_parameters.parameters,
         device_parameters=compiled,
-        timeout=shot_duration + 10,
+        timeout=shot_duration + 2,
     )
 
 
