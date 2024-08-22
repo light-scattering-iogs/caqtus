@@ -118,6 +118,15 @@ def test_ramp():
     assert result.units is None
 
 
+def test_ramp_zero_duration():
+    lane = AnalogTimeLane([Expression("0"), Ramp(), Expression("10")])
+    result = compile_analog_lane(lane, {}, [0, 10e-9, 10e-9, 15e-9], decimal.Decimal(1))
+    expected = Pattern([0]) * 10 + Pattern([10]) * 5
+
+    assert result.values == approx(expected)
+    assert result.units is None
+
+
 def test_ramp_2():
     lane = AnalogTimeLane([Expression("10 V"), Ramp(), Expression("100 mV")])
     result = compile_analog_lane(

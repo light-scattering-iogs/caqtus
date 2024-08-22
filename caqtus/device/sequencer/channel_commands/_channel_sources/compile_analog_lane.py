@@ -397,10 +397,17 @@ class RampBlockResult:
         first_tick_time = float(first_tick * time_step * ns)
         last_tick_time = float(last_tick * time_step * ns)
 
-        initial_value = f(first_tick_time)
-        final_value = f(last_tick_time)
-
         length = last_tick - first_tick
+
+        if length == 0:
+            # We can pick whatever value we want, as the ramp has no length.
+            # However, we need to be careful to not call f with t0 == t1 as this will
+            # raise a ZeroDivisionError.
+            initial_value = v0
+            final_value = v1
+        else:
+            initial_value = f(first_tick_time)
+            final_value = f(last_tick_time)
 
         return RampBlockResult(
             initial_value,
