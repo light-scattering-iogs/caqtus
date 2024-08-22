@@ -118,7 +118,8 @@ class ConnectionFailedError(ConnectionError, RecoverableException):
 class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
     """Raised when the number of shot attempts exceeds the maximum allowed."""
 
-    pass
+    def derive(self, excs):
+        return ShotAttemptsExceededError(self.message, excs)
 
 
 class SequenceInterruptedException(RecoverableException):
