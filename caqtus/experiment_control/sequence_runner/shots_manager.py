@@ -6,7 +6,7 @@ import functools
 import logging
 import warnings
 import weakref
-from collections.abc import AsyncIterable
+from collections.abc import AsyncIterable, Awaitable, Callable
 from typing import Mapping, Any, Protocol, TypeVar
 
 import anyio
@@ -15,13 +15,14 @@ import attrs
 import tblib.pickling_support
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
+
 from caqtus.device import DeviceName
+from caqtus.device._controller import DeviceException
 from caqtus.formatter import fmt
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.data import DataLabel, Data
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
-
 from .._async_utils import task_group_with_error_message
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,9 @@ class ShotManager:
             shot_data_receive_stream,
         ) = anyio.create_memory_object_stream[ShotData](1)
         task_group = await self._exit_stack.enter_async_context(
-            task_group_with_error_message("Errors occurred while managing shots execution")
+            task_group_with_error_message(
+                "Errors occurred while managing shots execution"
+            )
         )
         (
             device_parameters_send_stream,
@@ -211,7 +214,9 @@ class ShotManager:
     ):
         async with (
             device_parameters_send_stream,
-            task_group_with_error_message("Errors occurred during shot compilation") as tg,
+            task_group_with_error_message(
+                "Errors occurred during shot compilation"
+            ) as tg,
         ):
             shot_execution_queue = ShotExecutionSorter(device_parameters_send_stream)
             async with shot_params_receive_stream:
@@ -249,43 +254,94 @@ class ShotManager:
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
     ) -> ShotData:
-        exceptions_to_retry = self._shot_retry_config.exceptions_to_retry
-        number_of_attempts = self._shot_retry_config.number_of_attempts
-        if number_of_attempts < 1:
-            raise ValueError("number_of_attempts must be >= 1")
 
-        errors: list[ExceptionGroup] = []
-
-        for attempt in range(number_of_attempts):
-            try:
-                start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-                data = await shot_runner.run_shot(
-                    device_parameters.device_parameters, device_parameters.timeout
-                )
-                end_time = datetime.datetime.now(tz=datetime.timezone.utc)
-            except* exceptions_to_retry as e:
-                errors.append(
-                    ExceptionGroup(
-                        f"Attempt {attempt+1}/{number_of_attempts} failed", e.exceptions
-                    )
-                )
-                # We sleep a bit to allow to recover from the error, for example if it
-                # is a timeout.
-                await anyio.sleep(0.1)
-                logger.warning(
-                    f"Attempt {attempt+1}/{number_of_attempts} failed", exc_info=e
-                )
-            else:
-                return ShotData(
-                    index=device_parameters.index,
-                    start_time=start_time,
-                    end_time=end_time,
-                    variables=device_parameters.shot_parameters,
-                    data=data,
-                )
-        raise ShotAttemptsExceededError(
-            f"Could not execute shot after {number_of_attempts} attempts", errors
+        return await _run_shot_with_retry(
+            functools.partial(run_shot, device_parameters, shot_runner),
+            retry_condition(self._shot_retry_config.exceptions_to_retry),
+            self._shot_retry_config.number_of_attempts,
         )
+
+
+async def run_shot(
+    device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
+) -> ShotData:
+    start_time = datetime.datetime.now(tz=datetime.timezone.utc)
+    data = await shot_runner.run_shot(
+        device_parameters.device_parameters, device_parameters.timeout
+    )
+    end_time = datetime.datetime.now(tz=datetime.timezone.utc)
+    return ShotData(
+        index=device_parameters.index,
+        start_time=start_time,
+        end_time=end_time,
+        variables=device_parameters.shot_parameters,
+        data=data,
+    )
+
+
+async def _run_shot_with_retry(
+    run: Callable[[], Awaitable[ShotData]],
+    condition: Callable[[Exception], bool],
+    number_of_attempts: int,
+) -> ShotData:
+    """Run a shot with retry logic.
+
+    Args:
+        run: A function to call to run the shot.
+        condition: A function that determines if an exception is retriable.
+
+            If the run function raises an exception group, the condition function will
+            be tested against the exceptions in the group. If the condition function
+            returns True for all the sub-exceptions, the shot will be retried.
+
+        number_of_attempts: The maximum number of times to retry the shot if an error
+            occurs.
+
+            Must be >= 1.
+
+    Returns:
+        The data produced by the shot.
+
+    Raises:
+        ShotAttemptsExceededError: If the shot could not be executed after the number of
+            attempts specified.
+    """
+
+    if number_of_attempts < 1:
+        raise ValueError("number_of_attempts must be >= 1")
+
+    errors: list[ExceptionGroup] = []
+
+    for attempt in range(number_of_attempts):
+        try:
+            return await run()
+        except BaseExceptionGroup as exc_group:
+            retriable, others = exc_group.split(condition)
+            if others:
+                raise
+            errors.append(
+                ExceptionGroup(
+                    f"Attempt {attempt+1}/{number_of_attempts} failed",
+                    retriable.exceptions,
+                )
+            )
+            logger.warning(
+                f"Attempt {attempt+1}/{number_of_attempts} failed", exc_info=exc_group
+            )
+    raise ShotAttemptsExceededError(
+        f"Could not execute shot after {number_of_attempts} attempts", errors
+    )
+
+
+def retry_condition(
+    retriable_exceptions: tuple[type[Exception], ...]
+) -> Callable[[Exception], bool]:
+    def _retry_condition(e: Exception) -> bool:
+        return isinstance(e, DeviceException) and isinstance(
+            e.__cause__, retriable_exceptions
+        )
+
+    return _retry_condition
 
 
 @attrs.frozen(order=True)

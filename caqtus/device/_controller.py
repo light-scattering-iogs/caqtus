@@ -96,7 +96,7 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
             if not self._signaled_ready.is_set():
                 raise RuntimeError(f"wait_all_devices_ready was not called in run_shot")
         except BaseException as e:
-            raise RuntimeError(
+            raise DeviceException(
                 f"Error occurred for {fmt.device(self.device_name)}"
             ) from e
         assert self._signaled_ready_time is not None
@@ -212,5 +212,11 @@ def fail_after(delay: float | None, shield: bool = False):
 
 class DeviceTimeoutError(TimeoutError, RecoverableException):
     """Raise when a device exceeded the shot timeout."""
+
+    pass
+
+
+class DeviceException(Exception):
+    """Raise when a device encounters an error during a shot."""
 
     pass
