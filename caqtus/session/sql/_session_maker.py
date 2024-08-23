@@ -188,6 +188,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
 
         super().__init__(serializer, engine, async_engine)
+        self.check()
 
     def async_session(self) -> ThreadedAsyncSQLExperimentSession:
         return ThreadedAsyncSQLExperimentSession(
@@ -211,3 +212,27 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         config = state.pop("config")
         serializer = state.pop("serializer")
         self.__init__(serializer, config)
+
+    def check(self):
+        from alembic.config import Config
+        from alembic import script, migration
+
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option(
+            "script_location", "caqtus/session/sql/migration/_alembic"
+        )
+        alembic_cfg.set_main_option(
+            "sqlalchemy.url",
+            self._engine.url.render_as_string(hide_password=False),
+        )
+
+        directory = script.ScriptDirectory.from_config(alembic_cfg)
+
+        with self._engine.begin() as connection:
+            context = migration.MigrationContext.configure(connection)
+            up_to_date = set(context.get_current_heads()) == set(directory.get_heads())
+
+        if not up_to_date:
+            exception = ValueError("Database is not up to date.")
+            exception.add_note("Run the upgrade method to update the database.")
+            raise exception
