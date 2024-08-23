@@ -352,6 +352,10 @@ def setup_logs(file_name: str):
         },
         "loggers": {
             "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
+            "alembic": {
+                "level": "WARNING",
+                "handlers": ["default", "warnings", "errors"],
+            },
         },
     }
 
