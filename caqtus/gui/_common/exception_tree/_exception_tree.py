@@ -12,7 +12,7 @@ def create_exception_tree(
     result = []
     text = tb_summary.exc_msg
     text = process_text(text)
-    exception_label = tb_summary.exc_type
+    exception_label = tb_summary.exc_cls()
     exception_item = QTreeWidgetItem(None, [prepend, exception_label, text])  # type: ignore
     error_color = Qt.GlobalColor.red
     highlight_color = QApplication.palette().color(QPalette.ColorRole.Accent)

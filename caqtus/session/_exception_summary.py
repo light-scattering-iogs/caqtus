@@ -51,3 +51,8 @@ class TracebackSummary:
             exc_type=f"{exc_type.__module__}.{exc_type.__qualname__}",
             exc_msg=exc_msg,
         )
+
+    def exc_cls(self) -> str:
+        """Return the exception class name without the module."""
+
+        return self.exc_type.split(".")[-1]

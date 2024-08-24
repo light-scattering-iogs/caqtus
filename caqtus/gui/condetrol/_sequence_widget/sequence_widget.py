@@ -7,7 +7,7 @@ from typing import Optional, assert_never, Literal
 import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QColor
 from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget, QLabel, QHBoxLayout
 
 from caqtus.session import (
@@ -37,6 +37,7 @@ from .._parameter_tables_editor import ParameterNamespaceEditor
 from .._sequence_iteration_editors import StepsIterationEditor
 from ..timelanes_editor import TimeLanesEditor
 from ..timelanes_editor.extension import CondetrolLaneExtensionProtocol
+from ..._common.exception_tree import ExceptionDialog
 
 
 class SequenceWidget(QWidget, Ui_SequenceWidget):
@@ -107,8 +108,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
         self.warning_action = self.tool_bar.addAction(
-            get_icon("mdi6.alert", color=Qt.GlobalColor.darkRed), "warning"
+            get_icon("mdi6.alert", color=QColor(205, 22, 17)), "warning"
         )
+        self.warning_action.triggered.connect(self._on_warning_action_triggered)
         self.tool_bar.addWidget(self.status_widget)
         self.start_sequence_action = self.tool_bar.addAction(
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
@@ -130,6 +132,8 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         self.tabWidget.currentChanged.connect(self.stacked.setCurrentIndex)
 
         self._transition(_SequenceNotSetState())
+
+        self._exception_dialog = ExceptionDialog(self)
 
     def set_available_parameter_names(
         self, parameter_names: Set[DottedVariableName]
@@ -206,6 +210,18 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
                 self.setVisible(True)
         self._state = new_state
+
+    def _on_warning_action_triggered(self) -> None:
+        """Display the sequence traceback in a dialog."""
+
+        assert isinstance(self._state, _SequenceCrashedState)
+
+        self._exception_dialog.set_message(
+            f"An error occurred while running the sequence {self._state.sequence_path}"
+        )
+        traceback = self._state.exception_traceback
+        self._exception_dialog.set_exception(traceback)
+        self._exception_dialog.exec()
 
     def _set_status_widget(self, path: PureSequencePath, state: State) -> None:
         text = " > ".join(path.parts)

@@ -11,11 +11,10 @@ from PySide6.QtCore import Qt
 
 from caqtus.__about__ import __version__
 from caqtus.experiment_control.manager import ExperimentManager, Procedure
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session import ExperimentSessionMaker, PureSequencePath, TracebackSummary
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import (
     split_recoverable,
-    SequenceInterruptedException,
 )
 from ._main_window_ui import Ui_CondetrolMainWindow
 from .._extension import CondetrolExtensionProtocol
@@ -28,6 +27,7 @@ from ..device_configuration_editors._configurations_editor import (
 )
 from ..._common.exception_tree import ExceptionDialog
 from ..._common.waiting_widget import run_with_wip_widget
+from ...qtutil import temporary_widget
 
 
 class CondetrolWindowHandler:
@@ -73,14 +73,17 @@ class CondetrolWindowHandler:
         except Exception as e:
             logger.error("Failed to connect to experiment manager.", exc_info=e)
             self.main_window.display_error(
-                "Failed to connect to experiment manager.", e
+                "Failed to connect to experiment manager.",
+                TracebackSummary.from_exception(e),
             )
             return
 
         if self.is_running_sequence:
             self.main_window.display_error(
                 "A sequence is already running.",
-                RuntimeError("A sequence is already running."),
+                TracebackSummary.from_exception(
+                    RuntimeError("A sequence is already running.")
+                ),
             )
             return
         procedure = experiment_manager.create_procedure(
@@ -104,16 +107,8 @@ class CondetrolWindowHandler:
             while await anyio.to_thread.run_sync(procedure.is_running_sequence):
                 await anyio.sleep(50e-3)
 
-            if (exc := procedure.exception()) is not None:
-                # Here we ignore the SequenceInterruptedException because it is
-                # expected to happen when the sequence is interrupted and we don't
-                # want to display it to the user as an actual error.
-                if isinstance(exc, SequenceInterruptedException):
-                    exc = None
-                elif isinstance(exc, ExceptionGroup):
-                    _, exc = exc.split(SequenceInterruptedException)
-                if exc is not None:
-                    self.main_window.signal_exception_while_running_sequence(exc)
+            if exc := procedure.exception():
+                raise exc
         self.is_running_sequence = False
 
 
@@ -267,11 +262,11 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         ui_settings.setValue(f"{__name__}/state", self.saveState())
         ui_settings.setValue(f"{__name__}/geometry", self.saveGeometry())
 
-    def display_error(self, message: str, exception: BaseException):
-        exception_dialog = ExceptionDialog(self)
-        exception_dialog.set_exception(exception)
-        exception_dialog.set_message(message)
-        exception_dialog.exec()
+    def display_error(self, message: str, exception: TracebackSummary):
+        with temporary_widget(ExceptionDialog(self)) as exception_dialog:
+            exception_dialog.set_exception(exception)
+            exception_dialog.set_message(message)
+            exception_dialog.exec()
 
     def interrupt_sequence(self, path: PureSequencePath):
         experiment_manager = run_with_wip_widget(
