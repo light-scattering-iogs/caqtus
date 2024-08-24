@@ -32,6 +32,7 @@ from ._sequence_table import (
     SQLTimelanes,
     SQLDeviceConfiguration,
     SQLSequenceParameters,
+    SQLExceptionTraceback,
 )
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
@@ -177,6 +178,13 @@ class SQLSequenceCollection(SequenceCollection):
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
         return _get_exceptions(self._get_sql_session(), path)
+
+    def set_exception(
+        self, path: PureSequencePath, exception: TracebackSummary
+    ) -> Result[
+        None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
+    ]:
+        return _set_exception(self._get_sql_session(), path, exception)
 
     def set_state(self, path: PureSequencePath, state: State) -> None:
         sequence = unwrap(self._query_sequence_model(path))
@@ -457,6 +465,23 @@ def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
                     exception_model.content, TracebackSummary
                 )
                 return Success(traceback_summary)
+        case Failure() as failure:
+            return failure
+
+
+def _set_exception(
+    session: Session, path: PureSequencePath, exception: TracebackSummary
+) -> Result[None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError]:
+    sequence_model_query = _query_sequence_model(session, path)
+    match sequence_model_query:
+        case Success(sequence_model):
+            assert isinstance(sequence_model, SQLSequence)
+            if sequence_model.state != State.CRASHED:
+                return Failure(SequenceNotCrashedError(path))
+            content = cattrs.unstructure(exception, TracebackSummary)
+            exception_model = SQLExceptionTraceback(content=content)
+            sequence_model.exception_traceback = exception_model
+            return Success(None)
         case Failure() as failure:
             return failure
 

@@ -22,6 +22,7 @@ from ._sequence_collection import (
     InvalidStateTransitionError,
     SequenceNotEditableError,
     ShotNotFoundError,
+    SequenceNotCrashedError,
 )
 from ._session_maker import ExperimentSessionMaker
 from ._state import State
@@ -51,5 +52,6 @@ __all__ = [
     "PathIsRootError",
     "PathHasChildrenError",
     "TracebackSummary",
+    "SequenceNotCrashedError",
     "sql",
 ]
