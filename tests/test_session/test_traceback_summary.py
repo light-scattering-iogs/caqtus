@@ -1,7 +1,8 @@
 from caqtus.session._exception_summary import TracebackSummary
 
 
-def test():
+@pytest.fixture
+def exception():
     try:
         raise RuntimeError("err 1") from RuntimeError("err 1 cause")
     except RuntimeError as e:
@@ -14,11 +15,11 @@ def test():
         except RuntimeError as e:
             err2 = e
 
-    exception = ExceptionGroup("group", [err1, err2])
+    return ExceptionGroup("group", [err1, err2])
 
+
+def test_construction(exception):
     t = TracebackSummary.from_exception(exception)
-
-    print(t)
 
     assert t == TracebackSummary(
         exc_type="builtins.ExceptionGroup",
