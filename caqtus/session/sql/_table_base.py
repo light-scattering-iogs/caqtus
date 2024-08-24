@@ -10,5 +10,3 @@ def create_tables(engine: sqlalchemy.engine.Engine) -> None:
 
     This function only creates non-existing tables. It does not modify existing tables.
     """
-
-    Base.metadata.create_all(engine)

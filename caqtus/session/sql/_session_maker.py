@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from ._async_session import AsyncSQLExperimentSession, ThreadedAsyncSQLExperimentSession
 from ._experiment_session import SQLExperimentSession
 from ._serializer import SerializerProtocol
-from ._table_base import create_tables
 from .._session_maker import ExperimentSessionMaker
 
 
@@ -61,15 +60,6 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         )
         self._serializer = serializer
 
-    def create_tables(self) -> None:
-        """Create the tables in the database.
-
-        This method is useful the first time the database is created.
-        It will create missing tables and ignore existing ones.
-        """
-
-        create_tables(self._engine)
-
     def __call__(self) -> SQLExperimentSession:
         """Create a new ExperimentSession with the engine used at initialization."""
 
@@ -100,17 +90,6 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         async_engine = create_async_engine(state.pop("async_url"))
         self.__init__(state["serializer"], engine, async_engine)
 
-    def upgrade(self) -> None:
-        """Updates the database schema to the latest version.
-
-        When called on a database already setup, this method will upgrade the database
-        tables to the latest version.
-        When called on an empty database, this method will create the necessary tables.
-        """
-
-        # TODO: Handle upgrading the database schema if the tables already exist.
-        create_tables(self._engine)
-
 
 class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
@@ -140,6 +119,17 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
         path = state.pop("path")
         serializer = state.pop("serializer")
         self.__init__(path, serializer)
+
+    def create_tables(self) -> None:
+        """Create the tables in the database.
+
+        This method is useful the first time the database is created.
+        It will create missing tables and ignore existing ones.
+        """
+
+        from ._table_base import Base
+
+        Base.metadata.create_all(self._engine)
 
 
 @attrs.define
