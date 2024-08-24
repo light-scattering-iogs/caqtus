@@ -59,6 +59,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     """
 
     sequence_start_requested = Signal(PureSequencePath)
+    """A signal emitted when the start sequence button is clicked."""
 
     def __init__(
         self,
@@ -73,6 +74,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         Args:
             session_maker: It is used to connect to the storage system in which to look
             for the sequence.
+            extension: The extension that provides time lanes customization.
             parent: The parent widget.
         """
 
