@@ -7,7 +7,7 @@ from caqtus.extension import Experiment, upgrade_database
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
 from .device_configuration import DummyConfiguration
 
-postgresql_empty_no_proc = factories.postgresql_noproc()
+postgresql_empty_no_proc = factories.postgresql_noproc(dbname="caqtus_test_empty")
 
 postgresql_empty = factories.postgresql("postgresql_empty_no_proc")
 
@@ -26,7 +26,9 @@ def initialize(**kwargs):
     upgrade_database(exp)
 
 
-postgresql_initialized_no_proc = factories.postgresql_noproc(load=[initialize])
+postgresql_initialized_no_proc = factories.postgresql_noproc(
+    load=[initialize], dbname="caqtus_test_initialized"
+)
 
 postgresql_initialized = factories.postgresql("postgresql_initialized_no_proc")
 
