@@ -197,6 +197,8 @@ class SQLSequenceCollection(SequenceCollection):
             sequence.start_time = None
             sequence.stop_time = None
             sequence.parameters.content = None
+            if sequence.exception_traceback:
+                self._get_sql_session().delete(sequence.exception_traceback)
             delete_device_configurations = sqlalchemy.delete(
                 SQLDeviceConfiguration
             ).where(SQLDeviceConfiguration.sequence == sequence)
@@ -214,6 +216,8 @@ class SQLSequenceCollection(SequenceCollection):
             sequence.stop_time = datetime.datetime.now(
                 tz=datetime.timezone.utc
             ).replace(tzinfo=None)
+
+        assert sequence.state == state
 
     def set_device_configurations(
         self,
@@ -478,9 +482,10 @@ def _set_exception(
             assert isinstance(sequence_model, SQLSequence)
             if sequence_model.state != State.CRASHED:
                 return Failure(SequenceNotCrashedError(path))
+            if sequence_model.exception_traceback is not None:
+                raise RuntimeError("Exception already set")
             content = cattrs.unstructure(exception, TracebackSummary)
-            exception_model = SQLExceptionTraceback(content=content)
-            sequence_model.exception_traceback = exception_model
+            sequence_model.exception_traceback = SQLExceptionTraceback(content=content)
             return Success(None)
         case Failure() as failure:
             return failure

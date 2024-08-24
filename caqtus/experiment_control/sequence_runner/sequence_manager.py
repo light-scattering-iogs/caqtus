@@ -12,13 +12,21 @@ import anyio.to_process
 import anyio.to_thread
 
 from caqtus.device import DeviceName, DeviceConfiguration
-from caqtus.session import ExperimentSessionMaker, PureSequencePath, State
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    State,
+    TracebackSummary,
+)
 from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,
 )
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.types.recoverable_exceptions import SequenceInterruptedException
+from caqtus.types.recoverable_exceptions import (
+    SequenceInterruptedException,
+    split_recoverable,
+)
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -130,9 +138,18 @@ class SequenceManager:
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
             raise
-        except* BaseException:
+        except* BaseException as e:
             self._set_sequence_state(State.CRASHED)
-            raise
+            recoverable, non_recoverable = split_recoverable(e)
+            if non_recoverable:
+                raise
+            if recoverable:
+                traceback_summary = TracebackSummary.from_exception(recoverable)
+                with self._session_maker() as session:
+                    session.sequences.set_exception(
+                        self._sequence_path, traceback_summary
+                    )
+                raise recoverable
         else:
             self._set_sequence_state(State.FINISHED)
 

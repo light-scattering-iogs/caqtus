@@ -15,8 +15,6 @@ Only make exceptions recoverable if you expect them to happen in normal operatio
 
 from __future__ import annotations
 
-from typing import Optional
-
 import tblib.pickling_support
 
 
@@ -48,7 +46,11 @@ def is_recoverable(error: BaseException) -> bool:
 
 def split_recoverable(
     exception: BaseException,
-) -> tuple[Optional[BaseException], Optional[BaseException]]:
+) -> (
+    tuple[BaseException, BaseException]
+    | tuple[None, BaseException]
+    | tuple[BaseException, None]
+):
     """Split an exception into recoverable and non-recoverable parts.
 
     This function is mainly meant to split exception groups.
