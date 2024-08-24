@@ -30,19 +30,19 @@ from ._sequence_collection import (
     _get_all_shot_data,
 )
 from ._serializer import SerializerProtocol
-from .. import PureSequencePath
-from ..async_session import (
-    AsyncExperimentSession,
-    AsyncPathHierarchy,
-    AsyncSequenceCollection,
-)
 from .._experiment_session import ExperimentSessionNotActiveError
+from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
     PureShot,
+)
+from ..async_session import (
+    AsyncExperimentSession,
+    AsyncPathHierarchy,
+    AsyncSequenceCollection,
 )
 
 _T = TypeVar("_T")
