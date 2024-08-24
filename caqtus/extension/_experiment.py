@@ -187,7 +187,7 @@ class Experiment:
             )
             raise error
         session_maker = self._extension.create_session_maker(
-            PostgreSQLExperimentSessionMaker,
+            PostgreSQLExperimentSessionMaker.create_with_check,
             config=self._session_maker_config,
         )
         return session_maker

@@ -1,6 +1,10 @@
 from sqlite3 import Connection as SQLite3Connection
 from typing import Self
 
+import alembic.command
+import alembic.config
+import alembic.migration
+import alembic.script
 import attrs
 import sqlalchemy
 import sqlalchemy.orm
@@ -188,7 +192,16 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
 
         super().__init__(serializer, engine, async_engine)
-        self.check()
+
+    @classmethod
+    def create_with_check(
+        cls, serializer: SerializerProtocol, config: PostgreSQLConfig
+    ):
+        """Create a session maker and check if the database schema is up to date."""
+
+        instance = cls(serializer, config)
+        instance.check()
+        return instance
 
     def async_session(self) -> ThreadedAsyncSQLExperimentSession:
         return ThreadedAsyncSQLExperimentSession(
@@ -213,11 +226,8 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         serializer = state.pop("serializer")
         self.__init__(serializer, config)
 
-    def check(self):
-        from alembic.config import Config
-        from alembic import script, migration
-
-        alembic_cfg = Config()
+    def _get_alembic_config(self) -> alembic.config.Config:
+        alembic_cfg = alembic.config.Config()
         alembic_cfg.set_main_option(
             "script_location", "caqtus/session/sql/migration/_alembic"
         )
@@ -225,14 +235,25 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             "sqlalchemy.url",
             self._engine.url.render_as_string(hide_password=False),
         )
+        return alembic_cfg
 
-        directory = script.ScriptDirectory.from_config(alembic_cfg)
+    def check(self) -> None:
+        """Check if the database is up to date with the application schema.
+
+        Raises:
+            InvalidDatabaseSchema: If the database schema is not compatible with the
+                application schema.
+        """
+
+        alembic_cfg = self._get_alembic_config()
+
+        directory = alembic.script.ScriptDirectory.from_config(alembic_cfg)
 
         with self._engine.begin() as connection:
-            context = migration.MigrationContext.configure(connection)
+            context = alembic.migration.MigrationContext.configure(connection)
             up_to_date = set(context.get_current_heads()) == set(directory.get_heads())
 
         if not up_to_date:
-            exception = ValueError("Database is not up to date.")
+            exception = InvalidDatabaseSchema("Database is not up to date.")
             exception.add_note("Run the upgrade method to update the database.")
             raise exception
