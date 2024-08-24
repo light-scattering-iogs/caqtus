@@ -58,7 +58,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
     will become editable and any change will be saved.
     """
 
-    sequence_changed = Signal(object)  # Optional[tuple[PureSequencePath, State]]
     sequence_start_requested = Signal(PureSequencePath)
 
     def __init__(
