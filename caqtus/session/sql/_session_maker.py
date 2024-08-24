@@ -235,7 +235,10 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
         if not up_to_date:
             exception = InvalidDatabaseSchema("Database is not up to date.")
-            exception.add_note("Run the upgrade method to update the database.")
+            exception.add_note(
+                "Upgrade the database following the procedure at "
+                "https://caqtus.readthedocs.io/en/stable/how-to/upgrade-database.html."
+            )
             raise exception
 
     def upgrade(self) -> None:
