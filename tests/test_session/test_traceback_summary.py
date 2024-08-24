@@ -1,3 +1,5 @@
+import pytest
+
 from caqtus.session._exception_summary import TracebackSummary
 
 
