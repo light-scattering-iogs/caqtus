@@ -329,7 +329,7 @@ class Experiment:
 
 
 def upgrade_database(experiment: Experiment) -> None:
-    """Upgrade the database schema to the latest version.
+    """Upgrade the database schema of the experiment to the latest version.
 
     .. Warning::
 
@@ -338,6 +338,7 @@ def upgrade_database(experiment: Experiment) -> None:
 
     Args:
         experiment: The experiment to upgrade the database for.
+            It must have been configured with a PostgreSQL storage backend.
     """
 
     session_maker = experiment._get_session_maker(check_schema=False)

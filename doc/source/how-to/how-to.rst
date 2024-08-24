@@ -8,3 +8,4 @@ How to
    device-extension
    handle-recoverable-exceptions
    cleanup-in-enter
+   upgrade-database
