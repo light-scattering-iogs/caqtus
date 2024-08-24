@@ -180,6 +180,9 @@ class Experiment:
         The method :meth:`configure_storage` must be called before this method.
         """
 
+        return self._get_session_maker(check_schema=True)
+
+    def _get_session_maker(self, check_schema: bool = True) -> ExperimentSessionMaker:
         if self._session_maker_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
@@ -187,9 +190,11 @@ class Experiment:
             )
             raise error
         session_maker = self._extension.create_session_maker(
-            PostgreSQLExperimentSessionMaker.create_with_check,
+            PostgreSQLExperimentSessionMaker,
             config=self._session_maker_config,
         )
+        if check_schema:
+            session_maker.check()
         return session_maker
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
@@ -321,6 +326,29 @@ class Experiment:
         with Server(config) as server:
             print("Ready")
             server.wait_for_termination()
+
+
+def upgrade_database(experiment: Experiment) -> None:
+    """Upgrade the database schema to the latest version.
+
+    .. Warning::
+
+        It is strongly recommended to back up the database before running this
+        function in case something goes wrong.
+
+    Args:
+        experiment: The experiment to upgrade the database for.
+    """
+
+    session_maker = experiment._get_session_maker(check_schema=False)
+    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
+        error = RuntimeError("The session maker is not a PostgreSQL session maker.")
+        error.add_note(
+            "The upgrade_database method is only available for PostgreSQL session "
+            "makers."
+        )
+        raise error
+    session_maker.upgrade()
 
 
 def setup_logs(file_name: str):
