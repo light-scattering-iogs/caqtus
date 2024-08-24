@@ -1,9 +1,9 @@
 import pytest
 
-from caqtus.session.sql import (
+from caqtus.session.sql._serializer import Serializer
+from caqtus.session.sql._session_maker import (
     SQLExperimentSessionMaker,
     SQLiteExperimentSessionMaker,
-    Serializer,
 )
 
 
