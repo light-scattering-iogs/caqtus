@@ -1,6 +1,10 @@
 from sqlite3 import Connection as SQLite3Connection
 from typing import Self
 
+import alembic.command
+import alembic.config
+import alembic.migration
+import alembic.script
 import attrs
 import sqlalchemy
 import sqlalchemy.orm
@@ -211,3 +215,57 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         config = state.pop("config")
         serializer = state.pop("serializer")
         self.__init__(serializer, config)
+
+    def _get_alembic_config(self) -> alembic.config.Config:
+        alembic_cfg = alembic.config.Config()
+        alembic_cfg.set_main_option(
+            "script_location", "caqtus:session:sql:_migration:_alembic"
+        )
+        alembic_cfg.set_main_option(
+            "sqlalchemy.url",
+            self._engine.url.render_as_string(hide_password=False),
+        )
+        return alembic_cfg
+
+    def check(self) -> None:
+        """Check if the database is up to date with the application schema.
+
+        Raises:
+            InvalidDatabaseSchema: If the database schema is not compatible with the
+                application schema.
+        """
+
+        alembic_cfg = self._get_alembic_config()
+
+        directory = alembic.script.ScriptDirectory.from_config(alembic_cfg)
+
+        with self._engine.begin() as connection:
+            context = alembic.migration.MigrationContext.configure(connection)
+            up_to_date = set(context.get_current_heads()) == set(directory.get_heads())
+
+        if not up_to_date:
+            exception = InvalidDatabaseSchema("Database is not up to date.")
+            exception.add_note("Run the upgrade method to update the database.")
+            raise exception
+
+    def upgrade(self) -> None:
+        """Updates the database schema to the latest version.
+
+        When called on a database already setup, this method will upgrade the database
+        tables to the latest version.
+        When called on an empty database, this method will create the necessary tables.
+
+        .. Warning::
+
+            It is strongly recommended to back up the database before running this
+            method in case something goes wrong.
+        """
+
+        alembic_cfg = self._get_alembic_config()
+        alembic.command.upgrade(alembic_cfg, "head")
+
+
+class InvalidDatabaseSchema(Exception):
+    """Raised when the database schema is not compatible with the application schema."""
+
+    pass

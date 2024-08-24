@@ -180,6 +180,9 @@ class Experiment:
         The method :meth:`configure_storage` must be called before this method.
         """
 
+        return self._get_session_maker(check_schema=True)
+
+    def _get_session_maker(self, check_schema: bool = True) -> ExperimentSessionMaker:
         if self._session_maker_config is None:
             error = RuntimeError("Storage configuration has not been set.")
             error.add_note(
@@ -190,6 +193,8 @@ class Experiment:
             PostgreSQLExperimentSessionMaker,
             config=self._session_maker_config,
         )
+        if check_schema:
+            session_maker.check()
         return session_maker
 
     def connect_to_experiment_manager(self) -> ExperimentManager:
@@ -323,6 +328,46 @@ class Experiment:
             server.wait_for_termination()
 
 
+def upgrade_database(experiment: Experiment) -> None:
+    """Upgrade the database schema of the experiment to the latest version.
+
+    .. Warning::
+
+        It is strongly recommended to back up the database before running this
+        function in case something goes wrong.
+
+    Args:
+        experiment: The experiment to upgrade the database for.
+            It must have been configured with a PostgreSQL storage backend.
+    """
+
+    session_maker = experiment._get_session_maker(check_schema=False)
+    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
+        error = RuntimeError("The session maker is not a PostgreSQL session maker.")
+        error.add_note(
+            "The upgrade_database method is only available for PostgreSQL session "
+            "makers."
+        )
+        raise error
+    session_maker.upgrade()
+
+
+def stamp_database(experiment: Experiment) -> None:
+    """Mark old databases schema with the original revision.
+
+    This should only be called on databases that were created before version 6.3.0.
+    """
+
+    from alembic.command import stamp
+
+    session_maker = experiment._get_session_maker(check_schema=False)
+    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
+        raise RuntimeError("The session maker is not a PostgreSQL session maker.")
+    config = session_maker._get_alembic_config()
+
+    stamp(config, "038164d73465")
+
+
 def setup_logs(file_name: str):
     log_config = {
         "version": 1,
@@ -352,6 +397,10 @@ def setup_logs(file_name: str):
         },
         "loggers": {
             "": {"level": "INFO", "handlers": ["default", "warnings", "errors"]},
+            "alembic": {
+                "level": "WARNING",
+                "handlers": ["default", "warnings", "errors"],
+            },
         },
     }
 
