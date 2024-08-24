@@ -11,7 +11,7 @@ from ._sequence_collection import (
     SQLSequenceCollection,
 )
 from ._serializer import SerializerProtocol
-from .parameters_table import SQLParameters
+from ._parameters_table import SQLParameters
 from .._experiment_session import (
     ExperimentSession,
     ExperimentSessionNotActiveError,
