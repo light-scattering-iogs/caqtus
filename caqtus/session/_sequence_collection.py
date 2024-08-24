@@ -14,6 +14,7 @@ from caqtus.types.iteration import IterationConfiguration, Unknown
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError
 from ._state import State
@@ -58,6 +59,12 @@ class InvalidStateTransitionError(SequenceStateError):
 
 class SequenceNotEditableError(SequenceStateError):
     """Raised when trying to edit a sequence that is not in the draft state."""
+
+    pass
+
+
+class SequenceNotCrashedError(SequenceStateError):
+    """Raised when trying to read the exceptions of a sequence that is not crashed."""
 
     pass
 
@@ -212,6 +219,22 @@ class SequenceCollection(Protocol):
     def get_state(
         self, path: PureSequencePath
     ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_exception(self, path: PureSequencePath) -> Result[
+        Optional[TracebackSummary],
+        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
+    ]:
+        """Return the exceptions that occurred while running the sequence.
+
+        Returns:
+            A result wrapping the exceptions that occurred while running the sequence.
+
+            Even if the sequence is in the CRASHED state, there may not be any
+            exceptions captured. In this case, the result will be None.
+        """
+
         raise NotImplementedError
 
     @abc.abstractmethod
