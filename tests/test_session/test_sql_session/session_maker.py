@@ -1,12 +1,10 @@
-from typing import Any, Mapping
-
 import attrs
 import pytest
 
-from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.session.sql import (
+from caqtus.device import DeviceConfiguration
+from caqtus.session.sql._serializer import Serializer
+from caqtus.session.sql._session_maker import (
     SQLExperimentSessionMaker,
-    Serializer,
     SQLiteExperimentSessionMaker,
 )
 from caqtus.utils import serialization
@@ -19,14 +17,6 @@ class DummyConfiguration(DeviceConfiguration):
 
     a: int = attrs.field(converter=int, on_setattr=attrs.setters.convert)
     b: str = attrs.field(converter=str, on_setattr=attrs.setters.convert)
-
-    def get_device_initialization_method(self, device_name, sequence_context):
-        return super().get_device_initialization_method(device_name, sequence_context)
-
-    def compile_device_shot_parameters(
-        self, device_name: DeviceName, shot_context
-    ) -> Mapping[str, Any]:
-        pass
 
 
 def dump(configuration: DummyConfiguration) -> JSON:
