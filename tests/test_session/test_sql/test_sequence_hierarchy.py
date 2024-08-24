@@ -22,7 +22,7 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
 from tests.fixtures.steps_iteration import steps_configuration
-from .session_maker import session_maker, DummyConfiguration
+from .device_configuration import DummyConfiguration
 from ..generate_path import path
 from ...fixtures.time_lanes import time_lanes
 

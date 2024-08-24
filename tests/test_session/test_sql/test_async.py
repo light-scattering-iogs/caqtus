@@ -1,7 +1,6 @@
 from caqtus.gui.qtutil import qt_trio
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace
-from .session_maker import session_maker
 
 
 def test_0(session_maker, qtbot):

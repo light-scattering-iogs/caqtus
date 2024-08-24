@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import pytest
 from pytest_postgresql import factories
 
 from caqtus.extension import Experiment, upgrade_database
 from caqtus.session.sql import PostgreSQLConfig, PostgreSQLExperimentSessionMaker
+from .device_configuration import DummyConfiguration
 
 postgresql_empty_no_proc = factories.postgresql_noproc()
 
@@ -52,4 +55,7 @@ def initialized_database_config(postgresql_initialized) -> PostgreSQLConfig:
 def session_maker(initialized_database_config) -> PostgreSQLExperimentSessionMaker:
     exp = Experiment()
     exp.configure_storage(initialized_database_config)
+    exp._extension.device_configurations_serializer.register_device_configuration(
+        DummyConfiguration, DummyConfiguration.dump, DummyConfiguration.load
+    )
     return exp._get_session_maker(check_schema=False)

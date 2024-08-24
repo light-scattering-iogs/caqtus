@@ -1,8 +1,6 @@
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace
 
-from .session_maker import session_maker
-
 
 def test_0(session_maker):
     with session_maker() as session:

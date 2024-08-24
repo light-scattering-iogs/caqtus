@@ -110,7 +110,7 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
             parent_session=self, serializer=serializer
         )
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         if self._session is not None:
             raise RuntimeError("Session is already active")
         self._session = await anyio.to_thread.run_sync(self._session_context.__enter__)
