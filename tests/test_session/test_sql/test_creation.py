@@ -5,7 +5,7 @@ from caqtus.session.sql import PostgreSQLExperimentSessionMaker
 from caqtus.session.sql._session_maker import InvalidDatabaseSchema
 
 
-def test_example_postgres(empty_database_config):
+def test_initialization_postgres(empty_database_config):
 
     exp = Experiment()
     exp.configure_storage(empty_database_config)
