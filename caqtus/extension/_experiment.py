@@ -352,6 +352,22 @@ def upgrade_database(experiment: Experiment) -> None:
     session_maker.upgrade()
 
 
+def stamp_database(experiment: Experiment) -> None:
+    """Mark old databases schema with the original revision.
+
+    This should only be called on databases that were created before version 6.3.0.
+    """
+
+    from alembic.command import stamp
+
+    session_maker = experiment._get_session_maker(check_schema=False)
+    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
+        raise RuntimeError("The session maker is not a PostgreSQL session maker.")
+    config = session_maker._get_alembic_config()
+
+    stamp(config, "038164d73465")
+
+
 def setup_logs(file_name: str):
     log_config = {
         "version": 1,
