@@ -219,7 +219,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
     def _get_alembic_config(self) -> alembic.config.Config:
         alembic_cfg = alembic.config.Config()
         alembic_cfg.set_main_option(
-            "script_location", "caqtus/session/sql/_migration/_alembic"
+            "script_location", "caqtus:session:sql:_migration:_alembic"
         )
         alembic_cfg.set_main_option(
             "sqlalchemy.url",
