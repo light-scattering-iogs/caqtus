@@ -28,5 +28,7 @@ def get_icon(name: str, color=None) -> QIcon:
     }
     if color is None:
         color = QPalette().buttonText().color()
-    icon = qtawesome.icon(ids[name], color=color)
+    if name in ids:
+        name = ids[name]
+    icon = qtawesome.icon(name, color=color)
     return icon

@@ -15,6 +15,7 @@ from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
     AsyncExperimentSession,
+    TracebackSummary,
 )
 from caqtus.session import (
     PathNotFoundError,
@@ -104,6 +105,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
+        self.warning_action = self.tool_bar.addAction(
+            get_icon("mdi6.alert", color=Qt.GlobalColor.darkRed), "warning"
+        )
         self.tool_bar.addWidget(self.status_widget)
         self.start_sequence_action = self.tool_bar.addAction(
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
@@ -162,6 +166,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self.setVisible(False)
                 self.start_sequence_action.setEnabled(False)
                 self.interrupt_sequence_action.setEnabled(False)
+                self.warning_action.setVisible(False)
             case _SequenceSetState(
                 iterations=iterations,
                 time_lanes=time_lanes,
@@ -179,6 +184,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.time_lanes_editor.set_read_only(False)
                     self.iteration_editor.set_read_only(False)
                     self.tabWidget.setTabEnabled(0, False)
+                    self.warning_action.setVisible(False)
                 elif isinstance(new_state, _SequenceNotEditableState):
                     self.start_sequence_action.setEnabled(False)
                     self.interrupt_sequence_action.setEnabled(False)
@@ -186,6 +192,17 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.iteration_editor.set_read_only(True)
                     self.parameters_editor.set_parameters(new_state.parameters)
                     self.tabWidget.setTabEnabled(0, True)
+                    if isinstance(new_state, _SequenceCrashedState):
+                        self.warning_action.setVisible(True)
+                        msg = (
+                            new_state.exception_traceback.exc_type
+                            if new_state.exception_traceback
+                            else ""
+                        )
+                        self.warning_action.setToolTip(msg)
+                    else:
+                        self.warning_action.setVisible(False)
+
                 self.setVisible(True)
         self._state = new_state
 
@@ -271,6 +288,11 @@ class _SequenceNotEditableState(_SequenceSetState):
 
 
 @attrs.frozen
+class _SequenceCrashedState(_SequenceNotEditableState):
+    exception_traceback: Optional[TracebackSummary]
+
+
+@attrs.frozen
 class _SequenceEditableState(_SequenceSetState):
     pass
 
@@ -306,13 +328,24 @@ async def _query_sequence_state_async(
         )
     else:
         parameters = await session.sequences.get_global_parameters(path)
-        return _SequenceNotEditableState(
-            path,
-            iterations=iterations,
-            time_lanes=time_lanes,
-            parameters=parameters,
-            sequence_state=state,
-        )
+        if state == State.CRASHED:
+            tb_summary = unwrap(await session.sequences.get_traceback_summary(path))
+            return _SequenceCrashedState(
+                path,
+                iterations=iterations,
+                time_lanes=time_lanes,
+                parameters=parameters,
+                sequence_state=state,
+                exception_traceback=tb_summary,
+            )
+        else:
+            return _SequenceNotEditableState(
+                path,
+                iterations=iterations,
+                time_lanes=time_lanes,
+                parameters=parameters,
+                sequence_state=state,
+            )
 
 
 def _query_state_sync(
@@ -346,13 +379,24 @@ def _query_sequence_state_sync(
         )
     else:
         parameters = session.sequences.get_global_parameters(path)
-        return _SequenceNotEditableState(
-            path,
-            iterations=iterations,
-            time_lanes=time_lanes,
-            parameters=parameters,
-            sequence_state=state,
-        )
+        if state == State.CRASHED:
+            traceback_summary = unwrap(session.sequences.get_exception(path))
+            return _SequenceCrashedState(
+                path,
+                iterations=iterations,
+                time_lanes=time_lanes,
+                parameters=parameters,
+                sequence_state=state,
+                exception_traceback=traceback_summary,
+            )
+        else:
+            return _SequenceNotEditableState(
+                path,
+                iterations=iterations,
+                time_lanes=time_lanes,
+                parameters=parameters,
+                sequence_state=state,
+            )
 
 
 class IconLabel(QWidget):
