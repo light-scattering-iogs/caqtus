@@ -7,7 +7,7 @@ from typing import Optional, assert_never, Literal
 import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QIcon, QColor, QPalette
+from PySide6.QtGui import QIcon, QColor, QPalette, QKeySequence
 from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
@@ -126,6 +126,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
         )
         self.start_sequence_action.triggered.connect(self._on_start_sequence_requested)
+        self.start_sequence_action.setShortcut(QKeySequence("F5"))
         self.interrupt_sequence_action = self.tool_bar.addAction(
             get_icon("stop"), "interrupt"
         )
@@ -227,7 +228,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
         )
         traceback = self._state.exception_traceback
         self._exception_dialog.set_exception(traceback)
-        self._exception_dialog.exec()
+        self._exception_dialog.show()
 
     def _set_status_widget(self, path: PureSequencePath, state: State) -> None:
         text = " > ".join(path.parts)
