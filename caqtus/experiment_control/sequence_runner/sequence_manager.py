@@ -137,7 +137,6 @@ class SequenceManager:
                     yield scheduler
         except* SequenceInterruptedException:
             self._set_sequence_state(State.INTERRUPTED)
-            raise
         except* BaseException as e:
             self._set_sequence_state(State.CRASHED)
             recoverable, non_recoverable = split_recoverable(e)
