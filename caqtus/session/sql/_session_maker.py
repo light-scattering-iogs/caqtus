@@ -257,3 +257,25 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             exception = InvalidDatabaseSchema("Database is not up to date.")
             exception.add_note("Run the upgrade method to update the database.")
             raise exception
+
+    def upgrade(self) -> None:
+        """Updates the database schema to the latest version.
+
+        When called on a database already setup, this method will upgrade the database
+        tables to the latest version.
+        When called on an empty database, this method will create the necessary tables.
+
+        .. Warning::
+
+            It is strongly recommended to back up the database before running this
+            method in case something goes wrong.
+        """
+
+        alembic_cfg = self._get_alembic_config()
+        alembic.command.upgrade(alembic_cfg, "head")
+
+
+class InvalidDatabaseSchema(Exception):
+    """Raised when the database schema is not compatible with the application schema."""
+
+    pass
