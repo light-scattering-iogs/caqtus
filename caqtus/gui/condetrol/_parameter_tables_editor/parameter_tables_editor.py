@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from caqtus.gui._common.exception_tree import ExceptionDialog
 from caqtus.gui.qtutil import block_signals, temporary_widget
+from caqtus.session import TracebackSummary
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.variable_name import DottedVariableName
@@ -196,7 +197,7 @@ class ParameterNamespaceEditor(QWidget):
             parameters = serialization.from_json(serialized, ParameterNamespace)
         except Exception as e:
             with temporary_widget(ExceptionDialog(self)) as dialog:
-                dialog.set_exception(e)
+                dialog.set_exception(TracebackSummary.from_exception(e))
                 dialog.set_message("The clipboard does not contain valid parameters.")
                 dialog.exec()
         else:

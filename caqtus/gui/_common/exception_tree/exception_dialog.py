@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QDialog
 
+from caqtus.session import TracebackSummary
 from ._exception_tree import create_exception_tree
 from .exception_dialog_ui import Ui_ExceptionDialog
 from ...qtutil import HTMLItemDelegate
@@ -11,9 +12,9 @@ class ExceptionDialog(QDialog, Ui_ExceptionDialog):
         self.setupUi(self)
         self.exception_tree.setItemDelegateForColumn(2, HTMLItemDelegate(self))
 
-    def set_exception(self, exception: BaseException):
+    def set_exception(self, tb_summary: TracebackSummary):
         self.exception_tree.setColumnCount(3)
-        tree = create_exception_tree(exception)
+        tree = create_exception_tree(tb_summary)
 
         self.exception_tree.addTopLevelItems(tree)
         self.exception_tree.expandAll()
