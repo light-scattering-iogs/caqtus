@@ -28,8 +28,10 @@ from ._sequence_collection import (
     _get_shot_start_time,
     _get_shot_data_by_label,
     _get_all_shot_data,
+    _get_exceptions,
 )
 from ._serializer import SerializerProtocol
+from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSessionNotActiveError
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
@@ -38,6 +40,7 @@ from .._sequence_collection import (
     SequenceStats,
     PathIsNotSequenceError,
     PureShot,
+    SequenceNotCrashedError,
 )
 from ..async_session import (
     AsyncExperimentSession,
@@ -175,6 +178,12 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
         self, path: PureSequencePath
     ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_stats, path)
+
+    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
+        Optional[TracebackSummary],
+        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
+    ]:
+        return await self._run_sync(_get_exceptions, path)
 
     async def get_time_lanes(self, path: PureSequencePath) -> TimeLanes:
         return await self._run_sync(_get_time_lanes, path, self.serializer)

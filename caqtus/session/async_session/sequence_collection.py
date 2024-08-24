@@ -1,7 +1,7 @@
 import abc
 import datetime
 from collections.abc import Mapping
-from typing import Protocol
+from typing import Protocol, Optional
 
 from returns.result import Result
 
@@ -10,9 +10,15 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
-from .._sequence_collection import PathIsNotSequenceError, SequenceStats, PureShot
+from .._sequence_collection import (
+    PathIsNotSequenceError,
+    SequenceStats,
+    PureShot,
+    SequenceNotCrashedError,
+)
 from .._state import State
 
 
@@ -34,6 +40,13 @@ class AsyncSequenceCollection(Protocol):
     ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
 
         return (await self.get_stats(path)).map(lambda stats: stats.state)
+
+    @abc.abstractmethod
+    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
+        Optional[TracebackSummary],
+        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
+    ]:
+        raise NotImplementedError
 
     @abc.abstractmethod
     async def get_iteration_configuration(
