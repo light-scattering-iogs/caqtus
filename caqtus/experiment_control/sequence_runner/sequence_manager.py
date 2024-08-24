@@ -144,12 +144,15 @@ class SequenceManager:
             if non_recoverable:
                 raise
             if recoverable:
+                logger.warning(
+                    "A recoverable error occurred while running the sequence.",
+                    exc_info=recoverable,
+                )
                 traceback_summary = TracebackSummary.from_exception(recoverable)
                 with self._session_maker() as session:
                     session.sequences.set_exception(
                         self._sequence_path, traceback_summary
                     )
-                raise recoverable
         else:
             self._set_sequence_state(State.FINISHED)
 

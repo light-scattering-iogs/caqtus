@@ -343,46 +343,30 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
-        try:
-            with self._session_maker() as session:
-                iteration = session.sequences.get_iteration_configuration(sequence)
+        with self._session_maker() as session:
+            iteration = session.sequences.get_iteration_configuration(sequence)
 
-            async def run():
-                sequence_manager = SequenceManager(
-                    sequence=sequence,
-                    session_maker=self._session_maker,
-                    interruption_event=self._must_interrupt,
-                    shot_retry_config=self._shot_retry_config,
-                    global_parameters=global_parameters,
-                    device_configurations=device_configurations,
-                    device_manager_extension=self._device_manager_extension,
+        async def run():
+            sequence_manager = SequenceManager(
+                sequence=sequence,
+                session_maker=self._session_maker,
+                interruption_event=self._must_interrupt,
+                shot_retry_config=self._shot_retry_config,
+                global_parameters=global_parameters,
+                device_configurations=device_configurations,
+                device_manager_extension=self._device_manager_extension,
+            )
+            if not isinstance(iteration, StepsConfiguration):
+                raise NotImplementedError(
+                    "Only steps iteration is supported at the moment."
                 )
-                if not isinstance(iteration, StepsConfiguration):
-                    raise NotImplementedError(
-                        "Only steps iteration is supported at the moment."
-                    )
-                initial_context = evaluate_initial_context(
-                    sequence_manager.sequence_parameters
-                )
-                async with sequence_manager.run_sequence() as shot_scheduler:
-                    await execute_steps(
-                        iteration.steps, initial_context, shot_scheduler
-                    )
+            initial_context = evaluate_initial_context(
+                sequence_manager.sequence_parameters
+            )
+            async with sequence_manager.run_sequence() as shot_scheduler:
+                await execute_steps(iteration.steps, initial_context, shot_scheduler)
 
-            anyio.run(run, backend="trio")
-        except Exception as e:
-            recoverable, non_recoverable = split_recoverable(e)
-            if recoverable:
-                logger.info(
-                    "A recoverable error occurred while running the sequence.",
-                    exc_info=recoverable,
-                )
-            if non_recoverable:
-                logger.error(
-                    "A non-recoverable error occurred while running the sequence.",
-                    exc_info=non_recoverable,
-                )
-            raise
+        anyio.run(run, backend="trio")
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
