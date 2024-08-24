@@ -193,16 +193,6 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
         super().__init__(serializer, engine, async_engine)
 
-    @classmethod
-    def create_with_check(
-        cls, serializer: SerializerProtocol, config: PostgreSQLConfig
-    ):
-        """Create a session maker and check if the database schema is up to date."""
-
-        instance = cls(serializer, config)
-        instance.check()
-        return instance
-
     def async_session(self) -> ThreadedAsyncSQLExperimentSession:
         return ThreadedAsyncSQLExperimentSession(
             self._session_maker.begin(),
