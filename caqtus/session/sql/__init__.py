@@ -8,10 +8,8 @@ from ._session_maker import (
     PostgreSQLExperimentSessionMaker,
     PostgreSQLConfig,
 )
-from ._table_base import create_tables
 
 __all__ = [
-    "create_tables",
     "Serializer",
     "SQLExperimentSessionMaker",
     "SQLExperimentSession",
