@@ -5,6 +5,7 @@ from collections.abc import Mapping, Set
 from typing import TYPE_CHECKING, Optional, assert_never, Iterable
 
 import attrs
+import cattrs
 import numpy as np
 import sqlalchemy.orm
 from returns.result import Result
@@ -34,6 +35,7 @@ from ._sequence_table import (
 )
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
+from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError
 from .._return_or_raise import unwrap
@@ -46,6 +48,7 @@ from .._sequence_collection import (
     ShotNotFoundError,
     PureShot,
     DataNotFoundError,
+    SequenceNotCrashedError,
 )
 from .._sequence_collection import SequenceCollection
 from .._state import State
@@ -168,6 +171,12 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
         result = self._query_sequence_model(path)
         return result.map(lambda sequence: sequence.state)
+
+    def get_exception(self, path: PureSequencePath) -> Result[
+        Optional[TracebackSummary],
+        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
+    ]:
+        return _get_exceptions(self._get_sql_session(), path)
 
     def set_state(self, path: PureSequencePath, state: State) -> None:
         sequence = unwrap(self._query_sequence_model(path))
@@ -428,6 +437,28 @@ def _is_sequence(
     return _query_path_model(session, path).map(
         lambda path_model: bool(path_model.sequence)
     )
+
+
+def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
+    Optional[TracebackSummary],
+    PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
+]:
+    sequence_model_query = _query_sequence_model(session, path)
+    match sequence_model_query:
+        case Success(sequence_model):
+            assert isinstance(sequence_model, SQLSequence)
+            if sequence_model.state != State.CRASHED:
+                return Failure(SequenceNotCrashedError(path))
+            exception_model = sequence_model.exception_traceback
+            if exception_model is None:
+                return Success(None)
+            else:
+                traceback_summary = cattrs.structure(
+                    exception_model.content, TracebackSummary
+                )
+                return Success(traceback_summary)
+        case Failure() as failure:
+            return failure
 
 
 def _get_stats(
