@@ -7,8 +7,15 @@ from typing import Optional, assert_never, Literal
 import anyio
 import attrs
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QIcon, QColor
-from PySide6.QtWidgets import QWidget, QToolBar, QStackedWidget, QLabel, QHBoxLayout
+from PySide6.QtGui import QIcon, QColor, QPalette
+from PySide6.QtWidgets import (
+    QWidget,
+    QToolBar,
+    QStackedWidget,
+    QLabel,
+    QHBoxLayout,
+    QApplication,
+)
 
 from caqtus.session import (
     ExperimentSessionMaker,
@@ -107,10 +114,13 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         self.tool_bar = QToolBar(self)
         self.status_widget = IconLabel(icon_position="left")
+
         self.warning_action = self.tool_bar.addAction(
             get_icon("mdi6.alert", color=QColor(205, 22, 17)), "warning"
         )
         self.warning_action.triggered.connect(self._on_warning_action_triggered)
+        self.warning_action.setToolTip("Error")
+
         self.tool_bar.addWidget(self.status_widget)
         self.start_sequence_action = self.tool_bar.addAction(
             get_icon("start", color=Qt.GlobalColor.darkGreen), "start"
@@ -199,12 +209,6 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                     self.tabWidget.setTabEnabled(0, True)
                     if isinstance(new_state, _SequenceCrashedState):
                         self.warning_action.setVisible(True)
-                        msg = (
-                            new_state.exception_traceback.exc_type
-                            if new_state.exception_traceback
-                            else ""
-                        )
-                        self.warning_action.setToolTip(msg)
                     else:
                         self.warning_action.setVisible(False)
 
@@ -216,8 +220,10 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
         assert isinstance(self._state, _SequenceCrashedState)
 
+        color = QApplication.palette().color(QPalette.ColorRole.Accent).name()
         self._exception_dialog.set_message(
-            f"An error occurred while running the sequence {self._state.sequence_path}"
+            f"An error occurred while running the sequence "
+            f"<b><font color='{color}'>{self._state.sequence_path}</font></b>."
         )
         traceback = self._state.exception_traceback
         self._exception_dialog.set_exception(traceback)
