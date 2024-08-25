@@ -257,24 +257,24 @@ class ShotManager:
     async def _compile_shot(
         self, shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
     ) -> DeviceParameters:
-        for instrument in self._instruments:
-            instrument.before_shot_compiled(shot_parameters)
         try:
+            for instrument in self._instruments:
+                instrument.before_shot_compiled(shot_parameters)
             compiled, shot_duration = await shot_compiler.compile_shot(
                 shot_parameters.parameters
             )
+            result = DeviceParameters(
+                index=shot_parameters.index,
+                shot_parameters=shot_parameters.parameters,
+                device_parameters=compiled,
+                timeout=shot_duration + 2,
+            )
+            for instrument in self._instruments:
+                instrument.after_shot_compiled(result)
         except Exception as e:
             raise ShotCompilationError(
                 fmt("An error occurred while compiling {:shot}", shot_parameters.index)
             ) from e
-        result = DeviceParameters(
-            index=shot_parameters.index,
-            shot_parameters=shot_parameters.parameters,
-            device_parameters=compiled,
-            timeout=shot_duration + 2,
-        )
-        for instrument in self._instruments:
-            instrument.after_shot_compiled(result)
         return result
 
 

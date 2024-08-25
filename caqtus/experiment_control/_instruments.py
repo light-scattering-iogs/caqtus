@@ -24,6 +24,9 @@ class Instrument(Protocol):
     def before_shot_compiled(self, shot_parameters: ShotParameters) -> None:
         """Called just before a shot is compiled.
 
+        Exception raised in this method will be handled as if they were raised during
+        the compilation of the shot.
+
         Args:
             shot_parameters: The parameters used to compile the shot.
         """
@@ -32,6 +35,9 @@ class Instrument(Protocol):
 
     def after_shot_compiled(self, device_parameters: DeviceParameters) -> None:
         """Called just after a shot is compiled.
+
+        Exception raised in this method will be handled as if they were raised during
+        the compilation of the shot.
 
         Args:
             device_parameters: The parameters used to compile the shot.
