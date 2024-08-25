@@ -9,13 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ._path_table import SQLSequencePath
-from .._return_or_raise import unwrap, is_success
 from .._path import PureSequencePath
 from .._path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
     PathHierarchy,
 )
+from .._return_or_raise import unwrap, is_success
 from .._sequence_collection import PathIsSequenceError
 
 if TYPE_CHECKING:
@@ -163,4 +163,4 @@ def _query_path_model(
     if found := result.scalar():
         return Success(found)
     else:
-        return Failure(PathNotFoundError(path))
+        return Failure(PathNotFoundError(f'Path "{path}" does not exists'))

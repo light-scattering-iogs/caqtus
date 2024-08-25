@@ -14,10 +14,10 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
-from .. import TracebackSummary
+from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._return_or_raise import unwrap
-from .._sequence_collection import PathIsNotSequenceError
+from .._sequence_collection import PathIsNotSequenceError, PathNotFoundError
 from .._state import State
 
 if TYPE_CHECKING:
@@ -50,9 +50,22 @@ class Sequence:
     session: ExperimentSession
 
     def __attrs_post_init__(self):
-        is_sequence = unwrap(self.session.sequences.is_sequence(self.path))
-        if not is_sequence:
-            raise PathIsNotSequenceError(self.path)
+        try:
+            is_sequence = unwrap(self.session.sequences.is_sequence(self.path))
+        except PathNotFoundError as e:
+            import difflib
+
+            sequences = self.session.sequences.get_contained_sequences(
+                PureSequencePath.root()
+            )
+            paths = [str(sequence) for sequence in sequences]
+            similar_paths = difflib.get_close_matches(str(self.path), paths)
+            if similar_paths:
+                e.add_note(f'Perhaps you meant: "{similar_paths[0]}"')
+            raise e
+        else:
+            if not is_sequence:
+                raise PathIsNotSequenceError(self.path)
 
     @classmethod
     def create(

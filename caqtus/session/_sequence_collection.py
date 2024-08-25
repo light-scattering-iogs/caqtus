@@ -93,7 +93,7 @@ class SequenceCollection(Protocol):
 
     @abc.abstractmethod
     def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
-        """Return the children of this path that are sequences, including this path.
+        """Return the descendants of this path that are sequences, including this path.
 
         Return:
             A list of all sequences inside this path and all its descendants.
