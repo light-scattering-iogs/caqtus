@@ -150,4 +150,4 @@ exclude_lines = [
 enable_incomplete_feature = "NewGenericSyntax"
 
 [tool.ruff.lint]
-select = ["NPY201"]
+extend-select = ["NPY201"]
