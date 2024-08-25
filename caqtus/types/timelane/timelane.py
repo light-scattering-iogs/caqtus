@@ -76,7 +76,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
 
         values_list = list(values)
         spanned_values = []
-        for value, group in itertools.groupby(values_list, key=id):
+        for _, group in itertools.groupby(values_list, key=id):
             g = list(group)
             spanned_values.append((g[0], Span(len(g))))
         self._spanned_values = spanned_values

@@ -1,8 +1,8 @@
 from typing import assert_never
 
 import attrs
-from caqtus.types.expression import Expression
 
+from caqtus.types.expression import Expression
 from caqtus.utils import serialization
 from .timelane import TimeLane
 
@@ -49,8 +49,10 @@ class AnalogTimeLane(TimeLane[Expression | Ramp]):
     should enforce them:
 
     #. A ramp should not be the first or last value of the lane.
-    #. There should not be two consecutive ramps in the lane. Use a single ramp block spanning multiple steps instead.
-    #. Expressions representing values with units should all have the same dimension for a given lane.
+    #. There should not be two consecutive ramps in the lane. Use a single ramp block
+        spanning multiple steps instead.
+    #. Expressions representing values with units should all have the same dimension
+        for a given lane.
 
     Examples:
 
