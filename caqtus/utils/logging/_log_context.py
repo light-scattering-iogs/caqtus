@@ -17,10 +17,10 @@ def log_cm_decorator(logger: logging.Logger, level: int = logging.DEBUG):
         @functools.wraps(func)
         @contextlib.contextmanager
         def wrapper(*args: _P.args, **kwargs: _P.kwargs):
-            logger.log(level, f"Enter cm: %s.", func.__name__)
+            logger.log(level, "Enter cm: %s.", func.__name__)
             with func(*args, **kwargs) as cm:
                 yield cm
-            logger.log(level, f"Exit  cm: %s.", func.__name__)
+            logger.log(level, "Exit  cm: %s.", func.__name__)
 
         return wrapper
 
@@ -36,10 +36,10 @@ def log_async_cm_decorator(logger: logging.Logger, level: int = logging.DEBUG):
         @functools.wraps(func)
         @contextlib.asynccontextmanager
         async def wrapper(*args: _P.args, **kwargs: _P.kwargs):
-            logger.log(level, f"Enter cm: %s.", func.__name__)
+            logger.log(level, "Enter cm: %s.", func.__name__)
             async with func(*args, **kwargs) as cm:
                 yield cm
-            logger.log(level, f"Exit  cm: %s.", func.__name__)
+            logger.log(level, "Exit  cm: %s.", func.__name__)
 
         return wrapper
 
@@ -61,4 +61,4 @@ async def log_async_cm(
         async with cm as value:
             yield value
     finally:
-        logger.log(level, f"Exit  cm: %s.", to_print)
+        logger.log(level, "Exit  cm: %s.", to_print)
