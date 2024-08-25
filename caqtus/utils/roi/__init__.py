@@ -14,6 +14,7 @@ from caqtus.types.image.roi import (
 warnings.warn(
     "caqtus.utils.roi is deprecated, use caqtus.types.image instead.",
     DeprecationWarning,
+    stacklevel=2,
 )
 
 
