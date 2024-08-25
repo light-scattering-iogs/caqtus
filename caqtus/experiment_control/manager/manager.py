@@ -267,8 +267,8 @@ class BoundProcedure(Procedure):
         self._sequences: list[PureSequencePath] = []
         self._acquisition_timeout = acquisition_timeout if acquisition_timeout else -1
         self._shot_retry_config = shot_retry_config
-        self._must_interrupt = threading.Event()
         self._device_manager_extension = device_manager_extension
+        self._cancel_scope: Optional[anyio.CancelScope] = None
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -316,7 +316,6 @@ class BoundProcedure(Procedure):
             raise exception
         if self.is_running_sequence():
             raise SequenceAlreadyRunningError("A sequence is already running.")
-        self._must_interrupt.clear()
         self._sequence_future = self._thread_pool.submit(
             self._run_sequence,
             sequence,
@@ -328,7 +327,8 @@ class BoundProcedure(Procedure):
     def interrupt_sequence(self) -> bool:
         if not self.is_running_sequence():
             return False
-        self._must_interrupt.set()
+        assert self._cancel_scope is not None
+        self._cancel_scope.cancel()
         return True
 
     def wait_until_sequence_finished(self):
@@ -344,19 +344,20 @@ class BoundProcedure(Procedure):
         ] = None,
     ) -> None:
         async def run():
-            await run_sequence(
-                sequence=sequence,
-                session_maker=self._session_maker,
-                interruption_event=self._must_interrupt,
-                shot_retry_config=self._shot_retry_config,
-                global_parameters=global_parameters,
-                device_configurations=device_configurations,
-                device_manager_extension=self._device_manager_extension,
-                shot_runner_factory=create_shot_runner,
-                shot_compiler_factory=create_shot_compiler,
-            )
+            with anyio.CancelScope() as self._cancel_scope:
+                await run_sequence(
+                    sequence=sequence,
+                    session_maker=self._session_maker,
+                    shot_retry_config=self._shot_retry_config,
+                    global_parameters=global_parameters,
+                    device_configurations=device_configurations,
+                    device_manager_extension=self._device_manager_extension,
+                    shot_runner_factory=create_shot_runner,
+                    shot_compiler_factory=create_shot_compiler,
+                )
 
         anyio.run(run, backend="trio")
+        self._cancel_scope = None
 
     def __exit__(self, exc_type, exc_value, traceback):
         error_occurred = exc_value is not None
@@ -381,8 +382,4 @@ class SequenceAlreadyRunningError(RuntimeError):
 
 
 class ProcedureNotActiveError(RuntimeError):
-    pass
-
-
-class ErrorWhileRunningSequence(RuntimeError):
     pass

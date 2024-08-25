@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 import copy
 import logging
-import threading
 from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
@@ -24,10 +23,7 @@ from caqtus.shot_compilation import (
 )
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.types.recoverable_exceptions import (
-    SequenceInterruptedException,
-    split_recoverable,
-)
+from caqtus.types.recoverable_exceptions import split_recoverable
 from .sequence_runner import execute_steps, evaluate_initial_context
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
@@ -42,7 +38,6 @@ logger = logging.getLogger(__name__)
 async def run_sequence(
     sequence: PureSequencePath,
     session_maker: ExperimentSessionMaker,
-    interruption_event: threading.Event,
     shot_retry_config: Optional[ShotRetryConfig],
     global_parameters: Optional[ParameterNamespace],
     device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
@@ -58,11 +53,6 @@ async def run_sequence(
 
         session_maker: A factory for creating experiment sessions.
             This is used to connect to the storage in which to find the sequence.
-
-        interruption_event: An event that is set to interrupt the sequence.
-            When this event is set, the sequence manager will attempt to stop the
-            sequence as soon as possible.
-            Note that a shot that is currently running will not be interrupted.
 
         shot_retry_config: Specifies how to retry a shot if an error occurs.
             If an error occurs when the shot runner is running a shot, it will be caught
@@ -94,7 +84,6 @@ async def run_sequence(
     sequence_manager = SequenceManager(
         sequence=sequence,
         session_maker=session_maker,
-        interruption_event=interruption_event,
         shot_retry_config=shot_retry_config,
         global_parameters=global_parameters,
         device_configurations=device_configurations,
@@ -113,7 +102,6 @@ class SequenceManager:
         self,
         sequence: PureSequencePath,
         session_maker: ExperimentSessionMaker,
-        interruption_event: threading.Event,
         shot_retry_config: Optional[ShotRetryConfig],
         global_parameters: Optional[ParameterNamespace],
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
@@ -137,12 +125,9 @@ class SequenceManager:
                 self.sequence_parameters = copy.deepcopy(global_parameters)
             self.time_lanes = session.sequences.get_time_lanes(self._sequence_path)
 
-        self._interruption_event = interruption_event
-
         self._device_manager_extension = device_manager_extension
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
-        self._watch_for_interruption_scope = anyio.CancelScope()
         self._shot_runner_factory = shot_runner_factory
         self._shot_compiler_factory = shot_compiler_factory
         self._instruments = instruments
@@ -197,11 +182,11 @@ class SequenceManager:
                     anyio.create_task_group() as tg,
                     scheduler_cm as scheduler,
                 ):
-                    tg.start_soon(self._watch_for_interruption)
                     tg.start_soon(self._store_shots, data_stream_cm)
                     yield scheduler
-        except* SequenceInterruptedException:
+        except* anyio.get_cancelled_exc_class():
             self._set_sequence_state(State.INTERRUPTED)
+            raise
         except* BaseException as e:
             self._set_sequence_state(State.CRASHED)
             recoverable, non_recoverable = split_recoverable(e)
@@ -234,16 +219,6 @@ class SequenceManager:
         with self._session_maker() as session:
             session.sequences.set_state(self._sequence_path, state)
 
-    async def _watch_for_interruption(self):
-        with self._watch_for_interruption_scope:
-            while True:
-                if self._interruption_event.is_set():
-                    raise SequenceInterruptedException(
-                        f"Sequence '{self._sequence_path}' received an external "
-                        f"interruption signal."
-                    )
-                await anyio.sleep(20e-3)
-
     async def _store_shots(
         self,
         data_stream_cm: contextlib.AbstractAsyncContextManager[AsyncIterable[ShotData]],
@@ -251,7 +226,6 @@ class SequenceManager:
         async with data_stream_cm as shots_data:
             async for shot_data in shots_data:
                 self._store_shot(shot_data)
-        self._watch_for_interruption_scope.cancel()
 
     def _store_shot(self, shot_data: ShotData) -> None:
         params = {
