@@ -7,8 +7,6 @@ from collections.abc import Mapping, AsyncGenerator, AsyncIterable
 from typing import Optional
 
 import anyio
-import anyio.to_process
-import anyio.to_thread
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.session import (
