@@ -5,7 +5,10 @@ from typing import Any
 import anyio
 
 from caqtus.device import DeviceName
-from caqtus.experiment_control._shot_compiler import ShotCompilerProtocol
+from caqtus.experiment_control._shot_compiler import (
+    ShotCompilerProtocol,
+    ShotCompilerFactory,
+)
 from caqtus.experiment_control._shot_primitives import DeviceParameters, ShotParameters
 from caqtus.experiment_control._shot_runner import ShotRunnerProtocol, ShotRunnerFactory
 from caqtus.experiment_control.device_manager_extension import DeviceManagerExtension
@@ -176,5 +179,67 @@ async def test_sequence_execution_error(anyio_backend, session_maker, draft_sequ
         sequence = session.get_sequence(draft_sequence)
         assert sequence.get_state() == State.CRASHED
         assert len(list(sequence.get_shots())) == 7
+        tb_summary = sequence.get_traceback_summary()
+        assert tb_summary is not None
+
+
+class FailingShotCompiler(ShotCompilerProtocol):
+    def __init__(
+        self,
+        shot_compiler: ShotCompilerProtocol,
+        shot_to_fail: int,
+        exception: Exception,
+    ):
+        self.shot_compiler = shot_compiler
+        self.shot_to_fail = shot_to_fail
+        self.exception = exception
+
+    def compile_initialization_parameters(
+        self,
+    ) -> Mapping[DeviceName, Mapping[str, Any]]:
+        return self.shot_compiler.compile_initialization_parameters()
+
+    async def compile_shot(
+        self, shot_parameters: ShotParameters
+    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
+        if shot_parameters.index == self.shot_to_fail:
+            raise self.exception
+        return await self.shot_compiler.compile_shot(shot_parameters)
+
+    @classmethod
+    def create(
+        cls,
+        compiler_factory: ShotCompilerFactory,
+        shot_to_fail: int,
+        exception: Exception,
+    ):
+        def _create(sequence_context, device_manager_extension):
+            return cls(
+                compiler_factory(sequence_context, device_manager_extension),
+                shot_to_fail,
+                exception,
+            )
+
+        return _create
+
+
+async def test_sequence_compilation_error(anyio_backend, session_maker, draft_sequence):
+    await run_sequence(
+        draft_sequence,
+        session_maker,
+        None,
+        None,
+        None,
+        DeviceManagerExtension(),
+        ShotRunnerMock.create,
+        FailingShotCompiler.create(
+            ShotCompilerMock.create, 7, InvalidValueError("Error")
+        ),
+    )
+
+    with session_maker.session() as session:
+        sequence = session.get_sequence(draft_sequence)
+        assert sequence.get_state() == State.CRASHED
+        assert len(list(sequence.get_shots())) <= 7
         tb_summary = sequence.get_traceback_summary()
         assert tb_summary is not None
