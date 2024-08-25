@@ -7,7 +7,7 @@ import logging
 import warnings
 import weakref
 from collections.abc import AsyncIterable, Awaitable, Callable
-from typing import Mapping, Any, TypeVar
+from typing import TypeVar
 
 import anyio
 import attrs
@@ -15,15 +15,14 @@ import tblib.pickling_support
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
-from caqtus.device import DeviceName
 from caqtus.device._controller import DeviceException
 from caqtus.formatter import fmt
 from caqtus.shot_compilation import VariableNamespace
-from caqtus.types.data import DataLabel, Data
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 from .._async_utils import task_group_with_error_message
 from .._shot_compiler import ShotCompilerProtocol
+from .._shot_primitives import DeviceParameters, ShotData, ShotParameters
 from .._shot_runner import ShotRunnerProtocol
 
 logger = logging.getLogger(__name__)
@@ -329,35 +328,6 @@ def retry_condition(
         )
 
     return _retry_condition
-
-
-@attrs.frozen(order=True)
-class ShotParameters:
-    """Holds information necessary to compile a shot."""
-
-    index: int
-    parameters: VariableNamespace = attrs.field(eq=False)
-
-
-@attrs.frozen(order=True)
-class DeviceParameters:
-    """Holds information necessary to run a shot."""
-
-    index: int
-    shot_parameters: VariableNamespace = attrs.field(eq=False)
-    device_parameters: Mapping[DeviceName, Mapping[str, Any]] = attrs.field(eq=False)
-    timeout: float = attrs.field()
-
-
-@attrs.frozen(order=True)
-class ShotData:
-    """Holds information necessary to store a shot."""
-
-    index: int
-    start_time: datetime.datetime = attrs.field(eq=False)
-    end_time: datetime.datetime = attrs.field(eq=False)
-    variables: VariableNamespace = attrs.field(eq=False)
-    data: Mapping[DataLabel, Data] = attrs.field(eq=False)
 
 
 async def _compile_shot(
