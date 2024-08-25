@@ -33,6 +33,11 @@ class ShotRunnerMock(ShotRunnerProtocol):
 
 
 class ShotCompilerMock(ShotCompilerProtocol):
+    def compile_initialization_parameters(
+        self,
+    ) -> Mapping[DeviceName, Mapping[str, Any]]:
+        return {DeviceName("device"): {"param": 0}}
+
     def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
