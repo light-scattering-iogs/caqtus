@@ -209,7 +209,7 @@ class ShotManager:
         ):
             shot_execution_queue = ShotExecutionSorter(device_parameters_send_stream)
             async with shot_params_receive_stream:
-                for i in range(4):
+                for _ in range(4):
                     await tg.start(
                         self._compile_shots,
                         shot_compiler,
@@ -439,5 +439,5 @@ async def send_fast(
             "The data consumer can't keep up, which might cause a slowdown of the "
             "experiment."
         )
-        warnings.warn(message)
+        warnings.warn(message, stacklevel=2)
         logger.warning(message)
