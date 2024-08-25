@@ -5,11 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### [6.3.0] - Unreleased
+
+### Added
+
+- `caqtus.session.Sequence` will suggest a path if the specified path does not exist
+- Possibility to start a sequence with the *F5* key
+- Function `caqtus.experiment.upgrade_database` to initialize and upgrade the database
+  schema
+
+### Changed
+
+- User errors are now saved in the sequence and can be displayed at any time in the
+  sequence editor
+
 ### [6.2.1] - 2024-08-23
 
 ### Fixed
 
-- Bug were cancelled exceptions were not correctly handled if an error occurs while controlling a device
+- Bug were cancelled exceptions were not correctly handled if an error occurs while
+  controlling a device
 
 ## [6.2.0] - 2024-08-22
 
@@ -41,8 +56,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Sequencers can now interrupt their sequence if an error occurs after the sequence has been started.
-- Device proxy know use an async converter object to call underlying device methods instead of a rpc client.
+- Sequencers can now interrupt their sequence if an error occurs after the sequence has
+  been started.
+- Device proxy know use an async converter object to call underlying device methods
+  instead of a rpc client.
 
 ## [5.5.0] - 2024-08-20
 
