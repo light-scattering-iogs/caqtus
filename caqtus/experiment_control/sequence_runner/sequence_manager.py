@@ -22,11 +22,13 @@ from caqtus.shot_compilation import (
     DeviceCompiler,
     SequenceContext,
 )
+from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import (
     SequenceInterruptedException,
     split_recoverable,
 )
+from .sequence_runner import execute_steps, evaluate_initial_context
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
 from .._shot_compiler import ShotCompilerFactory
@@ -34,6 +36,39 @@ from .._shot_runner import ShotRunnerFactory
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 
 logger = logging.getLogger(__name__)
+
+
+async def run_sequence(
+    sequence: PureSequencePath,
+    session_maker: ExperimentSessionMaker,
+    interruption_event: threading.Event,
+    shot_retry_config: Optional[ShotRetryConfig],
+    global_parameters: Optional[ParameterNamespace],
+    device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
+    device_manager_extension: DeviceManagerExtensionProtocol,
+    shot_runner_factory: ShotRunnerFactory,
+    shot_compiler_factory: ShotCompilerFactory,
+) -> None:
+    """Run a sequence."""
+
+    with session_maker.session() as session:
+        iteration = session.sequences.get_iteration_configuration(sequence)
+    if not isinstance(iteration, StepsConfiguration):
+        raise NotImplementedError("Only steps iteration is supported at the moment.")
+    sequence_manager = SequenceManager(
+        sequence=sequence,
+        session_maker=session_maker,
+        interruption_event=interruption_event,
+        shot_retry_config=shot_retry_config,
+        global_parameters=global_parameters,
+        device_configurations=device_configurations,
+        device_manager_extension=device_manager_extension,
+        shot_runner_factory=shot_runner_factory,
+        shot_compiler_factory=shot_compiler_factory,
+    )
+    initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
+    async with sequence_manager.run_sequence() as shot_scheduler:
+        await execute_steps(iteration.steps, initial_context, shot_scheduler)
 
 
 class SequenceManager:

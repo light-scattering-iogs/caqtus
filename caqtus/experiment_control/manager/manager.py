@@ -17,14 +17,12 @@ from caqtus.session import (
     ExperimentSession,
     State,
 )
-from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
-from caqtus.types.recoverable_exceptions import split_recoverable
 from .._shot_compiler import create_shot_compiler
 from .._shot_runner import create_shot_runner
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ..sequence_runner import SequenceManager, ShotRetryConfig
-from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
+from ..sequence_runner import ShotRetryConfig
+from ..sequence_runner.sequence_manager import run_sequence
 
 logger = logging.getLogger(__name__)
 
@@ -345,11 +343,8 @@ class BoundProcedure(Procedure):
             Mapping[DeviceName, DeviceConfiguration]
         ] = None,
     ) -> None:
-        with self._session_maker() as session:
-            iteration = session.sequences.get_iteration_configuration(sequence)
-
         async def run():
-            sequence_manager = SequenceManager(
+            await run_sequence(
                 sequence=sequence,
                 session_maker=self._session_maker,
                 interruption_event=self._must_interrupt,
@@ -360,15 +355,6 @@ class BoundProcedure(Procedure):
                 shot_runner_factory=create_shot_runner,
                 shot_compiler_factory=create_shot_compiler,
             )
-            if not isinstance(iteration, StepsConfiguration):
-                raise NotImplementedError(
-                    "Only steps iteration is supported at the moment."
-                )
-            initial_context = evaluate_initial_context(
-                sequence_manager.sequence_parameters
-            )
-            async with sequence_manager.run_sequence() as shot_scheduler:
-                await execute_steps(iteration.steps, initial_context, shot_scheduler)
 
         anyio.run(run, backend="trio")
 
