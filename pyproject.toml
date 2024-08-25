@@ -150,4 +150,4 @@ exclude_lines = [
 enable_incomplete_feature = "NewGenericSyntax"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "N", "B", "NPY", "ASYNC"]
+select = ["E", "F", "W", "N", "B", "NPY", "ASYNC", "LOG"]
