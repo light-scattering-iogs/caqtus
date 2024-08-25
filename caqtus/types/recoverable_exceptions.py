@@ -124,12 +124,6 @@ class ShotAttemptsExceededError(RecoverableException, ExceptionGroup):
         return ShotAttemptsExceededError(self.message, excs)
 
 
-class SequenceInterruptedException(RecoverableException):
-    """Raised when a sequence is interrupted by the user before it finishes."""
-
-    pass
-
-
 class EvaluationError(RecoverableException):
     """Raised when an error occurs during the evaluation of an expression.
 
@@ -151,7 +145,6 @@ tblib.pickling_support.install(
     InvalidValueError,
     ConnectionFailedError,
     ShotAttemptsExceededError,
-    SequenceInterruptedException,
     EvaluationError,
     NotDefinedUnitError,
 )
