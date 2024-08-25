@@ -31,6 +31,7 @@ from caqtus.types.recoverable_exceptions import (
 from .sequence_runner import execute_steps, evaluate_initial_context
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
+from .._instruments import Instrument
 from .._shot_compiler import ShotCompilerFactory
 from .._shot_runner import ShotRunnerFactory
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -48,8 +49,43 @@ async def run_sequence(
     device_manager_extension: DeviceManagerExtensionProtocol,
     shot_runner_factory: ShotRunnerFactory,
     shot_compiler_factory: ShotCompilerFactory,
+    instruments: Optional[list[Instrument]] = None,
 ) -> None:
-    """Run a sequence."""
+    """Manages the execution of a sequence.
+
+    Args:
+        sequence: The sequence to run.
+
+        session_maker: A factory for creating experiment sessions.
+            This is used to connect to the storage in which to find the sequence.
+
+        interruption_event: An event that is set to interrupt the sequence.
+            When this event is set, the sequence manager will attempt to stop the
+            sequence as soon as possible.
+            Note that a shot that is currently running will not be interrupted.
+
+        shot_retry_config: Specifies how to retry a shot if an error occurs.
+            If an error occurs when the shot runner is running a shot, it will be caught
+            by the sequence manager and the shot will be retried according to the
+            configuration in this object.
+
+        global_parameters: The global parameters to use to run the sequence.
+            If None, the sequence manager will use the default global parameters stored
+            in the session.
+
+        device_configurations: The device configurations to use to run the sequence.
+            If None, the sequence manager will use the default device configurations.
+
+        device_manager_extension: Used to instantiate the device components.
+
+        shot_runner_factory: A function that can be used to create an object to run
+            shots.
+
+        shot_compiler_factory: A function that can be used to create an object to
+            compile shots.
+
+        instruments: The instruments to use to register events during the sequence.
+    """
 
     with session_maker.session() as session:
         iteration = session.sequences.get_iteration_configuration(sequence)
@@ -65,6 +101,7 @@ async def run_sequence(
         device_manager_extension=device_manager_extension,
         shot_runner_factory=shot_runner_factory,
         shot_compiler_factory=shot_compiler_factory,
+        instruments=instruments or [],
     )
     initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
     async with sequence_manager.run_sequence() as shot_scheduler:
@@ -72,26 +109,6 @@ async def run_sequence(
 
 
 class SequenceManager:
-    """Manages the execution of a sequence.
-
-    Args:
-        sequence: The sequence to run.
-        session_maker: A factory for creating experiment sessions.
-        This is used to connect to the storage in which to find the sequence.
-        interruption_event: An event that is set to interrupt the sequence.
-        When this event is set, the sequence manager will attempt to stop the sequence
-        as soon as possible.
-        Note that the sequence manager cannot interrupt a shot that is currently
-        running, but will wait for it to finish.
-        shot_retry_config: Specifies how to retry a shot if an error occurs.
-        If an error occurs when the shot runner is running a shot, it will be caught
-        by the sequence manager and the shot will be retried according to the
-        configuration in this object.
-        device_configurations: The device configurations to use to
-        run the sequence.
-        If None, the sequence manager will use the default device configurations.
-    """
-
     def __init__(
         self,
         sequence: PureSequencePath,
@@ -103,6 +120,7 @@ class SequenceManager:
         device_manager_extension: DeviceManagerExtensionProtocol,
         shot_runner_factory: ShotRunnerFactory,
         shot_compiler_factory: ShotCompilerFactory,
+        instruments: list[Instrument],
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence
@@ -127,6 +145,7 @@ class SequenceManager:
         self._watch_for_interruption_scope = anyio.CancelScope()
         self._shot_runner_factory = shot_runner_factory
         self._shot_compiler_factory = shot_compiler_factory
+        self._instruments = instruments
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[ShotScheduler, None]:
@@ -163,7 +182,12 @@ class SequenceManager:
                 self._shot_runner_factory(
                     sequence_context, shot_compiler, self._device_manager_extension
                 ) as shot_runner,
-                ShotManager(shot_runner, shot_compiler, self._shot_retry_config) as (
+                ShotManager(
+                    shot_runner,
+                    shot_compiler,
+                    self._shot_retry_config,
+                    self._instruments,
+                ) as (
                     scheduler_cm,
                     data_stream_cm,
                 ),

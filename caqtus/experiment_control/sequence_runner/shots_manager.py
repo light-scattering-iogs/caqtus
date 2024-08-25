@@ -21,6 +21,7 @@ from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 from .._async_utils import task_group_with_error_message
+from .._instruments import Instrument
 from .._shot_compiler import ShotCompilerProtocol
 from .._shot_primitives import DeviceParameters, ShotData, ShotParameters
 from .._shot_runner import ShotRunnerProtocol
@@ -86,12 +87,14 @@ class ShotManager:
         shot_runner: ShotRunnerProtocol,
         shot_compiler: ShotCompilerProtocol,
         shot_retry_config: ShotRetryConfig,
+        instruments: list[Instrument],
     ):
         self._shot_runner = shot_runner
         self._shot_compiler = shot_compiler
         self._shot_retry_config = shot_retry_config
 
         self._exit_stack = contextlib.AsyncExitStack()
+        self._instruments = instruments
 
     async def __aenter__(
         self,
@@ -190,7 +193,7 @@ class ShotManager:
         async with _log_async_cm(
             self._shot_parameters_send_stream, name="shot_parameters_input_stream"
         ):
-            yield ShotScheduler(self._shot_parameters_send_stream)
+            yield ShotScheduler(self._shot_parameters_send_stream, self._instruments)
 
     async def compile_shots(
         self,
@@ -217,8 +220,8 @@ class ShotManager:
                     )
             task_status.started()
 
-    @staticmethod
     async def _compile_shots(
+        self,
         shot_compiler: ShotCompilerProtocol,
         shot_params_receive_stream: MemoryObjectReceiveStream[ShotParameters],
         shot_execution_queue: ShotExecutionSorter,
@@ -231,7 +234,7 @@ class ShotManager:
             async with shot_params_receive_stream:
                 task_status.started()
                 async for shot_params in shot_params_receive_stream:
-                    result = await _compile_shot(shot_params, shot_compiler)
+                    result = await self._compile_shot(shot_params, shot_compiler)
                     logger.debug(
                         "Pushing shot %d to execution queue.", shot_params.index
                     )
@@ -240,12 +243,39 @@ class ShotManager:
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
     ) -> ShotData:
-
-        return await _run_shot_with_retry(
+        for instrument in self._instruments:
+            instrument.before_shot_started(device_parameters)
+        data = await _run_shot_with_retry(
             functools.partial(run_shot, device_parameters, shot_runner),
             retry_condition(self._shot_retry_config.exceptions_to_retry),
             self._shot_retry_config.number_of_attempts,
         )
+        for instrument in self._instruments:
+            instrument.after_shot_finished(data)
+        return data
+
+    async def _compile_shot(
+        self, shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
+    ) -> DeviceParameters:
+        for instrument in self._instruments:
+            instrument.before_shot_compiled(shot_parameters)
+        try:
+            compiled, shot_duration = await shot_compiler.compile_shot(
+                shot_parameters.parameters
+            )
+        except Exception as e:
+            raise ShotCompilationError(
+                fmt("An error occurred while compiling {:shot}", shot_parameters.index)
+            ) from e
+        result = DeviceParameters(
+            index=shot_parameters.index,
+            shot_parameters=shot_parameters.parameters,
+            device_parameters=compiled,
+            timeout=shot_duration + 2,
+        )
+        for instrument in self._instruments:
+            instrument.after_shot_compiled(result)
+        return result
 
 
 async def run_shot(
@@ -330,25 +360,6 @@ def retry_condition(
     return _retry_condition
 
 
-async def _compile_shot(
-    shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
-) -> DeviceParameters:
-    try:
-        compiled, shot_duration = await shot_compiler.compile_shot(
-            shot_parameters.parameters
-        )
-    except Exception as e:
-        raise ShotCompilationError(
-            fmt("An error occurred while compiling {:shot}", shot_parameters.index)
-        ) from e
-    return DeviceParameters(
-        index=shot_parameters.index,
-        shot_parameters=shot_parameters.parameters,
-        device_parameters=compiled,
-        timeout=shot_duration + 2,
-    )
-
-
 @tblib.pickling_support.install
 class ShotCompilationError(RuntimeError):
     """Error raised when an error occurs while compiling a shot."""
@@ -376,10 +387,13 @@ class ShotRetryConfig:
 
 class ShotScheduler:
     def __init__(
-        self, shot_parameters_input_stream: MemoryObjectSendStream[ShotParameters]
+        self,
+        shot_parameters_input_stream: MemoryObjectSendStream[ShotParameters],
+        instruments: list[Instrument],
     ):
         self._shot_parameters_input_stream = shot_parameters_input_stream
         self._current_shot = 0
+        self._instruments = instruments
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
@@ -387,6 +401,8 @@ class ShotScheduler:
         )
         with contextlib.suppress(anyio.BrokenResourceError):
             await self._shot_parameters_input_stream.send(shot_parameters)
+            for instrument in self._instruments:
+                instrument.after_shot_scheduled(shot_parameters)
         self._current_shot += 1
 
 
