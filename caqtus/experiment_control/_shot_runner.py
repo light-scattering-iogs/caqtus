@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import contextlib
 from collections.abc import Callable, AsyncGenerator
 from collections.abc import Mapping
@@ -20,6 +21,7 @@ from ..shot_compilation import SequenceContext
 class ShotRunnerProtocol(Protocol):
     """Interface for running a shot."""
 
+    @abc.abstractmethod
     async def run_shot(
         self, shot_parameters: DeviceParameters
     ) -> Mapping[DataLabel, Data]:

@@ -21,7 +21,6 @@ from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 from .._async_utils import task_group_with_error_message
-from .._instruments import Instrument
 from .._shot_compiler import ShotCompilerProtocol
 from .._shot_primitives import DeviceParameters, ShotData, ShotParameters
 from .._shot_runner import ShotRunnerProtocol
@@ -87,14 +86,12 @@ class ShotManager:
         shot_runner: ShotRunnerProtocol,
         shot_compiler: ShotCompilerProtocol,
         shot_retry_config: ShotRetryConfig,
-        instruments: list[Instrument],
     ):
         self._shot_runner = shot_runner
         self._shot_compiler = shot_compiler
         self._shot_retry_config = shot_retry_config
 
         self._exit_stack = contextlib.AsyncExitStack()
-        self._instruments = instruments
 
     async def __aenter__(
         self,
@@ -193,7 +190,7 @@ class ShotManager:
         async with _log_async_cm(
             self._shot_parameters_send_stream, name="shot_parameters_input_stream"
         ):
-            yield ShotScheduler(self._shot_parameters_send_stream, self._instruments)
+            yield ShotScheduler(self._shot_parameters_send_stream)
 
     async def compile_shots(
         self,
@@ -244,9 +241,7 @@ class ShotManager:
         self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
     ) -> ShotData:
         data = await _run_shot_with_retry(
-            functools.partial(
-                run_shot, device_parameters, shot_runner, self._instruments
-            ),
+            functools.partial(run_shot, device_parameters, shot_runner),
             retry_condition(self._shot_retry_config.exceptions_to_retry),
             self._shot_retry_config.number_of_attempts,
         )
@@ -256,8 +251,6 @@ class ShotManager:
         self, shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
     ) -> DeviceParameters:
         try:
-            for instrument in self._instruments:
-                instrument.before_shot_compiled(shot_parameters)
             compiled, shot_duration = await shot_compiler.compile_shot(shot_parameters)
             result = DeviceParameters(
                 index=shot_parameters.index,
@@ -265,8 +258,6 @@ class ShotManager:
                 device_parameters=compiled,
                 timeout=shot_duration + 2,
             )
-            for instrument in self._instruments:
-                instrument.after_shot_compiled(result)
         except Exception as e:
             raise ShotCompilationError(
                 fmt("An error occurred while compiling {:shot}", shot_parameters.index)
@@ -277,11 +268,8 @@ class ShotManager:
 async def run_shot(
     device_parameters: DeviceParameters,
     shot_runner: ShotRunnerProtocol,
-    instruments: list[Instrument],
 ) -> ShotData:
     start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-    for instrument in instruments:
-        instrument.before_shot_started(device_parameters)
     data = await shot_runner.run_shot(device_parameters)
     end_time = datetime.datetime.now(tz=datetime.timezone.utc)
     data = ShotData(
@@ -291,8 +279,6 @@ async def run_shot(
         variables=device_parameters.shot_parameters,
         data=data,
     )
-    for instrument in instruments:
-        instrument.after_shot_finished(data)
     return data
 
 
@@ -390,11 +376,9 @@ class ShotScheduler:
     def __init__(
         self,
         shot_parameters_input_stream: MemoryObjectSendStream[ShotParameters],
-        instruments: list[Instrument],
     ):
         self._shot_parameters_input_stream = shot_parameters_input_stream
         self._current_shot = 0
-        self._instruments = instruments
 
     async def schedule_shot(self, shot_variables: VariableNamespace) -> None:
         shot_parameters = ShotParameters(
@@ -402,8 +386,6 @@ class ShotScheduler:
         )
         with contextlib.suppress(anyio.BrokenResourceError):
             await self._shot_parameters_input_stream.send(shot_parameters)
-            for instrument in self._instruments:
-                instrument.after_shot_scheduled(shot_parameters)
         self._current_shot += 1
 
 

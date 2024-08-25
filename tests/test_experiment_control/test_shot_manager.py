@@ -68,7 +68,7 @@ async def test_success(anyio_backend):
         return shot_results
 
     async with (
-        ShotManager(ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig(), []) as (
+        ShotManager(ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()) as (
             scheduler_cm,
             data_stream_cm,
         ),
@@ -97,9 +97,7 @@ async def test_consumption_failure(anyio_backend):
 
     try:
         async with (
-            ShotManager(
-                ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig(), []
-            ) as (
+            ShotManager(ShotRunnerMock(), ShotCompilerMock(), ShotRetryConfig()) as (
                 scheduler_cm,
                 data_stream_cm,
             ),

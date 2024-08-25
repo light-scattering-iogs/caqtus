@@ -25,7 +25,6 @@ from caqtus.types.recoverable_exceptions import split_recoverable
 from .sequence_runner import execute_steps, evaluate_initial_context
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
-from .._instruments import Instrument
 from .._shot_compiler import ShotCompilerFactory
 from .._shot_runner import ShotRunnerFactory
 from ..device_manager_extension import DeviceManagerExtensionProtocol
@@ -42,7 +41,6 @@ async def run_sequence(
     device_manager_extension: DeviceManagerExtensionProtocol,
     shot_runner_factory: ShotRunnerFactory,
     shot_compiler_factory: ShotCompilerFactory,
-    instruments: Optional[list[Instrument]] = None,
 ) -> None:
     """Manages the execution of a sequence.
 
@@ -71,8 +69,6 @@ async def run_sequence(
 
         shot_compiler_factory: A function that can be used to create an object to
             compile shots.
-
-        instruments: The instruments to use to register events during the sequence.
     """
 
     with session_maker.session() as session:
@@ -88,7 +84,6 @@ async def run_sequence(
         device_manager_extension=device_manager_extension,
         shot_runner_factory=shot_runner_factory,
         shot_compiler_factory=shot_compiler_factory,
-        instruments=instruments or [],
     )
     initial_context = evaluate_initial_context(sequence_manager.sequence_parameters)
     async with sequence_manager.run_sequence() as shot_scheduler:
@@ -106,7 +101,6 @@ class SequenceManager:
         device_manager_extension: DeviceManagerExtensionProtocol,
         shot_runner_factory: ShotRunnerFactory,
         shot_compiler_factory: ShotCompilerFactory,
-        instruments: list[Instrument],
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence
@@ -128,7 +122,6 @@ class SequenceManager:
 
         self._shot_runner_factory = shot_runner_factory
         self._shot_compiler_factory = shot_compiler_factory
-        self._instruments = instruments
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[ShotScheduler, None]:
@@ -169,7 +162,6 @@ class SequenceManager:
                     shot_runner,
                     shot_compiler,
                     self._shot_retry_config,
-                    self._instruments,
                 ) as (
                     scheduler_cm,
                     data_stream_cm,
