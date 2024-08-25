@@ -205,5 +205,6 @@ def test_4(qtbot: QtBot, qtmodeltester: ModelTester):
         model.removeRow(0, second_loop_index)
 
     remove()
-    qtbot.wait_for_window_shown(editor)
+    with qtbot.wait_exposed(editor):
+        pass
     qtmodeltester.check(editor.model())
