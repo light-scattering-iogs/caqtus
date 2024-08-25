@@ -14,7 +14,7 @@ def structure_quantity(value: Any, _) -> Quantity:
     try:
         return Quantity(*value)
     except TypeError:
-        raise ValueError(f"Cannot structure {value!r} as a Quantity.")
+        raise ValueError(f"Cannot structure {value!r} as a Quantity.") from None
 
 
 serialization.register_unstructure_hook(Quantity, unstructure_quantity)

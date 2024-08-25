@@ -308,7 +308,7 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         elif isinstance(other, Sequence):
             if len(self) != len(other):
                 return False
-            return all(a == b for a, b in zip(self, other))
+            return all(a == b for a, b in zip(self, other, strict=True))
         else:
             return NotImplemented
 
@@ -401,8 +401,7 @@ class TimeLanes:
             raise TypeError(f"Invalid type for value: {type(lane)}")
         if not isinstance(name, str):
             raise TypeError(f"Invalid type for key: {type(name)}")
-        length = len(lane)
-        if not all(length == len(l) for l in self.lanes.values()):
+        if len(lane) != self.number_steps:
             raise ValueError("All lanes must have the same length")
 
         self.lanes[name] = lane

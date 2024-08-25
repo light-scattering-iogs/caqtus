@@ -228,9 +228,7 @@ class SQLSequenceCollection(SequenceCollection):
         if sequence.state != State.PREPARING:
             raise SequenceNotEditableError(path)
         sql_device_configs = []
-        for order, (name, device_configuration) in enumerate(
-            device_configurations.items()
-        ):
+        for name, device_configuration in device_configurations.items():
             type_name, content = self.serializer.dump_device_configuration(
                 device_configuration
             )

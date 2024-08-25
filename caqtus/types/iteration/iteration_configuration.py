@@ -73,7 +73,7 @@ class Unknown:
         return self.__mul__(other)
 
     def __repr__(self):
-        return f"Unknown()"
+        return "Unknown()"
 
     def __str__(self):
         return "unknown"

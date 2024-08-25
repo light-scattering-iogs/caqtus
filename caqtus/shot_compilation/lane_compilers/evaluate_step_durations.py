@@ -2,7 +2,6 @@ from collections.abc import Sequence
 
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import is_quantity, magnitude_in_unit
-from caqtus.types.units.unit_namespace import units
 from ..variable_namespace import VariableNamespace
 
 
