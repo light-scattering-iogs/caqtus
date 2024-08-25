@@ -12,6 +12,7 @@ from caqtus.experiment_control.device_manager_extension import DeviceManagerExte
 from caqtus.experiment_control.sequence_runner.sequence_manager import run_sequence
 from caqtus.session import State
 from caqtus.types.data import DataLabel, Data
+from caqtus.types.recoverable_exceptions import InvalidValueError
 
 
 class ShotRunnerMock(ShotRunnerProtocol):
@@ -119,3 +120,61 @@ async def test_sequence_interruption(anyio_backend, session_maker, draft_sequenc
         sequence = session.get_sequence(draft_sequence)
         assert sequence.get_state() == State.INTERRUPTED
         assert len(list(sequence.get_shots())) == 7
+
+
+class RaisingShotRunner(ShotRunnerProtocol):
+
+    def __init__(
+        self,
+        shot_runner: ShotRunnerProtocol,
+        shot_to_raise: int,
+        exception: Exception,
+    ):
+        self.shot_runner = shot_runner
+        self.shot_to_raise = shot_to_raise
+        self.exception = exception
+
+    async def run_shot(
+        self, shot_parameters: DeviceParameters
+    ) -> Mapping[DataLabel, Data]:
+
+        if shot_parameters.index == self.shot_to_raise:
+            raise self.exception
+
+        return await self.shot_runner.run_shot(shot_parameters)
+
+    @classmethod
+    def create(
+        cls,
+        factory: ShotRunnerFactory,
+        shot_to_raise: int,
+        exception: Exception,
+    ):
+        @contextlib.asynccontextmanager
+        async def _create(sequence_context, shot_compiler, device_manager_extension):
+            async with factory(
+                sequence_context, shot_compiler, device_manager_extension
+            ) as runner:
+                yield cls(runner, shot_to_raise, exception)
+
+        return _create
+
+
+async def test_sequence_execution_error(anyio_backend, session_maker, draft_sequence):
+    await run_sequence(
+        draft_sequence,
+        session_maker,
+        None,
+        None,
+        None,
+        DeviceManagerExtension(),
+        RaisingShotRunner.create(ShotRunnerMock.create, 7, InvalidValueError("Error")),
+        ShotCompilerMock.create,
+    )
+
+    with session_maker.session() as session:
+        sequence = session.get_sequence(draft_sequence)
+        assert sequence.get_state() == State.CRASHED
+        assert len(list(sequence.get_shots())) == 7
+        tb_summary = sequence.get_traceback_summary()
+        assert tb_summary is not None

@@ -14,6 +14,7 @@ from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
+from .. import TracebackSummary
 from .._path import PureSequencePath
 from .._return_or_raise import unwrap
 from .._sequence_collection import PathIsNotSequenceError
@@ -176,6 +177,19 @@ class Sequence:
 
         iterations = self.get_iteration_configuration()
         return iterations.get_parameter_names()
+
+    def get_traceback_summary(self) -> Optional[TracebackSummary]:
+        """Return the traceback summary of the sequence.
+
+        Return:
+            The summary of the exception that crashed the sequence if one could be
+            retrieved, otherwise None.
+
+        Raises:
+            SequenceNotCrashedError: If the sequence is not in the CRASHED state.
+        """
+
+        return unwrap(self.session.sequences.get_exception(self.path))
 
     def load_shots_data(
         self,
