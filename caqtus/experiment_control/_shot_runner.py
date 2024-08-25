@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 from collections.abc import Callable, AsyncGenerator
 from collections.abc import Mapping
-from typing import Any
 from typing import Protocol
 
 from caqtus.device import DeviceController
@@ -11,6 +10,7 @@ from caqtus.types.data import DataLabel, Data
 from ._initialize_devices import create_devices
 from ._shot_compiler import ShotCompilerProtocol
 from ._shot_event_dispatcher import DeviceRunConfig, ShotEventDispatcher
+from ._shot_primitives import DeviceParameters
 from .device_manager_extension import DeviceManagerExtensionProtocol
 from ..device import DeviceName, DeviceConfiguration
 from ..device.remote import DeviceProxy
@@ -21,13 +21,12 @@ class ShotRunnerProtocol(Protocol):
     """Interface for running a shot."""
 
     async def run_shot(
-        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
+        self, shot_parameters: DeviceParameters
     ) -> Mapping[DataLabel, Data]:
         """Run a shot.
 
         Args:
-            device_parameters: The parameters to apply to the devices for the shot.
-            timeout: The maximum time to wait for the shot to complete.
+            shot_parameters: The parameters for the shot.
         """
 
         ...
@@ -53,20 +52,19 @@ class ShotRunner(ShotRunnerProtocol):
 
     async def run_shot(
         self,
-        device_parameters: Mapping[DeviceName, Mapping[str, Any]],
-        timeout: float,
+        shot_params: DeviceParameters,
     ) -> Mapping[DataLabel, Data]:
         event_dispatcher = ShotEventDispatcher(
             {
                 name: DeviceRunConfig(
                     device=self.devices[name],
                     controller_type=self.controller_types[name],
-                    parameters=device_parameters[name],
+                    parameters=shot_params.device_parameters[name],
                 )
                 for name in self.devices
             }
         )
-        return await event_dispatcher.run_shot(timeout)
+        return await event_dispatcher.run_shot(shot_params.timeout)
 
 
 @contextlib.asynccontextmanager

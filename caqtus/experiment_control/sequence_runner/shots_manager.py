@@ -243,15 +243,13 @@ class ShotManager:
     async def _run_shot_with_retry(
         self, device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
     ) -> ShotData:
-        for instrument in self._instruments:
-            instrument.before_shot_started(device_parameters)
         data = await _run_shot_with_retry(
-            functools.partial(run_shot, device_parameters, shot_runner),
+            functools.partial(
+                run_shot, device_parameters, shot_runner, self._instruments
+            ),
             retry_condition(self._shot_retry_config.exceptions_to_retry),
             self._shot_retry_config.number_of_attempts,
         )
-        for instrument in self._instruments:
-            instrument.after_shot_finished(data)
         return data
 
     async def _compile_shot(
@@ -260,9 +258,7 @@ class ShotManager:
         try:
             for instrument in self._instruments:
                 instrument.before_shot_compiled(shot_parameters)
-            compiled, shot_duration = await shot_compiler.compile_shot(
-                shot_parameters.parameters
-            )
+            compiled, shot_duration = await shot_compiler.compile_shot(shot_parameters)
             result = DeviceParameters(
                 index=shot_parameters.index,
                 shot_parameters=shot_parameters.parameters,
@@ -279,20 +275,25 @@ class ShotManager:
 
 
 async def run_shot(
-    device_parameters: DeviceParameters, shot_runner: ShotRunnerProtocol
+    device_parameters: DeviceParameters,
+    shot_runner: ShotRunnerProtocol,
+    instruments: list[Instrument],
 ) -> ShotData:
     start_time = datetime.datetime.now(tz=datetime.timezone.utc)
-    data = await shot_runner.run_shot(
-        device_parameters.device_parameters, device_parameters.timeout
-    )
+    for instrument in instruments:
+        instrument.before_shot_started(device_parameters)
+    data = await shot_runner.run_shot(device_parameters)
     end_time = datetime.datetime.now(tz=datetime.timezone.utc)
-    return ShotData(
+    data = ShotData(
         index=device_parameters.index,
         start_time=start_time,
         end_time=end_time,
         variables=device_parameters.shot_parameters,
         data=data,
     )
+    for instrument in instruments:
+        instrument.after_shot_finished(data)
+    return data
 
 
 async def _run_shot_with_retry(

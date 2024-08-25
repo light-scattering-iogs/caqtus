@@ -48,6 +48,9 @@ class Instrument(Protocol):
     def before_shot_started(self, device_parameters: DeviceParameters) -> None:
         """Called just before a shot is started.
 
+        Exception raised in this method will be handled as if they were raised during
+        the execution of the shot.
+
         Args:
             device_parameters: The parameters used to run the shot.
         """
@@ -56,6 +59,9 @@ class Instrument(Protocol):
 
     def after_shot_finished(self, shot_data: ShotData) -> None:
         """Called just after a shot is finished.
+
+        Exception raised in this method will be handled as if they were raised during
+        the execution of the shot.
 
         Args:
             shot_data: The data produced by the shot.

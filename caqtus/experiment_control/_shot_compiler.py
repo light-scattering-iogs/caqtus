@@ -11,6 +11,7 @@ from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import TimeLanes
+from ._shot_primitives import ShotParameters
 from .device_manager_extension import DeviceManagerExtensionProtocol
 from ..device import DeviceName, DeviceConfiguration
 from ..shot_compilation import SequenceContext, DeviceCompiler, DeviceNotUsedException
@@ -35,7 +36,7 @@ class ShotCompilerProtocol(Protocol):
 
     @abc.abstractmethod
     async def compile_shot(
-        self, shot_parameters: VariableNamespace
+        self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         raise NotImplementedError
 
@@ -70,9 +71,11 @@ class ShotCompiler(ShotCompilerProtocol):
         return initialization_parameters
 
     async def compile_shot(
-        self, shot_parameters: VariableNamespace
+        self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
-        return await anyio.to_process.run_sync(self.compile_shot_sync, shot_parameters)
+        return await anyio.to_process.run_sync(
+            self.compile_shot_sync, shot_parameters.parameters
+        )
 
     def compile_shot_sync(
         self, shot_parameters: VariableNamespace

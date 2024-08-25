@@ -8,6 +8,7 @@ import anyio.to_process
 import pytest
 
 from caqtus.device import DeviceName
+from caqtus.experiment_control._shot_primitives import DeviceParameters, ShotParameters
 from caqtus.experiment_control.sequence_runner.shots_manager import (
     ShotRunnerProtocol,
     ShotCompilerProtocol,
@@ -27,7 +28,7 @@ caqtus_logger.setLevel(logging.DEBUG)
 
 class ShotRunnerMock(ShotRunnerProtocol):
     async def run_shot(
-        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
+        self, shot_parameters: DeviceParameters
     ) -> Mapping[DataLabel, Data]:
         return {DataLabel("data"): 0}
 
@@ -39,7 +40,7 @@ class ShotCompilerMock(ShotCompilerProtocol):
         return {DeviceName("device"): {"param": 0}}
 
     async def compile_shot(
-        self, shot_parameters: VariableNamespace
+        self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         await anyio.sleep(0)
         return {DeviceName("device"): {"param": 0}}, 1.0
