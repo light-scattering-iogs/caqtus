@@ -77,7 +77,7 @@ class ShotCompiler(ShotCompilerProtocol):
         )
 
         results = {}
-        for device_name, compiler in self.device_compilers.items():
+        for device_name in self.device_compilers:
             results[device_name] = shot_context.get_shot_parameters(device_name)
 
         # noinspection PyProtectedMember
