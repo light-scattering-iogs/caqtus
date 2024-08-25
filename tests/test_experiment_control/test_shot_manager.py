@@ -38,9 +38,10 @@ class ShotCompilerMock(ShotCompilerProtocol):
     ) -> Mapping[DeviceName, Mapping[str, Any]]:
         return {DeviceName("device"): {"param": 0}}
 
-    def compile_shot(
+    async def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
+        await anyio.sleep(0)
         return {DeviceName("device"): {"param": 0}}, 1.0
 
 

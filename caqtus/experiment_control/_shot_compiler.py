@@ -5,6 +5,8 @@ from collections.abc import Mapping, Callable
 from typing import Any
 from typing import Protocol
 
+import anyio.to_process
+
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
@@ -32,7 +34,7 @@ class ShotCompilerProtocol(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def compile_shot(
+    async def compile_shot(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         raise NotImplementedError
@@ -67,7 +69,12 @@ class ShotCompiler(ShotCompilerProtocol):
             )
         return initialization_parameters
 
-    def compile_shot(
+    async def compile_shot(
+        self, shot_parameters: VariableNamespace
+    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
+        return await anyio.to_process.run_sync(self.compile_shot_sync, shot_parameters)
+
+    def compile_shot_sync(
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         shot_context = ShotContext(

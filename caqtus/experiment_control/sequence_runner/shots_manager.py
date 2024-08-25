@@ -10,7 +10,6 @@ from collections.abc import AsyncIterable, Awaitable, Callable
 from typing import Mapping, Any, TypeVar
 
 import anyio
-import anyio.to_process
 import attrs
 import tblib.pickling_support
 from anyio.abc import TaskStatus
@@ -233,9 +232,7 @@ class ShotManager:
             async with shot_params_receive_stream:
                 task_status.started()
                 async for shot_params in shot_params_receive_stream:
-                    result = await anyio.to_process.run_sync(
-                        _compile_shot, shot_params, shot_compiler
-                    )
+                    result = await _compile_shot(shot_params, shot_compiler)
                     logger.debug(
                         "Pushing shot %d to execution queue.", shot_params.index
                     )
@@ -363,11 +360,13 @@ class ShotData:
     data: Mapping[DataLabel, Data] = attrs.field(eq=False)
 
 
-def _compile_shot(
+async def _compile_shot(
     shot_parameters: ShotParameters, shot_compiler: ShotCompilerProtocol
 ) -> DeviceParameters:
     try:
-        compiled, shot_duration = shot_compiler.compile_shot(shot_parameters.parameters)
+        compiled, shot_duration = await shot_compiler.compile_shot(
+            shot_parameters.parameters
+        )
     except Exception as e:
         raise ShotCompilationError(
             fmt("An error occurred while compiling {:shot}", shot_parameters.index)
