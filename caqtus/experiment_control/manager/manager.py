@@ -20,6 +20,8 @@ from caqtus.session import (
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
+from .._shot_compiler import create_shot_compiler
+from .._shot_runner import create_shot_runner
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_runner import SequenceManager, ShotRetryConfig
 from ..sequence_runner.sequence_runner import evaluate_initial_context, execute_steps
@@ -355,6 +357,8 @@ class BoundProcedure(Procedure):
                 global_parameters=global_parameters,
                 device_configurations=device_configurations,
                 device_manager_extension=self._device_manager_extension,
+                shot_runner_factory=create_shot_runner,
+                shot_compiler_factory=create_shot_compiler,
             )
             if not isinstance(iteration, StepsConfiguration):
                 raise NotImplementedError(

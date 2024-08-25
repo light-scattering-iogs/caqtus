@@ -29,8 +29,9 @@ from caqtus.types.recoverable_exceptions import (
 )
 from .shots_manager import ShotManager, ShotData, ShotScheduler
 from .shots_manager import ShotRetryConfig
+from .._shot_compiler import ShotCompilerFactory
+from .._shot_runner import ShotRunnerFactory
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ..initialize_resources import create_shot_runner, create_shot_compiler
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,8 @@ class SequenceManager:
         global_parameters: Optional[ParameterNamespace],
         device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
         device_manager_extension: DeviceManagerExtensionProtocol,
+        shot_runner_factory: ShotRunnerFactory,
+        shot_compiler_factory: ShotCompilerFactory,
     ) -> None:
         self._session_maker = session_maker
         self._sequence_path = sequence
@@ -87,6 +90,8 @@ class SequenceManager:
         self._device_compilers: dict[DeviceName, DeviceCompiler] = {}
 
         self._watch_for_interruption_scope = anyio.CancelScope()
+        self._shot_runner_factory = shot_runner_factory
+        self._shot_compiler_factory = shot_compiler_factory
 
     @contextlib.asynccontextmanager
     async def run_sequence(self) -> AsyncGenerator[ShotScheduler, None]:
@@ -111,16 +116,17 @@ class SequenceManager:
 
         self._prepare_sequence()
         try:
-            shot_compiler = create_shot_compiler(
-                SequenceContext(
-                    device_configurations=self.device_configurations,
-                    time_lanes=self.time_lanes,
-                ),
+            sequence_context = SequenceContext(
+                device_configurations=self.device_configurations,
+                time_lanes=self.time_lanes,
+            )
+            shot_compiler = self._shot_compiler_factory(
+                sequence_context,
                 self._device_manager_extension,
             )
             async with (
-                create_shot_runner(
-                    shot_compiler, self._device_manager_extension
+                self._shot_runner_factory(
+                    sequence_context, shot_compiler, self._device_manager_extension
                 ) as shot_runner,
                 ShotManager(shot_runner, shot_compiler, self._shot_retry_config) as (
                     scheduler_cm,

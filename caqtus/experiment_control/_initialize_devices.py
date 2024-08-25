@@ -1,6 +1,6 @@
 import contextlib
 from collections.abc import Mapping, AsyncGenerator, Callable
-from typing import TypeVar
+from typing import TypeVar, Any
 
 from caqtus.device import DeviceName, Device, DeviceConfiguration
 from caqtus.device.remote import DeviceProxy, RPCConfiguration
@@ -9,17 +9,13 @@ from caqtus.experiment_control.device_manager_extension import (
     DeviceManagerExtensionProtocol,
 )
 from caqtus.formatter import fmt
-from caqtus.shot_compilation import (
-    DeviceCompiler,
-)
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
-
 from ._async_utils import task_group_with_error_message
 
 
 @contextlib.asynccontextmanager
 async def create_devices(
-    device_compilers: Mapping[DeviceName, DeviceCompiler],
+    initialization_parameters: Mapping[DeviceName, Mapping[str, Any]],
     device_configs: Mapping[DeviceName, DeviceConfiguration],
     device_types: Mapping[DeviceName, Callable[..., Device]],
     device_manager_extension: DeviceManagerExtensionProtocol,
@@ -38,8 +34,7 @@ async def create_devices(
         device_to_server, device_server_configs
     ) as rpc_clients:
         uninitialized_proxies = {}
-        for device_name, device_compiler in device_compilers.items():
-            init_params = device_compiler.compile_initialization_parameters()
+        for device_name, init_params in initialization_parameters.items():
             device_config = device_configs[device_name]
             device_type = device_types[device_name]
             if device_config.remote_server is None:

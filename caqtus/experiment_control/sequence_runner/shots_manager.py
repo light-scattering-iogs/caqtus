@@ -7,7 +7,7 @@ import logging
 import warnings
 import weakref
 from collections.abc import AsyncIterable, Awaitable, Callable
-from typing import Mapping, Any, Protocol, TypeVar
+from typing import Mapping, Any, TypeVar
 
 import anyio
 import anyio.to_process
@@ -24,22 +24,12 @@ from caqtus.types.data import DataLabel, Data
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
 from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 from .._async_utils import task_group_with_error_message
+from .._shot_compiler import ShotCompilerProtocol
+from .._shot_runner import ShotRunnerProtocol
 
 logger = logging.getLogger(__name__)
 
 _log_async_cm = functools.partial(log_async_cm, logger=logger)
-
-
-class ShotRunnerProtocol(Protocol):
-    async def run_shot(
-        self, device_parameters: Mapping[DeviceName, Mapping[str, Any]], timeout: float
-    ) -> Mapping[DataLabel, Data]: ...
-
-
-class ShotCompilerProtocol(Protocol):
-    def compile_shot(
-        self, shot_parameters: VariableNamespace
-    ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]: ...
 
 
 class ShotExecutionSorter:
