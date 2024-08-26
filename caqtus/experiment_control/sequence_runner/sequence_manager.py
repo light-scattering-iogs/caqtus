@@ -179,6 +179,9 @@ class SequenceManager:
             raise
         except* BaseException as e:
             self._set_sequence_state(State.CRASHED)
+            traceback_summary = TracebackSummary.from_exception(e)
+            with self._session_maker() as session:
+                session.sequences.set_exception(self._sequence_path, traceback_summary)
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise
@@ -187,11 +190,7 @@ class SequenceManager:
                     "A recoverable error occurred while running the sequence.",
                     exc_info=recoverable,
                 )
-                traceback_summary = TracebackSummary.from_exception(recoverable)
-                with self._session_maker() as session:
-                    session.sequences.set_exception(
-                        self._sequence_path, traceback_summary
-                    )
+
         else:
             self._set_sequence_state(State.FINISHED)
 
