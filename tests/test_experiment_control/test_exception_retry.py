@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from caqtus.device._controller import DeviceException
+from caqtus.device._controller import DeviceError
 from caqtus.experiment_control.sequence_runner.shots_manager import (
     ShotData,
     _run_shot_with_retry,
@@ -41,8 +41,8 @@ async def test_single_failure(anyio_backend, shot_data):
         index += 1
         if index == 1:
             try:
-                raise DeviceException("Error") from TimeoutError("Timeout")
-            except DeviceException as exc:
+                raise DeviceError("Error") from TimeoutError("Timeout")
+            except DeviceError as exc:
                 raise ExceptionGroup("err", [exc])
         return shot_data
 
@@ -57,8 +57,8 @@ async def test_single_failure(anyio_backend, shot_data):
 async def test_repeat_failure(anyio_backend, shot_data):
     async def failing_shot():
         try:
-            raise DeviceException("Error") from TimeoutError("Timeout")
-        except DeviceException as exc:
+            raise DeviceError("Error") from TimeoutError("Timeout")
+        except DeviceError as exc:
             raise ExceptionGroup("err", [exc])
 
     with pytest.raises(ShotAttemptsExceededError):

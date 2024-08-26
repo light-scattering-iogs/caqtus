@@ -15,7 +15,7 @@ import tblib.pickling_support
 from anyio.abc import TaskStatus
 from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 
-from caqtus.device._controller import DeviceException
+from caqtus.device._controller import DeviceError
 from caqtus.formatter import fmt
 from caqtus.shot_compilation import VariableNamespace
 from caqtus.types.recoverable_exceptions import ShotAttemptsExceededError
@@ -340,7 +340,7 @@ def retry_condition(
     retriable_exceptions: tuple[type[Exception], ...]
 ) -> Callable[[Exception], bool]:
     def _retry_condition(e: Exception) -> bool:
-        return isinstance(e, DeviceException) and isinstance(
+        return isinstance(e, DeviceError) and isinstance(
             e.__cause__, retriable_exceptions
         )
 

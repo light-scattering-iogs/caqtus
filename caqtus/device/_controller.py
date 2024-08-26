@@ -94,11 +94,11 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
 
             finished_time = self._event_dispatcher.shot_time()
             if not self._signaled_ready.is_set():
-                raise RuntimeError(f"wait_all_devices_ready was not called in run_shot")
+                raise RuntimeError("wait_all_devices_ready was not called in run_shot")
         # We want to avoid wrapping Cancelled exceptions, otherwise the task group
         # won't be able to clear them, so we don't catch BaseException.
         except Exception as e:
-            raise DeviceException(
+            raise DeviceError(
                 f"Error occurred for {fmt.device(self.device_name)}"
             ) from e
         assert self._signaled_ready_time is not None
@@ -218,7 +218,7 @@ class DeviceTimeoutError(TimeoutError, RecoverableException):
     pass
 
 
-class DeviceException(Exception):
+class DeviceError(Exception):
     """Raise when a device encounters an error during a shot."""
 
     pass
