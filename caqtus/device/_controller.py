@@ -25,7 +25,7 @@ from .remote import DeviceProxy
 from ..types.recoverable_exceptions import RecoverableException
 
 if TYPE_CHECKING:
-    from caqtus.experiment_control._shot_handling import ShotEventDispatcher
+    from caqtus.experiment_control._shot_event_dispatcher import ShotEventDispatcher
     from caqtus.experiment_control.shot_timing import ShotTimer
 
 logger = logging.getLogger(__name__)
