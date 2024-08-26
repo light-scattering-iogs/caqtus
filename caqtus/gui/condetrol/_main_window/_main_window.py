@@ -200,7 +200,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         recoverable, non_recoverable = split_recoverable(exception)
         if recoverable:
             logger.warning(
-                f"Recoverable exception occurred while running a sequence",
+                "Recoverable exception occurred while running a sequence",
                 exc_info=recoverable,
             )
         if non_recoverable:
@@ -211,7 +211,7 @@ class CondetrolMainWindow(QtWidgets.QMainWindow, Ui_CondetrolMainWindow):
         assert recoverable is not None
 
         self.display_error(
-            f"An error occurred while running a sequence.",
+            "An error occurred while running a sequence.",
             recoverable,
         )
 
