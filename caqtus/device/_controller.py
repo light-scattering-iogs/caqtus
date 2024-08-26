@@ -209,7 +209,7 @@ def fail_after(delay: float | None, shield: bool = False):
         yield cancel_scope
 
     if cancel_scope.cancelled_caught and anyio.current_time() >= cancel_scope.deadline:
-        raise DeviceTimeoutError(f"Timeout after {delay:.2f} seconds")
+        raise DeviceTimeoutError(f"Timeout after {delay:.2f} seconds") from None
 
 
 class DeviceTimeoutError(TimeoutError, RecoverableException):
