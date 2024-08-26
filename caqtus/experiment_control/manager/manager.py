@@ -348,7 +348,7 @@ class BoundProcedure(Procedure):
     ) -> None:
         async def run():
             with anyio.CancelScope() as self._cancel_scope:
-                with anyio.from_thread.BlockingPortal() as self._portal:
+                async with anyio.from_thread.BlockingPortal() as self._portal:
                     await run_sequence(
                         sequence=sequence,
                         session_maker=self._session_maker,
