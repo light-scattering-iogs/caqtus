@@ -46,7 +46,7 @@ def unwrap_remote_error_cm():
             # If not handled, this would cause recursion issues when anything tries
             # to handle the exception down the line.
             remote.__cause__ = None
-            raise original
+            raise original from None
         else:
             raise
 
