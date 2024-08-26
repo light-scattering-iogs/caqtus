@@ -360,7 +360,10 @@ class BoundProcedure(Procedure):
                         shot_compiler_factory=create_shot_compiler,
                     )
 
-        anyio.run(run, backend="trio")
+        try:
+            anyio.run(run, backend="trio")
+        except Exception as e:
+            logger.error(f"Error while running sequence {sequence}.", exc_info=e)
         self._cancel_scope = None
 
     def __exit__(self, exc_type, exc_value, traceback):
