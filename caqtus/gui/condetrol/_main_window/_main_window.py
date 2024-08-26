@@ -107,8 +107,6 @@ class CondetrolWindowHandler:
             while await anyio.to_thread.run_sync(procedure.is_running_sequence):
                 await anyio.sleep(50e-3)
 
-            if exc := procedure.exception():
-                raise exc
         self.is_running_sequence = False
 
 
