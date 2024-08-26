@@ -9,6 +9,7 @@ from contextlib import AbstractContextManager
 from typing import Optional
 
 import anyio
+import anyio.from_thread
 
 from caqtus.device import DeviceConfiguration, DeviceName
 from caqtus.session import (
@@ -269,6 +270,7 @@ class BoundProcedure(Procedure):
         self._shot_retry_config = shot_retry_config
         self._device_manager_extension = device_manager_extension
         self._cancel_scope: Optional[anyio.CancelScope] = None
+        self._portal: Optional[anyio.from_thread.BlockingPortal] = None
 
     def __repr__(self):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
@@ -328,7 +330,8 @@ class BoundProcedure(Procedure):
         if not self.is_running_sequence():
             return False
         assert self._cancel_scope is not None
-        self._cancel_scope.cancel()
+        assert self._portal is not None
+        self._portal.call(self._cancel_scope.cancel)
         return True
 
     def wait_until_sequence_finished(self):
@@ -345,16 +348,17 @@ class BoundProcedure(Procedure):
     ) -> None:
         async def run():
             with anyio.CancelScope() as self._cancel_scope:
-                await run_sequence(
-                    sequence=sequence,
-                    session_maker=self._session_maker,
-                    shot_retry_config=self._shot_retry_config,
-                    global_parameters=global_parameters,
-                    device_configurations=device_configurations,
-                    device_manager_extension=self._device_manager_extension,
-                    shot_runner_factory=create_shot_runner,
-                    shot_compiler_factory=create_shot_compiler,
-                )
+                with anyio.from_thread.BlockingPortal() as self._portal:
+                    await run_sequence(
+                        sequence=sequence,
+                        session_maker=self._session_maker,
+                        shot_retry_config=self._shot_retry_config,
+                        global_parameters=global_parameters,
+                        device_configurations=device_configurations,
+                        device_manager_extension=self._device_manager_extension,
+                        shot_runner_factory=create_shot_runner,
+                        shot_compiler_factory=create_shot_compiler,
+                    )
 
         anyio.run(run, backend="trio")
         self._cancel_scope = None
