@@ -4,6 +4,8 @@ from typing import NewType, Iterable
 import attrs
 import numpy as np
 
+from .._image_type import Image, is_image
+
 Width = NewType("Width", int)
 Height = NewType("Height", int)
 
@@ -59,3 +61,25 @@ class ROI(ABC):
         """Return the height of the original image."""
 
         return self.original_image_size[1]
+
+    def apply[
+        T: np.generic
+    ](self, image: Image) -> np.ma.MaskedArray[tuple[Width, Height], np.dtype[T]]:
+        """Apply the ROI to an image.
+
+        Returns:
+            A masked array with the pixels outside the ROI masked.
+        """
+
+        if not is_image(image):
+            raise TypeError(
+                f"Image must be a numpy array with two dimensions, got {image}"
+            )
+
+        if image.shape != self.original_image_size:
+            raise ValueError(
+                f"Image shape {image.shape} does not match the roi original image size "
+                f"{self.original_image_size}"
+            )
+
+        return np.ma.MaskedArray(image, mask=~self.get_mask())
