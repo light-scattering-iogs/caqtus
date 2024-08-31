@@ -25,7 +25,9 @@ from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import is_unknown
 
-NODE_DATA_ROLE = Qt.UserRole + 1
+NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
+
+DEFAULT_INDEX = QModelIndex()
 
 
 def get_item_data(item: QStandardItem) -> Node:
@@ -73,7 +75,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             NODE_DATA_ROLE,
         )
 
-    def index(self, row, column, parent=QModelIndex()):
+    def index(self, row, column, parent=DEFAULT_INDEX):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         parent_item = (
@@ -86,7 +88,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             self.createIndex(row, column, child_item) if child_item else QModelIndex()
         )
 
-    def parent(self, index=QModelIndex()):
+    def parent(self, index=DEFAULT_INDEX):
         if not index.isValid():
             return QModelIndex()
         child_item = index.internalPointer()
@@ -99,7 +101,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else QModelIndex()
         )
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         item = self._get_item(index)
@@ -123,7 +125,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert isinstance(result, QStandardItem)
         return result
 
-    def rowCount(self, parent=QModelIndex()):
+    def rowCount(self, parent=DEFAULT_INDEX):  # noqa: N802
         if parent.column() > 0:
             return 0
         parent_item = self._get_item(parent)
@@ -136,7 +138,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             case FolderNode(has_fetched_children=False):
                 return 0
 
-    def hasChildren(self, parent=QModelIndex()) -> bool:
+    def hasChildren(self, parent=DEFAULT_INDEX) -> bool:  # noqa: N802
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         match node_data:
@@ -147,7 +149,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             case FolderNode(has_fetched_children=False):
                 return True
 
-    def canFetchMore(self, parent) -> bool:
+    def canFetchMore(self, parent) -> bool:  # noqa: N802
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         match node_data:
@@ -156,7 +158,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             case FolderNode(has_fetched_children=already_fetched):
                 return not already_fetched
 
-    def fetchMore(self, parent):
+    def fetchMore(self, parent):  # noqa: N802
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
         match node_data:
@@ -189,7 +191,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ) -> QStandardItem:
         assert session.paths.does_path_exists(path)
         item = QStandardItem()
-        item.setData(path.name, Qt.DisplayRole)
+        item.setData(path.name, Qt.ItemDataRole.DisplayRole)
         is_sequence = unwrap(session.sequences.is_sequence(path))
         creation_date = unwrap(session.paths.get_path_creation_date(path))
         if is_sequence:
@@ -218,7 +220,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ) -> QStandardItem:
         assert await session.paths.does_path_exists(path)
         item = QStandardItem()
-        item.setData(path.name, Qt.DisplayRole)
+        item.setData(path.name, Qt.ItemDataRole.DisplayRole)
         is_sequence = unwrap(await session.sequences.is_sequence(path))
         creation_date = unwrap(await session.paths.get_path_creation_date(path))
         if is_sequence:
@@ -241,10 +243,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             )
         return item
 
-    def columnCount(self, parent=QModelIndex()):
+    def columnCount(self, parent=DEFAULT_INDEX) -> int:  # noqa: N802
         return 5
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(  # noqa: N802
+        self, section, orientation, role=Qt.ItemDataRole.DisplayRole
+    ):
         if role == Qt.ItemDataRole.DisplayRole:
             if orientation == Qt.Orientation.Horizontal:
                 if section == 0:
@@ -361,7 +365,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             for row in range(item.rowCount()):
                 await self.update_stats(self.index(row, 0, index))
 
-    async def prune(self, parent: QModelIndex = QModelIndex()) -> None:
+    async def prune(self, parent: QModelIndex = DEFAULT_INDEX) -> None:
         """Removes items from the model that no longer exist in the session."""
 
         parent_item = self._get_item(parent)
@@ -389,7 +393,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else:
                 await self.prune(child)
 
-    async def add_new_paths(self, parent: QModelIndex = QModelIndex()) -> None:
+    async def add_new_paths(self, parent: QModelIndex = DEFAULT_INDEX) -> None:
         """Add new paths to the model that have been added to the session."""
 
         parent_item = self._get_item(parent)
@@ -501,7 +505,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
     if stats.state == State.DRAFT or stats.state == State.PREPARING:
-        return f"--/--"
+        return "--/--"
     elif stats.state == State.RUNNING:
         running_duration = updated_time - stats.start_time
         expected_num_shots = stats.expected_number_shots
