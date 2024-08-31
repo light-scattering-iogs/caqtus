@@ -113,6 +113,16 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
         self.setFont(font)
 
         self.toolbar = QtWidgets.QToolBar()
+        self.add_button = QtWidgets.QToolButton(self)
+        self.add_menu = QMenu(self)
+        self.add_shot_action = self.add_menu.addAction("shot")
+        self.add_variable_action = self.add_menu.addAction("variable")
+        self.add_linspace_action = self.add_menu.addAction("linspace loop")
+        self.add_arange_action = self.add_menu.addAction("arange loop")
+        self._setup_add_button()
+        self.toolbar.addWidget(self.add_button)
+
+        self.toolbar.addSeparator()
         self.copy_to_clipboard_action = self.toolbar.addAction(
             get_icon("copy", self.palette().buttonText().color()), "Copy to clipboard"
         )
@@ -122,6 +132,26 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
             "Paste from clipboard",
         )
         self.paste_from_clipboard_action.triggered.connect(self.paste_from_clipboard)
+
+    def _setup_add_button(self):
+        self.add_button.setToolTip("Add step")
+        self.add_button.setPopupMode(
+            QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup
+        )
+        self.add_button.setIcon(get_icon("plus", self.palette().buttonText().color()))
+        self.add_button.setMenu(self.add_menu)
+        self.add_shot_action.triggered.connect(
+            functools.partial(self._model.append_step, ExecuteShot())
+        )
+        self.add_variable_action.triggered.connect(
+            functools.partial(self._model.append_step, create_variable_declaration())
+        )
+        self.add_linspace_action.triggered.connect(
+            functools.partial(self._model.append_step, create_linspace_loop())
+        )
+        self.add_arange_action.triggered.connect(
+            functools.partial(self._model.append_step, create_arange_loop())
+        )
 
     def _emit_iteration_edited(self, *args, **kwargs):
         self.iteration_edited.emit(self.get_iteration())

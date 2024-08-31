@@ -311,6 +311,13 @@ class StepsModel(QStandardItemModel):
             new_item = StepItem.construct(step)
             parent_item.insertRows(index.row(), [new_item])
 
+    def append_step(self, step: Step) -> bool:
+        if self._read_only:
+            return False
+        root = self.invisibleRootItem()
+        new_item = StepItem.construct(step)
+        root.appendRow(new_item)
+
 
 def get_strict_descendants(parent: QStandardItem) -> list[QStandardItem]:
     children = [parent.child(i) for i in range(parent.rowCount())]
