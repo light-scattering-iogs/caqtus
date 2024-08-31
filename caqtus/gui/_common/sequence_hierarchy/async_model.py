@@ -475,9 +475,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def handle_path_was_deleted(self, index: QModelIndex):
         parent = self.parent(index)
-        grandparent_item = self._get_item(parent)
+        parent_item = self._get_item(parent)
         self.beginRemoveRows(parent, index.row(), index.row())
-        grandparent_item.removeRow(index.row())
+        parent_item.removeRow(index.row())
         self.endRemoveRows()
 
     async def handle_sequence_became_folder(
