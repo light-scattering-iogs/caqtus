@@ -184,7 +184,7 @@ class ArangeLoop(ContainsSubSteps):
                 evaluated.
             NotAnalogValueError: if the start, stop or step expressions don't evaluate
                 to an analog value.
-            DimensionalityError: if the start, stop and step values are not
+            InvalidDimensionalityError: if the start, stop and step values are not
                 commensurate.
         """
 
@@ -226,7 +226,7 @@ class ExecuteShot:
     pass
 
 
-def unstructure_hook(execute_shot: ExecuteShot) -> str:
+def unstructure_hook(execute_shot: ExecuteShot):
     return {"execute": "shot"}
 
 
@@ -271,6 +271,13 @@ class StepsConfiguration(IterationConfiguration):
     )
 
     def expected_number_shots(self) -> int | Unknown:
+        """Returns the expected number of shots that will be executed by the sequence.
+
+        Returns:
+            A positive integer if the number of shots can be determined, or Unknown if
+            the number of shots cannot be determined.
+        """
+
         return sum(expected_number_shots(step) for step in self.steps)
 
     def get_parameter_names(self) -> set[DottedVariableName]:
@@ -312,7 +319,7 @@ def _(step: LinspaceLoop):
 def _(step: ArangeLoop):
     try:
         length = len(list(step.loop_values({})))
-    except (EvaluationError, NotAnalogValueError, DimensionalityError):
+    except (EvaluationError, NotAnalogValueError, InvalidDimensionalityError):
         # The errors above can occur if the steps are still being edited or if the
         # expressions depend on other variables that are not defined here.
         # These can be errors on the user side, so we don't want to crash on them, and
