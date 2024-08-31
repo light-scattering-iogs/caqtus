@@ -196,6 +196,7 @@ class StepsIterationEditor(QTreeView, SequenceIterationEditor[StepsConfiguration
 
         self._model.set_read_only(read_only)
         self.paste_from_clipboard_action.setEnabled(not read_only)
+        self.add_button.setEnabled(not read_only)
 
     def is_read_only(self) -> bool:
         """Returns whether the editor is in read-only mode."""
