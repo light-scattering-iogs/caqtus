@@ -149,7 +149,7 @@ class Expression:
             value = eval(self._code, {"__builtins__": BUILTINS}, variables)
         except Exception as error:
             raise EvaluationError(
-                f"Could not evaluate {fmt.expression(self)}>"
+                f"Could not evaluate {fmt.expression(self)}"
             ) from error
         return value
 
