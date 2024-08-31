@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import NewType, Iterable
+from typing import Iterable
 
 import attrs
 import numpy as np
 
 from .._image_type import Image, is_image
-
-Width = NewType("Width", int)
-Height = NewType("Height", int)
+from .._shape import Width, Height
 
 
 @attrs.define
