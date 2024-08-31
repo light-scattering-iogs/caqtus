@@ -6,7 +6,14 @@ from typing import Optional, TypeGuard
 
 import anyio
 import attrs
-from PySide6.QtCore import QObject, QAbstractItemModel, QModelIndex, Qt, QDateTime
+from PySide6.QtCore import (
+    QObject,
+    QAbstractItemModel,
+    QModelIndex,
+    Qt,
+    QDateTime,
+    QPersistentModelIndex,
+)
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from caqtus.session import (
@@ -366,10 +373,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 await self.update_stats(self.index(row, 0, index))
 
     async def prune(self, parent: QModelIndex = DEFAULT_INDEX) -> None:
-        """Removes items from the model that no longer exist in the session."""
+        """Removes children of the parent that are no longer present in the session."""
 
         parent_item = self._get_item(parent)
         parent_data = get_item_data(parent_item)
+
+        if isinstance(parent_data, SequenceNode):
+            return
+
         async with self.session_maker.async_session() as session:
             children_result = await session.paths.get_children(parent_data.path)
             try:
@@ -381,17 +392,24 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 self.handle_path_was_deleted(parent)
                 return
 
-        # Need to remove children in reverse order to avoid invalidating rows
-        for row in reversed(range(self.rowCount(parent))):
-            child = self.index(row, 0, parent)
+        # Need to use persistent indices to avoid invalidation while removing rows.
+        child_indices = set[QPersistentModelIndex]()
+        for row in range(self.rowCount(parent)):
+            child_indices.add(QPersistentModelIndex(self.index(row, 0, parent)))
+
+        remaining_children = set()
+        for child in child_indices:
             child_item = self._get_item(child)
             child_path = get_item_data(child_item).path
             if child_path not in child_paths:
-                self.beginRemoveRows(parent, row, row)
-                parent_item.removeRow(row)
+                self.beginRemoveRows(parent, child.row(), child.row())
+                parent_item.removeRow(child.row())
                 self.endRemoveRows()
             else:
-                await self.prune(child)
+                remaining_children.add(child)
+
+        for child in remaining_children:
+            await self.prune(QModelIndex(child))
 
     async def add_new_paths(self, parent: QModelIndex = DEFAULT_INDEX) -> None:
         """Add new paths to the model that have been added to the session."""
