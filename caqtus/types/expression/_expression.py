@@ -7,6 +7,7 @@ from typing import Optional, Any
 import numpy
 import token_utils
 
+import caqtus.formatter as fmt
 from caqtus.utils import serialization
 from ..recoverable_exceptions import EvaluationError
 from ..units import units
@@ -118,7 +119,7 @@ class Expression:
         variables = set()
 
         class FindNameVisitor(ast.NodeVisitor):
-            def visit_Name(self, node: ast.Name):
+            def visit_Name(self, node: ast.Name):  # noqa: N802
                 if isinstance(node.ctx, ast.Load):
                     if node.id not in BUILTINS:
                         variables.add(VariableName(node.id))
@@ -147,7 +148,9 @@ class Expression:
         try:
             value = eval(self._code, {"__builtins__": BUILTINS}, variables)
         except Exception as error:
-            raise EvaluationError(f"Could not evaluate <{self.body}>") from error
+            raise EvaluationError(
+                f"Could not evaluate {fmt.expression(self)}>"
+            ) from error
         return value
 
     @cached_property
