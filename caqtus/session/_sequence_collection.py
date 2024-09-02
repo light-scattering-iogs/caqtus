@@ -6,6 +6,7 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional
 
 import attrs
+import polars
 from returns.result import Result
 
 from caqtus.device import DeviceName, DeviceConfiguration
@@ -285,6 +286,12 @@ class SequenceCollection(Protocol):
     def get_shot_parameters(
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DottedVariableName, Parameter]:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def load_shot_parameters(
+        self, path: PureSequencePath, shot_index: int
+    ) -> polars.DataFrame:
         raise NotImplementedError
 
     @abc.abstractmethod
