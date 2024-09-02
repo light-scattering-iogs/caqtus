@@ -22,8 +22,11 @@ from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     AsyncExperimentSession,
+    Sequence,
+    PathNotFoundError,
+    PathIsNotSequenceError,
+    Shot,
 )
-from caqtus.session import PathNotFoundError, PathIsNotSequenceError, Shot
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import PureShot
 from caqtus.utils import serialization
@@ -113,7 +116,8 @@ class SnapShotWindowHandler:
         # We need to create a new session for each view, because otherwise the views
         # might use the same session concurrently, which is not allowed.
         with self.experiment_session_maker() as session:
-            bound_shot = Shot.bound(shot, session)
+            sequence = Sequence(shot.sequence_path, session)
+            bound_shot = Shot(sequence, shot.index, session)
             await view.display_shot(bound_shot)
 
 

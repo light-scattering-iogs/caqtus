@@ -135,7 +135,7 @@ class Sequence:
 
         pure_shots = unwrap(self.session.sequences.get_shots(self.path))
         sorted_shots = sorted(pure_shots, key=lambda x: x.index)
-        return (Shot.bound(shot, self.session) for shot in sorted_shots)
+        return (Shot(self, shot.index, self.session) for shot in sorted_shots)
 
     def get_start_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was started.

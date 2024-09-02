@@ -11,8 +11,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget
 
 from caqtus.analysis.loading import DataImporter
-from caqtus.session import PathNotFoundError, PathIsNotSequenceError
 from caqtus.session import (
+    PathNotFoundError,
+    PathIsNotSequenceError,
+    Sequence,
     PureSequencePath,
     ExperimentSessionMaker,
     Shot,
@@ -139,8 +141,9 @@ class DataLoader(QWidget, Ui_Loader):
 
         for shot_group in batched(new_shots, self.process_chunk_size):
             with self.session_maker() as session:
+                sequence = Sequence(shot_group[0].sequence_path, session)
                 for shot in shot_group:
-                    await self.process_shot(Shot.bound(shot, session))
+                    await self.process_shot(Shot(sequence, shot.index, session))
                 # self.update_progress_bar()
 
     async def process_shot(self, shot: Shot) -> None:

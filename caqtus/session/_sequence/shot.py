@@ -10,7 +10,6 @@ from caqtus.types.data import DataLabel, Data
 from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
 from .._path import PureSequencePath
-from .._sequence_collection import PureShot
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
@@ -22,7 +21,7 @@ if typing.TYPE_CHECKING:
 class Shot:
     """Represents a shot inside a sequence."""
 
-    sequence_path: PureSequencePath
+    sequence: "Sequence"
     index: int
     _session: ExperimentSession
 
@@ -32,17 +31,11 @@ class Shot:
     # should not happen on the user side.
     _data_cache: dict[DataLabel, Data] = attrs.field(factory=dict)
 
-    @classmethod
-    def bound(cls, shot: PureShot, session: ExperimentSession) -> typing.Self:
-        return cls(shot.sequence_path, shot.index, session)
-
     @property
-    def sequence(self) -> "Sequence":
-        """The sequence to which this shot belongs."""
+    def sequence_path(self) -> PureSequencePath:
+        """The path of the sequence to which this shot belongs."""
 
-        from .sequence import Sequence
-
-        return Sequence(self.sequence_path, self._session)
+        return self.sequence_path
 
     def get_parameters(self) -> Mapping[DottedVariableName, Parameter]:
         """Return the parameters used to run this shot."""
