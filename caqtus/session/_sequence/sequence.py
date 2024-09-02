@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Iterable
+from functools import cached_property
 from typing import TYPE_CHECKING, Optional, Self
 
 import attrs
@@ -187,6 +188,12 @@ class Sequence:
 
     def get_local_parameters(self) -> set[DottedVariableName]:
         """Return the name of the parameters specifically set for this sequence."""
+
+        return self._local_parameters
+
+    @cached_property
+    def _local_parameters(self) -> set[DottedVariableName]:
+        """The name of the parameters specifically set for this sequence."""
 
         iterations = self.get_iteration_configuration()
         return iterations.get_parameter_names()
