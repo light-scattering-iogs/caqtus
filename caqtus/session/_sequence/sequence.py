@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from collections.abc import Iterable
 from functools import cached_property
-from typing import TYPE_CHECKING, Optional, Self
+from typing import TYPE_CHECKING, Optional, Self, Literal, assert_never
 
 import attrs
 import polars
@@ -189,10 +189,38 @@ class Sequence:
     def get_local_parameters(self) -> set[DottedVariableName]:
         """Return the name of the parameters specifically set for this sequence."""
 
-        return self._local_parameters
+        return self._sequence_parameters
+
+    def get_parameter_names(
+        self, which: Literal["all", "sequence"]
+    ) -> set[DottedVariableName]:
+        """Return the name of the parameters used to run this sequence.
+
+        Args:
+            which: Which parameters to return.
+                - "all": Return both sequence specific and global parameters.
+                - "local": Return only the parameters specifically set for this sequence.
+
+        Returns:
+            The names of the parameters used to run this sequence.
+        """
+
+        if which == "all":
+            return self._all_parameters
+        elif which == "sequence":
+            return self._sequence_parameters
+        else:
+            assert_never(which)
 
     @cached_property
-    def _local_parameters(self) -> set[DottedVariableName]:
+    def _all_parameters(self) -> set[DottedVariableName]:
+        """The name of the parameters used to run this sequence."""
+
+        global_parameters = self.get_global_parameters()
+        return global_parameters.names() | self._sequence_parameters
+
+    @cached_property
+    def _sequence_parameters(self) -> set[DottedVariableName]:
         """The name of the parameters specifically set for this sequence."""
 
         iterations = self.get_iteration_configuration()
