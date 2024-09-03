@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 from typing import Optional
 
@@ -166,6 +168,75 @@ class TimeLanesEditor(QWidget):
         return True
 
 
+class OverlayStepsView(QTableView):
+    def __init__(self, model: TimeLanesModel, parent: TimeLanesView):
+        super().__init__(parent)
+        self.setModel(model)
+
+        model.rowsInserted.connect(self.hide_lanes)
+        model.modelReset.connect(self.hide_lanes)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setSelectionModel(parent.selectionModel())
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.horizontalHeader().hide()
+
+        parent.horizontalHeader().sectionResized.connect(self.resize_columns)
+        parent.verticalHeader().sectionResized.connect(self.resize_rows)
+        self.verticalHeader().sectionResized.connect(self.resize_parent_rows)
+        parent.horizontalScrollBar().valueChanged.connect(
+            self.horizontalScrollBar().setValue
+        )
+        self.horizontalScrollBar().valueChanged.connect(
+            parent.horizontalScrollBar().setValue
+        )
+
+        for column in range(model.columnCount()):
+            self.setColumnWidth(column, parent.columnWidth(column))
+
+        self.setRowHeight(0, parent.rowHeight(0))
+        self.setRowHeight(1, parent.rowHeight(1))
+
+        self.update_geometry()
+
+        self.verticalScrollBar().valueChanged.connect(
+            lambda _: self.verticalScrollBar().setValue(
+                self.verticalScrollBar().minimum()
+            )
+        )
+
+    def resize_columns(self, logical_index: int, old_size: int, new_size: int):
+        self.setColumnWidth(logical_index, new_size)
+        self.update_geometry()
+
+    def resize_parent_rows(self, logical_index: int, old_size: int, new_size: int):
+        if logical_index <= 1:
+            self.parent().setRowHeight(logical_index, new_size)
+            self.update_geometry()
+
+    def resize_rows(self, logical_index: int, old_size: int, new_size: int):
+        if logical_index <= 1:
+            self.setRowHeight(logical_index, new_size)
+            self.update_geometry()
+
+    def hide_lanes(self):
+        for row in range(2, self.model().rowCount()):
+            self.hideRow(row)
+
+    def update_geometry(self):
+        parent = self.parent()
+        assert isinstance(parent, TimeLanesView)
+
+        self.setGeometry(
+            parent.viewport().x()
+            - parent.verticalHeader().width()
+            - parent.frameWidth(),
+            parent.horizontalHeader().height(),
+            parent.width(),
+            parent.rowHeight(0) + parent.rowHeight(1) + parent.frameWidth(),
+        )
+
+
 class TimeLanesView(QTableView):
     time_lanes_changed = Signal(TimeLanes)
 
@@ -201,7 +272,35 @@ class TimeLanesView(QTableView):
         # around on its own while the user is trying to edit the time lanes.
         self.setAutoScroll(False)
 
-        self.clicked.connect(self.edit)
+        self._steps_table = OverlayStepsView(self._model, self)
+        self.viewport().stackUnder(self._steps_table)
+        self._steps_table.show()
+        self.show()
+        self._steps_table.update_geometry()
+        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+
+    def moveCursor(self, cursorAction, modifiers):  # noqa: N802, N803
+        current = super().moveCursor(cursorAction, modifiers)
+
+        if cursorAction == QTableView.CursorAction.MoveUp:
+            if (current.row() > 1) and (
+                self.visualRect(current).topLeft().y()
+                < self._steps_table.rowHeight(0) + self._steps_table.rowHeight(1)
+            ):
+                new_value = (
+                    self.verticalScrollBar().value()
+                    + self.visualRect(current).topLeft().y()
+                    - self._steps_table.rowHeight(0)
+                    - self._steps_table.rowHeight(1)
+                )
+                self.verticalScrollBar().setValue(new_value)
+            elif current.row() <= 1:
+                return current.siblingAtRow(2)
+        return current
+
+    def resizeEvent(self, event):  # noqa: N802
+        self._steps_table.update_geometry()
+        super().resizeEvent(event)
 
     def setup_connections(self):
         self.horizontalHeader().customContextMenuRequested.connect(
