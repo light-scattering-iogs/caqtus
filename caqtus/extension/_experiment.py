@@ -1,3 +1,4 @@
+import contextlib
 import ctypes
 import logging.config
 import platform
@@ -26,7 +27,7 @@ from ..experiment_control.manager import (
     LocalExperimentManagerConfiguration,
     RemoteExperimentManagerConfiguration,
 )
-from ..session import ExperimentSessionMaker
+from ..session import ExperimentSessionMaker, ExperimentSession
 
 
 class Experiment:
@@ -326,6 +327,14 @@ class Experiment:
         with Server(config) as server:
             print("Ready")
             server.wait_for_termination()
+
+    def storage_session(self) -> contextlib.AbstractContextManager[ExperimentSession]:
+        """Return a context manager that provides a session to the storage backend.
+
+        A session can be used to access the data stored in the experiment.
+        """
+
+        return self.get_session_maker().session()
 
 
 def upgrade_database(experiment: Experiment) -> None:
