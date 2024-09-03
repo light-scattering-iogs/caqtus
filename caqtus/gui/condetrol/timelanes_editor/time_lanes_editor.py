@@ -278,6 +278,8 @@ class TimeLanesView(QTableView):
         self.show()
         self._steps_table.update_geometry()
         self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+        self.verticalHeader().setFixedWidth(200)
+        self._steps_table.verticalHeader().setFixedWidth(200)
 
     def moveCursor(self, cursorAction, modifiers):  # noqa: N802, N803
         current = super().moveCursor(cursorAction, modifiers)
