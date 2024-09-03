@@ -35,7 +35,7 @@ class Shot:
     def sequence_path(self) -> PureSequencePath:
         """The path of the sequence to which this shot belongs."""
 
-        return self.sequence_path
+        return self.sequence.path
 
     def get_parameters(self) -> Mapping[DottedVariableName, Parameter]:
         """Return the parameters used to run this shot."""
