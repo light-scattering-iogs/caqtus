@@ -289,12 +289,6 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def load_shot_parameters(
-        self, path: PureSequencePath, shot_index: int
-    ) -> polars.DataFrame:
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def get_all_shot_data(
         self, path: PureSequencePath, shot_index: int
     ) -> Mapping[DataLabel, Data]:
