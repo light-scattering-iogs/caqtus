@@ -14,10 +14,6 @@ from ..instructions import SequencerInstruction
 from ..trigger import Trigger, is_trigger
 
 
-def time_step_converter(value) -> TimeStep:
-    return TimeStep(decimal.Decimal(value))
-
-
 @attrs.define(slots=False)
 class Sequencer(Device, ABC):
     """Abstract base class for a sequencer device.
@@ -34,14 +30,15 @@ class Sequencer(Device, ABC):
 
     channel_number: ClassVar[int]
 
-    time_step: TimeStep = attrs.field(
-        on_setattr=attrs.setters.frozen,
-        converter=time_step_converter,
-        validator=attrs.validators.gt(TimeStep(decimal.Decimal(0))),
-    )
-    trigger: Trigger = attrs.field(
-        on_setattr=attrs.setters.frozen,
-    )
+    time_step: TimeStep = attrs.field(on_setattr=attrs.setters.frozen)
+    trigger: Trigger = attrs.field(on_setattr=attrs.setters.frozen)
+
+    @time_step.validator  # type: ignore
+    def _validate_time_step(self, _, value):
+        if not isinstance(value, decimal.Decimal):
+            raise TypeError("Time step must be a decimal number")
+        if value <= 0:
+            raise ValueError("Time step must be greater than zero")
 
     @trigger.validator  # type: ignore
     def _validate_trigger(self, _, value):
