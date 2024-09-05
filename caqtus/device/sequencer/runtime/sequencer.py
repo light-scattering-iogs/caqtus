@@ -14,6 +14,10 @@ from ..instructions import SequencerInstruction
 from ..trigger import Trigger, is_trigger
 
 
+def time_step_converter(value) -> TimeStep:
+    return TimeStep(decimal.Decimal(value))
+
+
 @attrs.define(slots=False)
 class Sequencer(Device, ABC):
     """Abstract base class for a sequencer device.
@@ -32,8 +36,8 @@ class Sequencer(Device, ABC):
 
     time_step: TimeStep = attrs.field(
         on_setattr=attrs.setters.frozen,
-        converter=decimal.Decimal,
-        validator=attrs.validators.gt(decimal.Decimal(0)),
+        converter=time_step_converter,
+        validator=attrs.validators.gt(TimeStep(decimal.Decimal(0))),
     )
     trigger: Trigger = attrs.field(
         on_setattr=attrs.setters.frozen,
