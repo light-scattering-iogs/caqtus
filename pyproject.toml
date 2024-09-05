@@ -82,7 +82,8 @@ dependencies = [
     "ruff>=0.5.5",
     "licensecheck>=2024.1.4",
     "pre-commit>=3.7.0",
-    "twine"
+    "twine",
+    "pyright>=1.1.355",
 ]
 
 
@@ -121,7 +122,6 @@ dependencies = [
 [tool.hatch.envs.types]
 dependencies = [
     "mypy>=1.11.0",
-    "pyright>=1.1.355",
 ]
 
 [tool.hatch.envs.types.scripts]
