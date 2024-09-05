@@ -1,3 +1,4 @@
+import decimal
 from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, TypeVar, TYPE_CHECKING
 
@@ -8,7 +9,7 @@ from typing_extensions import deprecated
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
-from .lane_compilers.timing import get_step_bounds
+from .lane_compilers.timing import get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
@@ -76,8 +77,8 @@ class ShotContext:
     _variables: Mapping[DottedVariableName, Any]
     _device_compilers: Mapping[DeviceName, "DeviceCompiler"]
 
-    _step_durations: tuple[float, ...] = attrs.field(init=False)
-    _step_bounds: tuple[float, ...] = attrs.field(init=False)
+    _step_durations: tuple[Time, ...] = attrs.field(init=False)
+    _step_bounds: tuple[Time, ...] = attrs.field(init=False)
     _was_lane_used: dict[str, bool] = attrs.field(init=False)
     _computed_shot_parameters: dict[DeviceName, Mapping[str, Any]] = attrs.field(
         init=False
@@ -132,12 +133,12 @@ class ShotContext:
 
         return self._sequence_context.get_step_names()
 
-    def get_step_durations(self) -> tuple[float, ...]:
+    def get_step_durations(self) -> tuple[Time, ...]:
         """Returns the durations of each step in seconds."""
 
         return self._step_durations
 
-    def get_step_start_times(self) -> Sequence[float]:
+    def get_step_start_times(self) -> Sequence[Time]:
         """Returns the times at which each step starts.
 
         Returns:
@@ -153,10 +154,10 @@ class ShotContext:
         return self._step_bounds
 
     @deprecated("Use get_step_start_times instead")
-    def get_step_bounds(self) -> Sequence[float]:
+    def get_step_bounds(self) -> Sequence[Time]:
         return self.get_step_start_times()
 
-    def get_shot_duration(self) -> float:
+    def get_shot_duration(self) -> Time:
         """Returns the total duration of the shot in seconds."""
 
         return self._step_bounds[-1]
@@ -218,10 +219,12 @@ def evaluate_step_durations(
     step_names: Iterable[str],
     step_durations: Iterable[Expression],
     variables: Mapping[DottedVariableName, Any],
-) -> list[float]:
+) -> list[Time]:
     result = []
 
-    for step, (name, duration) in enumerate(zip(step_names, step_durations)):
+    for step, (name, duration) in enumerate(
+        zip(step_names, step_durations, strict=True)
+    ):
         try:
             evaluated = duration.evaluate(variables)
         except EvaluationError as e:
@@ -262,5 +265,5 @@ def evaluate_step_durations(
                     (step, name),
                 )
             )
-        result.append(float(seconds))
+        result.append(Time(decimal.Decimal(seconds)))
     return result
