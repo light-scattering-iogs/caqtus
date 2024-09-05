@@ -22,7 +22,7 @@ converter = serialization.copy_converter()
 
 
 def _structure_time_step(value, _) -> TimeStep:
-    return decimal.Decimal(value)
+    return TimeStep(decimal.Decimal(value))
 
 
 converter.register_structure_hook(TimeStep, _structure_time_step)
