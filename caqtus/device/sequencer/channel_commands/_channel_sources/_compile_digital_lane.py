@@ -7,7 +7,7 @@ from caqtus.device.sequencer.instructions import (
     concatenate,
 )
 from caqtus.shot_compilation.compilation_contexts import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns, Time
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
@@ -28,8 +28,12 @@ def compile_digital_lane(
 
     step_bounds = shot_context.get_step_start_times()
     instructions = []
-    for cell_value, (start, stop) in zip(lane.block_values(), lane.block_bounds()):
-        length = number_ticks(step_bounds[start], step_bounds[stop], time_step * ns)
+    for cell_value, (start, stop) in zip(
+        lane.block_values(), lane.block_bounds(), strict=True
+    ):
+        length = number_ticks(
+            step_bounds[start], step_bounds[stop], Time(time_step * ns)
+        )
         if isinstance(cell_value, bool):
             instructions.append(get_constant_instruction(cell_value, length))
         elif isinstance(cell_value, Expression):

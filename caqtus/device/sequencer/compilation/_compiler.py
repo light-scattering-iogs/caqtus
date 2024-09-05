@@ -10,7 +10,7 @@ import tblib.pickling_support
 
 from caqtus.device import DeviceName, DeviceParameter
 from caqtus.shot_compilation import SequenceContext, ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import number_time_steps
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
@@ -115,8 +115,8 @@ class SequencerCompiler(TriggerableDeviceCompiler):
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
     ) -> SequencerInstruction[np.bool_]:
-        length = number_ticks(
-            0, shot_context.get_shot_duration(), sequencer_time_step * ns
+        length = number_time_steps(
+            shot_context.get_shot_duration(), sequencer_time_step
         )
 
         if isinstance(self.__configuration.trigger, ExternalClockOnChange):
