@@ -13,7 +13,7 @@ from caqtus.device.sequencer.instructions import (
     Pattern,
 )
 from caqtus.shot_compilation import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import number_time_steps
 from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableException
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
@@ -103,9 +103,7 @@ class DeviceTrigger(ChannelOutput):
         if not np.issubdtype(trigger_values.dtype, np.bool_):
             raise TypeError(f"Expected boolean trigger, got {trigger_values.dtype}")
 
-        length = number_ticks(
-            0, shot_context.get_shot_duration(), required_time_step * ns
-        )
+        length = number_time_steps(shot_context.get_shot_duration(), required_time_step)
 
         if len(trigger_values) != length:
             raise ValueError(

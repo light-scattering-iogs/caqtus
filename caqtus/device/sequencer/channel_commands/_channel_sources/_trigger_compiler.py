@@ -3,7 +3,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext, DeviceCompiler
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import number_time_steps
 from ..._time_step import TimeStep
 from ...instructions import SequencerInstruction, Pattern
 
@@ -40,8 +40,8 @@ class TriggerableDeviceCompiler(DeviceCompiler, Protocol):
             the sequencer time step.
         """
 
-        length = number_ticks(
-            0, shot_context.get_shot_duration(), sequencer_time_step * ns
+        length = number_time_steps(
+            shot_context.get_shot_duration(), sequencer_time_step
         )
         high_duration = length // 2
         low_duration = length - high_duration

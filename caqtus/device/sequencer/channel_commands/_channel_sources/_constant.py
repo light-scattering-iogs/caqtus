@@ -12,7 +12,7 @@ from caqtus.device.sequencer.channel_commands.channel_output import (
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.shot_compilation import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import ns, number_time_steps
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, Unit, dimensionless
@@ -47,7 +47,7 @@ class Constant(ChannelOutput):
     ) -> DimensionedSeries:
         length = (
             prepend
-            + number_ticks(0, shot_context.get_shot_duration(), required_time_step * ns)
+            + number_time_steps(shot_context.get_shot_duration(), required_time_step)
             + append
         )
         value = self.value.evaluate(shot_context.get_variables())
