@@ -6,6 +6,8 @@ from collections.abc import Iterable, Sequence
 from itertools import accumulate
 from typing import NewType
 
+from caqtus.device.sequencer import TimeStep
+
 Time = NewType("Time", decimal.Decimal)
 """A type for representing time in seconds.
 
@@ -39,7 +41,7 @@ def number_ticks(start_time: Time, stop_time: Time, time_step: Time) -> int:
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
 
 
-def ticks_for_duration(duration: Time, time_step: Time) -> int:
+def number_time_steps(duration: Time, time_step: TimeStep) -> int:
     """Returns the number of ticks covering the given duration.
 
     Args:
@@ -47,7 +49,21 @@ def ticks_for_duration(duration: Time, time_step: Time) -> int:
         time_step: The time step in seconds.
     """
 
-    return number_ticks(Time(decimal.Decimal(0)), duration, time_step)
+    return number_ticks(Time(decimal.Decimal(0)), duration, Time(time_step * ns))
+
+
+def number_time_steps_between(
+    start_time: Time, stop_time: Time, time_step: TimeStep
+) -> int:
+    """Returns the number of ticks covering the given duration.
+
+    Args:
+        start_time: The start time in seconds.
+        stop_time: The stop time in seconds.
+        time_step: The time step in seconds.
+    """
+
+    return number_ticks(start_time, stop_time, Time(time_step * ns))
 
 
 def get_step_bounds(step_durations: Iterable[Time]) -> Sequence[Time]:
