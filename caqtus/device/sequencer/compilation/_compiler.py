@@ -206,27 +206,27 @@ def compile_parallel_instructions(
 
     channel_instructions = []
     exceptions = []
-    for instruction_label, instruction in instructions.items():
+    for label, to_compile in instructions.items():
         try:
-            output_series = instruction.output.evaluate(
+            output_series = to_compile.output.evaluate(
                 time_step,
                 max_advance,
                 max_delay,
                 shot_context,
             )
-            instruction = _convert_series_to_instruction(output_series, instruction)
-            channel_instructions.append(with_name(instruction, instruction_label))
+            instruction = _convert_series_to_instruction(output_series, to_compile)
+            channel_instructions.append(with_name(instruction, label))
         except Exception as e:
             try:
                 raise ChannelCompilationError(
                     f"Error occurred when evaluating output for "
-                    f"'{instruction.description}'"
+                    f"'{to_compile.description}'"
                 ) from e
             except ChannelCompilationError as channel_error:
                 exceptions.append(channel_error)
     if exceptions:
         raise SequencerCompilationError(
-            f"Errors occurred when evaluating outputs",
+            "Errors occurred when evaluating outputs",
             exceptions,
         )
     stacked = stack_instructions(*channel_instructions)
@@ -332,14 +332,15 @@ def _(
         )
 
 
-@tblib.pickling_support.install
 class SequencerCompilationError(ExceptionGroup):
     pass
 
 
-@tblib.pickling_support.install
 class ChannelCompilationError(Exception):
     pass
+
+
+tblib.pickling_support.install(SequencerCompilationError, ChannelCompilationError)
 
 
 def _convert_series_to_instruction(

@@ -1,5 +1,4 @@
 import decimal
-import functools
 from typing import Optional
 
 import cattrs.strategies
@@ -7,6 +6,7 @@ from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
+from ._time_step import TimeStep
 from .channel_commands import (
     CalibratedAnalogMapping,
     ChannelOutput,
@@ -16,7 +16,6 @@ from .channel_commands import (
 )
 from .channel_commands.timing import Advance, Delay, BroadenLeft
 from .trigger import TriggerEdge, Trigger
-from ._time_step import TimeStep
 
 converter = serialization.copy_converter()
 """A converter than can serialize and deserialize sequencer configuration."""
@@ -149,10 +148,11 @@ def unstructure_lane_values(lane_values):
 converter.register_structure_hook(LaneValues, structure_lane_values)
 converter.register_unstructure_hook(LaneValues, unstructure_lane_values)
 
+
+def union_strategy(union, converter):
+    return cattrs.strategies.configure_tagged_union(union, converter, tag_name="type")
+
+
 cattrs.strategies.include_subclasses(
-    ChannelOutput,
-    converter,
-    union_strategy=functools.partial(
-        cattrs.strategies.configure_tagged_union, tag_name="type"
-    ),
+    ChannelOutput, converter, union_strategy=union_strategy
 )

@@ -156,8 +156,8 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         return apply_piecewise_linear_calibration(
             input_values,
             self.measured_data_points,
-            self.input_units,
-            self.output_units,
+            self.input_units,  # pyright: ignore [reportArgumentType]
+            self.output_units,  # pyright: ignore [reportArgumentType]
         )
 
 
