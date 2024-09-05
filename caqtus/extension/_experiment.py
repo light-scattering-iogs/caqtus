@@ -81,7 +81,7 @@ class Experiment:
         """
 
         if self._session_maker_config is not None:
-            warnings.warn("Storage configuration is being overwritten.")
+            warnings.warn("Storage configuration is being overwritten.", stacklevel=2)
         self._session_maker_config = backend_config
 
     def configure_shot_retry(
