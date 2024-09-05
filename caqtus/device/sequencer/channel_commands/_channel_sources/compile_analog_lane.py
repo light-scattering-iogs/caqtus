@@ -17,10 +17,11 @@ from caqtus.device.sequencer.instructions import (
     create_ramp,
 )
 from caqtus.shot_compilation.lane_compilers.timing import (
-    start_tick,
-    stop_tick,
-    number_ticks,
     ns,
+    start_time_step,
+    stop_time_step,
+    Time,
+    number_time_steps_between,
 )
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
@@ -43,7 +44,7 @@ TIME_VARIABLE = VariableName("t")
 def compile_analog_lane(
     lane: AnalogTimeLane,
     variables: Mapping[DottedVariableName, Any],
-    step_start_times: Sequence[float],
+    step_start_times: Sequence[Time],
     time_step: TimeStep,
 ) -> DimensionedSeries[np.float64]:
     """Compile the lane to a sequencer instruction.
@@ -162,12 +163,12 @@ def get_unique_units(
 def _compile_expression_block(
     expression: Expression,
     variables: Mapping[DottedVariableName, Any],
-    start_time: float,
-    stop_time: float,
+    start_time: Time,
+    stop_time: Time,
     time_step: TimeStep,
 ) -> ConstantBlockResult | TimeDependentBlockResult:
     if is_constant(expression):
-        length = number_ticks(start_time, stop_time, time_step * ns)
+        length = number_time_steps_between(start_time, stop_time, time_step)
         return evaluate_constant_expression(expression, variables, length)
     else:
         return evaluate_time_dependent_expression(
@@ -208,8 +209,8 @@ def evaluate_constant_expression(
 def evaluate_time_dependent_expression(
     expression: Expression,
     variables: Mapping[DottedVariableName, Any],
-    start_time: float,
-    stop_time: float,
+    start_time: Time,
+    stop_time: Time,
     time_step: TimeStep,
 ) -> TimeDependentBlockResult:
     assert not is_constant(expression)
@@ -224,7 +225,7 @@ def evaluate_time_dependent_expression(
     # Same if a ramp follows this block, we want to know the value of the current block
     # at true t=stop_time - start_time.
     time_values = np.insert(
-        time_values, [0, len(time_values)], [0, stop_time - start_time]
+        time_values, [0, len(time_values)], [0, float(stop_time - start_time)]
     )
 
     t = time_values * ureg.s
@@ -246,7 +247,7 @@ def evaluate_time_dependent_expression(
         raise InvalidTypeError(
             f"{fmt.expression(expression)} does not evaluate to a series of values"
         )
-    length = number_ticks(start_time, stop_time, time_step * ns)
+    length = number_time_steps_between(start_time, stop_time, time_step)
     if magnitudes.shape != (length + 2,):
         raise InvalidValueError(
             f"{fmt.expression(expression)} evaluates to an array of shape"
@@ -266,28 +267,28 @@ def _compile_ramp_cell(
     lane: AnalogTimeLane,
     ramp_block: Block,
     expression_blocks: dict[Block, ConstantBlockResult | TimeDependentBlockResult],
-    step_bounds: Sequence[float],
+    step_bounds: Sequence[Time],
     time_step: TimeStep,
 ) -> RampBlockResult:
     previous_block = Block(ramp_block - 1)
     if previous_block < 0:
-        raise InvalidValueError(f"There can't be a ramp at the beginning of a lane")
+        raise InvalidValueError("There can't be a ramp at the beginning of a lane")
     next_block = Block(ramp_block + 1)
     if next_block >= lane.number_blocks:
-        raise InvalidValueError(f"There can't be a ramp at the end of a lane")
+        raise InvalidValueError("There can't be a ramp at the end of a lane")
 
     try:
         previous_block_result = expression_blocks[previous_block]
     except KeyError:
         raise InvalidValueError(
             f"Block {previous_block} that precedes a ramp must be an expression"
-        )
+        ) from None
     try:
         next_block_result = expression_blocks[next_block]
     except KeyError:
         raise InvalidValueError(
             f"Block {next_block} that follows a ramp must be an expression"
-        )
+        ) from None
 
     assert previous_block_result.unit == next_block_result.unit
 
@@ -313,9 +314,9 @@ def is_constant(expression: Expression) -> bool:
     return TIME_VARIABLE not in expression.upstream_variables
 
 
-def get_time_array(start: float, stop: float, time_step: TimeStep) -> np.ndarray:
+def get_time_array(start: Time, stop: Time, time_step: TimeStep) -> np.ndarray:
     times = np.arange(
-        start_tick(start, time_step * ns), stop_tick(stop, time_step * ns)
+        start_time_step(start, time_step), stop_time_step(stop, time_step)
     ) * float(time_step * ns)
     return times
 
@@ -381,21 +382,21 @@ class RampBlockResult:
     @classmethod
     def through_two_points(
         cls,
-        t0: float,
+        t0: Time,
         v0: float,
-        t1: float,
+        t1: Time,
         v1: float,
         time_step: TimeStep,
         unit: Optional[UnitLike],
     ) -> RampBlockResult:
-        def f(t: float) -> float:
-            return (t - t0) / (t1 - t0) * (v1 - v0) + v0
+        def f(t: Time) -> float:
+            return float((t - t0) / (t1 - t0)) * (v1 - v0) + v0
 
-        first_tick = start_tick(t0, time_step * ns)
-        last_tick = stop_tick(t1, time_step * ns)
+        first_tick = start_time_step(t0, time_step)
+        last_tick = stop_time_step(t1, time_step)
 
-        first_tick_time = float(first_tick * time_step * ns)
-        last_tick_time = float(last_tick * time_step * ns)
+        first_tick_time = Time(first_tick * time_step * ns)
+        last_tick_time = Time(last_tick * time_step * ns)
 
         length = last_tick - first_tick
 

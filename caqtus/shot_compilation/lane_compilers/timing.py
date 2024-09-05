@@ -41,6 +41,18 @@ def number_ticks(start_time: Time, stop_time: Time, time_step: Time) -> int:
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
 
 
+def start_time_step(start_time: Time, time_step: TimeStep) -> int:
+    """Returns the time of the step starting at start_time."""
+
+    return start_tick(start_time, Time(time_step * ns))
+
+
+def stop_time_step(stop_time: Time, time_step: TimeStep) -> int:
+    """Returns the time of the step ending at stop_time."""
+
+    return stop_tick(stop_time, Time(time_step * ns))
+
+
 def number_time_steps(duration: Time, time_step: TimeStep) -> int:
     """Returns the number of ticks covering the given duration.
 
