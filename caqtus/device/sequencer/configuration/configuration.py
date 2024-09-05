@@ -85,11 +85,7 @@ class SequencerConfiguration(
         trigger: The trigger.
     """
 
-    time_step: TimeStep = attrs.field(
-        converter=decimal.Decimal,
-        validator=attrs.validators.gt(decimal.Decimal(0)),
-        on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
-    )
+    time_step: TimeStep = attrs.field(on_setattr=attrs.setters.validate)
     channels: tuple[ChannelConfiguration, ...] = attrs.field(
         converter=tuple,
         validator=attrs.validators.deep_iterable(
@@ -98,6 +94,13 @@ class SequencerConfiguration(
         on_setattr=attrs.setters.pipe(attrs.setters.convert, attrs.setters.validate),
     )
     trigger: Trigger = attrs.field(validator=validate_trigger)
+
+    @time_step.validator  # type: ignore
+    def _validate_time_step(self, _, value):
+        if not isinstance(value, decimal.Decimal):
+            raise TypeError("Time step must be a decimal number")
+        if value <= 0:
+            raise ValueError("Time step must be greater than zero")
 
     @abstractmethod
     def channel_types(self) -> tuple[Type[ChannelConfiguration], ...]:
