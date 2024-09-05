@@ -12,7 +12,7 @@ Time = NewType("Time", decimal.Decimal)
 It uses a decimal.Decimal to represent time in seconds to avoid floating point errors.
 """
 
-ns = decimal.Decimal("1e-9")
+ns = Time(decimal.Decimal("1e-9"))
 
 
 def start_tick(start_time: Time, time_step: Time) -> int:
@@ -37,6 +37,17 @@ def number_ticks(start_time: Time, stop_time: Time, time_step: Time) -> int:
     """
 
     return stop_tick(stop_time, time_step) - start_tick(start_time, time_step)
+
+
+def ticks_for_duration(duration: Time, time_step: Time) -> int:
+    """Returns the number of ticks covering the given duration.
+
+    Args:
+        duration: The duration in seconds.
+        time_step: The time step in seconds.
+    """
+
+    return number_ticks(Time(decimal.Decimal(0)), duration, time_step)
 
 
 def get_step_bounds(step_durations: Iterable[Time]) -> Sequence[Time]:
