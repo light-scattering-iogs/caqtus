@@ -28,6 +28,15 @@ T = TypeVar("T", bound=DeviceConfiguration)
 
 
 class SerializerProtocol(Protocol):
+    """Serialize and deserialize user objects.
+
+    Attributes:
+        sequence_serializer: Used to structure and unstructure sequence iterations.
+        device_configuration_serializer: Used to structure and unstructure device
+            configurations.
+        time_lane_serializer: Used to structure and unstructure time lanes.
+    """
+
     sequence_serializer: SequenceSerializer
     device_configuration_serializer: DeviceConfigJSONSerializerProtocol
     time_lane_serializer: TimeLaneSerializerProtocol
@@ -66,8 +75,6 @@ class SerializerProtocol(Protocol):
 
 @attrs.define
 class Serializer(SerializerProtocol):
-    """Serialize and deserialize user objects."""
-
     sequence_serializer: SequenceSerializer
     device_configuration_serializer: DeviceConfigJSONSerializer
     time_lane_serializer: TimeLaneSerializer
