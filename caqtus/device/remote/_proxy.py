@@ -1,9 +1,4 @@
-from typing import Generic, TypeVar
-
-T = TypeVar("T")
-
-
-class Proxy(Generic[T]):
+class Proxy[T]:
     def __init__(self, pid: int, obj_id: int):
         self._pid = pid
         self._obj_id = obj_id

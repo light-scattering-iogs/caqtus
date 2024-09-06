@@ -4,7 +4,6 @@ from typing import (
     Self,
     ParamSpec,
     TypeVar,
-    Generic,
     LiteralString,
     Any,
     final,
@@ -19,10 +18,8 @@ from ...utils.contextlib import aclose_on_error
 T = TypeVar("T")
 P = ParamSpec("P")
 
-DeviceType = TypeVar("DeviceType", bound=Device)
 
-
-class DeviceProxy(Generic[DeviceType]):
+class DeviceProxy[DeviceType: Device]:
     """Proxy to a remote device.
 
     This class is used on the client side to interact with a device running on a remote
