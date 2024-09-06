@@ -1,24 +1,25 @@
-from typing import Mapping, Any, assert_never
+from typing import assert_never, TypedDict, reveal_type, assert_type
 
 import numpy as np
 
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.shot_compilation import (
     SequenceContext,
     DeviceNotUsedException,
     ShotContext,
 )
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
+from caqtus.shot_compilation.lane_compilers.timing import ns, number_time_steps_between
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
 from ..sequencer import TimeStep
 from ..sequencer.compilation import TriggerableDeviceCompiler
 from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
+from ...types.image.roi import RectangularROI
 
 
 class CameraCompiler(TriggerableDeviceCompiler):
-    """Compiler for a camera device."""
+    """Computes parameters for a camera device."""
 
     def __init__(self, device_name: DeviceName, sequence_context: SequenceContext):
         super().__init__(device_name, sequence_context)
@@ -26,7 +27,7 @@ class CameraCompiler(TriggerableDeviceCompiler):
         try:
             lane = sequence_context.get_lane(device_name)
         except KeyError:
-            raise DeviceNotUsedException(device_name)
+            raise DeviceNotUsedException(device_name) from None
         if not isinstance(lane, CameraTimeLane):
             raise TypeError(
                 f"Expected a camera time lane for device {device_name}, got "
@@ -41,51 +42,98 @@ class CameraCompiler(TriggerableDeviceCompiler):
             )
         self.__configuration = configuration
 
-    def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
-        return {
-            DeviceParameter("roi"): self.__configuration.roi,
-            DeviceParameter("external_trigger"): True,
-            DeviceParameter("timeout"): 1.0,
-        }
+    class CameraInitializationParameters(TypedDict):
+        """The parameters to pass to the camera constructor.
 
-    def compile_shot_parameters(self, shot_context: ShotContext) -> Mapping[str, Any]:
+        Fields:
+            roi: The region of interest of the sensor for the camera during the
+                sequence.
+            external_trigger: Whether the camera should be triggered externally or not.
+            timeout: The maximum time to wait for the camera to be ready to take a
+                picture.
+        """
+
+        roi: RectangularROI
+        external_trigger: bool
+        timeout: float
+
+    def compile_initialization_parameters(self) -> CameraInitializationParameters:
+        """Compile the parameters to pass to the device constructor."""
+
+        return self.CameraInitializationParameters(
+            roi=self.__configuration.roi,
+            external_trigger=True,
+            timeout=1.0,
+        )
+
+    class CameraShotParameters(TypedDict):
+        """The parameters to pass to the camera controller for a shot.
+
+        Fields:
+            timeout: The maximum time to wait for a picture to be taken.
+            picture_names: The names of the pictures to take, in the order they should
+                be taken.
+            exposures: The exposure times of the pictures to take, in the order they
+                should be taken.
+                The number of exposures matches the number of pictures.
+        """
+
+        timeout: float
+        picture_names: list[str]
+        exposures: list[float]
+
+    def compile_shot_parameters(
+        self, shot_context: ShotContext
+    ) -> CameraShotParameters:
+        """Compile the parameters to pass to the camera controller for a shot.
+
+        The exposures for the pictures are computed from the duration of the
+        corresponding blocks in the camera time lane.
+        """
+
         step_durations = shot_context.get_step_durations()
-        exposures = []
+        exposures: list[float] = []
         picture_names = []
         shot_context.mark_lane_used(self.__device_name)
         for value, (start, stop) in zip(
-            self.__lane.block_values(), self.__lane.block_bounds()
+            self.__lane.block_values(), self.__lane.block_bounds(), strict=True
         ):
             if isinstance(value, TakePicture):
                 exposure = sum(step_durations[start:stop])
-                exposures.append(exposure)
+                exposures.append(float(exposure))
                 picture_names.append(value.picture_name)
-        return {
+        return self.CameraShotParameters(
             # Add a bit of extra time to the timeout, in case the shot takes a bit of
             # time to actually start.
-            "timeout": shot_context.get_shot_duration() + 1,
-            "picture_names": picture_names,
-            "exposures": exposures,
-        }
+            timeout=float(shot_context.get_shot_duration() + 1),
+            picture_names=picture_names,
+            exposures=exposures,
+        )
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
     ) -> SequencerInstruction[np.bool_]:
+        """Compute the trigger for the camera.
+
+        For a camera, the trigger is high during the exposure time of each picture,
+        and low in between.
+        """
+
         step_bounds = shot_context.get_step_start_times()
 
         instructions: list[SequencerInstruction[np.bool_]] = []
         for value, (start, stop) in zip(
-            self.__lane.block_values(), self.__lane.block_bounds()
+            self.__lane.block_values(), self.__lane.block_bounds(), strict=True
         ):
-            length = number_ticks(
-                step_bounds[start], step_bounds[stop], sequencer_time_step * ns
+            length = number_time_steps_between(
+                step_bounds[start], step_bounds[stop], sequencer_time_step
             )
             if isinstance(value, TakePicture):
                 if length == 0:
                     raise InvalidValueError(
                         f"No trigger can be generated for picture "
                         f"'{value.picture_name}' because its exposure is too short"
-                        f"({(step_bounds[stop] - step_bounds[start]) * 1e9} ns) with "
+                        f"({(step_bounds[stop] - step_bounds[start]) / ns} ns) with "
                         f"respect to the time step ({sequencer_time_step} ns)"
                     )
                 instructions.append(Pattern([True]) * length)

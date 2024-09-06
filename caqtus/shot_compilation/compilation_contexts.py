@@ -133,7 +133,7 @@ class ShotContext:
 
         return self._sequence_context.get_step_names()
 
-    def get_step_durations(self) -> tuple[Time, ...]:
+    def get_step_durations(self) -> Sequence[Time]:
         """Returns the durations of each step in seconds."""
 
         return self._step_durations
