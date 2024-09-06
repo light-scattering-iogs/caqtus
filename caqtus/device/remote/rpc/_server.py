@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @attrs.define
 class ObjectReference:
-    obj: object
+    obj: Any
     number_proxies: int
 
 
@@ -83,7 +83,7 @@ class RPCServer:
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
-    def run(self) -> Never:
+    def run(self) -> Never:  # pyright: ignore[reportReturnType]
         anyio.run(self.run_async, backend="trio")
 
     async def run_async(self) -> Never:
