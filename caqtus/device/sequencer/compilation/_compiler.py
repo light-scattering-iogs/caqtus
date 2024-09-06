@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Iterable
-from typing import Mapping, Any, Optional
+from typing import Mapping, Any, Optional, TypedDict
 
 import attrs
 import numpy as np
@@ -8,7 +8,7 @@ import numpy as np
 # TODO: Can remove tblib support once the experiment manager runs in a single process
 import tblib.pickling_support
 
-from caqtus.device import DeviceName, DeviceParameter
+from caqtus.device import DeviceName
 from caqtus.shot_compilation import SequenceContext, ShotContext
 from caqtus.shot_compilation.lane_compilers.timing import number_time_steps
 from caqtus.types.recoverable_exceptions import InvalidValueError
@@ -35,7 +35,12 @@ from ..instructions import (
     concatenate,
     Repeated,
 )
-from ..trigger import ExternalClockOnChange, ExternalTriggerStart, SoftwareTrigger
+from ..trigger import (
+    ExternalClockOnChange,
+    ExternalTriggerStart,
+    SoftwareTrigger,
+    Trigger,
+)
 
 
 class SequencerCompiler(TriggerableDeviceCompiler):
@@ -52,7 +57,18 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         self.__configuration = configuration
         self.__device_name = device_name
 
-    def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
+    class SequencerInitializationParameters(TypedDict):
+        """The parameters to pass to the sequencer constructor.
+
+        Fields:
+            time_step: The time step of the sequencer.
+            trigger: The trigger configuration of the sequencer.
+        """
+
+        time_step: TimeStep
+        trigger: Trigger
+
+    def compile_initialization_parameters(self) -> SequencerInitializationParameters:
         """Compile the parameters needed to initialize the sequencer.
 
         Returns:
@@ -64,23 +80,25 @@ class SequencerCompiler(TriggerableDeviceCompiler):
 
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
-        return {
-            DeviceParameter("time_step"): self.__configuration.time_step,
-            DeviceParameter("trigger"): self.__configuration.trigger,
-        }
+        return self.SequencerInitializationParameters(
+            time_step=self.__configuration.time_step,
+            trigger=self.__configuration.trigger,
+        )
+
+    class SequencerShotParameters(TypedDict):
+        """The parameters to pass to the sequencer controller for a shot.
+
+        Fields:
+            sequence: The instructions to execute on the sequencer.
+        """
+
+        sequence: SequencerInstruction
 
     def compile_shot_parameters(
         self,
         shot_context: ShotContext,
-    ) -> Mapping[str, Any]:
-        """Evaluates the output for each channel of the sequencer.
-
-        Returns:
-            A dictionary with the following key:
-
-            * 'sequence': A :class:`SequencerInstruction` that contains the
-              instructions for all the channels of the sequencer.
-        """
+    ) -> SequencerShotParameters:
+        """Evaluates the output for each channel of the sequencer."""
 
         instructions = {}
 
@@ -110,11 +128,13 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             shot_context,
         )
 
-        return {"sequence": stacked}
+        return SequencerCompiler.SequencerShotParameters(sequence=stacked)
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
     ) -> SequencerInstruction[np.bool_]:
+        """Compile the trigger to generate for the current device."""
+
         length = number_time_steps(
             shot_context.get_shot_duration(), sequencer_time_step
         )
