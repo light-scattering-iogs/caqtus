@@ -47,7 +47,7 @@ class DeviceCompiler(Protocol):
         pass
 
     @abc.abstractmethod
-    def compile_initialization_parameters(self) -> Mapping[DeviceParameter, Any]:
+    def compile_initialization_parameters(self) -> Mapping[str, Any]:
         """Compile the parameters to pass to the device constructor."""
 
         return {}
