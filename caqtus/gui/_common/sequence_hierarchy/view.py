@@ -7,7 +7,6 @@ from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QTreeView, QMenu, QWidget
 
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
-from caqtus.session._result import unwrap
 from .async_model import AsyncPathHierarchyModel
 from .delegate import ProgressDelegate
 
@@ -59,6 +58,6 @@ class AsyncPathHierarchyView(QTreeView):
     def on_double_click(self, index: QModelIndex):
         path = self._model.get_path(self._proxy_model.mapToSource(index))
         with self.session_maker() as session:
-            is_sequence = unwrap(session.sequences.is_sequence(path))
+            is_sequence = session.sequences.is_sequence(path).unwrap()
         if is_sequence:
             self.sequence_double_clicked.emit(path)
