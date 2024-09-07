@@ -38,8 +38,9 @@ def test_0():
             ),
         },
     )
-
     params, duration = compiler.compile_shot_sync(context.variables)
+    assert isinstance(duration, float)
+    assert duration == 0.47811
     assert len(params[DeviceName("Spincore")]["sequence"]) == number_time_steps(
         to_time(duration), configs[DeviceName("Spincore")].time_step
     )
