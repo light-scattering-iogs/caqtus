@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import functools
 from collections.abc import Callable
 from typing import TypeVar
@@ -10,15 +11,13 @@ from typing_extensions import Protocol
 from caqtus.device import DeviceConfiguration
 from caqtus.device.configuration.serializer import (
     DeviceConfigJSONSerializer,
-    DeviceConfigJSONSerializerProtocol,
 )
 from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
 )
-from caqtus.types.timelane import TimeLanes, TimeLane
+from caqtus.types.timelane import TimeLanes
 from caqtus.types.timelane._serializer import (
-    TimeLaneSerializerProtocol,
     TimeLaneSerializer,
 )
 from caqtus.utils import serialization
@@ -28,49 +27,39 @@ T = TypeVar("T", bound=DeviceConfiguration)
 
 
 class SerializerProtocol(Protocol):
-    """Serialize and deserialize user objects.
+    """Serialize and deserialize user objects."""
 
-    Attributes:
-        sequence_serializer: Used to structure and unstructure sequence iterations.
-        device_configuration_serializer: Used to structure and unstructure device
-            configurations.
-        time_lane_serializer: Used to structure and unstructure time lanes.
-    """
-
-    sequence_serializer: SequenceSerializer
-    device_configuration_serializer: DeviceConfigJSONSerializerProtocol
-    time_lane_serializer: TimeLaneSerializerProtocol
-
+    @abc.abstractmethod
     def dump_device_configuration(
         self, config: DeviceConfiguration
     ) -> tuple[str, serialization.JSON]:
-        return self.device_configuration_serializer.dump_device_configuration(config)
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def load_device_configuration(
         self, tag: str, content: serialization.JSON
     ) -> DeviceConfiguration:
-        return self.device_configuration_serializer.load_device_configuration(
-            tag, content
-        )
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def construct_sequence_iteration(
         self, content: serialization.JSON
     ) -> IterationConfiguration:
-        return self.sequence_serializer.iteration_constructor(content)
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def dump_sequence_iteration(
         self, iteration: IterationConfiguration
     ) -> serialization.JSON:
-        return self.sequence_serializer.iteration_serializer(iteration)
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
-        return self.time_lane_serializer.unstructure_time_lanes(time_lanes)
+        raise NotImplementedError
 
+    @abc.abstractmethod
     def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
-        return self.time_lane_serializer.structure_time_lanes(content)
-
-    def construct_time_lane(self, content: serialization.JSON) -> TimeLane:
-        return self.time_lane_serializer.load(content)
+        raise NotImplementedError
 
 
 @attrs.define
@@ -107,6 +96,34 @@ class Serializer(SerializerProtocol):
             iteration_constructor=constructor,
         )
 
+    def construct_sequence_iteration(
+        self, content: serialization.JSON
+    ) -> IterationConfiguration:
+        return self.sequence_serializer.iteration_constructor(content)
+
+    def dump_sequence_iteration(
+        self, iteration: IterationConfiguration
+    ) -> serialization.JSON:
+        return self.sequence_serializer.iteration_serializer(iteration)
+
+    def dump_device_configuration(
+        self, config: DeviceConfiguration
+    ) -> tuple[str, serialization.JSON]:
+        return self.device_configuration_serializer.dump_device_configuration(config)
+
+    def load_device_configuration(
+        self, tag: str, content: serialization.JSON
+    ) -> DeviceConfiguration:
+        return self.device_configuration_serializer.load_device_configuration(
+            tag, content
+        )
+
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+        return self.time_lane_serializer.unstructure_time_lanes(time_lanes)
+
+    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+        return self.time_lane_serializer.structure_time_lanes(content)
+
 
 @attrs.frozen
 class SequenceSerializer:
@@ -134,7 +151,7 @@ def _(
 
 
 def default_iteration_configuration_constructor(
-    iteration_content: serialization.JSON,
+    iteration_content,
 ) -> IterationConfiguration:
     iteration_type = iteration_content.pop("type")
     if iteration_type == "steps":
