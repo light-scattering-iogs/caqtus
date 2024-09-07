@@ -148,6 +148,22 @@ class SQLPathHierarchy(PathHierarchy):
 
         return Success(None)
 
+    def check_valid(self) -> None:
+        """Check that the hierarchy is valid."""
+
+        # We check that the name of the paths are consistent with the links between
+        # them.
+        for child in self.get_children(PureSequencePath.root()).unwrap():
+            self._check_valid(self._query_path_model(child).unwrap())
+
+    def _check_valid(self, path: SQLSequencePath) -> None:
+        current_path = PureSequencePath(str(path.path))
+        for child in path.children:
+            child_path = PureSequencePath(str(child.path))
+            if child_path.parent != current_path:
+                raise AssertionError("Invalid path hierarchy")
+            self._check_valid(child)
+
 
 def _recursively_replace_prefix(
     path_model: SQLSequencePath, old_parts: int, new_prefixes: tuple[str, ...]
