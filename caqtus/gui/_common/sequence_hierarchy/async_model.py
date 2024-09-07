@@ -28,7 +28,6 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
-from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import Unknown
 
@@ -232,10 +231,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert await session.paths.does_path_exists(path)
         item = QStandardItem()
         item.setData(path.name, Qt.ItemDataRole.DisplayRole)
-        is_sequence = unwrap(await session.sequences.is_sequence(path))
-        creation_date = unwrap(await session.paths.get_path_creation_date(path))
+        is_sequence = (await session.sequences.is_sequence(path)).unwrap()
+        creation_date = (await session.paths.get_path_creation_date(path)).unwrap()
         if is_sequence:
-            stats = unwrap(await session.sequences.get_stats(path))
+            stats = (await session.sequences.get_stats(path)).unwrap()
             item.setData(
                 SequenceNode(
                     path=path,
@@ -350,7 +349,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         async with self.session_maker.async_session() as session:
             creation_date_result = await session.paths.get_path_creation_date(data.path)
             try:
-                creation_date = unwrap(creation_date_result)
+                creation_date = creation_date_result.unwrap()
             except PathNotFoundError:
                 self.handle_path_was_deleted(index)
                 return
@@ -360,7 +359,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             if isinstance(data, SequenceNode):
                 sequence_stats_result = await session.sequences.get_stats(data.path)
                 try:
-                    stats = unwrap(sequence_stats_result)
+                    stats = sequence_stats_result.unwrap()
                 except PathIsNotSequenceError:
                     await self.handle_sequence_became_folder(index, session)
                     return
@@ -388,7 +387,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         async with self.session_maker.async_session() as session:
             children_result = await session.paths.get_children(parent_data.path)
             try:
-                child_paths = unwrap(children_result)
+                child_paths = children_result.unwrap()
             except PathIsSequenceError:
                 await self.handle_folder_became_sequence_async(parent, session)
                 return
@@ -429,7 +428,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 async with self.session_maker.async_session() as session:
                     children_result = await session.paths.get_children(parent_path)
                     try:
-                        child_paths = unwrap(children_result)
+                        child_paths = children_result.unwrap()
                     except PathIsSequenceError:
                         await self.handle_folder_became_sequence_async(parent, session)
                         return
@@ -479,8 +478,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        stats = unwrap(await session.sequences.get_stats(data.path))
-        creation_date = unwrap(await session.paths.get_path_creation_date(data.path))
+        stats = (await session.sequences.get_stats(data.path)).unwrap()
+        creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(
@@ -509,7 +508,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        creation_date = unwrap(await session.paths.get_path_creation_date(data.path))
+        creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
         assert item.rowCount() == 0
         item.setData(
             FolderNode(
