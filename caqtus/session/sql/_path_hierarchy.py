@@ -161,7 +161,7 @@ class SQLPathHierarchy(PathHierarchy):
         current_path = PureSequencePath(str(path.path))
         for child in path.children:
             child_path = PureSequencePath(str(child.path))
-            if child_path.parent != current_path:
+            if child_path.parent != current_path:  # pragma: no cover
                 raise AssertionError("Invalid path hierarchy")
             self._check_valid(child)
 
