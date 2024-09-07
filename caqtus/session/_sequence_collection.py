@@ -93,14 +93,12 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
-        """Return the descendants of this path that are sequences, including this path.
+    def get_contained_sequences(
+        self, path: PureSequencePath
+    ) -> _Result[list[PureSequencePath], PathNotFoundError]:
+        """Return the descendants of this path that are sequences.
 
-        Return:
-            A list of all sequences inside this path and all its descendants.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
+        The current path is included in the result if it is a sequence.
         """
 
         raise NotImplementedError
