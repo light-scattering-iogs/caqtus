@@ -5,7 +5,6 @@ from pytestqt.modeltest import ModelTester
 from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
 from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath
-from .session_maker import session_maker
 
 
 def test_0(session_maker, qtbot):
