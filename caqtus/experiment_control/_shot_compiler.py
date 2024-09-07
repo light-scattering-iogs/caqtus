@@ -56,7 +56,8 @@ class ShotCompiler(ShotCompilerProtocol):
         self.shot_time_lanes = shot_timelanes
         self.device_configurations = device_configurations
         self._sequence_context = SequenceContext(
-            device_configurations=device_configurations, time_lanes=shot_timelanes
+            device_configurations=device_configurations,  # pyright: ignore[reportCallIssue]
+            time_lanes=shot_timelanes,  # pyright: ignore[reportCallIssue]
         )
         self.device_compilers = device_compilers
 
@@ -81,9 +82,9 @@ class ShotCompiler(ShotCompilerProtocol):
         self, shot_parameters: VariableNamespace
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
         shot_context = ShotContext(
-            sequence_context=self._sequence_context,
-            variables=shot_parameters.dict(),
-            device_compilers=self.device_compilers,
+            sequence_context=self._sequence_context,  # pyright: ignore[reportCallIssue]
+            variables=shot_parameters.dict(),  # pyright: ignore[reportCallIssue]
+            device_compilers=self.device_compilers,  # pyright: ignore[reportCallIssue]
         )
 
         results = {}
@@ -97,7 +98,7 @@ class ShotCompiler(ShotCompilerProtocol):
                 + ", ".join(unused_lanes)
             )
 
-        return results, shot_context.get_shot_duration()
+        return results, float(shot_context.get_shot_duration())
 
 
 def create_shot_compiler(
