@@ -96,7 +96,7 @@ class Sequence:
     def __len__(self) -> int:
         """Return the number of shots that have been run for this sequence."""
 
-        return len(unwrap(self.session.sequences.get_shots(self.path)))
+        return len(self.session.sequences.get_shots(self.path).unwrap())
 
     def get_state(self) -> State:
         """Return the state of the sequence."""
@@ -134,7 +134,7 @@ class Sequence:
         The shots are returned sorted by index.
         """
 
-        pure_shots = unwrap(self.session.sequences.get_shots(self.path))
+        pure_shots = self.session.sequences.get_shots(self.path).unwrap()
         sorted_shots = sorted(pure_shots, key=lambda x: x.index)
         return (Shot(self, shot.index, self.session) for shot in sorted_shots)
 
