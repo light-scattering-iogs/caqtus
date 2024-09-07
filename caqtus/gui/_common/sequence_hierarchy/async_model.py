@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import datetime
-from typing import Optional, TypeGuard
+from typing import Optional, TypeGuard, assert_never, assert_type
 
 import anyio
 import attrs
@@ -30,7 +30,7 @@ from caqtus.session import (
 )
 from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import SequenceStats
-from caqtus.types.iteration import is_unknown
+from caqtus.types.iteration import Unknown
 
 NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -95,7 +95,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             self.createIndex(row, column, child_item) if child_item else QModelIndex()
         )
 
-    def parent(self, index=DEFAULT_INDEX):
+    def parent(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, index: QModelIndex | QPersistentModelIndex = DEFAULT_INDEX
+    ):
         if not index.isValid():
             return QModelIndex()
         child_item = index.internalPointer()
@@ -108,7 +110,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             else QModelIndex()
         )
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         item = self._get_item(index)
@@ -132,28 +134,30 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert isinstance(result, QStandardItem)
         return result
 
-    def rowCount(self, parent=DEFAULT_INDEX):  # noqa: N802
+    def rowCount(self, parent=DEFAULT_INDEX) -> int:  # noqa: N802
         if parent.column() > 0:
             return 0
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
-        match node_data:
-            case SequenceNode():
-                return 0
-            case FolderNode(has_fetched_children=True):
+        if isinstance(node_data, SequenceNode):
+            return 0
+        else:
+            assert_type(node_data, FolderNode)
+            if node_data.has_fetched_children:
                 return parent_item.rowCount()
-            case FolderNode(has_fetched_children=False):
+            else:
                 return 0
 
     def hasChildren(self, parent=DEFAULT_INDEX) -> bool:  # noqa: N802
         parent_item = self._get_item(parent)
         node_data = get_item_data(parent_item)
-        match node_data:
-            case SequenceNode():
-                return False
-            case FolderNode(has_fetched_children=True):
+        if isinstance(node_data, SequenceNode):
+            return False
+        else:
+            assert_type(node_data, FolderNode)
+            if node_data.has_fetched_children:
                 return parent_item.rowCount() > 0
-            case FolderNode(has_fetched_children=False):
+            else:
                 return True
 
     def canFetchMore(self, parent) -> bool:  # noqa: N802
@@ -178,7 +182,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 with self.session_maker() as session:
                     children_result = session.paths.get_children(parent_path)
                     try:
-                        children = unwrap(children_result)
+                        children = children_result.unwrap()
                     except PathIsSequenceError:
                         self.handle_folder_became_sequence(parent, session)
                         return
@@ -199,10 +203,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert session.paths.does_path_exists(path)
         item = QStandardItem()
         item.setData(path.name, Qt.ItemDataRole.DisplayRole)
-        is_sequence = unwrap(session.sequences.is_sequence(path))
-        creation_date = unwrap(session.paths.get_path_creation_date(path))
+        is_sequence = session.sequences.is_sequence(path).unwrap()
+        creation_date = session.paths.get_path_creation_date(path).unwrap()
         if is_sequence:
-            stats = unwrap(session.sequences.get_stats(path))
+            stats = session.sequences.get_stats(path).unwrap()
             item.setData(
                 SequenceNode(
                     path=path,
@@ -324,7 +328,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     async def watch_session(self) -> None:
         while True:
             await self.update_from_session()
-            await anyio.sleep(0)
+            await anyio.sleep(0)  # noqa: ASYNC115
 
     async def update_from_session(self) -> None:
         await self.prune()
@@ -450,12 +454,12 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     await self.add_new_paths(self.index(row, 0, parent))
 
     def handle_folder_became_sequence(
-        self, index: QModelIndex, session: ExperimentSession
+        self, index: QModelIndex | QPersistentModelIndex, session: ExperimentSession
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        stats = unwrap(session.sequences.get_stats(data.path))
-        creation_date = unwrap(session.paths.get_path_creation_date(data.path))
+        stats = session.sequences.get_stats(data.path).unwrap()
+        creation_date = session.paths.get_path_creation_date(data.path).unwrap()
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(
@@ -491,7 +495,9 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.endRemoveRows()
         self.emit_index_updated(index)
 
-    def handle_path_was_deleted(self, index: QModelIndex):
+    def handle_path_was_deleted(
+        self, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
         parent = self.parent(index)
         parent_item = self._get_item(parent)
         self.beginRemoveRows(parent, index.row(), index.row())
@@ -513,7 +519,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         )
         self.emit_index_updated(index)
 
-    def emit_index_updated(self, index: QModelIndex) -> None:
+    def emit_index_updated(self, index: QModelIndex | QPersistentModelIndex) -> None:
+        index = QModelIndex(index)
         self.dataChanged.emit(
             index.siblingAtColumn(0),
             index.siblingAtColumn(self.columnCount() - 1),
@@ -525,9 +532,11 @@ def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> st
     if stats.state == State.DRAFT or stats.state == State.PREPARING:
         return "--/--"
     elif stats.state == State.RUNNING:
+        assert stats.start_time is not None
+        assert stats.number_completed_shots is not None
         running_duration = updated_time - stats.start_time
         expected_num_shots = stats.expected_number_shots
-        if is_unknown(expected_num_shots) or stats.number_completed_shots == 0:
+        if isinstance(expected_num_shots, Unknown) or stats.number_completed_shots == 0:
             remaining = "--"
         else:
             remaining = (
@@ -545,12 +554,13 @@ def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> st
         or stats.state == State.CRASHED
         or stats.state == State.INTERRUPTED
     ):
-        try:
-            total_duration = stats.stop_time - stats.start_time
-            total_duration = _format_seconds(total_duration.total_seconds())
-            return total_duration
-        except TypeError:
+        # Need to handle the case where the sequence crashed before starting.
+        if stats.start_time is None or stats.stop_time is None:
             return ""
+        else:
+            total_duration = stats.stop_time - stats.start_time
+            return _format_seconds(total_duration.total_seconds())
+    assert_never(stats.state)
 
 
 def _format_seconds(seconds: float) -> str:
