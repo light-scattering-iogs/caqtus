@@ -144,7 +144,7 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).start_time
+        return self.session.sequences.get_stats(self.path).unwrap().start_time
 
     def get_end_time(self) -> Optional[datetime.datetime]:
         """Return the time the sequence was ended.
@@ -152,7 +152,7 @@ class Sequence:
         If the sequence has not been ended, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).stop_time
+        return self.session.sequences.get_stats(self.path).unwrap().stop_time
 
     def get_expected_number_of_shots(self) -> int | Unknown:
         """Return the expected number of shots for the sequence.
@@ -160,7 +160,9 @@ class Sequence:
         If the sequence has not been started, return None.
         """
 
-        return unwrap(self.session.sequences.get_stats(self.path)).expected_number_shots
+        return (
+            self.session.sequences.get_stats(self.path).unwrap().expected_number_shots
+        )
 
     def duplicate(self, target_path: PureSequencePath | str) -> Sequence:
         """Duplicate the sequence to a new path.
