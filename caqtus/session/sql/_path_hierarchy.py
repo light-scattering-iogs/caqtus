@@ -31,7 +31,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
+    ) -> _Result[list[PureSequencePath], PathIsSequenceError]:
         paths_to_create: list[PureSequencePath] = []
         current = path
         sequence_collection = self.parent_session.sequences
@@ -39,7 +39,7 @@ class SQLPathHierarchy(PathHierarchy):
             is_sequence = sequence_collection.is_sequence(current)
             match is_sequence:
                 case Success(True):
-                    return Failure(
+                    return _Failure(
                         PathIsSequenceError(
                             f"Cannot create path {path} because {current} is already a"
                             " sequence"
@@ -66,7 +66,7 @@ class SQLPathHierarchy(PathHierarchy):
             )
             session.add(new_path)
             created_paths.append(path_to_create)
-        return Success(created_paths)
+        return _Success(created_paths)
 
     def get_children(
         self, path: PureSequencePath

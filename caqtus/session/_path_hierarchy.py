@@ -36,7 +36,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def create_path(
         self, path: PureSequencePath
-    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
+    ) -> _Result[list[PureSequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
         If is safe to call this methode even if the path already exists, in which case
