@@ -6,7 +6,6 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional
 
 import attrs
-import polars
 from returns.result import Result
 
 from caqtus.device import DeviceName, DeviceConfiguration
@@ -16,6 +15,7 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._exception_summary import TracebackSummary
+from ._light_result import _Result
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError
 from ._state import State
@@ -89,7 +89,7 @@ class SequenceCollection(Protocol):
     """
 
     @abc.abstractmethod
-    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> _Result[bool, PathNotFoundError]:
         raise NotImplementedError
 
     @abc.abstractmethod
