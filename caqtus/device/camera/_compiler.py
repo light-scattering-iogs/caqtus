@@ -45,11 +45,13 @@ class CameraCompiler(TriggerableDeviceCompiler):
     class CameraInitializationParameters(TypedDict):
         """The parameters to pass to the camera constructor.
 
-        Fields:
-            roi: The region of interest of the sensor for the camera during the
+        This dictionary contains the following keys:
+
+            * roi: The region of interest of the sensor for the camera during the
                 sequence.
-            external_trigger: Whether the camera should be triggered externally or not.
-            timeout: The maximum time to wait for the camera to be ready to take a
+            * external_trigger: Whether the camera should be triggered externally or
+                not.
+            * timeout: The maximum time to wait for the camera to be ready to take a
                 picture.
         """
 
@@ -69,11 +71,12 @@ class CameraCompiler(TriggerableDeviceCompiler):
     class CameraShotParameters(TypedDict):
         """The parameters to pass to the camera controller for a shot.
 
-        Fields:
-            timeout: The maximum time to wait for a picture to be taken.
-            picture_names: The names of the pictures to take, in the order they should
-                be taken.
-            exposures: The exposure times of the pictures to take, in the order they
+        This dictionary contains the following keys:
+
+            * timeout: The maximum time to wait for a picture to be taken.
+            * picture_names: The names of the pictures to take, in the order they
+                should be taken.
+            * exposures: The exposure times of the pictures to take, in the order they
                 should be taken.
                 The number of exposures matches the number of pictures.
         """
