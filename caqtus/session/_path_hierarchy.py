@@ -4,8 +4,8 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from ._result import Result
 from ._path import PureSequencePath
+from ._result import Result
 
 if TYPE_CHECKING:
     from ._sequence_collection import PathIsSequenceError
@@ -115,6 +115,30 @@ class PathHierarchy(Protocol):
         Args:
             path: the path to update the creation date for.
             date: the new creation date.
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
+        None,
+        PathIsRootError | PathNotFoundError | PathExistsError | PathIsSequenceError,
+    ]:
+        """Move a path to a new location.
+
+        Args:
+            source: The path to move.
+            destination: The new location of the path.
+                If a parent of the destination path does not exist, it will be created.
+
+        Returns:
+            Success if the path was moved successfully.
+            Failure with one of the following errors:
+
+            * PathIsRootError: If the source path is the root path.
+            * PathNotFoundError: If the source path does not exist.
+            * PathExistsError: If the destination path already exists.
+            * PathIsSequenceError: If an ancestor in the destination path is a sequence.
         """
 
         raise NotImplementedError

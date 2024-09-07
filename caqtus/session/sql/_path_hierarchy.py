@@ -8,13 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ._path_table import SQLSequencePath
-from .._result import Result, Success, Failure
 from .._path import PureSequencePath
 from .._path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
     PathHierarchy,
+    PathExistsError,
 )
+from .._result import Result, Success, Failure
 from .._sequence_collection import PathIsSequenceError
 
 if TYPE_CHECKING:
@@ -113,6 +114,59 @@ class SQLPathHierarchy(PathHierarchy):
         self, path: PureSequencePath
     ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         return _get_path_creation_date(self._get_sql_session(), path)
+
+    def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
+        None,
+        PathIsRootError | PathNotFoundError | PathExistsError | PathIsSequenceError,
+    ]:
+        session = self._get_sql_session()
+        source_path_result = _query_path_model(session, source)
+        if isinstance(source_path_result, Failure):
+            return source_path_result
+        source_model = source_path_result.unwrap()
+
+        if self.does_path_exists(destination):
+            return Failure(PathExistsError(destination))
+
+        # destination doesn't exist, so it can't be the root path, and thus it has a
+        # parent.
+        assert destination.parent is not None
+
+        created_paths_result = self.create_path(destination.parent)
+        if isinstance(created_paths_result, Failure):
+            return created_paths_result
+        destination_parent_model = (
+            _query_path_model(session, destination.parent).unwrap()
+            if destination.parent
+            else None
+        )
+        source_model.parent_id = (
+            destination_parent_model.id_ if destination_parent_model else None
+        )
+
+        _recursively_replace_prefix(source_model, len(source.parts), destination.parts)
+
+        return Success(None)
+
+
+def _recursively_replace_prefix(
+    path_model: SQLSequencePath, old_parts: int, new_prefixes: tuple[str, ...]
+) -> None:
+    """Replace the prefix of a path and all its children.
+
+    Args:
+        path_model: The path to update.
+        old_parts: The number of parts to remove at the beginning of each path.
+        new_prefixes: The new prefixes to replace the old ones
+            The new path will be formed by concatenating the new prefixes with the
+            remaining parts of the old path.
+    """
+
+    old_path = PureSequencePath(str(path_model.path))
+    new_path = PureSequencePath.from_parts(new_prefixes + old_path.parts[old_parts:])
+    path_model.path = str(new_path)
+    for child in path_model.children:
+        _recursively_replace_prefix(child, old_parts, new_prefixes)
 
 
 def _does_path_exists(session: Session, path: PureSequencePath) -> bool:
