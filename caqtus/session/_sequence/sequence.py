@@ -52,13 +52,13 @@ class Sequence:
 
     def __attrs_post_init__(self):
         try:
-            is_sequence = unwrap(self.session.sequences.is_sequence(self.path))
+            is_sequence = self.session.sequences.is_sequence(self.path).unwrap()
         except PathNotFoundError as e:
             import difflib
 
             sequences = self.session.sequences.get_contained_sequences(
                 PureSequencePath.root()
-            )
+            ).unwrap()
             paths = [str(sequence) for sequence in sequences]
             similar_paths = difflib.get_close_matches(str(self.path), paths)
             if similar_paths:
@@ -198,8 +198,9 @@ class Sequence:
 
         Args:
             which: Which parameters to return.
-                - "all": Return both sequence specific and global parameters.
-                - "local": Return only the parameters specifically set for this sequence.
+
+                * all: Return both sequence specific and global parameters.
+                * local: Return only the parameters specifically set for this sequence.
 
         Returns:
             The names of the parameters used to run this sequence.
@@ -277,7 +278,7 @@ class Sequence:
             data = importer(shot)
             data_labels = set(shot._data_cache.keys())
 
-            if tags is not None:
+            if tags_dataframe is not None:
                 yield data.join(tags_dataframe, how="cross")
             else:
                 yield data
