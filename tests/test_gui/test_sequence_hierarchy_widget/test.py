@@ -2,10 +2,8 @@ from PySide6.QtCore import Qt
 from pytestqt.modeltest import ModelTester
 
 from caqtus.gui._common.sequence_hierarchy import AsyncPathHierarchyModel
-from caqtus.gui.qtutil import QtAsyncio
+from caqtus.gui.qtutil import qt_trio
 from caqtus.session import PureSequencePath, State
-from tests.fixtures import steps_configuration, time_lanes
-from .session_maker import session_maker
 
 
 def test_0(session_maker, qtmodeltester: ModelTester):
@@ -28,7 +26,9 @@ def test_1(session_maker, qtmodeltester: ModelTester):
     assert model.data(child, Qt.ItemDataRole.DisplayRole) == "test2"
 
 
-def test_2(session_maker, qtmodeltester: ModelTester, steps_configuration, time_lanes):
+def test_2(
+    session_maker, qtmodeltester: ModelTester, steps_configuration, time_lanes, qtbot
+):
     model = AsyncPathHierarchyModel(session_maker)
     with session_maker() as session:
         path = PureSequencePath(r"\test")
@@ -40,5 +40,5 @@ def test_2(session_maker, qtmodeltester: ModelTester, steps_configuration, time_
     with session_maker() as session:
         session.sequences.set_state(path, State.PREPARING)
 
-    QtAsyncio.run(model.update_stats(model.index(0, 0)), keep_running=False)
+    qt_trio.run(model.update_stats, model.index(0, 0))
     assert index.data().state == State.PREPARING
