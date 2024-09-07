@@ -12,13 +12,13 @@ import yaml
 from sqlalchemy import event, Engine, create_engine, URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from ._async_session import AsyncExperimentSession
 from ._async_session import (
     GreenletSQLExperimentSession,
     ThreadedAsyncSQLExperimentSession,
 )
 from ._experiment_session import SQLExperimentSession
 from ._serializer import SerializerProtocol
-from .. import AsyncExperimentSession
 from .._session_maker import ExperimentSessionMaker
 
 
