@@ -5,7 +5,7 @@ import contextlib
 import functools
 import logging
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import (
     TypeVar,
     ParamSpec,
@@ -13,6 +13,7 @@ from typing import (
     final,
     Optional,
     TypedDict,
+    Any,
 )
 
 import anyio
@@ -84,13 +85,15 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
     async def _run_shot(
         self,
         device: DeviceProxyType,
-        timeout: float,
-        kwargs,
+        shot_timeout: float,
+        kwargs: Mapping[str, Any],
     ) -> ShotStats:
         start_time = self._event_dispatcher.shot_time()
         try:
-            with fail_after(delay=timeout, shield=False):
-                await self.run_shot(device, **kwargs)
+            with fail_after(delay=shot_timeout, shield=False):
+                await self.run_shot(
+                    device, **kwargs
+                )  # pyright: ignore[reportCallIssue]
 
             finished_time = self._event_dispatcher.shot_time()
             if not self._signaled_ready.is_set():

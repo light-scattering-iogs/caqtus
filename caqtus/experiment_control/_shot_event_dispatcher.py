@@ -52,9 +52,9 @@ class ShotEventDispatcher:
 
         self._shot_timer: Optional[ShotTimer] = None
 
-    async def run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
+    async def run_shot(self, shot_timeout: float) -> Mapping[DataLabel, Data]:
         try:
-            return await self._run_shot(timeout)
+            return await self._run_shot(shot_timeout)
         except:
             stats = {
                 name: controller._debug_stats()
@@ -63,7 +63,7 @@ class ShotEventDispatcher:
             logger.debug("Shot trace: %s", stats)
             raise
 
-    async def _run_shot(self, timeout: float) -> Mapping[DataLabel, Data]:
+    async def _run_shot(self, shot_timeout: float) -> Mapping[DataLabel, Data]:
         self._start_time = time.monotonic()
         result = {}
         # We shield running a shot from external cancellation, so that external
@@ -75,7 +75,7 @@ class ShotEventDispatcher:
                     tg.start_soon(
                         _save_in_dict,
                         info.controller._run_shot(
-                            info.device, timeout, info.parameters
+                            info.device, shot_timeout, info.parameters
                         ),
                         name,
                         result,
