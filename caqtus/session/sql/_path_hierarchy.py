@@ -1,6 +1,6 @@
 from datetime import datetime
 from datetime import timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_never
 
 import sqlalchemy.orm
 from attr import frozen
@@ -36,19 +36,20 @@ class SQLPathHierarchy(PathHierarchy):
         current = path
         sequence_collection = self.parent_session.sequences
         while parent := current.parent:
-            is_sequence = sequence_collection.is_sequence(current)
-            match is_sequence:
-                case Success(True):
-                    return _Failure(
-                        PathIsSequenceError(
-                            f"Cannot create path {path} because {current} is already a"
-                            " sequence"
+            is_sequence_result = sequence_collection.is_sequence(current)
+            match is_sequence_result:
+                case _Success(is_sequence):
+                    if is_sequence:
+                        return _Failure(
+                            PathIsSequenceError(
+                                f"Cannot create path {path} because {current} is "
+                                f"already a sequence"
+                            )
                         )
-                    )
-                case Success(False):
-                    pass
-                case Failure(PathNotFoundError()):
+                case _Failure(PathNotFoundError()):
                     paths_to_create.append(current)
+                case _:
+                    assert_never(is_sequence_result)
             current = parent
 
         session = self._get_sql_session()
