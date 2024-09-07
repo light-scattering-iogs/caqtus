@@ -28,7 +28,7 @@ from caqtus.shot_compilation import ShotContext
 from caqtus.types.units import Unit, dimensionless
 from caqtus.types.units.base import is_in_base_units
 from caqtus.types.variable_name import DottedVariableName
-from .._time_step import TimeStep
+from ..timming import TimeStep
 
 
 @attrs.frozen

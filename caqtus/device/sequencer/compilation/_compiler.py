@@ -10,12 +10,11 @@ import tblib.pickling_support
 
 from caqtus.device import DeviceName
 from caqtus.shot_compilation import SequenceContext, ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_time_steps
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
 from caqtus.types.variable_name import DottedVariableName
-from .._time_step import TimeStep
+from ..timming import TimeStep, number_time_steps
 from ..channel_commands import ChannelOutput
 from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (
@@ -262,7 +261,7 @@ def _find_max_advance_and_delays(
         output.evaluate_max_advance_and_delay(time_step, variables)
         for output in outputs
     ]
-    advances, delays = zip(*advances_and_delays)
+    advances, delays = zip(*advances_and_delays, strict=True)
     return max(advances), max(delays)
 
 

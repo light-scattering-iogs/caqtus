@@ -1,4 +1,4 @@
-from typing import assert_never, TypedDict, reveal_type, assert_type
+from typing import assert_never, TypedDict
 
 import numpy as np
 
@@ -8,13 +8,13 @@ from caqtus.shot_compilation import (
     DeviceNotUsedException,
     ShotContext,
 )
-from caqtus.shot_compilation.lane_compilers.timing import ns, number_time_steps_between
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import CameraTimeLane, TakePicture
 from ._configuration import CameraConfiguration
 from ..sequencer import TimeStep
 from ..sequencer.compilation import TriggerableDeviceCompiler
 from ..sequencer.instructions import SequencerInstruction, Pattern, concatenate
+from ..sequencer.timming import ns, number_time_steps_between
 from ...types.image.roi import RectangularROI
 
 

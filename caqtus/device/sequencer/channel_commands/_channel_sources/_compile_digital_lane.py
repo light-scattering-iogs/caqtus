@@ -7,11 +7,10 @@ from caqtus.device.sequencer.instructions import (
     concatenate,
 )
 from caqtus.shot_compilation.compilation_contexts import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns, Time
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
-from ..._time_step import TimeStep
+from ...timming import number_time_steps_between, TimeStep
 
 
 def compile_digital_lane(
@@ -31,8 +30,8 @@ def compile_digital_lane(
     for cell_value, (start, stop) in zip(
         lane.block_values(), lane.block_bounds(), strict=True
     ):
-        length = number_ticks(
-            step_bounds[start], step_bounds[stop], Time(time_step * ns)
+        length = number_time_steps_between(
+            step_bounds[start], step_bounds[stop], time_step
         )
         if isinstance(cell_value, bool):
             instructions.append(get_constant_instruction(cell_value, length))

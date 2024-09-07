@@ -12,12 +12,11 @@ from caqtus.device.sequencer.channel_commands.channel_output import (
 )
 from caqtus.device.sequencer.instructions import Pattern
 from caqtus.shot_compilation import ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import ns, number_time_steps
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, Unit, dimensionless
 from caqtus.types.variable_name import DottedVariableName
-from ..._time_step import TimeStep
+from ...timming import TimeStep, number_time_steps
 
 
 @attrs.define

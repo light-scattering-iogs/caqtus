@@ -9,7 +9,7 @@ from typing import (
 import attrs
 
 from caqtus.device.configuration import DeviceConfiguration
-from .._time_step import TimeStep
+from ..timming import TimeStep
 from ..channel_commands import ChannelOutput
 from ..runtime import Sequencer
 from ..trigger import Trigger, is_trigger

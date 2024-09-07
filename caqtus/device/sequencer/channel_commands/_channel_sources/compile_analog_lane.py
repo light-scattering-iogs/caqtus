@@ -16,13 +16,7 @@ from caqtus.device.sequencer.instructions import (
     concatenate,
     create_ramp,
 )
-from caqtus.shot_compilation.lane_compilers.timing import (
-    ns,
-    start_time_step,
-    stop_time_step,
-    Time,
-    number_time_steps_between,
-)
+from caqtus.shot_compilation.lane_compilers.timing import Time
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Block
@@ -36,7 +30,13 @@ from caqtus.types.units import (
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
 from ..channel_output import DimensionedSeries
-from ..._time_step import TimeStep
+from ...timming import (
+    TimeStep,
+    ns,
+    start_time_step,
+    stop_time_step,
+    number_time_steps_between,
+)
 
 TIME_VARIABLE = VariableName("t")
 

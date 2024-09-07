@@ -6,7 +6,7 @@ from cattrs.gen import make_dict_structure_fn, override
 
 from caqtus.types.expression import Expression
 from caqtus.utils import serialization
-from ._time_step import TimeStep
+from .timming import TimeStep
 from .channel_commands import (
     CalibratedAnalogMapping,
     ChannelOutput,

@@ -13,7 +13,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput
-from ..._time_step import TimeStep
+from ...timming import TimeStep
 
 
 @attrs.define
