@@ -11,6 +11,7 @@ from caqtus.device.sequencer import (
 )
 from caqtus.device.sequencer.channel_commands import LaneValues, Constant
 from caqtus.device.sequencer.instructions import Pattern
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import SoftwareTrigger
 from caqtus.shot_compilation.compilation_contexts import SequenceContext, ShotContext
 from caqtus.types.expression import Expression
@@ -18,8 +19,7 @@ from caqtus.types.timelane import TimeLanes, DigitalTimeLane
 
 
 class MockSequencerConfiguration(SequencerConfiguration):
-    @classmethod
-    def channel_types(cls) -> tuple[Type[ChannelConfiguration], ...]:
+    def channel_types(self) -> tuple[Type[ChannelConfiguration], ...]:
         return DigitalChannelConfiguration, DigitalChannelConfiguration
 
 
@@ -27,7 +27,7 @@ class MockSequencerConfiguration(SequencerConfiguration):
 def sequencer_config() -> SequencerConfiguration:
     return MockSequencerConfiguration(
         remote_server=None,
-        time_step=10,
+        time_step=to_time_step(10),
         trigger=SoftwareTrigger(),
         channels=(
             DigitalChannelConfiguration(

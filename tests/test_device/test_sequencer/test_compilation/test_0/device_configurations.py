@@ -1,6 +1,6 @@
-from decimal import Decimal
 from typing import Type
 
+from caqtus.device import DeviceName
 from caqtus.device.sequencer import (
     SequencerConfiguration,
     AnalogChannelConfiguration,
@@ -14,6 +14,7 @@ from caqtus.device.sequencer.channel_commands import (
     DeviceTrigger,
 )
 from caqtus.device.sequencer.channel_commands.timing import BroadenLeft
+from caqtus.device.sequencer.timing import to_time_step
 from caqtus.device.sequencer.trigger import (
     ExternalClockOnChange,
     TriggerEdge,
@@ -33,7 +34,7 @@ class DigitalSequenceConfiguration(SequencerConfiguration):
 
 
 configs = {
-    "NI6738": AnalogSequencerConfiguration(
+    DeviceName("NI6738"): AnalogSequencerConfiguration(
         remote_server=None,
         trigger=ExternalClockOnChange(edge=TriggerEdge.RISING),
         channels=(
@@ -357,9 +358,9 @@ configs = {
                 output_unit="V",
             ),
         ),
-        time_step=Decimal("3000"),
+        time_step=to_time_step(3000),
     ),
-    "Spincore": DigitalSequenceConfiguration(
+    DeviceName("Spincore"): DigitalSequenceConfiguration(
         remote_server=None,
         trigger=SoftwareTrigger(),
         channels=(
@@ -479,6 +480,6 @@ configs = {
                 description="", output=Constant(value=Expression("Disabled"))
             ),
         ),
-        time_step=Decimal("50"),
+        time_step=to_time_step(50),
     ),
 }

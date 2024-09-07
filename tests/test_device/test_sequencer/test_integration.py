@@ -1,7 +1,7 @@
 from caqtus.device import DeviceName
 from caqtus.device.sequencer import SequencerCompiler
+from caqtus.device.sequencer.timming import number_time_steps
 from caqtus.shot_compilation import SequenceContext, ShotContext
-from caqtus.shot_compilation.lane_compilers.timing import number_ticks, ns
 from .fixtures import (
     time_lanes,
     spincore_config,
@@ -40,15 +40,14 @@ def test_single_digital_lane(
 
     shot_duration = shot_context.get_shot_duration()
 
-    assert len(spincore_sequence) == number_ticks(
-        0, shot_duration, spincore_config.time_step * ns
+    assert len(spincore_sequence) == number_time_steps(
+        shot_duration, spincore_config.time_step
     )
-    assert len(swabian_sequence) == number_ticks(
-        0.0,
+    assert len(swabian_sequence) == number_time_steps(
         shot_duration
         + 1.1e-6,  # Need to tak into account time shift when computing shot duration
-        swabian_configuration.time_step * ns,
+        swabian_configuration.time_step,
     )
-    assert len(ni6738_sequence) == number_ticks(
-        0, shot_duration, ni6738_configuration.time_step * ns
+    assert len(ni6738_sequence) == number_time_steps(
+        shot_duration, ni6738_configuration.time_step
     )
