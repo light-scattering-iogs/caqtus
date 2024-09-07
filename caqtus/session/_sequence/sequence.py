@@ -240,7 +240,7 @@ class Sequence:
             SequenceNotCrashedError: If the sequence is not in the CRASHED state.
         """
 
-        return unwrap(self.session.sequences.get_exception(self.path))
+        return self.session.sequences.get_exception(self.path).unwrap()
 
     def load_shots_data(
         self,
