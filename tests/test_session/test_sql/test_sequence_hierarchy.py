@@ -11,7 +11,6 @@ from caqtus.session import (
     PathNotFoundError,
 )
 from caqtus.session import PureSequencePath, Sequence, State
-from caqtus.session._path import BoundSequencePath
 from caqtus.session._result import unwrap
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
@@ -25,19 +24,12 @@ from .device_configuration import DummyConfiguration
 from ..generate_path import path
 
 
-@pytest.fixture(scope="function")
-def empty_session(session_maker):
-    return session_maker()
-
-
 def test_2(session_maker):
     with session_maker() as session:
-        bound_path = BoundSequencePath(PureSequencePath.from_parts(["0", "0"]), session)
-        created_paths = bound_path.create()
-        for ancestor in bound_path.get_ancestors():
+        path = PureSequencePath.from_parts(["0", "0"])
+        session.paths.create_path(path).unwrap()
+        for ancestor in path.get_ancestors():
             assert session.paths.does_path_exists(ancestor)
-        for created_path in reversed(created_paths):
-            created_path.delete()
 
 
 def test_3(session_maker):
@@ -54,56 +46,54 @@ def test_3(session_maker):
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_creation_1(p, session_maker):
     with session_maker() as session:
-        bound_path = BoundSequencePath(p, session)
-        created_paths = bound_path.create()
-        for ancestor in bound_path.get_ancestors():
+        created_paths = session.paths.create_path(p).unwrap()
+        for ancestor in p.get_ancestors():
             assert session.paths.does_path_exists(ancestor)
         for created_path in reversed(created_paths):
-            created_path.delete()
+            session.paths.delete_path(created_path)
 
 
-def test_creation_2(empty_session):
-    with empty_session as session:
-        p = BoundSequencePath(r"\a\b\c", session)
-        p.create()
+def test_creation_2(session_maker):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b\c")
+        session.paths.create_path(p).unwrap()
         for ancestor in p.get_ancestors():
             assert session.paths.does_path_exists(ancestor)
-        p = BoundSequencePath(r"\a\b\d", session)
-        p.create()
+        p = PureSequencePath(r"\a\b\d")
+        session.paths.create_path(p).unwrap()
         for ancestor in p.get_ancestors():
             assert session.paths.does_path_exists(ancestor)
 
 
-def test_root_creation(empty_session):
-    with empty_session as session:
+def test_root_creation(session_maker):
+    with session_maker() as session:
         p = PureSequencePath.root()
-        created = session.paths.create_path(p)
-        assert unwrap(created) == []
+        created = session.paths.create_path(p).unwrap()
+        assert created == []
 
 
-def test_children_1(empty_session):
-    with empty_session as session:
-        p = BoundSequencePath(r"\a\b\c", session)
+def test_children_1(session_maker):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b\c")
         assert p.parent is not None
-        p.create()
-        assert p.parent.get_children() == {p}
-        p1 = BoundSequencePath(r"\a\b\d", session)
-        p1.create()
-        assert p.parent.get_children() == {p, p1}
-        root_children = BoundSequencePath("\\", session).get_children()
-        print(root_children)
+        session.paths.create_path(p).unwrap()
+        assert session.paths.get_children(p.parent).unwrap() == {p}
+        p1 = PureSequencePath(r"\a\b\d")
+        session.paths.create_path(p1).unwrap()
+        assert session.paths.get_children(p.parent).unwrap() == {p, p1}
+        root_children = session.paths.get_children(PureSequencePath.root()).unwrap()
         assert root_children == {p.parent.parent}, repr(root_children)
 
 
-def test_children_2(empty_session):
-    with empty_session as session:
-        p = BoundSequencePath(r"\a\b\c", session)
+def test_children_2(session_maker):
+    with session_maker() as session:
+        p = PureSequencePath(r"\a\b\c")
         assert p.parent is not None
-        p.create()
-        p1 = BoundSequencePath(r"\u\v\w", session)
+        session.paths.create_path(p).unwrap()
+        p1 = PureSequencePath(r"\u\v\w")
         assert p1.parent is not None
-        p1.create()
-        root_children = BoundSequencePath("\\", session).get_children()
+        session.paths.create_path(p1).unwrap()
+        root_children = session.paths.get_children(PureSequencePath.root()).unwrap()
         assert root_children == {p.parent.parent, p1.parent.parent}, repr(root_children)
 
 
@@ -117,21 +107,21 @@ def test_deletion_1(session_maker):
         assert session.paths.does_path_exists(p.parent)
 
 
-def test_sequence(empty_session, steps_configuration: StepsConfiguration, time_lanes):
-    with empty_session as session:
+def test_sequence(session_maker, steps_configuration: StepsConfiguration, time_lanes):
+    with session_maker() as session:
         p = PureSequencePath(r"\a\b\c")
         session.sequences.create(p, steps_configuration, time_lanes)
-        assert unwrap(session.sequences.is_sequence(p))
+        assert session.sequences.is_sequence(p).unwrap()
         with pytest.raises(PathIsSequenceError):
             session.sequences.create(p, steps_configuration, time_lanes)
 
-        assert not unwrap(session.sequences.is_sequence(p.parent))
+        assert not session.sequences.is_sequence(p.parent).unwrap()
 
 
 def test_sequence_deletion(
-    empty_session, steps_configuration: StepsConfiguration, time_lanes
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
 ):
-    with empty_session as session:
+    with session_maker() as session:
         p = PureSequencePath(r"\test\test")
         session.sequences.create(p, steps_configuration, time_lanes)
         with pytest.raises(PathIsSequenceError):
@@ -150,20 +140,20 @@ def test_sequence_deletion_1(
     with session_maker() as session:
         p = PureSequencePath(r"\test")
         session.sequences.create(p, steps_configuration, time_lanes)
-        assert unwrap(session.sequences.is_sequence(p))
+        assert session.sequences.is_sequence(p).unwrap()
     with session_maker() as session:
         session.paths.delete_path(p, delete_sequences=True)
         with pytest.raises(PathNotFoundError):
-            unwrap(session.sequences.is_sequence(p))
+            session.sequences.is_sequence(p).unwrap()
     with session_maker() as session:
         session.sequences.create(p, steps_configuration, time_lanes)
         assert session.sequences.is_sequence(p)
 
 
 def test_iteration_save(
-    empty_session, steps_configuration: StepsConfiguration, time_lanes
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
 ):
-    with empty_session as session:
+    with session_maker() as session:
         p = PureSequencePath(r"\test\test")
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         assert sequence.get_iteration_configuration() == steps_configuration
@@ -199,9 +189,9 @@ def test_start_date(session_maker, steps_configuration: StepsConfiguration, time
 
 
 def test_shot_creation(
-    empty_session, steps_configuration: StepsConfiguration, time_lanes
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
 ):
-    with empty_session as session:
+    with session_maker() as session:
         p = PureSequencePath(r"\test")
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
@@ -242,9 +232,9 @@ def test_shot_creation(
 
 
 def test_data_not_existing(
-    empty_session, steps_configuration: StepsConfiguration, time_lanes
+    session_maker, steps_configuration: StepsConfiguration, time_lanes
 ):
-    with empty_session as session:
+    with session_maker() as session:
         p = PureSequencePath(r"\test")
         sequence = Sequence.create(p, steps_configuration, time_lanes, session)
         session.sequences.set_state(p, State.PREPARING)
