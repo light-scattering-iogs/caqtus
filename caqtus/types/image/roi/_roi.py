@@ -62,7 +62,7 @@ class ROI(ABC):
 
     def apply[
         T: np.generic
-    ](self, image: Image) -> np.ma.MaskedArray[tuple[Width, Height], np.dtype[T]]:
+    ](self, image: Image[T]) -> np.ma.MaskedArray[tuple[Width, Height], np.dtype[T]]:
         """Apply the ROI to an image.
 
         Returns:
