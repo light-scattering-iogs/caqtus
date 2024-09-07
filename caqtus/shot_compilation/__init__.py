@@ -3,6 +3,7 @@
 from caqtus.types.units.unit_namespace import units
 from ._device_compiler import DeviceCompiler, DeviceNotUsedException
 from .compilation_contexts import ShotContext, SequenceContext
+from .lane_compilers.timing import Time
 from .variable_namespace import VariableNamespace
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "SequenceContext",
     "DeviceCompiler",
     "DeviceNotUsedException",
+    "Time",
 ]

@@ -1,6 +1,8 @@
 import decimal
 from typing import SupportsFloat, TYPE_CHECKING
 
+from .lane_compilers.timing import Time
+
 if TYPE_CHECKING:
     from caqtus.device.sequencer import TimeStep
 
@@ -21,3 +23,16 @@ def duration_to_ticks(duration: SupportsFloat, time_step: "TimeStep") -> int:
     if not isinstance(rounded, int):
         raise TypeError(f"Expected integer number of ticks, got {rounded}")
     return rounded
+
+
+def to_time(value: decimal.Decimal | float | str) -> Time:
+    """Converts a value to a Time object.
+
+    Args:
+        value: The value to convert to a Time object.
+
+    Returns:
+        A Time object representing the value in seconds.
+    """
+
+    return Time(decimal.Decimal(value))

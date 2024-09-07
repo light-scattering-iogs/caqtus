@@ -1,4 +1,3 @@
-import decimal
 from collections.abc import Mapping, Iterable, Sequence
 from typing import Any, TypeVar, TYPE_CHECKING
 
@@ -10,6 +9,7 @@ from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
 from .lane_compilers.timing import get_step_bounds, Time
+from .timing import to_time
 from ..formatter import fmt
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
@@ -265,5 +265,5 @@ def evaluate_step_durations(
                     (step, name),
                 )
             )
-        result.append(Time(decimal.Decimal(seconds)))
+        result.append(to_time(seconds))
     return result
