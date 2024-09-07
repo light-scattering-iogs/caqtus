@@ -6,7 +6,6 @@ from collections.abc import Mapping, Set, Iterable
 from typing import Protocol, Optional
 
 import attrs
-from returns.result import Result
 
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.data import DataLabel, Data
@@ -217,11 +216,11 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_state(
         self, path: PureSequencePath
-    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[State, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_exception(self, path: PureSequencePath) -> Result[
+    def get_exception(self, path: PureSequencePath) -> _Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -239,7 +238,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> Result[
+    ) -> _Result[
         None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
     ]:
         """Set the exception that occurred while running the sequence.
@@ -257,7 +256,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -275,7 +274,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError

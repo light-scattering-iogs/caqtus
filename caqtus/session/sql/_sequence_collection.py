@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping, Set
-from typing import TYPE_CHECKING, Optional, assert_never, Iterable
+from typing import TYPE_CHECKING, Optional, assert_never, Iterable, assert_type
 
 import attrs
 import cattrs
 import numpy as np
 import sqlalchemy.orm
-from returns.result import Result
-from returns.result import Success, Failure
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -37,9 +35,9 @@ from ._sequence_table import (
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._exception_summary import TracebackSummary
+from .._light_result import _Result, _Success, _Failure
 from .._path import PureSequencePath
-from .._path_hierarchy import PathNotFoundError, PathHasChildrenError
-from .._return_or_raise import unwrap
+from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
 from .._sequence_collection import (
     PathIsSequenceError,
     PathIsNotSequenceError,
@@ -63,23 +61,32 @@ class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: SerializerProtocol
 
-    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> _Result[bool, PathNotFoundError]:
         return _is_sequence(self._get_sql_session(), path)
 
-    def get_contained_sequences(self, path: PureSequencePath) -> list[PureSequencePath]:
-        if unwrap(self.is_sequence(path)):
-            return [path]
+    def get_contained_sequences(
+        self, path: PureSequencePath
+    ) -> _Result[list[PureSequencePath], PathNotFoundError]:
+        is_sequence_result = self.is_sequence(path)
+        match is_sequence_result:
+            case _Success(is_sequence):
+                if is_sequence:
+                    return _Success([path])
+            case _Failure() as failure:
+                return failure
+            case _:
+                assert_never(is_sequence_result)
 
         path_hierarchy = self.parent_session.paths
         result = []
-        for child in unwrap(path_hierarchy.get_children(path)):
-            result += self.get_contained_sequences(child)
-        return result
+        for child in path_hierarchy.get_children(path).unwrap():
+            result += self.get_contained_sequences(child).unwrap()
+        return _Success(result)
 
     def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         if sequence.state != State.PREPARING:
             raise SequenceNotEditableError(path)
 
@@ -110,7 +117,7 @@ class SQLSequenceCollection(SequenceCollection):
         sequence: PureSequencePath,
         iteration_configuration: IterationConfiguration,
     ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence))
+        sequence_model = self._query_sequence_model(sequence).unwrap()
         if not sequence_model.state.is_editable():
             raise SequenceNotEditableError(sequence)
         iteration_content = self.serializer.dump_sequence_iteration(
@@ -129,9 +136,9 @@ class SQLSequenceCollection(SequenceCollection):
         time_lanes: TimeLanes,
     ) -> None:
         self.parent_session.paths.create_path(path)
-        if unwrap(self.is_sequence(path)):
+        if self.is_sequence(path).unwrap():
             raise PathIsSequenceError(path)
-        if unwrap(self.parent_session.paths.get_children(path)):
+        if self.parent_session.paths.get_children(path).unwrap():
             raise PathHasChildrenError(path)
 
         iteration_content = self.serializer.dump_sequence_iteration(
@@ -139,7 +146,7 @@ class SQLSequenceCollection(SequenceCollection):
         )
 
         new_sequence = SQLSequence(
-            path=unwrap(self._query_path_model(path)),
+            path=self._query_path_model(path).unwrap(),
             parameters=SQLSequenceParameters(content=None),
             iteration=SQLIterationConfiguration(content=iteration_content),
             time_lanes=SQLTimelanes(content=self.serialize_time_lanes(time_lanes)),
@@ -162,18 +169,18 @@ class SQLSequenceCollection(SequenceCollection):
     def set_time_lanes(
         self, sequence_path: PureSequencePath, time_lanes: TimeLanes
     ) -> None:
-        sequence_model = unwrap(self._query_sequence_model(sequence_path))
+        sequence_model = self._query_sequence_model(sequence_path).unwrap()
         if not sequence_model.state.is_editable():
             raise SequenceNotEditableError(sequence_path)
         sequence_model.time_lanes.content = self.serialize_time_lanes(time_lanes)
 
     def get_state(
         self, path: PureSequencePath
-    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[State, PathNotFoundError | PathIsNotSequenceError]:
         result = self._query_sequence_model(path)
         return result.map(lambda sequence: sequence.state)
 
-    def get_exception(self, path: PureSequencePath) -> Result[
+    def get_exception(self, path: PureSequencePath) -> _Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -181,13 +188,13 @@ class SQLSequenceCollection(SequenceCollection):
 
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> Result[
+    ) -> _Result[
         None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
     ]:
         return _set_exception(self._get_sql_session(), path, exception)
 
     def set_state(self, path: PureSequencePath, state: State) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         if not State.is_transition_allowed(sequence.state, state):
             raise InvalidStateTransitionError(
                 f"Sequence at {path} can't transition from {sequence.state} to {state}"
@@ -224,7 +231,7 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         device_configurations: Mapping[DeviceName, DeviceConfiguration],
     ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         if sequence.state != State.PREPARING:
             raise SequenceNotEditableError(path)
         sql_device_configs = []
@@ -242,7 +249,7 @@ class SQLSequenceCollection(SequenceCollection):
     def get_device_configurations(
         self, path: PureSequencePath
     ) -> dict[DeviceName, DeviceConfiguration]:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         if sequence.state == State.DRAFT:
             raise RuntimeError("Sequence has not been prepared yet")
 
@@ -257,7 +264,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return _get_stats(self._get_sql_session(), path)
 
     def create_shot(
@@ -269,7 +276,7 @@ class SQLSequenceCollection(SequenceCollection):
         shot_start_time: datetime.datetime,
         shot_end_time: datetime.datetime,
     ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         if sequence.state != State.RUNNING:
             raise RuntimeError("Can't create shot in sequence that is not running")
         if shot_index < 0:
@@ -337,7 +344,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         return _get_shots(self._get_sql_session(), path)
 
     def get_shot_parameters(
@@ -380,7 +387,7 @@ class SQLSequenceCollection(SequenceCollection):
         start_time: Optional[datetime.datetime],
         end_time: Optional[datetime.datetime],
     ) -> None:
-        sequence = unwrap(self._query_sequence_model(path))
+        sequence = self._query_sequence_model(path).unwrap()
         sequence.start_time = (
             start_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
             if start_time
@@ -401,17 +408,17 @@ class SQLSequenceCollection(SequenceCollection):
 
     def _query_path_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequencePath, PathNotFoundError]:
+    ) -> _Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
         return _query_path_model(self._get_sql_session(), path)
 
     def _query_sequence_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
         return _query_sequence_model(self._get_sql_session(), path)
 
     def _query_shot_model(
         self, path: PureSequencePath, shot_index: int
-    ) -> Result[
+    ) -> _Result[
         SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError
     ]:
         return _query_shot_model(self._get_sql_session(), path, shot_index)
@@ -441,57 +448,64 @@ def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
 
 def _is_sequence(
     session: Session, path: PureSequencePath
-) -> Result[bool, PathNotFoundError]:
-    if path.is_root():
-        return Success(False)
-    return _query_path_model(session, path).map(
-        lambda path_model: bool(path_model.sequence)
-    )
+) -> _Result[bool, PathNotFoundError]:
+    path_model_result = _query_path_model(session, path)
+    if isinstance(path_model_result, _Failure):
+        if isinstance(path_model_result.error, PathNotFoundError):
+            return _Failure(path_model_result.error)
+        else:
+            assert_type(path_model_result.error, PathIsRootError)
+            return _Success(False)
+    else:
+        path_model = path_model_result.value
+        return _Success(bool(path_model.sequence))
 
 
-def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
+def _get_exceptions(session: Session, path: PureSequencePath) -> _Result[
     Optional[TracebackSummary],
     PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
 ]:
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
-        case Success(sequence_model):
+        case _Success(sequence_model):
             assert isinstance(sequence_model, SQLSequence)
             if sequence_model.state != State.CRASHED:
-                return Failure(SequenceNotCrashedError(path))
+                return _Failure(SequenceNotCrashedError(path))
             exception_model = sequence_model.exception_traceback
             if exception_model is None:
-                return Success(None)
+                return _Success(None)
             else:
                 traceback_summary = cattrs.structure(
                     exception_model.content, TracebackSummary
                 )
-                return Success(traceback_summary)
-        case Failure() as failure:
+                return _Success(traceback_summary)
+        case _Failure() as failure:
             return failure
 
 
 def _set_exception(
     session: Session, path: PureSequencePath, exception: TracebackSummary
-) -> Result[None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError]:
+) -> _Result[
+    None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
+]:
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
-        case Success(sequence_model):
+        case _Success(sequence_model):
             assert isinstance(sequence_model, SQLSequence)
             if sequence_model.state != State.CRASHED:
-                return Failure(SequenceNotCrashedError(path))
+                return _Failure(SequenceNotCrashedError(path))
             if sequence_model.exception_traceback is not None:
                 raise RuntimeError("Exception already set")
             content = cattrs.unstructure(exception, TracebackSummary)
             sequence_model.exception_traceback = SQLExceptionTraceback(content=content)
-            return Success(None)
-        case Failure() as failure:
+            return _Success(None)
+        case _Failure() as failure:
             return failure
 
 
 def _get_stats(
     session: Session, path: PureSequencePath
-) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
     result = _query_sequence_model(session, path)
 
     def extract_stats(sequence: SQLSequence) -> SequenceStats:
@@ -523,7 +537,7 @@ def _get_stats(
 def _get_sequence_global_parameters(
     session: Session, path: PureSequencePath
 ) -> ParameterNamespace:
-    sequence = unwrap(_query_sequence_model(session, path))
+    sequence = _query_sequence_model(session, path).unwrap()
 
     if sequence.state == State.DRAFT:
         raise RuntimeError("Sequence has not been prepared yet")
@@ -538,7 +552,7 @@ def _get_sequence_global_parameters(
 def _get_iteration_configuration(
     session: Session, sequence: PureSequencePath, serializer: SerializerProtocol
 ) -> IterationConfiguration:
-    sequence_model = unwrap(_query_sequence_model(session, sequence))
+    sequence_model = _query_sequence_model(session, sequence).unwrap()
     return serializer.construct_sequence_iteration(
         sequence_model.iteration.content,
     )
@@ -547,13 +561,13 @@ def _get_iteration_configuration(
 def _get_time_lanes(
     session: Session, sequence_path: PureSequencePath, serializer: SerializerProtocol
 ) -> TimeLanes:
-    sequence_model = unwrap(_query_sequence_model(session, sequence_path))
+    sequence_model = _query_sequence_model(session, sequence_path).unwrap()
     return serializer.structure_time_lanes(sequence_model.time_lanes.content)
 
 
 def _get_shots(
     session: Session, path: PureSequencePath
-) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
     sql_sequence = _query_sequence_model(session, path)
 
     def extract_shots(sql_sequence: SQLSequence) -> list[PureShot]:
@@ -580,14 +594,14 @@ def _get_shot_parameters(
             result, dict[DottedVariableName, bool | int | float | Quantity]
         )
     # This will raise the proper error if the shot was not found.
-    unwrap(_query_shot_model(session, path, shot_index))
-    assert False, "Unreachable"
+    _query_shot_model(session, path, shot_index).unwrap()
+    raise AssertionError("Unreachable code")
 
 
 def _get_all_shot_data(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> dict[DataLabel, Data]:
-    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    shot_model = _query_shot_model(session, path, shot_index).unwrap()
     arrays = shot_model.array_data
     structured_data = shot_model.structured_data
     result = {}
@@ -615,7 +629,7 @@ def _get_shot_data_by_labels(
     shot_index: int,
     data_labels: Set[DataLabel],
 ) -> dict[DataLabel, Data]:
-    content = unwrap(_query_data_model(session, path, shot_index, data_labels))
+    content = _query_data_model(session, path, shot_index, data_labels).unwrap()
 
     data = {}
 
@@ -634,14 +648,14 @@ def _get_shot_data_by_labels(
 def _get_shot_start_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
-    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    shot_model = _query_shot_model(session, path, shot_index).unwrap()
     return shot_model.start_time.replace(tzinfo=datetime.timezone.utc)
 
 
 def _get_shot_end_time(
     session: Session, path: PureSequencePath, shot_index: int
 ) -> datetime.datetime:
-    shot_model = unwrap(_query_shot_model(session, path, shot_index))
+    shot_model = _query_shot_model(session, path, shot_index).unwrap()
     return shot_model.end_time.replace(tzinfo=datetime.timezone.utc)
 
 
@@ -650,7 +664,7 @@ def _query_data_model(
     path: PureSequencePath,
     shot_index: int,
     data_labels: Set[DataLabel],
-) -> Result[
+) -> _Result[
     dict[DataLabel, SQLShotArray | SQLStructuredShotData],
     PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError | DataNotFoundError,
 ]:
@@ -670,7 +684,7 @@ def _query_data_model(
         data[result.label] = result
         data_labels.remove(result.label)
     if not data_labels:
-        return Success(data)
+        return _Success(data)
     stmt = (
         select(SQLShotArray)
         .where(SQLShotArray.label.in_(data_labels))
@@ -685,18 +699,18 @@ def _query_data_model(
         data[result.label] = result
         data_labels.remove(result.label)
     if not data_labels:
-        return Success(data)
+        return _Success(data)
     shot_result = _query_shot_model(session, path, shot_index)
     match shot_result:
-        case Success():
-            return Failure(DataNotFoundError(data_labels))
-        case Failure() as failure:
+        case _Success():
+            return _Failure(DataNotFoundError(data_labels))
+        case _Failure() as failure:
             return failure
 
 
 def _query_sequence_model(
     session: Session, path: PureSequencePath
-) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+) -> _Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
     stmt = (
         select(SQLSequence)
         .join(SQLSequencePath)
@@ -704,21 +718,24 @@ def _query_sequence_model(
     )
     result = session.execute(stmt).scalar_one_or_none()
     if result is not None:
-        return Success(result)
+        return _Success(result)
     else:
         # If we are not is the happy path, we need to check the reason why to be able to
         # return the correct error.
         path_result = _query_path_model(session, path)
-        match path_result:
-            case Success():
-                return Failure(PathIsNotSequenceError(path))
-            case Failure() as failure:
-                return failure
+        if isinstance(path_result, _Success):
+            return _Failure(PathIsNotSequenceError(path))
+        else:
+            if isinstance(path_result.error, PathNotFoundError):
+                return _Failure(path_result.error)
+            else:
+                assert_type(path_result.error, PathIsRootError)
+                return _Failure(PathIsNotSequenceError(path))
 
 
 def _query_shot_model(
     session: Session, path: PureSequencePath, shot_index: int
-) -> Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
+) -> _Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
     stmt = (
         select(SQLShot)
         .where(SQLShot.index == shot_index)
@@ -729,18 +746,20 @@ def _query_shot_model(
 
     result = session.execute(stmt).scalar_one_or_none()
     if result is not None:
-        return Success(result)
+        return _Success(result)
     else:
         # This function is fast for the happy path were the shot exists, but if it was
         # not found, we need to check the reason why to be able to return the correct
         # error.
         sequence_model_result = _query_sequence_model(session, path)
         match sequence_model_result:
-            case Success():
-                return Failure(
+            case _Success():
+                return _Failure(
                     ShotNotFoundError(
                         f"Shot {shot_index} not found for sequence {path}"
                     )
                 )
-            case Failure() as failure:
+            case _Failure() as failure:
                 return failure
+            case _:
+                assert_never(sequence_model_result)
