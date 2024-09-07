@@ -319,7 +319,9 @@ async def _run_shot_with_retry(
         try:
             return await run()
         except BaseExceptionGroup as exc_group:
-            retriable, others = exc_group.split(condition)
+            retriable, others = exc_group.split(
+                condition  # pyright: ignore[reportArgumentType, reportCallIssue]
+            )
             if others:
                 raise
             errors.append(
@@ -347,11 +349,13 @@ def retry_condition(
     return _retry_condition
 
 
-@tblib.pickling_support.install
 class ShotCompilationError(RuntimeError):
     """Error raised when an error occurs while compiling a shot."""
 
     pass
+
+
+tblib.pickling_support.install(ShotCompilationError)
 
 
 @attrs.define
