@@ -1,3 +1,4 @@
+import abc
 import contextlib
 import functools
 from datetime import datetime
@@ -5,7 +6,6 @@ from typing import Callable, Concatenate, TypeVar, ParamSpec, Mapping, Optional,
 
 import anyio.to_thread
 import attrs
-from returns.result import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
@@ -33,6 +33,7 @@ from ._sequence_collection import (
 from ._serializer import SerializerProtocol
 from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSessionNotActiveError
+from .._light_result import _Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (
@@ -52,7 +53,30 @@ _T = TypeVar("_T")
 _P = ParamSpec("_P")
 
 
-class AsyncSQLExperimentSession(AsyncExperimentSession):
+class AsyncSQLExperimentSession(AsyncExperimentSession, abc.ABC):
+    def __init__(self, serializer: SerializerProtocol):
+        self.paths = AsyncSQLPathHierarchy(parent_session=self)
+        self.sequences = AsyncSQLSequenceCollection(
+            parent_session=self, serializer=serializer
+        )
+
+    @abc.abstractmethod
+    async def _run_sync(
+        self,
+        fun: Callable[Concatenate[Session, _P], _T],
+        *args: _P.args,
+        **kwargs: _P.kwargs,
+    ) -> _T:
+        raise NotImplementedError
+
+    async def get_global_parameters(self) -> ParameterNamespace:
+        return await self._run_sync(_get_global_parameters)
+
+    async def set_global_parameters(self, parameters: ParameterNamespace) -> None:
+        return await self._run_sync(_set_global_parameters, parameters)
+
+
+class GreenletSQLExperimentSession(AsyncSQLExperimentSession):
     def __init__(
         self,
         async_session_context: contextlib.AbstractAsyncContextManager[AsyncSession],
@@ -60,10 +84,7 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
     ):
         self._async_session_context = async_session_context
         self._async_session: Optional[AsyncSession] = None
-        self.paths = AsyncSQLPathHierarchy(parent_session=self)
-        self.sequences = AsyncSQLSequenceCollection(
-            parent_session=self, serializer=serializer
-        )
+        super().__init__(serializer=serializer)
 
     async def __aenter__(self) -> Self:
         if self._async_session is not None:
@@ -77,21 +98,15 @@ class AsyncSQLExperimentSession(AsyncExperimentSession):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self._async_session_context.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def get_global_parameters(self) -> ParameterNamespace:
-        return await self._run_sync(_get_global_parameters)
-
-    async def set_global_parameters(self, parameters: ParameterNamespace) -> None:
-        return await self._run_sync(_set_global_parameters, parameters)
-
     async def _run_sync(
         self,
         fun: Callable[Concatenate[Session, _P], _T],
         *args: _P.args,
         **kwargs: _P.kwargs,
     ) -> _T:
-        return await self._session().run_sync(fun, *args, **kwargs)
+        return await self._get_session().run_sync(fun, *args, **kwargs)
 
-    def _session(self) -> AsyncSession:
+    def _get_session(self) -> AsyncSession:
         if self._async_session is None:
             raise ExperimentSessionNotActiveError(
                 "Experiment session was not activated"
@@ -107,11 +122,7 @@ class ThreadedAsyncSQLExperimentSession(AsyncSQLExperimentSession):
     ):
         self._session_context = session_context
         self._session: Optional[Session] = None
-
-        self.paths = AsyncSQLPathHierarchy(parent_session=self)
-        self.sequences = AsyncSQLSequenceCollection(
-            parent_session=self, serializer=serializer
-        )
+        super().__init__(serializer=serializer)
 
     async def __aenter__(self) -> Self:
         if self._session is not None:
@@ -147,12 +158,12 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 
     async def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         return await self._run_sync(_get_children, path)
 
     async def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
         return await self._run_sync(_get_path_creation_date, path)
 
     async def _run_sync(
@@ -171,15 +182,15 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def is_sequence(
         self, path: PureSequencePath
-    ) -> Result[bool, PathNotFoundError]:
+    ) -> _Result[bool, PathNotFoundError]:
         return await self._run_sync(_is_sequence, path)
 
     async def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_stats, path)
 
-    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
+    async def get_traceback_summary(self, path: PureSequencePath) -> _Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -198,7 +209,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_shots, path)
 
     async def get_shot_parameters(

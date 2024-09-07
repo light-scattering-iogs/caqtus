@@ -12,9 +12,13 @@ import yaml
 from sqlalchemy import event, Engine, create_engine, URL
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from ._async_session import AsyncSQLExperimentSession, ThreadedAsyncSQLExperimentSession
+from ._async_session import (
+    GreenletSQLExperimentSession,
+    ThreadedAsyncSQLExperimentSession,
+)
 from ._experiment_session import SQLExperimentSession
 from ._serializer import SerializerProtocol
+from .. import AsyncExperimentSession
 from .._session_maker import ExperimentSessionMaker
 
 
@@ -68,8 +72,8 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
             self._serializer,
         )
 
-    def async_session(self) -> AsyncSQLExperimentSession:
-        return AsyncSQLExperimentSession(
+    def async_session(self) -> AsyncExperimentSession:
+        return GreenletSQLExperimentSession(
             self._async_session_maker.begin(),
             self._serializer,
         )

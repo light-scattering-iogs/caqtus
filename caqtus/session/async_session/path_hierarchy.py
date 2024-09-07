@@ -4,8 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from returns.result import Result
-
+from .._light_result import _Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 
@@ -21,11 +20,11 @@ class AsyncPathHierarchy(Protocol):
     @abstractmethod
     async def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         raise NotImplementedError
 
     @abstractmethod
     async def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
         raise NotImplementedError
