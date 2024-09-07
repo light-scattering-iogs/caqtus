@@ -1,6 +1,7 @@
 from hypothesis import given
-from .generate_path import path, path_name
+
 from caqtus.session import PureSequencePath
+from .generate_path import path, path_name
 
 
 @given(path_name)
@@ -25,3 +26,24 @@ def test_whitespace_names():
 
 def test_special_characters():
     assert PureSequencePath.is_valid_name(".")
+
+
+def test_is_descendant():
+    ancestor = PureSequencePath.root() / "ancestor"
+    descendant = ancestor / "descendant"
+
+    assert descendant.is_descendant_of(ancestor)
+
+
+def test_is_not_descendant():
+    ancestor = PureSequencePath.root() / "ancestor"
+    descendant = ancestor / "descendant"
+    other = PureSequencePath.root() / "other"
+
+    assert not descendant.is_descendant_of(other)
+
+
+def test_is_not_descendant_of_itself():
+    path = PureSequencePath.root() / "path"
+
+    assert not path.is_descendant_of(path)

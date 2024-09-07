@@ -215,6 +215,25 @@ class PureSequencePath:
 
         return bool(_PATH_REGEX.match(path))
 
+    def is_descendant_of(self, other: PureSequencePath) -> bool:
+        """Check if this path is a descendant of another path.
+
+        A path is a descendant of another path if it starts with the other path.
+
+        A path is not a descendant of itself.
+
+        Example:
+            >>> path = PureSequencePath(r"\foo\bar")
+            >>> other = PureSequencePath(r"\foo")
+            >>> path.is_descendant_of(other)
+            True
+        """
+
+        if self == other:
+            return False
+        else:
+            return self.parts[: len(other.parts)] == other.parts
+
 
 class InvalidPathFormatError(ValueError):
     """Raised when a path has an invalid format."""
