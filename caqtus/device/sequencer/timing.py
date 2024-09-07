@@ -1,7 +1,7 @@
 import decimal
 from typing import NewType
 
-from caqtus.shot_compilation.timing import start_tick, stop_tick, number_ticks, Time
+from caqtus.shot_compilation.timing import start_tick, stop_tick, number_ticks, Time, ps
 
 __all__ = [
     "TimeStep",
@@ -9,6 +9,7 @@ __all__ = [
     "stop_time_step",
     "number_time_steps",
     "number_time_steps_between",
+    "to_time_step",
 ]
 
 TimeStep = NewType("TimeStep", decimal.Decimal)
@@ -18,6 +19,20 @@ A time step is represented as a decimal number to avoid floating point errors.
 """
 
 ns = Time(decimal.Decimal("1e-9"))
+
+
+def to_time_step(value: decimal.Decimal | float | str) -> TimeStep:
+    """Converts a value to a TimeStep object.
+
+    Args:
+        value: The value to convert to a TimeStep object, in nanoseconds.
+
+    Returns:
+        A TimeStep object representing the value in nanoseconds, rounded to the
+        picosecond.
+    """
+
+    return TimeStep(decimal.Decimal(value).quantize(ps / ns))
 
 
 def start_time_step(start_time: Time, time_step: TimeStep) -> int:

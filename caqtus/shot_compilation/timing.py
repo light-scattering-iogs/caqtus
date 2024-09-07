@@ -34,6 +34,9 @@ def duration_to_ticks(duration: SupportsFloat, time_step: "TimeStep") -> int:
     return rounded
 
 
+ps = decimal.Decimal("1e-12")
+
+
 def to_time(value: decimal.Decimal | float | str) -> Time:
     """Converts a value to a Time object.
 
@@ -41,10 +44,10 @@ def to_time(value: decimal.Decimal | float | str) -> Time:
         value: The value to convert to a Time object.
 
     Returns:
-        A Time object representing the value in seconds.
+        A Time object representing the value in seconds, rounded to the picosecond.
     """
 
-    return Time(decimal.Decimal(value))
+    return Time(decimal.Decimal(value).quantize(ps))
 
 
 def to_time_bounds(durations: Iterable[float]) -> Sequence[Time]:

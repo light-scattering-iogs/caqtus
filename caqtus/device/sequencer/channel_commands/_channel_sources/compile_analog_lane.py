@@ -215,7 +215,7 @@ def evaluate_time_dependent_expression(
 ) -> TimeDependentBlockResult:
     assert not is_constant(expression)
 
-    time_values = get_time_array(start_time, stop_time, time_step) - start_time
+    time_values = get_time_array(start_time, stop_time, time_step) - float(start_time)
     # The first time is not necessarily 0, it is the time of the first tick of the
     # block.
     # Same for the last time which is not necessarily stop_time - start_time, but the
@@ -314,9 +314,13 @@ def is_constant(expression: Expression) -> bool:
     return TIME_VARIABLE not in expression.upstream_variables
 
 
-def get_time_array(start: Time, stop: Time, time_step: TimeStep) -> np.ndarray:
+def get_time_array(
+    start: Time, stop: Time, time_step: TimeStep
+) -> np.ndarray[Any, np.dtype[np.floating]]:
     times = np.arange(
-        start_time_step(start, time_step), stop_time_step(stop, time_step)
+        start_time_step(start, time_step),
+        stop_time_step(stop, time_step),
+        dtype=np.float64,
     ) * float(time_step * ns)
     return times
 
