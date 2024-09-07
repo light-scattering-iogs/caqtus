@@ -86,6 +86,9 @@ dependencies = [
     "pyright>=1.1.355",
 ]
 
+[tool.hatch.envs.default.scripts]
+lint = ["ruff check {args:.}", "pyright {args:.}"]
+
 
 [tool.hatch.envs.test]
 matrix-name-format = "{variable}={value}"
