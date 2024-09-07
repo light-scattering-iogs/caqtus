@@ -135,11 +135,12 @@ class SQLPathHierarchy(PathHierarchy):
         created_paths_result = self.create_path(destination.parent)
         if isinstance(created_paths_result, Failure):
             return created_paths_result
-        destination_parent_model = (
-            _query_path_model(session, destination.parent).unwrap()
-            if destination.parent
-            else None
-        )
+        if destination.parent.is_root():
+            destination_parent_model = None
+        else:
+            destination_parent_model = _query_path_model(
+                session, destination.parent
+            ).unwrap()
         source_model.parent_id = (
             destination_parent_model.id_ if destination_parent_model else None
         )
