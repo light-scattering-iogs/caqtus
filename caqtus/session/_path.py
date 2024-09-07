@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import datetime
 import re
 from typing import Self, Optional, TYPE_CHECKING, Iterable
 
-from ._return_or_raise import unwrap
-
 if TYPE_CHECKING:
-    from ._experiment_session import ExperimentSession
+    pass
 
 _PATH_SEPARATOR = "\\"
 _CHARACTER_SET = (
@@ -86,7 +83,7 @@ class PureSequencePath:
         else:
             return PureSequencePath.from_parts(self._parts[:-1])
 
-    def get_ancestors(self) -> Iterable[Self]:
+    def get_ancestors(self) -> Iterable[PureSequencePath]:
         r"""Return the ancestors of this path.
 
         Returns:
@@ -217,113 +214,6 @@ class PureSequencePath:
         """Check if a string is a valid path."""
 
         return bool(_PATH_REGEX.match(path))
-
-
-class BoundSequencePath(PureSequencePath):
-    __slots__ = ("_session",)
-
-    def __init__(self, path: PureSequencePath | str, session: "ExperimentSession"):
-        super().__init__(path)
-        self._session = session
-
-    @property
-    def parent(self) -> Optional[Self]:
-        p = super().parent
-        if p is None:
-            return None
-        else:
-            return BoundSequencePath(p, self._session)
-
-    def get_ancestors(self) -> Iterable[Self]:
-        ancestors = super().get_ancestors()
-        return (BoundSequencePath(a, self._session) for a in ancestors)
-
-    def rebind(self, new_session: "ExperimentSession"):
-        self._session = new_session
-
-    def exists(self) -> bool:
-        return self._session.paths.does_path_exists(self)
-
-    def create(self) -> list[BoundSequencePath]:
-        """Create the path and all its ancestors if they don't exist.
-
-        Return:
-            A list of paths that were created if they didn't exist.
-
-        Raises:
-            PathIsSequenceError: If an ancestor exists and is a sequence.
-        """
-
-        result = self._session.paths.create_path(self)
-        return [BoundSequencePath(path, self._session) for path in unwrap(result)]
-
-    def get_children(self) -> set[BoundSequencePath]:
-        """Return the direct descendants of this path.
-
-        Returns:
-            A set of the direct descendants of this path.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-            PathIsSequenceError: If the path is a sequence.
-        """
-
-        result = self._session.paths.get_children(self)
-        return {BoundSequencePath(path, self._session) for path in unwrap(result)}
-
-    def get_descendants(self) -> set[BoundSequencePath]:
-        """Return the descendants of this path.
-
-        Returns:
-            A set of the descendants of this path.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-            PathIsSequenceError: If the path is a sequence.
-        """
-
-        from ._sequence_collection import PathIsSequenceError
-
-        descendants = set()
-        for child in self.get_children():
-            descendants.add(child)
-            try:
-                descendants.update(child.get_descendants())
-            except PathIsSequenceError:
-                pass
-        return descendants
-
-    def delete(self, delete_sequences: bool = False):
-        """Delete the path and all its children if they exist.
-
-        Warnings:
-            If delete_sequences is True, all sequences in the path will be deleted.
-
-        Raises:
-            PathIsSequenceError: If the path or one of its children is a sequence and
-            delete_sequence is False
-        """
-
-        self._session.paths.delete_path(self, delete_sequences)
-
-    def get_creation_date(
-        self, experiment_session: "ExperimentSession"
-    ) -> datetime.datetime:
-        """Get the creation date of the path.
-
-        Returns:
-            The date at which the path was created.
-
-        Raises:
-            PathNotFoundError: If the path does not exist in the session.
-        """
-
-        result = experiment_session.paths.get_path_creation_date(self)
-        return unwrap(result)
-
-    @property
-    def session(self) -> "ExperimentSession":
-        return self._session
 
 
 class InvalidPathFormatError(ValueError):
