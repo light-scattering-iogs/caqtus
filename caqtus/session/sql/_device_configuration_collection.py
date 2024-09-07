@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, Session
 from ._serializer import SerializerProtocol
 from ._table_base import Base
 from .._device_configuration_collection import DeviceConfigurationCollection
+from ...device import DeviceName
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -64,23 +65,26 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
             raise KeyError(__key)
 
     def __len__(self):
-        stmt = sqlalchemy.select(sqlalchemy.func.count(SQLDefaultDeviceConfiguration))
-        result = self._get_sql_session().execute(stmt)
-        return result.scalar()
+        stmt = sqlalchemy.select(
+            sqlalchemy.func.count(SQLDefaultDeviceConfiguration.name)
+        )
+        result = self._get_sql_session().execute(stmt).scalar()
+        assert result is not None
+        return result
 
     def __iter__(self):
         stmt = sqlalchemy.select(SQLDefaultDeviceConfiguration).order_by(
             SQLDefaultDeviceConfiguration.name
         )
         result = self._get_sql_session().execute(stmt)
-        return (row.name for row in result.scalars())
+        return (DeviceName(row.name) for row in result.scalars())
 
     def __contains__(self, item):
         stmt = sqlalchemy.select(
             sqlalchemy.func.count(SQLDefaultDeviceConfiguration.name)
         ).where(SQLDefaultDeviceConfiguration.name == str(item))
         result = self._get_sql_session().execute(stmt)
-        return result.scalar() > 0
+        return result.scalar() is not None
 
     def _get_sql_session(self) -> Session:
         # noinspection PyProtectedMember
