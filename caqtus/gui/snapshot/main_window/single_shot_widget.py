@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import abc
 import datetime
 import functools
 from collections.abc import Callable
-from typing import Optional, Mapping, assert_never, TypeAlias
+from typing import Optional, Mapping, TypeAlias
 
 import anyio
 import attrs
@@ -27,7 +26,6 @@ from caqtus.session import (
     PathIsNotSequenceError,
     Shot,
 )
-from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import PureShot
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
@@ -98,7 +96,7 @@ class SnapShotWindowHandler:
                         if new_state != self._state:
                             await self._transition(new_state)
                 case _:
-                    assert_never(self._state)
+                    raise AssertionError("Invalid state")
 
     async def _transition(self, state: WidgetState) -> None:
         if isinstance(state, SequenceSelected):
@@ -156,14 +154,18 @@ class SnapShotMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
 
     def restore_state(self):
         ui_settings = QSettings("Caqtus", "ShotViewer")
-        self.restoreState(ui_settings.value("state", self.saveState()))
-        self.restoreGeometry(ui_settings.value("geometry", self.saveGeometry()))
+        state = ui_settings.value("state", self.saveState())
+        assert isinstance(state, QByteArray)
+        self.restoreState(state)
+        geometry = ui_settings.value("geometry", self.saveGeometry())
+        assert isinstance(geometry, QByteArray)
+        self.restoreGeometry(geometry)
 
-    def closeEvent(self, a0):
+    def closeEvent(self, event):  # noqa: N802
         ui_settings = QSettings("Caqtus", "ShotViewer")
         ui_settings.setValue("state", self.saveState())
         ui_settings.setValue("geometry", self.saveGeometry())
-        super().closeEvent(a0)
+        super().closeEvent(event)
 
     def _setup_ui(self) -> None:
         self.setupUi(self)
@@ -197,10 +199,12 @@ class SnapShotMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
         sub_window.show()
 
     def get_views(self) -> dict[str, ShotView]:
-        return {
-            sub_window.windowTitle(): sub_window.widget()
-            for sub_window in self._mdi_area.subWindowList()
-        }
+        result = {}
+        for sub_window in self._mdi_area.subWindowList():
+            widget = sub_window.widget()
+            assert isinstance(widget, ShotView)
+            result[sub_window.windowTitle()] = widget
+        return result
 
     def get_workspace(self) -> WorkSpace:
         view_states = {}
@@ -269,11 +273,12 @@ def _str_to_bytes_array(string: str) -> QByteArray:
 
 
 def _bytes_to_str(array: QByteArray) -> str:
-    return bytes(array.toHex()).decode("ascii")
+
+    return bytes(array.toHex()).decode("ascii")  # pyright: ignore[reportArgumentType]
 
 
 @attrs.frozen
-class WidgetState(abc.ABC):
+class WidgetState:
     pass
 
 
@@ -296,11 +301,13 @@ async def get_state_async(
         return NoSequenceSelected()
     shots_result = await session.sequences.get_shots(sequence_path)
     try:
-        shots = unwrap(shots_result)
+        shots = shots_result.unwrap()
     except (PathNotFoundError, PathIsNotSequenceError):
         return NoSequenceSelected()
     else:
-        start_time = unwrap(await session.sequences.get_stats(sequence_path)).start_time
+        start_time = (
+            (await session.sequences.get_stats(sequence_path)).unwrap().start_time
+        )
     return SequenceSelected(
         path=sequence_path, shots=frozenset(shots), start_time=start_time
     )

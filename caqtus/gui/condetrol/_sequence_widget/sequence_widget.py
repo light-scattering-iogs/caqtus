@@ -29,7 +29,6 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
-from caqtus.session._return_or_raise import unwrap
 from caqtus.types.iteration import (
     IterationConfiguration,
     StepsConfiguration,
@@ -327,7 +326,7 @@ async def _query_state_async(
     async with session_maker.async_session() as session:
         is_sequence_result = await session.sequences.is_sequence(path)
         try:
-            is_sequence = unwrap(is_sequence_result)
+            is_sequence = is_sequence_result.unwrap()
         except PathNotFoundError:
             return _SequenceNotSetState()
         else:
@@ -342,7 +341,7 @@ async def _query_sequence_state_async(
 ) -> _SequenceSetState:
     # These results can be unwrapped safely because we checked that the sequence
     # exists in the session.
-    state = unwrap(await session.sequences.get_state(path))
+    state = (await session.sequences.get_state(path)).unwrap()
     iterations = await session.sequences.get_iteration_configuration(path)
     time_lanes = await session.sequences.get_time_lanes(path)
 
@@ -353,7 +352,7 @@ async def _query_sequence_state_async(
     else:
         parameters = await session.sequences.get_global_parameters(path)
         if state == State.CRASHED:
-            tb_summary = unwrap(await session.sequences.get_traceback_summary(path))
+            tb_summary = (await session.sequences.get_traceback_summary(path)).unwrap()
             return _SequenceCrashedState(
                 path,
                 iterations=iterations,

@@ -19,7 +19,6 @@ from caqtus.session import (
     ExperimentSessionMaker,
     Shot,
 )
-from caqtus.session._return_or_raise import unwrap
 from caqtus.session._sequence_collection import PureShot
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
@@ -98,7 +97,7 @@ class DataLoader(QWidget, Ui_Loader):
             # the processed shots.
             stats_result = await session.sequences.get_stats(path)
             try:
-                stats = unwrap(stats_result)
+                stats = stats_result.unwrap()
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(path)
                 return
@@ -116,7 +115,7 @@ class DataLoader(QWidget, Ui_Loader):
                 return
             result = await session.sequences.get_shots(path)
             try:
-                shots: list[PureShot] = unwrap(result)
+                shots: list[PureShot] = result.unwrap()
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(path)
                 return
