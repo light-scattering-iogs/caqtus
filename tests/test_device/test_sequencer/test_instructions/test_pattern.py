@@ -16,7 +16,7 @@ def test():
 
 def test_0():
     with pytest.raises(TypeError):
-        Pattern([True]) * np.int64(1)
+        Pattern([True]) * np.int64(1)  # pyright: ignore[reportUnusedExpression]
 
 
 @composite

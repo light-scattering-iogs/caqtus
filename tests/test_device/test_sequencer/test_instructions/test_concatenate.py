@@ -104,6 +104,5 @@ def test():
     dtype = np.dtype([("a", np.int32)])
     a = Pattern([1, 2, 3], dtype=dtype)
     b = Pattern([4, 5, 6])
-    c = Pattern([7, 8, 9])
     with pytest.raises(TypeError):
-        a + b
+        a + b  # pyright: ignore[reportUnusedExpression]
