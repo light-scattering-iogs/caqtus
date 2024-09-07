@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import abc
 from collections.abc import Set
-from typing import Optional, assert_never, Literal
+from typing import Optional, Literal
 
 import anyio
 import attrs
@@ -50,9 +49,9 @@ from ..._common.exception_tree import ExceptionDialog
 class SequenceWidget(QWidget, Ui_SequenceWidget):
     """Widget for editing sequence parameters, iterations and time lanes.
 
-    This widget is a tab widget with three tabs: one for defining initial parameters, one for editing how the
-    parameters should be iterated over for the sequence, and one for editing the time lanes that specify how
-    a given shot should be executed.
+    This widget is a tab widget with three tabs: one for defining initial parameters,
+    one for editing how the parameters should be iterated over for the sequence, and
+    one for editing the time lanes that specify how a given shot should be executed.
 
     This widget is (optionally) associated with a sequence and displays the iteration
     configuration and time lanes for that sequence.
@@ -60,8 +59,9 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
 
     When associated with a sequence, the widget is constantly watching the state of the
     sequence.
-    If the sequence is not in the draft state, the iteration editor and time lanes editor
-    will become read-only.
+    If the sequence is not in the draft state, the iteration editor and time lanes
+    editor
+     will become read-only.
     If the sequence is in the draft state, the iteration editor and time lanes editor
     will become editable and any change will be saved.
     """
@@ -174,7 +174,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
             if new_state != self._state:
                 self._transition(new_state)
         else:
-            assert_never(self._state)
+            raise AssertionError("Invalid state")
 
     def _transition(self, new_state: _State) -> None:
         match new_state:
@@ -288,7 +288,7 @@ class SequenceWidget(QWidget, Ui_SequenceWidget):
                 self._state = attrs.evolve(self._state, time_lanes=time_lanes)
 
 
-class _State(abc.ABC):
+class _State:
     pass
 
 
@@ -378,7 +378,7 @@ def _query_state_sync(
     with session_maker() as session:
         is_sequence_result = session.sequences.is_sequence(path)
         try:
-            is_sequence = unwrap(is_sequence_result)
+            is_sequence = is_sequence_result.unwrap()
         except PathNotFoundError:
             return _SequenceNotSetState()
         else:
@@ -393,7 +393,7 @@ def _query_sequence_state_sync(
 ) -> _SequenceSetState:
     # These results can be unwrapped safely because we checked that the sequence
     # exists in the session.
-    state = unwrap(session.sequences.get_state(path))
+    state = session.sequences.get_state(path).unwrap()
     iterations = session.sequences.get_iteration_configuration(path)
     time_lanes = session.sequences.get_time_lanes(path)
 
@@ -404,7 +404,7 @@ def _query_sequence_state_sync(
     else:
         parameters = session.sequences.get_global_parameters(path)
         if state == State.CRASHED:
-            traceback_summary = unwrap(session.sequences.get_exception(path))
+            traceback_summary = session.sequences.get_exception(path).unwrap()
             return _SequenceCrashedState(
                 path,
                 iterations=iterations,
