@@ -7,8 +7,7 @@ from . import trigger
 from ._controller import SequencerController
 from ._converter import converter
 from ._proxy import SequencerProxy
-from .timing import TimeStep
-from .compilation import SequencerCompiler
+from .compilation._compiler import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,
     ChannelConfiguration,
@@ -16,6 +15,7 @@ from .configuration import (
     AnalogChannelConfiguration,
 )
 from .runtime import Sequencer
+from .timing import TimeStep
 
 __all__ = [
     "Sequencer",
