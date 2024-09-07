@@ -44,7 +44,7 @@ class DataLoader(QWidget, Ui_Loader):
     def add_sequence_to_watchlist(self, sequence_path: PureSequencePath):
         if sequence_path not in self.watchlist:
             with self.session_maker() as session:
-                stats = unwrap(session.sequences.get_stats(sequence_path))
+                stats = session.sequences.get_stats(sequence_path).unwrap()
                 start_time = stats.start_time
                 number_completed_shots = stats.number_completed_shots
             self.watchlist[sequence_path] = SequenceLoadingInfo(
@@ -78,60 +78,51 @@ class DataLoader(QWidget, Ui_Loader):
             ):
                 self.sequence_list.takeItem(self.sequence_list.row(item))
 
-    def update_progress_bar(self) -> None:
-        """Update the progress bar to reflect the number of processed shots."""
-
-        total_shots = sum(
-            info.number_completed_shots for info in self.watchlist.values()
-        )
-        processed_shots = sum(
-            len(info.processed_shots) for info in self.watchlist.values()
-        )
-        self.progress_bar.setMaximum(total_shots)
-        self.progress_bar.setValue(processed_shots)
-
     async def process(self):
         while True:
             await self.single_process()
             await anyio.sleep(1e-3)
 
     async def single_process(self):
-        # Can't update over the dict watchlist, because it might be updated during the processing
+        # Can't update over the dict watchlist, because it might be updated during the
+        # processing
         for sequence_path in list(self.watchlist):
             await self.process_new_shots(sequence_path)
 
-    async def process_new_shots(self, sequence: PureSequencePath) -> None:
+    async def process_new_shots(self, path: PureSequencePath) -> None:
         async with self.session_maker.async_session() as session:
             # Check if the sequence has been reset by comparing the start time
-            # of the sequence in the watchlist with the start time of the sequence in the session.
-            # If the start time is different, the sequence has been reset, and we clear the processed shots.
-            stats_result = await session.sequences.get_stats(sequence)
+            # of the sequence in the watchlist with the start time of the sequence in
+            # the session.
+            # If the start time is different, the sequence has been reset, and we clear
+            # the processed shots.
+            stats_result = await session.sequences.get_stats(path)
             try:
                 stats = unwrap(stats_result)
             except (PathNotFoundError, PathIsNotSequenceError):
-                self.remove_sequence_from_watchlist(sequence)
+                self.remove_sequence_from_watchlist(path)
                 return
             try:
-                loading_info = self.watchlist[sequence]
+                loading_info = self.watchlist[path]
             except KeyError:
                 return
             if stats.start_time != loading_info.start_time:
-                self.watchlist[sequence] = SequenceLoadingInfo(
+                self.watchlist[path] = SequenceLoadingInfo(
                     start_time=stats.start_time,
                     number_completed_shots=stats.number_completed_shots,
                     processed_shots=set(),
                     dataframe=empty_dataframe(),
                 )
                 return
-            result = await session.sequences.get_shots(sequence)
+            result = await session.sequences.get_shots(path)
             try:
                 shots: list[PureShot] = unwrap(result)
             except (PathNotFoundError, PathIsNotSequenceError):
-                self.remove_sequence_from_watchlist(sequence)
+                self.remove_sequence_from_watchlist(path)
                 return
 
         try:
-            processed_shots = self.watchlist[sequence].processed_shots
+            processed_shots = self.watchlist[path].processed_shots
         except KeyError:
             return
         new_shots = sorted(
@@ -144,7 +135,6 @@ class DataLoader(QWidget, Ui_Loader):
                 sequence = Sequence(shot_group[0].sequence_path, session)
                 for shot in shot_group:
                     await self.process_shot(Shot(sequence, shot.index, session))
-                # self.update_progress_bar()
 
     async def process_shot(self, shot: Shot) -> None:
         new_data = await anyio.to_thread.run_sync(self.shot_loader, shot)
