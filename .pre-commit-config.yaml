@@ -17,4 +17,3 @@ repos:
         entry: hatch run lint
         language: system
         types: [ python ]
-        pass_filenames: false
