@@ -124,7 +124,10 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
         None,
-        PathIsRootError | PathNotFoundError | PathExistsError | PathIsSequenceError,
+        PathNotFoundError
+        | PathExistsError
+        | PathIsSequenceError
+        | RecursivePathMoveError,
     ]:
         """Move a path to a new location.
 
@@ -137,10 +140,13 @@ class PathHierarchy(Protocol):
             Success if the path was moved successfully.
             Failure with one of the following errors:
 
-            * PathIsRootError: If the source path is the root path.
             * PathNotFoundError: If the source path does not exist.
             * PathExistsError: If the destination path already exists.
             * PathIsSequenceError: If an ancestor in the destination path is a sequence.
+            * RecursivePathMoveError: If the destination path is the source path or a
+                descendant of the source path.
+                As a specific case, this error is returned if the source is the root
+                path.
 
             If a failure is returned, the path is not moved and no path is created.
         """
@@ -174,5 +180,11 @@ class PathHasChildrenError(PathError):
 
 class PathExistsError(PathError):
     """Raised when a path already exists in the session."""
+
+    pass
+
+
+class RecursivePathMoveError(PathError):
+    """Raised when an invalid move operation is performed."""
 
     pass

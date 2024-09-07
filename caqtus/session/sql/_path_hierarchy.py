@@ -14,6 +14,7 @@ from .._path_hierarchy import (
     PathIsRootError,
     PathHierarchy,
     PathExistsError,
+    RecursivePathMoveError,
 )
 from .._result import Result, Success, Failure
 from .._sequence_collection import PathIsSequenceError
@@ -117,12 +118,22 @@ class SQLPathHierarchy(PathHierarchy):
 
     def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
         None,
-        PathIsRootError | PathNotFoundError | PathExistsError | PathIsSequenceError,
+        PathNotFoundError
+        | PathExistsError
+        | PathIsSequenceError
+        | RecursivePathMoveError,
     ]:
+        if destination.is_descendant_of(source) or source == destination:
+            return Failure(
+                RecursivePathMoveError(f"Cannot move {source} into {destination}")
+            )
         session = self._get_sql_session()
         source_path_result = _query_path_model(session, source)
         if isinstance(source_path_result, Failure):
-            return source_path_result
+            # We can't have the PathIsRootError here because it is prevented by
+            # ensuring that the destination can't be a descendant of the source.
+            assert isinstance(source_path_result.error, PathNotFoundError)
+            return Failure(source_path_result.error)
         source_model = source_path_result.unwrap()
 
         if self.does_path_exists(destination):
