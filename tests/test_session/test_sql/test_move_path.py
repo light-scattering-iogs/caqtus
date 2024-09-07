@@ -88,6 +88,18 @@ def test_cant_move_root(session_maker):
         session.paths.check_valid()
 
 
+def test_cant_move_on_root(session_maker):
+    with session_maker() as session:
+        src = PureSequencePath.root() / "src"
+        session.paths.create_path(src)
+        dst = PureSequencePath.root()
+
+        with pytest.raises(PathExistsError):
+            session.paths.move(src, dst).unwrap()
+
+        session.paths.check_valid()
+
+
 def test_cant_move_to_existing_path(session_maker):
     with session_maker() as session:
         src = PureSequencePath.root() / "src"
