@@ -1,14 +1,21 @@
 import decimal
 import math
 from itertools import accumulate
+from typing import NewType
 from typing import SupportsFloat, TYPE_CHECKING, Iterable, Sequence
-
-from ._shot_time import Time
 
 if TYPE_CHECKING:
     from caqtus.device.sequencer import TimeStep
 
+
 _ns = decimal.Decimal("1e-9")
+
+
+Time = NewType("Time", decimal.Decimal)
+"""A type for representing time in seconds.
+
+It uses a decimal.Decimal to represent time in seconds to avoid floating point errors.
+"""
 
 
 def duration_to_ticks(duration: SupportsFloat, time_step: "TimeStep") -> int:
@@ -38,6 +45,19 @@ def to_time(value: decimal.Decimal | float | str) -> Time:
     """
 
     return Time(decimal.Decimal(value))
+
+
+def to_time_bounds(durations: Iterable[float]) -> Sequence[Time]:
+    """Converts an iterable of durations to an iterable of Time objects.
+
+    Args:
+        durations: An iterable of durations in seconds.
+
+    Returns:
+        An iterable of Time objects representing the durations in seconds.
+    """
+
+    return [to_time(duration) for duration in durations]
 
 
 def get_step_bounds(step_durations: Iterable[Time]) -> Sequence[Time]:

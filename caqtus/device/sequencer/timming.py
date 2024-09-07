@@ -1,8 +1,7 @@
 import decimal
 from typing import NewType
 
-from caqtus.shot_compilation._shot_time import Time, ns
-from caqtus.shot_compilation.timing import start_tick, stop_tick, number_ticks
+from caqtus.shot_compilation.timing import start_tick, stop_tick, number_ticks, Time
 
 __all__ = [
     "TimeStep",
@@ -10,7 +9,6 @@ __all__ = [
     "stop_time_step",
     "number_time_steps",
     "number_time_steps_between",
-    "ns",
 ]
 
 TimeStep = NewType("TimeStep", decimal.Decimal)
@@ -18,6 +16,8 @@ TimeStep = NewType("TimeStep", decimal.Decimal)
 
 A time step is represented as a decimal number to avoid floating point errors.
 """
+
+ns = Time(decimal.Decimal("1e-9"))
 
 
 def start_time_step(start_time: Time, time_step: TimeStep) -> int:
