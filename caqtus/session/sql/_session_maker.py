@@ -180,6 +180,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             database=config.database,
         )
         async_engine = create_async_engine(async_url, isolation_level="REPEATABLE READ")
+        self.config = config
 
         super().__init__(serializer, engine, async_engine)
 
@@ -191,13 +192,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
 
     def __getstate__(self):
         return {
-            "config": PostgreSQLConfig(
-                username=self._engine.url.username,
-                password=self._engine.url.password,
-                host=self._engine.url.host,
-                port=self._engine.url.port,
-                database=self._engine.url.database,
-            ),
+            "config": self.config,
             "serializer": self._serializer,
         }
 
@@ -234,7 +229,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
             up_to_date = set(context.get_current_heads()) == set(directory.get_heads())
 
         if not up_to_date:
-            exception = InvalidDatabaseSchema("Database is not up to date.")
+            exception = InvalidDatabaseSchemaError("Database is not up to date.")
             exception.add_note(
                 "Upgrade the database following the procedure at "
                 "https://caqtus.readthedocs.io/en/stable/how-to/upgrade-database.html."
@@ -258,7 +253,7 @@ class PostgreSQLExperimentSessionMaker(SQLExperimentSessionMaker):
         alembic.command.upgrade(alembic_cfg, "head")
 
 
-class InvalidDatabaseSchema(Exception):
+class InvalidDatabaseSchemaError(Exception):
     """Raised when the database schema is not compatible with the application schema."""
 
     pass
