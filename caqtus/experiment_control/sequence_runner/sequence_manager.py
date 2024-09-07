@@ -147,8 +147,8 @@ class SequenceManager:
         self._prepare_sequence()
         try:
             sequence_context = SequenceContext(
-                device_configurations=self.device_configurations,
-                time_lanes=self.time_lanes,
+                device_configurations=self.device_configurations,  # pyright: ignore[reportCallIssue]
+                time_lanes=self.time_lanes,  # pyright: ignore[reportCallIssue]
             )
             shot_compiler = self._shot_compiler_factory(
                 sequence_context,
@@ -181,7 +181,9 @@ class SequenceManager:
             self._set_sequence_state(State.CRASHED)
             traceback_summary = TracebackSummary.from_exception(e)
             with self._session_maker() as session:
-                session.sequences.set_exception(self._sequence_path, traceback_summary)
+                session.sequences.set_exception(
+                    self._sequence_path, traceback_summary
+                ).unwrap()
             recoverable, non_recoverable = split_recoverable(e)
             if non_recoverable:
                 raise
