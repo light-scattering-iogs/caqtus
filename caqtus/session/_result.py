@@ -7,25 +7,25 @@ import attrs
 
 
 @attrs.frozen
-class _Success[T]:
+class Success[T]:
     value: T
 
     def unwrap(self) -> T:
         return self.value
 
-    def map[R](self, func: Callable[[T], R]) -> _Success[R]:
-        return _Success(func(self.value))
+    def map[R](self, func: Callable[[T], R]) -> Success[R]:
+        return Success(func(self.value))
 
 
 @attrs.frozen
-class _Failure[E: Exception]:
+class Failure[E: Exception]:
     error: E
 
     def unwrap(self) -> Never:
         raise self.error
 
-    def map(self, func: Callable) -> _Failure[E]:
+    def map(self, func: Callable) -> Failure[E]:
         return self
 
 
-type _Result[T, E: Exception] = _Success[T] | _Failure[E]
+type Result[T, E: Exception] = Success[T] | Failure[E]

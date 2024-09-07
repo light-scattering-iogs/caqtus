@@ -35,7 +35,7 @@ from ._sequence_table import (
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._exception_summary import TracebackSummary
-from .._light_result import _Result, _Success, _Failure
+from .._result import Result, Success, Failure
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
 from .._sequence_collection import (
@@ -61,18 +61,18 @@ class SQLSequenceCollection(SequenceCollection):
     parent_session: "SQLExperimentSession"
     serializer: SerializerProtocol
 
-    def is_sequence(self, path: PureSequencePath) -> _Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         return _is_sequence(self._get_sql_session(), path)
 
     def get_contained_sequences(
         self, path: PureSequencePath
-    ) -> _Result[list[PureSequencePath], PathNotFoundError]:
+    ) -> Result[list[PureSequencePath], PathNotFoundError]:
         is_sequence_result = self.is_sequence(path)
         match is_sequence_result:
-            case _Success(is_sequence):
+            case Success(is_sequence):
                 if is_sequence:
-                    return _Success([path])
-            case _Failure() as failure:
+                    return Success([path])
+            case Failure() as failure:
                 return failure
             case _:
                 assert_never(is_sequence_result)
@@ -81,7 +81,7 @@ class SQLSequenceCollection(SequenceCollection):
         result = []
         for child in path_hierarchy.get_children(path).unwrap():
             result += self.get_contained_sequences(child).unwrap()
-        return _Success(result)
+        return Success(result)
 
     def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
@@ -176,11 +176,11 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_state(
         self, path: PureSequencePath
-    ) -> _Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
         result = self._query_sequence_model(path)
         return result.map(lambda sequence: sequence.state)
 
-    def get_exception(self, path: PureSequencePath) -> _Result[
+    def get_exception(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -188,7 +188,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> _Result[
+    ) -> Result[
         None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
     ]:
         return _set_exception(self._get_sql_session(), path, exception)
@@ -264,7 +264,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_stats(
         self, path: PureSequencePath
-    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return _get_stats(self._get_sql_session(), path)
 
     def create_shot(
@@ -344,7 +344,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_shots(
         self, path: PureSequencePath
-    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         return _get_shots(self._get_sql_session(), path)
 
     def get_shot_parameters(
@@ -408,17 +408,17 @@ class SQLSequenceCollection(SequenceCollection):
 
     def _query_path_model(
         self, path: PureSequencePath
-    ) -> _Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
+    ) -> Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
         return _query_path_model(self._get_sql_session(), path)
 
     def _query_sequence_model(
         self, path: PureSequencePath
-    ) -> _Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
         return _query_sequence_model(self._get_sql_session(), path)
 
     def _query_shot_model(
         self, path: PureSequencePath, shot_index: int
-    ) -> _Result[
+    ) -> Result[
         SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError
     ]:
         return _query_shot_model(self._get_sql_session(), path, shot_index)
@@ -448,64 +448,62 @@ def _convert_to_unknown(value: Optional[int]) -> int | Unknown:
 
 def _is_sequence(
     session: Session, path: PureSequencePath
-) -> _Result[bool, PathNotFoundError]:
+) -> Result[bool, PathNotFoundError]:
     path_model_result = _query_path_model(session, path)
-    if isinstance(path_model_result, _Failure):
+    if isinstance(path_model_result, Failure):
         if isinstance(path_model_result.error, PathNotFoundError):
-            return _Failure(path_model_result.error)
+            return Failure(path_model_result.error)
         else:
             assert_type(path_model_result.error, PathIsRootError)
-            return _Success(False)
+            return Success(False)
     else:
         path_model = path_model_result.value
-        return _Success(bool(path_model.sequence))
+        return Success(bool(path_model.sequence))
 
 
-def _get_exceptions(session: Session, path: PureSequencePath) -> _Result[
+def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
     Optional[TracebackSummary],
     PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
 ]:
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
-        case _Success(sequence_model):
+        case Success(sequence_model):
             assert isinstance(sequence_model, SQLSequence)
             if sequence_model.state != State.CRASHED:
-                return _Failure(SequenceNotCrashedError(path))
+                return Failure(SequenceNotCrashedError(path))
             exception_model = sequence_model.exception_traceback
             if exception_model is None:
-                return _Success(None)
+                return Success(None)
             else:
                 traceback_summary = cattrs.structure(
                     exception_model.content, TracebackSummary
                 )
-                return _Success(traceback_summary)
-        case _Failure() as failure:
+                return Success(traceback_summary)
+        case Failure() as failure:
             return failure
 
 
 def _set_exception(
     session: Session, path: PureSequencePath, exception: TracebackSummary
-) -> _Result[
-    None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
-]:
+) -> Result[None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError]:
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
-        case _Success(sequence_model):
+        case Success(sequence_model):
             assert isinstance(sequence_model, SQLSequence)
             if sequence_model.state != State.CRASHED:
-                return _Failure(SequenceNotCrashedError(path))
+                return Failure(SequenceNotCrashedError(path))
             if sequence_model.exception_traceback is not None:
                 raise RuntimeError("Exception already set")
             content = cattrs.unstructure(exception, TracebackSummary)
             sequence_model.exception_traceback = SQLExceptionTraceback(content=content)
-            return _Success(None)
-        case _Failure() as failure:
+            return Success(None)
+        case Failure() as failure:
             return failure
 
 
 def _get_stats(
     session: Session, path: PureSequencePath
-) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
     result = _query_sequence_model(session, path)
 
     def extract_stats(sequence: SQLSequence) -> SequenceStats:
@@ -567,7 +565,7 @@ def _get_time_lanes(
 
 def _get_shots(
     session: Session, path: PureSequencePath
-) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
     sql_sequence = _query_sequence_model(session, path)
 
     def extract_shots(sql_sequence: SQLSequence) -> list[PureShot]:
@@ -664,7 +662,7 @@ def _query_data_model(
     path: PureSequencePath,
     shot_index: int,
     data_labels: Set[DataLabel],
-) -> _Result[
+) -> Result[
     dict[DataLabel, SQLShotArray | SQLStructuredShotData],
     PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError | DataNotFoundError,
 ]:
@@ -684,7 +682,7 @@ def _query_data_model(
         data[result.label] = result
         data_labels.remove(result.label)
     if not data_labels:
-        return _Success(data)
+        return Success(data)
     stmt = (
         select(SQLShotArray)
         .where(SQLShotArray.label.in_(data_labels))
@@ -699,18 +697,18 @@ def _query_data_model(
         data[result.label] = result
         data_labels.remove(result.label)
     if not data_labels:
-        return _Success(data)
+        return Success(data)
     shot_result = _query_shot_model(session, path, shot_index)
     match shot_result:
-        case _Success():
-            return _Failure(DataNotFoundError(data_labels))
-        case _Failure() as failure:
+        case Success():
+            return Failure(DataNotFoundError(data_labels))
+        case Failure() as failure:
             return failure
 
 
 def _query_sequence_model(
     session: Session, path: PureSequencePath
-) -> _Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
     stmt = (
         select(SQLSequence)
         .join(SQLSequencePath)
@@ -718,24 +716,24 @@ def _query_sequence_model(
     )
     result = session.execute(stmt).scalar_one_or_none()
     if result is not None:
-        return _Success(result)
+        return Success(result)
     else:
         # If we are not is the happy path, we need to check the reason why to be able to
         # return the correct error.
         path_result = _query_path_model(session, path)
-        if isinstance(path_result, _Success):
-            return _Failure(PathIsNotSequenceError(path))
+        if isinstance(path_result, Success):
+            return Failure(PathIsNotSequenceError(path))
         else:
             if isinstance(path_result.error, PathNotFoundError):
-                return _Failure(path_result.error)
+                return Failure(path_result.error)
             else:
                 assert_type(path_result.error, PathIsRootError)
-                return _Failure(PathIsNotSequenceError(path))
+                return Failure(PathIsNotSequenceError(path))
 
 
 def _query_shot_model(
     session: Session, path: PureSequencePath, shot_index: int
-) -> _Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
+) -> Result[SQLShot, PathNotFoundError | PathIsNotSequenceError | ShotNotFoundError]:
     stmt = (
         select(SQLShot)
         .where(SQLShot.index == shot_index)
@@ -746,20 +744,20 @@ def _query_shot_model(
 
     result = session.execute(stmt).scalar_one_or_none()
     if result is not None:
-        return _Success(result)
+        return Success(result)
     else:
         # This function is fast for the happy path were the shot exists, but if it was
         # not found, we need to check the reason why to be able to return the correct
         # error.
         sequence_model_result = _query_sequence_model(session, path)
         match sequence_model_result:
-            case _Success():
-                return _Failure(
+            case Success():
+                return Failure(
                     ShotNotFoundError(
                         f"Shot {shot_index} not found for sequence {path}"
                     )
                 )
-            case _Failure() as failure:
+            case Failure() as failure:
                 return failure
             case _:
                 assert_never(sequence_model_result)

@@ -33,7 +33,7 @@ from ._sequence_collection import (
 from ._serializer import SerializerProtocol
 from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSessionNotActiveError
-from .._light_result import _Result
+from .._result import Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (
@@ -158,12 +158,12 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 
     async def get_children(
         self, path: PureSequencePath
-    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         return await self._run_sync(_get_children, path)
 
     async def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         return await self._run_sync(_get_path_creation_date, path)
 
     async def _run_sync(
@@ -182,15 +182,15 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def is_sequence(
         self, path: PureSequencePath
-    ) -> _Result[bool, PathNotFoundError]:
+    ) -> Result[bool, PathNotFoundError]:
         return await self._run_sync(_is_sequence, path)
 
     async def get_stats(
         self, path: PureSequencePath
-    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_stats, path)
 
-    async def get_traceback_summary(self, path: PureSequencePath) -> _Result[
+    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -209,7 +209,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def get_shots(
         self, path: PureSequencePath
-    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_shots, path)
 
     async def get_shot_parameters(

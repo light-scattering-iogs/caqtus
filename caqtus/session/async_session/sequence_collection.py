@@ -9,7 +9,7 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from .._exception_summary import TracebackSummary
-from .._light_result import _Result
+from .._result import Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import (
@@ -25,23 +25,23 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def is_sequence(
         self, path: PureSequencePath
-    ) -> _Result[bool, PathNotFoundError]:
+    ) -> Result[bool, PathNotFoundError]:
         raise NotImplementedError
 
     @abc.abstractmethod
     async def get_stats(
         self, path: PureSequencePath
-    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     async def get_state(
         self, path: PureSequencePath
-    ) -> _Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
 
         return (await self.get_stats(path)).map(lambda stats: stats.state)
 
     @abc.abstractmethod
-    async def get_traceback_summary(self, path: PureSequencePath) -> _Result[
+    async def get_traceback_summary(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -64,7 +64,7 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def get_shots(
         self, path: PureSequencePath
-    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod

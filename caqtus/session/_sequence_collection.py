@@ -14,7 +14,7 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._exception_summary import TracebackSummary
-from ._light_result import _Result
+from ._result import Result
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError
 from ._state import State
@@ -88,13 +88,13 @@ class SequenceCollection(Protocol):
     """
 
     @abc.abstractmethod
-    def is_sequence(self, path: PureSequencePath) -> _Result[bool, PathNotFoundError]:
+    def is_sequence(self, path: PureSequencePath) -> Result[bool, PathNotFoundError]:
         raise NotImplementedError
 
     @abc.abstractmethod
     def get_contained_sequences(
         self, path: PureSequencePath
-    ) -> _Result[list[PureSequencePath], PathNotFoundError]:
+    ) -> Result[list[PureSequencePath], PathNotFoundError]:
         """Return the descendants of this path that are sequences.
 
         The current path is included in the result if it is a sequence.
@@ -216,11 +216,11 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_state(
         self, path: PureSequencePath
-    ) -> _Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_exception(self, path: PureSequencePath) -> _Result[
+    def get_exception(self, path: PureSequencePath) -> Result[
         Optional[TracebackSummary],
         PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
     ]:
@@ -238,7 +238,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> _Result[
+    ) -> Result[
         None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
     ]:
         """Set the exception that occurred while running the sequence.
@@ -256,7 +256,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
-    ) -> _Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -274,7 +274,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_shots(
         self, path: PureSequencePath
-    ) -> _Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError

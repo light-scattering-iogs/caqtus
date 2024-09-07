@@ -4,7 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from ._light_result import _Result
+from ._result import Result
 from ._path import PureSequencePath
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def create_path(
         self, path: PureSequencePath
-    ) -> _Result[list[PureSequencePath], PathIsSequenceError]:
+    ) -> Result[list[PureSequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
         If is safe to call this methode even if the path already exists, in which case
@@ -75,7 +75,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_children(
         self, path: PureSequencePath
-    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         """Get the children of the path."""
 
         raise NotImplementedError
@@ -83,7 +83,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         """Get the creation date of the path.
 
         Args:
