@@ -17,7 +17,6 @@ from caqtus.types.variable_name import DottedVariableName
 from .shot import Shot
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
-from .._return_or_raise import unwrap
 from .._sequence_collection import PathIsNotSequenceError, PathNotFoundError
 from .._state import State
 
@@ -101,7 +100,7 @@ class Sequence:
     def get_state(self) -> State:
         """Return the state of the sequence."""
 
-        return unwrap(self.session.sequences.get_state(self.path))
+        return self.session.sequences.get_state(self.path).unwrap()
 
     def get_global_parameters(self) -> ParameterNamespace:
         """Return a copy of the parameter tables set for this sequence.
