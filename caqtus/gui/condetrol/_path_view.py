@@ -22,7 +22,6 @@ from caqtus.session import (
     PathHasChildrenError,
     State,
 )
-from caqtus.session._result import unwrap
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -74,9 +73,9 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             color = self.palette().text().color()
 
             with self.session_maker() as session:
-                is_sequence = unwrap(session.sequences.is_sequence(path))
+                is_sequence = session.sequences.is_sequence(path).unwrap()
                 if is_sequence:
-                    state = unwrap(session.sequences.get_state(path))
+                    state = session.sequences.get_state(path).unwrap()
                 else:
                     state = None
             if not is_sequence:
@@ -164,6 +163,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         """Ask the user for a new sequence name and duplicate the sequence."""
 
         assert not path.is_root()
+        assert path.name is not None
 
         text, ok = QInputDialog().getText(
             self,
@@ -251,7 +251,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         )
         if self.exec_confirmation_message_box(message):
             with self.session_maker() as session:
-                if unwrap(session.sequences.is_sequence(path)):
+                if session.sequences.is_sequence(path).unwrap():
                     session.paths.delete_path(path, delete_sequences=True)
                 else:
                     # An error will be raised if someone tries to delete a folder that
@@ -259,9 +259,12 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                     try:
                         session.paths.delete_path(path, delete_sequences=False)
                     except PathIsSequenceError:
+                        app = QApplication.instance()
+                        if app is None:
+                            raise RuntimeError("No QApplication instance")  # noqa: B904
                         QMessageBox.critical(
                             self,
-                            QApplication.instance().applicationName(),
+                            app.applicationName(),
                             f"The path '{path}' contains sequences and therefore "
                             f"cannot be deleted",
                         )
@@ -271,6 +274,8 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
 
         message_box = QMessageBox(self)
         app = QApplication.instance()
+        if app is None:
+            raise RuntimeError("No QApplication instance")
         message_box.setWindowTitle(app.applicationName())
         message_box.setText(message)
         message_box.setInformativeText("Are you really sure you want to continue?")
