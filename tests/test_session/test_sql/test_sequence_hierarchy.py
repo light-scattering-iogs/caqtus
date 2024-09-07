@@ -21,10 +21,8 @@ from caqtus.types.iteration import (
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.units import ureg
 from caqtus.types.variable_name import DottedVariableName, VariableName
-from tests.fixtures.steps_iteration import steps_configuration
 from .device_configuration import DummyConfiguration
 from ..generate_path import path
-from ...fixtures.time_lanes import time_lanes
 
 
 @pytest.fixture(scope="function")
@@ -79,6 +77,7 @@ def test_creation_2(empty_session):
 def test_children_1(empty_session):
     with empty_session as session:
         p = BoundSequencePath(r"\a\b\c", session)
+        assert p.parent is not None
         p.create()
         assert p.parent.get_children() == {p}
         p1 = BoundSequencePath(r"\a\b\d", session)
@@ -92,8 +91,10 @@ def test_children_1(empty_session):
 def test_children_2(empty_session):
     with empty_session as session:
         p = BoundSequencePath(r"\a\b\c", session)
+        assert p.parent is not None
         p.create()
         p1 = BoundSequencePath(r"\u\v\w", session)
+        assert p1.parent is not None
         p1.create()
         root_children = BoundSequencePath("\\", session).get_children()
         assert root_children == {p.parent.parent, p1.parent.parent}, repr(root_children)
@@ -205,7 +206,7 @@ def test_shot_creation(
         data = {
             DataLabel("a"): [1, 2, 3],
             DataLabel("b"): np.linspace(0, 1, 100),
-            DataLabel("c"): np.random.normal(size=(10, 20)),
+            DataLabel("c"): np.random.default_rng().normal(size=(10, 20)),
         }
         session.sequences.create_shot(
             p,
@@ -221,8 +222,12 @@ def test_shot_creation(
         assert shots[0].get_parameters() == parameters
         d = shots[0].get_data()
         assert d[DataLabel("a")] == [1, 2, 3]
-        assert np.array_equal(d[DataLabel("b")], np.linspace(0, 1, 100))
-        assert np.array_equal(d[DataLabel("c")], data[DataLabel("c")])
+        b = d[DataLabel("b")]
+        assert isinstance(b, np.ndarray)
+        assert np.array_equal(b, np.linspace(0, 1, 100))
+        c = d[DataLabel("c")]
+        assert isinstance(c, np.ndarray)
+        assert np.array_equal(c, data[DataLabel("c")])
         assert shots[0].get_data_by_label(DataLabel("a")) == [1, 2, 3]
 
         with pytest.raises(DataNotFoundError):
@@ -263,9 +268,7 @@ def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
             }
         )
         device_configurations = {
-            DeviceName("device"): DummyConfiguration(
-                a=1, b="test", remote_server="test"
-            ),
+            DeviceName("device"): DummyConfiguration(a=1, b="test", remote_server=None),
         }
         p = PureSequencePath(r"\a\b\c")
         Sequence.create(p, steps_configuration, time_lanes, session)
@@ -285,9 +288,7 @@ def test_0(session_maker, steps_configuration: StepsConfiguration, time_lanes):
 def test_1(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         configurations = {
-            DeviceName("device"): DummyConfiguration(
-                a=1, b="test", remote_server="test"
-            )
+            DeviceName("device"): DummyConfiguration(a=1, b="test", remote_server=None)
         }
         p = PureSequencePath(r"\a\b\c")
         Sequence.create(p, steps_configuration, time_lanes, session)
