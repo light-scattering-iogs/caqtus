@@ -79,7 +79,7 @@ python = ["3.12"]
 [tool.hatch.envs.default]
 dependencies = [
     "black>=24.3.0",
-    "ruff>=0.5.5",
+    "ruff>=0.6.4",
     "licensecheck>=2024.1.4",
     "pre-commit>=3.7.0",
     "twine",
