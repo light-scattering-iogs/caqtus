@@ -16,7 +16,7 @@ from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.units import Quantity, Unit, dimensionless
 from caqtus.types.variable_name import DottedVariableName
-from ...timming import TimeStep, number_time_steps
+from ...timing import TimeStep, number_time_steps
 
 
 @attrs.define

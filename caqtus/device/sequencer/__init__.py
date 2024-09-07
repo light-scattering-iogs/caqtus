@@ -7,7 +7,7 @@ from . import trigger
 from ._controller import SequencerController
 from ._converter import converter
 from ._proxy import SequencerProxy
-from .timming import TimeStep
+from .timing import TimeStep
 from .compilation import SequencerCompiler
 from .configuration import (
     SequencerConfiguration,

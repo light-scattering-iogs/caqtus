@@ -12,7 +12,7 @@ from caqtus.types.variable_name import DottedVariableName
 from ._compile_digital_lane import compile_digital_lane
 from .compile_analog_lane import compile_analog_lane
 from ..channel_output import ChannelOutput, DimensionedSeries
-from ...timming import TimeStep
+from ...timing import TimeStep
 from ...instructions import Pattern
 
 

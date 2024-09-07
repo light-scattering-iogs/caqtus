@@ -30,7 +30,7 @@ from caqtus.types.units import (
 )
 from caqtus.types.variable_name import VariableName, DottedVariableName
 from ..channel_output import DimensionedSeries
-from ...timming import (
+from ...timing import (
     TimeStep,
     ns,
     start_time_step,

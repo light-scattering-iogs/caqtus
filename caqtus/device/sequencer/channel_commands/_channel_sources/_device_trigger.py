@@ -17,7 +17,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError, RecoverableEx
 from caqtus.types.variable_name import DottedVariableName
 from ._trigger_compiler import TriggerableDeviceCompiler
 from ..channel_output import ChannelOutput, DimensionedSeries
-from ...timming import TimeStep, number_time_steps
+from ...timing import TimeStep, number_time_steps
 
 
 @attrs.define

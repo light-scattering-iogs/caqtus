@@ -15,7 +15,7 @@ from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.itertools import pairwise
 from .channel_output import ChannelOutput, DimensionedSeries
-from ..timming import TimeStep
+from ..timing import TimeStep
 from ..instructions import (
     SequencerInstruction,
     Pattern,

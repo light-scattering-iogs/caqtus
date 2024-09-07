@@ -14,7 +14,7 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
 from caqtus.types.variable_name import DottedVariableName
-from ..timming import TimeStep, number_time_steps
+from ..timing import TimeStep, number_time_steps
 from ..channel_commands import ChannelOutput
 from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (

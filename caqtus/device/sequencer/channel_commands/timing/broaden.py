@@ -14,7 +14,7 @@ from caqtus.types.recoverable_exceptions import InvalidTypeError, InvalidValueEr
 from caqtus.types.units import Unit, Quantity, InvalidDimensionalityError
 from caqtus.types.variable_name import DottedVariableName
 from ..channel_output import ChannelOutput, DimensionedSeries
-from ...timming import TimeStep
+from ...timing import TimeStep
 from ...instructions import (
     SequencerInstruction,
     Pattern,

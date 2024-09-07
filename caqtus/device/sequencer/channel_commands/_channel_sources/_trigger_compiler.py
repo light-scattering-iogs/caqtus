@@ -3,7 +3,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 
 from caqtus.shot_compilation import ShotContext, DeviceCompiler
-from ...timming import TimeStep, number_time_steps
+from ...timing import TimeStep, number_time_steps
 from ...instructions import SequencerInstruction, Pattern
 
 

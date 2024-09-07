@@ -9,7 +9,7 @@ from typing import ClassVar, Protocol
 import attrs
 
 from caqtus.device.runtime import Device
-from ..timming import TimeStep
+from ..timing import TimeStep
 from ..instructions import SequencerInstruction
 from ..trigger import Trigger, is_trigger
 

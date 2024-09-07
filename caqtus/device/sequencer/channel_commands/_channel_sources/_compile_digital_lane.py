@@ -10,7 +10,7 @@ from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.types.timelane import DigitalTimeLane
-from ...timming import number_time_steps_between, TimeStep
+from ...timing import number_time_steps_between, TimeStep
 
 
 def compile_digital_lane(
