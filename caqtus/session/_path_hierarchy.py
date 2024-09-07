@@ -48,6 +48,8 @@ class PathHierarchy(Protocol):
               created successfully. The list is ordered from parent to child.
             * Failure, with PathIsSequenceError if the path or one of its ancestors is a
               sequence. No path is created if any of the ancestors is a sequence.
+
+              If a failure is returned, not paths are created.
         """
 
         raise NotImplementedError
@@ -139,6 +141,8 @@ class PathHierarchy(Protocol):
             * PathNotFoundError: If the source path does not exist.
             * PathExistsError: If the destination path already exists.
             * PathIsSequenceError: If an ancestor in the destination path is a sequence.
+
+            If a failure is returned, the path is not moved and no path is created.
         """
 
         raise NotImplementedError
