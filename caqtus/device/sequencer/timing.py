@@ -10,6 +10,7 @@ __all__ = [
     "number_time_steps",
     "number_time_steps_between",
     "to_time_step",
+    "ns",
 ]
 
 TimeStep = NewType("TimeStep", decimal.Decimal)
