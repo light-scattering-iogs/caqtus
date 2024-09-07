@@ -36,7 +36,8 @@ class SQLPathHierarchy(PathHierarchy):
         current = path
         sequence_collection = self.parent_session.sequences
         while parent := current.parent:
-            match sequence_collection.is_sequence(current):
+            is_sequence = sequence_collection.is_sequence(current)
+            match is_sequence:
                 case Success(True):
                     return Failure(
                         PathIsSequenceError(
@@ -53,14 +54,14 @@ class SQLPathHierarchy(PathHierarchy):
         session = self._get_sql_session()
         created_paths = []
         for path_to_create in reversed(paths_to_create):
-            parent = (
-                unwrap(self._query_path_model(path_to_create.parent))
-                if not path_to_create.parent.is_root()
+            parent_model = (
+                unwrap(self._query_path_model(parent_path))
+                if (parent_path := path_to_create.parent)
                 else None
             )
             new_path = SQLSequencePath(
                 path=str(path_to_create),
-                parent=parent,
+                parent=parent_model,
                 creation_date=datetime.now(tz=timezone.utc).replace(tzinfo=None),
             )
             session.add(new_path)
@@ -108,7 +109,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError]:
+    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
         return _get_path_creation_date(self._get_sql_session(), path)
 
 
@@ -141,13 +142,15 @@ def _get_children(
                     children = path_sql.children
             case Failure() as failure:
                 return failure
+            case _:
+                raise AssertionError("Unreachable code")
     # noinspection PyUnboundLocalVariable
     return Success(set(PureSequencePath(str(child.path)) for child in children))
 
 
 def _get_path_creation_date(
     session: Session, path: PureSequencePath
-) -> Result[datetime, PathNotFoundError]:
+) -> Result[datetime, PathNotFoundError | PathIsRootError]:
     if path.is_root():
         return Failure(PathIsRootError(path))
     return _query_path_model(session, path).map(
