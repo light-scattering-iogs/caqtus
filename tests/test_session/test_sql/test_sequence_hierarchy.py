@@ -11,7 +11,6 @@ from caqtus.session import (
     PathNotFoundError,
 )
 from caqtus.session import PureSequencePath, Sequence, State
-from caqtus.session._result import unwrap
 from caqtus.types.data import DataLabel
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
@@ -177,7 +176,7 @@ def test_start_date(session_maker, steps_configuration: StepsConfiguration, time
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
     with session_maker() as session:
-        stats = unwrap(session.sequences.get_stats(p))
+        stats = session.sequences.get_stats(p).unwrap()
         d = stats.start_time
         assert d.tzinfo is not None and d.tzinfo.utcoffset(d) is not None
         now = datetime.datetime.now(tz=datetime.timezone.utc)
