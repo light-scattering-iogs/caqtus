@@ -39,7 +39,7 @@ class TracebackSummary:
             exceptions = [cls.from_exception(e) for e in exc.exceptions]
         else:
             exceptions = None
-        notes = tb.__notes__
+        notes = tb.__notes__  # pyright: ignore[reportAttributeAccessIssue]
         exc_type = type(exc)
         exc_msg = str(exc)
 
