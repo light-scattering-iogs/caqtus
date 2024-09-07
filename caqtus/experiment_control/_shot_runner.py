@@ -54,19 +54,19 @@ class ShotRunner(ShotRunnerProtocol):
 
     async def run_shot(
         self,
-        shot_params: DeviceParameters,
+        shot_parameters: DeviceParameters,
     ) -> Mapping[DataLabel, Data]:
         event_dispatcher = ShotEventDispatcher(
             {
                 name: DeviceRunConfig(
                     device=self.devices[name],
                     controller_type=self.controller_types[name],
-                    parameters=shot_params.device_parameters[name],
+                    parameters=shot_parameters.device_parameters[name],
                 )
                 for name in self.devices
             }
         )
-        return await event_dispatcher.run_shot(shot_params.timeout)
+        return await event_dispatcher.run_shot(shot_parameters.timeout)
 
 
 @contextlib.asynccontextmanager
