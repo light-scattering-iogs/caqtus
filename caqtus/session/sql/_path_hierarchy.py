@@ -9,13 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ._path_table import SQLSequencePath
+from .._light_result import _Result, _Success, _Failure
 from .._path import PureSequencePath
 from .._path_hierarchy import (
     PathNotFoundError,
     PathIsRootError,
     PathHierarchy,
 )
-from .._return_or_raise import unwrap, is_success
 from .._sequence_collection import PathIsSequenceError
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ class SQLPathHierarchy(PathHierarchy):
         created_paths = []
         for path_to_create in reversed(paths_to_create):
             parent_model = (
-                unwrap(self._query_path_model(parent_path))
+                self._query_path_model(parent_path).unwrap()
                 if (parent_path := path_to_create.parent)
                 else None
             )
@@ -82,8 +82,7 @@ class SQLPathHierarchy(PathHierarchy):
                 raise PathIsSequenceError(
                     f"Cannot delete a path that contains sequences: {contained}"
                 )
-
-        session.delete(unwrap(self._query_path_model(path)))
+        session.delete(self._query_path_model(path).unwrap())
         session.flush()
 
     def get_all_paths(self) -> set[PureSequencePath]:
@@ -95,12 +94,12 @@ class SQLPathHierarchy(PathHierarchy):
         if path.is_root():
             raise PathIsRootError(path)
 
-        sql_path = unwrap(self._query_path_model(path))
+        sql_path = self._query_path_model(path).unwrap()
         sql_path.creation_date = date
 
     def _query_path_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequencePath, PathNotFoundError]:
+    ) -> _Result[SQLSequencePath, PathNotFoundError]:
         return _query_path_model(self._get_sql_session(), path)
 
     def _get_sql_session(self) -> sqlalchemy.orm.Session:
@@ -109,7 +108,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
         return _get_path_creation_date(self._get_sql_session(), path)
 
 
@@ -117,7 +116,7 @@ def _does_path_exists(session: Session, path: PureSequencePath) -> bool:
     if path.is_root():
         return True
     result = _query_path_model(session, path)
-    return is_success(result)
+    return isinstance(result, _Success)
 
 
 def _get_children(
@@ -150,9 +149,9 @@ def _get_children(
 
 def _get_path_creation_date(
     session: Session, path: PureSequencePath
-) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
     if path.is_root():
-        return Failure(PathIsRootError(path))
+        return _Failure(PathIsRootError(path))
     return _query_path_model(session, path).map(
         lambda x: x.creation_date.replace(tzinfo=timezone.utc)
     )
@@ -160,10 +159,10 @@ def _get_path_creation_date(
 
 def _query_path_model(
     session: Session, path: PureSequencePath
-) -> Result[SQLSequencePath, PathNotFoundError]:
+) -> _Result[SQLSequencePath, PathNotFoundError]:
     stmt = select(SQLSequencePath).where(SQLSequencePath.path == str(path))
     result = session.execute(stmt)
     if found := result.scalar():
-        return Success(found)
+        return _Success(found)
     else:
-        return Failure(PathNotFoundError(f'Path "{path}" does not exists'))
+        return _Failure(PathNotFoundError(f'Path "{path}" does not exists'))

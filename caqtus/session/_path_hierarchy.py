@@ -6,6 +6,7 @@ from typing import Protocol, TYPE_CHECKING
 
 from returns.result import Result
 
+from ._light_result import _Result
 from ._path import PureSequencePath
 
 if TYPE_CHECKING:
@@ -84,7 +85,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> _Result[datetime, PathNotFoundError | PathIsRootError]:
         """Get the creation date of the path.
 
         Args:
