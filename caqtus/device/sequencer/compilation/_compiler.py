@@ -14,7 +14,6 @@ from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.units import Unit, InvalidDimensionalityError, dimensionless
 from caqtus.types.units.base import is_in_base_units, base_units
 from caqtus.types.variable_name import DottedVariableName
-from ..timing import TimeStep, number_time_steps
 from ..channel_commands import ChannelOutput
 from ..channel_commands import DimensionedSeries
 from ..channel_commands._channel_sources._trigger_compiler import (
@@ -34,6 +33,7 @@ from ..instructions import (
     concatenate,
     Repeated,
 )
+from ..timing import TimeStep, number_time_steps
 from ..trigger import (
     ExternalClockOnChange,
     ExternalTriggerStart,
@@ -56,7 +56,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         self.__configuration = configuration
         self.__device_name = device_name
 
-    class SequencerInitializationParameters(TypedDict):
+    class InitializationParameters(TypedDict):
         """The parameters to pass to the sequencer constructor.
 
         Fields:
@@ -67,7 +67,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
         time_step: TimeStep
         trigger: Trigger
 
-    def compile_initialization_parameters(self) -> SequencerInitializationParameters:
+    def compile_initialization_parameters(self) -> InitializationParameters:
         """Compile the parameters needed to initialize the sequencer.
 
         Returns:
@@ -79,12 +79,12 @@ class SequencerCompiler(TriggerableDeviceCompiler):
 
         # TODO: raise DeviceNotUsedException if the sequencer is not used for the
         #  current sequence
-        return self.SequencerInitializationParameters(
+        return self.InitializationParameters(
             time_step=self.__configuration.time_step,
             trigger=self.__configuration.trigger,
         )
 
-    class SequencerShotParameters(TypedDict):
+    class ShotParameters(TypedDict):
         """The parameters to pass to the sequencer controller for a shot.
 
         Fields:
@@ -96,7 +96,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
     def compile_shot_parameters(
         self,
         shot_context: ShotContext,
-    ) -> SequencerShotParameters:
+    ) -> ShotParameters:
         """Evaluates the output for each channel of the sequencer."""
 
         instructions = {}
@@ -127,7 +127,7 @@ class SequencerCompiler(TriggerableDeviceCompiler):
             shot_context,
         )
 
-        return SequencerCompiler.SequencerShotParameters(sequence=stacked)
+        return SequencerCompiler.ShotParameters(sequence=stacked)
 
     def compute_trigger(
         self, sequencer_time_step: TimeStep, shot_context: ShotContext
