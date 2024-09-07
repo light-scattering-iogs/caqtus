@@ -38,14 +38,17 @@ class PathHierarchy(Protocol):
     ) -> Result[list[PureSequencePath], PathIsSequenceError]:
         """Create the path in the session and its parent paths if they do not exist.
 
+        If is safe to call this methode even if the path already exists, in which case
+        it will return a Success with an empty list.
+
         Args:
             path: the path to create.
 
         Returns:
-            A list of the paths that were created if the path was created successfully
-            or PathIsSequenceError if the path or one of its ancestors is a sequence.
-            No path is created if any of the ancestors is a sequence.
-            The list is ordered from parent to child.
+            * Success, with a list of the paths that were created if the path was
+              created successfully. The list is ordered from parent to child.
+            * Failure, with PathIsSequenceError if the path or one of its ancestors is a
+              sequence. No path is created if any of the ancestors is a sequence.
         """
 
         raise NotImplementedError
@@ -138,5 +141,11 @@ class PathIsRootError(PathError):
 
 class PathHasChildrenError(PathError):
     """Raised when an invalid operation is performed on a path that has children."""
+
+    pass
+
+
+class PathExistsError(PathError):
+    """Raised when a path already exists in the session."""
 
     pass
