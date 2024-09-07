@@ -74,6 +74,13 @@ def test_creation_2(empty_session):
             assert session.paths.does_path_exists(ancestor)
 
 
+def test_root_creation(empty_session):
+    with empty_session as session:
+        p = PureSequencePath.root()
+        created = session.paths.create_path(p)
+        assert unwrap(created) == []
+
+
 def test_children_1(empty_session):
     with empty_session as session:
         p = BoundSequencePath(r"\a\b\c", session)
