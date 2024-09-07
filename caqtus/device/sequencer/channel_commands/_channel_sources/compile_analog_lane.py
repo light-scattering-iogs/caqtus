@@ -16,7 +16,7 @@ from caqtus.device.sequencer.instructions import (
     concatenate,
     create_ramp,
 )
-from caqtus.shot_compilation.lane_compilers.timing import Time
+from caqtus.shot_compilation.timing import Time
 from caqtus.types.expression import Expression
 from caqtus.types.recoverable_exceptions import InvalidValueError, InvalidTypeError
 from caqtus.types.timelane import AnalogTimeLane, Ramp, Block

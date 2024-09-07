@@ -2,11 +2,7 @@ import decimal
 from typing import NewType
 
 from caqtus.shot_compilation._shot_time import Time, ns
-from caqtus.shot_compilation.lane_compilers.timing import (
-    start_tick,
-    stop_tick,
-    number_ticks,
-)
+from caqtus.shot_compilation.timing import start_tick, stop_tick, number_ticks
 
 __all__ = [
     "TimeStep",

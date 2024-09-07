@@ -8,8 +8,7 @@ from typing_extensions import deprecated
 from caqtus.device import DeviceName, DeviceConfiguration
 from caqtus.types.timelane import TimeLanes, TimeLane
 from caqtus.types.variable_name import DottedVariableName
-from .lane_compilers.timing import get_step_bounds, Time
-from .timing import to_time
+from .timing import to_time, get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
 from ..types.parameter import is_quantity, magnitude_in_unit
