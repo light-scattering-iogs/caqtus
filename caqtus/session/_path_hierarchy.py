@@ -4,8 +4,6 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from returns.result import Result
-
 from ._light_result import _Result
 from ._path import PureSequencePath
 
@@ -77,7 +75,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         """Get the children of the path."""
 
         raise NotImplementedError

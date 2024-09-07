@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, assert_never
 
 import sqlalchemy.orm
 from attr import frozen
-from returns.result import Success, Failure, Result
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -71,7 +70,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         return _get_children(self._get_sql_session(), path)
 
     def delete_path(self, path: PureSequencePath, delete_sequences: bool = False):
@@ -79,7 +78,7 @@ class SQLPathHierarchy(PathHierarchy):
 
         if not delete_sequences:
             sequence_collection = self.parent_session.sequences
-            if contained := sequence_collection.get_contained_sequences(path):
+            if contained := sequence_collection.get_contained_sequences(path).unwrap():
                 raise PathIsSequenceError(
                     f"Cannot delete a path that contains sequences: {contained}"
                 )
@@ -122,7 +121,7 @@ def _does_path_exists(session: Session, path: PureSequencePath) -> bool:
 
 def _get_children(
     session: Session, path: PureSequencePath
-) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+) -> _Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
     if path.is_root():
         query_children = select(SQLSequencePath).where(
             SQLSequencePath.parent_id.is_(None)
@@ -131,21 +130,21 @@ def _get_children(
     else:
         query_result = _query_path_model(session, path)
         match query_result:
-            case Success(path_sql):
+            case _Success(path_sql):
                 if path_sql.sequence:
-                    return Failure(
+                    return _Failure(
                         PathIsSequenceError(
                             f"Cannot check children of a sequence: {path}"
                         )
                     )
                 else:
                     children = path_sql.children
-            case Failure() as failure:
+            case _Failure() as failure:
                 return failure
             case _:
                 raise AssertionError("Unreachable code")
     # noinspection PyUnboundLocalVariable
-    return Success(set(PureSequencePath(str(child.path)) for child in children))
+    return _Success(set(PureSequencePath(str(child.path)) for child in children))
 
 
 def _get_path_creation_date(
