@@ -54,11 +54,14 @@ class SQLPathHierarchy(PathHierarchy):
         session = self._get_sql_session()
         created_paths = []
         for path_to_create in reversed(paths_to_create):
-            parent_model = (
-                self._query_path_model(parent_path).unwrap()
-                if (parent_path := path_to_create.parent)
-                else None
-            )
+            assert path_to_create.parent is not None
+            parent_model_result = _query_path_model(session, path_to_create.parent)
+            if isinstance(parent_model_result, _Failure):
+                assert isinstance(parent_model_result.error, PathIsRootError)
+                parent_model = None
+            else:
+                parent_model = parent_model_result.value
+
             new_path = SQLSequencePath(
                 path=str(path_to_create),
                 parent=parent_model,
