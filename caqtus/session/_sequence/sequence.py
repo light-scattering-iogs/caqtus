@@ -86,7 +86,7 @@ class Sequence:
                 The session must be active.
         """
 
-        session.sequences.create(path, iteration_configuration, time_lanes)
+        session.sequences.create(path, iteration_configuration, time_lanes).unwrap()
         return cls(path, session)
 
     def __str__(self) -> str:

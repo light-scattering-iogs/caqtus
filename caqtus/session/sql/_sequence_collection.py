@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Mapping, Set
-from typing import TYPE_CHECKING, Optional, assert_never, Iterable, assert_type
+from collections.abc import Mapping, Iterable, Set
+from typing import (
+    TYPE_CHECKING,
+    Optional,
+    assert_never,
+    assert_type,
+)
 
 import attrs
 import cattrs
@@ -11,8 +16,8 @@ import sqlalchemy.orm
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from caqtus.device import DeviceConfiguration, DeviceName
-from caqtus.types.data import DataLabel, Data, is_data
+from caqtus.types.data import Data
+from caqtus.types.data import is_data, DataLabel
 from caqtus.types.iteration import (
     IterationConfiguration,
     Unknown,
@@ -37,7 +42,7 @@ from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructured
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
-from .._result import Result, Success, Failure
+from .._result import Result, Success, Failure, is_failure_type, is_success, is_failure
 from .._sequence_collection import (
     PathIsSequenceError,
     PathIsNotSequenceError,
@@ -51,6 +56,7 @@ from .._sequence_collection import (
 )
 from .._sequence_collection import SequenceCollection
 from .._state import State
+from ...device import DeviceName, DeviceConfiguration
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -173,12 +179,22 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> None:
-        self.parent_session.paths.create_path(path)
-        if self.is_sequence(path).unwrap():
-            raise PathIsSequenceError(path)
-        if self.parent_session.paths.get_children(path).unwrap():
-            raise PathHasChildrenError(path)
+    ) -> Result[None, PathIsSequenceError | PathHasChildrenError]:
+        children_result = self.parent_session.paths.get_children(path)
+        if is_success(children_result):
+            if children_result.value:
+                return Failure(PathHasChildrenError(path))
+        else:
+            if is_failure_type(children_result, PathIsSequenceError):
+                return children_result
+            elif is_failure_type(children_result, PathNotFoundError):
+                creation_result = self.parent_session.paths.create_path(path)
+                if is_failure(creation_result):
+                    if is_failure_type(creation_result, PathIsSequenceError):
+                        return creation_result
+                    assert_never(creation_result)
+            else:
+                assert_never(children_result)  # pyright: ignore[reportArgumentType]
 
         iteration_content = self.serializer.dump_sequence_iteration(
             iteration_configuration
@@ -198,6 +214,7 @@ class SQLSequenceCollection(SequenceCollection):
             ),
         )
         self._get_sql_session().add(new_sequence)
+        return Success(None)
 
     def serialize_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return self.serializer.unstructure_time_lanes(time_lanes)

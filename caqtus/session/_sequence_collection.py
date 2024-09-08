@@ -15,7 +15,7 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
-from ._path_hierarchy import PathError, PathNotFoundError
+from ._path_hierarchy import PathError, PathNotFoundError, PathHasChildrenError
 from ._result import Result
 from ._state import State
 
@@ -209,10 +209,10 @@ class SequenceCollection(Protocol):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> None:
+    ) -> Result[None, PathIsSequenceError | PathHasChildrenError]:
         """Create a new sequence at the given path.
 
-        Raises:
+        Returns:
             PathIsSequenceError: If the path already exists and is a sequence.
             PathHasChildrenError: If the path already exists and has children.
         """
