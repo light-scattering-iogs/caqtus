@@ -441,14 +441,20 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         for row in range(parent_item.rowCount())
                     }
                     new_paths = child_paths - already_added_paths
+                    new_items = [
+                        await self._build_item_async(path, session)
+                        for path in new_paths
+                    ]
+
                     self.beginInsertRows(
                         parent,
                         parent_item.rowCount(),
-                        parent_item.rowCount() + len(new_paths) - 1,
+                        parent_item.rowCount() + len(new_items) - 1,
                     )
-                    for child_path in new_paths:
-                        child_item = await self._build_item_async(child_path, session)
-                        parent_item.appendRow(child_item)
+                    # Need to be careful to not nest an async call inside this block,
+                    # as it can raise a cancellation error.
+                    for item in new_items:
+                        parent_item.appendRow(item)
                     self.endInsertRows()
                 for row in range(self.rowCount(parent)):
                     await self.add_new_paths(self.index(row, 0, parent))
