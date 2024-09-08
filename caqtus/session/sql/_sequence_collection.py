@@ -85,23 +85,33 @@ class SQLSequenceCollection(SequenceCollection):
         The ancestor is not included in the result.
         """
 
-        descendants_query = self.parent_session.paths.descendants_query(ancestor_id)
-        sequences_query = select(SQLSequence).join_from(
-            SQLSequence,
-            descendants_query,
-            SQLSequence.path_id == descendants_query.c.id,
+        descendants = self.parent_session.paths.descendants_query(ancestor_id)
+        sequences_query = select(SQLSequence).join(
+            descendants,
+            SQLSequence.path_id == descendants.id_,
         )
         return sequences_query
 
     def get_contained_running_sequences(
         self, path: PureSequencePath
     ) -> Result[set[PureSequencePath], PathNotFoundError]:
-        path_hierarchy = self.parent_session.paths
-        parent_id_result = path_hierarchy.get_parent_id(path)
-        if isinstance(parent_id_result, Failure):
-            return parent_id_result
+        path_model_result = _query_path_model(self._get_sql_session(), path)
 
-        sequences_query = self.descendant_sequences(parent_id_result.value)
+        running_sequences = set()
+        if isinstance(path_model_result, Failure):
+            if isinstance(path_model_result.error, PathNotFoundError):
+                return Failure(path_model_result.error)
+            assert_type(path_model_result.error, PathIsRootError)
+            parent_id = None
+        else:
+            path_model = path_model_result.value
+
+            if path_model.sequence is not None:
+                if path_model.sequence.state in {State.PREPARING, State.RUNNING}:
+                    running_sequences.add(path)
+            parent_id = path_model.id_
+
+        sequences_query = self.descendant_sequences(parent_id)
         running_sequences_query = sequences_query.where(
             SQLSequence.state.in_({State.PREPARING, State.RUNNING})
         )
@@ -109,7 +119,8 @@ class SQLSequenceCollection(SequenceCollection):
         result = (
             self._get_sql_session().execute(running_sequences_query).scalars().all()
         )
-        return Success({PureSequencePath(row.path.path) for row in result})
+        running_sequences.update(PureSequencePath(row.path.path) for row in result)
+        return Success(running_sequences)
 
     def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace

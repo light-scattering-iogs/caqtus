@@ -160,3 +160,47 @@ def test_rename_folder(session_maker):
         assert not session.paths.does_path_exists(parent)
         assert session.paths.does_path_exists(new_name)
         assert session.paths.does_path_exists(new_name / "child")
+
+
+def test_rename_folder_with_multiple_children(session_maker):
+    with session_maker() as session:
+        parent = PureSequencePath.root() / "parent"
+        session.paths.create_path(parent)
+
+        child1 = parent / "child1"
+        session.paths.create_path(child1)
+
+        child2 = parent / "child2"
+        session.paths.create_path(child2)
+
+        new_name = PureSequencePath.root() / "new name"
+        session.paths.move(parent, new_name)
+
+        session.paths.check_valid()
+
+        assert not session.paths.does_path_exists(parent)
+        assert session.paths.does_path_exists(new_name)
+        assert session.paths.does_path_exists(new_name / "child1")
+        assert session.paths.does_path_exists(new_name / "child2")
+
+
+def test_rename_folder_with_sibling(session_maker):
+    with session_maker() as session:
+        parent = PureSequencePath.root() / "parent"
+        session.paths.create_path(parent)
+
+        child = parent / "child"
+        session.paths.create_path(child)
+
+        sibling = PureSequencePath.root() / "sibling"
+        session.paths.create_path(sibling)
+
+        new_name = PureSequencePath.root() / "new name"
+        session.paths.move(parent, new_name)
+
+        session.paths.check_valid()
+
+        assert not session.paths.does_path_exists(parent)
+        assert session.paths.does_path_exists(new_name)
+        assert session.paths.does_path_exists(new_name / "child")
+        assert session.paths.does_path_exists(sibling)
