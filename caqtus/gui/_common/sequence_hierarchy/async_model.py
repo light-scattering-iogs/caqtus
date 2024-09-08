@@ -36,11 +36,32 @@ from caqtus.session import (
 )
 from caqtus.session._result import Result
 from caqtus.session._sequence_collection import SequenceStats
-from caqtus.types.iteration import Unknown
+from caqtus.types.expression import Expression
+from caqtus.types.iteration import Unknown, StepsConfiguration, ArangeLoop, ExecuteShot
+from caqtus.types.timelane import TimeLanes
+from caqtus.types.variable_name import DottedVariableName
 
 NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 
 DEFAULT_INDEX = QModelIndex()
+
+DEFAULT_ITERATION_CONFIG = StepsConfiguration(
+    steps=[
+        ArangeLoop(
+            variable=DottedVariableName("rep"),
+            start=Expression("0"),
+            stop=Expression("10"),
+            step=Expression("1"),
+            sub_steps=[ExecuteShot()],
+        ),
+    ]
+)
+
+DEFAULT_TIME_LANES = TimeLanes(
+    step_names=["step 0"],
+    step_durations=[Expression("...")],
+    lanes={},
+)
 
 
 def get_item_data(item: QStandardItem) -> Node:
@@ -658,6 +679,21 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.emit_index_updated(index)
         for row in range(self.rowCount(index)):
             self._rename_recursively(self.index(row, 0, index), new_path)
+
+    def create_new_sequence(self, parent: QModelIndex, name: str):
+        parent_item = self._get_item(parent)
+        parent_data = get_item_data(parent_item)
+        if not isinstance(parent_data, FolderNode):
+            raise ValueError("Parent must be a folder")
+        new_path = parent_data.path / name
+        with self.session_maker() as session, self._background_runner.suspend():
+            session.sequences.create(
+                new_path, DEFAULT_ITERATION_CONFIG, DEFAULT_TIME_LANES
+            )
+            item = self._build_item(new_path, session)
+            self.beginInsertRows(parent, parent_item.rowCount(), parent_item.rowCount())
+            parent_item.appendRow(item)
+            self.endInsertRows()
 
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:

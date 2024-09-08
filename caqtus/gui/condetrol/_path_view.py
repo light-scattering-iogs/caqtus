@@ -1,4 +1,3 @@
-import copy
 import functools
 
 from PySide6 import QtCore
@@ -25,33 +24,7 @@ from caqtus.session import (
     State,
 )
 from caqtus.session._result import Failure
-from caqtus.types.expression import Expression
-from caqtus.types.iteration import (
-    StepsConfiguration,
-    ArangeLoop,
-    ExecuteShot,
-)
-from caqtus.types.timelane import TimeLanes
-from caqtus.types.variable_name import DottedVariableName
 from ._icons import get_icon
-
-DEFAULT_ITERATION_CONFIG = StepsConfiguration(
-    steps=[
-        ArangeLoop(
-            variable=DottedVariableName("rep"),
-            start=Expression("0"),
-            stop=Expression("10"),
-            step=Expression("1"),
-            sub_steps=[ExecuteShot()],
-        ),
-    ]
-)
-
-DEFAULT_TIME_LANES = TimeLanes(
-    step_names=["step 0"],
-    step_durations=[Expression("...")],
-    lanes={},
-)
 
 
 class EditablePathHierarchyView(AsyncPathHierarchyView):
@@ -98,7 +71,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
 
                 create_sequence_action = new_menu.addAction("sequence")
                 create_sequence_action.triggered.connect(
-                    functools.partial(self.create_new_sequence, path)
+                    functools.partial(self.create_new_sequence, index)
                 )
             if is_sequence:
                 play_icon = get_icon("start", color)
@@ -281,7 +254,8 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             with self.session_maker() as session:
                 session.paths.create_path(new_path)
 
-    def create_new_sequence(self, path: PureSequencePath):
+    def create_new_sequence(self, parent: QModelIndex):
+        path = self._model.get_path(parent)
         text, ok = QInputDialog().getText(
             self,
             f"New sequence in {path}...",
@@ -290,13 +264,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             "new sequence",
         )
         if ok and text:
-            new_path = path / text
-            with self.session_maker() as session:
-                session.sequences.create(
-                    new_path,
-                    copy.deepcopy(DEFAULT_ITERATION_CONFIG),
-                    copy.deepcopy(DEFAULT_TIME_LANES),
-                )
+            self._model.create_new_sequence(parent, text)
 
     def delete(self, path: PureSequencePath):
         message = (
