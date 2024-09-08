@@ -126,15 +126,23 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             return Qt.ItemFlag.NoItemFlags | Qt.ItemFlag.ItemIsDropEnabled
         item = self._get_item(index)
         node_data = get_item_data(item)
-        flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        flags = Qt.ItemFlag.NoItemFlags
         if isinstance(node_data, SequenceNode):
+            flags |= Qt.ItemFlag.ItemIsEnabled
+            flags |= Qt.ItemFlag.ItemIsSelectable
             flags |= Qt.ItemFlag.ItemNeverHasChildren
             if node_data.stats.state not in {State.PREPARING, State.RUNNING}:
                 flags |= Qt.ItemFlag.ItemIsDragEnabled
         else:
             assert_type(node_data, FolderNode)
-            flags |= Qt.ItemFlag.ItemIsDragEnabled
-            flags |= Qt.ItemFlag.ItemIsDropEnabled
+            if index.column() == 0:
+                flags |= Qt.ItemFlag.ItemIsSelectable
+                flags |= Qt.ItemFlag.ItemIsEnabled
+                flags |= Qt.ItemFlag.ItemIsDragEnabled
+                flags |= Qt.ItemFlag.ItemIsDropEnabled
+            if index.column() == 4:
+                flags |= Qt.ItemFlag.ItemIsSelectable
+                flags |= Qt.ItemFlag.ItemIsEnabled
         return flags
 
     def mimeTypes(self):  # noqa: N802
