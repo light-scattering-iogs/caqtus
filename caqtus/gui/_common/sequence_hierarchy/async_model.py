@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import datetime
-from typing import Optional, TypeGuard, assert_never, assert_type
+from typing import Optional, TypeGuard, assert_never, assert_type, Never
 
 import anyio
+import anyio.abc
 import attrs
 from PySide6.QtCore import (
     QObject,
@@ -81,6 +83,8 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             ),
             NODE_DATA_ROLE,
         )
+        self._update_cancel_scope: Optional[anyio.CancelScope] = None
+        self._task_group: Optional[anyio.abc.TaskGroup] = None
 
     def index(self, row, column, parent=DEFAULT_INDEX):
         if not self.hasIndex(row, column, parent):
@@ -325,10 +329,40 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         elif index.column() == 4:
             return QDateTime(node_data.creation_date.astimezone(None))  # type: ignore
 
+    async def run(self) -> Never:
+        async with anyio.create_task_group() as self._task_group:
+            self._task_group.start_soon(self.watch_session)
+            await anyio.sleep_forever()
+
     async def watch_session(self) -> None:
-        while True:
-            await self.update_from_session()
-            await anyio.sleep(0)  # noqa: ASYNC115
+        with anyio.CancelScope() as self._update_cancel_scope:
+            while True:
+                # The call to update_from_session must be safe to be cancelled in the
+                # middle of its execution, without corrupting the model.
+                await self.update_from_session()
+                await anyio.sleep(0)  # noqa: ASYNC115
+
+    @contextlib.contextmanager
+    def suspend_background_update(self):
+        """Suspend the background structure update of the model.
+
+        When this context manager is entered, the current background update is
+        cancelled and all pending changes to the model structure are discarded.
+
+        When this context manager is exited, the background update resumes.
+        """
+
+        if self._update_cancel_scope is not None:
+            self._update_cancel_scope.cancel()
+
+        yield
+
+        self._update_cancel_scope = None
+        if self._task_group is None:
+            raise RuntimeError(
+                "The task group must be initialized before calling this method."
+            )
+        self._task_group.start_soon(self.watch_session)
 
     async def update_from_session(self) -> None:
         await self.prune()
@@ -554,7 +588,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert data.path.parent is not None
         new_path = data.path.parent / new_name
 
-        with self.session_maker() as session:
+        with self.suspend_background_update(), self.session_maker() as session:
             return session.paths.move(data.path, new_path)
 
 
