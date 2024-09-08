@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QApplication,
+    QAbstractItemView,
 )
 
 from caqtus.gui._common.sequence_hierarchy import (
@@ -65,6 +66,11 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         super().__init__(session_maker, parent)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.setDragEnabled(True)
+        self.viewport().setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
     def show_context_menu(self, pos):
         proxy_index = self.indexAt(pos)

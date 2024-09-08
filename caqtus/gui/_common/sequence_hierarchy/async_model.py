@@ -3,7 +3,10 @@ from __future__ import annotations
 import abc
 import contextlib
 import datetime
-from typing import Optional, TypeGuard, assert_never, assert_type, Never
+import json
+import weakref
+from collections.abc import Awaitable
+from typing import Optional, TypeGuard, assert_never, assert_type, Never, Callable
 
 import anyio
 import anyio.abc
@@ -15,6 +18,7 @@ from PySide6.QtCore import (
     Qt,
     QDateTime,
     QPersistentModelIndex,
+    QMimeData,
 )
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
@@ -83,8 +87,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             ),
             NODE_DATA_ROLE,
         )
-        self._update_cancel_scope: Optional[anyio.CancelScope] = None
-        self._task_group: Optional[anyio.abc.TaskGroup] = None
+        self._background_runner = BackgroundRunner(self.watch_session)
 
     def index(self, row, column, parent=DEFAULT_INDEX):
         if not self.hasIndex(row, column, parent):
@@ -116,18 +119,77 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
     def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
+            return Qt.ItemFlag.NoItemFlags | Qt.ItemFlag.ItemIsDropEnabled
         item = self._get_item(index)
         node_data = get_item_data(item)
         flags = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if isinstance(node_data, SequenceNode):
             flags |= Qt.ItemFlag.ItemNeverHasChildren
+            if node_data.stats.state not in {State.PREPARING, State.RUNNING}:
+                flags |= Qt.ItemFlag.ItemIsDragEnabled
+        else:
+            assert_type(node_data, FolderNode)
+            flags |= Qt.ItemFlag.ItemIsDragEnabled
+            flags |= Qt.ItemFlag.ItemIsDropEnabled
         return flags
 
-    def get_path(self, index: QModelIndex) -> PureSequencePath:
-        item = self._get_item(index)
-        node_data = get_item_data(item)
-        return node_data.path
+    def mimeTypes(self):  # noqa: N802
+        return ["application/x-caqtus-sequence-path"]
+
+    def mimeData(self, indexes):  # noqa: N802
+        items = [self._get_item(index) for index in indexes]
+        data = [get_item_data(item) for item in items]
+        paths = {node.path for node in data}
+        assert len(paths) == 1
+        encoded = json.dumps([str(path) for path in paths]).encode("utf-8")
+        mime_data = QMimeData()
+        mime_data.setData("application/x-caqtus-sequence-path", encoded)
+        return mime_data
+
+    def supportedDropActions(self):  # noqa: N802
+        return Qt.DropAction.MoveAction
+
+    def canDropMimeData(self, data, action, row, column, parent):  # noqa: N802
+        if not data.hasFormat("application/x-caqtus-sequence-path"):
+            return False
+        if action != Qt.DropAction.MoveAction:
+            return False
+        parent_item = self._get_item(parent)
+        node_data = get_item_data(parent_item)
+        if row == -1:
+            return isinstance(node_data, FolderNode)
+        return False
+
+    def dropMimeData(self, data, action, row, column, parent):  # noqa: N802
+        if not self.canDropMimeData(data, action, row, column, parent):
+            return False
+
+        paths = json.loads(
+            bytes(
+                data.data(
+                    "application/x-caqtus-sequence-path"
+                )  # pyright: ignore[reportArgumentType]
+            ).decode("utf-8")
+        )
+        assert len(paths) == 1
+        src = PureSequencePath(paths[0])
+        if row == -1:
+            dst_parent = get_item_data(self._get_item(parent)).path
+            dst = dst_parent / src.name
+            with self.session_maker() as session, self._background_runner.suspend():
+                result = session.paths.move(src, dst)
+                return result.is_success()
+        return False
+
+    def removeRows(self, row, count, parent=...):  # noqa: N802
+        # This method only remove the in-memory data, it does not remove the path from
+        # the session.
+        parent_item = self._get_item(parent)
+        with self._background_runner.suspend():
+            self.beginRemoveRows(parent, row, row + count - 1)
+            parent_item.removeRows(row, count)
+            self.endRemoveRows()
+        return False
 
     def _get_item(self, index) -> QStandardItem:
         result = (
@@ -330,39 +392,13 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             return QDateTime(node_data.creation_date.astimezone(None))  # type: ignore
 
     async def run(self) -> Never:
-        async with anyio.create_task_group() as self._task_group:
-            self._task_group.start_soon(self.watch_session)
-            await anyio.sleep_forever()
+        await self._background_runner.run()
 
     async def watch_session(self) -> None:
-        with anyio.CancelScope() as self._update_cancel_scope:
-            while True:
-                # The call to update_from_session must be safe to be cancelled in the
-                # middle of its execution, without corrupting the model.
-                await self.update_from_session()
-                await anyio.sleep(0)  # noqa: ASYNC115
-
-    @contextlib.contextmanager
-    def suspend_background_update(self):
-        """Suspend the background structure update of the model.
-
-        When this context manager is entered, the current background update is
-        cancelled and all pending changes to the model structure are discarded.
-
-        When this context manager is exited, the background update resumes.
-        """
-
-        if self._update_cancel_scope is not None:
-            self._update_cancel_scope.cancel()
-
-        yield
-
-        self._update_cancel_scope = None
-        if self._task_group is None:
-            raise RuntimeError(
-                "The task group must be initialized before calling this method."
-            )
-        self._task_group.start_soon(self.watch_session)
+        while True:
+            # The call to update_from_session must be safe to be cancelled in the
+            # middle of its execution, without corrupting the model.
+            await self.update_from_session()
 
     async def update_from_session(self) -> None:
         await self.prune()
@@ -386,9 +422,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             try:
                 creation_date = creation_date_result.unwrap()
             except PathNotFoundError:
-                self.handle_path_was_deleted(index)
+                await self.handle_path_was_deleted_async(index)
                 return
             if creation_date != data.creation_date:
+                await anyio.sleep(0)  # noqa: ASYNC115
                 data.creation_date = creation_date
                 change_detected = True
             if isinstance(data, SequenceNode):
@@ -399,6 +436,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     await self.handle_sequence_became_folder(index, session)
                     return
                 if stats != data.stats:
+                    await anyio.sleep(0)  # noqa: ASYNC115
                     data.stats = stats
                     data.last_query_time = get_update_date()
                     change_detected = True
@@ -421,15 +459,17 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         async with self.session_maker.async_session() as session:
             children_result = await session.paths.get_children(parent_data.path)
+            await anyio.sleep(0)  # noqa: ASYNC115
             try:
                 child_paths = children_result.unwrap()
             except PathIsSequenceError:
                 await self.handle_folder_became_sequence_async(parent, session)
                 return
             except PathNotFoundError:
-                self.handle_path_was_deleted(parent)
+                await self.handle_path_was_deleted_async(parent)
                 return
 
+        await anyio.sleep(0)  # noqa: ASYNC115
         # Need to use persistent indices to avoid invalidation while removing rows.
         child_indices = set[QPersistentModelIndex]()
         for row in range(self.rowCount(parent)):
@@ -468,7 +508,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         await self.handle_folder_became_sequence_async(parent, session)
                         return
                     except PathNotFoundError:
-                        self.handle_path_was_deleted(parent)
+                        await self.handle_path_was_deleted_async(parent)
                         return
                     already_added_paths = {
                         get_item_data(parent_item.child(row)).path
@@ -479,19 +519,23 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                         await self._build_item_async(path, session)
                         for path in new_paths
                     ]
-
-                    self.beginInsertRows(
-                        parent,
-                        parent_item.rowCount(),
-                        parent_item.rowCount() + len(new_items) - 1,
-                    )
-                    # Need to be careful to not nest an async call inside this block,
-                    # as it can raise a cancellation error.
-                    for item in new_items:
-                        parent_item.appendRow(item)
-                    self.endInsertRows()
+                    await self.append_items(parent, new_items)
                 for row in range(self.rowCount(parent)):
                     await self.add_new_paths(self.index(row, 0, parent))
+
+    async def append_items(
+        self, parent: QModelIndex, items: list[QStandardItem]
+    ) -> None:
+        await anyio.sleep(0)  # noqa: ASYNC115
+        parent_item = self._get_item(parent)
+        self.beginInsertRows(
+            parent,
+            parent_item.rowCount(),
+            parent_item.rowCount() + len(items) - 1,
+        )
+        for item in items:
+            parent_item.appendRow(item)
+        self.endInsertRows()
 
     def handle_folder_became_sequence(
         self, index: QModelIndex | QPersistentModelIndex, session: ExperimentSession
@@ -521,6 +565,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         data = get_item_data(item)
         stats = (await session.sequences.get_stats(data.path)).unwrap()
         creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
+        await anyio.sleep(0)  # noqa: ASYNC115
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(
@@ -544,6 +589,13 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         parent_item.removeRow(index.row())
         self.endRemoveRows()
 
+    async def handle_path_was_deleted_async(self, index: QModelIndex) -> None:
+        await anyio.sleep(0)  # noqa: ASYNC115
+        self.handle_path_was_deleted(index)
+
+    def get_path(self, index: QModelIndex | QPersistentModelIndex) -> PureSequencePath:
+        return get_item_data(self._get_item(index)).path
+
     async def handle_sequence_became_folder(
         self, index: QModelIndex, session: AsyncExperimentSession
     ):
@@ -551,6 +603,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         data = get_item_data(item)
         creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
         assert item.rowCount() == 0
+        await anyio.sleep(0)  # noqa: ASYNC115
         item.setData(
             FolderNode(
                 path=data.path, has_fetched_children=False, creation_date=creation_date
@@ -588,7 +641,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert data.path.parent is not None
         new_path = data.path.parent / new_name
 
-        with self.session_maker() as session, self.suspend_background_update():
+        with self.session_maker() as session, self._background_runner.suspend():
             result = session.paths.move(data.path, new_path)
             if result.is_success():
                 self._rename_recursively(index, new_path)
@@ -670,3 +723,34 @@ def _format_seconds(seconds: float) -> str:
 
 def get_update_date() -> datetime.datetime:
     return datetime.datetime.now(tz=datetime.timezone.utc).replace(microsecond=0)
+
+
+class BackgroundRunner:
+    def __init__(self, task: Callable[[], Awaitable[None]]):
+        self.task = task
+        self._task_group: Optional[anyio.abc.TaskGroup] = None
+        self._cancel_scopes = weakref.WeakValueDictionary[int, anyio.CancelScope]()
+
+    async def run(self) -> Never:
+        """Run the background task indefinitely."""
+
+        while True:
+            self._can_resume = anyio.Event()
+            with anyio.CancelScope() as self._cancel_scope:
+                await self.task()
+            await self._can_resume.wait()
+
+    @contextlib.contextmanager
+    def suspend(self):
+        """Suspend the background task until the context manager exits.
+
+        When the context manager is entered, the background task is cancelled at the
+        next cancellation point.
+        When the context manager exits, a new background task is started.
+        """
+
+        self._cancel_scope.cancel()
+
+        yield
+
+        self._can_resume.set()
