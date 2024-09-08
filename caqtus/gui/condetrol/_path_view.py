@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import functools
 
 from PySide6 import QtCore
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import (
+    QModelIndex,
+)
 from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
@@ -18,12 +22,19 @@ from caqtus.gui._common.waiting_widget import run_with_wip_widget
 from caqtus.gui.qtutil import temporary_widget
 from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.session import (
-    InvalidPathFormatError,
     PathIsSequenceError,
     PathHasChildrenError,
     State,
 )
 from caqtus.session._result import Failure
+from caqtus.types.expression import Expression
+from caqtus.types.iteration import (
+    StepsConfiguration,
+    ArangeLoop,
+    ExecuteShot,
+)
+from caqtus.types.timelane import TimeLanes
+from caqtus.types.variable_name import DottedVariableName
 from ._icons import get_icon
 
 
@@ -97,7 +108,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 duplicate_icon = get_icon("duplicate", color)
                 duplicate_action = menu.addAction(duplicate_icon, "Duplicate")
                 duplicate_action.triggered.connect(
-                    functools.partial(self.on_sequence_duplication_requested, path)
+                    functools.partial(self.on_sequence_duplication_requested, index)
                 )
 
                 clear_icon = get_icon("clear", color)
@@ -186,10 +197,11 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
 
         run_with_wip_widget(self, "Clearing sequence", clear)
 
-    def on_sequence_duplication_requested(self, path: PureSequencePath):
+    def on_sequence_duplication_requested(self, source: QModelIndex):
         """Ask the user for a new sequence name and duplicate the sequence."""
 
-        assert not path.is_root()
+        path = self._model.get_path(source)
+
         assert path.name is not None
 
         text, ok = QInputDialog().getText(
@@ -204,41 +216,33 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             raise RuntimeError("No QApplication instance")
         title = app.applicationName()
         if ok and text:
-            try:
-                if text.startswith(PureSequencePath._separator()):
-                    new_path = PureSequencePath(text)
-                else:
-                    assert path.parent is not None
-                    new_path = path.parent / text
-            except InvalidPathFormatError:
+            if not PureSequencePath.is_valid_name(text):
                 QMessageBox.critical(
                     self,
                     title,
-                    f"The path '{text}' is not a valid path.",
+                    f"Name '{text}' is not valid for a sequence.",
                 )
                 return
+
             with self.session_maker() as session:
                 iterations = session.sequences.get_iteration_configuration(path)
                 time_lanes = session.sequences.get_time_lanes(path)
+                creation_result = self._model.create_new_sequence(
+                    source.parent(), text, iterations, time_lanes
+                )
                 try:
-                    session.sequences.create(
-                        new_path,
-                        iterations,
-                        time_lanes,
-                    )
+                    creation_result.unwrap()
                 except PathIsSequenceError:
-                    QMessageBox.critical(
+                    QMessageBox.warning(
                         self,
                         title,
-                        f"Can't duplicate sequence '{path}' to '{new_path}' because "
-                        f"'{new_path}' already exists and is a sequence.",
+                        f"Target <i>{text}</i> already exists and is a sequence.",
                     )
                 except PathHasChildrenError:
-                    QMessageBox.critical(
+                    QMessageBox.warning(
                         self,
                         title,
-                        f"Can't duplicate sequence '{path}' to '{new_path}' because "
-                        f"'{new_path}' already exists and has children.",
+                        f"Target <i>{text}</i> already exists and has children.",
                     )
 
     def create_new_folder(self, path: PureSequencePath):
@@ -264,7 +268,9 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             "new sequence",
         )
         if ok and text:
-            self._model.create_new_sequence(parent, text)
+            self._model.create_new_sequence(
+                parent, text, DEFAULT_ITERATION_CONFIG, DEFAULT_TIME_LANES
+            )
 
     def delete(self, path: PureSequencePath):
         message = (
@@ -310,3 +316,22 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         if result == QMessageBox.StandardButton.Cancel:
             return False
         return True
+
+
+DEFAULT_ITERATION_CONFIG = StepsConfiguration(
+    steps=[
+        ArangeLoop(
+            variable=DottedVariableName("rep"),
+            start=Expression("0"),
+            stop=Expression("10"),
+            step=Expression("1"),
+            sub_steps=[ExecuteShot()],
+        ),
+    ]
+)
+
+DEFAULT_TIME_LANES = TimeLanes(
+    step_names=["step 0"],
+    step_durations=[Expression("...")],
+    lanes={},
+)
