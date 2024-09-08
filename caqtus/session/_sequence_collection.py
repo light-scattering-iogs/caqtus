@@ -100,7 +100,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_contained_sequences(
         self, path: PureSequencePath
-    ) -> Result[list[PureSequencePath], PathNotFoundError]:
+    ) -> Result[Set[PureSequencePath], PathNotFoundError]:
         """Return the descendants of this path that are sequences.
 
         The current path is included in the result if it is a sequence.
