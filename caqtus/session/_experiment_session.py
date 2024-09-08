@@ -58,8 +58,11 @@ class ExperimentSession(
 
         ...
 
-    sequences: SequenceCollection
-    """The collection of sequences in the experiment session."""
+    @property
+    def sequences(self) -> SequenceCollection:
+        """The collection of sequences in the experiment session."""
+
+        ...
 
     default_device_configurations: DeviceConfigurationCollection
     """The default device configurations used to run a sequence."""

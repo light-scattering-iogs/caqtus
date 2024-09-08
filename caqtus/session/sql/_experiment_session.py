@@ -67,7 +67,7 @@ class SQLExperimentSession(ExperimentSession):
         super().__init__(*args, **kwargs)
         self._state = Inactive(session_context=session_context)
         self._paths = SQLPathHierarchy(parent_session=self)
-        self.sequences = SQLSequenceCollection(
+        self._sequences = SQLSequenceCollection(
             parent_session=self, serializer=serializer
         )
         self.default_device_configurations = SQLDeviceConfigurationCollection(
@@ -77,6 +77,10 @@ class SQLExperimentSession(ExperimentSession):
     @property
     def paths(self) -> SQLPathHierarchy:
         return self._paths
+
+    @property
+    def sequences(self) -> SQLSequenceCollection:
+        return self._sequences
 
     def get_global_parameters(self) -> ParameterNamespace:
         return _get_global_parameters(self._get_sql_session())
