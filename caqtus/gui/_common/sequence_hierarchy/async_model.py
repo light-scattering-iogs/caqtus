@@ -588,8 +588,23 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert data.path.parent is not None
         new_path = data.path.parent / new_name
 
-        with self.suspend_background_update(), self.session_maker() as session:
-            return session.paths.move(data.path, new_path)
+        with self.session_maker() as session, self.suspend_background_update():
+            result = session.paths.move(data.path, new_path)
+            if result.is_success():
+                self._rename_recursively(index, new_path)
+            return result
+
+    def _rename_recursively(
+        self, index: QModelIndex, new_prefix: PureSequencePath
+    ) -> None:
+        item = self._get_item(index)
+        data = get_item_data(item)
+        new_parts = new_prefix.parts + data.path.parts[len(new_prefix.parts) :]
+        new_path = PureSequencePath.from_parts(new_parts)
+        data.path = new_path
+        self.emit_index_updated(index)
+        for row in range(self.rowCount(index)):
+            self._rename_recursively(self.index(row, 0, index), new_path)
 
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
