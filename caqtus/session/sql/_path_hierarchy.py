@@ -17,7 +17,7 @@ from .._path_hierarchy import (
     RecursivePathMoveError,
 )
 from .._result import Result, Success, Failure
-from .._sequence_collection import PathIsSequenceError
+from .._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 if TYPE_CHECKING:
     from ._experiment_session import SQLExperimentSession
@@ -121,7 +121,8 @@ class SQLPathHierarchy(PathHierarchy):
         PathNotFoundError
         | PathExistsError
         | PathIsSequenceError
-        | RecursivePathMoveError,
+        | RecursivePathMoveError
+        | SequenceRunningError,
     ]:
         if destination.is_descendant_of(source) or source == destination:
             return Failure(
@@ -135,6 +136,19 @@ class SQLPathHierarchy(PathHierarchy):
             assert isinstance(source_path_result.error, PathNotFoundError)
             return Failure(source_path_result.error)
         source_model = source_path_result.unwrap()
+
+        running_sequences = (
+            self.parent_session.sequences.get_contained_running_sequences(
+                source
+            ).unwrap()
+        )
+        if running_sequences:
+            return Failure(
+                SequenceRunningError(
+                    f"Cannot move {source} because it contains running sequences: "
+                    f"{running_sequences}"
+                )
+            )
 
         if self.does_path_exists(destination):
             return Failure(PathExistsError(destination))

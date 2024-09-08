@@ -93,6 +93,24 @@ class SQLSequenceCollection(SequenceCollection):
         )
         return sequences_query
 
+    def get_contained_running_sequences(
+        self, path: PureSequencePath
+    ) -> Result[set[PureSequencePath], PathNotFoundError]:
+        path_hierarchy = self.parent_session.paths
+        parent_id_result = path_hierarchy.get_parent_id(path)
+        if isinstance(parent_id_result, Failure):
+            return parent_id_result
+
+        sequences_query = self.descendant_sequences(parent_id_result.value)
+        running_sequences_query = sequences_query.where(
+            SQLSequence.state.in_({State.PREPARING, State.RUNNING})
+        )
+
+        result = (
+            self._get_sql_session().execute(running_sequences_query).scalars().all()
+        )
+        return Success({PureSequencePath(row.path.path) for row in result})
+
     def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace
     ) -> None:
