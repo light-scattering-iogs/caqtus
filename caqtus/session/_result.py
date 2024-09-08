@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Never
+from typing import Never, Literal
 
 import attrs
 
@@ -16,6 +16,10 @@ class Success[T]:
     def map[R](self, func: Callable[[T], R]) -> Success[R]:
         return Success(func(self.value))
 
+    @staticmethod
+    def is_success() -> Literal[True]:
+        return True
+
 
 @attrs.frozen
 class Failure[E: Exception]:
@@ -26,6 +30,10 @@ class Failure[E: Exception]:
 
     def map(self, func: Callable) -> Failure[E]:
         return self
+
+    @staticmethod
+    def is_success() -> Literal[False]:
+        return False
 
 
 type Result[T, E: Exception] = Success[T] | Failure[E]
