@@ -52,8 +52,11 @@ class ExperimentSession(
     :py:class:`caqtus.session.ExperimentSessionMaker`.
     """
 
-    paths: PathHierarchy
-    """The hierarchy of paths in the experiment session."""
+    @property
+    def paths(self) -> PathHierarchy:
+        """The hierarchy of paths in the experiment session."""
+
+        ...
 
     sequences: SequenceCollection
     """The collection of sequences in the experiment session."""
