@@ -533,7 +533,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         Args:
             index: Index of the sequence or folder to rename.
                 It must be a valid index.
-            new_name: The new name to give to the paths.
+            new_name: The new name to give to the path.
                 It must be a valid path name.
         """
 
