@@ -2,6 +2,7 @@ import copy
 import functools
 
 from PySide6 import QtCore
+from PySide6.QtCore import QModelIndex
 from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
@@ -22,6 +23,7 @@ from caqtus.session import (
     PathHasChildrenError,
     State,
 )
+from caqtus.session._result import Failure
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -65,9 +67,10 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
         self.customContextMenuRequested.connect(self.show_context_menu)  # type: ignore
 
     def show_context_menu(self, pos):
-        index = self.indexAt(pos)
+        proxy_index = self.indexAt(pos)
+        index = self._proxy_model.mapToSource(proxy_index)
 
-        path = self._model.get_path(self._proxy_model.mapToSource(index))
+        path = self._model.get_path(index)
 
         with temporary_widget(QMenu(self)) as menu:
             color = self.palette().text().color()
@@ -78,6 +81,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                     state = session.sequences.get_state(path).unwrap()
                 else:
                     state = None
+
             if not is_sequence:
                 new_menu = menu.addMenu("New...")
 
@@ -141,8 +145,50 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 }:
                     delete_action.setEnabled(False)
                 delete_action.triggered.connect(functools.partial(self.delete, path))
+            if index.isValid():
+                rename_action = menu.addAction(
+                    get_icon("mdi6.form-textbox", color), "Rename"
+                )
+                rename_action.triggered.connect(
+                    functools.partial(self.on_rename_requested, index)
+                )
 
             menu.exec(self.mapToGlobal(pos))
+
+    def on_rename_requested(self, index: QModelIndex) -> None:
+        """Ask the user for a new name and rename the sequence."""
+
+        app = QApplication.instance()
+        if app is None:
+            raise RuntimeError("No QApplication instance")
+
+        path = self._model.get_path(index)
+
+        assert path.name is not None
+
+        text, ok = QInputDialog().getText(
+            self,
+            f"Rename {path}...",
+            "New name:",
+            QLineEdit.EchoMode.Normal,
+            path.name,
+        )
+        if ok and text:
+            if PureSequencePath.is_valid_name(text):
+                result = self._model.rename(index, text)
+                if isinstance(result, Failure):
+                    QMessageBox.warning(
+                        self,
+                        app.applicationName(),
+                        f"Could not rename '{path}' to '{text}': \n" f"{result.error}",
+                    )
+            else:
+                QMessageBox.warning(
+                    self,
+                    app.applicationName(),
+                    f"The name '{text}' is not a valid name.",
+                )
+                self.on_rename_requested(index)
 
     def on_clear_sequence_requested(self, path: PureSequencePath) -> None:
         """Clear the sequence at the given path.

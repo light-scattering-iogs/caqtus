@@ -28,6 +28,7 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
+from caqtus.session._result import Result
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import Unknown
 
@@ -526,12 +527,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             [Qt.ItemDataRole.DisplayRole],
         )
 
-    def rename(self, index: QModelIndex, new_name: str) -> None:
+    def rename(self, index: QModelIndex, new_name: str) -> Result[None, Exception]:
         """Rename a sequence or folder in the model.
 
         Args:
             index: Index of the sequence or folder to rename.
+                It must be a valid index.
             new_name: The new name to give to the paths.
+                It must be a valid path name.
         """
 
         if not index.isValid():
@@ -546,7 +549,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         new_path = data.path.parent / new_name
 
         with self.session_maker() as session:
-            session.paths.move(data.path, new_path).unwrap()
+            return session.paths.move(data.path, new_path)
 
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
