@@ -35,9 +35,9 @@ from ._sequence_table import (
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
 from .._exception_summary import TracebackSummary
-from .._result import Result, Success, Failure
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
+from .._result import Result, Success, Failure
 from .._sequence_collection import (
     PathIsSequenceError,
     PathIsNotSequenceError,
@@ -67,21 +67,31 @@ class SQLSequenceCollection(SequenceCollection):
     def get_contained_sequences(
         self, path: PureSequencePath
     ) -> Result[list[PureSequencePath], PathNotFoundError]:
-        is_sequence_result = self.is_sequence(path)
-        match is_sequence_result:
-            case Success(is_sequence):
-                if is_sequence:
-                    return Success([path])
-            case Failure() as failure:
-                return failure
-            case _:
-                assert_never(is_sequence_result)
-
         path_hierarchy = self.parent_session.paths
-        result = []
-        for child in path_hierarchy.get_children(path).unwrap():
-            result += self.get_contained_sequences(child).unwrap()
-        return Success(result)
+        parent_id_result = path_hierarchy.get_parent_id(path)
+        if isinstance(parent_id_result, Failure):
+            return parent_id_result
+
+        sequences_query = self.descendant_sequences(parent_id_result.value)
+
+        result = self._get_sql_session().execute(sequences_query).scalars().all()
+        return Success([PureSequencePath(row.path.path) for row in result])
+
+    def descendant_sequences(
+        self, ancestor_id: Optional[int]
+    ) -> sqlalchemy.sql.Select[tuple[SQLSequence]]:
+        """Returns a query for the descendant sequences of the given ancestor.
+
+        The ancestor is not included in the result.
+        """
+
+        descendants_query = self.parent_session.paths.descendants_query(ancestor_id)
+        sequences_query = select(SQLSequence).join_from(
+            SQLSequence,
+            descendants_query,
+            SQLSequence.path_id == descendants_query.c.id,
+        )
+        return sequences_query
 
     def set_global_parameters(
         self, path: PureSequencePath, parameters: ParameterNamespace

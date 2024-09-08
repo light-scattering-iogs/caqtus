@@ -8,7 +8,7 @@ from ._path import PureSequencePath
 from ._result import Result
 
 if TYPE_CHECKING:
-    from ._sequence_collection import PathIsSequenceError
+    from ._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 
 class PathHierarchy(Protocol):
@@ -127,7 +127,8 @@ class PathHierarchy(Protocol):
         PathNotFoundError
         | PathExistsError
         | PathIsSequenceError
-        | RecursivePathMoveError,
+        | RecursivePathMoveError
+        | SequenceRunningError,
     ]:
         """Move a path to a new location.
 
@@ -147,6 +148,8 @@ class PathHierarchy(Protocol):
                 descendant of the source path.
                 As a specific case, this error is returned if the source is the root
                 path.
+            * SequenceRunningError: If the source path contains a sequence that is
+              currently running.
 
             If a failure is returned, the path is not moved and no path is created.
         """

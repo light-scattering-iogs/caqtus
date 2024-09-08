@@ -14,9 +14,9 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from ._exception_summary import TracebackSummary
-from ._result import Result
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError
+from ._result import Result
 from ._state import State
 
 
@@ -44,6 +44,12 @@ class SequenceStateError(RuntimeError):
     This error is raised when trying to perform an operation that is not allowed in the
     current state, such as adding data to a sequence that is not in the RUNNING state.
     """
+
+    pass
+
+
+class SequenceRunningError(SequenceStateError):
+    """Raised when trying to perform an invalid operation on a running sequence."""
 
     pass
 

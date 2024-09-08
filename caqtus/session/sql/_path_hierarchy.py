@@ -1,6 +1,6 @@
 from datetime import datetime
 from datetime import timezone
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING, assert_never, Optional
 
 import sqlalchemy.orm
 from attr import frozen
@@ -175,6 +175,43 @@ class SQLPathHierarchy(PathHierarchy):
             if child_path.parent != current_path:  # pragma: no cover
                 raise AssertionError("Invalid path hierarchy")
             self._check_valid(child)
+
+    def get_parent_id(
+        self, path: PureSequencePath
+    ) -> Result[int | None, PathNotFoundError]:
+        path_model_result = self._query_path_model(path)
+        if isinstance(path_model_result, Failure):
+            if isinstance(path_model_result.error, PathIsRootError):
+                return Success(None)
+            else:
+                return Failure(path_model_result.error)
+        return Success(path_model_result.value.parent_id)
+
+    @staticmethod
+    def descendants_query(
+        ancestor_id: Optional[int],
+    ) -> sqlalchemy.sql.expression.CTE[SQLSequencePath]:
+        """Return an expression for querying the descendants of a path.
+
+        Args:
+            ancestor_id: The id of the ancestor path.
+                If None, the root path is used.
+                The ancestor is not included in the descendants.
+
+        Returns:
+            A expression representing the descendants of the ancestor.
+        """
+
+        top_query = (
+            select(SQLSequencePath)
+            .where(SQLSequencePath.parent_id == ancestor_id)
+            .cte(recursive=True)
+        )
+        bottom_query = select(SQLSequencePath).join(
+            top_query, SQLSequencePath.parent_id == top_query.c.id
+        )
+        descendants_query = top_query.union(bottom_query)
+        return descendants_query
 
 
 def _recursively_replace_prefix(
