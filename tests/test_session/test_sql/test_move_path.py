@@ -142,3 +142,21 @@ def test_cant_move_running_sequence(session_maker, steps_configuration, time_lan
         dst = PureSequencePath.root() / "dst"
         with pytest.raises(SequenceRunningError):
             session.paths.move(src, dst).unwrap()
+
+
+def test_rename_folder(session_maker):
+    with session_maker() as session:
+        parent = PureSequencePath.root() / "parent"
+        session.paths.create_path(parent)
+
+        child = parent / "child"
+        session.paths.create_path(child)
+
+        new_name = PureSequencePath.root() / "new name"
+        session.paths.move(parent, new_name)
+
+        session.paths.check_valid()
+
+        assert not session.paths.does_path_exists(parent)
+        assert session.paths.does_path_exists(new_name)
+        assert session.paths.does_path_exists(new_name / "child")

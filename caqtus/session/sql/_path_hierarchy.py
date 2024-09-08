@@ -171,10 +171,12 @@ class SQLPathHierarchy(PathHierarchy):
         )
         source_model.path = str(destination)
 
-        descendants = self._get_sql_session().query(
-            self.descendants_query(source_model.id_)
+        descendants = self._get_sql_session().execute(
+            select(SQLSequencePath).select_from(
+                self.descendants_query(source_model.id_)
+            )
         )
-        for child in descendants:
+        for child in descendants.scalars():
             child_path = PureSequencePath(str(child.path))
             new_path = PureSequencePath.from_parts(
                 destination.parts + child_path.parts[len(source.parts) :]
