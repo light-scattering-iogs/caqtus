@@ -526,6 +526,28 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             [Qt.ItemDataRole.DisplayRole],
         )
 
+    def rename(self, index: QModelIndex, new_name: str) -> None:
+        """Rename a sequence or folder in the model.
+
+        Args:
+            index: Index of the sequence or folder to rename.
+            new_name: The new name to give to the paths.
+        """
+
+        if not index.isValid():
+            raise ValueError("Invalid index")
+
+        item = self._get_item(index)
+        data = get_item_data(item)
+
+        # Since the index is valid, it can't be the root item, and thus it must have a
+        # parent.
+        assert data.path.parent is not None
+        new_path = data.path.parent / new_name
+
+        with self.session_maker() as session:
+            session.paths.move(data.path, new_path).unwrap()
+
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
     if stats.state == State.DRAFT or stats.state == State.PREPARING:
