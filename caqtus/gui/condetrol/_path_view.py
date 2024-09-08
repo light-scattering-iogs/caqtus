@@ -216,34 +216,47 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
             raise RuntimeError("No QApplication instance")
         title = app.applicationName()
         if ok and text:
-            if not PureSequencePath.is_valid_name(text):
-                QMessageBox.critical(
-                    self,
-                    title,
-                    f"Name '{text}' is not valid for a sequence.",
-                )
-                return
-
             with self.session_maker() as session:
                 iterations = session.sequences.get_iteration_configuration(path)
                 time_lanes = session.sequences.get_time_lanes(path)
+            if text.startswith(PureSequencePath._separator()):
+                if not PureSequencePath.is_valid_path(text):
+                    QMessageBox.warning(
+                        self,
+                        title,
+                        f"Path '{text}' is not valid for a sequence.",
+                    )
+                    return
+                path = PureSequencePath(text)
+                with self.session_maker() as session:
+                    creation_result = session.sequences.create(
+                        path, iterations, time_lanes
+                    )
+            else:
+                if not PureSequencePath.is_valid_name(text):
+                    QMessageBox.warning(
+                        self,
+                        title,
+                        f"Name '{text}' is not valid for a sequence.",
+                    )
+                    return
                 creation_result = self._model.create_new_sequence(
                     source.parent(), text, iterations, time_lanes
                 )
-                try:
-                    creation_result.unwrap()
-                except PathIsSequenceError:
-                    QMessageBox.warning(
-                        self,
-                        title,
-                        f"Target <i>{text}</i> already exists and is a sequence.",
-                    )
-                except PathHasChildrenError:
-                    QMessageBox.warning(
-                        self,
-                        title,
-                        f"Target <i>{text}</i> already exists and has children.",
-                    )
+            try:
+                creation_result.unwrap()
+            except PathIsSequenceError:
+                QMessageBox.warning(
+                    self,
+                    title,
+                    f"Target <i>{text}</i> already exists and is a sequence.",
+                )
+            except PathHasChildrenError:
+                QMessageBox.warning(
+                    self,
+                    title,
+                    f"Target <i>{text}</i> already exists and has children.",
+                )
 
     def create_new_folder(self, path: PureSequencePath):
         text, ok = QInputDialog().getText(
