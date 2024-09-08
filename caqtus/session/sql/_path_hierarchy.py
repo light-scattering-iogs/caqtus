@@ -155,8 +155,17 @@ class SQLPathHierarchy(PathHierarchy):
         source_model.parent_id = (
             destination_parent_model.id_ if destination_parent_model else None
         )
+        source_model.path = str(destination)
 
-        _recursively_replace_prefix(source_model, len(source.parts), destination.parts)
+        descendants = self._get_sql_session().query(
+            self.descendants_query(source_model.id_)
+        )
+        for child in descendants:
+            child_path = PureSequencePath(str(child.path))
+            new_path = PureSequencePath.from_parts(
+                destination.parts + child_path.parts[len(source.parts) :]
+            )
+            child.path = str(new_path)
 
         return Success(None)
 
@@ -212,26 +221,6 @@ class SQLPathHierarchy(PathHierarchy):
         )
         descendants_query = top_query.union(bottom_query)
         return descendants_query
-
-
-def _recursively_replace_prefix(
-    path_model: SQLSequencePath, old_parts: int, new_prefixes: tuple[str, ...]
-) -> None:
-    """Replace the prefix of a path and all its children.
-
-    Args:
-        path_model: The path to update.
-        old_parts: The number of parts to remove at the beginning of each path.
-        new_prefixes: The new prefixes to replace the old ones
-            The new path will be formed by concatenating the new prefixes with the
-            remaining parts of the old path.
-    """
-
-    old_path = PureSequencePath(str(path_model.path))
-    new_path = PureSequencePath.from_parts(new_prefixes + old_path.parts[old_parts:])
-    path_model.path = str(new_path)
-    for child in path_model.children:
-        _recursively_replace_prefix(child, old_parts, new_prefixes)
 
 
 def _does_path_exists(session: Session, path: PureSequencePath) -> bool:
