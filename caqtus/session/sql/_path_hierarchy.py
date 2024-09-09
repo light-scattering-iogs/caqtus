@@ -16,7 +16,7 @@ from .._path_hierarchy import (
     PathExistsError,
     RecursivePathMoveError,
 )
-from .._result import Result, Success, Failure
+from .._result import Result, Success, Failure, is_failure, is_failure_type
 from .._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 if TYPE_CHECKING:
@@ -78,17 +78,38 @@ class SQLPathHierarchy(PathHierarchy):
     ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
         return _get_children(self._get_sql_session(), path)
 
-    def delete_path(self, path: PureSequencePath, delete_sequences: bool = False):
+    def delete_path(
+        self, path: PureSequencePath, delete_sequences: bool = False
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+        | Failure[PathIsRootError]
+    ):
+
         session = self._get_sql_session()
 
         if not delete_sequences:
             sequence_collection = self.parent_session.sequences
-            if contained := sequence_collection.get_contained_sequences(path).unwrap():
-                raise PathIsSequenceError(
-                    f"Cannot delete a path that contains sequences: {contained}"
+            contained_sequence_result = sequence_collection.get_contained_sequences(
+                path
+            )
+            if is_failure(contained_sequence_result):
+                return contained_sequence_result
+            if contained_sequence_result.value:
+                return Failure(
+                    PathIsSequenceError(
+                        f"Cannot delete a path that contains sequences: "
+                        f"{contained_sequence_result.value}"
+                    )
                 )
-        session.delete(self._query_path_model(path).unwrap())
-        session.flush()
+
+        path_model_result = _query_path_model(session, path)
+        if is_failure_type(path_model_result, PathIsRootError):
+            return path_model_result
+        assert not is_failure_type(path_model_result, PathNotFoundError)
+        session.delete(path_model_result.value)
+        return Success(None)
 
     def get_all_paths(self) -> set[PureSequencePath]:
         query = select(SQLSequencePath)
@@ -283,7 +304,7 @@ def _get_path_creation_date(
 
 def _query_path_model(
     session: Session, path: PureSequencePath
-) -> Result[SQLSequencePath, PathNotFoundError | PathIsRootError]:
+) -> Success[SQLSequencePath] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
     if path.is_root():
         return Failure(PathIsRootError(path))
     stmt = select(SQLSequencePath).where(SQLSequencePath.path == str(path))

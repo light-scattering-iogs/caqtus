@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
 from ._path import PureSequencePath
-from ._result import Result
+from ._result import Result, Success, Failure
 
 if TYPE_CHECKING:
     from ._sequence_collection import PathIsSequenceError, SequenceRunningError
@@ -55,7 +55,14 @@ class PathHierarchy(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def delete_path(self, path: PureSequencePath, delete_sequences: bool = False):
+    def delete_path(
+        self, path: PureSequencePath, delete_sequences: bool = False
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+        | Failure[PathIsRootError]
+    ):
         """Delete the path and all its descendants.
 
         Warnings:
@@ -66,10 +73,15 @@ class PathHierarchy(Protocol):
             delete_sequences: If False, raise an error if the path or one of its
             children is a sequence.
 
-        Raises:
-            PathNotFoundError: If the path does not exist.
-            PathIsSequenceError: If the path or one of its children is a sequence and
-            delete_sequence is False.
+        Returns:
+            Success, if the path was deleted successfully.
+
+            Failure, with one of the following errors:
+
+            * PathNotFoundError: If the path does not exist.
+            * PathIsSequenceError: If the path or one of its children is a sequence and
+                delete_sequence is False.
+            * PathIsRootError: If the path is the root path.
         """
 
         raise NotImplementedError
