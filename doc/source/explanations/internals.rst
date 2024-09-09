@@ -36,9 +36,11 @@ Shutdown
 
 If no error occurs either during shot compilation or execution, the sequence terminates successfully.
 
-If an error occurs while compiling a shot, the currently running shot will finish properly, but no shot after will be scheduled.
+If an error occurs while compiling a shot, the currently running shot will finish properly, but no shot will be scheduled after it.
 
-If an error occurs inside the :meth:`~caqtus.device.DeviceController.run_shot` method of a controller, the shot is aborted.
-In this case the :meth:`~caqtus.device.DeviceController.run_shot` method of the other controllers are cancelled.
+If an error occurs inside the :meth:`~caqtus.device.DeviceController.run_shot` method of a controller, the shot is aborted in the middle of its execution.
+It is unfortunately not possible to let the other devices go to the end of the shot, since there are not guarantee to be able to terminate if they are waiting for the device that crashed.
+Because of this, the :meth:`~caqtus.device.DeviceController.run_shot` method of the other controllers are cancelled as soon as possible.
+
 
 In the end of the sequence, whether it is successful or not, each device is closed by exiting its context manager (i.e. its method :meth:`~caqtus.device.Device.__exit__` is called).
