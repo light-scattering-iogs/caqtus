@@ -43,7 +43,7 @@ async def test_single_failure(anyio_backend, shot_data):
             try:
                 raise DeviceError("Error") from TimeoutError("Timeout")
             except DeviceError as exc:
-                raise ExceptionGroup("err", [exc])
+                raise ExceptionGroup("err", [exc])  # noqa: B904
         return shot_data
 
     result = await _run_shot_with_retry(
@@ -59,7 +59,7 @@ async def test_repeat_failure(anyio_backend, shot_data):
         try:
             raise DeviceError("Error") from TimeoutError("Timeout")
         except DeviceError as exc:
-            raise ExceptionGroup("err", [exc])
+            raise ExceptionGroup("err", [exc])  # noqa: B904
 
     with pytest.raises(ShotAttemptsExceededError):
         await _run_shot_with_retry(failing_shot, retry_condition((TimeoutError,)), 1)

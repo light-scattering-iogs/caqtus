@@ -3,6 +3,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import anyio
+import anyio.lowlevel
 
 from caqtus.device import DeviceName
 from caqtus.experiment_control._shot_compiler import (
@@ -39,7 +40,7 @@ class ShotCompilerMock(ShotCompilerProtocol):
     async def compile_shot(
         self, shot_parameters: ShotParameters
     ) -> tuple[Mapping[DeviceName, Mapping[str, Any]], float]:
-        await anyio.sleep(0)
+        await anyio.lowlevel.checkpoint()
         return {DeviceName("device"): {"param": 0}}, 1.0
 
     @classmethod

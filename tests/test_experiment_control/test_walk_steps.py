@@ -1,12 +1,12 @@
 from caqtus.experiment_control.sequence_runner import walk_steps
 from caqtus.experiment_control.sequence_runner.step_context import StepContext
+from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     ArangeLoop,
     ExecuteShot,
     VariableDeclaration,
 )
-from caqtus.types.expression import Expression
-from caqtus.types.variable_name import DottedVariableName
+from caqtus.types.variable_name import DottedVariableName, VariableName
 
 
 def test_0():
@@ -21,7 +21,7 @@ def test_0():
     ]
     counter = 0
     for namespace in walk_steps(steps, StepContext()):
-        assert namespace.variables["x"] == counter
+        assert namespace.variables[VariableName("x")] == counter
         counter += 1
 
 
@@ -40,7 +40,7 @@ def test_1():
     ]
     counter = 0
     for namespace in walk_steps(steps, StepContext()):
-        assert namespace.variables["y"] == 2 * counter
+        assert namespace.variables[VariableName("y")] == 2 * counter
         counter += 1
 
 
@@ -87,5 +87,7 @@ def test_2():
         17,
         18,
     ]
-    for expected, namespace in zip(expected_values, walk_steps(steps, StepContext())):
-        assert namespace.variables["x"] == expected
+    for expected, namespace in zip(
+        expected_values, walk_steps(steps, StepContext()), strict=True
+    ):
+        assert namespace.variables[VariableName("x")] == expected
