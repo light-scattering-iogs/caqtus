@@ -73,15 +73,25 @@ class SQLSequenceCollection(SequenceCollection):
     def get_contained_sequences(
         self, path: PureSequencePath
     ) -> Result[set[PureSequencePath], PathNotFoundError]:
-        path_hierarchy = self.parent_session.paths
-        parent_id_result = path_hierarchy.get_parent_id(path)
-        if isinstance(parent_id_result, Failure):
-            return parent_id_result
+        path_result = _query_path_model(self._get_sql_session(), path)
+        if is_failure_type(path_result, PathNotFoundError):
+            # TODO: Remove ignore once pyright bug fix for type narrowing is released
+            #  in 1.1.380.
+            return path_result  # pyright: ignore[reportReturnType]
 
-        sequences_query = self.descendant_sequences(parent_id_result.value)
+        result = set()
+        if is_failure_type(path_result, PathIsRootError):
+            ancestor_id = None
+        else:
+            ancestor_id = path_result.value.id_
 
-        result = self._get_sql_session().execute(sequences_query).scalars().all()
-        return Success({PureSequencePath(row.path.path) for row in result})
+            if path_result.value.sequence is not None:
+                result.add(path)
+
+        sequences_query = self.descendant_sequences(ancestor_id)
+
+        query = self._get_sql_session().execute(sequences_query).scalars().all()
+        return Success({PureSequencePath(row.path.path) for row in query} | result)
 
     def descendant_sequences(
         self, ancestor_id: Optional[int]

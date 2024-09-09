@@ -57,3 +57,18 @@ def test_get_contained_sequence_on_sequence(
         assert session.sequences.get_contained_sequences(sequence_path).unwrap() == {
             sequence_path
         }
+
+
+def test_get_contained_sequence_with_sibling_sequence(
+    session_maker, steps_configuration, time_lanes
+):
+    with session_maker() as session:
+        sequence_path = PureSequencePath(r"\a")
+        session.sequences.create(
+            sequence_path, steps_configuration, time_lanes
+        ).unwrap()
+
+        other_path = PureSequencePath(r"\b")
+        session.paths.create_path(other_path).unwrap()
+
+        assert session.sequences.get_contained_sequences(other_path).unwrap() == set()
