@@ -27,6 +27,7 @@ from caqtus.session import (
     PureSequencePath,
     ExperimentSession,
     AsyncExperimentSession,
+    PathIsRootError,
 )
 from caqtus.session import (
     PathNotFoundError,
@@ -34,7 +35,7 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
-from caqtus.session._result import Result, is_failure
+from caqtus.session._result import Result, is_failure, Failure, Success
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import (
     Unknown,
@@ -201,7 +202,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             self.beginRemoveRows(parent, row, row + count - 1)
             parent_item.removeRows(row, count)
             self.endRemoveRows()
-        return False
+        return True
 
     def _get_item(self, index) -> QStandardItem:
         result = (
@@ -694,6 +695,33 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             parent_item.appendRow(item)
             self.endInsertRows()
             return creation_result
+
+    def remove_path(
+        self, index: QModelIndex
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+        | Failure[PathIsRootError]
+    ):
+        """Remove the path at the requested index."""
+
+        item = self._get_item(index)
+        path = get_item_data(item).path
+        with self.session_maker() as session:
+            is_sequence_result = session.sequences.is_sequence(path)
+            if is_failure(is_sequence_result):
+                return is_sequence_result
+            with self._background_runner.suspend():
+                if is_sequence_result.value:
+                    result = session.paths.delete_path(path, delete_sequences=True)
+                else:
+                    result = session.paths.delete_path(path, delete_sequences=False)
+            if result.is_success():
+                assert self.removeRows(index.row(), 1, self.parent(index))
+                return Success(None)
+            else:
+                return result
 
 
 def format_duration(stats: SequenceStats, updated_time: datetime.datetime) -> str:
