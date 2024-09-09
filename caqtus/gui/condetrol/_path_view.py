@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from typing import assert_never
 
 from PySide6 import QtCore
 from PySide6.QtCore import (
@@ -20,13 +21,18 @@ from caqtus.gui._common.sequence_hierarchy import (
 )
 from caqtus.gui._common.waiting_widget import run_with_wip_widget
 from caqtus.gui.qtutil import temporary_widget
-from caqtus.session import ExperimentSessionMaker, PureSequencePath
+from caqtus.session import (
+    ExperimentSessionMaker,
+    PureSequencePath,
+    PathIsRootError,
+    PathNotFoundError,
+)
 from caqtus.session import (
     PathIsSequenceError,
     PathHasChildrenError,
     State,
 )
-from caqtus.session._result import Failure
+from caqtus.session._result import Failure, is_success, is_failure_type
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -134,7 +140,7 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                     None,
                 }:
                     delete_action.setEnabled(False)
-                delete_action.triggered.connect(functools.partial(self.delete, path))
+                delete_action.triggered.connect(functools.partial(self.delete, index))
             if index.isValid():
                 rename_action = menu.addAction(
                     get_icon("mdi6.form-textbox", color), "Rename"
@@ -285,50 +291,53 @@ class EditablePathHierarchyView(AsyncPathHierarchyView):
                 parent, text, DEFAULT_ITERATION_CONFIG, DEFAULT_TIME_LANES
             )
 
-    def delete(self, path: PureSequencePath):
+    def delete(self, index: QModelIndex):
+        path = self._model.get_path(index)
         message = (
-            f'You are about to delete the path "{path}".\n'
+            f'You are about to delete "{path}".\n'
             "All data inside will be irremediably lost."
         )
         if self.exec_confirmation_message_box(message):
-            with self.session_maker() as session:
-                if session.sequences.is_sequence(path).unwrap():
-                    session.paths.delete_path(path, delete_sequences=True)
-                else:
-                    # An error will be raised if someone tries to delete a folder that
-                    # contains sequences.
-                    try:
-                        session.paths.delete_path(path, delete_sequences=False)
-                    except PathIsSequenceError:
-                        app = QApplication.instance()
-                        if app is None:
-                            raise RuntimeError("No QApplication instance")  # noqa: B904
-                        QMessageBox.critical(
-                            self,
-                            app.applicationName(),
-                            f"The path '{path}' contains sequences and therefore "
-                            f"cannot be deleted",
-                        )
+            result = self._model.remove_path(index)
+
+            assert not is_failure_type(result, PathIsRootError)
+
+            if is_success(result):
+                return
+            if is_failure_type(result, PathNotFoundError):
+                return  # The path was already deleted
+            if is_failure_type(result, PathIsSequenceError):
+                app = QApplication.instance()
+                if app is None:
+                    raise RuntimeError("No QApplication instance")
+                QMessageBox.warning(
+                    self,
+                    app.applicationName(),
+                    f"The path '{path}' contains sequences and therefore "
+                    f"cannot be deleted",
+                )
+                return
+            assert_never(result)
 
     def exec_confirmation_message_box(self, message: str) -> bool:
         """Show a popup box to ask  a question."""
 
-        message_box = QMessageBox(self)
-        app = QApplication.instance()
-        if app is None:
-            raise RuntimeError("No QApplication instance")
-        message_box.setWindowTitle(app.applicationName())
-        message_box.setText(message)
-        message_box.setInformativeText("Are you really sure you want to continue?")
-        message_box.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-        )
-        message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        message_box.setIcon(QMessageBox.Icon.Warning)
-        result = message_box.exec()
-        if result == QMessageBox.StandardButton.Cancel:
-            return False
-        return True
+        with temporary_widget(QMessageBox(self)) as message_box:
+            app = QApplication.instance()
+            if app is None:
+                raise RuntimeError("No QApplication instance")
+            message_box.setWindowTitle(app.applicationName())
+            message_box.setText(message)
+            message_box.setInformativeText("Are you really sure you want to continue?")
+            message_box.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+            )
+            message_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+            message_box.setIcon(QMessageBox.Icon.Warning)
+            result = message_box.exec()
+            if result == QMessageBox.StandardButton.Cancel:
+                return False
+            return True
 
 
 DEFAULT_ITERATION_CONFIG = StepsConfiguration(
