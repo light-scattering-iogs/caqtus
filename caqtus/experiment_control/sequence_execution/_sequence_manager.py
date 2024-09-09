@@ -55,10 +55,18 @@ async def run_sequence(
             configuration in this object.
 
         global_parameters: The global parameters to use to run the sequence.
+
+            These parameters will be saved as the global parameters for the sequence
+            when it is prepared.
+
             If None, the sequence manager will use the default global parameters stored
             in the session.
 
         device_configurations: The device configurations to use to run the sequence.
+
+            These configurations will be saved as the configurations used for the
+            sequence when it is prepared.
+
             If None, the sequence manager will use the default device configurations.
 
         device_manager_extension: Used to instantiate the device components.
