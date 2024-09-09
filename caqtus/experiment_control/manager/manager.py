@@ -90,7 +90,7 @@ class Procedure(AbstractContextManager, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def exception(self) -> Optional[Exception]:
+    def exception(self) -> Optional[BaseException]:
         """Retrieve the exception that occurred while running the last sequence.
 
         If a sequence is currently running, this method will block until the sequence
@@ -196,7 +196,7 @@ class LocalExperimentManager(ExperimentManager):
     ):
         self._procedure_running = threading.Lock()
         self._session_maker = session_maker
-        self._shot_retry_config = shot_retry_config
+        self._shot_retry_config = shot_retry_config or ShotRetryConfig()
         self._thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self._active_procedure: Optional[BoundProcedure] = None
         self._device_manager_extension = device_manager_extension
@@ -294,7 +294,7 @@ class BoundProcedure(Procedure):
     def sequences(self) -> list[PureSequencePath]:
         return self._sequences.copy()
 
-    def exception(self) -> Optional[Exception]:
+    def exception(self) -> Optional[BaseException]:
         if self._sequence_future is None:
             return None
         return self._sequence_future.exception()
@@ -336,6 +336,7 @@ class BoundProcedure(Procedure):
 
     def wait_until_sequence_finished(self):
         if self.is_running_sequence():
+            assert self._sequence_future is not None
             self._sequence_future.result()
 
     def _run_sequence(

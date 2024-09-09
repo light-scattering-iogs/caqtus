@@ -36,7 +36,7 @@ class ShotRunnerProtocol(Protocol):
 
 type ShotRunnerFactory = Callable[
     [SequenceContext, ShotCompilerProtocol, DeviceManagerExtensionProtocol],
-    contextlib.AbstractAsyncContextManager[ShotRunnerProtocol, None],
+    contextlib.AbstractAsyncContextManager[ShotRunnerProtocol],
 ]
 """A function called to create a object that can run a shot."""
 

@@ -67,7 +67,9 @@ class ProcedureProxy(Procedure, multiprocessing.managers.BaseProxy):
         return f"<{self.__class__.__name__}('{self}') at {hex(id(self))}>"
 
     def __str__(self):
-        return self._callmethod("__str__", ())
+        result = self._callmethod("__str__", ())
+        assert isinstance(result, str)
+        return result
 
     def is_active(self) -> bool:
         return self._callmethod("is_active", ())  # type: ignore
@@ -130,10 +132,12 @@ def _get_experiment_manager() -> LocalExperimentManager:
 
 
 def _enter_experiment_manager() -> None:
+    assert experiment_manager is not None
     experiment_manager.__enter__()
 
 
 def _exit_experiment_manager(exc_value) -> None:
+    assert experiment_manager is not None
     experiment_manager.__exit__(type(exc_value), exc_value, exc_value.__traceback__)
 
 
@@ -187,12 +191,12 @@ class RemoteExperimentManagerServer:
 
     def __enter__(self):
         self._multiprocessing_manager.start()
-        self._multiprocessing_manager.create_experiment_manager(
+        self._multiprocessing_manager.create_experiment_manager(  # type: ignore
             self._session_maker,
             self._device_manager_extension,
             self._shot_retry_config,
         )
-        self._multiprocessing_manager.enter_experiment_manager()
+        self._multiprocessing_manager.enter_experiment_manager()  # type: ignore
         return self
 
     @staticmethod
@@ -201,7 +205,7 @@ class RemoteExperimentManagerServer:
             time.sleep(100e-3)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._multiprocessing_manager.exit_experiment_manager(exc_value)
+        self._multiprocessing_manager.exit_experiment_manager(exc_value)  # type: ignore
         return self._multiprocessing_manager.__exit__(exc_type, exc_value, traceback)
 
 
@@ -224,4 +228,4 @@ class RemoteExperimentManagerClient:
         self._multiprocessing_manager.connect()
 
     def get_experiment_manager(self) -> ExperimentManagerProxy:
-        return self._multiprocessing_manager.get_experiment_manager()
+        return self._multiprocessing_manager.get_experiment_manager()  # type: ignore
