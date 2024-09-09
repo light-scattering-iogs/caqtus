@@ -7,15 +7,15 @@ from collections.abc import Mapping
 from typing import Protocol
 
 from caqtus.device import DeviceController
+from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.device.remote import DeviceProxy
+from caqtus.shot_compilation import SequenceContext
 from caqtus.types.data import DataLabel, Data
 from ._initialize_devices import create_devices
 from ._shot_compiler import ShotCompilerProtocol
 from ._shot_event_dispatcher import DeviceRunConfig, ShotEventDispatcher
 from ._shot_primitives import DeviceParameters
-from .device_manager_extension import DeviceManagerExtensionProtocol
-from ..device import DeviceName, DeviceConfiguration
-from ..device.remote import DeviceProxy
-from ..shot_compilation import SequenceContext
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 
 
 class ShotRunnerProtocol(Protocol):

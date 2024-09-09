@@ -7,14 +7,18 @@ from typing import Protocol
 
 import anyio.to_process
 
+from caqtus.device import DeviceName, DeviceConfiguration
+from caqtus.shot_compilation import (
+    SequenceContext,
+    DeviceCompiler,
+    DeviceNotUsedException,
+)
 from caqtus.shot_compilation.compilation_contexts import ShotContext
 from caqtus.shot_compilation.variable_namespace import VariableNamespace
 from caqtus.types.recoverable_exceptions import InvalidValueError
 from caqtus.types.timelane import TimeLanes
 from ._shot_primitives import ShotParameters
-from .device_manager_extension import DeviceManagerExtensionProtocol
-from ..device import DeviceName, DeviceConfiguration
-from ..shot_compilation import SequenceContext, DeviceCompiler, DeviceNotUsedException
+from ..device_manager_extension import DeviceManagerExtensionProtocol
 
 
 class ShotCompilerProtocol(Protocol):

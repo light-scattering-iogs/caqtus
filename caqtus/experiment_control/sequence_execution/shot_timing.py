@@ -1,3 +1,4 @@
+import anyio.lowlevel
 import trio
 
 from caqtus.utils._no_public_constructor import NoPublicConstructor
@@ -49,7 +50,7 @@ class ShotTimer(metaclass=NoPublicConstructor):
 
         if duration_to_sleep < 0:
             # We still need to await to get a checkpoint.
-            await trio.sleep(0)
+            await anyio.lowlevel.checkpoint()
         else:
             await trio.sleep(duration_to_sleep)
         return duration_to_sleep

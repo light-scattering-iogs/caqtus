@@ -10,7 +10,7 @@ from caqtus.experiment_control.device_manager_extension import (
 )
 from caqtus.formatter import fmt
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
-from ._async_utils import task_group_with_error_message
+from .._async_utils import task_group_with_error_message
 
 
 @contextlib.asynccontextmanager
@@ -19,7 +19,7 @@ async def create_devices(
     device_configs: Mapping[DeviceName, DeviceConfiguration],
     device_types: Mapping[DeviceName, Callable[..., Device]],
     device_manager_extension: DeviceManagerExtensionProtocol,
-) -> AsyncGenerator[dict[DeviceName, DeviceProxy], None]:
+) -> AsyncGenerator[Mapping[DeviceName, DeviceProxy], None]:
     device_server_configs = {}
     device_to_server = {}
     for device_name, device_config in device_configs.items():
@@ -74,11 +74,13 @@ async def create_rpc_clients(
 T = TypeVar("T")
 
 
-async def enter_and_push_device(
+async def enter_and_push[
+    K, T
+](
     stack: contextlib.AsyncExitStack,
-    device: DeviceName,
+    device: K,
     cm: contextlib.AbstractAsyncContextManager[T],
-    results: dict,
+    results: dict[K, T],
 ):
     try:
         value = await stack.enter_async_context(cm)
@@ -88,14 +90,16 @@ async def enter_and_push_device(
 
 
 @contextlib.asynccontextmanager
-async def context_group(
-    cms: Mapping[str, contextlib.AbstractAsyncContextManager[T]]
-) -> AsyncGenerator[Mapping[str, T], None]:
+async def context_group[
+    K, T
+](cms: Mapping[K, contextlib.AbstractAsyncContextManager[T]]) -> AsyncGenerator[
+    Mapping[K, T], None
+]:
     results = {}
     async with contextlib.AsyncExitStack() as stack:
         async with task_group_with_error_message(
             "Errors occurred while initializing devices"
         ) as tg:
             for key, cm in cms.items():
-                tg.start_soon(enter_and_push_device, stack, key, cm, results)
+                tg.start_soon(enter_and_push, stack, key, cm, results)
         yield results

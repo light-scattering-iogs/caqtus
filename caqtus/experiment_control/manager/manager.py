@@ -19,10 +19,10 @@ from caqtus.session import (
     State,
 )
 from caqtus.types.parameter import ParameterNamespace
-from .._shot_compiler import create_shot_compiler
-from .._shot_runner import create_shot_runner
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig
+from ..sequence_execution._shot_compiler import create_shot_compiler
+from ..sequence_execution._shot_runner import create_shot_runner
 from ..sequence_execution.sequence_manager import run_sequence
 
 logger = logging.getLogger(__name__)

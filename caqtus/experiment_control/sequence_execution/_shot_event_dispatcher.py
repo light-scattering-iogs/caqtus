@@ -11,8 +11,8 @@ import attrs
 from caqtus.device import DeviceName, DeviceController
 from caqtus.device.remote import DeviceProxy
 from caqtus.types.data import DataLabel, Data
-from ._logger import logger
 from .shot_timing import ShotTimer
+from .._logger import logger
 
 
 @attrs.define

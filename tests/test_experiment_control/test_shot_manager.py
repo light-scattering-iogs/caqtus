@@ -9,7 +9,10 @@ import anyio.to_process
 import pytest
 
 from caqtus.device import DeviceName
-from caqtus.experiment_control._shot_primitives import DeviceParameters, ShotParameters
+from caqtus.experiment_control.sequence_execution._shot_primitives import (
+    DeviceParameters,
+    ShotParameters,
+)
 from caqtus.experiment_control.sequence_execution.shots_manager import (
     ShotRunnerProtocol,
     ShotCompilerProtocol,

@@ -1,7 +1,7 @@
 import pytest
-
-from caqtus.experiment_control.shot_timing import ShotTimer
 import trio.testing
+
+from caqtus.experiment_control.sequence_execution.shot_timing import ShotTimer
 
 
 def test_elapsed():
