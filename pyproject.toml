@@ -115,7 +115,7 @@ pytest = "python -m pytest {args:tests}"
 dependencies = [
     "sphinx",
     "sphinx-autodoc-typehints",
-    "sphinx-rtd-theme",
+    "sphinx-rtd-theme>=2",
     "jupyter>=1.0.0",
     "matplotlib"
 ]
