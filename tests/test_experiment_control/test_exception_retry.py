@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from caqtus.device._controller import DeviceError
-from caqtus.experiment_control.sequence_runner.shots_manager import (
+from caqtus.experiment_control.sequence_execution.shots_manager import (
     ShotData,
     _run_shot_with_retry,
     retry_condition,

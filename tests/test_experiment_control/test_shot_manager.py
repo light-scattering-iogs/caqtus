@@ -10,7 +10,7 @@ import pytest
 
 from caqtus.device import DeviceName
 from caqtus.experiment_control._shot_primitives import DeviceParameters, ShotParameters
-from caqtus.experiment_control.sequence_runner.shots_manager import (
+from caqtus.experiment_control.sequence_execution.shots_manager import (
     ShotRunnerProtocol,
     ShotCompilerProtocol,
     ShotManager,

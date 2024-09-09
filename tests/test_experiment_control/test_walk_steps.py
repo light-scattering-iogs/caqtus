@@ -1,5 +1,5 @@
-from caqtus.experiment_control.sequence_runner import walk_steps
-from caqtus.experiment_control.sequence_runner.step_context import StepContext
+from caqtus.experiment_control.sequence_execution import walk_steps
+from caqtus.experiment_control.sequence_execution.step_context import StepContext
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     ArangeLoop,

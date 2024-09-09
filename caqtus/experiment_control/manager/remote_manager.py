@@ -12,7 +12,7 @@ from caqtus.session import ExperimentSessionMaker, PureSequencePath
 from caqtus.types.parameter import ParameterNamespace
 from .manager import ExperimentManager, Procedure, LocalExperimentManager
 from ..device_manager_extension import DeviceManagerExtensionProtocol
-from ..sequence_runner import ShotRetryConfig
+from ..sequence_execution import ShotRetryConfig
 
 experiment_manager: Optional[LocalExperimentManager] = None
 
