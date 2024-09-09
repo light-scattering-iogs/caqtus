@@ -32,7 +32,6 @@ from caqtus.session import (
     PathHasChildrenError,
     State,
 )
-from caqtus.session._result import Failure, is_success, is_failure_type
 from caqtus.types.expression import Expression
 from caqtus.types.iteration import (
     StepsConfiguration,
@@ -41,6 +40,7 @@ from caqtus.types.iteration import (
 )
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils._result import Failure, is_success, is_failure_type
 from ._icons import get_icon
 
 

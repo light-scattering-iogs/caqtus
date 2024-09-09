@@ -4,7 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from .._result import Result
+from caqtus.utils._result import Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 

@@ -8,8 +8,8 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils._result import Result
 from .._exception_summary import TracebackSummary
-from .._result import Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import (

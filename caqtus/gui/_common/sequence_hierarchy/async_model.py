@@ -35,13 +35,13 @@ from caqtus.session import (
     PathIsNotSequenceError,
     State,
 )
-from caqtus.session._result import Result, is_failure, Failure, Success
 from caqtus.session._sequence_collection import SequenceStats
 from caqtus.types.iteration import (
     Unknown,
     IterationConfiguration,
 )
 from caqtus.types.timelane import TimeLanes
+from caqtus.utils._result import Result, is_failure, Failure, Success
 
 NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 

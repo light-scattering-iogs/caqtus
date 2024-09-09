@@ -27,6 +27,14 @@ from caqtus.types.timelane import TimeLanes
 from caqtus.types.units import Quantity
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
+from caqtus.utils._result import (
+    Result,
+    Success,
+    Failure,
+    is_failure_type,
+    is_success,
+    is_failure,
+)
 from ._path_hierarchy import _query_path_model
 from ._path_table import SQLSequencePath
 from ._sequence_table import (
@@ -42,7 +50,6 @@ from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructured
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
-from .._result import Result, Success, Failure, is_failure_type, is_success, is_failure
 from .._sequence_collection import (
     PathIsSequenceError,
     PathIsNotSequenceError,

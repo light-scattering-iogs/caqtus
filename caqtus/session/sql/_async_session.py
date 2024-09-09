@@ -14,6 +14,7 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
+from caqtus.utils._result import Result
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
 from ._sequence_collection import (
@@ -33,7 +34,6 @@ from ._sequence_collection import (
 from ._serializer import SerializerProtocol
 from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSessionNotActiveError
-from .._result import Result
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 from .._sequence_collection import (

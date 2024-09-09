@@ -7,6 +7,7 @@ from attr import frozen
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from caqtus.utils._result import Result, Success, Failure, is_failure, is_failure_type
 from ._path_table import SQLSequencePath
 from .._path import PureSequencePath
 from .._path_hierarchy import (
@@ -16,7 +17,6 @@ from .._path_hierarchy import (
     PathExistsError,
     RecursivePathMoveError,
 )
-from .._result import Result, Success, Failure, is_failure, is_failure_type
 from .._sequence_collection import PathIsSequenceError, SequenceRunningError
 
 if TYPE_CHECKING:

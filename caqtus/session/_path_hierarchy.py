@@ -4,8 +4,8 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
+from caqtus.utils._result import Result, Success, Failure
 from ._path import PureSequencePath
-from ._result import Result, Success, Failure
 
 if TYPE_CHECKING:
     from ._sequence_collection import PathIsSequenceError, SequenceRunningError
