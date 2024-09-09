@@ -26,8 +26,10 @@ from .remote import DeviceProxy
 from ..types.recoverable_exceptions import RecoverableException
 
 if TYPE_CHECKING:
-    from caqtus.experiment_control._shot_event_dispatcher import ShotEventDispatcher
-    from caqtus.experiment_control.shot_timing import ShotTimer
+    from caqtus.experiment_control.sequence_execution._shot_event_dispatcher import (
+        ShotEventDispatcher,
+    )
+    from caqtus.experiment_control.sequence_execution import ShotTimer
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +77,27 @@ class DeviceController[DeviceProxyType: DeviceProxy, **_P](abc.ABC):
 
         Args:
             device: An asynchronous proxy to the device being controlled.
+
             args, kwargs: Extra arguments than can be computed before the shot
                 and that are required to run the shot.
+
+                These arguments are at the discretion of the subclass implementation.
+
+        A typical implementation can look like this:
+
+        .. code-block:: python
+
+            async def run_shot(self, device, instruction):
+                await device.program(instruction)
+                await self.wait_all_devices_ready()
+                await device.trigger()
+
+                data = await device.read_data()
+                self.signal_data_acquired("some label", data)
+
+        Warning:
+            Implementations of this method must be careful to handle cancellation at a
+            checkpoint in case the shot is aborted.
         """
 
         raise NotImplementedError
