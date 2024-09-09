@@ -109,10 +109,10 @@ def test_deletion_1(session_maker):
 def test_sequence(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         p = PureSequencePath(r"\a\b\c")
-        session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         assert session.sequences.is_sequence(p).unwrap()
         with pytest.raises(PathIsSequenceError):
-            session.sequences.create(p, steps_configuration, time_lanes)
+            session.sequences.create(p, steps_configuration, time_lanes).unwrap()
 
         assert not session.sequences.is_sequence(p.parent).unwrap()
 
@@ -122,7 +122,7 @@ def test_sequence_deletion(
 ):
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
-        session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         with pytest.raises(PathIsSequenceError):
             session.paths.delete_path(p.parent)
         assert session.sequences.is_sequence(p)
@@ -138,14 +138,14 @@ def test_sequence_deletion_1(
     # with the same path would fail.
     with session_maker() as session:
         p = PureSequencePath(r"\test")
-        session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         assert session.sequences.is_sequence(p).unwrap()
     with session_maker() as session:
         session.paths.delete_path(p, delete_sequences=True)
         with pytest.raises(PathNotFoundError):
             session.sequences.is_sequence(p).unwrap()
     with session_maker() as session:
-        session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         assert session.sequences.is_sequence(p)
 
 
@@ -172,7 +172,7 @@ def test_iteration_save(
 def test_start_date(session_maker, steps_configuration: StepsConfiguration, time_lanes):
     with session_maker() as session:
         p = PureSequencePath(r"\test\test")
-        session.sequences.create(p, steps_configuration, time_lanes)
+        session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         session.sequences.set_state(p, State.PREPARING)
         session.sequences.set_state(p, State.RUNNING)
     with session_maker() as session:
