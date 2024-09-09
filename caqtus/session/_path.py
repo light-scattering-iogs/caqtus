@@ -216,7 +216,7 @@ class PureSequencePath:
         return bool(_PATH_REGEX.match(path))
 
     def is_descendant_of(self, other: PureSequencePath) -> bool:
-        """Check if this path is a descendant of another path.
+        r"""Check if this path is a descendant of another path.
 
         A path is a descendant of another path if it starts with the other path.
 
