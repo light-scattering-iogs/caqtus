@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Possibility to rename a sequence in Condetrol
+- Possibility to rename and move sequence paths in Condetrol
+
+### Fixed
+
+- Reduced latency when creating or deleting a sequence path in Condetrol
 
 ## [6.6.1] - 2024-09-07
 
