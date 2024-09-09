@@ -124,7 +124,7 @@ def test_sequence_deletion(
         p = PureSequencePath(r"\test\test")
         session.sequences.create(p, steps_configuration, time_lanes).unwrap()
         with pytest.raises(PathIsSequenceError):
-            session.paths.delete_path(p.parent)
+            session.paths.delete_path(p.parent).unwrap()
         assert session.sequences.is_sequence(p)
 
 
