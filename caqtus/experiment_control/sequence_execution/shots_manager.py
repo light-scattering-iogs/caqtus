@@ -23,7 +23,9 @@ from caqtus.utils.logging import log_async_cm_decorator, log_async_cm
 from ._shot_compiler import ShotCompilerProtocol
 from ._shot_primitives import DeviceParameters, ShotData, ShotParameters
 from ._shot_runner import ShotRunnerProtocol
-from .._async_utils import task_group_with_error_message
+from caqtus.experiment_control.sequence_execution._async_utils import (
+    task_group_with_error_message,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,9 @@ from caqtus.experiment_control.device_manager_extension import (
 )
 from caqtus.formatter import fmt
 from caqtus.types.recoverable_exceptions import ConnectionFailedError
-from .._async_utils import task_group_with_error_message
+from caqtus.experiment_control.sequence_execution._async_utils import (
+    task_group_with_error_message,
+)
 
 
 @contextlib.asynccontextmanager
