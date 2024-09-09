@@ -22,11 +22,10 @@ from caqtus.shot_compilation import (
 from caqtus.types.iteration import StepsConfiguration
 from caqtus.types.parameter import ParameterNamespace
 from caqtus.types.recoverable_exceptions import split_recoverable
-from ._shot_compiler import ShotCompilerFactory
-from ._shot_runner import ShotRunnerFactory
+from ._shot_compiler import ShotCompilerFactory, create_shot_compiler
+from ._shot_runner import ShotRunnerFactory, create_shot_runner
 from .sequence_runner import execute_steps, evaluate_initial_context
-from .shots_manager import ShotManager, ShotData, ShotScheduler
-from .shots_manager import ShotRetryConfig
+from .shots_manager import ShotManager, ShotData, ShotScheduler, ShotRetryConfig
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 
 logger = logging.getLogger(__name__)
@@ -39,8 +38,8 @@ async def run_sequence(
     global_parameters: Optional[ParameterNamespace],
     device_configurations: Optional[Mapping[DeviceName, DeviceConfiguration]],
     device_manager_extension: DeviceManagerExtensionProtocol,
-    shot_runner_factory: ShotRunnerFactory,
-    shot_compiler_factory: ShotCompilerFactory,
+    shot_runner_factory: ShotRunnerFactory = create_shot_runner,
+    shot_compiler_factory: ShotCompilerFactory = create_shot_compiler,
 ) -> None:
     """Manages the execution of a sequence.
 

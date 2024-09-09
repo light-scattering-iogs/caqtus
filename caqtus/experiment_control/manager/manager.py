@@ -21,8 +21,6 @@ from caqtus.session import (
 from caqtus.types.parameter import ParameterNamespace
 from ..device_manager_extension import DeviceManagerExtensionProtocol
 from ..sequence_execution import ShotRetryConfig
-from ..sequence_execution._shot_compiler import create_shot_compiler
-from ..sequence_execution._shot_runner import create_shot_runner
 from ..sequence_execution._sequence_manager import run_sequence
 
 logger = logging.getLogger(__name__)
@@ -357,8 +355,6 @@ class BoundProcedure(Procedure):
                         global_parameters=global_parameters,
                         device_configurations=device_configurations,
                         device_manager_extension=self._device_manager_extension,
-                        shot_runner_factory=create_shot_runner,
-                        shot_compiler_factory=create_shot_compiler,
                     )
 
         try:
