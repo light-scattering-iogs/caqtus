@@ -69,7 +69,7 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
             sqlalchemy.func.count(SQLDefaultDeviceConfiguration.name)
         )
         result = self._get_sql_session().execute(stmt).scalar()
-        assert result is not None
+        assert isinstance(result, int)
         return result
 
     def __iter__(self):
@@ -83,8 +83,9 @@ class SQLDeviceConfigurationCollection(DeviceConfigurationCollection):
         stmt = sqlalchemy.select(
             sqlalchemy.func.count(SQLDefaultDeviceConfiguration.name)
         ).where(SQLDefaultDeviceConfiguration.name == str(item))
-        result = self._get_sql_session().execute(stmt)
-        return result.scalar() is not None
+        result = self._get_sql_session().execute(stmt).scalar()
+        assert isinstance(result, int)
+        return result > 0
 
     def _get_sql_session(self) -> Session:
         # noinspection PyProtectedMember
