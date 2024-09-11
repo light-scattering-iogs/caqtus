@@ -134,7 +134,7 @@ class SQLPathHierarchy(PathHierarchy):
 
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> Success[datetime] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
         return _get_path_creation_date(self._get_sql_session(), path)
 
     def move(self, source: PureSequencePath, destination: PureSequencePath) -> Result[
@@ -294,9 +294,7 @@ def _get_children(
 
 def _get_path_creation_date(
     session: Session, path: PureSequencePath
-) -> Result[datetime, PathNotFoundError | PathIsRootError]:
-    if path.is_root():
-        return Failure(PathIsRootError(path))
+) -> Success[datetime] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
     return _query_path_model(session, path).map(
         lambda x: x.creation_date.replace(tzinfo=timezone.utc)
     )

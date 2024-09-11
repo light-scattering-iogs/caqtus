@@ -14,7 +14,7 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils._result import Result
+from caqtus.utils._result import Result, Failure, Success
 from ._experiment_session import _get_global_parameters, _set_global_parameters
 from ._path_hierarchy import _does_path_exists, _get_children, _get_path_creation_date
 from ._sequence_collection import (
@@ -164,7 +164,7 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 
     async def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> Success[datetime] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
         return await self._run_sync(_get_path_creation_date, path)
 
     async def _run_sync(

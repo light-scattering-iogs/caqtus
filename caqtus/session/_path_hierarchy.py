@@ -97,7 +97,7 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_path_creation_date(
         self, path: PureSequencePath
-    ) -> Result[datetime, PathNotFoundError | PathIsRootError]:
+    ) -> Success[datetime] | Failure[PathNotFoundError] | Failure[PathIsRootError]:
         """Get the creation date of the path.
 
         Args:
