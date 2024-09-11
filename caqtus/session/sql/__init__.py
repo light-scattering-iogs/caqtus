@@ -3,9 +3,7 @@
 from ._session_maker import (
     PostgreSQLExperimentSessionMaker,
     PostgreSQLConfig,
+    SQLiteConfig,
 )
 
-__all__ = [
-    "PostgreSQLExperimentSessionMaker",
-    "PostgreSQLConfig",
-]
+__all__ = ["PostgreSQLExperimentSessionMaker", "PostgreSQLConfig", "SQLiteConfig"]
