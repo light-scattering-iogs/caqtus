@@ -95,12 +95,21 @@ class SQLExperimentSessionMaker(ExperimentSessionMaker):
         self.__init__(state["serializer"], engine, async_engine)
 
 
+@attrs.define
+class SQLiteConfig:
+    """Configuration for connecting to a SQLite database."""
+
+    path: str
+
+
 class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
     def __init__(
         self,
         serializer: SerializerProtocol,
-        path: str,
+        config: SQLiteConfig,
     ):
+        path = config.path
+        self.config = config
         engine = create_engine(f"sqlite:///{path}?check_same_thread=False")
         async_engine = create_async_engine(
             f"sqlite+aiosqlite:///{path}?check_same_thread=False"
@@ -115,14 +124,14 @@ class SQLiteExperimentSessionMaker(SQLExperimentSessionMaker):
 
     def __getstate__(self):
         return {
-            "path": self._engine.url.database,
+            "config": self.config,
             "serializer": self._serializer,
         }
 
     def __setstate__(self, state):
-        path = state.pop("path")
+        config = state.pop("config")
         serializer = state.pop("serializer")
-        self.__init__(path, serializer)
+        self.__init__(config, serializer)
 
     def create_tables(self) -> None:
         """Create the tables in the database.
