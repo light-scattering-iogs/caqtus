@@ -210,7 +210,7 @@ class SequenceCollection(Protocol):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> Result[None, PathIsSequenceError | PathHasChildrenError]:
+    ) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathHasChildrenError]:
         """Create a new sequence at the given path.
 
         Returns:
