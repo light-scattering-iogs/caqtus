@@ -18,6 +18,16 @@ from ..single_shot_view import ShotView
 
 @attrs.define
 class ImageViewState:
+    """Contains the state of a view for an image.
+
+    Attributes:
+        camera_name: The name of the camera device from which to fetch the image.
+        image: The name of the image to fetch.
+        background: The name of the background image to fetch.
+        colormap: The name of the colormap to use.
+        levels: The minimum and maximum values to display.
+    """
+
     camera_name: DeviceName
     image: ImageLabel
     background: Optional[ImageLabel] = None
@@ -26,6 +36,8 @@ class ImageViewState:
 
 
 class ImageView(ShotView, pyqtgraph.ImageView):
+    """A view to display an image for a shot."""
+
     def __init__(
         self,
         state: ImageViewState,
@@ -65,26 +77,28 @@ class ImageView(ShotView, pyqtgraph.ImageView):
     def set_image(self, image: Image) -> None:
         match self._state.levels:
             case None:
-                autoRange = True
+                auto_range = True
                 levels = None
-                autoHistogramRange = True
+                auto_histogram_range = True
             case (min_, max_):
-                autoRange = False
-                autoHistogramRange = False
+                auto_range = False
+                auto_histogram_range = False
                 levels = (min_, max_)
             case _:
                 assert_never(self._state.levels)
         self.setImage(
             image[::, ::-1],
-            autoRange=autoRange,
+            autoRange=auto_range,
             levels=levels,
-            autoHistogramRange=autoHistogramRange,
+            autoHistogramRange=auto_histogram_range,
         )
         self.getHistogramWidget().item.sigLevelsChanged.connect(self._on_levels_changed)
 
     def _on_levels_changed(self) -> None:
         if self._state.levels is not None:
-            self._state.levels = self.getLevels()
+            self._state.levels = (
+                self.getLevels()  # pyright: ignore[reportAttributeAccessIssue]
+            )
 
 
 class ImageViewDialog(QDialog, Ui_ImageViewDialog):
@@ -100,9 +114,9 @@ def create_image_view() -> tuple[str, ImageViewState]:
         name = dialog.view_name_line_edit.text()
         state = ImageViewState(
             camera_name=DeviceName(dialog.camera_name_line_edit.text()),
-            image=ImageLabel(dialog.image_line_edit.text()),
+            image=ImageLabel(DataLabel(dialog.image_line_edit.text())),
             background=(
-                ImageLabel(text)
+                ImageLabel(DataLabel(text))
                 if (text := dialog.background_line_edit.text())
                 else None
             ),
