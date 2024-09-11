@@ -9,6 +9,7 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils._result import Result
+from .._data_id import DataId
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError
@@ -81,9 +82,7 @@ class AsyncSequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def get_shot_data_by_label(
-        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
-    ) -> Data:
+    async def get_shot_data_by_label(self, data: DataId) -> Data:
         raise NotImplementedError
 
     @abc.abstractmethod

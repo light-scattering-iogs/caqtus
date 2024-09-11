@@ -32,6 +32,7 @@ from ._sequence_collection import (
     _get_exceptions,
 )
 from ._serializer import SerializerProtocol
+from .._data_id import DataId
 from .._exception_summary import TracebackSummary
 from .._experiment_session import ExperimentSessionNotActiveError
 from .._path import PureSequencePath
@@ -222,12 +223,8 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
     ) -> Mapping[DataLabel, Data]:
         return await self._run_sync(_get_all_shot_data, path, shot_index)
 
-    async def get_shot_data_by_label(
-        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
-    ) -> Data:
-        return await self._run_sync(
-            _get_shot_data_by_label, path, shot_index, data_label
-        )
+    async def get_shot_data_by_label(self, data: DataId) -> Data:
+        return await self._run_sync(_get_shot_data_by_label, data)
 
     async def get_shot_start_time(
         self, path: PureSequencePath, shot_index: int
