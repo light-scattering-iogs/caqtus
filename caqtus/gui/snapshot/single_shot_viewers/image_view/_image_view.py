@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QWidget
 from caqtus.device import DeviceName
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session._data_id import DataId
-from caqtus.session._sequence_collection import PureShot
+from caqtus.session._sequence_collection import ShotId
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel, Image, is_image
 from caqtus.types.recoverable_exceptions import InvalidTypeError
@@ -66,7 +66,7 @@ class ImageView(ShotView, pyqtgraph.ImageView):
         if state.levels is not None:
             self.setLevels(*state.levels)
 
-    async def display_shot(self, shot: PureShot) -> None:
+    async def display_shot(self, shot: ShotId) -> None:
         image_label = ImageLabel(
             DataLabel(f"{self._state.camera_name}/{self._state.image}")
         )
@@ -109,7 +109,7 @@ class ImageView(ShotView, pyqtgraph.ImageView):
 
 
 async def load_image(
-    shot: PureShot,
+    shot: ShotId,
     image_label: ImageLabel,
     background_label: Optional[ImageLabel],
     session_make: ExperimentSessionMaker,

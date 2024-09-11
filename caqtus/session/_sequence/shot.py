@@ -11,7 +11,7 @@ from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
 from .._data_id import DataId
 from .._path import PureSequencePath
-from .._sequence_collection import PureShot
+from .._sequence_collection import ShotId
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:
@@ -96,5 +96,5 @@ class Shot:
         return self._session.sequences.get_shot_end_time(self.sequence_path, self.index)
 
     @property
-    def _id(self) -> PureShot:
-        return PureShot(self.sequence_path, self.index)
+    def _id(self) -> ShotId:
+        return ShotId(self.sequence_path, self.index)

@@ -281,7 +281,7 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
         """Return the shots that belong to this sequence."""
 
         raise NotImplementedError
@@ -328,7 +328,7 @@ class SequenceCollection(Protocol):
         """
 
         # Naive implementation that calls get_shot_data_by_label for each label.
-        shot_id = PureShot(path, shot_index)
+        shot_id = ShotId(path, shot_index)
         return {
             label: self.get_shot_data_by_label(DataId(shot_id, label))
             for label in data_labels
@@ -380,7 +380,7 @@ class SequenceStats:
 
 
 @attrs.frozen
-class PureShot:
+class ShotId:
     """Unique identifier for a shot in a sequence."""
 
     sequence_path: PureSequencePath

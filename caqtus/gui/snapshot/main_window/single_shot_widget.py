@@ -21,12 +21,10 @@ from caqtus.session import (
     ExperimentSessionMaker,
     PureSequencePath,
     AsyncExperimentSession,
-    Sequence,
     PathNotFoundError,
     PathIsNotSequenceError,
-    Shot,
 )
-from caqtus.session._sequence_collection import PureShot
+from caqtus.session._sequence_collection import ShotId
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow
@@ -105,18 +103,10 @@ class SnapShotWindowHandler:
                 await self._update_views(last_shot)
         self._state = state
 
-    async def _update_views(self, shot: PureShot) -> None:
+    async def _update_views(self, shot: ShotId) -> None:
         async with anyio.create_task_group() as tg:
             for view in self.window.get_views().values():
-                tg.start_soon(self._update_view, shot, view)
-
-    async def _update_view(self, shot: PureShot, view: ShotView) -> None:
-        # We need to create a new session for each view, because otherwise the views
-        # might use the same session concurrently, which is not allowed.
-        with self.experiment_session_maker() as session:
-            sequence = Sequence(shot.sequence_path, session)
-            bound_shot = Shot(sequence, shot.index, session)
-            await view.display_shot(bound_shot)
+                tg.start_soon(view.display_shot, shot)
 
 
 class SnapShotMainWindow(QMainWindow, Ui_ShotViewerMainWindow):
@@ -291,7 +281,7 @@ class NoSequenceSelected(WidgetState):
 class SequenceSelected(WidgetState):
     path: PureSequencePath
     start_time: Optional[datetime.datetime]
-    shots: frozenset[PureShot]
+    shots: frozenset[ShotId]
 
 
 async def get_state_async(

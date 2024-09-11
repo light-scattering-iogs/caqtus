@@ -19,7 +19,7 @@ from caqtus.session import (
     ExperimentSessionMaker,
     Shot,
 )
-from caqtus.session._sequence_collection import PureShot
+from caqtus.session._sequence_collection import ShotId
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 
@@ -115,7 +115,7 @@ class DataLoader(QWidget, Ui_Loader):
                 return
             result = await session.sequences.get_shots(path)
             try:
-                shots: list[PureShot] = result.unwrap()
+                shots: list[ShotId] = result.unwrap()
             except (PathNotFoundError, PathIsNotSequenceError):
                 self.remove_sequence_from_watchlist(path)
                 return

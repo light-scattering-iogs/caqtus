@@ -1,6 +1,6 @@
 import attrs
 
-from caqtus.session._sequence_collection import PureShot
+from caqtus.session._sequence_collection import ShotId
 from caqtus.types.data import DataLabel
 
 
@@ -15,5 +15,5 @@ class DataId:
         data_label: The label of the data.
     """
 
-    shot_id: PureShot
+    shot_id: ShotId
     data_label: DataLabel

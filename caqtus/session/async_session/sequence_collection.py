@@ -16,7 +16,7 @@ from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import (
     PathIsNotSequenceError,
     SequenceStats,
-    PureShot,
+    ShotId,
     SequenceNotCrashedError,
 )
 from .._state import State
@@ -65,7 +65,7 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
         raise NotImplementedError
 
     @abc.abstractmethod

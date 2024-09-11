@@ -41,7 +41,7 @@ from .._sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
-    PureShot,
+    ShotId,
     SequenceNotCrashedError,
 )
 from ..async_session import (
@@ -210,7 +210,7 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def get_shots(
         self, path: PureSequencePath
-    ) -> Result[list[PureShot], PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Result[list[ShotId], PathNotFoundError | PathIsNotSequenceError]:
         return await self._run_sync(_get_shots, path)
 
     async def get_shot_parameters(
