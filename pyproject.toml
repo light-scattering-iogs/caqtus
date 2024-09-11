@@ -65,7 +65,7 @@ path = "caqtus/__about__.py"
 allow-direct-references = true
 
 [tool.hatch.build.targets.sdist]
-exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github"]
+exclude = ["*.ui", "/tests", "/doc", "/manual", "/.github", "/tutorials"]
 
 [tool.hatch.build.targets.wheel]
 include = ["caqtus/"]
