@@ -58,10 +58,10 @@ from .._sequence_collection import (
     SequenceNotEditableError,
     SequenceStats,
     ShotNotFoundError,
-    ShotId,
     DataNotFoundError,
     SequenceNotCrashedError,
 )
+from .._shot_id import ShotId
 from .._sequence_collection import SequenceCollection
 from .._state import State
 from ...device import DeviceName, DeviceConfiguration

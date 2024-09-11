@@ -16,9 +16,9 @@ from .._path_hierarchy import PathNotFoundError
 from .._sequence_collection import (
     PathIsNotSequenceError,
     SequenceStats,
-    ShotId,
     SequenceNotCrashedError,
 )
+from .._shot_id import ShotId
 from .._state import State
 
 

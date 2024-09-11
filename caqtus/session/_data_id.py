@@ -1,7 +1,7 @@
 import attrs
 
-from caqtus.session._sequence_collection import ShotId
 from caqtus.types.data import DataLabel
+from ._shot_id import ShotId
 
 
 @attrs.frozen

@@ -7,7 +7,7 @@ import attrs
 from PySide6.QtWidgets import QWidget
 
 import caqtus.gui.qtutil.qabc as qabc
-from caqtus.session._sequence_collection import ShotId
+from caqtus.session._shot_id import ShotId
 from caqtus.utils.serialization import JSON
 
 

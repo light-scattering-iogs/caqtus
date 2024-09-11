@@ -41,9 +41,9 @@ from .._sequence_collection import (
     PathIsSequenceError,
     SequenceStats,
     PathIsNotSequenceError,
-    ShotId,
     SequenceNotCrashedError,
 )
+from .._shot_id import ShotId
 from ..async_session import (
     AsyncExperimentSession,
     AsyncPathHierarchy,

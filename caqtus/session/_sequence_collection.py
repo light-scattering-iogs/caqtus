@@ -18,6 +18,7 @@ from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError, PathHasChildrenError
+from ._shot_id import ShotId
 from ._state import State
 
 
@@ -381,11 +382,3 @@ class SequenceStats:
     stop_time: Optional[datetime.datetime]
     number_completed_shots: int
     expected_number_shots: int | Unknown
-
-
-@attrs.frozen
-class ShotId:
-    """Unique identifier for a shot in a sequence."""
-
-    sequence_path: PureSequencePath
-    index: int

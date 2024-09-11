@@ -11,7 +11,7 @@ from caqtus.types.parameter import Parameter
 from caqtus.types.variable_name import DottedVariableName
 from .._data_id import DataId
 from .._path import PureSequencePath
-from .._sequence_collection import ShotId
+from .._shot_id import ShotId
 
 # We don't do these imports at runtime because it would create a circular import.
 if typing.TYPE_CHECKING:

@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QWidget
 from caqtus.device import DeviceName
 from caqtus.session import ExperimentSessionMaker
 from caqtus.session._data_id import DataId
-from caqtus.session._sequence_collection import ShotId
+from caqtus.session._shot_id import ShotId
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel, Image, is_image
 from caqtus.types.recoverable_exceptions import InvalidTypeError

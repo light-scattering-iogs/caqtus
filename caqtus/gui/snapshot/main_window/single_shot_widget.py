@@ -24,7 +24,7 @@ from caqtus.session import (
     PathNotFoundError,
     PathIsNotSequenceError,
 )
-from caqtus.session._sequence_collection import ShotId
+from caqtus.session._shot_id import ShotId
 from caqtus.utils import serialization
 from caqtus.utils.serialization import JSON
 from .main_window_ui import Ui_ShotViewerMainWindow

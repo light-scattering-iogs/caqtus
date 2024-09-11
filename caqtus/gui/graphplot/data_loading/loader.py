@@ -19,7 +19,7 @@ from caqtus.session import (
     ExperimentSessionMaker,
     Shot,
 )
-from caqtus.session._sequence_collection import ShotId
+from caqtus.session._shot_id import ShotId
 from caqtus.utils.itertools import batched
 from .loader_ui import Ui_Loader
 
