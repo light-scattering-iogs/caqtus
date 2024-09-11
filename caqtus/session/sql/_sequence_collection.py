@@ -197,7 +197,7 @@ class SQLSequenceCollection(SequenceCollection):
         path: PureSequencePath,
         iteration_configuration: IterationConfiguration,
         time_lanes: TimeLanes,
-    ) -> Result[None, PathIsSequenceError | PathHasChildrenError]:
+    ) -> Success[None] | Failure[PathIsSequenceError] | Failure[PathHasChildrenError]:
         children_result = self.parent_session.paths.get_children(path)
         if is_success(children_result):
             if children_result.value:
@@ -338,7 +338,11 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[SequenceStats]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return _get_stats(self._get_sql_session(), path)
 
     def create_shot(
@@ -577,7 +581,11 @@ def _set_exception(
 
 def _get_stats(
     session: Session, path: PureSequencePath
-) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+) -> (
+    Success[SequenceStats]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+):
     result = _query_sequence_model(session, path)
 
     def extract_stats(sequence: SQLSequence) -> SequenceStats:

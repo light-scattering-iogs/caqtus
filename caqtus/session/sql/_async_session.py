@@ -188,7 +188,11 @@ class AsyncSQLSequenceCollection(AsyncSequenceCollection):
 
     async def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[SequenceStats]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return await self._run_sync(_get_stats, path)
 
     async def get_traceback_summary(self, path: PureSequencePath) -> Result[

@@ -8,7 +8,7 @@ from caqtus.types.iteration import IterationConfiguration
 from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
-from caqtus.utils._result import Result
+from caqtus.utils._result import Result, Success, Failure
 from .._data_id import DataId
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
@@ -32,12 +32,16 @@ class AsyncSequenceCollection(Protocol):
     @abc.abstractmethod
     async def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[SequenceStats]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         raise NotImplementedError
 
     async def get_state(
         self, path: PureSequencePath
-    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Success[State] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
 
         return (await self.get_stats(path)).map(lambda stats: stats.state)
 

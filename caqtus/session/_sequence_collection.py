@@ -263,7 +263,11 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def get_stats(
         self, path: PureSequencePath
-    ) -> Result[SequenceStats, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[SequenceStats]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         raise NotImplementedError
 
     @abc.abstractmethod
