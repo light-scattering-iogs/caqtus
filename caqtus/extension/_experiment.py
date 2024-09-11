@@ -29,6 +29,11 @@ from ..experiment_control.manager import (
 )
 from ..experiment_control.sequence_execution import ShotRetryConfig
 from ..session import ExperimentSessionMaker, ExperimentSession
+from ..session.sql._session_maker import (
+    SQLiteConfig,
+    SQLiteExperimentSessionMaker,
+    SQLExperimentSessionMaker,
+)
 
 
 class Experiment:
@@ -40,7 +45,7 @@ class Experiment:
     """
 
     def __init__(self) -> None:
-        self._session_maker_config: Optional[PostgreSQLConfig] = None
+        self._session_maker_config: Optional[PostgreSQLConfig | SQLiteConfig] = None
         self._extension = CaqtusExtension()
         self._experiment_manager: Optional[LocalExperimentManager] = None
         self._experiment_manager_location: ExperimentManagerConnection = (
@@ -68,7 +73,9 @@ class Experiment:
         self.register_time_lane_extension(analog_time_lane_extension)
         self.register_time_lane_extension(camera_time_lane_extension)
 
-    def configure_storage(self, backend_config: PostgreSQLConfig) -> None:
+    def configure_storage(
+        self, backend_config: PostgreSQLConfig | SQLiteConfig
+    ) -> None:
         """Configure the storage backend to be used by the application.
 
         After this method is called, the application will read and write data and
@@ -191,10 +198,18 @@ class Experiment:
                 "Call `configure_storage` with the appropriate configuration."
             )
             raise error
-        session_maker = self._extension.create_session_maker(
-            PostgreSQLExperimentSessionMaker,
-            config=self._session_maker_config,
-        )
+        if isinstance(self._session_maker_config, SQLiteConfig):
+            session_maker = self._extension.create_session_maker(
+                SQLiteExperimentSessionMaker,
+                config=self._session_maker_config,
+            )
+        elif isinstance(self._session_maker_config, PostgreSQLConfig):
+            session_maker = self._extension.create_session_maker(
+                PostgreSQLExperimentSessionMaker,
+                config=self._session_maker_config,
+            )
+        else:
+            assert_never(self._session_maker_config)
         if check_schema:
             session_maker.check()
         return session_maker
@@ -352,11 +367,10 @@ def upgrade_database(experiment: Experiment) -> None:
     """
 
     session_maker = experiment._get_session_maker(check_schema=False)
-    if not isinstance(session_maker, PostgreSQLExperimentSessionMaker):
-        error = RuntimeError("The session maker is not a PostgreSQL session maker.")
+    if not isinstance(session_maker, SQLExperimentSessionMaker):
+        error = RuntimeError("The session maker is not a SQL session maker.")
         error.add_note(
-            "The upgrade_database method is only available for PostgreSQL session "
-            "makers."
+            "The upgrade_database method is only available for SQL session makers."
         )
         raise error
     session_maker.upgrade()
