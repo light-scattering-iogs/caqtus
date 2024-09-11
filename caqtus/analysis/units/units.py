@@ -6,9 +6,10 @@ to add or remove units from series.
 """
 
 from typing import Optional, Mapping
-from typing_extensions import deprecated
 
 import polars
+from typing_extensions import deprecated
+
 from caqtus.types.units import Unit, Quantity
 
 MAGNITUDE_FIELD = "magnitude"
@@ -21,10 +22,14 @@ class QuantityExpressions:
         self._expr = expr
 
     def magnitude(self) -> polars.Expr:
-        return self._expr.struct.field(MAGNITUDE_FIELD)
+        return self._expr.struct.field(MAGNITUDE_FIELD).name.keep()
 
+    @deprecated("Use expr.quantity.units() instead.")
     def unit(self) -> polars.Expr:
-        return self._expr.struct.field(UNITS_FIELD)
+        return self.units()
+
+    def units(self) -> polars.Expr:
+        return self._expr.struct.field(UNITS_FIELD).name.keep()
 
 
 @polars.api.register_series_namespace("quantity")
@@ -135,14 +140,16 @@ def add_unit(series: polars.Series, unit: Optional[Unit]) -> polars.Series:
 def extract_unit(
     series: polars.Series,
 ) -> tuple[polars.Series, Optional[Unit]]:
-    return series.quantity.extract_unit()
+    return series.quantity.extract_unit()  # pyright: ignore[reportAttributeAccessIssue]
 
 
 @deprecated("Use dataframe.quantity.extract_units() instead.")
 def extract_units(
     dataframe: polars.DataFrame,
 ) -> tuple[polars.DataFrame, Mapping[str, Optional[str]]]:
-    return dataframe.quantity.extract_units()
+    return (
+        dataframe.quantity.extract_units()  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
 
 def convert_to_unit(
