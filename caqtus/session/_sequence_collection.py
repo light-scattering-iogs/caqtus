@@ -14,6 +14,7 @@ from caqtus.types.parameter import Parameter, ParameterNamespace
 from caqtus.types.timelane import TimeLanes
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils._result import Result
+from ._data_id import DataId
 from ._exception_summary import TracebackSummary
 from ._path import PureSequencePath
 from ._path_hierarchy import PathError, PathNotFoundError, PathHasChildrenError
@@ -298,9 +299,7 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_shot_data_by_label(
-        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
-    ) -> Data:
+    def get_shot_data_by_label(self, data: DataId) -> Data:
         """Return the data with the given label for the shot at the given index.
 
         Raises:
@@ -329,8 +328,9 @@ class SequenceCollection(Protocol):
         """
 
         # Naive implementation that calls get_shot_data_by_label for each label.
+        shot_id = PureShot(path, shot_index)
         return {
-            label: self.get_shot_data_by_label(path, shot_index, label)
+            label: self.get_shot_data_by_label(DataId(shot_id, label))
             for label in data_labels
         }
 

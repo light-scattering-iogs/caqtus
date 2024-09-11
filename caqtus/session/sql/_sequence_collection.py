@@ -47,6 +47,7 @@ from ._sequence_table import (
 )
 from ._serializer import SerializerProtocol
 from ._shot_tables import SQLShot, SQLShotParameter, SQLShotArray, SQLStructuredShotData
+from .._data_id import DataId
 from .._exception_summary import TracebackSummary
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathHasChildrenError, PathIsRootError
@@ -430,12 +431,8 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> dict[DataLabel, Data]:
         return _get_all_shot_data(self._get_sql_session(), path, shot_index)
 
-    def get_shot_data_by_label(
-        self, path: PureSequencePath, shot_index: int, data_label: DataLabel
-    ) -> Data:
-        return _get_shot_data_by_label(
-            self._get_sql_session(), path, shot_index, data_label
-        )
+    def get_shot_data_by_label(self, data: DataId) -> Data:
+        return _get_shot_data_by_label(self._get_sql_session(), data)
 
     def get_shot_data_by_labels(
         self, path: PureSequencePath, shot_index: int, data_labels: Set[DataLabel]
@@ -687,11 +684,11 @@ def _get_all_shot_data(
 
 def _get_shot_data_by_label(
     session: Session,
-    path: PureSequencePath,
-    shot_index: int,
-    data_label: DataLabel,
+    data: DataId,
 ) -> Data:
-    return _get_shot_data_by_labels(session, path, shot_index, {data_label})[data_label]
+    return _get_shot_data_by_labels(
+        session, data.shot_id.sequence_path, data.shot_id.index, {data.data_label}
+    )[data.data_label]
 
 
 def _get_shot_data_by_labels(
