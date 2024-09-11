@@ -7,13 +7,13 @@ import attrs
 from PySide6.QtWidgets import QWidget
 
 import caqtus.gui.qtutil.qabc as qabc
-from caqtus.session import Shot
+from caqtus.session._sequence_collection import PureShot
 from caqtus.utils.serialization import JSON
 
 
 class ShotView(QWidget, metaclass=qabc.QABCMeta):
     @abstractmethod
-    async def display_shot(self, shot: Shot) -> None:
+    async def display_shot(self, shot: PureShot) -> None:
         raise NotImplementedError
 
 
