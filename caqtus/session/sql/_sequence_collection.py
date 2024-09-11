@@ -250,7 +250,7 @@ class SQLSequenceCollection(SequenceCollection):
 
     def get_state(
         self, path: PureSequencePath
-    ) -> Result[State, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> Success[State] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]:
         result = self._query_sequence_model(path)
         return result.map(lambda sequence: sequence.state)
 
@@ -483,7 +483,11 @@ class SQLSequenceCollection(SequenceCollection):
 
     def _query_sequence_model(
         self, path: PureSequencePath
-    ) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+    ) -> (
+        Success[SQLSequence]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+    ):
         return _query_sequence_model(self._get_sql_session(), path)
 
     def _query_shot_model(
@@ -778,7 +782,9 @@ def _query_data_model(
 
 def _query_sequence_model(
     session: Session, path: PureSequencePath
-) -> Result[SQLSequence, PathNotFoundError | PathIsNotSequenceError]:
+) -> (
+    Success[SQLSequence] | Failure[PathNotFoundError] | Failure[PathIsNotSequenceError]
+):
     stmt = (
         select(SQLSequence)
         .join(SQLSequencePath)
