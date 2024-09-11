@@ -3,14 +3,18 @@ from __future__ import annotations
 from typing import Optional, assert_never
 
 import attrs
+import numpy as np
 import pyqtgraph
 from PySide6.QtWidgets import QDialog
 from PySide6.QtWidgets import QWidget
 
 from caqtus.device import DeviceName
-from caqtus.session import Shot, ExperimentSessionMaker
+from caqtus.session import ExperimentSessionMaker
+from caqtus.session._data_id import DataId
+from caqtus.session._sequence_collection import PureShot
 from caqtus.types.data import DataLabel
 from caqtus.types.image import ImageLabel, Image, is_image
+from caqtus.types.recoverable_exceptions import InvalidTypeError
 from caqtus.utils import serialization
 from .image_view_dialog_ui import Ui_ImageViewDialog
 from ..single_shot_view import ShotView
@@ -62,16 +66,19 @@ class ImageView(ShotView, pyqtgraph.ImageView):
         if state.levels is not None:
             self.setLevels(*state.levels)
 
-    async def display_shot(self, shot: Shot) -> None:
-        camera_name = self._state.camera_name
-        picture_name = self._state.image
-        async with self._session_maker.async_session() as session:
-            image_label = DataLabel(f"{camera_name}\\{picture_name}")
-            image = await session.sequences.get_shot_data_by_label(
-                shot.sequence_path, shot.index, image_label
-            )
-            if not is_image(image):
-                raise ValueError(f"Data {image_label} is not an image.")
+    async def display_shot(self, shot: PureShot) -> None:
+        image_label = ImageLabel(
+            DataLabel(f"{self._state.camera_name}/{self._state.image}")
+        )
+        background_label = (
+            ImageLabel(DataLabel(f"{self._state.camera_name}/{self._state.background}"))
+            if self._state.background is not None
+            else None
+        )
+
+        image = await load_image(
+            shot, image_label, background_label, self._session_maker
+        )
         self.set_image(image)
 
     def set_image(self, image: Image) -> None:
@@ -99,6 +106,30 @@ class ImageView(ShotView, pyqtgraph.ImageView):
             self._state.levels = (
                 self.getLevels()  # pyright: ignore[reportAttributeAccessIssue]
             )
+
+
+async def load_image(
+    shot: PureShot,
+    image_label: ImageLabel,
+    background_label: Optional[ImageLabel],
+    session_make: ExperimentSessionMaker,
+) -> Image[np.floating]:
+    async with session_make.async_session() as session:
+        image = await session.sequences.get_shot_data_by_label(
+            DataId(shot, image_label)
+        )
+        if not is_image(image):
+            raise InvalidTypeError(f"Data {image_label} is not an image.")
+        image = image.astype(float)
+        if background_label is not None:
+            background = await session.sequences.get_shot_data_by_label(
+                DataId(shot, background_label)
+            )
+            if not is_image(background):
+                raise InvalidTypeError(f"Data {background_label} is not an image.")
+            background = background.astype(float)
+            image = image - background
+    return image
 
 
 class ImageViewDialog(QDialog, Ui_ImageViewDialog):
