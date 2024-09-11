@@ -99,7 +99,6 @@ class ImageView(ShotView, pyqtgraph.ImageView):
             levels=levels,
             autoHistogramRange=auto_histogram_range,
         )
-        self.getHistogramWidget().item.sigLevelsChanged.connect(self._on_levels_changed)
 
     def _on_levels_changed(self) -> None:
         if self._state.levels is not None:
