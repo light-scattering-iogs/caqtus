@@ -68,10 +68,12 @@ class ImageView(ShotView, pyqtgraph.ImageView):
 
     async def display_shot(self, shot: ShotId) -> None:
         image_label = ImageLabel(
-            DataLabel(f"{self._state.camera_name}/{self._state.image}")
+            DataLabel(f"{self._state.camera_name}\\{self._state.image}")
         )
         background_label = (
-            ImageLabel(DataLabel(f"{self._state.camera_name}/{self._state.background}"))
+            ImageLabel(
+                DataLabel(f"{self._state.camera_name}\\{self._state.background}")
+            )
             if self._state.background is not None
             else None
         )
