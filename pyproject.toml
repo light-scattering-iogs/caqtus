@@ -85,7 +85,8 @@ dependencies = [
     "pytest>=8.1.1",
     "pytest-qt>=4.4.0",
     "hypothesis[numpy]>=6.103.1",
-    "pytest-postgresql>=6.0"
+    "pytest-postgresql>=6.0",
+    "isort"
 ]
 
 [tool.hatch.envs.default.scripts]
