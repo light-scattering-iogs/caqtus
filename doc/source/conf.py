@@ -25,6 +25,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.inheritance_diagram",
     "sphinx_rtd_theme",
+    "nbsphinx",
 ]
 
 templates_path = ["_templates"]
