@@ -38,7 +38,7 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     """Returns the unit of the value if it has one, None otherwise."""
 
     if isinstance(value, Quantity):
-        return value.units
+        return value.units  # pyright: ignore[reportReturnType]
     return None
 
 
@@ -87,7 +87,7 @@ def add_unit(
 
     if unit is None:
         return magnitude
-    return Quantity(magnitude, unit)
+    return Quantity(magnitude, unit)  # pyright: ignore[reportReturnType]
 
 
 def are_units_compatible(unit1: Optional[Unit], unit2: Optional[Unit]) -> bool:

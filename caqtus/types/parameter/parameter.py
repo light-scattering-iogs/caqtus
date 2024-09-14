@@ -12,7 +12,7 @@ def unstructure_quantity(value: Quantity):
 
 def structure_quantity(value: Any, _) -> Quantity:
     try:
-        return Quantity(*value)
+        return Quantity(*value)  # pyright: ignore[reportReturnType]
     except TypeError:
         raise ValueError(f"Cannot structure {value!r} as a Quantity.") from None
 
