@@ -11,8 +11,7 @@ from caqtus.types.variable_name import DottedVariableName
 from .timing import to_time, get_step_bounds, Time
 from ..formatter import fmt
 from ..types.expression import Expression
-from ..types.parameter import is_quantity, magnitude_in_unit
-from ..types.parameter.analog_value import NotQuantityError
+from ..types.parameter import is_quantity, magnitude_in_unit, NotQuantityError
 from ..types.recoverable_exceptions import InvalidValueError, EvaluationError
 from ..types.units import DimensionalityError, InvalidDimensionalityError
 
@@ -207,11 +206,13 @@ class ShotContext:
         return {name for name, used in self._was_lane_used.items() if not used}
 
 
-@tblib.pickling_support.install
 class DeviceCompilationError(Exception):
     """Raised when compilation for a device fails."""
 
     pass
+
+
+tblib.pickling_support.install(DeviceCompilationError)
 
 
 def evaluate_step_durations(
@@ -246,7 +247,7 @@ def evaluate_step_durations(
             )
 
         try:
-            seconds = magnitude_in_unit(evaluated, "s")
+            seconds = float(magnitude_in_unit(evaluated, "s"))
         except DimensionalityError as error:
             raise InvalidDimensionalityError(
                 fmt(

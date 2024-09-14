@@ -1,4 +1,4 @@
-from .analog_value import (
+from ._analog_value import (
     AnalogValue,
     NotAnalogValueError,
     is_analog_value,
@@ -6,9 +6,10 @@ from .analog_value import (
     add_unit,
     get_unit,
     magnitude_in_unit,
+    NotQuantityError,
 )
-from .parameter import Parameter, is_parameter
 from ._parameter_namespace import ParameterNamespace
+from .parameter import Parameter, is_parameter
 
 __all__ = [
     "AnalogValue",
@@ -21,4 +22,5 @@ __all__ = [
     "is_quantity",
     "get_unit",
     "magnitude_in_unit",
+    "NotQuantityError",
 ]

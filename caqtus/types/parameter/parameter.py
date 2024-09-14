@@ -1,7 +1,7 @@
 from typing import TypeGuard, Any, TypeAlias
 
 from caqtus.utils import serialization
-from .analog_value import AnalogValue, is_analog_value, Quantity
+from ._analog_value import AnalogValue, is_analog_value, Quantity
 
 Parameter: TypeAlias = AnalogValue | int | bool
 
