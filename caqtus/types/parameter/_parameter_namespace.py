@@ -7,7 +7,7 @@ from caqtus.formatter import fmt
 from caqtus.types.expression import Expression
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils import serialization
-from .parameter import Parameter, is_parameter
+from ._parameter import Parameter, is_parameter
 
 MappingNamespace = Mapping[
     str | DottedVariableName, Union[Expression, "MappingNamespace"]

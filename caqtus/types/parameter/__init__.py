@@ -9,7 +9,7 @@ from ._analog_value import (
     NotQuantityError,
 )
 from ._parameter_namespace import ParameterNamespace
-from .parameter import Parameter, is_parameter
+from ._parameter import Parameter, is_parameter
 
 __all__ = [
     "AnalogValue",
