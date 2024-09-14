@@ -8,7 +8,7 @@ from .analog_value import (
     magnitude_in_unit,
 )
 from .parameter import Parameter, is_parameter
-from .parameter_namespace import ParameterNamespace
+from ._parameter_namespace import ParameterNamespace
 
 __all__ = [
     "AnalogValue",
