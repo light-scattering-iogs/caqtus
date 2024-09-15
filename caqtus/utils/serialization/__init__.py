@@ -1,5 +1,13 @@
 from cattrs.gen import override
 
+from ._json import (
+    JSON,
+    is_valid_json,
+    is_valid_json_dict,
+    is_valid_json_list,
+    JsonDict,
+    JsonList,
+)
 from .converters import (
     unstructure,
     converters,
@@ -11,7 +19,6 @@ from .converters import (
     copy_converter,
 )
 from .customize import customize
-from ._json import JSON, is_valid_json, is_valid_json_dict, is_valid_json_list
 from .strategies import include_subclasses, include_type, configure_tagged_union
 
 __all__ = [
@@ -28,6 +35,8 @@ __all__ = [
     "configure_tagged_union",
     "include_type",
     "JSON",
+    "JsonDict",
+    "JsonList",
     "is_valid_json",
     "is_valid_json_dict",
     "is_valid_json_list",
