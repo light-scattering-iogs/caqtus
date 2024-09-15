@@ -160,10 +160,16 @@ class ShotContext:
 
         return self._step_bounds[-1]
 
+    def get_parameters(self) -> Mapping[DottedVariableName, Any]:
+        """Returns the parameters for the shot."""
+
+        return self._variables
+
+    @deprecated("Use get_parameters instead")
     def get_variables(self) -> Mapping[DottedVariableName, Any]:
         """Returns the variables for the shot."""
 
-        return self._variables
+        return self.get_parameters()
 
     def get_device_config(self, device_name: DeviceName) -> DeviceConfiguration:
         """Returns the configuration for the given device.
