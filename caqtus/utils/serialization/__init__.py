@@ -10,7 +10,7 @@ from .converters import (
     from_json,
     copy_converter,
 )
-from .customize import customize, AttributeOverride
+from .customize import customize
 from .json import JSON
 from .strategies import include_subclasses, include_type, configure_tagged_union
 
@@ -23,7 +23,6 @@ __all__ = [
     "to_json",
     "from_json",
     "customize",
-    "AttributeOverride",
     "override",
     "include_subclasses",
     "configure_tagged_union",
