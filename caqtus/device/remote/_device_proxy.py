@@ -13,7 +13,7 @@ from typing import (
 from ._async_converter import AsyncConverter
 from .rpc import Proxy
 from ..runtime import Device
-from ...utils.contextlib import aclose_on_error
+from ...utils.context_managers import aclose_on_error
 
 T = TypeVar("T")
 P = ParamSpec("P")
