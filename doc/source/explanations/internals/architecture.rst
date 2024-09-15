@@ -37,3 +37,26 @@ Experiment Manager
 This is background process that is responsible for controlling the experiment and running sequences.
 
 When it receives a request to run a sequence, it will execute this :ref:`procedure <explanations/internals/executing-a-sequence:Executing a sequence>`.
+
+While the experiment manager is running a sequence, it will send device instructions to the device server and get the data back.
+
+It then saves the generated data to the database.
+
+Device Server
+-------------
+
+There can be one or more device servers running in the system, possibly on different machines.
+
+They are responsible for communicating with the physical instruments and executing the instructions sent by the experiment manager.
+
+One device server can control multiple instruments and uses threads to communicate with them in parallel.
+
+SnapShot
+--------
+
+This is a GUI application that allows the user to visualize the data for each shot of a sequence in real time.
+
+GraphPlot
+---------
+
+This is a GUI application that allows the user to gather data from one or more sequences and perform analysis on it.
