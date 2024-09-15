@@ -4,6 +4,5 @@ Explanations
 .. toctree::
     :maxdepth: 1
 
-    architecture
-    internals
+    internals/internals
     external resources

@@ -24,6 +24,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.autosectionlabel",
     "sphinx_rtd_theme",
     "nbsphinx",
 ]
@@ -37,6 +38,7 @@ autodoc_typehints_format = "short"
 autodoc_preserve_defaults = True
 autodoc_member_order = "bysource"
 maximum_signature_line_length = 80
+autosectionlabel_prefix_document = True
 
 
 autodoc_type_aliases = {
