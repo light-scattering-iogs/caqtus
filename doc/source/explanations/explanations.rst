@@ -6,3 +6,4 @@ Explanations
 
     internals/internals
     external resources
+    glossary
