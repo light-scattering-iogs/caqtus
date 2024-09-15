@@ -1,4 +1,5 @@
 import contextlib
+from collections.abc import AsyncGenerator, Generator
 from typing import Protocol
 
 
@@ -7,7 +8,7 @@ class Closeable(Protocol):
 
 
 @contextlib.contextmanager
-def close_on_error[R: Closeable](resource: R) -> R:
+def close_on_error[R: Closeable](resource: R) -> Generator[R, None, None]:
     """Context manager that closes a resource if an error occurs.
 
     Beware that the resource will NOT be closed if the context manager is exited
@@ -15,7 +16,7 @@ def close_on_error[R: Closeable](resource: R) -> R:
     """
 
     try:
-        yield R
+        yield resource
     except:
         resource.close()
         raise
@@ -26,7 +27,7 @@ class AsyncCloseable(Protocol):
 
 
 @contextlib.asynccontextmanager
-async def aclose_on_error[R: AsyncCloseable](resource: R) -> R:
+async def aclose_on_error[R: AsyncCloseable](resource: R) -> AsyncGenerator[R, None]:
     """Async context manager that closes a resource if an error occurs.
 
     Beware that the resource will NOT be closed if the context manager is exited
@@ -34,7 +35,7 @@ async def aclose_on_error[R: AsyncCloseable](resource: R) -> R:
     """
 
     try:
-        yield
+        yield resource
     except:
         await resource.aclose()
         raise
