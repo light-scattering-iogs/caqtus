@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed caqtus.utils.contextlib to caqtus.utils.context_managers
+- Renamed `caqtus.utils.contextlib` to `caqtus.utils.context_managers`
+
+### Deprecated
+
+- `ShotContext.get_variables` in favor of `ShotContext.get_parameters`
 
 ## [6.8.1] - 2024-09-13
 
