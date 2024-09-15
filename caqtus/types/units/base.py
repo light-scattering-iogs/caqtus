@@ -16,7 +16,9 @@ def base_units(units: Unit) -> Unit:
         The base units of the given units.
     """
 
-    return (1 * units).to_base_units().units
+    return (
+        Quantity(1.0, units).to_base_units().units
+    )  # pyright: ignore[reportReturnType]
 
 
 def is_in_base_units(units: Unit) -> bool:
@@ -58,5 +60,5 @@ def convert_to_base_units(magnitude, units):
         if base_units == dimensionless:
             base_units = None
         else:
-            assert is_in_base_units(base_units)
+            assert is_in_base_units(base_units)  # pyright: ignore[reportArgumentType]
         return magnitude_in_base_units, base_units

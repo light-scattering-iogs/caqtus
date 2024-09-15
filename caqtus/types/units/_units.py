@@ -9,7 +9,7 @@ units_definition_file = importlib.resources.files("caqtus.types.units").joinpath
 )
 
 ureg = pint.UnitRegistry(
-    units_definition_file,
+    str(units_definition_file),
     autoconvert_offset_to_baseunit=True,
     cache_folder=":auto:",
 )
