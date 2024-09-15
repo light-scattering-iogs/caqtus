@@ -58,7 +58,7 @@ class SerializerProtocol(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+    def structure_time_lanes(self, content: serialization.JsonDict) -> TimeLanes:
         raise NotImplementedError
 
 
@@ -121,7 +121,7 @@ class Serializer(SerializerProtocol):
     def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
         return self.time_lane_serializer.unstructure_time_lanes(time_lanes)
 
-    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+    def structure_time_lanes(self, content: serialization.JsonDict) -> TimeLanes:
         return self.time_lane_serializer.structure_time_lanes(content)
 
 
