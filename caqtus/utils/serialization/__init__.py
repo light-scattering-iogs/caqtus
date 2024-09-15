@@ -11,7 +11,7 @@ from .converters import (
     copy_converter,
 )
 from .customize import customize
-from .json import JSON, is_valid_json, is_valid_json_dict, is_valid_json_list
+from ._json import JSON, is_valid_json, is_valid_json_dict, is_valid_json_list
 from .strategies import include_subclasses, include_type, configure_tagged_union
 
 __all__ = [
