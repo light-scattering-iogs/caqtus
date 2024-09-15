@@ -77,11 +77,11 @@ class CondetrolLaneExtension(CondetrolLaneExtensionProtocol):
             )
         return lane
 
-    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JsonDict:
 
         return self._lane_serializer.unstructure_time_lanes(time_lanes)
 
-    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+    def structure_time_lanes(self, content: serialization.JsonDict) -> TimeLanes:
         return self._lane_serializer.structure_time_lanes(content)
 
 

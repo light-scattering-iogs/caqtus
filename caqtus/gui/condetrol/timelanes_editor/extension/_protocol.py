@@ -52,12 +52,12 @@ class CondetrolLaneExtensionProtocol(Protocol):
 
         ...
 
-    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JSON:
+    def unstructure_time_lanes(self, time_lanes: TimeLanes) -> serialization.JsonDict:
         """Convert the time lanes to a serializable format."""
 
         ...
 
-    def structure_time_lanes(self, content: serialization.JSON) -> TimeLanes:
+    def structure_time_lanes(self, content: serialization.JsonDict) -> TimeLanes:
         """Convert the serializable format to time lanes."""
 
         ...
