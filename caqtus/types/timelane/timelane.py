@@ -2,7 +2,7 @@ import abc
 import bisect
 import itertools
 from collections.abc import MutableSequence, Iterable, Sequence
-from typing import TypeVar, Generic, Self, NewType
+from typing import TypeVar, Generic, Self, NewType, overload, Never
 
 import attrs
 from typing_extensions import deprecated
@@ -158,7 +158,13 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
     def __len__(self):
         return self._bounds[-1]
 
-    def __getitem__(self, item) -> T:
+    @overload
+    def __getitem__(self, item: int) -> T: ...
+
+    @overload
+    def __getitem__(self, item: slice) -> Never: ...
+
+    def __getitem__(self, item):
         if isinstance(item, int):
             return self.get_value_at_step(Step(item))
         else:
@@ -263,7 +269,8 @@ class TimeLane(MutableSequence[T], abc.ABC, Generic[T]):
         assert len(self) == previous_length - 1
 
     @assert_length_changed(+1)
-    def insert(self, step: Step, value: T) -> None:
+    def insert(self, index: int, value: T) -> None:
+        step = Step(index)
         step = self._normalize_step(step)
         if step == len(self):
             self._spanned_values.append((value, Span(1)))
