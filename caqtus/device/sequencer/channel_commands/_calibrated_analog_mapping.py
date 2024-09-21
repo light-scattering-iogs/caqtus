@@ -15,7 +15,6 @@ from caqtus.types.units.base import convert_to_base_units
 from caqtus.types.variable_name import DottedVariableName
 from caqtus.utils.itertools import pairwise
 from .channel_output import ChannelOutput, DimensionedSeries
-from ..timing import TimeStep
 from ..instructions import (
     SequencerInstruction,
     Pattern,
@@ -25,6 +24,7 @@ from ..instructions import (
     Ramp,
     create_ramp,
 )
+from ..timing import TimeStep
 
 
 class TimeIndependentMapping(ChannelOutput, abc.ABC):
@@ -53,7 +53,7 @@ class TimeIndependentMapping(ChannelOutput, abc.ABC):
             input_.evaluate_max_advance_and_delay(time_step, variables)
             for input_ in self.inputs()
         ]
-        advances, delays = zip(*advances_and_delays)
+        advances, delays = zip(*advances_and_delays, strict=True)
         return max(advances), max(delays)
 
 
@@ -156,8 +156,8 @@ class CalibratedAnalogMapping(TimeIndependentMapping):
         return apply_piecewise_linear_calibration(
             input_values,
             self.measured_data_points,
-            self.input_units,  # pyright: ignore [reportArgumentType]
-            self.output_units,  # pyright: ignore [reportArgumentType]
+            Unit(self.input_units) if self.input_units is not None else None,
+            Unit(self.output_units) if self.output_units is not None else None,
         )
 
 
@@ -206,7 +206,7 @@ def apply_piecewise_linear_calibration(
         )
 
     calibration = DimensionlessCalibration(
-        list(zip(input_magnitudes, output_magnitudes))
+        list(zip(input_magnitudes, output_magnitudes, strict=True))
     )
     return DimensionedSeries(
         calibration.apply(values.values.as_type(np.dtype(np.float64))),
@@ -220,7 +220,9 @@ class DimensionlessCalibration:
             raise ValueError("Calibration must have at least 2 data points")
         input_points = [x for x, _ in calibration_points]
         output_points = [y for _, y in calibration_points]
-        sorted_points = sorted(zip(input_points, output_points), key=lambda x: x[0])
+        sorted_points = sorted(
+            zip(input_points, output_points, strict=True), key=lambda x: x[0]
+        )
         sorted_input_points = [x for x, _ in sorted_points]
         sorted_output_points = [y for _, y in sorted_points]
         # We add new flat segments before and after the calibration points to ensure
@@ -243,7 +245,8 @@ class DimensionlessCalibration:
 
     def __repr__(self):
         points = ", ".join(
-            f"({x}, {y})" for x, y in zip(self.input_points, self.output_points)
+            f"({x}, {y})"
+            for x, y in zip(self.input_points, self.output_points, strict=True)
         )
         return f"Calibration({points})"
 
@@ -310,21 +313,21 @@ class DimensionlessCalibration:
 
     @_apply_without_checks.register
     def _apply_calibration_ramp(self, r: Ramp) -> SequencerInstruction[np.float64]:
-        # Ramp maps t -> x(t) = a + (b - a) * t / l
+        # Ramp maps t -> x(t) = a + (b - a) * t / length
         # Calibration maps x -> y in a piecewise linear way
         # We want to map t -> y(t)
-        l = len(r)
+        length = len(r)
         a = r.start
         b = r.stop
 
         if a == b:
-            return Pattern([self._apply_explicit(a)]) * l
+            return Pattern([self._apply_explicit(a)]) * length
 
         def map_x_segment_to_t(x_0, x_1) -> tuple[float, float]:
             if b > a:
-                return l * (x_0 - a) / (b - a), l * (x_1 - a) / (b - a)
+                return length * (x_0 - a) / (b - a), length * (x_1 - a) / (b - a)
             else:
-                return l * (x_1 - a) / (b - a), l * (x_0 - a) / (b - a)
+                return length * (x_1 - a) / (b - a), length * (x_0 - a) / (b - a)
 
         # Find the segments in time over which the output y(t) is linear.
         time_segments = []
@@ -336,8 +339,8 @@ class DimensionlessCalibration:
 
         sections = []
         for lower, higher in time_segments:
-            lower = min(max(lower, 0), l)
-            higher = min(max(higher, 0), l)
+            lower = min(max(lower, 0), length)
+            higher = min(max(higher, 0), length)
             i_min = math.ceil(lower)
             i_max = math.ceil(higher)
             sections.append((i_min, i_max))
