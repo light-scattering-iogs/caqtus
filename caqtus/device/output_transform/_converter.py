@@ -14,5 +14,8 @@ def structure_evaluable_output(data, _) -> EvaluableOutput:
         return converter.structure(data, Transformation)
 
 
+converter.register_structure_hook(EvaluableOutput, structure_evaluable_output)
+
+
 def get_converter() -> cattrs.Converter:
     return converter.copy()
