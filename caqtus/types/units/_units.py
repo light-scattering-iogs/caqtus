@@ -1,4 +1,5 @@
 import importlib.resources
+from typing import TYPE_CHECKING
 
 import pint._typing
 
@@ -15,8 +16,16 @@ ureg = pint.UnitRegistry(
 )
 unit_registry = ureg
 pint.set_application_registry(unit_registry)
-Quantity = pint.Quantity
-Unit = pint.Unit
+
+if TYPE_CHECKING:
+    from pint.facets.plain import PlainQuantity, PlainUnit
+
+    Quantity = PlainQuantity
+    Unit = PlainUnit
+else:
+    Quantity = pint.Quantity
+    Unit = pint.Unit
+
 UnitLike = pint._typing.UnitLike
 UndefinedUnitError = pint.UndefinedUnitError
 
