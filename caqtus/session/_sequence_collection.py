@@ -246,9 +246,12 @@ class SequenceCollection(Protocol):
     @abc.abstractmethod
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> Result[
-        None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
-    ]:
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         """Set the exception that occurred while running the sequence.
 
         Return:

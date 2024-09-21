@@ -61,8 +61,8 @@ from .._sequence_collection import (
     DataNotFoundError,
     SequenceNotCrashedError,
 )
-from .._shot_id import ShotId
 from .._sequence_collection import SequenceCollection
+from .._shot_id import ShotId
 from .._state import State
 from ...device import DeviceName, DeviceConfiguration
 
@@ -260,9 +260,12 @@ class SQLSequenceCollection(SequenceCollection):
 
     def set_exception(
         self, path: PureSequencePath, exception: TracebackSummary
-    ) -> Result[
-        None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError
-    ]:
+    ) -> (
+        Success[None]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         return _set_exception(self._get_sql_session(), path, exception)
 
     def set_state(self, path: PureSequencePath, state: State) -> None:
@@ -561,7 +564,12 @@ def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
 
 def _set_exception(
     session: Session, path: PureSequencePath, exception: TracebackSummary
-) -> Result[None, PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError]:
+) -> (
+    Success[None]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotCrashedError]
+):
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
         case Success(sequence_model):
