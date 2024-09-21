@@ -1,12 +1,19 @@
+from __future__ import annotations
+
 import importlib.resources
+from collections.abc import Sequence
+from typing import overload, Self
 
 import pint._typing
 import pint.facets
 import pint.facets.nonmultiplicative.objects
 import pint.facets.numpy.quantity
 import pint.facets.numpy.unit
+from pint.facets.plain.quantity import ScalarT
 
 from caqtus.types.recoverable_exceptions import InvalidValueError
+
+UnitLike = pint._typing.UnitLike
 
 
 class Quantity[M: pint._typing.Magnitude](
@@ -15,7 +22,22 @@ class Quantity[M: pint._typing.Magnitude](
     pint.facets.nonmultiplicative.objects.NonMultiplicativeQuantity[M],
     pint.facets.plain.PlainQuantity[M],
 ):
-    pass
+    @overload
+    def __new__(cls, value: M, units: UnitLike | None = None) -> Quantity[M]: ...
+
+    @overload
+    def __new__(cls, value: str, units: UnitLike | None = None) -> Self: ...
+
+    @overload
+    def __new__(  # type: ignore[misc]
+        cls, value: Sequence[ScalarT], units: UnitLike | None = None
+    ) -> Self: ...
+
+    @overload
+    def __new__(cls, value: Self, units: UnitLike | None = None) -> Self: ...
+
+    def __new__(cls, value, units=None):
+        return super().__new__(cls, value, units)
 
 
 class Unit(
@@ -45,7 +67,6 @@ unit_registry = ureg
 pint.set_application_registry(unit_registry)
 
 
-UnitLike = pint._typing.UnitLike
 UndefinedUnitError = pint.UndefinedUnitError
 
 DimensionalityError = pint.DimensionalityError
