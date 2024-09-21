@@ -1,9 +1,9 @@
 from typing import TypeGuard, Any, TypeAlias
 
 from caqtus.utils import serialization
-from ._analog_value import AnalogValue, is_analog_value, Quantity
+from ._analog_value import Quantity, ScalarAnalogValue, is_scalar_analog_value
 
-Parameter: TypeAlias = AnalogValue | int | bool
+Parameter: TypeAlias = ScalarAnalogValue | int | bool
 
 
 def unstructure_quantity(value: Quantity):
@@ -25,4 +25,4 @@ serialization.register_structure_hook(Quantity, structure_quantity)
 def is_parameter(parameter: Any) -> TypeGuard[Parameter]:
     """Returns True if the value is a valid parameter type, False otherwise."""
 
-    return is_analog_value(parameter) or isinstance(parameter, (int, bool))
+    return is_scalar_analog_value(parameter) or isinstance(parameter, (int, bool))
