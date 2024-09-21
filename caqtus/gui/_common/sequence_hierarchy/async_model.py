@@ -41,7 +41,7 @@ from caqtus.types.iteration import (
     IterationConfiguration,
 )
 from caqtus.types.timelane import TimeLanes
-from caqtus.utils._result import Result, is_failure, Failure, Success
+from caqtus.utils._result import Result, is_failure, Failure, Success, is_failure_type
 
 NODE_DATA_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -260,14 +260,13 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                 assert parent_item.rowCount() == 0
                 with self.session_maker() as session:
                     children_result = session.paths.get_children(parent_path)
-                    try:
-                        children = children_result.unwrap()
-                    except PathIsSequenceError:
+                    if is_failure_type(children_result, PathIsSequenceError):
                         self.handle_folder_became_sequence(parent, session)
                         return
-                    except PathNotFoundError:
+                    elif is_failure_type(children_result, PathNotFoundError):
                         self.handle_path_was_deleted(parent)
                         return
+                    children = children_result.value
                     self.beginInsertRows(parent, 0, len(children) - 1)
                     for child_path in children:
                         child_item = self._build_item(child_path, session)
