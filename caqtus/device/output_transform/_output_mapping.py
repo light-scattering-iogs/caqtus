@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Iterable, Sequence
-from typing import Any, Optional
+from typing import Any, Optional, overload, assert_type
 
 import attrs
-import cattrs
 import numpy as np
 
 import caqtus.formatter as fmt
 from caqtus.types.parameter import (
     magnitude_in_unit,
     add_unit,
-    AnalogValue,
 )
 from caqtus.types.recoverable_exceptions import NotDefinedUnitError
 from caqtus.types.units import (
@@ -23,7 +21,6 @@ from caqtus.types.units import (
     UndefinedUnitError,
 )
 from caqtus.types.variable_name import DottedVariableName
-from ._converter import converter, structure_evaluable_output
 from .transformation import (
     Transformation,
     EvaluableOutput,
@@ -31,6 +28,7 @@ from .transformation import (
     OutputValue,
     evaluate,
 )
+from ...types.parameter._analog_value import ScalarAnalogValue, ArrayAnalogValue
 
 
 def _data_points_converter(data_points: Iterable[tuple[float, float]]):
@@ -83,16 +81,6 @@ class LinearInterpolation(Transformation):
             raise InvalidDimensionalityError("Invalid dimensionality") from e
 
 
-# Workaround for https://github.com/python-attrs/cattrs/issues/430
-structure_hook = cattrs.gen.make_dict_structure_fn(
-    LinearInterpolation,
-    converter,
-    input_=cattrs.override(struct_hook=structure_evaluable_output),
-)
-
-converter.register_structure_hook(LinearInterpolation, structure_hook)
-
-
 def to_base_units(
     values: Sequence[float], required_unit: Optional[UnitLike]
 ) -> tuple[Sequence[float], Optional[Unit]]:
@@ -124,7 +112,13 @@ class Interpolator:
             [point[1] for point in measured_data_points], output_units
         )
 
-    def __call__(self, input_value: AnalogValue) -> AnalogValue:
+    @overload
+    def __call__(self, input_value: ScalarAnalogValue) -> ScalarAnalogValue: ...
+
+    @overload
+    def __call__(self, input_value: ArrayAnalogValue) -> ArrayAnalogValue: ...
+
+    def __call__(self, input_value):
 
         input_magnitudes = magnitude_in_unit(input_value, self.input_unit)
 
@@ -135,4 +129,9 @@ class Interpolator:
             left=self.output_points[0],
             right=self.output_points[-1],
         )
-        return add_unit(output_magnitude, self.output_unit)
+        if np.isscalar(output_magnitude):
+            assert isinstance(output_magnitude, np.floating)
+            return add_unit(float(output_magnitude), self.output_unit)
+        else:
+            assert_type(output_magnitude, np.ndarray[Any, np.dtype[np.float64]])
+            return add_unit(output_magnitude, self.output_unit)
