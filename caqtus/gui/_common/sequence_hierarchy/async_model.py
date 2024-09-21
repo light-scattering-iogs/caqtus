@@ -488,17 +488,16 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
 
         async with self.session_maker.async_session() as session:
             children_result = await session.paths.get_children(parent_data.path)
-            await anyio.sleep(0)  # noqa: ASYNC115
-            try:
-                child_paths = children_result.unwrap()
-            except PathIsSequenceError:
+            await anyio.lowlevel.checkpoint()
+            if is_failure_type(children_result, PathIsSequenceError):
                 await self.handle_folder_became_sequence_async(parent, session)
                 return
-            except PathNotFoundError:
+            elif is_failure_type(children_result, PathNotFoundError):
                 await self.handle_path_was_deleted_async(parent)
                 return
+            child_paths = children_result.value
 
-        await anyio.sleep(0)  # noqa: ASYNC115
+        await anyio.lowlevel.checkpoint()
         # Need to use persistent indices to avoid invalidation while removing rows.
         child_indices = set[QPersistentModelIndex]()
         for row in range(self.rowCount(parent)):
