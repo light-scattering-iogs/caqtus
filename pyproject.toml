@@ -154,3 +154,6 @@ enable_incomplete_feature = "NewGenericSyntax"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "N", "B", "NPY", "ASYNC", "LOG"]
+
+[tool.pyright]
+exclude = ["**/*_ui.py"]
