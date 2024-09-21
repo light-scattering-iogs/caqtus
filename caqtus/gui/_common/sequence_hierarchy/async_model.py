@@ -640,7 +640,10 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
+        creation_date_result = await session.paths.get_path_creation_date(data.path)
+        assert not is_failure_type(creation_date_result, PathNotFoundError)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        creation_date = creation_date_result.value
         assert item.rowCount() == 0
         await anyio.sleep(0)  # noqa: ASYNC115
         item.setData(
