@@ -1,5 +1,4 @@
-from numbers import Real
-from typing import overload, Optional
+from typing import overload, Optional, Any
 
 import numpy as np
 
@@ -38,18 +37,30 @@ def is_in_base_units(units: Unit) -> bool:
 
 
 @overload
-def convert_to_base_units[
-    T: (Real, np.ndarray)
-](magnitude: T, units: None) -> tuple[T, None]: ...
+def convert_to_base_units(magnitude: float, units: None) -> tuple[float, None]: ...
 
 
 @overload
 def convert_to_base_units[
-    T: (Real, np.ndarray)
-](magnitude: T, units: Unit) -> tuple[np.ndarray, Optional[Unit]]: ...
+    A: np.ndarray[Any, np.dtype[np.floating]]
+](magnitude: A, units: None) -> tuple[A, None]: ...
 
 
-def convert_to_base_units(magnitude, units):
+@overload
+def convert_to_base_units(
+    magnitude: float, units: Unit
+) -> tuple[float, Optional[Unit]]: ...
+
+
+@overload
+def convert_to_base_units[
+    A: np.ndarray[Any, np.dtype[np.floating]]
+](magnitude: A, units: Unit) -> tuple[A, Optional[Unit]]: ...
+
+
+def convert_to_base_units(  # pyright: ignore[reportInconsistentOverload]
+    magnitude, units
+):
     if units is None:
         return magnitude, None
     else:
