@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from collections.abc import Mapping, Iterable
+from collections.abc import Mapping, Iterator
 from typing import TypeAlias, TypeGuard, assert_never, Any
 
 import attrs
@@ -10,7 +10,6 @@ import numpy
 import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
-    AnalogValue,
     NotAnalogValueError,
     get_unit,
     add_unit,
@@ -18,7 +17,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
-from ..parameter._analog_value import is_scalar_analog_value
+from ..parameter._analog_value import is_scalar_analog_value, ScalarAnalogValue
 from ..recoverable_exceptions import EvaluationError
 from ..units import DimensionalityError, InvalidDimensionalityError
 from ..variable_name import DottedVariableName
@@ -107,7 +106,7 @@ class LinspaceLoop(ContainsSubSteps):
 
     def loop_values(
         self, evaluation_context: Mapping[DottedVariableName, Any]
-    ) -> Iterable[AnalogValue]:
+    ) -> Iterator[ScalarAnalogValue]:
         """Returns the values that the variable represented by this loop takes.
 
         Args:
@@ -122,9 +121,13 @@ class LinspaceLoop(ContainsSubSteps):
         """
 
         start = self.start.evaluate(evaluation_context)
+        if isinstance(start, int):
+            start = float(start)
         if not is_scalar_analog_value(start):
             raise NotAnalogValueError(f"Start of {self} is not an analog value")
         stop = self.stop.evaluate(evaluation_context)
+        if isinstance(stop, int):
+            stop = float(stop)
         if not is_scalar_analog_value(stop):
             raise NotAnalogValueError(f"Stop of {self} is not an analog value")
 
@@ -184,7 +187,7 @@ class ArangeLoop(ContainsSubSteps):
 
     def loop_values(
         self, evaluation_context: Mapping[DottedVariableName, Any]
-    ) -> Iterable[AnalogValue]:
+    ) -> Iterator[ScalarAnalogValue]:
         """Returns the values that the variable represented by this loop takes.
 
         Args:
@@ -201,12 +204,18 @@ class ArangeLoop(ContainsSubSteps):
         """
 
         start = self.start.evaluate(evaluation_context)
+        if isinstance(start, int):
+            start = float(start)
         if not is_scalar_analog_value(start):
             raise NotAnalogValueError(f"Start of {self} is not an analog value.")
         stop = self.stop.evaluate(evaluation_context)
+        if isinstance(stop, int):
+            stop = float(stop)
         if not is_scalar_analog_value(stop):
             raise NotAnalogValueError(f"Stop of {self} is not an analog value.")
         step = self.step.evaluate(evaluation_context)
+        if isinstance(step, int):
+            step = float(step)
         if not is_scalar_analog_value(step):
             raise NotAnalogValueError(f"Step of {self} is not an analog value.")
 
