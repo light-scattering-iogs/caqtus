@@ -1,13 +1,14 @@
 from numbers import Real
-from typing import Any, Optional, TypeGuard, overload, TypeAlias
+from typing import Any, Optional, overload, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+from typing_extensions import TypeIs
 
 from ..recoverable_exceptions import InvalidTypeError
 from ..units import Quantity, Unit, dimensionless, UnitLike
 
-AnalogValue: TypeAlias = Real | NDArray[np.floating] | Quantity
+AnalogValue: TypeAlias = float | NDArray[np.floating] | Quantity
 
 
 class NotAnalogValueError(InvalidTypeError):
@@ -18,17 +19,17 @@ class NotQuantityError(InvalidTypeError):
     pass
 
 
-def is_analog_value(value: Any) -> TypeGuard[AnalogValue]:
+def is_analog_value(value: Any) -> TypeIs[AnalogValue]:
     """Returns True if the value is an analog value, False otherwise."""
 
     if isinstance(value, np.ndarray):
         return issubclass(value.dtype.type, np.floating)
-    elif isinstance(value, (Real, Quantity)):
+    elif isinstance(value, (float, Quantity)):
         return True
     return False
 
 
-def is_quantity(value: Any) -> TypeGuard[Quantity]:
+def is_quantity(value: Any) -> TypeIs[Quantity]:
     """Returns True if the value is a quantity, False otherwise."""
 
     return isinstance(value, Quantity)
@@ -74,7 +75,7 @@ def magnitude_in_unit(value, unit):
 
 
 def add_unit(
-    magnitude: Real | NDArray[np.floating], unit: Optional[Unit]
+    magnitude: float | NDArray[np.floating], unit: Optional[Unit]
 ) -> AnalogValue:
     """Add a unit to a magnitude."""
 
