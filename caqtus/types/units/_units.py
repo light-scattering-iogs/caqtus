@@ -39,6 +39,12 @@ class Quantity[M: pint._typing.Magnitude](
     def __new__(cls, value, units=None):
         return super().__new__(cls, value, units)
 
+    @property
+    def units(self) -> Unit:
+        u = super().units
+        assert isinstance(u, Unit)
+        return u
+
 
 class Unit(
     pint.facets.SystemRegistry.Unit,
