@@ -62,14 +62,14 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
     """Returns the unit of the value if it has one, None otherwise."""
 
     if isinstance(value, Quantity):
-        return value.units  # pyright: ignore[reportReturnType]
+        return value.units
     return None
 
 
 @overload
-def magnitude_in_unit(
-    value: Quantity, unit: Optional[UnitLike]
-) -> float | NDArray[np.floating]: ...
+def magnitude_in_unit[
+    M: float | NDArray[np.floating]
+](value: Quantity[M], unit: Optional[UnitLike]) -> M: ...
 
 
 @overload
@@ -97,9 +97,25 @@ def magnitude_in_unit(value, unit):
             return value.to(unit).magnitude
 
 
+@overload
+def add_unit(magnitude: float, unit: None) -> float: ...
+
+
+@overload
+def add_unit(magnitude: NDArray[np.floating], unit: None) -> NDArray[np.floating]: ...
+
+
+@overload
+def add_unit(magnitude: float, unit: Unit) -> Quantity[float]: ...
+
+
+@overload
 def add_unit(
-    magnitude: float | NDArray[np.floating], unit: Optional[Unit]
-) -> AnalogValue:
+    magnitude: NDArray[np.floating], unit: Unit
+) -> Quantity[NDArray[np.floating]]: ...
+
+
+def add_unit(magnitude, unit):
     """Add a unit to a magnitude."""
 
     if unit is None:
