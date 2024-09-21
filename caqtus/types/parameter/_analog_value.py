@@ -1,4 +1,3 @@
-from numbers import Real
 from typing import Any, Optional, overload, TypeAlias
 
 import numpy as np
@@ -46,11 +45,11 @@ def get_unit(value: AnalogValue) -> Optional[Unit]:
 @overload
 def magnitude_in_unit(
     value: Quantity, unit: Optional[UnitLike]
-) -> Real | NDArray[np.floating]: ...
+) -> float | NDArray[np.floating]: ...
 
 
 @overload
-def magnitude_in_unit[R: Real](value: R, unit: Optional[UnitLike]) -> R: ...
+def magnitude_in_unit(value: float, unit: Optional[UnitLike]) -> float: ...
 
 
 @overload
