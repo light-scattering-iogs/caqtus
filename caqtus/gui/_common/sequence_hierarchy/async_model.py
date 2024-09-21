@@ -530,14 +530,13 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
             case FolderNode(path=parent_path, has_fetched_children=True):
                 async with self.session_maker.async_session() as session:
                     children_result = await session.paths.get_children(parent_path)
-                    try:
-                        child_paths = children_result.unwrap()
-                    except PathIsSequenceError:
+                    if is_failure_type(children_result, PathIsSequenceError):
                         await self.handle_folder_became_sequence_async(parent, session)
                         return
-                    except PathNotFoundError:
+                    elif is_failure_type(children_result, PathNotFoundError):
                         await self.handle_path_was_deleted_async(parent)
                         return
+                    child_paths = children_result.value
                     already_added_paths = {
                         get_item_data(parent_item.child(row)).path
                         for row in range(parent_item.rowCount())
