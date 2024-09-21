@@ -10,8 +10,15 @@ from caqtus.session import (
     PathIsRootError,
     State,
     SequenceStateError,
+    SequenceNotCrashedError,
 )
-from caqtus.utils._result import Success, Failure, is_failure, is_failure_type
+from caqtus.utils._result import (
+    Success,
+    Failure,
+    is_failure,
+    is_failure_type,
+    is_success,
+)
 
 
 def copy_sequence(
@@ -79,9 +86,16 @@ def copy_sequence(
 
     if state == State.CRASHED:
         destination_session.sequences.set_state(destination, State.CRASHED)
-        exceptions = source_session.sequences.get_exception(source).unwrap()
-        if exceptions:
-            destination_session.sequences.set_exception(destination, exceptions)
+        exception_result = source_session.sequences.get_exception(source)
+        assert not is_failure_type(exception_result, PathNotFoundError)
+        assert not is_failure_type(exception_result, PathIsNotSequenceError)
+        assert not is_failure_type(exception_result, SequenceNotCrashedError)
+        exception = exception_result.value
+
+        if exception:
+            assert is_success(
+                destination_session.sequences.set_exception(destination, exception)
+            )
     destination_session.sequences.update_start_and_end_time(
         destination, stats.start_time, stats.stop_time
     )
