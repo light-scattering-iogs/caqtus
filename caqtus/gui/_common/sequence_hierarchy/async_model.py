@@ -465,7 +465,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
                     return
                 stats = sequence_stats_result.value
                 if stats != data.stats:
-                    await anyio.sleep(0)  # noqa: ASYNC115
+                    await anyio.lowlevel.checkpoint()
                     data.stats = stats
                     data.last_query_time = get_update_date()
                     change_detected = True
@@ -553,7 +553,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     async def append_items(
         self, parent: QModelIndex, items: list[QStandardItem]
     ) -> None:
-        await anyio.sleep(0)  # noqa: ASYNC115
+        await anyio.lowlevel.checkpoint()
         parent_item = self._get_item(parent)
         self.beginInsertRows(
             parent,
@@ -629,7 +629,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         self.endRemoveRows()
 
     async def handle_path_was_deleted_async(self, index: QModelIndex) -> None:
-        await anyio.sleep(0)  # noqa: ASYNC115
+        await anyio.lowlevel.checkpoint()
         self.handle_path_was_deleted(index)
 
     def get_path(self, index: QModelIndex | QPersistentModelIndex) -> PureSequencePath:
@@ -645,7 +645,7 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         assert not is_failure_type(creation_date_result, PathIsRootError)
         creation_date = creation_date_result.value
         assert item.rowCount() == 0
-        await anyio.sleep(0)  # noqa: ASYNC115
+        await anyio.lowlevel.checkpoint()
         item.setData(
             FolderNode(
                 path=data.path, has_fetched_children=False, creation_date=creation_date
