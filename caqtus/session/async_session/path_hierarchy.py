@@ -4,7 +4,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Protocol, TYPE_CHECKING
 
-from caqtus.utils._result import Result
+from caqtus.utils._result import Result, Success, Failure
 from .._path import PureSequencePath
 from .._path_hierarchy import PathNotFoundError, PathIsRootError
 
@@ -20,7 +20,11 @@ class AsyncPathHierarchy(Protocol):
     @abstractmethod
     async def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> (
+        Success[set[PureSequencePath]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+    ):
         raise NotImplementedError
 
     @abstractmethod

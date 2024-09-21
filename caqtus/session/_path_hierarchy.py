@@ -89,7 +89,11 @@ class PathHierarchy(Protocol):
     @abstractmethod
     def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> (
+        Success[set[PureSequencePath]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+    ):
         """Get the children of the path."""
 
         raise NotImplementedError

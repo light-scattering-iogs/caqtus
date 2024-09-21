@@ -83,9 +83,7 @@ class SQLSequenceCollection(SequenceCollection):
     ) -> Result[set[PureSequencePath], PathNotFoundError]:
         path_result = _query_path_model(self._get_sql_session(), path)
         if is_failure_type(path_result, PathNotFoundError):
-            # TODO: Remove ignore once pyright bug fix for type narrowing is released
-            #  in 1.1.380.
-            return path_result  # pyright: ignore[reportReturnType]
+            return path_result
 
         result = set()
         if is_failure_type(path_result, PathIsRootError):
@@ -212,7 +210,7 @@ class SQLSequenceCollection(SequenceCollection):
                         return creation_result
                     assert_never(creation_result)
             else:
-                assert_never(children_result)  # pyright: ignore[reportArgumentType]
+                assert_never(children_result)
 
         iteration_content = self.serializer.dump_sequence_iteration(
             iteration_configuration

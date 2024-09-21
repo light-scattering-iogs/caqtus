@@ -75,7 +75,11 @@ class SQLPathHierarchy(PathHierarchy):
 
     def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> (
+        Success[set[PureSequencePath]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+    ):
         return _get_children(self._get_sql_session(), path)
 
     def delete_path(
@@ -268,7 +272,11 @@ def _does_path_exists(session: Session, path: PureSequencePath) -> bool:
 
 def _get_children(
     session: Session, path: PureSequencePath
-) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+) -> (
+    Success[set[PureSequencePath]]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsSequenceError]
+):
     query_result = _query_path_model(session, path)
     if isinstance(query_result, Success):
         path_sql = query_result.unwrap()

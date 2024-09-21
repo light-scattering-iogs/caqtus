@@ -159,7 +159,11 @@ class AsyncSQLPathHierarchy(AsyncPathHierarchy):
 
     async def get_children(
         self, path: PureSequencePath
-    ) -> Result[set[PureSequencePath], PathNotFoundError | PathIsSequenceError]:
+    ) -> (
+        Success[set[PureSequencePath]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsSequenceError]
+    ):
         return await self._run_sync(_get_children, path)
 
     async def get_path_creation_date(
