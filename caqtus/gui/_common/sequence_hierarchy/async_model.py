@@ -569,8 +569,14 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        stats = session.sequences.get_stats(data.path).unwrap()
-        creation_date = session.paths.get_path_creation_date(data.path).unwrap()
+        stats_result = session.sequences.get_stats(data.path)
+        assert not is_failure_type(stats_result, PathNotFoundError)
+        assert not is_failure_type(stats_result, PathIsNotSequenceError)
+        stats = stats_result.value
+        creation_date_result = session.paths.get_path_creation_date(data.path)
+        assert not is_failure_type(creation_date_result, PathNotFoundError)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        creation_date = creation_date_result.value
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(
@@ -590,9 +596,15 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
     ):
         item = self._get_item(index)
         data = get_item_data(item)
-        stats = (await session.sequences.get_stats(data.path)).unwrap()
-        creation_date = (await session.paths.get_path_creation_date(data.path)).unwrap()
-        await anyio.sleep(0)  # noqa: ASYNC115
+        stats_result = await session.sequences.get_stats(data.path)
+        assert not is_failure_type(stats_result, PathNotFoundError)
+        assert not is_failure_type(stats_result, PathIsNotSequenceError)
+        stats = stats_result.value
+        creation_date_result = await session.paths.get_path_creation_date(data.path)
+        assert not is_failure_type(creation_date_result, PathNotFoundError)
+        assert not is_failure_type(creation_date_result, PathIsRootError)
+        creation_date = creation_date_result.value
+        await anyio.lowlevel.checkpoint()
         self.beginRemoveRows(index, 0, item.rowCount() - 1)
         item.setData(
             SequenceNode(
