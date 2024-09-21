@@ -23,6 +23,7 @@ def test_expression_value():
 
 def test_expression_value_db(variables):
     evaluated = evaluate(Expression("0 dB"), {})
+    assert isinstance(evaluated, Quantity)
     assert evaluated.units == Unit("dimensionless")
     assert evaluated.magnitude == 1
 
@@ -30,6 +31,7 @@ def test_expression_value_db(variables):
 def test_expression_value_dbm(variables):
 
     evaluated = evaluate(Expression("0 dBm"), {})
+    assert isinstance(evaluated, Quantity)
     assert evaluated.units == Unit("W")
     assert evaluated.magnitude == 1e-3
 
@@ -44,6 +46,7 @@ def test_interpolation():
 def test_interpolation_db():
     interpolator = Interpolator([(0, 0), (10, 1)], "dB", "V")
     computed = interpolator((1 + 10) / 2)
+    assert isinstance(computed, Quantity)
     assert np.allclose(computed.to("V").magnitude, 0.5)
 
 
@@ -51,8 +54,14 @@ def test_linear_interpolation_serialization():
     output = LinearInterpolation(Expression("0.5 V"), ((0, 0), (1, 1)), "V", "V")
 
     unstructured = converter.unstructure(output, EvaluableOutput)
-
-    structured = converter.structure(unstructured, EvaluableOutput)
+    assert unstructured == {
+        "input_": "0.5 V",
+        "measured_data_points": ((0, 0), (1, 1)),
+        "input_points_unit": "V",
+        "output_points_unit": "V",
+        "type": "LinearInterpolation",
+    }
+    structured = converter.structure(unstructured, EvaluableOutput)  # type: ignore
 
     assert structured == output
 
@@ -62,6 +71,6 @@ def test_expression_serialization():
 
     unstructured = converter.unstructure(output, EvaluableOutput)
 
-    structured = converter.structure(unstructured, EvaluableOutput)
+    structured = converter.structure(unstructured, EvaluableOutput)  # type: ignore
 
     assert structured == output
