@@ -11,7 +11,6 @@ import caqtus.formatter as fmt
 from caqtus.types.expression import Expression
 from caqtus.types.parameter import (
     AnalogValue,
-    is_analog_value,
     NotAnalogValueError,
     get_unit,
     add_unit,
@@ -19,6 +18,7 @@ from caqtus.types.parameter import (
 )
 from caqtus.utils import serialization
 from .iteration_configuration import IterationConfiguration, Unknown
+from ..parameter._analog_value import is_scalar_analog_value
 from ..recoverable_exceptions import EvaluationError
 from ..units import DimensionalityError, InvalidDimensionalityError
 from ..variable_name import DottedVariableName
@@ -77,7 +77,13 @@ class LinspaceLoop(ContainsSubSteps):
         num: The number of steps to take between the start and stop values.
     """
 
-    __match_args__ = ("variable", "start", "stop", "num", "sub_steps")
+    __match_args__ = (
+        "variable",  # pyright: ignore[reportAssignmentType]
+        "start",
+        "stop",
+        "num",
+        "sub_steps",
+    )
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -116,10 +122,10 @@ class LinspaceLoop(ContainsSubSteps):
         """
 
         start = self.start.evaluate(evaluation_context)
-        if not is_analog_value(start):
+        if not is_scalar_analog_value(start):
             raise NotAnalogValueError(f"Start of {self} is not an analog value")
         stop = self.stop.evaluate(evaluation_context)
-        if not is_analog_value(stop):
+        if not is_scalar_analog_value(stop):
             raise NotAnalogValueError(f"Stop of {self} is not an analog value")
 
         unit = get_unit(start)
@@ -149,7 +155,13 @@ class ArangeLoop(ContainsSubSteps):
         step: The step size between each value.
     """
 
-    __match_args__ = ("variable", "start", "stop", "step", "sub_steps")
+    __match_args__ = (
+        "variable",  # pyright: ignore[reportAssignmentType]
+        "start",
+        "stop",
+        "step",
+        "sub_steps",
+    )
     variable: DottedVariableName = attrs.field(
         validator=attrs.validators.instance_of(DottedVariableName),
         on_setattr=attrs.setters.validate,
@@ -189,13 +201,13 @@ class ArangeLoop(ContainsSubSteps):
         """
 
         start = self.start.evaluate(evaluation_context)
-        if not is_analog_value(start):
+        if not is_scalar_analog_value(start):
             raise NotAnalogValueError(f"Start of {self} is not an analog value.")
         stop = self.stop.evaluate(evaluation_context)
-        if not is_analog_value(stop):
+        if not is_scalar_analog_value(stop):
             raise NotAnalogValueError(f"Stop of {self} is not an analog value.")
         step = self.step.evaluate(evaluation_context)
-        if not is_analog_value(step):
+        if not is_scalar_analog_value(step):
             raise NotAnalogValueError(f"Step of {self} is not an analog value.")
 
         unit = get_unit(start)
@@ -293,8 +305,8 @@ class StepsConfiguration(IterationConfiguration):
 
 
 @functools.singledispatch
-def expected_number_shots(step: Step) -> int | Unknown:  # type: ignore
-    assert_never(step)
+def expected_number_shots(step: Step) -> int | Unknown:
+    raise NotImplementedError(f"Cannot determine the number of shots for {step}")
 
 
 @expected_number_shots.register
