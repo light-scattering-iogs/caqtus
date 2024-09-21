@@ -10,6 +10,7 @@ from typing import Optional, TypeGuard, assert_never, assert_type, Never, Callab
 
 import anyio
 import anyio.abc
+import anyio.lowlevel
 import attrs
 from PySide6.QtCore import (
     QObject,
@@ -447,22 +448,22 @@ class AsyncPathHierarchyModel(QAbstractItemModel):
         change_detected = False
         async with self.session_maker.async_session() as session:
             creation_date_result = await session.paths.get_path_creation_date(data.path)
-            try:
-                creation_date = creation_date_result.unwrap()
-            except PathNotFoundError:
+            assert not is_failure_type(creation_date_result, PathIsRootError)
+            if is_failure_type(creation_date_result, PathNotFoundError):
                 await self.handle_path_was_deleted_async(index)
                 return
+            creation_date = creation_date_result.value
             if creation_date != data.creation_date:
-                await anyio.sleep(0)  # noqa: ASYNC115
+                await anyio.lowlevel.checkpoint()
                 data.creation_date = creation_date
                 change_detected = True
             if isinstance(data, SequenceNode):
                 sequence_stats_result = await session.sequences.get_stats(data.path)
-                try:
-                    stats = sequence_stats_result.unwrap()
-                except PathIsNotSequenceError:
+                assert not is_failure_type(sequence_stats_result, PathNotFoundError)
+                if is_failure_type(sequence_stats_result, PathIsNotSequenceError):
                     await self.handle_sequence_became_folder(index, session)
                     return
+                stats = sequence_stats_result.value
                 if stats != data.stats:
                     await anyio.sleep(0)  # noqa: ASYNC115
                     data.stats = stats
