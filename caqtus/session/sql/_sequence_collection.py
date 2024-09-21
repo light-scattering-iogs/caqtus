@@ -252,10 +252,14 @@ class SQLSequenceCollection(SequenceCollection):
         result = self._query_sequence_model(path)
         return result.map(lambda sequence: sequence.state)
 
-    def get_exception(self, path: PureSequencePath) -> Result[
-        Optional[TracebackSummary],
-        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
-    ]:
+    def get_exception(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Optional[TracebackSummary]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         return _get_exceptions(self._get_sql_session(), path)
 
     def set_exception(
@@ -540,10 +544,14 @@ def _is_sequence(
         return Success(bool(path_model.sequence))
 
 
-def _get_exceptions(session: Session, path: PureSequencePath) -> Result[
-    Optional[TracebackSummary],
-    PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
-]:
+def _get_exceptions(
+    session: Session, path: PureSequencePath
+) -> (
+    Success[Optional[TracebackSummary]]
+    | Failure[PathNotFoundError]
+    | Failure[PathIsNotSequenceError]
+    | Failure[SequenceNotCrashedError]
+):
     sequence_model_query = _query_sequence_model(session, path)
     match sequence_model_query:
         case Success(sequence_model):

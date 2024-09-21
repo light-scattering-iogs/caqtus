@@ -228,10 +228,14 @@ class SequenceCollection(Protocol):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_exception(self, path: PureSequencePath) -> Result[
-        Optional[TracebackSummary],
-        PathNotFoundError | PathIsNotSequenceError | SequenceNotCrashedError,
-    ]:
+    def get_exception(
+        self, path: PureSequencePath
+    ) -> (
+        Success[Optional[TracebackSummary]]
+        | Failure[PathNotFoundError]
+        | Failure[PathIsNotSequenceError]
+        | Failure[SequenceNotCrashedError]
+    ):
         """Return the exceptions that occurred while running the sequence.
 
         Returns:
